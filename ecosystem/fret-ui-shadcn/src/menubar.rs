@@ -695,7 +695,7 @@ impl MenubarShortcut {
         let fg = theme.color_token("muted-foreground");
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let mut style = typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
         style.weight = FontWeight::NORMAL;
         style.letter_spacing_em = Some(0.12);
@@ -1173,7 +1173,7 @@ fn menu_row_children<H: UiHost>(
     text_style: TextStyle,
     chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
-    let dir = crate::use_direction(cx, None);
+    let dir = crate::direction::use_direction(cx, None);
     let child = cx.container(
         ContainerProps {
             layout: {
@@ -1349,7 +1349,7 @@ fn submenu_chevron_right_text<H: UiHost>(
     fg: Color,
     _text_style: TextStyle,
 ) -> AnyElement {
-    let dir = crate::use_direction(cx, None);
+    let dir = crate::direction::use_direction(cx, None);
     let icon = rtl::chevron_inline_end(dir);
     cx.flex(
         FlexProps {
@@ -2317,7 +2317,7 @@ impl MenubarMenuEntries {
                                               submenu_for_panel_for_content.clone(),
                                               move |cx| {
                                                   let entries_for_content = entries_for_content;
-                                                  let dir = crate::use_direction(cx, None);
+                                                  let dir = crate::direction::use_direction(cx, None);
                                                   let mut out: Vec<AnyElement> =
                                                       Vec::with_capacity(entries_for_content.len());
 
@@ -3505,7 +3505,7 @@ impl MenubarMenuEntries {
                                                                      &*cx.app,
                                                                      cx.window,
                                                                  );
-                                                             let dir = crate::use_direction(cx, None);
+                                                             let dir = crate::direction::use_direction(cx, None);
                                                              let submenu_entries_for_panel =
                                                                  submenu_entries_for_panel;
                                                              let mut out: Vec<AnyElement> =

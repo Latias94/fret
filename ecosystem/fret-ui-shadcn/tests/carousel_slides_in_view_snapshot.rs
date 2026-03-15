@@ -6,6 +6,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -31,9 +32,9 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    slides_in_view: Model<fret_ui_shadcn::CarouselSlidesInViewSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<shadcn::CarouselApiSnapshot>,
+    slides_in_view: Model<shadcn::CarouselSlidesInViewSnapshot>,
+    opts: shadcn::CarouselOptions,
     carousel_width: Px,
     item_basis_main_px: Px,
 ) {
@@ -50,7 +51,7 @@ fn render_frame(
         "carousel-slides-in-view",
         move |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_snapshot_model(api)
                 .slides_in_view_snapshot_model(slides_in_view)
@@ -84,12 +85,12 @@ fn carousel_slides_in_view_snapshot_emits_enter_and_leave() {
 
     let slides_in_view = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselSlidesInViewSnapshot::default());
+        .insert(shadcn::CarouselSlidesInViewSnapshot::default());
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
 
-    let opts = fret_ui_shadcn::CarouselOptions::default()
+    let opts = shadcn::CarouselOptions::default()
         .embla_engine(true)
         .in_view_threshold(0.0)
         .in_view_margin_px(Px(0.0));

@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/web_golden_shadcn.rs"]
@@ -221,9 +222,7 @@ fn web_vs_fret_input_disabled_height_matches() {
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
-        let input = fret_ui_shadcn::Input::new(model)
-            .disabled(true)
-            .into_element(cx);
+        let input = shadcn::Input::new(model).disabled(true).into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -263,7 +262,7 @@ fn web_vs_fret_input_file_height_matches() {
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
-        let input = fret_ui_shadcn::Input::new(model).into_element(cx);
+        let input = shadcn::Input::new(model).into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -309,9 +308,7 @@ fn web_vs_fret_input_otp_demo_height_matches() {
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
-        let otp = fret_ui_shadcn::InputOtp::new(model)
-            .length(6)
-            .into_element(cx);
+        let otp = shadcn::InputOtp::new(model).length(6).into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {

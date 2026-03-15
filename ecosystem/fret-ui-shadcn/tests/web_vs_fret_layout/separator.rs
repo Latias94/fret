@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_separator_demo_geometry() {
@@ -29,13 +30,13 @@ fn web_vs_fret_layout_separator_demo_geometry() {
     );
 
     let (ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
-        let horizontal = fret_ui_shadcn::Separator::new()
-            .orientation(fret_ui_shadcn::SeparatorOrientation::Horizontal)
+        let horizontal = shadcn::Separator::new()
+            .orientation(shadcn::SeparatorOrientation::Horizontal)
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
             .into_element(cx);
 
-        let vertical = fret_ui_shadcn::Separator::new()
-            .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+        let vertical = shadcn::Separator::new()
+            .orientation(shadcn::SeparatorOrientation::Vertical)
             .into_element(cx);
 
         vec![cx.column(

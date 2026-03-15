@@ -1,4 +1,4 @@
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::CommandId;
 use fret_ui::element::{
@@ -486,7 +486,7 @@ impl PaginationPrevious {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Previous"));
         let show_text = viewport_queries::viewport_width_at_least(
             cx,
@@ -578,7 +578,7 @@ impl PaginationNext {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Next"));
         let show_text = viewport_queries::viewport_width_at_least(
             cx,

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use fret_core::{Edges, Px, SemanticsLive, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
@@ -1021,7 +1021,7 @@ impl FieldTitle {
             (fg, px, line_height)
         };
 
-        let align = match crate::use_direction(cx, None) {
+        let align = match crate::direction::use_direction(cx, None) {
             LayoutDirection::Rtl => TextAlign::End,
             LayoutDirection::Ltr => TextAlign::Start,
         };
@@ -1146,7 +1146,7 @@ impl FieldLabel {
 
         let wrap_children = self.children;
         let Some(for_control) = self.for_control else {
-            let align = match crate::use_direction(cx, None) {
+            let align = match crate::direction::use_direction(cx, None) {
                 LayoutDirection::Rtl => TextAlign::End,
                 LayoutDirection::Ltr => TextAlign::Start,
             };
@@ -1366,7 +1366,7 @@ impl FieldLabel {
                                 let inner = cx.container(wrapper, move |_cx| children);
                                 vec![inner]
                             } else if render_text {
-                                let align = match crate::use_direction(cx, None) {
+                                let align = match crate::direction::use_direction(cx, None) {
                                     LayoutDirection::Rtl => TextAlign::End,
                                     LayoutDirection::Ltr => TextAlign::Start,
                                 };
@@ -1445,7 +1445,7 @@ impl FieldDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let align = match crate::use_direction(cx, None) {
+        let align = match crate::direction::use_direction(cx, None) {
             LayoutDirection::Rtl => TextAlign::End,
             LayoutDirection::Ltr => TextAlign::Start,
         };
@@ -1542,7 +1542,7 @@ impl FieldError {
             (fg, px, line_height)
         };
 
-        let align = match crate::use_direction(cx, None) {
+        let align = match crate::direction::use_direction(cx, None) {
             LayoutDirection::Rtl => TextAlign::End,
             LayoutDirection::Ltr => TextAlign::Start,
         };
@@ -2321,7 +2321,7 @@ mod tests {
                     FieldError::new("Required.")
                         .for_control(id.clone())
                         .into_element(cx),
-                    crate::Input::new(model.clone())
+                    crate::input::Input::new(model.clone())
                         .control_id(id.clone())
                         .into_element(cx),
                 ]
@@ -2340,7 +2340,7 @@ mod tests {
                         FieldError::new("Required.")
                             .for_control(id.clone())
                             .into_element(cx),
-                        crate::Input::new(model.clone())
+                        crate::input::Input::new(model.clone())
                             .control_id(id.clone())
                             .into_element(cx),
                     ]
@@ -2452,9 +2452,9 @@ mod tests {
                 let label_contents = ui::h_flex(|cx| {
                     vec![
                         ui::text("Email").into_element(cx),
-                        crate::Button::new("Help")
-                            .variant(crate::ButtonVariant::Secondary)
-                            .size(crate::ButtonSize::Sm)
+                        crate::button::Button::new("Help")
+                            .variant(crate::button::ButtonVariant::Secondary)
+                            .size(crate::button::ButtonSize::Sm)
                             .test_id("field.label.nested_button")
                             .into_element(cx),
                     ]
@@ -2471,7 +2471,7 @@ mod tests {
                             .wrap([label_contents])
                             .test_id("field.label")
                             .into_element(cx),
-                        crate::Input::new(model.clone())
+                        crate::input::Input::new(model.clone())
                             .control_id(control_id.clone())
                             .into_element(cx),
                     ]
@@ -2625,7 +2625,7 @@ mod tests {
                             .for_control(control_id.clone())
                             .test_id("field.label.action")
                             .into_element(cx),
-                        crate::Toggle::new(model.clone())
+                        crate::toggle::Toggle::new(model.clone())
                             .label("Enabled")
                             .control_id(control_id.clone())
                             .into_element(cx),

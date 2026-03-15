@@ -7,6 +7,7 @@ use fret_runtime::Model;
 use fret_ui::element::{LayoutStyle, Length, PressableA11y, PressableProps};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/style_aware_services.rs"]
@@ -73,7 +74,7 @@ fn render_frame(
             let slide_1 = cx.container(Default::default(), move |_cx| vec![pressable]);
             let slide_2 = cx.container(Default::default(), move |_cx| vec![]);
 
-            let carousel = fret_ui_shadcn::Carousel::new([slide_1, slide_2])
+            let carousel = shadcn::Carousel::new([slide_1, slide_2])
                 .drag_threshold_px(drag_threshold_px)
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)

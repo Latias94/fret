@@ -4,6 +4,7 @@ use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, SortSpec, TableState};
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -50,7 +51,7 @@ fn render_frame(
         bounds,
         "data-table-column-actions-menu",
         move |cx| {
-            let table = fret_ui_shadcn::DataTable::new()
+            let table = shadcn::DataTable::new()
                 .column_actions_menu(true)
                 .into_element_retained(
                     cx,

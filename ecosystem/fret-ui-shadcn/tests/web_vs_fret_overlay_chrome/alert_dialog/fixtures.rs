@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -15,7 +16,7 @@ struct AlertDialogOverlayChromeCase {
 }
 
 fn build_alert_dialog_demo(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
+    use shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
 
     AlertDialog::new(open.clone()).into_element(
         cx,

@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -42,7 +43,7 @@ struct DialogOverlayChromeCase {
 }
 
 fn build_dialog_demo(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+    use shadcn::{Button, ButtonVariant, Dialog, DialogContent};
 
     Dialog::new(open.clone()).into_element(
         cx,

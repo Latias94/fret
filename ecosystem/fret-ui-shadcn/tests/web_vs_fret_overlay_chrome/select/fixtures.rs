@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -50,10 +51,10 @@ fn build_select_simple_scrollable(
     open: &Model<bool>,
 ) -> AnyElement {
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-    fret_ui_shadcn::Select::new(value, open.clone())
+    shadcn::Select::new(value, open.clone())
         .a11y_label("Select")
-        .item(fret_ui_shadcn::SelectItem::new("one", "One"))
-        .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+        .item(shadcn::SelectItem::new("one", "One"))
+        .item(shadcn::SelectItem::new("two", "Two"))
         .into_element(cx)
 }
 

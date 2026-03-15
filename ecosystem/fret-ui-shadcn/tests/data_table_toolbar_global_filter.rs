@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{ColumnDef, TableState};
@@ -37,15 +38,14 @@ fn render_frame(
         bounds,
         "data-table-toolbar-global-filter",
         move |cx| {
-            let toolbar =
-                fret_ui_shadcn::DataTableToolbar::new(state.clone(), columns.clone(), |col| {
-                    Arc::clone(&col.id)
-                })
-                .show_global_filter(show_global_filter)
-                .show_columns_menu(show_columns_menu)
-                .show_pinning_menu(false)
-                .show_selected_text(false)
-                .into_element(cx);
+            let toolbar = shadcn::DataTableToolbar::new(state.clone(), columns.clone(), |col| {
+                Arc::clone(&col.id)
+            })
+            .show_global_filter(show_global_filter)
+            .show_columns_menu(show_columns_menu)
+            .show_pinning_menu(false)
+            .show_selected_text(false)
+            .into_element(cx);
             vec![toolbar]
         },
     );

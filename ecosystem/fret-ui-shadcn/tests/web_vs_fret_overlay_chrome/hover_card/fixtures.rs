@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -42,13 +43,12 @@ struct HoverCardOverlayChromeCase {
 }
 
 fn build_hover_card(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    let trigger_el = fret_ui_shadcn::Button::new("@nextjs")
-        .variant(fret_ui_shadcn::ButtonVariant::Link)
+    let trigger_el = shadcn::Button::new("@nextjs")
+        .variant(shadcn::ButtonVariant::Link)
         .into_element(cx);
-    let content_el =
-        fret_ui_shadcn::HoverCardContent::new(vec![cx.text("@nextjs")]).into_element(cx);
+    let content_el = shadcn::HoverCardContent::new(vec![cx.text("@nextjs")]).into_element(cx);
 
-    fret_ui_shadcn::HoverCard::new(cx, trigger_el, content_el)
+    shadcn::HoverCard::new(cx, trigger_el, content_el)
         .open(Some(open.clone()))
         .into_element(cx)
 }

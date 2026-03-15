@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -136,7 +137,7 @@ fn web_vs_fret_layout_scroll_area_demo_root_size() {
     let snap = run_fret_root(bounds, |cx| {
         let items: Vec<_> = (1..=50).map(|i| cx.text(format!("Item {i}"))).collect();
 
-        let scroll_area = fret_ui_shadcn::ScrollArea::new(items)
+        let scroll_area = shadcn::ScrollArea::new(items)
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
                     .w_px(Px(web_root.rect.w))
@@ -219,7 +220,7 @@ fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
             |_cx| vec![],
         );
 
-        let scroll_area = fret_ui_shadcn::ScrollArea::new(vec![content])
+        let scroll_area = shadcn::ScrollArea::new(vec![content])
             .scroll_handle(handle.clone())
             .refine_layout(LayoutRefinement::default().size_full())
             .into_element(cx);
@@ -311,7 +312,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
             |_cx| vec![],
         );
 
-        let scroll_area = fret_ui_shadcn::ScrollArea::new(vec![content])
+        let scroll_area = shadcn::ScrollArea::new(vec![content])
             .axis(fret_ui::element::ScrollAxis::Both)
             .scroll_handle(handle.clone())
             .refine_layout(LayoutRefinement::default().size_full())
@@ -434,16 +435,14 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -646,16 +645,14 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light(
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -849,16 +846,14 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark()
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1071,13 +1066,14 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
                         );
 
                         let scroll_area =
-                            fret_ui_shadcn::ScrollAreaRoot::new(
-                                fret_ui_shadcn::ScrollAreaViewport::new(vec![content]),
-                            )
+                            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![
+                                content,
+                            ]))
                             .scroll_handle(handle.clone())
-                            .scrollbar(fret_ui_shadcn::ScrollAreaScrollbar::new().orientation(
-                                fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical,
-                            ))
+                            .scrollbar(
+                                shadcn::ScrollAreaScrollbar::new()
+                                    .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                            )
                             .refine_layout(LayoutRefinement::default().size_full())
                             .into_element(cx);
 
@@ -1347,16 +1343,14 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1546,21 +1540,19 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal),
-            )
-            .corner(true)
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Horizontal),
+                )
+                .corner(true)
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1761,21 +1753,19 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal),
-            )
-            .corner(true)
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Horizontal),
+                )
+                .corner(true)
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1969,21 +1959,19 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal),
-            )
-            .corner(true)
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Horizontal),
+                )
+                .corner(true)
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -2198,16 +2186,19 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_ou
                         );
 
                         let scroll_area =
-                            fret_ui_shadcn::ScrollAreaRoot::new(
-                                fret_ui_shadcn::ScrollAreaViewport::new(vec![content]),
-                            )
+                            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![
+                                content,
+                            ]))
                             .scroll_handle(handle.clone())
-                            .scrollbar(fret_ui_shadcn::ScrollAreaScrollbar::new().orientation(
-                                fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical,
-                            ))
-                            .scrollbar(fret_ui_shadcn::ScrollAreaScrollbar::new().orientation(
-                                fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal,
-                            ))
+                            .scrollbar(
+                                shadcn::ScrollAreaScrollbar::new()
+                                    .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                            )
+                            .scrollbar(
+                                shadcn::ScrollAreaScrollbar::new().orientation(
+                                    shadcn::ScrollAreaScrollbarOrientation::Horizontal,
+                                ),
+                            )
                             .corner(true)
                             .refine_layout(LayoutRefinement::default().size_full())
                             .into_element(cx);
@@ -2468,21 +2459,19 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_bounds_match_web_scrolle
         );
 
         let scroll_area =
-            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
-                content,
-            ]))
-            .scroll_handle(handle.clone())
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .scrollbar(
-                fret_ui_shadcn::ScrollAreaScrollbar::new()
-                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal),
-            )
-            .corner(true)
-            .refine_layout(LayoutRefinement::default().size_full())
-            .into_element(cx);
+            shadcn::ScrollAreaRoot::new(shadcn::ScrollAreaViewport::new(vec![content]))
+                .scroll_handle(handle.clone())
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Vertical),
+                )
+                .scrollbar(
+                    shadcn::ScrollAreaScrollbar::new()
+                        .orientation(shadcn::ScrollAreaScrollbarOrientation::Horizontal),
+                )
+                .corner(true)
+                .refine_layout(LayoutRefinement::default().size_full())
+                .into_element(cx);
 
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {

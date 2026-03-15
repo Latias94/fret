@@ -7,8 +7,10 @@ const ALERT_RS: &str = include_str!("alert.rs");
 const AVATAR_RS: &str = include_str!("avatar.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
 const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
+const BUTTON_GROUP_RS: &str = include_str!("button_group.rs");
 const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
 const CARD_RS: &str = include_str!("card.rs");
+const CAROUSEL_RS: &str = include_str!("carousel.rs");
 const EMPTY_RS: &str = include_str!("empty.rs");
 const FIELD_RS: &str = include_str!("field.rs");
 const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
@@ -73,17 +75,16 @@ fn normalized_reexport_block(source: &str, marker: &str) -> String {
     normalize_ws(&tail[..end])
 }
 
-fn assert_root_and_facade_reexports(module: &str, names: &[&str]) {
+fn assert_facade_only_reexports(module: &str, names: &[&str]) {
     let root_marker = format!("pub use {module}::{{");
     let facade_marker = format!("pub use crate::{module}::{{");
-    let root_block = normalized_reexport_block(LIB_RS, &root_marker);
     let facade_block = normalized_reexport_block(LIB_RS, &facade_marker);
+    assert!(
+        !LIB_RS.contains(&root_marker),
+        "{module} should not re-export component families from the flat crate root"
+    );
 
     for name in names {
-        assert!(
-            root_block.contains(name),
-            "{module} should re-export `{name}` from the crate root"
-        );
         assert!(
             facade_block.contains(name),
             "{module} should re-export `{name}` from the curated facade"
@@ -211,15 +212,115 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("UiElementTestIdExt"));
     assert!(LIB_RS.contains("UiElementA11yExt"));
     assert!(LIB_RS.contains("UiElementKeyContextExt"));
-    assert!(LIB_RS.contains("#[doc(hidden)]\npub use accordion::{"));
+    assert!(!LIB_RS.contains("pub use accordion::{"));
+    assert!(!LIB_RS.contains("pub use button::{"));
     assert!(LIB_RS.contains("#[doc(hidden)]\npub use ::fret_ui_kit::declarative::icon;"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
 }
 
 #[test]
-fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_facade() {
-    assert_root_and_facade_reexports(
+fn curated_prelude_and_internal_glue_do_not_depend_on_hidden_root_compatibility_exports() {
+    let normalized_lib = normalize_ws(LIB_RS);
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use crate::direction::{DirectionProvider, LayoutDirection, use_direction};"
+        )),
+        "prelude should source direction helpers from the explicit module, not the hidden root"
+    );
+    assert!(
+        !normalized_lib.contains(&normalize_ws(
+            "pub use direction::{DirectionProvider, LayoutDirection, use_direction, with_direction_provider};"
+        )),
+        "crate root should not retain hidden direction compatibility exports"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use crate::facade::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
+        )),
+        "prelude should source authoring-critical family exports from the curated facade"
+    );
+    assert!(
+        !normalized_lib.contains(&normalize_ws(
+            "pub use crate::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
+        )),
+        "prelude should not depend on hidden flat root compatibility exports"
+    );
+
+    for (label, source, forbidden, required) in [
+        (
+            "button_group.rs",
+            BUTTON_GROUP_RS,
+            "use crate::{Button, Input, InputGroup, Select, Separator, SeparatorOrientation};",
+            "use crate::button::Button;",
+        ),
+        (
+            "carousel.rs",
+            CAROUSEL_RS,
+            "use crate::{Button, ButtonSize, ButtonVariant};",
+            "use crate::button::{Button, ButtonSize, ButtonVariant};",
+        ),
+        (
+            "command.rs",
+            COMMAND_RS,
+            "use crate::{Dialog, DialogContent, ScrollArea};",
+            "use crate::dialog::{Dialog, DialogContent};",
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            "use crate::{Button, ButtonSize, ButtonVariant, Input, Sheet, SheetContent, SheetSide, Skeleton};",
+            "use crate::button::{Button, ButtonSize, ButtonVariant};",
+        ),
+        (
+            "state.rs",
+            STATE_RS,
+            "use crate::{Alert, AlertDescription, AlertTitle, AlertVariant, Badge, BadgeVariant};",
+            "use crate::alert::{Alert, AlertDescription, AlertTitle, AlertVariant};",
+        ),
+        (
+            "ui_builder_ext/menus.rs",
+            UI_BUILDER_EXT_MENUS_RS,
+            "use crate::{ContextMenu, ContextMenuEntry, DropdownMenu, DropdownMenuEntry};",
+            "use crate::context_menu::{ContextMenu, ContextMenuEntry};",
+        ),
+        (
+            "ui_builder_ext/data.rs",
+            UI_BUILDER_EXT_DATA_RS,
+            "use crate::{DataGridCanvas, DataTable};",
+            "use crate::data_grid_canvas::DataGridCanvas;",
+        ),
+        (
+            "ui_builder_ext/overlay_roots.rs",
+            UI_BUILDER_EXT_OVERLAY_ROOTS_RS,
+            "use crate::{AlertDialog, Dialog, Drawer, Popover, Sheet};",
+            "use crate::alert_dialog::AlertDialog;",
+        ),
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "{label} should not import hidden flat root compatibility exports"
+        );
+        assert!(
+            source.contains(required),
+            "{label} should import explicit module/facade paths instead"
+        );
+    }
+
+    assert!(
+        TEXT_EDIT_CONTEXT_MENU_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
+        "raw seam docs should still teach the curated facade import"
+    );
+    assert!(
+        !TEXT_EDIT_CONTEXT_MENU_RS
+            .contains("# use fret_ui_shadcn::{Input, text_edit_context_menu_controllable};"),
+        "raw seam docs should not teach flat root component imports"
+    );
+}
+
+#[test]
+fn authoring_critical_family_exports_live_on_curated_facade_only() {
+    assert_facade_only_reexports(
         "select",
         &[
             "Select",
@@ -229,7 +330,7 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "SelectItem",
         ],
     );
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports(
         "combobox",
         &[
             "Combobox",
@@ -240,8 +341,8 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "ComboboxValue",
         ],
     );
-    assert_root_and_facade_reexports("combobox_chips", &["ComboboxChips", "ComboboxChipsPart"]);
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports("combobox_chips", &["ComboboxChips", "ComboboxChipsPart"]);
+    assert_facade_only_reexports(
         "command",
         &[
             "Command",
@@ -252,7 +353,7 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "command",
         ],
     );
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports(
         "navigation_menu",
         &[
             "NavigationMenu",
@@ -268,7 +369,7 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "navigation_menu_uncontrolled",
         ],
     );
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports(
         "pagination",
         &[
             "Pagination",

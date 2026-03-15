@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "navigation_menu/fixtures.rs"]
 mod fixtures;
@@ -11,7 +12,7 @@ fn assert_navigation_menu_trigger_surface_colors_match(
     web_theme_name: &str,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
 ) {
-    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+    use shadcn::{NavigationMenu, NavigationMenuItem};
 
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);

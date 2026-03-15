@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -85,14 +86,14 @@ fn build_menu(cx: &mut ElementContext<'_, App>, model: Model<Option<Arc<str>>>) 
     );
 
     let items = vec![
-        fret_ui_shadcn::NavigationMenuItem::new("alpha", "Alpha", [alpha_content])
+        shadcn::NavigationMenuItem::new("alpha", "Alpha", [alpha_content])
             .trigger_test_id("nav-trigger-alpha"),
-        fret_ui_shadcn::NavigationMenuItem::new("beta", "Beta", [beta_content])
+        shadcn::NavigationMenuItem::new("beta", "Beta", [beta_content])
             .trigger_test_id("nav-trigger-beta"),
     ];
 
     vec![
-        fret_ui_shadcn::NavigationMenu::new(model)
+        shadcn::NavigationMenu::new(model)
             .items(items)
             .viewport_test_id("nav-viewport")
             .into_element(cx),

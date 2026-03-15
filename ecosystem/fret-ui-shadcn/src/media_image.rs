@@ -9,7 +9,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::aspect_ratio::AspectRatio;
 use fret_ui_kit::{ChromeRefinement, ImageMetadataStore, LayoutRefinement, Space};
 
-use crate::Skeleton;
+use crate::skeleton::Skeleton;
 
 /// A small shadcn-style image recipe for cards/media rows.
 ///

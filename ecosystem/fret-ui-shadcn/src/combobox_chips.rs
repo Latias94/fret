@@ -28,11 +28,9 @@ use crate::combobox::{
     ComboboxOpenChangeReason, ComboboxStyle, ComboboxTrigger, ComboboxValue, combobox_group_items,
 };
 use crate::command::CommandPaletteA11ySelectedMode;
+use crate::command::{CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator};
+use crate::popover::{Popover, PopoverContent};
 use crate::test_id::test_id_slug;
-use crate::{
-    CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
-    PopoverContent,
-};
 
 /// Part-based authoring surface aligned with shadcn/ui v4 exports.
 #[derive(Debug)]
@@ -397,7 +395,8 @@ mod tests {
         apply_parts_patch_to_chips(
             &mut chips,
             vec![
-                ComboboxValue::new([crate::ComboboxChip::new("a").show_remove(false)]).into(),
+                ComboboxValue::new([crate::combobox::ComboboxChip::new("a").show_remove(false)])
+                    .into(),
                 ComboboxChipsInput::new()
                     .placeholder("Add framework")
                     .into(),
@@ -448,9 +447,10 @@ mod tests {
         let open = app.models_mut().insert(false);
 
         let chips = ComboboxChips::new(values, open)
-            .value(ComboboxValue::new([
-                crate::ComboboxChip::new("a").show_remove(false)
-            ]))
+            .value(ComboboxValue::new([crate::combobox::ComboboxChip::new(
+                "a",
+            )
+            .show_remove(false)]))
             .input(ComboboxChipsInput::new().placeholder("Select frameworks"))
             .trigger(ComboboxTrigger::new().width_px(Px(260.0)))
             .content(ComboboxContent::new([
@@ -697,7 +697,7 @@ fn combobox_chips_with_patch<H: UiHost>(
 
 	                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
 	                        states.set(WidgetState::Open, is_open);
-	                        let dir = crate::use_direction(cx, None);
+	                        let dir = crate::direction::use_direction(cx, None);
 
                         let bg_ref = resolve_override_slot(
                             style_override.trigger_background.as_ref(),

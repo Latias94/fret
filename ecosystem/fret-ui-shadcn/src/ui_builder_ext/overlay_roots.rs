@@ -2,7 +2,11 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::{IntoUiElement, UiBuilder};
 
-use crate::{AlertDialog, Dialog, Drawer, Popover, Sheet};
+use crate::alert_dialog::AlertDialog;
+use crate::dialog::Dialog;
+use crate::drawer::Drawer;
+use crate::popover::Popover;
+use crate::sheet::Sheet;
 
 pub trait PopoverUiBuilderExt {
     fn into_element<H: UiHost, TTrigger, TContent>(

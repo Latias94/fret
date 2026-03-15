@@ -534,7 +534,7 @@ impl CardHeader {
                     LayoutRefinement::default().w_full(),
                 )
             };
-            let separator = crate::Separator::new().into_element(cx);
+            let separator = crate::separator::Separator::new().into_element(cx);
             shadcn_layout::container_vstack(
                 cx,
                 outer_props,
@@ -1018,7 +1018,7 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let button = crate::Button::new("Inline").into_element(cx);
+            let button = crate::button::Button::new("Inline").into_element(cx);
             let el = CardContent::new([button]).into_element(cx);
 
             let child = el
@@ -2140,7 +2140,7 @@ impl CardFooter {
                 )
             };
 
-            let separator = crate::Separator::new().into_element(cx);
+            let separator = crate::separator::Separator::new().into_element(cx);
             shadcn_layout::container_vstack(
                 cx,
                 outer_props,

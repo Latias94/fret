@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -21,8 +22,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<shadcn::CarouselApiSnapshot>,
+    opts: shadcn::CarouselOptions,
     carousel_width: Px,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
@@ -38,11 +39,11 @@ fn render_frame(
         "carousel-breakpoints",
         move |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .breakpoint(
                     Px(300.0),
-                    fret_ui_shadcn::CarouselOptionsPatch {
+                    shadcn::CarouselOptionsPatch {
                         loop_enabled: Some(true),
                         ..Default::default()
                     },
@@ -77,8 +78,8 @@ fn carousel_breakpoints_toggle_loop_enabled_by_viewport_width() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let opts = shadcn::CarouselOptions::default();
 
     // Below breakpoint: loop remains disabled, so can_scroll_prev should be false at index=0.
     for _ in 0..3 {

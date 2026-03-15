@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_button_as_child_geometry_matches_web() {
@@ -13,7 +14,7 @@ fn web_vs_fret_layout_button_as_child_geometry_matches_web() {
 
     let mut services = StyleAwareServices::default();
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
-        vec![fret_ui_shadcn::Button::new("Login").into_element(cx)]
+        vec![shadcn::Button::new("Login").into_element(cx)]
     });
 
     let button = find_semantics(&snap, SemanticsRole::Button, Some("Login"))

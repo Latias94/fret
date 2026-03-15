@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -57,7 +58,7 @@ fn build_navigation_menu_demo(
     viewport: bool,
     indicator: bool,
 ) -> AnyElement {
-    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+    use shadcn::{NavigationMenu, NavigationMenuItem};
 
     let el = NavigationMenu::new(model.clone())
         .viewport(viewport)

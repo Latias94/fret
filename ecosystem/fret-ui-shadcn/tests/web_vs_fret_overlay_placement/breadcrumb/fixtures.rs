@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 use serde::Deserialize;
 
@@ -22,7 +23,7 @@ fn build_breadcrumb_demo_ellipsis(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_shadcn::breadcrumb::primitives as bc;
-    use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
+    use shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
 
     let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 
@@ -76,7 +77,7 @@ fn build_breadcrumb_dropdown_button(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_shadcn::breadcrumb::primitives as bc;
-    use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
+    use shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
 
     let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 
@@ -164,7 +165,7 @@ fn build_breadcrumb_responsive_menu(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_shadcn::breadcrumb::primitives as bc;
-    use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
+    use shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
 
     let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 

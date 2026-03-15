@@ -6,6 +6,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::ui;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -31,7 +32,7 @@ fn render_frame(
     data_revision: u64,
     state: Model<TableState>,
     columns: Arc<[ColumnDef<RowData>]>,
-    output: Model<fret_ui_shadcn::DataTableViewOutput>,
+    output: Model<shadcn::DataTableViewOutput>,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -45,7 +46,7 @@ fn render_frame(
         bounds,
         "data-table-pagination",
         move |cx: &mut ElementContext<'_, App>| {
-            let table = fret_ui_shadcn::DataTable::new()
+            let table = shadcn::DataTable::new()
                 .output_model(output.clone())
                 .into_element(
                     cx,
@@ -61,8 +62,7 @@ fn render_frame(
                     },
                 );
             let pagination =
-                fret_ui_shadcn::DataTablePagination::new(state.clone(), output.clone())
-                    .into_element(cx);
+                shadcn::DataTablePagination::new(state.clone(), output.clone()).into_element(cx);
             vec![ui::v_stack(move |_cx| vec![table, pagination]).into_element(cx)]
         },
     );
@@ -147,8 +147,7 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
         Arc::from(vec![ColumnDef::new("id")].into_boxed_slice());
 
     let state: Model<TableState> = app.models_mut().insert(TableState::default());
-    let output: Model<fret_ui_shadcn::DataTableViewOutput> =
-        app.models_mut().insert(Default::default());
+    let output: Model<shadcn::DataTableViewOutput> = app.models_mut().insert(Default::default());
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);

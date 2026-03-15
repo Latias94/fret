@@ -10,7 +10,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::facade::{Button, ButtonSize, ButtonVariant};
 
 use super::conversation::{
     CONVERSATION_SCROLL_BUTTON_SLOT_KEY, conversation_slot_placeholder, use_conversation_context,

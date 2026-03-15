@@ -13,7 +13,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, ScrollArea};
+use fret_ui_shadcn::facade::{Button, ButtonSize, ButtonVariant, ScrollArea};
 
 use crate::model::MessageId;
 use crate::{Message, MessageContent, MessageRole};

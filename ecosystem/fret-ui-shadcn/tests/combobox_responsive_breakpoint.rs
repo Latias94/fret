@@ -11,6 +11,7 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_shadcn::shadcn_themes;
 use std::sync::Arc;
 
@@ -147,8 +148,8 @@ fn render_frame(
                                             .test_id_prefix("combobox-responsive")
                                             .items(items)
                                             .into_element_parts(cx, |_cx| {
-                                                vec![fret_ui_shadcn::ComboboxPart::from(
-                                                    fret_ui_shadcn::ComboboxInput::new()
+                                                vec![shadcn::ComboboxPart::from(
+                                                    shadcn::ComboboxInput::new()
                                                         .placeholder("Select an option"),
                                                 )]
                                             }),

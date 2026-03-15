@@ -9,6 +9,7 @@ use fret_ui_kit::ChromeRefinement;
 use fret_ui_kit::Space;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui as decl_stack;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use time::{Date, Month};
 
@@ -623,32 +624,32 @@ fn web_vs_fret_button_group_demo_button_chrome_matches() {
             .expect("web More Options borderTopRightRadius");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let go_back = fret_ui_shadcn::Button::new("Go Back")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .size(fret_ui_shadcn::ButtonSize::Icon)
+        let go_back = shadcn::Button::new("Go Back")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
             .into();
 
-        let archive = fret_ui_shadcn::Button::new("Archive")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+        let archive = shadcn::Button::new("Archive")
+            .variant(shadcn::ButtonVariant::Outline)
             .into();
-        let report = fret_ui_shadcn::Button::new("Report")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+        let report = shadcn::Button::new("Report")
+            .variant(shadcn::ButtonVariant::Outline)
             .into();
 
-        let snooze = fret_ui_shadcn::Button::new("Snooze")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+        let snooze = shadcn::Button::new("Snooze")
+            .variant(shadcn::ButtonVariant::Outline)
             .into();
-        let more_options = fret_ui_shadcn::Button::new("More Options")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .size(fret_ui_shadcn::ButtonSize::Icon)
+        let more_options = shadcn::Button::new("More Options")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
             .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
             .into();
 
-        let top = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::ButtonGroup::new(vec![go_back]).into(),
-            fret_ui_shadcn::ButtonGroup::new(vec![archive, report]).into(),
-            fret_ui_shadcn::ButtonGroup::new(vec![snooze, more_options]).into(),
+        let top = shadcn::ButtonGroup::new(vec![
+            shadcn::ButtonGroup::new(vec![go_back]).into(),
+            shadcn::ButtonGroup::new(vec![archive, report]).into(),
+            shadcn::ButtonGroup::new(vec![snooze, more_options]).into(),
         ]);
 
         vec![top.into_element(cx)]
@@ -825,14 +826,14 @@ fn web_vs_fret_button_group_split_chrome_matches() {
         .expect("web icon borderTopRightRadius");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let split = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("Button")
-                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+        let split = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Secondary)
                 .into(),
-            fret_ui_shadcn::ButtonGroupSeparator::new().into(),
-            fret_ui_shadcn::Button::new("Menu")
-                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+            shadcn::ButtonGroupSeparator::new().into(),
+            shadcn::Button::new("Menu")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Icon)
                 .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
                 .into(),
         ]);
@@ -986,20 +987,20 @@ fn web_vs_fret_button_group_orientation_vertical_chrome_matches() {
             .expect("web bottom borderBottomLeftRadius");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let group = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("Play")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+        let group = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("Play")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
                 .children(vec![decl_icon::icon(cx, ids::ui::PLAY)])
                 .into(),
-            fret_ui_shadcn::Button::new("Stop")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+            shadcn::Button::new("Stop")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
                 .children(vec![decl_icon::icon(cx, ids::ui::CLOSE)])
                 .into(),
         ])
         .a11y_label("Media controls")
-        .orientation(fret_ui_shadcn::ButtonGroupOrientation::Vertical);
+        .orientation(shadcn::ButtonGroupOrientation::Vertical);
 
         vec![group.into_element(cx)]
     });
@@ -1158,48 +1159,48 @@ fn web_vs_fret_button_group_nested_geometry_and_chrome_match() {
         .expect("web Next borderTopRightRadius");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let group_a = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("1")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+        let group_a = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("1")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .into(),
-            fret_ui_shadcn::Button::new("2")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("2")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .into(),
-            fret_ui_shadcn::Button::new("3")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("3")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .into(),
-            fret_ui_shadcn::Button::new("4")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("4")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .into(),
-            fret_ui_shadcn::Button::new("5")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("5")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .into(),
         ])
         .a11y_label("NestedGroupA")
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group_a.rect.w)));
 
-        let group_b = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("Previous")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::IconSm)
+        let group_b = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("Previous")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
                 .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
                 .into(),
-            fret_ui_shadcn::Button::new("Next")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::IconSm)
+            shadcn::Button::new("Next")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
                 .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
                 .into(),
         ])
         .a11y_label("NestedGroupB")
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group_b.rect.w)));
 
-        let outer = fret_ui_shadcn::ButtonGroup::new(vec![group_a.into(), group_b.into()])
-            .a11y_label("OuterGroup");
+        let outer =
+            shadcn::ButtonGroup::new(vec![group_a.into(), group_b.into()]).a11y_label("OuterGroup");
 
         vec![outer.into_element(cx)]
     });
@@ -1357,15 +1358,15 @@ fn web_vs_fret_button_group_separator_geometry_and_chrome_match() {
         .expect("web Paste borderTopRightRadius");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let group = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("Copy")
-                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+        let group = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("Copy")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
                 .into(),
-            fret_ui_shadcn::ButtonGroupSeparator::new().into(),
-            fret_ui_shadcn::Button::new("Paste")
-                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::ButtonGroupSeparator::new().into(),
+            shadcn::Button::new("Paste")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
                 .into(),
         ]);
         vec![group.into_element(cx)]
@@ -1576,75 +1577,75 @@ fn web_vs_fret_button_group_size_geometry_and_chrome_match() {
         web_border_width_px_for(web_lg_icon, "borderLeftWidth").expect("web large icon borderLeft");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let group_sm = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("Small")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+        let group_sm = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("Small")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .test_id("button-group-size.sm.first")
                 .into(),
-            fret_ui_shadcn::Button::new("Button")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .test_id("button-group-size.sm.mid")
                 .into(),
-            fret_ui_shadcn::Button::new("Group")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .test_id("button-group-size.sm.last_text")
                 .into(),
-            fret_ui_shadcn::Button::new("")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::IconSm)
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
                 .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
                 .test_id("button-group-size.sm.icon")
                 .into(),
         ])
         .a11y_label("ButtonGroupSizeSm");
 
-        let group_md = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("Default")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Default)
+        let group_md = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("Default")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Default)
                 .test_id("button-group-size.md.first")
                 .into(),
-            fret_ui_shadcn::Button::new("Button")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Default)
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Default)
                 .test_id("button-group-size.md.mid")
                 .into(),
-            fret_ui_shadcn::Button::new("Group")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Default)
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Default)
                 .test_id("button-group-size.md.last_text")
                 .into(),
-            fret_ui_shadcn::Button::new("")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
                 .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
                 .test_id("button-group-size.md.icon")
                 .into(),
         ])
         .a11y_label("ButtonGroupSizeMd");
 
-        let group_lg = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::Button::new("Large")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Lg)
+        let group_lg = shadcn::ButtonGroup::new(vec![
+            shadcn::Button::new("Large")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
                 .test_id("button-group-size.lg.first")
                 .into(),
-            fret_ui_shadcn::Button::new("Button")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Lg)
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
                 .test_id("button-group-size.lg.mid")
                 .into(),
-            fret_ui_shadcn::Button::new("Group")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Lg)
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
                 .test_id("button-group-size.lg.last_text")
                 .into(),
-            fret_ui_shadcn::Button::new("")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::IconLg)
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconLg)
                 .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
                 .test_id("button-group-size.lg.icon")
                 .into(),
@@ -1956,21 +1957,21 @@ fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
             .expect("web trigger borderTopRightRadius");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let follow = fret_ui_shadcn::Button::new("Follow")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+        let follow = shadcn::Button::new("Follow")
+            .variant(shadcn::ButtonVariant::Outline)
             .into();
 
         // Upstream `button-group-dropdown` uses asymmetric padding (`pl-2 pr-3`) for the trigger.
         // We express that via `ChromeRefinement` without changing global button sizing rules.
-        let trigger = fret_ui_shadcn::Button::new("")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+        let trigger = shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Outline)
             .refine_style(ChromeRefinement::default().pl(Space::N2).pr(Space::N3))
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
             .test_id("button-group-dropdown.trigger")
             .into();
 
-        let group = fret_ui_shadcn::ButtonGroup::new(vec![follow, trigger])
-            .a11y_label("ButtonGroupDropdown");
+        let group =
+            shadcn::ButtonGroup::new(vec![follow, trigger]).a11y_label("ButtonGroupDropdown");
         vec![group.into_element(cx)]
     });
 
@@ -2081,8 +2082,8 @@ fn web_vs_fret_button_group_popover_geometry_and_chrome_match() {
             .expect("web trigger borderTopRightRadius");
 
     let (snap, scene) = render_and_paint(|cx| {
-        let lead = fret_ui_shadcn::Button::new("")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+        let lead = shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Outline)
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
             .test_id("button-group-popover.lead")
             .refine_layout(
@@ -2092,15 +2093,14 @@ fn web_vs_fret_button_group_popover_geometry_and_chrome_match() {
             )
             .into();
 
-        let trigger = fret_ui_shadcn::Button::new("Open Popover")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .size(fret_ui_shadcn::ButtonSize::Icon)
+        let trigger = shadcn::Button::new("Open Popover")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
             .test_id("button-group-popover.trigger")
             .into();
 
-        let group =
-            fret_ui_shadcn::ButtonGroup::new(vec![lead, trigger]).a11y_label("ButtonGroupPopover");
+        let group = shadcn::ButtonGroup::new(vec![lead, trigger]).a11y_label("ButtonGroupPopover");
         vec![group.into_element(cx)]
     });
 
@@ -2219,7 +2219,7 @@ fn web_vs_fret_button_group_input_geometry_and_chrome_match() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
 
-        let input = fret_ui_shadcn::Input::new(model)
+        let input = shadcn::Input::new(model)
             .a11y_label("ButtonGroupInputInput")
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_input.rect.w)))
             .corner_radii_override(Corners {
@@ -2230,8 +2230,8 @@ fn web_vs_fret_button_group_input_geometry_and_chrome_match() {
             })
             .into_element(cx);
 
-        let button = fret_ui_shadcn::Button::new("Search")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+        let button = shadcn::Button::new("Search")
+            .variant(shadcn::ButtonVariant::Outline)
             .border_left_width_override(Px(0.0))
             .corner_radii_override(Corners {
                 top_left: Px(0.0),
@@ -2349,7 +2349,7 @@ fn web_vs_fret_input_demo_focus_ring_matches() {
         |cx| {
             let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
             vec![
-                fret_ui_shadcn::Input::new(model)
+                shadcn::Input::new(model)
                     .a11y_label("InputDemoInput")
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
@@ -2420,7 +2420,7 @@ fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
         |cx| {
             let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
             vec![
-                fret_ui_shadcn::Input::new(model)
+                shadcn::Input::new(model)
                     .a11y_label("InputDemoInputInvalid")
                     .aria_invalid(true)
                     .refine_layout(
@@ -2508,7 +2508,7 @@ fn web_vs_fret_input_group_demo_focus_ring_matches() {
                 ink_overflow: Default::default(),
             })];
 
-            let group = fret_ui_shadcn::InputGroup::new(model)
+            let group = shadcn::InputGroup::new(model)
                 .a11y_label("InputGroupControl")
                 .leading(leading)
                 .trailing(trailing)
@@ -2594,7 +2594,7 @@ fn web_vs_fret_input_group_demo_aria_invalid_focus_ring_matches() {
                 ink_overflow: Default::default(),
             })];
 
-            let group = fret_ui_shadcn::InputGroup::new(model)
+            let group = shadcn::InputGroup::new(model)
                 .a11y_label("InputGroupControlInvalid")
                 .aria_invalid(true)
                 .leading(leading)
@@ -2688,8 +2688,8 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
 
         let radius = Px(8.0);
 
-        let select = fret_ui_shadcn::Select::new(select_value, select_open)
-            .value(fret_ui_shadcn::SelectValue::new().placeholder(""))
+        let select = shadcn::Select::new(select_value, select_open)
+            .value(shadcn::SelectValue::new().placeholder(""))
             .a11y_label("ButtonGroupSelectCombobox")
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
@@ -2704,7 +2704,7 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
             })
             .into_element(cx);
 
-        let input = fret_ui_shadcn::Input::new(input_model)
+        let input = shadcn::Input::new(input_model)
             .a11y_label("ButtonGroupSelectInput")
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
@@ -2742,9 +2742,9 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
             },
         );
 
-        let send = fret_ui_shadcn::Button::new("Send")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .size(fret_ui_shadcn::ButtonSize::Icon)
+        let send = shadcn::Button::new("Send")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
             .test_id("button-group-select.send")
             .into_element(cx);
@@ -2895,15 +2895,15 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
 
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
 
-        let left = fret_ui_shadcn::Button::new("")
-            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .size(fret_ui_shadcn::ButtonSize::Icon)
+        let left = shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
             .corner_radii_override(Corners::all(Px(9999.0)))
             .test_id("button-group-input-group.left")
             .into_element(cx);
 
-        let input = fret_ui_shadcn::Input::new(model)
+        let input = shadcn::Input::new(model)
             .a11y_label("ButtonGroupInputGroupInput")
             .refine_style(
                 ChromeRefinement::default()
@@ -3141,7 +3141,7 @@ fn web_vs_fret_input_demo_control_chrome_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::Input::new(model)
+            shadcn::Input::new(model)
                 .a11y_label("Input")
                 .into_element(cx),
         ]
@@ -3195,7 +3195,7 @@ fn web_vs_fret_input_demo_aria_invalid_border_color_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::Input::new(model)
+            shadcn::Input::new(model)
                 .a11y_label("Input")
                 .aria_invalid(true)
                 .into_element(cx),
@@ -3250,7 +3250,7 @@ fn web_vs_fret_input_group_demo_aria_invalid_border_color_matches() {
     let (_snap, scene) = render_and_paint_in_bounds(CoreSize::new(Px(web_w), Px(web_h)), |cx| {
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::InputGroup::new(model)
+            shadcn::InputGroup::new(model)
                 .aria_invalid(true)
                 .into_element(cx),
         ]
@@ -3290,7 +3290,7 @@ fn web_vs_fret_badge_demo_chrome_matches() {
 
     let (_snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Badge::new("Badge")
+            shadcn::Badge::new("Badge")
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(web_w))
@@ -3319,7 +3319,7 @@ fn web_vs_fret_badge_demo_chrome_matches() {
 fn assert_badge_variant_chrome_matches(
     web_name: &str,
     label: &'static str,
-    variant: fret_ui_shadcn::BadgeVariant,
+    variant: shadcn::BadgeVariant,
 ) {
     let web = read_web_golden(web_name);
     let theme = web
@@ -3340,7 +3340,7 @@ fn assert_badge_variant_chrome_matches(
 
     let (_snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Badge::new(label)
+            shadcn::Badge::new(label)
                 .variant(variant)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
@@ -3372,7 +3372,7 @@ fn web_vs_fret_badge_secondary_chrome_matches() {
     assert_badge_variant_chrome_matches(
         "badge-secondary",
         "Secondary",
-        fret_ui_shadcn::BadgeVariant::Secondary,
+        shadcn::BadgeVariant::Secondary,
     );
 }
 
@@ -3381,17 +3381,13 @@ fn web_vs_fret_badge_destructive_chrome_matches() {
     assert_badge_variant_chrome_matches(
         "badge-destructive",
         "Destructive",
-        fret_ui_shadcn::BadgeVariant::Destructive,
+        shadcn::BadgeVariant::Destructive,
     );
 }
 
 #[test]
 fn web_vs_fret_badge_outline_chrome_matches() {
-    assert_badge_variant_chrome_matches(
-        "badge-outline",
-        "Outline",
-        fret_ui_shadcn::BadgeVariant::Outline,
-    );
+    assert_badge_variant_chrome_matches("badge-outline", "Outline", shadcn::BadgeVariant::Outline);
 }
 
 #[test]
@@ -3423,7 +3419,7 @@ fn web_vs_fret_card_demo_chrome_matches() {
 
     let (_snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Card::new(Vec::new())
+            shadcn::Card::new(Vec::new())
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(web_w))
@@ -3466,8 +3462,7 @@ fn web_vs_fret_kbd_demo_key_chrome_matches() {
     let web_w = web_kbd.rect.w;
     let web_h = web_kbd.rect.h;
 
-    let (_snap, scene) =
-        render_and_paint(|cx| vec![fret_ui_shadcn::Kbd::new("B").into_element(cx)]);
+    let (_snap, scene) = render_and_paint(|cx| vec![shadcn::Kbd::new("B").into_element(cx)]);
 
     let target = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3507,8 +3502,8 @@ fn web_vs_fret_separator_demo_geometry_matches() {
     let (_snap, scene) =
         render_and_paint_in_bounds(CoreSize::new(Px(web_sep_h.rect.w), Px(80.0)), |cx| {
             vec![
-                fret_ui_shadcn::Separator::new()
-                    .orientation(fret_ui_shadcn::SeparatorOrientation::Horizontal)
+                shadcn::Separator::new()
+                    .orientation(shadcn::SeparatorOrientation::Horizontal)
                     .into_element(cx),
             ]
         });
@@ -3534,8 +3529,8 @@ fn web_vs_fret_separator_demo_geometry_matches() {
     let (_snap, scene) =
         render_and_paint_in_bounds(CoreSize::new(Px(80.0), Px(web_sep_v.rect.h)), |cx| {
             vec![
-                fret_ui_shadcn::Separator::new()
-                    .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+                shadcn::Separator::new()
+                    .orientation(shadcn::SeparatorOrientation::Vertical)
                     .into_element(cx),
             ]
         });
@@ -3598,25 +3593,25 @@ fn web_vs_fret_toggle_group_demo_chrome_matches() {
     let (_snap, scene) = render_and_paint(|cx| {
         use fret_icons::ids::ui as icon_ids;
 
-        let i1 = fret_ui_shadcn::ToggleGroupItem::new(
+        let i1 = shadcn::ToggleGroupItem::new(
             "bold",
             vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CHECK.clone())],
         )
         .a11y_label("Toggle bold");
-        let i2 = fret_ui_shadcn::ToggleGroupItem::new(
+        let i2 = shadcn::ToggleGroupItem::new(
             "italic",
             vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CHEVRON_UP.clone())],
         )
         .a11y_label("Toggle italic");
-        let i3 = fret_ui_shadcn::ToggleGroupItem::new(
+        let i3 = shadcn::ToggleGroupItem::new(
             "strike",
             vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CLOSE.clone())],
         )
         .a11y_label("Toggle strikethrough");
 
         vec![
-            fret_ui_shadcn::ToggleGroup::single_uncontrolled::<&str>(None)
-                .variant(fret_ui_shadcn::ToggleVariant::Outline)
+            shadcn::ToggleGroup::single_uncontrolled::<&str>(None)
+                .variant(shadcn::ToggleVariant::Outline)
                 .items([i1, i2, i3])
                 .into_element(cx),
         ]
@@ -3778,8 +3773,8 @@ fn web_vs_fret_button_demo_control_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Button::new("Button")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(web_w))
@@ -3829,8 +3824,8 @@ fn web_vs_fret_button_demo_focus_ring_matches() {
         CoreSize::new(Px(1024.0), Px(768.0)),
         |cx| {
             vec![
-                fret_ui_shadcn::Button::new("Button")
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                shadcn::Button::new("Button")
+                    .variant(shadcn::ButtonVariant::Outline)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(web_button.rect.w))
@@ -3882,9 +3877,9 @@ fn web_vs_fret_button_icon_control_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Button::new("Icon")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+            shadcn::Button::new("Icon")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
                 .into_element(cx),
         ]
     });
@@ -3935,9 +3930,9 @@ fn web_vs_fret_button_loading_control_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Button::new("Submit")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Submit")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(true)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
@@ -3994,9 +3989,9 @@ fn web_vs_fret_button_rounded_control_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Button::new("Up")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+            shadcn::Button::new("Up")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
                 .refine_style(
                     fret_ui_kit::ChromeRefinement::default().rounded(fret_ui_kit::Radius::Full),
                 )
@@ -4050,9 +4045,9 @@ fn web_vs_fret_button_with_icon_control_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Button::new("New Branch")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("New Branch")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(web_w))
@@ -4125,34 +4120,34 @@ fn web_vs_fret_button_size_demo_heights_match() {
 
     let (snap, _scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Button::new("Small")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Small")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .test_id("button-size.small")
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::IconSm)
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
                 .test_id("button-size.icon-sm")
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("Default")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Default)
+            shadcn::Button::new("Default")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Default)
                 .test_id("button-size.default")
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
                 .test_id("button-size.icon")
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("Large")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Lg)
+            shadcn::Button::new("Large")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
                 .test_id("button-size.large")
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::IconLg)
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconLg)
                 .test_id("button-size.icon-lg")
                 .into_element(cx),
         ]
@@ -4257,7 +4252,7 @@ fn web_vs_fret_textarea_demo_control_chrome_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::Textarea::new(model)
+            shadcn::Textarea::new(model)
                 .a11y_label("Textarea")
                 .into_element(cx),
         ]
@@ -4306,7 +4301,7 @@ fn web_vs_fret_textarea_demo_aria_invalid_border_color_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::Textarea::new(model)
+            shadcn::Textarea::new(model)
                 .a11y_label("TextareaInvalid")
                 .aria_invalid(true)
                 .into_element(cx),
@@ -4354,7 +4349,7 @@ fn web_vs_fret_textarea_demo_focus_ring_matches() {
         |cx| {
             let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
             vec![
-                fret_ui_shadcn::Textarea::new(model)
+                shadcn::Textarea::new(model)
                     .a11y_label("TextareaFocus")
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
@@ -4411,7 +4406,7 @@ fn web_vs_fret_textarea_demo_aria_invalid_focus_ring_matches() {
         |cx| {
             let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
             vec![
-                fret_ui_shadcn::Textarea::new(model)
+                shadcn::Textarea::new(model)
                     .a11y_label("TextareaInvalidFocus")
                     .aria_invalid(true)
                     .refine_layout(
@@ -4476,10 +4471,10 @@ fn web_vs_fret_select_scrollable_trigger_chrome_matches() {
         let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
         let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
         vec![
-            fret_ui_shadcn::Select::new(model, open)
+            shadcn::Select::new(model, open)
                 .a11y_label("Select")
-                .item(fret_ui_shadcn::SelectItem::new("one", "One"))
-                .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                .item(shadcn::SelectItem::new("one", "One"))
+                .item(shadcn::SelectItem::new("two", "Two"))
                 .into_element(cx),
         ]
     });
@@ -4530,11 +4525,11 @@ fn web_vs_fret_select_demo_aria_invalid_border_color_matches() {
         let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
         let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
         vec![
-            fret_ui_shadcn::Select::new(model, open)
+            shadcn::Select::new(model, open)
                 .a11y_label("SelectInvalid")
                 .aria_invalid(true)
-                .item(fret_ui_shadcn::SelectItem::new("one", "One"))
-                .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                .item(shadcn::SelectItem::new("one", "One"))
+                .item(shadcn::SelectItem::new("two", "Two"))
                 .into_element(cx),
         ]
     });
@@ -4582,10 +4577,10 @@ fn web_vs_fret_select_demo_focus_ring_matches() {
             let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
             let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
             vec![
-                fret_ui_shadcn::Select::new(model, open)
+                shadcn::Select::new(model, open)
                     .a11y_label("SelectFocus")
-                    .item(fret_ui_shadcn::SelectItem::new("one", "One"))
-                    .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                    .item(shadcn::SelectItem::new("one", "One"))
+                    .item(shadcn::SelectItem::new("two", "Two"))
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(web_trigger.rect.w))
@@ -4661,7 +4656,7 @@ fn web_vs_fret_calendar_14_focus_ring_matches_web() {
             let selected: fret_runtime::Model<Option<Date>> =
                 cx.app.models_mut().insert(Some(selected_date));
 
-            let calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+            let calendar = shadcn::Calendar::new(month_model, selected)
                 .cell_size(Px(web_focused_button.rect.w))
                 .refine_style(
                     ChromeRefinement::default()
@@ -4751,7 +4746,7 @@ fn web_vs_fret_calendar_14_vp375x320_focus_ring_matches_web() {
             let selected: fret_runtime::Model<Option<Date>> =
                 cx.app.models_mut().insert(Some(selected_date));
 
-            let calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+            let calendar = shadcn::Calendar::new(month_model, selected)
                 .cell_size(Px(web_focused_button.rect.w))
                 .refine_style(
                     ChromeRefinement::default()
@@ -4851,7 +4846,7 @@ fn web_vs_fret_calendar_03_focus_ring_matches_web() {
             let selected: fret_runtime::Model<Vec<Date>> =
                 cx.app.models_mut().insert(selected_dates.clone());
 
-            let calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+            let calendar = shadcn::CalendarMultiple::new(month_model, selected)
                 .required(true)
                 .max(5)
                 .cell_size(Px(web_focused_button.rect.w))
@@ -4953,7 +4948,7 @@ fn web_vs_fret_calendar_03_vp375x320_focus_ring_matches_web() {
             let selected: fret_runtime::Model<Vec<Date>> =
                 cx.app.models_mut().insert(selected_dates.clone());
 
-            let calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+            let calendar = shadcn::CalendarMultiple::new(month_model, selected)
                 .required(true)
                 .max(5)
                 .cell_size(Px(web_focused_button.rect.w))
@@ -5068,7 +5063,7 @@ fn web_vs_fret_calendar_04_focus_ring_matches_web() {
                     to: Some(range_max),
                 });
 
-            let calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+            let calendar = shadcn::CalendarRange::new(month_model, selected)
                 .cell_size(Px(web_focused_button.rect.w))
                 .refine_style(
                     ChromeRefinement::default()
@@ -5181,7 +5176,7 @@ fn web_vs_fret_calendar_04_vp375x320_focus_ring_matches_web() {
                     to: Some(range_max),
                 });
 
-            let calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+            let calendar = shadcn::CalendarRange::new(month_model, selected)
                 .cell_size(Px(web_focused_button.rect.w))
                 .refine_style(
                     ChromeRefinement::default()
@@ -5254,11 +5249,11 @@ fn web_vs_fret_select_demo_aria_invalid_focus_ring_matches() {
             let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
             let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
             vec![
-                fret_ui_shadcn::Select::new(model, open)
+                shadcn::Select::new(model, open)
                     .a11y_label("SelectInvalidFocus")
                     .aria_invalid(true)
-                    .item(fret_ui_shadcn::SelectItem::new("one", "One"))
-                    .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                    .item(shadcn::SelectItem::new("one", "One"))
+                    .item(shadcn::SelectItem::new("two", "Two"))
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(web_trigger.rect.w))
@@ -5320,7 +5315,7 @@ fn web_vs_fret_switch_demo_track_chrome_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
         vec![
-            fret_ui_shadcn::Switch::new(model)
+            shadcn::Switch::new(model)
                 .a11y_label("Switch")
                 .into_element(cx),
         ]
@@ -5366,7 +5361,7 @@ fn web_vs_fret_switch_demo_focus_ring_matches() {
         |cx| {
             let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
             vec![
-                fret_ui_shadcn::Switch::new(model)
+                shadcn::Switch::new(model)
                     .a11y_label("SwitchFocus")
                     .into_element(cx),
             ]
@@ -5421,7 +5416,7 @@ fn web_vs_fret_checkbox_demo_control_chrome_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
         vec![
-            fret_ui_shadcn::Checkbox::new(model)
+            shadcn::Checkbox::new(model)
                 .a11y_label("Checkbox")
                 .into_element(cx),
         ]
@@ -5471,7 +5466,7 @@ fn web_vs_fret_checkbox_demo_focus_ring_matches() {
         |cx| {
             let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
             vec![
-                fret_ui_shadcn::Checkbox::new(model)
+                shadcn::Checkbox::new(model)
                     .a11y_label("CheckboxFocus")
                     .into_element(cx),
             ]
@@ -5526,7 +5521,7 @@ fn web_vs_fret_slider_demo_thumb_chrome_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<Vec<f32>> = cx.app.models_mut().insert(vec![50.0]);
         vec![
-            fret_ui_shadcn::Slider::new(model)
+            shadcn::Slider::new(model)
                 .range(0.0, 100.0)
                 .a11y_label("Slider")
                 .into_element(cx),
@@ -5573,13 +5568,13 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         let items = vec![
-            fret_ui_shadcn::RadioGroupItem::new("default", "Default"),
-            fret_ui_shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
-            fret_ui_shadcn::RadioGroupItem::new("compact", "Compact"),
+            shadcn::RadioGroupItem::new("default", "Default"),
+            shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
+            shadcn::RadioGroupItem::new("compact", "Compact"),
         ];
 
         let group = items.into_iter().fold(
-            fret_ui_shadcn::RadioGroup::uncontrolled(Some("default")).a11y_label("Options"),
+            shadcn::RadioGroup::uncontrolled(Some("default")).a11y_label("Options"),
             |group, item| group.item(item),
         );
 
@@ -5707,13 +5702,13 @@ fn web_vs_fret_radio_group_demo_focus_ring_matches() {
         CoreSize::new(Px(1024.0), Px(768.0)),
         |cx| {
             let items = vec![
-                fret_ui_shadcn::RadioGroupItem::new("default", "Default"),
-                fret_ui_shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
-                fret_ui_shadcn::RadioGroupItem::new("compact", "Compact"),
+                shadcn::RadioGroupItem::new("default", "Default"),
+                shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
+                shadcn::RadioGroupItem::new("compact", "Compact"),
             ];
 
             let group = items.into_iter().fold(
-                fret_ui_shadcn::RadioGroup::uncontrolled(Some("comfortable")).a11y_label("Options"),
+                shadcn::RadioGroup::uncontrolled(Some("comfortable")).a11y_label("Options"),
                 |group, item| group.item(item),
             );
 
@@ -5770,7 +5765,7 @@ fn web_vs_fret_progress_demo_control_chrome_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<f32> = cx.app.models_mut().insert(42.0);
         vec![
-            fret_ui_shadcn::Progress::new(model)
+            shadcn::Progress::new(model)
                 .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
                 .into_element(cx),
         ]
@@ -5811,10 +5806,10 @@ fn web_vs_fret_toggle_demo_control_chrome_matches() {
     let (snap, scene) = render_and_paint(|cx| {
         let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
         vec![
-            fret_ui_shadcn::Toggle::new(model)
+            shadcn::Toggle::new(model)
                 // Web `toggle-demo` is `size="sm" variant="outline"` (shadcn v4 registry example).
-                .variant(fret_ui_shadcn::ToggleVariant::Outline)
-                .size(fret_ui_shadcn::ToggleSize::Sm)
+                .variant(shadcn::ToggleVariant::Outline)
+                .size(shadcn::ToggleSize::Sm)
                 .a11y_label("Toggle bookmark")
                 .label("Bookmark")
                 .refine_layout(
@@ -5864,9 +5859,9 @@ fn web_vs_fret_alert_demo_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Alert::new(vec![
-                fret_ui_shadcn::AlertTitle::new("Heads up!").into_element(cx),
-                fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
+            shadcn::Alert::new(vec![
+                shadcn::AlertTitle::new("Heads up!").into_element(cx),
+                shadcn::AlertDescription::new("You can add components to your app.")
                     .into_element(cx),
             ])
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
@@ -5907,10 +5902,10 @@ fn web_vs_fret_alert_demo_icon_geometry_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Alert::new(vec![
+            shadcn::Alert::new(vec![
                 decl_icon::icon(cx, fret_icons::IconId::new_static("lucide.terminal")),
-                fret_ui_shadcn::AlertTitle::new("Heads up!").into_element(cx),
-                fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
+                shadcn::AlertTitle::new("Heads up!").into_element(cx),
+                shadcn::AlertDescription::new("You can add components to your app.")
                     .into_element(cx),
             ])
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
@@ -5959,12 +5954,12 @@ fn web_vs_fret_alert_destructive_chrome_matches() {
 
     let (snap, scene) = render_and_paint(|cx| {
         vec![
-            fret_ui_shadcn::Alert::new(vec![
-                fret_ui_shadcn::AlertTitle::new("Heads up!").into_element(cx),
-                fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
+            shadcn::Alert::new(vec![
+                shadcn::AlertTitle::new("Heads up!").into_element(cx),
+                shadcn::AlertDescription::new("You can add components to your app.")
                     .into_element(cx),
             ])
-            .variant(fret_ui_shadcn::AlertVariant::Destructive)
+            .variant(shadcn::AlertVariant::Destructive)
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
             .into_element(cx),
         ]

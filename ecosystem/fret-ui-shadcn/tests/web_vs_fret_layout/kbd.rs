@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 struct LayoutKbdHeightCase {
@@ -20,7 +21,7 @@ fn assert_kbd_first_height_matches_web(web_name: &str, text: &str) {
 
     let label = format!("Golden:{web_name}:kbd");
     let snap = run_fret_root(bounds, |cx| {
-        let kbd = fret_ui_shadcn::Kbd::new(text).into_element(cx);
+        let kbd = shadcn::Kbd::new(text).into_element(cx);
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
@@ -44,7 +45,7 @@ fn assert_kbd_text_is_vertically_centered(text: &str) {
 
     let panel_label = format!("KbdVerticalCenter:{text}");
     let snap = run_fret_root(bounds, |cx| {
-        let kbd = fret_ui_shadcn::Kbd::new(text).into_element(cx);
+        let kbd = shadcn::Kbd::new(text).into_element(cx);
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
@@ -106,9 +107,9 @@ fn web_vs_fret_layout_kbd_tooltip_kbd_height_matches_web() {
 
     let snap = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::Button::new("Save")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Save")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .into_element(cx),
         ]
     });
@@ -140,7 +141,7 @@ fn fret_layout_kbd_icon_only_height_matches_control_height() {
 
     let snap = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
+            shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
                 cx,
                 IconId::new_static("lucide.command"),
             )])

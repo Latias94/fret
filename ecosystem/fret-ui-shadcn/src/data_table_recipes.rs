@@ -16,17 +16,15 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, u
 use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
+use crate::command::{CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator};
 use crate::direction::{LayoutDirection, use_direction};
 use crate::dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
     DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
 use crate::input::Input;
+use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverTrigger};
 use crate::rtl;
-use crate::{
-    CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
-    PopoverAlign, PopoverContent, PopoverTrigger,
-};
 
 fn sanitize_test_id_segment(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -1071,9 +1069,9 @@ impl<TData> DataTableToolbar<TData> {
                                         );
                                         if trigger_selected_count > 0 {
                                             children.push(
-                                                crate::Separator::new()
+                                                crate::separator::Separator::new()
                                                     .orientation(
-                                                        crate::SeparatorOrientation::Vertical,
+                                                        crate::separator::SeparatorOrientation::Vertical,
                                                     )
                                                     .refine_layout(
                                                         LayoutRefinement::default()

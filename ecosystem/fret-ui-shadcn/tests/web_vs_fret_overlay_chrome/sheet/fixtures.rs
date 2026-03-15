@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -43,12 +44,12 @@ enum SheetSideName {
 }
 
 impl SheetSideName {
-    fn side(&self) -> fret_ui_shadcn::SheetSide {
+    fn side(&self) -> shadcn::SheetSide {
         match self {
-            SheetSideName::Top => fret_ui_shadcn::SheetSide::Top,
-            SheetSideName::Right => fret_ui_shadcn::SheetSide::Right,
-            SheetSideName::Bottom => fret_ui_shadcn::SheetSide::Bottom,
-            SheetSideName::Left => fret_ui_shadcn::SheetSide::Left,
+            SheetSideName::Top => shadcn::SheetSide::Top,
+            SheetSideName::Right => shadcn::SheetSide::Right,
+            SheetSideName::Bottom => shadcn::SheetSide::Bottom,
+            SheetSideName::Left => shadcn::SheetSide::Left,
         }
     }
 }
@@ -67,7 +68,7 @@ struct SheetOverlayChromeCase {
 }
 
 fn build_sheet_demo(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+    use shadcn::{Button, ButtonVariant, Sheet, SheetContent};
 
     Sheet::new(open.clone()).into_element(
         cx,
@@ -83,10 +84,10 @@ fn build_sheet_demo(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> Any
 fn build_sheet_side(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
-    side: fret_ui_shadcn::SheetSide,
+    side: shadcn::SheetSide,
     label: &str,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+    use shadcn::{Button, ButtonVariant, Sheet, SheetContent};
 
     Sheet::new(open.clone()).side(side).into_element(
         cx,

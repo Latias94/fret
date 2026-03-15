@@ -11,6 +11,7 @@ use fret_ui::element::{
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -573,14 +574,14 @@ fn radix_web_alert_dialog_open_cancel_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::AlertDialog::new(open.clone()).into_element(
+        shadcn::AlertDialog::new(open.clone()).into_element(
             cx,
             |cx| {
-                fret_ui_shadcn::Button::new("Open AlertDialog")
+                shadcn::Button::new("Open AlertDialog")
                     .toggle_model(open.clone())
                     .into_element(cx)
             },
-            |cx| fret_ui_shadcn::AlertDialogContent::new(vec![cx.text("Content")]).into_element(cx),
+            |cx| shadcn::AlertDialogContent::new(vec![cx.text("Content")]).into_element(cx),
         )
     };
 
@@ -683,14 +684,14 @@ fn radix_web_dialog_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::Dialog::new(open.clone()).into_element(
+        shadcn::Dialog::new(open.clone()).into_element(
             cx,
             |cx| {
-                fret_ui_shadcn::Button::new("Open Dialog")
+                shadcn::Button::new("Open Dialog")
                     .toggle_model(open.clone())
                     .into_element(cx)
             },
-            |cx| fret_ui_shadcn::DialogContent::new(vec![cx.text("Hello")]).into_element(cx),
+            |cx| shadcn::DialogContent::new(vec![cx.text("Hello")]).into_element(cx),
         )
     };
 
@@ -797,18 +798,16 @@ fn radix_web_dropdown_menu_open_navigate_select_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("My Account"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Profile"),
-                        ),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
+                            "My Account",
+                        )),
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile")),
                     ]),
                 )]
             },
@@ -940,17 +939,13 @@ fn radix_web_context_menu_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 vec![
-                    fret_ui_shadcn::ContextMenuEntry::Item(fret_ui_shadcn::ContextMenuItem::new(
-                        "Copy",
-                    )),
-                    fret_ui_shadcn::ContextMenuEntry::Item(fret_ui_shadcn::ContextMenuItem::new(
-                        "Cut",
-                    )),
+                    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Copy")),
+                    shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Cut")),
                 ]
             },
         )
@@ -1052,7 +1047,7 @@ fn radix_web_menubar_open_navigate_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -1207,7 +1202,7 @@ fn radix_web_menubar_hover_switch_trigger_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -1342,7 +1337,7 @@ fn radix_web_menubar_outside_click_close_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -1474,7 +1469,7 @@ fn radix_web_menubar_submenu_outside_click_close_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -1633,10 +1628,10 @@ fn radix_web_navigation_menu_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, model: &Model<Option<Arc<str>>>| {
-        fret_ui_shadcn::NavigationMenu::new(model.clone())
+        shadcn::NavigationMenu::new(model.clone())
             .items(vec![
-                fret_ui_shadcn::NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
-                fret_ui_shadcn::NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+                shadcn::NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
+                shadcn::NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
             ])
             .into_element(cx)
     };
@@ -1744,14 +1739,14 @@ fn radix_web_popover_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::Popover::from_open(open.clone()).into_element_with(
+        shadcn::Popover::from_open(open.clone()).into_element_with(
             cx,
             |cx| {
-                fret_ui_shadcn::Button::new("Open Popover")
+                shadcn::Button::new("Open Popover")
                     .toggle_model(open.clone())
                     .into_element(cx)
             },
-            |cx| fret_ui_shadcn::PopoverContent::new(vec![cx.text("Hello")]).into_element(cx),
+            |cx| shadcn::PopoverContent::new(vec![cx.text("Hello")]).into_element(cx),
         )
     };
 
@@ -1848,14 +1843,14 @@ fn radix_web_select_open_navigate_select_matches_fret() {
 
     let build =
         |cx: &mut ElementContext<'_, App>, value: &Model<Option<Arc<str>>>, open: &Model<bool>| {
-            fret_ui_shadcn::Select::new(value.clone(), open.clone())
+            shadcn::Select::new(value.clone(), open.clone())
                 .a11y_label("Select")
                 .items([
-                    fret_ui_shadcn::SelectItem::new("apple", "Apple"),
-                    fret_ui_shadcn::SelectItem::new("banana", "Banana"),
-                    fret_ui_shadcn::SelectItem::new("blueberry", "Blueberry"),
-                    fret_ui_shadcn::SelectItem::new("grapes", "Grapes"),
-                    fret_ui_shadcn::SelectItem::new("pineapple", "Pineapple"),
+                    shadcn::SelectItem::new("apple", "Apple"),
+                    shadcn::SelectItem::new("banana", "Banana"),
+                    shadcn::SelectItem::new("blueberry", "Blueberry"),
+                    shadcn::SelectItem::new("grapes", "Grapes"),
+                    shadcn::SelectItem::new("pineapple", "Pineapple"),
                 ])
                 .into_element(cx)
         };
@@ -1964,9 +1959,9 @@ fn radix_web_tooltip_hover_show_hide_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        let trigger = fret_ui_shadcn::Button::new("Hover").into_element(cx);
-        let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Tip")]).into_element(cx);
-        fret_ui_shadcn::Tooltip::new(cx, trigger, content)
+        let trigger = shadcn::Button::new("Hover").into_element(cx);
+        let content = shadcn::TooltipContent::new(vec![cx.text("Tip")]).into_element(cx);
+        shadcn::Tooltip::new(cx, trigger, content)
             .open_delay_frames(0)
             .close_delay_frames(0)
             .into_element(cx)
@@ -2092,19 +2087,17 @@ fn radix_web_hover_card_hover_matches_fret() {
 
     let open: Model<bool> = app.models_mut().insert(false);
     let build = |cx: &mut ElementContext<'_, App>| {
-        let trigger = fret_ui_shadcn::Button::new("@nextjs").into_element(cx);
+        let trigger = shadcn::Button::new("@nextjs").into_element(cx);
         let content = cx.semantics(
             SemanticsProps {
                 role: SemanticsRole::Panel,
                 label: Some(Arc::from("HoverCardContent")),
                 ..Default::default()
             },
-            |cx| {
-                vec![fret_ui_shadcn::HoverCardContent::new(vec![cx.text("card")]).into_element(cx)]
-            },
+            |cx| vec![shadcn::HoverCardContent::new(vec![cx.text("card")]).into_element(cx)],
         );
 
-        fret_ui_shadcn::HoverCard::new(cx, trigger, content)
+        shadcn::HoverCard::new(cx, trigger, content)
             .open(Some(open.clone()))
             .open_delay_frames(0)
             .close_delay_frames(0)
@@ -2235,7 +2228,7 @@ fn radix_web_checkbox_toggle_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Checkbox::new(checked.clone())
+                shadcn::Checkbox::new(checked.clone())
                     .a11y_label("Checkbox")
                     .into_element(cx),
             ]
@@ -2259,7 +2252,7 @@ fn radix_web_checkbox_toggle_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Checkbox::new(checked.clone())
+                shadcn::Checkbox::new(checked.clone())
                     .a11y_label("Checkbox")
                     .into_element(cx),
             ]
@@ -2334,40 +2327,34 @@ fn radix_web_dropdown_menu_submenu_hover_select_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Email"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Message"),
                                         ),
-                                    ]),
-                                ),
-                                fret_ui_shadcn::DropdownMenuEntry::Separator,
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("More..."),
-                                        ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
+                                shadcn::DropdownMenuEntry::Separator,
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("More..."),
+                                    )],
+                                )),
                             ]),
                         ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("New Team"),
-                        ),
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("New Team")),
                     ]),
                 )]
             },
@@ -2570,12 +2557,12 @@ fn radix_web_context_menu_submenu_hover_select_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
-                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+                use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
                     ContextMenuEntry::Group(ContextMenuGroup::new(vec![
@@ -2783,12 +2770,12 @@ fn radix_web_context_menu_submenu_unsafe_leave_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
-                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+                use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
                     ContextMenuEntry::Group(ContextMenuGroup::new(vec![
@@ -2980,7 +2967,7 @@ fn radix_web_menubar_submenu_hover_select_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -3160,7 +3147,7 @@ fn radix_web_menubar_submenu_unsafe_leave_matches_fret() {
     let mut services = FakeServices;
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -3337,40 +3324,34 @@ fn radix_web_dropdown_menu_submenu_grace_corridor_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Email"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Message"),
                                         ),
-                                    ]),
-                                ),
-                                fret_ui_shadcn::DropdownMenuEntry::Separator,
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("More..."),
-                                        ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
+                                shadcn::DropdownMenuEntry::Separator,
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("More..."),
+                                    )],
+                                )),
                             ]),
                         ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("New Team"),
-                        ),
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("New Team")),
                     ]),
                 )]
             },
@@ -3558,40 +3539,34 @@ fn radix_web_dropdown_menu_submenu_unsafe_leave_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Email"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Message"),
                                         ),
-                                    ]),
-                                ),
-                                fret_ui_shadcn::DropdownMenuEntry::Separator,
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("More..."),
-                                        ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
+                                shadcn::DropdownMenuEntry::Separator,
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("More..."),
+                                    )],
+                                )),
                             ]),
                         ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("New Team"),
-                        ),
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("New Team")),
                     ]),
                 )]
             },
@@ -3772,40 +3747,34 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Email"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Message"),
                                         ),
-                                    ]),
-                                ),
-                                fret_ui_shadcn::DropdownMenuEntry::Separator,
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("More..."),
-                                        ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
+                                shadcn::DropdownMenuEntry::Separator,
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("More..."),
+                                    )],
+                                )),
                             ]),
                         ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("New Team"),
-                        ),
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("New Team")),
                     ]),
                 )]
             },
@@ -4038,12 +4007,12 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
-                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+                use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
                     ContextMenuEntry::Group(ContextMenuGroup::new(vec![
@@ -4302,7 +4271,7 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -4558,7 +4527,7 @@ fn radix_web_menubar_submenu_arrowleft_escape_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![
             MenubarMenu::new("File").entries(vec![
@@ -4798,12 +4767,12 @@ fn radix_web_context_menu_submenu_grace_corridor_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
-                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+                use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
                     ContextMenuEntry::Group(ContextMenuGroup::new(vec![
@@ -5005,7 +4974,7 @@ fn radix_web_menubar_submenu_grace_corridor_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+        use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
         Menubar::new(vec![MenubarMenu::new("File").entries(vec![
             MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![MenubarEntry::Group(
@@ -5195,7 +5164,7 @@ fn radix_web_switch_toggle_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Switch::new(checked.clone())
+                shadcn::Switch::new(checked.clone())
                     .a11y_label("Switch")
                     .into_element(cx),
             ]
@@ -5219,7 +5188,7 @@ fn radix_web_switch_toggle_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Switch::new(checked.clone())
+                shadcn::Switch::new(checked.clone())
                     .a11y_label("Switch")
                     .into_element(cx),
             ]
@@ -5277,9 +5246,9 @@ fn radix_web_tabs_click_second_tab_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Tabs::new(selected.clone())
-                    .item(fret_ui_shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
-                    .item(fret_ui_shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
+                shadcn::Tabs::new(selected.clone())
+                    .item(shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
+                    .item(shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
                     .into_element(cx),
             ]
         },
@@ -5302,9 +5271,9 @@ fn radix_web_tabs_click_second_tab_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Tabs::new(selected.clone())
-                    .item(fret_ui_shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
-                    .item(fret_ui_shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
+                shadcn::Tabs::new(selected.clone())
+                    .item(shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
+                    .item(shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
                     .into_element(cx),
             ]
         },
@@ -5363,10 +5332,10 @@ fn radix_web_radio_group_click_second_radio_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::RadioGroup::new(selected.clone())
+                shadcn::RadioGroup::new(selected.clone())
                     .a11y_label("Options")
-                    .item(fret_ui_shadcn::RadioGroupItem::new("r0", labels[0]))
-                    .item(fret_ui_shadcn::RadioGroupItem::new("r1", labels[1]))
+                    .item(shadcn::RadioGroupItem::new("r0", labels[0]))
+                    .item(shadcn::RadioGroupItem::new("r1", labels[1]))
                     .into_element(cx),
             ]
         },
@@ -5394,10 +5363,10 @@ fn radix_web_radio_group_click_second_radio_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::RadioGroup::new(selected.clone())
+                shadcn::RadioGroup::new(selected.clone())
                     .a11y_label("Options")
-                    .item(fret_ui_shadcn::RadioGroupItem::new("r0", labels[0]))
-                    .item(fret_ui_shadcn::RadioGroupItem::new("r1", labels[1]))
+                    .item(shadcn::RadioGroupItem::new("r0", labels[0]))
+                    .item(shadcn::RadioGroupItem::new("r1", labels[1]))
                     .into_element(cx),
             ]
         },
@@ -5452,7 +5421,7 @@ fn radix_web_toggle_click_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Toggle::new(pressed.clone())
+                shadcn::Toggle::new(pressed.clone())
                     .a11y_label("Toggle")
                     .into_element(cx),
             ]
@@ -5481,7 +5450,7 @@ fn radix_web_toggle_click_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Toggle::new(pressed.clone())
+                shadcn::Toggle::new(pressed.clone())
                     .a11y_label("Toggle")
                     .into_element(cx),
             ]
@@ -5546,13 +5515,13 @@ fn radix_web_toggle_group_click_second_item_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::ToggleGroup::multiple(selected.clone())
+                shadcn::ToggleGroup::multiple(selected.clone())
                     .item(
-                        fret_ui_shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
+                        shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
                             .a11y_label(labels[0]),
                     )
                     .item(
-                        fret_ui_shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
+                        shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
                             .a11y_label(labels[1]),
                     )
                     .into_element(cx),
@@ -5582,13 +5551,13 @@ fn radix_web_toggle_group_click_second_item_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::ToggleGroup::multiple(selected.clone())
+                shadcn::ToggleGroup::multiple(selected.clone())
                     .item(
-                        fret_ui_shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
+                        shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
                             .a11y_label(labels[0]),
                     )
                     .item(
-                        fret_ui_shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
+                        shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
                             .a11y_label(labels[1]),
                     )
                     .into_element(cx),
@@ -5648,7 +5617,7 @@ fn radix_web_slider_arrow_right_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            let slider = fret_ui_shadcn::Slider::new(values.clone())
+            let slider = shadcn::Slider::new(values.clone())
                 .a11y_label("Slider")
                 .into_element(cx);
             vec![slider]
@@ -5681,7 +5650,7 @@ fn radix_web_slider_arrow_right_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Slider::new(values.clone())
+                shadcn::Slider::new(values.clone())
                     .a11y_label("Slider")
                     .into_element(cx),
             ]
@@ -5759,14 +5728,12 @@ fn radix_web_accordion_toggle_first_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            let trigger = fret_ui_shadcn::AccordionTrigger::new(vec![cx.text(label.clone())])
+            let trigger = shadcn::AccordionTrigger::new(vec![cx.text(label.clone())])
                 .a11y_label(label.clone());
-            let content = fret_ui_shadcn::AccordionContent::new(vec![cx.text("Content")]);
+            let content = shadcn::AccordionContent::new(vec![cx.text("Content")]);
             vec![
-                fret_ui_shadcn::Accordion::single(open.clone())
-                    .item(fret_ui_shadcn::AccordionItem::new(
-                        "item-0", trigger, content,
-                    ))
+                shadcn::Accordion::single(open.clone())
+                    .item(shadcn::AccordionItem::new("item-0", trigger, content))
                     .into_element(cx),
             ]
         },
@@ -5793,14 +5760,12 @@ fn radix_web_accordion_toggle_first_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            let trigger = fret_ui_shadcn::AccordionTrigger::new(vec![cx.text(label.clone())])
+            let trigger = shadcn::AccordionTrigger::new(vec![cx.text(label.clone())])
                 .a11y_label(label.clone());
-            let content = fret_ui_shadcn::AccordionContent::new(vec![cx.text("Content")]);
+            let content = shadcn::AccordionContent::new(vec![cx.text("Content")]);
             vec![
-                fret_ui_shadcn::Accordion::single(open.clone())
-                    .item(fret_ui_shadcn::AccordionItem::new(
-                        "item-0", trigger, content,
-                    ))
+                shadcn::Accordion::single(open.clone())
+                    .item(shadcn::AccordionItem::new("item-0", trigger, content))
                     .into_element(cx),
             ]
         },
@@ -5863,20 +5828,14 @@ fn radix_web_collapsible_toggle_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
+                shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
                     cx,
                     |cx, open, is_open| {
-                        fret_ui_shadcn::CollapsibleTrigger::new(
-                            open.clone(),
-                            vec![cx.text("Trigger")],
-                        )
-                        .a11y_label(label.clone())
-                        .into_element(cx, is_open)
+                        shadcn::CollapsibleTrigger::new(open.clone(), vec![cx.text("Trigger")])
+                            .a11y_label(label.clone())
+                            .into_element(cx, is_open)
                     },
-                    |cx| {
-                        fret_ui_shadcn::CollapsibleContent::new(vec![cx.text("Content")])
-                            .into_element(cx)
-                    },
+                    |cx| shadcn::CollapsibleContent::new(vec![cx.text("Content")]).into_element(cx),
                 ),
             ]
         },
@@ -5904,20 +5863,14 @@ fn radix_web_collapsible_toggle_state_matches_fret() {
         true,
         |cx| {
             vec![
-                fret_ui_shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
+                shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
                     cx,
                     |cx, open, is_open| {
-                        fret_ui_shadcn::CollapsibleTrigger::new(
-                            open.clone(),
-                            vec![cx.text("Trigger")],
-                        )
-                        .a11y_label(label.clone())
-                        .into_element(cx, is_open)
+                        shadcn::CollapsibleTrigger::new(open.clone(), vec![cx.text("Trigger")])
+                            .a11y_label(label.clone())
+                            .into_element(cx, is_open)
                     },
-                    |cx| {
-                        fret_ui_shadcn::CollapsibleContent::new(vec![cx.text("Content")])
-                            .into_element(cx)
-                    },
+                    |cx| shadcn::CollapsibleContent::new(vec![cx.text("Content")]).into_element(cx),
                 ),
             ]
         },
@@ -5998,7 +5951,7 @@ fn radix_web_scroll_area_scroll_top_delta_matches_fret() {
         );
 
         vec![
-            fret_ui_shadcn::ScrollArea::new(vec![content])
+            shadcn::ScrollArea::new(vec![content])
                 .scroll_handle(handle)
                 .refine_layout(
                     fret_ui_shadcn::prelude::LayoutRefinement::default()
@@ -6154,40 +6107,34 @@ fn radix_web_dropdown_menu_submenu_arrowleft_escape_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Email"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Message"),
                                         ),
-                                    ]),
-                                ),
-                                fret_ui_shadcn::DropdownMenuEntry::Separator,
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("More..."),
-                                        ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
+                                shadcn::DropdownMenuEntry::Separator,
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("More..."),
+                                    )],
+                                )),
                             ]),
                         ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("New Team"),
-                        ),
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("New Team")),
                     ]),
                 )]
             },
@@ -6493,12 +6440,12 @@ fn radix_web_context_menu_submenu_arrowleft_escape_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
-                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+                use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
                     ContextMenuEntry::Group(ContextMenuGroup::new(vec![
@@ -6759,27 +6706,25 @@ fn radix_web_dropdown_menu_outside_click_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Email"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Message"),
                                         ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
                             ]),
                         ),
                     ]),
@@ -6938,27 +6883,25 @@ fn radix_web_dropdown_menu_submenu_outside_click_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+        shadcn::DropdownMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+            |cx| shadcn::Button::new("Open").into_element(cx),
             |_cx| {
-                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
-                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
-                        ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                vec![shadcn::DropdownMenuEntry::Group(
+                    shadcn::DropdownMenuGroup::new(vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Team")),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Email"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Message"),
                                         ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
                             ]),
                         ),
                     ]),
@@ -7133,12 +7076,12 @@ fn radix_web_context_menu_outside_click_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
-                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+                use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
                     ContextMenuEntry::Group(ContextMenuGroup::new(vec![
@@ -7300,12 +7243,12 @@ fn radix_web_context_menu_submenu_outside_click_close_matches_fret() {
     let mut timers = TimerQueue::default();
 
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+        shadcn::ContextMenu::from_open(open.clone()).into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
                 use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
-                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+                use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
                     ContextMenuEntry::Group(ContextMenuGroup::new(vec![

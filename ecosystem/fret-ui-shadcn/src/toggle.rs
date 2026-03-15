@@ -1122,7 +1122,7 @@ mod tests {
                                 .label("Bookmark")
                                 .action(cmd.clone())
                                 .into_element(cx),
-                            crate::FieldLabel::new("Toggle via label")
+                            crate::field::FieldLabel::new("Toggle via label")
                                 .for_control("test.toggle")
                                 .into_element(cx)
                                 .test_id("test.toggle.label"),

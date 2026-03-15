@@ -4,7 +4,7 @@ use fret_core::{Edges, Px};
 use fret_ui::element::InsetStyle;
 use fret_ui_kit::{LayoutRefinement, Space};
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 
 #[inline]
 pub(crate) fn chevrons_inline_start(dir: LayoutDirection) -> IconId {

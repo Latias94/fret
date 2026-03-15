@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "select/fixtures.rs"]
 mod fixtures;
@@ -7,7 +8,7 @@ fn build_shadcn_select_demo_page(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+    use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let entries: Vec<SelectEntry> = vec![
@@ -22,9 +23,9 @@ fn build_shadcn_select_demo_page(
         .into(),
     ];
 
-    fret_ui_shadcn::Select::new(value, open.clone())
+    shadcn::Select::new(value, open.clone())
         .a11y_label("Select")
-        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
+        .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default().w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
         )
@@ -36,7 +37,7 @@ fn build_shadcn_select_scrollable_page(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+    use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let entries: Vec<SelectEntry> = vec![
@@ -89,9 +90,9 @@ fn build_shadcn_select_scrollable_page(
         .into(),
     ];
 
-    fret_ui_shadcn::Select::new(value, open.clone())
+    shadcn::Select::new(value, open.clone())
         .a11y_label("Select")
-        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+        .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default().w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
         )

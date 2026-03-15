@@ -46,7 +46,7 @@ fn shortcut_hint_with_patch<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let kbd = crate::Kbd::new(keys).into_element(cx);
+    let kbd = crate::kbd::Kbd::new(keys).into_element(cx);
     let label = shortcut_hint_label(cx, &theme, label);
 
     let base_h = Px(20.0);

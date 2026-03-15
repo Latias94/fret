@@ -1633,7 +1633,10 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(cx, DialogTrigger::build(crate::Card::build(|_cx, _out| {})));
+            out.push_ui(
+                cx,
+                DialogTrigger::build(crate::card::Card::build(|_cx, _out| {})),
+            );
 
             assert_eq!(out.len(), 1);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
@@ -1655,7 +1658,7 @@ mod tests {
             out.push_ui(
                 cx,
                 DialogFooter::build(|cx, out| {
-                    out.push_ui(cx, crate::Button::new("Close"));
+                    out.push_ui(cx, crate::button::Button::new("Close"));
                 }),
             );
         })
@@ -2047,12 +2050,12 @@ mod tests {
 
                         let header = DialogHeader::new(vec![title, description]).into_element(cx);
 
-                        let cancel = crate::Button::new("Cancel")
-                            .variant(crate::ButtonVariant::Outline)
+                        let cancel = crate::button::Button::new("Cancel")
+                            .variant(crate::button::ButtonVariant::Outline)
                             .into_element(cx);
                         cancel_id_out.set(Some(cancel.id));
 
-                        let action = crate::Button::new("Save changes").into_element(cx);
+                        let action = crate::button::Button::new("Save changes").into_element(cx);
                         action_id_out.set(Some(action.id));
 
                         let footer = DialogFooter::new(vec![cancel, action]).into_element(cx);
@@ -2316,7 +2319,7 @@ mod tests {
             |cx| {
                 vec![Dialog::new(open.clone()).into_element_parts(
                     cx,
-                    |cx| DialogTrigger::new(crate::Button::new("Open").into_element(cx)),
+                    |cx| DialogTrigger::new(crate::button::Button::new("Open").into_element(cx)),
                     DialogPortal::new(),
                     DialogOverlay::new(),
                     |cx| DialogContent::new([cx.text("Content")]).into_element(cx),
@@ -2390,7 +2393,8 @@ mod tests {
                     Dialog::new(open.clone())
                         .compose()
                         .trigger(DialogTrigger::build(
-                            crate::Button::new("Open").test_id("dialog-compose-trigger-late-child"),
+                            crate::button::Button::new("Open")
+                                .test_id("dialog-compose-trigger-late-child"),
                         ))
                         .portal(DialogPortal::new())
                         .overlay(DialogOverlay::new())
@@ -2467,7 +2471,8 @@ mod tests {
             bounds,
             "shadcn-dialog-compose-content-with-from-scope",
             |cx| {
-                let trigger = DialogTrigger::new(crate::Button::new("Open").into_element(cx));
+                let trigger =
+                    DialogTrigger::new(crate::button::Button::new("Open").into_element(cx));
 
                 vec![
                     Dialog::new(open.clone())
@@ -5203,7 +5208,7 @@ mod tests {
             bounds,
             "dialog-content-show-close-button-false-hides-default-close",
             |cx| {
-                let trigger = crate::Button::new("Open").into_element(cx);
+                let trigger = crate::button::Button::new("Open").into_element(cx);
                 let dialog = Dialog::new(open.clone()).into_element(
                     cx,
                     |_cx| trigger,

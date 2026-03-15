@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize, TextWrap};
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
 
 #[path = "support/web_golden_shadcn.rs"]
@@ -182,7 +183,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
 
     let snap_default = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
+            shadcn::SidebarMenuButton::new("Sidebar Menu Button")
                 .size(SidebarMenuButtonSize::Default)
                 .into_element(cx),
         ]
@@ -207,7 +208,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
         let collapsed = (web_lg.rect.h - 32.0).abs() <= 1.0;
         let snap_lg = run_fret_root(bounds, |cx| {
             vec![
-                fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
+                shadcn::SidebarMenuButton::new("Sidebar Menu Button")
                     .size(SidebarMenuButtonSize::Lg)
                     .collapsed(collapsed)
                     .into_element(cx),

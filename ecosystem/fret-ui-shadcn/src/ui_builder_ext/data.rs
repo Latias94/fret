@@ -7,8 +7,9 @@ use fret_ui_kit::{IntoUiElement, UiBuilder};
 
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 
+use crate::data_grid_canvas::DataGridCanvas;
+use crate::data_table::DataTable;
 use crate::experimental::{DataGridElement, DataGridRowState};
-use crate::{DataGridCanvas, DataTable};
 
 pub trait DataGridCanvasUiBuilderExt {
     fn into_element<H: UiHost>(

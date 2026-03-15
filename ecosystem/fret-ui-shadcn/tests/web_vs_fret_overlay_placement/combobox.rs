@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 
 #[test]
@@ -78,8 +79,8 @@ fn fret_combobox_popover_tracks_trigger_when_underlay_scrolls() {
                                         .a11y_label("Combobox")
                                         .items(items)
                                         .into_element_parts(cx, |_cx| {
-                                            vec![fret_ui_shadcn::ComboboxPart::from(
-                                                fret_ui_shadcn::ComboboxInput::new()
+                                            vec![shadcn::ComboboxPart::from(
+                                                shadcn::ComboboxInput::new()
                                                     .placeholder("Select an option"),
                                             )]
                                         }),
@@ -332,8 +333,8 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
                                         .a11y_label("Combobox")
                                         .items(items)
                                         .into_element_parts(cx, |_cx| {
-                                            vec![fret_ui_shadcn::ComboboxPart::from(
-                                                fret_ui_shadcn::ComboboxInput::new()
+                                            vec![shadcn::ComboboxPart::from(
+                                                shadcn::ComboboxInput::new()
                                                     .placeholder("Select an option"),
                                             )]
                                         }),

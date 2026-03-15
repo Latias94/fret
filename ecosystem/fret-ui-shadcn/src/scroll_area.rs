@@ -2021,12 +2021,12 @@ mod tests {
                 },
             );
 
-            let tabs = crate::Tabs::uncontrolled(Some("preview"))
+            let tabs = crate::tabs::Tabs::uncontrolled(Some("preview"))
                 .content_fill_remaining(false)
                 .test_id(format!("docs-tabs-{idx}"))
                 .items([
-                    crate::TabsItem::new("preview", "Preview", [preview]),
-                    crate::TabsItem::new("code", "Code", [code]),
+                    crate::tabs::TabsItem::new("preview", "Preview", [preview]),
+                    crate::tabs::TabsItem::new("code", "Code", [code]),
                 ])
                 .into_element(cx);
 
@@ -2082,16 +2082,16 @@ mod tests {
                     )
                     .test_id("docs-root");
 
-                let page_root = crate::Card::new([
-                    crate::CardHeader::new([
-                        crate::CardTitle::new("Preview").into_element(cx),
-                        crate::CardDescription::new(
+                let page_root = crate::card::Card::new([
+                    crate::card::CardHeader::new([
+                        crate::card::CardTitle::new("Preview").into_element(cx),
+                        crate::card::CardDescription::new(
                             "Interactive preview for validating behaviors.",
                         )
                         .into_element(cx),
                     ])
                     .into_element(cx),
-                    crate::CardContent::new([body]).into_element(cx),
+                    crate::card::CardContent::new([body]).into_element(cx),
                 ])
                 .into_element(cx)
                 .test_id("page-root");

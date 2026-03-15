@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 fn text_sm_nowrap<H: fret_ui::UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
@@ -56,13 +57,13 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::TableRow::new(
+                    shadcn::TableRow::new(
                         4,
                         vec![
-                            fret_ui_shadcn::TableHead::new("Invoice").into_element(cx),
-                            fret_ui_shadcn::TableHead::new("Status").into_element(cx),
-                            fret_ui_shadcn::TableHead::new("Method").into_element(cx),
-                            fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
+                            shadcn::TableHead::new("Invoice").into_element(cx),
+                            shadcn::TableHead::new("Status").into_element(cx),
+                            shadcn::TableHead::new("Method").into_element(cx),
+                            shadcn::TableHead::new("Amount").into_element(cx),
                         ],
                     )
                     .into_element(cx),
@@ -78,17 +79,14 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::TableRow::new(
+                    shadcn::TableRow::new(
                         4,
                         vec![
-                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "INV001"))
+                            shadcn::TableCell::new(text_sm_nowrap(cx, "INV001")).into_element(cx),
+                            shadcn::TableCell::new(text_sm_nowrap(cx, "Paid")).into_element(cx),
+                            shadcn::TableCell::new(text_sm_nowrap(cx, "Credit Card"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "Paid"))
-                                .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "Credit Card"))
-                                .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "$250.00"))
-                                .into_element(cx),
+                            shadcn::TableCell::new(text_sm_nowrap(cx, "$250.00")).into_element(cx),
                         ],
                     )
                     .into_element(cx),
@@ -106,13 +104,13 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
         ]
         .into_iter()
         .map(|(invoice, status, method, amount)| {
-            fret_ui_shadcn::TableRow::new(
+            shadcn::TableRow::new(
                 4,
                 vec![
-                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, invoice)).into_element(cx),
-                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, status)).into_element(cx),
-                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, method)).into_element(cx),
-                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, amount)).into_element(cx),
+                    shadcn::TableCell::new(text_sm_nowrap(cx, invoice)).into_element(cx),
+                    shadcn::TableCell::new(text_sm_nowrap(cx, status)).into_element(cx),
+                    shadcn::TableCell::new(text_sm_nowrap(cx, method)).into_element(cx),
+                    shadcn::TableCell::new(text_sm_nowrap(cx, amount)).into_element(cx),
                 ],
             )
             .into_element(cx)
@@ -127,13 +125,13 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::TableRow::new(
+                    shadcn::TableRow::new(
                         4,
                         vec![
-                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "Total"))
+                            shadcn::TableCell::new(text_sm_nowrap(cx, "Total"))
                                 .col_span(3)
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "$2,500.00"))
+                            shadcn::TableCell::new(text_sm_nowrap(cx, "$2,500.00"))
                                 .into_element(cx),
                         ],
                     )
@@ -142,21 +140,21 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
             },
         );
 
-        let caption = fret_ui_shadcn::TableCaption::new("A list of your recent invoices.")
+        let caption = shadcn::TableCaption::new("A list of your recent invoices.")
             .into_element(cx)
             .test_id("Golden:table-demo:caption");
 
         vec![
-            fret_ui_shadcn::Table::new(vec![
-                fret_ui_shadcn::TableHeader::new(vec![head_row]).into_element(cx),
-                fret_ui_shadcn::TableBody::new({
+            shadcn::Table::new(vec![
+                shadcn::TableHeader::new(vec![head_row]).into_element(cx),
+                shadcn::TableBody::new({
                     let mut rows = Vec::new();
                     rows.push(first_body_row);
                     rows.extend(other_rows);
                     rows
                 })
                 .into_element(cx),
-                fret_ui_shadcn::TableFooter::new(vec![footer_row]).into_element(cx),
+                shadcn::TableFooter::new(vec![footer_row]).into_element(cx),
                 caption,
             ])
             .into_element(cx),
@@ -279,19 +277,19 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::TableRow::new(
+                    shadcn::TableRow::new(
                         5,
                         vec![
-                            fret_ui_shadcn::TableCell::new(
-                                fret_ui_shadcn::Checkbox::new(header_select_all.clone())
+                            shadcn::TableCell::new(
+                                shadcn::Checkbox::new(header_select_all.clone())
                                     .a11y_label("Select all")
                                     .into_element(cx),
                             )
                             .into_element(cx),
-                            fret_ui_shadcn::TableHead::new("Status").into_element(cx),
-                            fret_ui_shadcn::TableHead::new("Email").into_element(cx),
-                            fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
-                            fret_ui_shadcn::TableHead::new("").into_element(cx),
+                            shadcn::TableHead::new("Status").into_element(cx),
+                            shadcn::TableHead::new("Email").into_element(cx),
+                            shadcn::TableHead::new("Amount").into_element(cx),
+                            shadcn::TableHead::new("").into_element(cx),
                         ],
                     )
                     .into_element(cx),
@@ -307,30 +305,27 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::TableRow::new(
+                    shadcn::TableRow::new(
                         5,
                         vec![
-                            fret_ui_shadcn::TableCell::new(
-                                fret_ui_shadcn::Checkbox::new(row_select.clone())
+                            shadcn::TableCell::new(
+                                shadcn::Checkbox::new(row_select.clone())
                                     .a11y_label("Select row")
                                     .into_element(cx),
                             )
                             .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "success"))
+                            shadcn::TableCell::new(decl_text::text_sm(cx, "success"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(
-                                cx,
-                                "ken99@example.com",
-                            ))
-                            .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$316.00"))
+                            shadcn::TableCell::new(decl_text::text_sm(cx, "ken99@example.com"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(
-                                fret_ui_shadcn::Button::new("Open menu")
-                                    .variant(fret_ui_shadcn::ButtonVariant::Ghost)
-                                    .size(fret_ui_shadcn::ButtonSize::IconSm)
+                            shadcn::TableCell::new(decl_text::text_sm(cx, "$316.00"))
+                                .into_element(cx),
+                            shadcn::TableCell::new(
+                                shadcn::Button::new("Open menu")
+                                    .variant(shadcn::ButtonVariant::Ghost)
+                                    .size(shadcn::ButtonSize::IconSm)
                                     .children(vec![
-                                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
+                                        shadcn::Spinner::new().speed(0.0).into_element(cx),
                                     ])
                                     .into_element(cx),
                             )
@@ -343,9 +338,9 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
         );
 
         vec![
-            fret_ui_shadcn::Table::new(vec![
-                fret_ui_shadcn::TableHeader::new(vec![header_row]).into_element(cx),
-                fret_ui_shadcn::TableBody::new(vec![body_row]).into_element(cx),
+            shadcn::Table::new(vec![
+                shadcn::TableHeader::new(vec![header_row]).into_element(cx),
+                shadcn::TableBody::new(vec![body_row]).into_element(cx),
             ])
             .into_element(cx),
         ]
@@ -436,7 +431,7 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
     let (ui, snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let theme = Theme::global(&*cx.app).clone();
 
-        let empty_td = fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "No results."))
+        let empty_td = shadcn::TableCell::new(decl_text::text_sm(cx, "No results."))
             .col_span(5)
             .refine_layout(LayoutRefinement::default().h_px(Px(web_empty_td.rect.h)))
             .into_element(cx);
@@ -457,23 +452,23 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Table::new(vec![
-                        fret_ui_shadcn::TableHeader::new(vec![
-                            fret_ui_shadcn::TableRow::new(
+                    shadcn::Table::new(vec![
+                        shadcn::TableHeader::new(vec![
+                            shadcn::TableRow::new(
                                 5,
                                 vec![
-                                    fret_ui_shadcn::TableHead::new("").into_element(cx),
-                                    fret_ui_shadcn::TableHead::new("Status").into_element(cx),
-                                    fret_ui_shadcn::TableHead::new("Email").into_element(cx),
-                                    fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
-                                    fret_ui_shadcn::TableHead::new("").into_element(cx),
+                                    shadcn::TableHead::new("").into_element(cx),
+                                    shadcn::TableHead::new("Status").into_element(cx),
+                                    shadcn::TableHead::new("Email").into_element(cx),
+                                    shadcn::TableHead::new("Amount").into_element(cx),
+                                    shadcn::TableHead::new("").into_element(cx),
                                 ],
                             )
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        fret_ui_shadcn::TableBody::new(vec![
-                            fret_ui_shadcn::TableRow::new(5, vec![empty_td])
+                        shadcn::TableBody::new(vec![
+                            shadcn::TableRow::new(5, vec![empty_td])
                                 .border_bottom(false)
                                 .into_element(cx),
                         ])

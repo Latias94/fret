@@ -100,7 +100,7 @@ mod tests {
             bounds(),
             "form-control-direct",
             |cx| {
-                crate::Input::new(model.clone())
+                crate::input::Input::new(model.clone())
                     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx)
             },
@@ -112,7 +112,7 @@ mod tests {
             bounds(),
             "form-control-wrapped",
             |cx| {
-                FormControl::new([crate::Input::new(model.clone())
+                FormControl::new([crate::input::Input::new(model.clone())
                     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx)])
                 .into_element(cx)

@@ -172,7 +172,7 @@ Guidelines:
   `.action_payload(...)`; curated first-party button and action-capable UI Gallery slices are now
   policy-gated away from legacy `.on_click(...)`.
 - For activation-only surfaces rendered inside a `fret` app shell, prefer
-  `use fret::view::AppActivateExt as _;` plus `.dispatch::<A>(cx)` /
+  `use fret::app::AppActivateExt as _;` plus `.dispatch::<A>(cx)` /
   `.dispatch_payload::<A>(cx, payload)` / `.listen(cx, ...)`; do not reopen raw `.on_activate(...)`
   on first-party snippet surfaces unless the example is intentionally documenting a raw/advanced
   seam.
@@ -180,12 +180,17 @@ Guidelines:
   environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
   lanes (`typography` prose helpers, `extras`, breadcrumb primitives, and low-level icon helpers)
   instead of importing `fret_ui_shadcn::*` directly.
-- Treat the flat `fret_ui_shadcn::*` root exports as a hidden compatibility/implementation
-  surface, not as a peer first-contact discovery lane next to `facade as shadcn`.
+- Treat the flat `fret_ui_shadcn::*` crate root as non-authoring glue only; component-family
+  exports now live on `facade as shadcn`, with `raw::*` as the explicit escape hatch.
+- The curated `prelude` and crate-internal recipe/helper glue now also source their
+  authoring-critical names from explicit module/facade paths instead of hidden flat root
+  reexports; the component-family and direction-utility delete passes have landed, leaving only
+  narrow authoring-glue residue on the flat root.
 - The current first-party source-policy tests that ban root-style imports are evidence of remaining
   public-surface duplication, not proof that the current three-lane discovery story is ideal.
-  The next cleanup step is to make the curated facade lane more self-evident, not to normalize the
-  crate root as another default authoring path.
+  The next cleanup step is to decide whether the remaining hidden root glue should stay as internal
+  implementation convenience or move behind even more explicit lanes, not to normalize the crate
+  root as another default authoring path.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 

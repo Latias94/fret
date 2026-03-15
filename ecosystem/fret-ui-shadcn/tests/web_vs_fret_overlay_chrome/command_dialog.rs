@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "command_dialog/fixtures.rs"]
 mod fixtures;
@@ -8,7 +9,7 @@ fn build_shadcn_command_dialog_page(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+    use shadcn::{Button, CommandDialog, CommandItem};
 
     let query = cx.local_model_keyed("query", String::new);
 

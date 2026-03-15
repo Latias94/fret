@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 struct LayoutNativeSelectCase {
@@ -34,13 +35,12 @@ fn web_vs_fret_layout_native_select_heights_match_web_fixtures() {
         );
 
         let snap = run_fret_root(bounds, |cx| {
-            let mut select =
-                fret_ui_shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
-                    .a11y_label("NativeSelect")
-                    .placeholder(case.label_text.clone())
-                    .refine_layout(
-                        LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
-                    );
+            let mut select = shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
+                .a11y_label("NativeSelect")
+                .placeholder(case.label_text.clone())
+                .refine_layout(
+                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
+                );
             if case.disabled {
                 select = select.disabled(true);
             }
@@ -94,15 +94,14 @@ fn web_vs_fret_layout_native_select_chevron_matches_web_fixtures() {
         );
 
         let snap = run_fret_root(bounds, |cx| {
-            let mut select =
-                fret_ui_shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
-                    .a11y_label("NativeSelect")
-                    .placeholder(case.label_text.clone())
-                    .test_id_prefix("test-native-select")
-                    .options([fret_ui_shadcn::NativeSelectOption::new("alpha", "Alpha")])
-                    .refine_layout(
-                        LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
-                    );
+            let mut select = shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
+                .a11y_label("NativeSelect")
+                .placeholder(case.label_text.clone())
+                .test_id_prefix("test-native-select")
+                .options([shadcn::NativeSelectOption::new("alpha", "Alpha")])
+                .refine_layout(
+                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
+                );
             if case.disabled {
                 select = select.disabled(true);
             }

@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -49,7 +50,7 @@ fn render_frame(
                 )
             });
 
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)
                 .item_basis_main_px(Px(200.0))

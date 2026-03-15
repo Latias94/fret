@@ -8,7 +8,7 @@ use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::typography::{description_text_refinement, muted_foreground_color};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
-use fret_ui_shadcn::{Alert, Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::facade::{Alert, Button, ButtonSize, ButtonVariant};
 
 /// Tool UI part state aligned with AI Elements `ToolUIPart["state"]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -712,7 +712,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Axis, Point, Px, Rect, SemanticsRole, Size};
-    use fret_ui::element::{CrossAlign, ElementKind, Length, TextProps};
+    use fret_ui::element::{CrossAlign, ElementKind, Length, TextLineHeightPolicy, TextProps};
 
     fn bounds() -> Rect {
         Rect::new(

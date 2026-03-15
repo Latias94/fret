@@ -28,11 +28,10 @@ use fret_ui_kit::{
     Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
+use crate::command::{CommandEntry, CommandGroup, CommandItem, CommandList, CommandSeparator};
 use crate::overlay_motion;
+use crate::popover::{Popover, PopoverContent};
 use crate::test_id::test_id_slug;
-use crate::{
-    CommandEntry, CommandGroup, CommandItem, CommandList, CommandSeparator, Popover, PopoverContent,
-};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -546,7 +545,7 @@ fn render_native_select<H: UiHost>(
                 pressable_props,
                 chrome_props,
                 move |cx: &mut ElementContext<'_, H>| {
-                    let dir = crate::use_direction(cx, None);
+                    let dir = crate::direction::use_direction(cx, None);
                     let surface = {
                         let surface_props = ContainerProps {
                             layout: LayoutStyle {

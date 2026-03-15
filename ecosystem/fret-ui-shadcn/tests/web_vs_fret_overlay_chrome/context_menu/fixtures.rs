@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -54,12 +55,12 @@ struct ContextMenuOverlayChromeCase {
 }
 
 fn build_context_menu_copy(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    fret_ui_shadcn::ContextMenu::from_open(open.clone()).into_element(
+    shadcn::ContextMenu::from_open(open.clone()).into_element(
         cx,
-        |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+        |cx| shadcn::Button::new("Right click here").into_element(cx),
         |_cx| {
-            vec![fret_ui_shadcn::ContextMenuEntry::Item(
-                fret_ui_shadcn::ContextMenuItem::new("Copy"),
+            vec![shadcn::ContextMenuEntry::Item(
+                shadcn::ContextMenuItem::new("Copy"),
             )]
         },
     )
@@ -69,14 +70,14 @@ fn build_context_menu_copy_with_demo_widths(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+    use shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 
     ContextMenu::from_open(open.clone())
         .min_width(Px(208.0))
         .submenu_min_width(Px(176.0))
         .into_element(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Copy"))],
         )
 }
@@ -85,7 +86,7 @@ fn build_context_menu_more_tools_submenu(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, ContextMenu, ContextMenuEntry, ContextMenuItem};
+    use shadcn::{Button, ContextMenu, ContextMenuEntry, ContextMenuItem};
 
     ContextMenu::from_open(open.clone())
         .min_width(Px(208.0))

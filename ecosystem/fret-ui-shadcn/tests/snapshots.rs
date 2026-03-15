@@ -11,6 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
+use fret_ui_shadcn::facade as shadcn;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -695,7 +696,7 @@ fn snapshot_button_default() {
         CoreSize::new(Px(320.0), Px(180.0)),
     );
     snapshot_for_root("button_default", bounds, |cx| {
-        vec![fret_ui_shadcn::Button::new("Hello").into_element(cx)]
+        vec![shadcn::Button::new("Hello").into_element(cx)]
     });
 }
 
@@ -707,7 +708,7 @@ fn snapshot_toggle_pressed_semantics() {
     );
     snapshot_for_root("toggle_pressed_semantics", bounds, |cx| {
         vec![
-            fret_ui_shadcn::Toggle::uncontrolled(true)
+            shadcn::Toggle::uncontrolled(true)
                 .a11y_label("Toggle")
                 .label("Hello")
                 .into_element(cx),
@@ -723,11 +724,11 @@ fn snapshot_toggle_group_pressed_semantics() {
     );
     snapshot_for_root("toggle_group_pressed_semantics", bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::ToggleGroupItem::new("alpha", vec![cx.text("A")]).a11y_label("Alpha"),
-            fret_ui_shadcn::ToggleGroupItem::new("beta", vec![cx.text("B")]).a11y_label("Beta"),
+            shadcn::ToggleGroupItem::new("alpha", vec![cx.text("A")]).a11y_label("Alpha"),
+            shadcn::ToggleGroupItem::new("beta", vec![cx.text("B")]).a11y_label("Beta"),
         ];
         vec![
-            fret_ui_shadcn::ToggleGroup::multiple_uncontrolled(vec!["alpha"])
+            shadcn::ToggleGroup::multiple_uncontrolled(vec!["alpha"])
                 .items(items)
                 .into_element(cx),
         ]
@@ -743,7 +744,7 @@ fn snapshot_input_required_invalid_semantics() {
     snapshot_for_root("input_required_invalid_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert("Hello".to_string());
         vec![
-            fret_ui_shadcn::Input::new(model)
+            shadcn::Input::new(model)
                 .a11y_label("Email")
                 .aria_required(true)
                 .aria_invalid(true)
@@ -800,8 +801,8 @@ fn snapshot_badge_link_visited_semantics() {
     );
     snapshot_for_root("badge_link_visited_semantics", bounds, |cx| {
         vec![
-            fret_ui_shadcn::Badge::new("Docs")
-                .render(fret_ui_shadcn::BadgeRender::Link {
+            shadcn::Badge::new("Docs")
+                .render(shadcn::BadgeRender::Link {
                     href: Arc::from("https://example.com"),
                     target: None,
                     rel: None,
@@ -865,7 +866,7 @@ fn snapshot_heading_level_semantics() {
         CoreSize::new(Px(320.0), Px(180.0)),
     );
     snapshot_for_root("heading_level_semantics", bounds, |cx| {
-        vec![fret_ui_shadcn::DialogTitle::new("Dialog Title").into_element(cx)]
+        vec![shadcn::DialogTitle::new("Dialog Title").into_element(cx)]
     });
 }
 
@@ -877,12 +878,12 @@ fn snapshot_tabs_default() {
     );
     snapshot_for_root("tabs_default", bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("alpha", "Alpha", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("beta", "Beta", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("gamma", "Gamma", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("alpha", "Alpha", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("beta", "Beta", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("gamma", "Gamma", vec![cx.text("Panel")]),
         ];
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("alpha"))
+            shadcn::Tabs::uncontrolled(Some("alpha"))
                 .items(items)
                 .into_element(cx),
         ]
@@ -898,7 +899,7 @@ fn snapshot_slider_numeric_semantics() {
     snapshot_for_root("slider_numeric_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert(vec![80.0f32]);
         vec![
-            fret_ui_shadcn::Slider::new(model)
+            shadcn::Slider::new(model)
                 .a11y_label("Volume")
                 .range(0.0, 100.0)
                 .step(1.0)
@@ -916,7 +917,7 @@ fn snapshot_progress_numeric_semantics() {
     snapshot_for_root("progress_numeric_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert(66.0f32);
         vec![
-            fret_ui_shadcn::Progress::new(model)
+            shadcn::Progress::new(model)
                 .a11y_label("Loading")
                 .range(0.0, 100.0)
                 .into_element(cx),
@@ -998,11 +999,11 @@ fn snapshot_resizable_splitter_semantics() {
         let model = cx.app.models_mut().insert(vec![0.5f32, 0.5f32]);
 
         vec![
-            fret_ui_shadcn::ResizablePanelGroup::new(model)
+            shadcn::ResizablePanelGroup::new(model)
                 .entries([
-                    fret_ui_shadcn::ResizablePanel::new([cx.text("Left")]).into(),
-                    fret_ui_shadcn::ResizableHandle::new().into(),
-                    fret_ui_shadcn::ResizablePanel::new([cx.text("Right")]).into(),
+                    shadcn::ResizablePanel::new([cx.text("Left")]).into(),
+                    shadcn::ResizableHandle::new().into(),
+                    shadcn::ResizablePanel::new([cx.text("Right")]).into(),
                 ])
                 .into_element(cx),
         ]
@@ -1031,7 +1032,7 @@ fn snapshot_scroll_area_scrollbar_semantics() {
         );
 
         vec![
-            fret_ui_shadcn::ScrollArea::new([content])
+            shadcn::ScrollArea::new([content])
                 .type_(ScrollAreaType::Always)
                 .into_element(cx),
         ]
@@ -1047,7 +1048,7 @@ fn snapshot_checkbox_indeterminate_semantics() {
     snapshot_for_root("checkbox_indeterminate_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert(None::<bool>);
         vec![
-            fret_ui_shadcn::Checkbox::new_optional(model)
+            shadcn::Checkbox::new_optional(model)
                 .a11y_label("Agree")
                 .into_element(cx),
         ]
@@ -1246,22 +1247,10 @@ fn snapshot_extras_avatar_stack_default() {
         CoreSize::new(Px(560.0), Px(180.0)),
     );
     snapshot_for_root("extras_avatar_stack_default", bounds, |cx| {
-        let a =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("A").into_element(cx)],
-            );
-        let b =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("B").into_element(cx)],
-            );
-        let c =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("C").into_element(cx)],
-            );
-        let d =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("D").into_element(cx)],
-            );
+        let a = shadcn::Avatar::new([shadcn::AvatarFallback::new("A").into_element(cx)]);
+        let b = shadcn::Avatar::new([shadcn::AvatarFallback::new("B").into_element(cx)]);
+        let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("C").into_element(cx)]);
+        let d = shadcn::Avatar::new([shadcn::AvatarFallback::new("D").into_element(cx)]);
 
         vec![
             fret_ui_shadcn::extras::AvatarStack::new([a, b, c, d])
@@ -1278,30 +1267,12 @@ fn snapshot_extras_avatar_stack_overflow_default() {
         CoreSize::new(Px(560.0), Px(180.0)),
     );
     snapshot_for_root("extras_avatar_stack_overflow_default", bounds, |cx| {
-        let a =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("A").into_element(cx)],
-            );
-        let b =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("B").into_element(cx)],
-            );
-        let c =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("C").into_element(cx)],
-            );
-        let d =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("D").into_element(cx)],
-            );
-        let e =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("E").into_element(cx)],
-            );
-        let f =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("F").into_element(cx)],
-            );
+        let a = shadcn::Avatar::new([shadcn::AvatarFallback::new("A").into_element(cx)]);
+        let b = shadcn::Avatar::new([shadcn::AvatarFallback::new("B").into_element(cx)]);
+        let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("C").into_element(cx)]);
+        let d = shadcn::Avatar::new([shadcn::AvatarFallback::new("D").into_element(cx)]);
+        let e = shadcn::Avatar::new([shadcn::AvatarFallback::new("E").into_element(cx)]);
+        let f = shadcn::Avatar::new([shadcn::AvatarFallback::new("F").into_element(cx)]);
 
         vec![
             fret_ui_shadcn::extras::AvatarStack::new([a, b, c, d, e, f])
@@ -1368,8 +1339,8 @@ fn snapshot_extras_kanban_custom_cards() {
                     .truncate()
                     .into_element(cx);
 
-                let badge = fret_ui_shadcn::Badge::new(item.column.clone())
-                    .variant(fret_ui_shadcn::BadgeVariant::Secondary)
+                let badge = shadcn::Badge::new(item.column.clone())
+                    .variant(shadcn::BadgeVariant::Secondary)
                     .into_element(cx);
 
                 let mut children = vec![title, badge];

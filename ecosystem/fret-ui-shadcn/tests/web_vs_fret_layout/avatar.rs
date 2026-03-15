@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_avatar_demo_geometry() {
@@ -40,17 +41,17 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
     let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
         let image = ImageId::default();
 
-        let avatar_round = fret_ui_shadcn::Avatar::new(vec![
-            fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
-            fret_ui_shadcn::AvatarFallback::new("CN")
+        let avatar_round = shadcn::Avatar::new(vec![
+            shadcn::AvatarImage::new(image).into_element(cx),
+            shadcn::AvatarFallback::new("CN")
                 .when_image_missing(Some(image))
                 .into_element(cx),
         ])
         .into_element(cx);
 
-        let avatar_rounded = fret_ui_shadcn::Avatar::new(vec![
-            fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
-            fret_ui_shadcn::AvatarFallback::new("CN")
+        let avatar_rounded = shadcn::Avatar::new(vec![
+            shadcn::AvatarImage::new(image).into_element(cx),
+            shadcn::AvatarFallback::new("CN")
                 .when_image_missing(Some(image))
                 .into_element(cx),
         ])
@@ -59,9 +60,9 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
 
         let group_items = (0..3)
             .map(|idx| {
-                let mut avatar = fret_ui_shadcn::Avatar::new(vec![
-                    fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
-                    fret_ui_shadcn::AvatarFallback::new("CN")
+                let mut avatar = shadcn::Avatar::new(vec![
+                    shadcn::AvatarImage::new(image).into_element(cx),
+                    shadcn::AvatarFallback::new("CN")
                         .when_image_missing(Some(image))
                         .into_element(cx),
                 ]);
@@ -314,15 +315,13 @@ fn web_vs_fret_layout_empty_avatar_geometry() {
     );
 
     let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
-        let avatar = fret_ui_shadcn::Avatar::new(vec![
-            fret_ui_shadcn::AvatarFallback::new("CN").into_element(cx),
-        ])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(Px(web_avatar.rect.w))
-                .h_px(Px(web_avatar.rect.h)),
-        )
-        .into_element(cx);
+        let avatar = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("CN").into_element(cx)])
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(Px(web_avatar.rect.w))
+                    .h_px(Px(web_avatar.rect.h)),
+            )
+            .into_element(cx);
 
         vec![avatar]
     });
@@ -412,9 +411,9 @@ fn web_vs_fret_layout_empty_avatar_group_geometry() {
 
         let avatars = (0..3)
             .map(|idx| {
-                let mut avatar = fret_ui_shadcn::Avatar::new(vec![
-                    fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
-                    fret_ui_shadcn::AvatarFallback::new("CN")
+                let mut avatar = shadcn::Avatar::new(vec![
+                    shadcn::AvatarImage::new(image).into_element(cx),
+                    shadcn::AvatarFallback::new("CN")
                         .when_image_missing(Some(image))
                         .into_element(cx),
                 ])

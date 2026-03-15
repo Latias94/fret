@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::TableState;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -28,7 +29,7 @@ fn render_frame(
     window: AppWindowId,
     bounds: Rect,
     state: Model<TableState>,
-    output: Model<fret_ui_shadcn::DataTableViewOutput>,
+    output: Model<shadcn::DataTableViewOutput>,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -43,8 +44,7 @@ fn render_frame(
         "data-table-pagination-page-size",
         move |cx: &mut ElementContext<'_, App>| {
             let pagination =
-                fret_ui_shadcn::DataTablePagination::new(state.clone(), output.clone())
-                    .into_element(cx);
+                shadcn::DataTablePagination::new(state.clone(), output.clone()).into_element(cx);
             vec![pagination]
         },
     );
@@ -136,8 +136,7 @@ fn data_table_pagination_page_size_dropdown_updates_state_and_resets_page_index(
     let mut state_value = TableState::default();
     state_value.pagination.page_index = 3;
     let state: Model<TableState> = app.models_mut().insert(state_value);
-    let output: Model<fret_ui_shadcn::DataTableViewOutput> =
-        app.models_mut().insert(Default::default());
+    let output: Model<shadcn::DataTableViewOutput> = app.models_mut().insert(Default::default());
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);

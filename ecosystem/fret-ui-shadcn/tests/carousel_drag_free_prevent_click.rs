@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 use fret_app::App;
@@ -90,8 +91,8 @@ fn render_frame(
     window: AppWindowId,
     bounds: Rect,
     frame_id: FrameId,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<shadcn::CarouselApiSnapshot>,
+    opts: shadcn::CarouselOptions,
     click_count_model: Model<u32>,
 ) -> Vec<Effect> {
     app.set_frame_id(frame_id);
@@ -116,13 +117,13 @@ fn render_frame(
                 );
                 cx.container(Default::default(), |cx| {
                     vec![
-                        fret_ui_shadcn::Button::new(label.clone())
+                        shadcn::Button::new(label.clone())
                             .on_activate(on_activate)
                             .into_element(cx),
                     ]
                 })
             });
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_snapshot_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -163,12 +164,12 @@ fn carousel_drag_free_mouse_click_while_moving_is_prevented() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let api: Model<fret_ui_shadcn::CarouselApiSnapshot> = app
+    let api: Model<shadcn::CarouselApiSnapshot> = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
     let click_count_model: Model<u32> = app.models_mut().insert(0);
 
-    let opts = fret_ui_shadcn::CarouselOptions::new()
+    let opts = shadcn::CarouselOptions::new()
         .embla_engine(true)
         .drag_free(true);
 

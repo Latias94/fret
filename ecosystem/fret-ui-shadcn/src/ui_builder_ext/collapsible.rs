@@ -3,7 +3,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::{IntoUiElement, UiBuilder};
 
-use crate::Collapsible;
+use crate::collapsible::Collapsible;
 
 pub trait CollapsibleUiBuilderExt {
     fn into_element<H: UiHost, TTrigger, TContent>(

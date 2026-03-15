@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -21,8 +22,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<Option<fret_ui_shadcn::CarouselApi>>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<Option<shadcn::CarouselApi>>,
+    opts: shadcn::CarouselOptions,
     carousel_width: Px,
     item_basis_main_px: Px,
 ) {
@@ -39,7 +40,7 @@ fn render_frame(
         "carousel-api-handle",
         move |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_handle_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -66,8 +67,8 @@ fn render_frame_parts(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<Option<fret_ui_shadcn::CarouselApi>>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<Option<shadcn::CarouselApi>>,
+    opts: shadcn::CarouselOptions,
     carousel_width: Px,
     item_basis_main_px: Px,
 ) {
@@ -84,13 +85,9 @@ fn render_frame_parts(
         "carousel-api-handle-parts",
         move |cx| {
             let items = (0..5)
-                .map(|_| {
-                    fret_ui_shadcn::CarouselItem::new(
-                        cx.container(Default::default(), |_cx| vec![]),
-                    )
-                })
+                .map(|_| shadcn::CarouselItem::new(cx.container(Default::default(), |_cx| vec![])))
                 .collect::<Vec<_>>();
-            let carousel = fret_ui_shadcn::Carousel::default()
+            let carousel = shadcn::Carousel::default()
                 .opts(opts)
                 .api_handle_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -104,9 +101,9 @@ fn render_frame_parts(
                 .refine_viewport_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(120.0))))
                 .into_element_parts(
                     cx,
-                    |_cx| fret_ui_shadcn::CarouselContent::new(items),
-                    fret_ui_shadcn::CarouselPrevious::new(),
-                    fret_ui_shadcn::CarouselNext::new(),
+                    |_cx| shadcn::CarouselContent::new(items),
+                    shadcn::CarouselPrevious::new(),
+                    shadcn::CarouselNext::new(),
                 );
             vec![carousel]
         },
@@ -126,8 +123,8 @@ fn carousel_api_handle_is_published_and_can_scroll_next() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let api = app.models_mut().insert(None::<fret_ui_shadcn::CarouselApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+    let api = app.models_mut().insert(None::<shadcn::CarouselApi>);
+    let opts = shadcn::CarouselOptions::default();
 
     for _ in 0..3 {
         render_frame(
@@ -154,7 +151,7 @@ fn carousel_api_handle_is_published_and_can_scroll_next() {
         "expected measurable snaps; snapshot={before:?}"
     );
 
-    let mut cursor = fret_ui_shadcn::CarouselEventCursor {
+    let mut cursor = shadcn::CarouselEventCursor {
         select_generation: before.select_generation,
         reinit_generation: before.reinit_generation,
     };
@@ -185,10 +182,9 @@ fn carousel_api_handle_is_published_and_can_scroll_next() {
 
     let events = api_handle.events_since(&mut app, &mut cursor);
     assert!(
-        events.iter().any(|ev| matches!(
-            ev,
-            fret_ui_shadcn::CarouselEvent::Select { selected_index: 1 }
-        )),
+        events
+            .iter()
+            .any(|ev| matches!(ev, shadcn::CarouselEvent::Select { selected_index: 1 })),
         "expected select event; events={events:?} snapshot={after:?}"
     );
 }
@@ -203,8 +199,8 @@ fn carousel_api_handle_is_published_when_using_parts_adapter() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let api = app.models_mut().insert(None::<fret_ui_shadcn::CarouselApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+    let api = app.models_mut().insert(None::<shadcn::CarouselApi>);
+    let opts = shadcn::CarouselOptions::default();
 
     for _ in 0..3 {
         render_frame_parts(

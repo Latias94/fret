@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space, ui,
 };
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::facade::{Button, ButtonSize, ButtonVariant};
 
 /// AI Elements-aligned workflow `Controls` chrome (UI-only).
 ///

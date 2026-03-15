@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_sonner_demo_button_height_matches_web() {
@@ -14,8 +15,8 @@ fn web_vs_fret_layout_sonner_demo_button_height_matches_web() {
 
     let snap = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::Button::new("Show Toast")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            shadcn::Button::new("Show Toast")
+                .variant(shadcn::ButtonVariant::Outline)
                 .into_element(cx),
         ]
     });
@@ -46,8 +47,8 @@ fn web_vs_fret_layout_sonner_types_first_button_height_matches_web() {
 
     let snap = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::Button::new("Default")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            shadcn::Button::new("Default")
+                .variant(shadcn::ButtonVariant::Outline)
                 .into_element(cx),
         ]
     });

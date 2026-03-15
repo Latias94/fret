@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -85,18 +86,18 @@ fn dialog_escape_closes_and_restores_focus_to_trigger() {
 
     let build = move |open: Model<bool>| {
         move |cx: &mut ElementContext<'_, App>| {
-            vec![fret_ui_shadcn::Dialog::new(open).into_element_parts(
+            vec![shadcn::Dialog::new(open).into_element_parts(
                 cx,
                 |cx| {
-                    fret_ui_shadcn::DialogTrigger::new(
-                        fret_ui_shadcn::Button::new("Open")
+                    shadcn::DialogTrigger::new(
+                        shadcn::Button::new("Open")
                             .test_id("dialog-trigger")
                             .into_element(cx),
                     )
                 },
-                fret_ui_shadcn::DialogPortal::new(),
-                fret_ui_shadcn::DialogOverlay::new(),
-                |cx| fret_ui_shadcn::DialogContent::new([cx.text("Content")]).into_element(cx),
+                shadcn::DialogPortal::new(),
+                shadcn::DialogOverlay::new(),
+                |cx| shadcn::DialogContent::new([cx.text("Content")]).into_element(cx),
             )]
         }
     };

@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -80,30 +81,27 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             let items = [
-                fret_ui_shadcn::ComboboxItem::new("Next.js", "Next.js"),
-                fret_ui_shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
-                fret_ui_shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
+                shadcn::ComboboxItem::new("Next.js", "Next.js"),
+                shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
+                shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
             ];
 
             vec![
-                fret_ui_shadcn::Combobox::new(value_frame_1, open_frame_1)
+                shadcn::Combobox::new(value_frame_1, open_frame_1)
                     .test_id_prefix("combobox-test")
                     .into_element_parts(cx, |_cx| {
                         vec![
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxInput::new()
-                                    .placeholder("Select a framework"),
+                            shadcn::ComboboxPart::from(
+                                shadcn::ComboboxInput::new().placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxContent::new([
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxEmpty::new("No items found."),
-                                    ),
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxList::new().items(items),
-                                    ),
-                                ]),
-                            ),
+                            shadcn::ComboboxPart::from(shadcn::ComboboxContent::new([
+                                shadcn::ComboboxContentPart::from(shadcn::ComboboxEmpty::new(
+                                    "No items found.",
+                                )),
+                                shadcn::ComboboxContentPart::from(
+                                    shadcn::ComboboxList::new().items(items),
+                                ),
+                            ])),
                         ]
                     }),
             ]
@@ -123,30 +121,27 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             let items = [
-                fret_ui_shadcn::ComboboxItem::new("Next.js", "Next.js"),
-                fret_ui_shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
-                fret_ui_shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
+                shadcn::ComboboxItem::new("Next.js", "Next.js"),
+                shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
+                shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
             ];
 
             vec![
-                fret_ui_shadcn::Combobox::new(value_frame_2, open_frame_2)
+                shadcn::Combobox::new(value_frame_2, open_frame_2)
                     .test_id_prefix("combobox-test")
                     .into_element_parts(cx, |_cx| {
                         vec![
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxInput::new()
-                                    .placeholder("Select a framework"),
+                            shadcn::ComboboxPart::from(
+                                shadcn::ComboboxInput::new().placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxContent::new([
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxEmpty::new("No items found."),
-                                    ),
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxList::new().items(items),
-                                    ),
-                                ]),
-                            ),
+                            shadcn::ComboboxPart::from(shadcn::ComboboxContent::new([
+                                shadcn::ComboboxContentPart::from(shadcn::ComboboxEmpty::new(
+                                    "No items found.",
+                                )),
+                                shadcn::ComboboxContentPart::from(
+                                    shadcn::ComboboxList::new().items(items),
+                                ),
+                            ])),
                         ]
                     }),
             ]
@@ -175,30 +170,27 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             let items = [
-                fret_ui_shadcn::ComboboxItem::new("Next.js", "Next.js"),
-                fret_ui_shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
-                fret_ui_shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
+                shadcn::ComboboxItem::new("Next.js", "Next.js"),
+                shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
+                shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
             ];
 
             vec![
-                fret_ui_shadcn::Combobox::new(value_frame_3, open_frame_3)
+                shadcn::Combobox::new(value_frame_3, open_frame_3)
                     .test_id_prefix("combobox-test")
                     .into_element_parts(cx, |_cx| {
                         vec![
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxInput::new()
-                                    .placeholder("Select a framework"),
+                            shadcn::ComboboxPart::from(
+                                shadcn::ComboboxInput::new().placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxContent::new([
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxEmpty::new("No items found."),
-                                    ),
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxList::new().items(items),
-                                    ),
-                                ]),
-                            ),
+                            shadcn::ComboboxPart::from(shadcn::ComboboxContent::new([
+                                shadcn::ComboboxContentPart::from(shadcn::ComboboxEmpty::new(
+                                    "No items found.",
+                                )),
+                                shadcn::ComboboxContentPart::from(
+                                    shadcn::ComboboxList::new().items(items),
+                                ),
+                            ])),
                         ]
                     }),
             ]
@@ -218,30 +210,27 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             let items = [
-                fret_ui_shadcn::ComboboxItem::new("Next.js", "Next.js"),
-                fret_ui_shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
-                fret_ui_shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
+                shadcn::ComboboxItem::new("Next.js", "Next.js"),
+                shadcn::ComboboxItem::new("SvelteKit", "SvelteKit"),
+                shadcn::ComboboxItem::new("Nuxt.js", "Nuxt.js"),
             ];
 
             vec![
-                fret_ui_shadcn::Combobox::new(value_frame_4, open_frame_4)
+                shadcn::Combobox::new(value_frame_4, open_frame_4)
                     .test_id_prefix("combobox-test")
                     .into_element_parts(cx, |_cx| {
                         vec![
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxInput::new()
-                                    .placeholder("Select a framework"),
+                            shadcn::ComboboxPart::from(
+                                shadcn::ComboboxInput::new().placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxContent::new([
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxEmpty::new("No items found."),
-                                    ),
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxList::new().items(items),
-                                    ),
-                                ]),
-                            ),
+                            shadcn::ComboboxPart::from(shadcn::ComboboxContent::new([
+                                shadcn::ComboboxContentPart::from(shadcn::ComboboxEmpty::new(
+                                    "No items found.",
+                                )),
+                                shadcn::ComboboxContentPart::from(
+                                    shadcn::ComboboxList::new().items(items),
+                                ),
+                            ])),
                         ]
                     }),
             ]

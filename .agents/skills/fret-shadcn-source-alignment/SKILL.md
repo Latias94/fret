@@ -104,6 +104,16 @@ Check the intended surface first:
 If the mismatch is “our example code teaches the wrong import/build pattern”, fix the exemplar surface
 first, then the component internals if they still block the intended authoring flow.
 
+If the mismatch is specifically that first-party snippets still teach the wrong widget-local event
+surface, fix that teaching surface before touching internals:
+
+- prefer `.action(...)` / `.action_payload(...)` on widgets that already expose stable action slots,
+- prefer `fret::view::AppActivateExt` (`.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, payload)` /
+  `.listen(cx, ...)`) for activation-only surfaces,
+- that activation sugar is valid in both `View::render(&mut AppUi)` and extracted `UiCx` helper
+  functions, so snippets should not fall back to raw `.on_activate(...)` just because the example
+  was factored out of the root render function.
+
 If the mismatch is really about helper return types or explicit conversion trait names showing up
 in curated examples, consult:
 

@@ -5,6 +5,7 @@ use fret_core::{
 };
 use fret_ui::Theme;
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_shadcn::prelude::UiElementTestIdExt;
 use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
@@ -169,8 +170,8 @@ fn fret_kbd_in_tooltip_content_overrides_bg_and_fg() {
         "fret-kbd-tooltip-slot",
         |cx| {
             vec![
-                fret_ui_shadcn::TooltipContent::build(cx, |_cx| {
-                    [fret_ui_shadcn::Kbd::new("S").test_id("kbd-tooltip-key")]
+                shadcn::TooltipContent::build(cx, |_cx| {
+                    [shadcn::Kbd::new("S").test_id("kbd-tooltip-key")]
                 })
                 .into_element(cx),
             ]

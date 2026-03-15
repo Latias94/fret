@@ -16,7 +16,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
 
-use fret_ui_shadcn::{Badge, BadgeVariant, HoverCard, HoverCardContent};
+use fret_ui_shadcn::facade::{Badge, BadgeVariant, HoverCard, HoverCardContent};
 
 use crate::model::SourceItem;
 

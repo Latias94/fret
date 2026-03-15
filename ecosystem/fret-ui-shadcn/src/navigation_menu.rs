@@ -1339,7 +1339,7 @@ impl NavigationMenu {
             .unwrap_or(Px(16.0));
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
         let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         // Upstream base-maia `NavigationMenuContent` uses `p-2.5 pr-3`.
         let content_pad_y = MetricRef::space(Space::N2p5).resolve(&theme);
         let content_pad_left = MetricRef::space(Space::N2p5).resolve(&theme);

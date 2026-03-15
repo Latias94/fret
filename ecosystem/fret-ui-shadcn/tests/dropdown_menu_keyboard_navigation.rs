@@ -6,6 +6,7 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -94,23 +95,23 @@ fn dropdown_menu_arrow_down_enter_activates_item_and_closes() {
                 });
             });
 
-            vec![fret_ui_shadcn::DropdownMenu::from_open(open).into_element(
+            vec![shadcn::DropdownMenu::from_open(open).into_element(
                 cx,
                 |cx| {
-                    fret_ui_shadcn::Button::new("Open")
+                    shadcn::Button::new("Open")
                         .test_id("menu-trigger")
                         .into_element(cx)
                 },
                 move |_cx| {
                     vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("My Account")
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("My Account")
                                 .value("my-account")
                                 .test_id("menu-item-my-account")
                                 .on_activate(on_activate.clone()),
                         ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Profile")
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Profile")
                                 .value("profile")
                                 .test_id("menu-item-profile"),
                         ),

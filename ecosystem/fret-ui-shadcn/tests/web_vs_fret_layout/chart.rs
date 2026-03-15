@@ -1,11 +1,12 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 fn assert_chart_tooltip_rect_matches_web(
     web_name: &str,
-    indicator: fret_ui_shadcn::ChartTooltipIndicator,
+    indicator: shadcn::ChartTooltipIndicator,
     hide_indicator: bool,
     hide_label: bool,
-    kind: fret_ui_shadcn::ChartTooltipContentKind,
+    kind: shadcn::ChartTooltipContentKind,
     fixed_width_border_box: Option<Px>,
 ) {
     let web = read_web_golden(web_name);
@@ -20,10 +21,8 @@ fn assert_chart_tooltip_rect_matches_web(
     })
     .expect("web chart tooltip node");
 
-    let advanced_layout = matches!(
-        kind,
-        fret_ui_shadcn::ChartTooltipContentKind::AdvancedKcalTotal
-    ) && web_name == "chart-tooltip-advanced";
+    let advanced_layout = matches!(kind, shadcn::ChartTooltipContentKind::AdvancedKcalTotal)
+        && web_name == "chart-tooltip-advanced";
 
     let (web_item_0, web_item_1, web_total_row) = if advanced_layout {
         let item_row = |name: &str| {
@@ -66,15 +65,15 @@ fn assert_chart_tooltip_rect_matches_web(
     let label = Arc::<str>::from(format!("Golden:{web_name}:tooltip"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let mut tooltip = fret_ui_shadcn::ChartTooltipContent::new()
+        let mut tooltip = shadcn::ChartTooltipContent::new()
             .label("Tue")
             .indicator(indicator)
             .hide_indicator(hide_indicator)
             .hide_label(hide_label)
             .kind(kind)
             .items([
-                fret_ui_shadcn::ChartTooltipItem::new("Running", "380"),
-                fret_ui_shadcn::ChartTooltipItem::new("Swimming", "420"),
+                shadcn::ChartTooltipItem::new("Running", "380"),
+                shadcn::ChartTooltipItem::new("Swimming", "420"),
             ]);
         if advanced_layout {
             tooltip = tooltip.test_id_prefix(label.clone());
@@ -157,9 +156,9 @@ fn assert_chart_legend_rect_matches_web(web_name: &str) {
     .expect("web chart legend node");
 
     let vertical_align = if class_has_token(web_legend, "pb-3") {
-        fret_ui_shadcn::ChartLegendVerticalAlign::Top
+        shadcn::ChartLegendVerticalAlign::Top
     } else {
-        fret_ui_shadcn::ChartLegendVerticalAlign::Bottom
+        shadcn::ChartLegendVerticalAlign::Bottom
     };
 
     let bounds = Rect::new(
@@ -170,11 +169,11 @@ fn assert_chart_legend_rect_matches_web(web_name: &str) {
     let label = Arc::<str>::from(format!("Golden:{web_name}:legend"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let legend = fret_ui_shadcn::ChartLegendContent::new()
+        let legend = shadcn::ChartLegendContent::new()
             .vertical_align(vertical_align)
             .items([
-                fret_ui_shadcn::ChartLegendItem::new("Desktop"),
-                fret_ui_shadcn::ChartLegendItem::new("Mobile"),
+                shadcn::ChartLegendItem::new("Desktop"),
+                shadcn::ChartLegendItem::new("Mobile"),
             ])
             .into_element(cx);
 
@@ -233,17 +232,17 @@ fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
     let label = Arc::<str>::from(format!("Golden:{web_name}:pie-legend"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let legend = fret_ui_shadcn::ChartLegendContent::new()
+        let legend = shadcn::ChartLegendContent::new()
             .gap(Space::N2)
             .wrap(true)
             .item_width_px(Px(72.5))
             .item_justify_center(true)
             .items([
-                fret_ui_shadcn::ChartLegendItem::new("Chrome"),
-                fret_ui_shadcn::ChartLegendItem::new("Safari"),
-                fret_ui_shadcn::ChartLegendItem::new("Firefox"),
-                fret_ui_shadcn::ChartLegendItem::new("Edge"),
-                fret_ui_shadcn::ChartLegendItem::new("Other"),
+                shadcn::ChartLegendItem::new("Chrome"),
+                shadcn::ChartLegendItem::new("Safari"),
+                shadcn::ChartLegendItem::new("Firefox"),
+                shadcn::ChartLegendItem::new("Edge"),
+                shadcn::ChartLegendItem::new("Other"),
             ])
             .into_element(cx);
 
@@ -278,7 +277,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
     label: &str,
     hide_label: bool,
     hide_indicator: bool,
-    indicator: fret_ui_shadcn::ChartTooltipIndicator,
+    indicator: shadcn::ChartTooltipIndicator,
     width_border_box: Px,
     items: impl IntoIterator<Item = (Arc<str>, Arc<str>)>,
 ) -> AnyElement {
@@ -312,7 +311,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
 
     let items: Vec<(Arc<str>, Arc<str>)> = items.into_iter().collect();
     let nest_label =
-        !hide_label && items.len() == 1 && indicator != fret_ui_shadcn::ChartTooltipIndicator::Dot;
+        !hide_label && items.len() == 1 && indicator != shadcn::ChartTooltipIndicator::Dot;
 
     let row_height = if nest_label {
         Px(text_xs_px.0 * 2.0 + gap_1p5.0)
@@ -326,7 +325,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
         tooltip_label: Arc<str>,
         muted: fret_core::Color,
         hide_indicator: bool,
-        indicator: fret_ui_shadcn::ChartTooltipIndicator,
+        indicator: shadcn::ChartTooltipIndicator,
         nest_label: bool,
         gap_1p5: Px,
         gap_2: Px,
@@ -340,9 +339,10 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
         if !hide_indicator {
             let indicator_color = theme.color_token("foreground");
             let (w, h) = match indicator {
-                fret_ui_shadcn::ChartTooltipIndicator::Dot => (Px(10.0), Px(10.0)),
-                fret_ui_shadcn::ChartTooltipIndicator::Line
-                | fret_ui_shadcn::ChartTooltipIndicator::Dashed => (Px(4.0), row_height),
+                shadcn::ChartTooltipIndicator::Dot => (Px(10.0), Px(10.0)),
+                shadcn::ChartTooltipIndicator::Line | shadcn::ChartTooltipIndicator::Dashed => {
+                    (Px(4.0), row_height)
+                }
             };
 
             let mut indicator_props = decl_style::container_props(
@@ -432,9 +432,10 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
                 padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: match indicator {
-                    fret_ui_shadcn::ChartTooltipIndicator::Dot => CrossAlign::Center,
-                    fret_ui_shadcn::ChartTooltipIndicator::Line
-                    | fret_ui_shadcn::ChartTooltipIndicator::Dashed => CrossAlign::Stretch,
+                    shadcn::ChartTooltipIndicator::Dot => CrossAlign::Center,
+                    shadcn::ChartTooltipIndicator::Line | shadcn::ChartTooltipIndicator::Dashed => {
+                        CrossAlign::Stretch
+                    }
                 },
                 wrap: false,
             },
@@ -576,7 +577,7 @@ fn web_vs_fret_layout_chart_tooltip_demo_geometry_matches_web() {
             "Page Views",
             false,
             false,
-            fret_ui_shadcn::ChartTooltipIndicator::Dot,
+            shadcn::ChartTooltipIndicator::Dot,
             Px(128.0),
             [
                 (Arc::from("Desktop"), Arc::from("186")),
@@ -597,7 +598,7 @@ fn web_vs_fret_layout_chart_tooltip_demo_geometry_matches_web() {
             "Browser",
             true,
             false,
-            fret_ui_shadcn::ChartTooltipIndicator::Dashed,
+            shadcn::ChartTooltipIndicator::Dashed,
             Px(128.0),
             [
                 (Arc::from("Chrome"), Arc::from("1,286")),
@@ -618,7 +619,7 @@ fn web_vs_fret_layout_chart_tooltip_demo_geometry_matches_web() {
             "Page Views",
             false,
             false,
-            fret_ui_shadcn::ChartTooltipIndicator::Line,
+            shadcn::ChartTooltipIndicator::Line,
             Px(144.0),
             [(Arc::from("Desktop"), Arc::from("12,486"))],
         );
@@ -636,7 +637,7 @@ fn web_vs_fret_layout_chart_tooltip_demo_geometry_matches_web() {
             "Browser",
             true,
             false,
-            fret_ui_shadcn::ChartTooltipIndicator::Dot,
+            shadcn::ChartTooltipIndicator::Dot,
             Px(128.0),
             [(Arc::from("Chrome"), Arc::from("1,286"))],
         );

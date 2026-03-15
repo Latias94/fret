@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "date_picker/fixtures.rs"]
 mod fixtures;
@@ -44,14 +45,14 @@ fn web_vs_fret_date_picker_with_presets_select_open_vp375x160_listbox_paints_abo
             };
             use fret_ui_shadcn::select::SelectPosition;
 
-            fret_ui_shadcn::Popover::from_open(popover_open)
-                .align(fret_ui_shadcn::PopoverAlign::Start)
-                .side(fret_ui_shadcn::PopoverSide::Bottom)
+            shadcn::Popover::from_open(popover_open)
+                .align(shadcn::PopoverAlign::Start)
+                .side(shadcn::PopoverSide::Bottom)
                 .into_element_with(
                     cx,
                     |cx| {
-                        fret_ui_shadcn::Button::new("Pick a date")
-                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                        shadcn::Button::new("Pick a date")
+                            .variant(shadcn::ButtonVariant::Outline)
                             .refine_layout(
                                 LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))),
                             )
@@ -60,24 +61,23 @@ fn web_vs_fret_date_picker_with_presets_select_open_vp375x160_listbox_paints_abo
                     move |cx| {
                         let value = value.clone();
                         let select_open = select_open.clone();
-                        let select =
-                            fret_ui_shadcn::Select::new(value.clone(), select_open.clone())
-                                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
-                                .position(SelectPosition::Popper)
-                                .items([
-                                    fret_ui_shadcn::SelectItem::new("0", "Today"),
-                                    fret_ui_shadcn::SelectItem::new("1", "Tomorrow"),
-                                    fret_ui_shadcn::SelectItem::new("3", "In 3 days"),
-                                    fret_ui_shadcn::SelectItem::new("7", "In a week"),
-                                ])
-                                .into_element(cx);
+                        let select = shadcn::Select::new(value.clone(), select_open.clone())
+                            .value(shadcn::SelectValue::new().placeholder("Select"))
+                            .position(SelectPosition::Popper)
+                            .items([
+                                shadcn::SelectItem::new("0", "Today"),
+                                shadcn::SelectItem::new("1", "Tomorrow"),
+                                shadcn::SelectItem::new("3", "In 3 days"),
+                                shadcn::SelectItem::new("7", "In a week"),
+                            ])
+                            .into_element(cx);
 
                         let body = ui::v_stack(move |_cx| vec![select])
                             .gap(Space::N2)
                             .items_stretch()
                             .into_element(cx);
 
-                        fret_ui_shadcn::PopoverContent::new([body])
+                        shadcn::PopoverContent::new([body])
                             .refine_style(ChromeRefinement::default().p(Space::N2))
                             .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
                             .into_element(cx)

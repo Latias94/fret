@@ -20,7 +20,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
-use fret_ui_shadcn::{Badge, BadgeVariant};
+use fret_ui_shadcn::facade::{Badge, BadgeVariant};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PackageInfoChangeKind {

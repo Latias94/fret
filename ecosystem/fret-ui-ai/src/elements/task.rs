@@ -21,7 +21,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
 };
-use fret_ui_shadcn::{Collapsible, CollapsibleContent, CollapsibleTrigger};
+use fret_ui_shadcn::facade::{Collapsible, CollapsibleContent, CollapsibleTrigger};
 
 fn muted_fg(theme: &Theme) -> Color {
     theme

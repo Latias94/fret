@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_accordion_demo_geometry_light() {
@@ -45,7 +46,8 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
 
     let default_value = Some(Arc::from("item-1"));
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger, Space};
+        use fret_ui_shadcn::prelude::Space;
+        use shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
 
         let item_1 = AccordionItem::new(
             Arc::from("item-1"),
@@ -262,7 +264,8 @@ fn web_vs_fret_layout_accordion_demo_geometry_dark() {
 
     let default_value = Some(Arc::from("item-1"));
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger, Space};
+        use fret_ui_shadcn::prelude::Space;
+        use shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
 
         let item_1 = AccordionItem::new(
             Arc::from("item-1"),

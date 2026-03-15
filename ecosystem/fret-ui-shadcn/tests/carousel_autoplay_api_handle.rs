@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, Event, FrameId, Point, Px, Rect, Size as CoreSize, 
 use fret_runtime::{Effect, Model};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -23,8 +24,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<Option<fret_ui_shadcn::CarouselAutoplayApi>>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<Option<shadcn::CarouselAutoplayApi>>,
+    opts: shadcn::CarouselOptions,
     carousel_width: Px,
     item_basis_main_px: Px,
 ) {
@@ -41,10 +42,10 @@ fn render_frame(
         "carousel-autoplay-api-handle",
         move |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
-                .plugins([fret_ui_shadcn::CarouselPlugin::Autoplay(
-                    fret_ui_shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
+                .plugins([shadcn::CarouselPlugin::Autoplay(
+                    shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
                         .pause_on_hover(false)
                         .reset_on_hover_leave(false),
                 )])
@@ -101,10 +102,8 @@ fn carousel_autoplay_stop_on_interaction_stops_after_slide_receives_focus() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let autoplay = app
-        .models_mut()
-        .insert(None::<fret_ui_shadcn::CarouselAutoplayApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+    let autoplay = app.models_mut().insert(None::<shadcn::CarouselAutoplayApi>);
+    let opts = shadcn::CarouselOptions::default();
 
     fn render_focus_stop_frame(
         ui: &mut UiTree<App>,
@@ -112,8 +111,8 @@ fn carousel_autoplay_stop_on_interaction_stops_after_slide_receives_focus() {
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         bounds: Rect,
-        autoplay: Model<Option<fret_ui_shadcn::CarouselAutoplayApi>>,
-        opts: fret_ui_shadcn::CarouselOptions,
+        autoplay: Model<Option<shadcn::CarouselAutoplayApi>>,
+        opts: shadcn::CarouselOptions,
     ) {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -141,10 +140,10 @@ fn carousel_autoplay_stop_on_interaction_stops_after_slide_receives_focus() {
                         |_cx| vec![],
                     )
                 });
-                let carousel = fret_ui_shadcn::Carousel::new(slides)
+                let carousel = shadcn::Carousel::new(slides)
                     .opts(opts)
-                    .plugins([fret_ui_shadcn::CarouselPlugin::Autoplay(
-                        fret_ui_shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
+                    .plugins([shadcn::CarouselPlugin::Autoplay(
+                        shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
                             .pause_on_hover(false)
                             .reset_on_hover_leave(false),
                     )])
@@ -238,10 +237,8 @@ fn carousel_autoplay_api_handle_publishes_and_accepts_stop_reset() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let api = app
-        .models_mut()
-        .insert(None::<fret_ui_shadcn::CarouselAutoplayApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+    let api = app.models_mut().insert(None::<shadcn::CarouselAutoplayApi>);
+    let opts = shadcn::CarouselOptions::default();
 
     for _ in 0..3 {
         render_frame(
@@ -328,10 +325,8 @@ fn carousel_autoplay_api_handle_accepts_pause_and_play() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let api = app
-        .models_mut()
-        .insert(None::<fret_ui_shadcn::CarouselAutoplayApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+    let api = app.models_mut().insert(None::<shadcn::CarouselAutoplayApi>);
+    let opts = shadcn::CarouselOptions::default();
 
     for _ in 0..3 {
         render_frame(
@@ -406,10 +401,8 @@ fn carousel_autoplay_stop_on_last_snap_stops_after_reaching_last_snap() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let autoplay = app
-        .models_mut()
-        .insert(None::<fret_ui_shadcn::CarouselAutoplayApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default().loop_enabled(false);
+    let autoplay = app.models_mut().insert(None::<shadcn::CarouselAutoplayApi>);
+    let opts = shadcn::CarouselOptions::default().loop_enabled(false);
 
     fn render_stop_on_last_snap_frame(
         ui: &mut UiTree<App>,
@@ -417,8 +410,8 @@ fn carousel_autoplay_stop_on_last_snap_stops_after_reaching_last_snap() {
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         bounds: Rect,
-        autoplay: Model<Option<fret_ui_shadcn::CarouselAutoplayApi>>,
-        opts: fret_ui_shadcn::CarouselOptions,
+        autoplay: Model<Option<shadcn::CarouselAutoplayApi>>,
+        opts: shadcn::CarouselOptions,
     ) {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -433,10 +426,10 @@ fn carousel_autoplay_stop_on_last_snap_stops_after_reaching_last_snap() {
             "carousel-autoplay-stop-on-last-snap",
             move |cx| {
                 let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-                let carousel = fret_ui_shadcn::Carousel::new(slides)
+                let carousel = shadcn::Carousel::new(slides)
                     .opts(opts)
-                    .plugins([fret_ui_shadcn::CarouselPlugin::Autoplay(
-                        fret_ui_shadcn::CarouselAutoplayConfig::new(Duration::from_millis(10))
+                    .plugins([shadcn::CarouselPlugin::Autoplay(
+                        shadcn::CarouselAutoplayConfig::new(Duration::from_millis(10))
                             .pause_on_hover(false)
                             .reset_on_hover_leave(false)
                             .stop_on_last_snap(true),
@@ -530,10 +523,8 @@ fn carousel_autoplay_per_snap_delays_reschedule_timer_after_with_expected_values
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let autoplay = app
-        .models_mut()
-        .insert(None::<fret_ui_shadcn::CarouselAutoplayApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default().loop_enabled(false);
+    let autoplay = app.models_mut().insert(None::<shadcn::CarouselAutoplayApi>);
+    let opts = shadcn::CarouselOptions::default().loop_enabled(false);
 
     for _ in 0..3 {
         render_frame(

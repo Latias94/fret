@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_shadcn::tabs::TabsActivationMode;
 use std::sync::Arc;
 
@@ -97,18 +98,18 @@ fn build_tabs(
         |_cx| Vec::new(),
     );
 
-    let tabs = fret_ui_shadcn::Tabs::new(selected)
+    let tabs = shadcn::Tabs::new(selected)
         .activation_mode(activation_mode)
         .item(
-            fret_ui_shadcn::TabsItem::new("alpha", "Alpha", [alpha_panel])
+            shadcn::TabsItem::new("alpha", "Alpha", [alpha_panel])
                 .trigger_test_id("tabs-trigger-alpha"),
         )
         .item(
-            fret_ui_shadcn::TabsItem::new("beta", "Beta", [beta_panel])
+            shadcn::TabsItem::new("beta", "Beta", [beta_panel])
                 .trigger_test_id("tabs-trigger-beta"),
         )
         .item(
-            fret_ui_shadcn::TabsItem::new("gamma", "Gamma", [gamma_panel])
+            shadcn::TabsItem::new("gamma", "Gamma", [gamma_panel])
                 .trigger_test_id("tabs-trigger-gamma"),
         );
 

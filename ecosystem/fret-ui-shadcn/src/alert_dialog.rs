@@ -2381,7 +2381,9 @@ mod tests {
             |cx| {
                 vec![AlertDialog::new(open.clone()).into_element_parts(
                     cx,
-                    |cx| AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx)),
+                    |cx| {
+                        AlertDialogTrigger::new(crate::button::Button::new("Open").into_element(cx))
+                    },
                     AlertDialogPortal::new(),
                     AlertDialogOverlay::new(),
                     |cx| AlertDialogContent::new([cx.text("Content")]).into_element(cx),
@@ -2452,7 +2454,8 @@ mod tests {
             bounds,
             "shadcn-alert-dialog-compose-content-with-from-scope",
             |cx| {
-                let trigger = AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx));
+                let trigger =
+                    AlertDialogTrigger::new(crate::button::Button::new("Open").into_element(cx));
 
                 vec![
                     AlertDialog::new(open.clone())

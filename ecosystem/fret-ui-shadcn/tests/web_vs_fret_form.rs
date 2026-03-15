@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, NodeId, Point, Px, Rect, SemanticsRole, Size as Cor
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::headless::form_state::{FormFieldId, FormState};
+use fret_ui_shadcn::facade as shadcn;
 #[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
@@ -239,10 +240,10 @@ fn web_vs_fret_form_rhf_input_control_height_matches() {
         let form_state: Model<FormState> = cx.app.models_mut().insert(FormState::default());
 
         let id = FormFieldId::from("username");
-        let input = fret_ui_shadcn::Input::new(input_model)
+        let input = shadcn::Input::new(input_model)
             .a11y_label(label_text.clone())
             .into_element(cx);
-        let field = fret_ui_shadcn::FormField::new(form_state, id, vec![input])
+        let field = shadcn::FormField::new(form_state, id, vec![input])
             .label(label_text.clone())
             .into_element(cx);
 

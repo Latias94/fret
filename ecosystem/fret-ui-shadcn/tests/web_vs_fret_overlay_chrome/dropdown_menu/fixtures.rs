@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -83,7 +84,7 @@ fn build_dropdown_menu_invite_submenu(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
+    use shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
     DropdownMenu::from_open(open.clone())
         .min_width(Px(224.0))
@@ -310,12 +311,12 @@ fn web_vs_fret_dropdown_menu_overlay_chrome_cases_match_web_fixtures() {
                     "menu",
                     SemanticsRole::Menu,
                     |cx, open| {
-                        fret_ui_shadcn::DropdownMenu::from_open(open.clone()).into_element(
+                        shadcn::DropdownMenu::from_open(open.clone()).into_element(
                             cx,
-                            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
+                            |cx| shadcn::Button::new("Open").into_element(cx),
                             |_cx| {
-                                vec![fret_ui_shadcn::DropdownMenuEntry::Item(
-                                    fret_ui_shadcn::DropdownMenuItem::new("Alpha"),
+                                vec![shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("Alpha"),
                                 )]
                             },
                         )

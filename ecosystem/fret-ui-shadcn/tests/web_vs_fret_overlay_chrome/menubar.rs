@@ -1,11 +1,12 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "menubar/fixtures.rs"]
 mod fixtures;
 
 #[test]
 fn web_vs_fret_menubar_root_shadow_matches_web() {
-    use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+    use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
 
     let web = read_web_golden_open("menubar-demo");
     let theme = web_theme_named(&web, "light");
@@ -64,7 +65,7 @@ fn web_vs_fret_menubar_root_shadow_matches_web() {
 
 #[test]
 fn web_vs_fret_menubar_root_shadow_matches_web_dark() {
-    use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+    use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
 
     let web = read_web_golden_open("menubar-demo");
     let theme = web_theme_named(&web, "dark");
@@ -356,7 +357,7 @@ fn build_shadcn_menubar_file_menu_destructive(
     new_tab_destructive: bool,
     new_window_destructive: bool,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu, MenubarShortcut};
+    use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu, MenubarShortcut};
 
     let mut new_tab =
         MenubarItem::new("New Tab").trailing(MenubarShortcut::new("⌘T").into_element(cx));

@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -39,7 +40,7 @@ struct DrawerOverlayChromeCase {
 }
 
 fn build_drawer_demo(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+    use shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
 
     Drawer::new(open.clone()).into_element(
         cx,

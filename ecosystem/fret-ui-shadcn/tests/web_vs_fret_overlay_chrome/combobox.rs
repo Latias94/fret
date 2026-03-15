@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "combobox/fixtures.rs"]
 mod fixtures;
@@ -7,7 +8,7 @@ fn build_shadcn_combobox_demo_page(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Combobox, ComboboxItem};
+    use shadcn::{Combobox, ComboboxItem};
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let items = vec![
@@ -22,8 +23,8 @@ fn build_shadcn_combobox_demo_page(
         .a11y_label("Select a fruit")
         .items(items)
         .into_element_parts(cx, |_cx| {
-            vec![fret_ui_shadcn::ComboboxPart::from(
-                fret_ui_shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
+            vec![shadcn::ComboboxPart::from(
+                shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
             )]
         })
 }

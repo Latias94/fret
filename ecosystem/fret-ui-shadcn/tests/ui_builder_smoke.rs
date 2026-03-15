@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
@@ -379,16 +380,15 @@ fn ui_builder_smoke_applies_supported_patches() {
     .ui()
     .build();
 
-    let _ = fret_ui_shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
+    let _ = shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
         .ui()
         .p_4()
         .build();
-    let _ =
-        fret_ui_shadcn::CalendarRange::new(calendar_month.clone(), calendar_range_selected.clone())
-            .ui()
-            .p_4()
-            .build();
-    let _ = fret_ui_shadcn::DatePicker::new(
+    let _ = shadcn::CalendarRange::new(calendar_month.clone(), calendar_range_selected.clone())
+        .ui()
+        .p_4()
+        .build();
+    let _ = shadcn::DatePicker::new(
         date_picker_open,
         calendar_month.clone(),
         calendar_selected.clone(),
@@ -396,7 +396,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     .ui()
     .p_4()
     .build();
-    let _ = fret_ui_shadcn::DateRangePicker::new(
+    let _ = shadcn::DateRangePicker::new(
         date_range_picker_open,
         calendar_month,
         calendar_range_selected,
@@ -404,7 +404,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     .ui()
     .p_4()
     .build();
-    let _ = fret_ui_shadcn::RadioGroup::new(radio_group_model)
+    let _ = shadcn::RadioGroup::new(radio_group_model)
         .ui()
         .p_4()
         .build();

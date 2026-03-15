@@ -9,6 +9,7 @@ use fret_ui::element::{
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/style_aware_services.rs"]
@@ -23,7 +24,7 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api_snapshot: Model<fret_ui_shadcn::CarouselApiSnapshot>,
+    api_snapshot: Model<shadcn::CarouselApiSnapshot>,
     dnd_started: Model<bool>,
     handle_captures_pointer: bool,
 ) {
@@ -126,7 +127,7 @@ fn render_frame(
             );
             let slide_2 = cx.container(Default::default(), move |_cx| vec![]);
 
-            let carousel = fret_ui_shadcn::Carousel::new([slide_1, slide_2])
+            let carousel = shadcn::Carousel::new([slide_1, slide_2])
                 .api_snapshot_model(api_snapshot)
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)
@@ -157,7 +158,7 @@ fn carousel_drag_changes_offset_without_dnd_arbitration() {
 
     let api_snapshot = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
     let dnd_started = app.models_mut().insert(false);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -235,7 +236,7 @@ fn carousel_dnd_tracking_blocks_carousel_drag_when_handle_does_not_capture() {
 
     let api_snapshot = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
     let dnd_started = app.models_mut().insert(false);
     let dnd_service = fret_ui_kit::dnd::dnd_service_model_global(&mut app);
     let bounds = Rect::new(
@@ -331,7 +332,7 @@ fn carousel_dnd_handle_capture_enables_dnd_activation_without_carousel_scroll() 
 
     let api_snapshot = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
     let dnd_started = app.models_mut().insert(false);
     let dnd_service = fret_ui_kit::dnd::dnd_service_model_global(&mut app);
     let bounds = Rect::new(

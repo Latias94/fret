@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_tabs_demo_tab_list_height() {
@@ -23,12 +24,12 @@ fn web_vs_fret_layout_tabs_demo_tab_list_height() {
 
     let snap = run_fret_root(bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
         ];
 
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+            shadcn::Tabs::uncontrolled(Some("account"))
                 .items(items)
                 .into_element(cx),
         ]
@@ -60,12 +61,12 @@ fn web_vs_fret_layout_tabs_demo_active_tab_height() {
 
     let snap = run_fret_root(bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
         ];
 
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+            shadcn::Tabs::uncontrolled(Some("account"))
                 .items(items)
                 .into_element(cx),
         ]
@@ -104,12 +105,12 @@ fn web_vs_fret_layout_tabs_demo_inactive_tab_text_color_matches_web() {
 
     let (snap, scene) = render_and_paint_in_bounds(bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
         ];
 
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+            shadcn::Tabs::uncontrolled(Some("account"))
                 .items(items)
                 .into_element(cx),
         ]
@@ -155,12 +156,12 @@ fn web_vs_fret_layout_tabs_demo_active_tab_text_color_matches_web() {
 
     let (snap, scene) = render_and_paint_in_bounds(bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
         ];
 
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+            shadcn::Tabs::uncontrolled(Some("account"))
                 .items(items)
                 .into_element(cx),
         ]
@@ -205,12 +206,12 @@ fn web_vs_fret_layout_tabs_demo_active_tab_inset_matches_web() {
 
     let snap = run_fret_root(bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
         ];
 
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+            shadcn::Tabs::uncontrolled(Some("account"))
                 .items(items)
                 .into_element(cx),
         ]
@@ -311,12 +312,12 @@ fn web_vs_fret_layout_tabs_demo_panel_gap() {
 
     let snap = run_fret_root(bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
         ];
 
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+            shadcn::Tabs::uncontrolled(Some("account"))
                 .items(items)
                 .into_element(cx),
         ]

@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_breadcrumb_separator_geometry() {
@@ -455,9 +456,9 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
             use fret_ui_shadcn::breadcrumb::primitives as bc;
 
             let open: Model<bool> = cx.app.models_mut().insert(false);
-            let dropdown = fret_ui_shadcn::DropdownMenu::from_open(open)
+            let dropdown = shadcn::DropdownMenu::from_open(open)
                 .modal(false)
-                .align(fret_ui_shadcn::DropdownMenuAlign::Start);
+                .align(shadcn::DropdownMenuAlign::Start);
 
             vec![bc::Breadcrumb::new().into_element(cx, |cx| {
                 vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -542,14 +543,14 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
                                 },
                                 |_cx| {
                                     vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Documentation"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Documentation"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Themes"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Themes"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("GitHub"),
                                         ),
                                     ]
                                 },
@@ -657,9 +658,9 @@ fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
             use fret_ui_shadcn::breadcrumb::primitives as bc;
 
             let open: Model<bool> = cx.app.models_mut().insert(false);
-            let dropdown = fret_ui_shadcn::DropdownMenu::from_open(open)
+            let dropdown = shadcn::DropdownMenu::from_open(open)
                 .modal(false)
-                .align(fret_ui_shadcn::DropdownMenuAlign::Start);
+                .align(shadcn::DropdownMenuAlign::Start);
 
             vec![bc::Breadcrumb::new().into_element(cx, |cx| {
                 vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -696,14 +697,14 @@ fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
                                 },
                                 |_cx| {
                                     vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Documentation"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Documentation"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Themes"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Themes"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("GitHub"),
                                         ),
                                     ]
                                 },

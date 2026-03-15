@@ -5,6 +5,7 @@ use fret_core::{
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -23,8 +24,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: fret_runtime::Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: fret_runtime::Model<shadcn::CarouselApiSnapshot>,
+    opts: shadcn::CarouselOptions,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -39,7 +40,7 @@ fn render_frame(
         "carousel-direction-rtl",
         move |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_snapshot_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -72,8 +73,8 @@ fn carousel_drag_right_advances_in_rtl() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let opts = fret_ui_shadcn::CarouselOptions::new().direction(LayoutDirection::Rtl);
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let opts = shadcn::CarouselOptions::new().direction(LayoutDirection::Rtl);
 
     // Two+ frames are required because the carousel derives snap points from the previous layout
     // pass' measured geometry.

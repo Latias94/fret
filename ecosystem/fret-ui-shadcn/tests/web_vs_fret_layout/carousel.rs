@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_carousel_demo_geometry_matches_web() {
@@ -11,7 +12,7 @@ fn web_vs_fret_layout_carousel_demo_geometry_matches_web() {
                 .map(|i| carousel_slide(cx, i, Px(36.0), Px(40.0), true, true))
                 .collect::<Vec<_>>();
 
-            fret_ui_shadcn::Carousel::new(slides)
+            shadcn::Carousel::new(slides)
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
                 .refine_track_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(336.0))))
                 .track_start_neg_margin(Space::N4)
@@ -31,7 +32,7 @@ fn web_vs_fret_layout_carousel_plugin_geometry_matches_web() {
                 .map(|i| carousel_slide(cx, i, Px(36.0), Px(40.0), true, true))
                 .collect::<Vec<_>>();
 
-            fret_ui_shadcn::Carousel::new(slides)
+            shadcn::Carousel::new(slides)
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
                 .refine_track_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(336.0))))
                 .track_start_neg_margin(Space::N4)
@@ -51,7 +52,7 @@ fn web_vs_fret_layout_carousel_api_geometry_matches_web() {
                 .map(|i| carousel_slide(cx, i, Px(36.0), Px(40.0), true, false))
                 .collect::<Vec<_>>();
 
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
                 .refine_track_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(336.0))))
                 .track_start_neg_margin(Space::N4)
@@ -93,11 +94,8 @@ fn web_vs_fret_layout_carousel_size_geometry_matches_web() {
                 .map(|i| carousel_slide(cx, i, Px(30.0), Px(36.0), true, true))
                 .collect::<Vec<_>>();
 
-            fret_ui_shadcn::Carousel::new(slides)
-                .opts(
-                    fret_ui_shadcn::CarouselOptions::new()
-                        .align(fret_ui_shadcn::CarouselAlign::Start),
-                )
+            shadcn::Carousel::new(slides)
+                .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(384.0))))
                 .refine_track_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(400.0))))
                 .track_start_neg_margin(Space::N4)
@@ -125,7 +123,7 @@ fn web_vs_fret_layout_carousel_spacing_geometry_matches_web() {
                 .map(|i| carousel_slide(cx, i, Px(24.0), Px(32.0), true, true))
                 .collect::<Vec<_>>();
 
-            fret_ui_shadcn::Carousel::new(slides)
+            shadcn::Carousel::new(slides)
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(384.0))))
                 .refine_track_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(388.0))))
                 .track_start_neg_margin(Space::N1)
@@ -151,7 +149,7 @@ fn web_vs_fret_layout_carousel_orientation_geometry_matches_web() {
         |cx| {
             let slides = (1..=5)
                 .map(|i| {
-                    fret_ui_shadcn::CarouselItem::new(carousel_slide(
+                    shadcn::CarouselItem::new(carousel_slide(
                         cx,
                         i,
                         Px(30.0),
@@ -164,12 +162,9 @@ fn web_vs_fret_layout_carousel_orientation_geometry_matches_web() {
                 })
                 .collect::<Vec<_>>();
 
-            fret_ui_shadcn::Carousel::new(slides)
-                .orientation(fret_ui_shadcn::CarouselOrientation::Vertical)
-                .opts(
-                    fret_ui_shadcn::CarouselOptions::new()
-                        .align(fret_ui_shadcn::CarouselAlign::Start),
-                )
+            shadcn::Carousel::new(slides)
+                .orientation(shadcn::CarouselOrientation::Vertical)
+                .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
                 .refine_viewport_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(196.0))))
                 .refine_track_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(200.0))))
@@ -233,7 +228,7 @@ fn carousel_card_content(
     );
 
     if aspect_square {
-        fret_ui_shadcn::AspectRatio::new(1.0, content).into_element(cx)
+        shadcn::AspectRatio::new(1.0, content).into_element(cx)
     } else {
         content
     }
@@ -248,7 +243,7 @@ fn carousel_slide(
     with_p1_wrapper: bool,
 ) -> AnyElement {
     let content = carousel_card_content(cx, number, text_px, line_height, aspect_square);
-    let card = fret_ui_shadcn::Card::new([content]).into_element(cx);
+    let card = shadcn::Card::new([content]).into_element(cx);
 
     if with_p1_wrapper {
         ui::container(move |_cx| vec![card])

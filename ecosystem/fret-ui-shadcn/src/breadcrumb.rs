@@ -20,7 +20,8 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Space, ui,
 };
 
-use crate::{overlay_motion, rtl, use_direction};
+use crate::direction::use_direction;
+use crate::{overlay_motion, rtl};
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
@@ -1318,7 +1319,7 @@ pub mod primitives {
                 (muted, props)
             };
 
-            let dir = crate::use_direction(cx, None);
+            let dir = crate::direction::use_direction(cx, None);
             let (icon, size) = match self.kind {
                 BreadcrumbSeparatorKind::ChevronRight => {
                     (crate::rtl::chevron_inline_end(dir), Px(14.0))

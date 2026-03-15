@@ -94,7 +94,7 @@ use state::get_context_menu_open_model;
 use state::get_overflow_menu_open_model;
 
 #[cfg(feature = "shadcn-context-menu")]
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     ContextMenu, ContextMenuEntry, ContextMenuItem, DropdownMenu, DropdownMenuAlign,
     DropdownMenuSide,
 };

@@ -6,6 +6,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -35,8 +36,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<Option<fret_ui_shadcn::CarouselApi>>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<Option<shadcn::CarouselApi>>,
+    opts: shadcn::CarouselOptions,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -51,11 +52,11 @@ fn render_frame(
         "carousel-focus-watch-tab-scrolls",
         move |cx| {
             let slides = (1..=5).map(|idx| {
-                let button = fret_ui_shadcn::Button::new(format!("Button {idx}")).into_element(cx);
+                let button = shadcn::Button::new(format!("Button {idx}")).into_element(cx);
                 cx.container(Default::default(), move |_cx| vec![button])
             });
 
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_handle_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -88,8 +89,8 @@ fn carousel_watch_focus_scrolls_to_focused_slide_after_tab() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let api = app.models_mut().insert(None::<fret_ui_shadcn::CarouselApi>);
-    let opts = fret_ui_shadcn::CarouselOptions::default().watch_focus(true);
+    let api = app.models_mut().insert(None::<shadcn::CarouselApi>);
+    let opts = shadcn::CarouselOptions::default().watch_focus(true);
 
     for _ in 0..3 {
         render_frame(

@@ -948,7 +948,7 @@ impl Tooltip {
 
                 let (arrow_options, arrow_protrusion) =
                     tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
-                let direction = crate::use_direction(cx, None);
+                let direction = crate::direction::use_direction(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
                     outer,
@@ -1671,7 +1671,7 @@ mod tests {
             let mut out = Vec::new();
             out.push_ui(
                 cx,
-                TooltipTrigger::build(crate::Card::build(|_cx, _out| {})),
+                TooltipTrigger::build(crate::card::Card::build(|_cx, _out| {})),
             );
 
             assert_eq!(out.len(), 1);
@@ -1691,7 +1691,10 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(cx, TooltipAnchor::build(crate::Card::build(|_cx, _out| {})));
+            out.push_ui(
+                cx,
+                TooltipAnchor::build(crate::card::Card::build(|_cx, _out| {})),
+            );
 
             assert_eq!(out.len(), 1);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
@@ -1710,8 +1713,8 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)]);
-            let root =
-                Tooltip::new(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
+            let root = Tooltip::new(cx, crate::card::Card::build(|_cx, _out| {}), content)
+                .into_element(cx);
 
             assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
         });

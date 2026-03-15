@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_item_avatar_geometry() {
@@ -40,9 +41,9 @@ fn web_vs_fret_layout_item_avatar_geometry() {
     let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
         let image = ImageId::default();
 
-        let item_avatar = fret_ui_shadcn::Avatar::new(vec![
-            fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
-            fret_ui_shadcn::AvatarFallback::new("CN")
+        let item_avatar = shadcn::Avatar::new(vec![
+            shadcn::AvatarImage::new(image).into_element(cx),
+            shadcn::AvatarFallback::new("CN")
                 .when_image_missing(Some(image))
                 .into_element(cx),
         ])
@@ -55,9 +56,9 @@ fn web_vs_fret_layout_item_avatar_geometry() {
 
         let group_items = (0..3)
             .map(|idx| {
-                let mut avatar = fret_ui_shadcn::Avatar::new(vec![
-                    fret_ui_shadcn::AvatarImage::new(image).into_element(cx),
-                    fret_ui_shadcn::AvatarFallback::new("CN")
+                let mut avatar = shadcn::Avatar::new(vec![
+                    shadcn::AvatarImage::new(image).into_element(cx),
+                    shadcn::AvatarFallback::new("CN")
                         .when_image_missing(Some(image))
                         .into_element(cx),
                 ])
@@ -238,7 +239,7 @@ fn web_vs_fret_layout_item_demo_item_rects_match_web() {
             LayoutRefinement::default().w_full().max_w(max_w),
         );
 
-        let outline = fret_ui_shadcn::ItemVariant::Outline;
+        let outline = shadcn::ItemVariant::Outline;
 
         let item0 = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -248,18 +249,18 @@ fn web_vs_fret_layout_item_demo_item_rects_match_web() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Item::new([
-                        fret_ui_shadcn::ItemContent::new([
-                            fret_ui_shadcn::ItemTitle::new("Basic Item").into_element(cx),
-                            fret_ui_shadcn::ItemDescription::new(
+                    shadcn::Item::new([
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("Basic Item").into_element(cx),
+                            shadcn::ItemDescription::new(
                                 "A simple item with title and description.",
                             )
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        fret_ui_shadcn::ItemActions::new([fret_ui_shadcn::Button::new("Action")
-                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                            .size(fret_ui_shadcn::ButtonSize::Sm)
+                        shadcn::ItemActions::new([shadcn::Button::new("Action")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
                             .into_element(cx)])
                         .into_element(cx),
                     ])
@@ -290,17 +291,17 @@ fn web_vs_fret_layout_item_demo_item_rects_match_web() {
                 );
 
                 vec![
-                    fret_ui_shadcn::Item::new([
-                        fret_ui_shadcn::ItemMedia::new([badge]).into_element(cx),
-                        fret_ui_shadcn::ItemContent::new([fret_ui_shadcn::ItemTitle::new(
+                    shadcn::Item::new([
+                        shadcn::ItemMedia::new([badge]).into_element(cx),
+                        shadcn::ItemContent::new([shadcn::ItemTitle::new(
                             "Your profile has been verified.",
                         )
                         .into_element(cx)])
                         .into_element(cx),
-                        fret_ui_shadcn::ItemActions::new([chevron]).into_element(cx),
+                        shadcn::ItemActions::new([chevron]).into_element(cx),
                     ])
                     .variant(outline)
-                    .size(fret_ui_shadcn::ItemSize::Sm)
+                    .size(shadcn::ItemSize::Sm)
                     .into_element(cx),
                 ]
             },
@@ -354,18 +355,18 @@ fn item_root_is_w_full_like_web_even_when_parent_does_not_stretch_children() {
 
     const ITEM_TEST_ID: &str = "Golden:item-demo:w-full";
     let snap = run_fret_root(bounds, |cx| {
-        let outline = fret_ui_shadcn::ItemVariant::Outline;
+        let outline = shadcn::ItemVariant::Outline;
 
-        let item = fret_ui_shadcn::Item::new([
-            fret_ui_shadcn::ItemContent::new([
-                fret_ui_shadcn::ItemTitle::new("Basic Item").into_element(cx),
-                fret_ui_shadcn::ItemDescription::new("A simple item with title and description.")
+        let item = shadcn::Item::new([
+            shadcn::ItemContent::new([
+                shadcn::ItemTitle::new("Basic Item").into_element(cx),
+                shadcn::ItemDescription::new("A simple item with title and description.")
                     .into_element(cx),
             ])
             .into_element(cx),
-            fret_ui_shadcn::ItemActions::new([fret_ui_shadcn::Button::new("Action")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::ItemActions::new([shadcn::Button::new("Action")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .into_element(cx)])
             .into_element(cx),
         ])
@@ -440,14 +441,14 @@ fn item_description_clamps_to_two_lines_by_default() {
             let long = "This is a long description that should wrap into multiple lines. ";
             let long: Arc<str> = Arc::from(long.repeat(16));
 
-            let item = fret_ui_shadcn::Item::new([fret_ui_shadcn::ItemContent::new([
-                fret_ui_shadcn::ItemTitle::new("Item").into_element(cx),
-                fret_ui_shadcn::ItemDescription::new(long)
+            let item = shadcn::Item::new([shadcn::ItemContent::new([
+                shadcn::ItemTitle::new("Item").into_element(cx),
+                shadcn::ItemDescription::new(long)
                     .into_element(cx)
                     .test_id("test.item.description"),
             ])
             .into_element(cx)])
-            .variant(fret_ui_shadcn::ItemVariant::Outline)
+            .variant(shadcn::ItemVariant::Outline)
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx);
 
@@ -502,7 +503,7 @@ fn web_vs_fret_layout_item_size_item_rects_match_web() {
             LayoutRefinement::default().w_full().max_w(max_w),
         );
 
-        let outline = fret_ui_shadcn::ItemVariant::Outline;
+        let outline = shadcn::ItemVariant::Outline;
 
         let item0 = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -512,18 +513,18 @@ fn web_vs_fret_layout_item_size_item_rects_match_web() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Item::new([
-                        fret_ui_shadcn::ItemContent::new([
-                            fret_ui_shadcn::ItemTitle::new("Basic Item").into_element(cx),
-                            fret_ui_shadcn::ItemDescription::new(
+                    shadcn::Item::new([
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("Basic Item").into_element(cx),
+                            shadcn::ItemDescription::new(
                                 "A simple item with title and description.",
                             )
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        fret_ui_shadcn::ItemActions::new([fret_ui_shadcn::Button::new("Action")
-                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                            .size(fret_ui_shadcn::ButtonSize::Sm)
+                        shadcn::ItemActions::new([shadcn::Button::new("Action")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
                             .into_element(cx)])
                         .into_element(cx),
                     ])
@@ -554,17 +555,17 @@ fn web_vs_fret_layout_item_size_item_rects_match_web() {
                 );
 
                 vec![
-                    fret_ui_shadcn::Item::new([
-                        fret_ui_shadcn::ItemMedia::new([badge]).into_element(cx),
-                        fret_ui_shadcn::ItemContent::new([fret_ui_shadcn::ItemTitle::new(
+                    shadcn::Item::new([
+                        shadcn::ItemMedia::new([badge]).into_element(cx),
+                        shadcn::ItemContent::new([shadcn::ItemTitle::new(
                             "Your profile has been verified.",
                         )
                         .into_element(cx)])
                         .into_element(cx),
-                        fret_ui_shadcn::ItemActions::new([chevron]).into_element(cx),
+                        shadcn::ItemActions::new([chevron]).into_element(cx),
                     ])
                     .variant(outline)
-                    .size(fret_ui_shadcn::ItemSize::Sm)
+                    .size(shadcn::ItemSize::Sm)
                     .into_element(cx),
                 ]
             },
@@ -618,7 +619,7 @@ fn web_vs_fret_layout_item_variant_item_heights_match_web() {
         );
 
         let mk_item = |cx: &mut fret_ui::ElementContext<'_, App>,
-                       variant: fret_ui_shadcn::ItemVariant,
+                       variant: shadcn::ItemVariant,
                        title: &str,
                        desc: &str,
                        test_id: &'static str| {
@@ -630,15 +631,15 @@ fn web_vs_fret_layout_item_variant_item_heights_match_web() {
                 },
                 move |cx| {
                     vec![
-                        fret_ui_shadcn::Item::new([
-                            fret_ui_shadcn::ItemContent::new([
-                                fret_ui_shadcn::ItemTitle::new(title).into_element(cx),
-                                fret_ui_shadcn::ItemDescription::new(desc).into_element(cx),
+                        shadcn::Item::new([
+                            shadcn::ItemContent::new([
+                                shadcn::ItemTitle::new(title).into_element(cx),
+                                shadcn::ItemDescription::new(desc).into_element(cx),
                             ])
                             .into_element(cx),
-                            fret_ui_shadcn::ItemActions::new([fret_ui_shadcn::Button::new("Open")
-                                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                                .size(fret_ui_shadcn::ButtonSize::Sm)
+                            shadcn::ItemActions::new([shadcn::Button::new("Open")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
                                 .into_element(cx)])
                             .into_element(cx),
                         ])
@@ -651,21 +652,21 @@ fn web_vs_fret_layout_item_variant_item_heights_match_web() {
 
         let item0 = mk_item(
             cx,
-            fret_ui_shadcn::ItemVariant::Default,
+            shadcn::ItemVariant::Default,
             "Default Variant",
             "Standard styling with subtle background and borders.",
             "Golden:item-variant:0",
         );
         let item1 = mk_item(
             cx,
-            fret_ui_shadcn::ItemVariant::Outline,
+            shadcn::ItemVariant::Outline,
             "Outline Variant",
             "Outlined style with clear borders and transparent background.",
             "Golden:item-variant:1",
         );
         let item2 = mk_item(
             cx,
-            fret_ui_shadcn::ItemVariant::Muted,
+            shadcn::ItemVariant::Muted,
             "Muted Variant",
             "Subdued appearance with muted colors for secondary content.",
             "Golden:item-variant:2",
@@ -723,25 +724,23 @@ fn web_vs_fret_layout_item_icon_item_rect_matches_web() {
             move |cx| {
                 let alert = decl_icon::icon(cx, IconId::new_static("lucide.shield-alert"));
                 vec![
-                    fret_ui_shadcn::Item::new([
-                        fret_ui_shadcn::ItemMedia::new([alert])
-                            .variant(fret_ui_shadcn::ItemMediaVariant::Icon)
+                    shadcn::Item::new([
+                        shadcn::ItemMedia::new([alert])
+                            .variant(shadcn::ItemMediaVariant::Icon)
                             .into_element(cx),
-                        fret_ui_shadcn::ItemContent::new([
-                            fret_ui_shadcn::ItemTitle::new("Security Alert").into_element(cx),
-                            fret_ui_shadcn::ItemDescription::new(
-                                "New login detected from unknown device.",
-                            )
-                            .into_element(cx),
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("Security Alert").into_element(cx),
+                            shadcn::ItemDescription::new("New login detected from unknown device.")
+                                .into_element(cx),
                         ])
                         .into_element(cx),
-                        fret_ui_shadcn::ItemActions::new([fret_ui_shadcn::Button::new("Review")
-                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                            .size(fret_ui_shadcn::ButtonSize::Sm)
+                        shadcn::ItemActions::new([shadcn::Button::new("Review")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
                             .into_element(cx)])
                         .into_element(cx),
                     ])
-                    .variant(fret_ui_shadcn::ItemVariant::Outline)
+                    .variant(shadcn::ItemVariant::Outline)
                     .into_element(cx),
                 ]
             },
@@ -796,17 +795,16 @@ fn web_vs_fret_layout_item_link_item_rects_match_web() {
                     None,
                 );
                 vec![
-                    fret_ui_shadcn::Item::new([
-                        fret_ui_shadcn::ItemContent::new([
-                            fret_ui_shadcn::ItemTitle::new("Visit our documentation")
-                                .into_element(cx),
-                            fret_ui_shadcn::ItemDescription::new(
+                    shadcn::Item::new([
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("Visit our documentation").into_element(cx),
+                            shadcn::ItemDescription::new(
                                 "Learn how to get started with our components.",
                             )
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        fret_ui_shadcn::ItemActions::new([chevron]).into_element(cx),
+                        shadcn::ItemActions::new([chevron]).into_element(cx),
                     ])
                     .into_element(cx),
                 ]
@@ -827,18 +825,18 @@ fn web_vs_fret_layout_item_link_item_rects_match_web() {
                     None,
                 );
                 vec![
-                    fret_ui_shadcn::Item::new([
-                        fret_ui_shadcn::ItemContent::new([
-                            fret_ui_shadcn::ItemTitle::new("External resource").into_element(cx),
-                            fret_ui_shadcn::ItemDescription::new(
+                    shadcn::Item::new([
+                        shadcn::ItemContent::new([
+                            shadcn::ItemTitle::new("External resource").into_element(cx),
+                            shadcn::ItemDescription::new(
                                 "Opens in a new tab with security attributes.",
                             )
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        fret_ui_shadcn::ItemActions::new([external]).into_element(cx),
+                        shadcn::ItemActions::new([external]).into_element(cx),
                     ])
-                    .variant(fret_ui_shadcn::ItemVariant::Outline)
+                    .variant(shadcn::ItemVariant::Outline)
                     .into_element(cx),
                 ]
             },
@@ -906,9 +904,9 @@ fn web_vs_fret_layout_item_group_item_and_separator_heights_match_web() {
 
         let plus = |cx: &mut fret_ui::ElementContext<'_, App>| {
             let icon = decl_icon::icon(cx, IconId::new_static("lucide.plus"));
-            fret_ui_shadcn::Button::new("")
-                .variant(fret_ui_shadcn::ButtonVariant::Ghost)
-                .size(fret_ui_shadcn::ButtonSize::Icon)
+            shadcn::Button::new("")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::Icon)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
                 .children([icon])
                 .into_element(cx)
@@ -930,22 +928,22 @@ fn web_vs_fret_layout_item_group_item_and_separator_heights_match_web() {
                 },
                 move |cx| {
                     vec![
-                        fret_ui_shadcn::Item::new([
-                            fret_ui_shadcn::ItemMedia::new([fret_ui_shadcn::Avatar::new([
-                                fret_ui_shadcn::AvatarFallback::new(
+                        shadcn::Item::new([
+                            shadcn::ItemMedia::new([shadcn::Avatar::new([
+                                shadcn::AvatarFallback::new(
                                     username.chars().next().unwrap_or('S').to_string(),
                                 )
                                 .into_element(cx),
                             ])
                             .into_element(cx)])
                             .into_element(cx),
-                            fret_ui_shadcn::ItemContent::new([
-                                fret_ui_shadcn::ItemTitle::new(username).into_element(cx),
-                                fret_ui_shadcn::ItemDescription::new(email).into_element(cx),
+                            shadcn::ItemContent::new([
+                                shadcn::ItemTitle::new(username).into_element(cx),
+                                shadcn::ItemDescription::new(email).into_element(cx),
                             ])
                             .gap(Px(4.0))
                             .into_element(cx),
-                            fret_ui_shadcn::ItemActions::new([plus(cx)]).into_element(cx),
+                            shadcn::ItemActions::new([plus(cx)]).into_element(cx),
                         ])
                         .into_element(cx),
                     ]
@@ -959,13 +957,13 @@ fn web_vs_fret_layout_item_group_item_and_separator_heights_match_web() {
                         test_id: Some(Arc::from(format!("Golden:item-group:sep-{idx}"))),
                         ..Default::default()
                     },
-                    move |cx| vec![fret_ui_shadcn::ItemSeparator::new().into_element(cx)],
+                    move |cx| vec![shadcn::ItemSeparator::new().into_element(cx)],
                 );
                 rows.push(sep);
             }
         }
 
-        let group = fret_ui_shadcn::ItemGroup::new(rows).into_element(cx);
+        let group = shadcn::ItemGroup::new(rows).into_element(cx);
 
         vec![cx.column(
             ColumnProps {
@@ -1044,15 +1042,15 @@ fn web_vs_fret_layout_item_header_grid_item_rects_match_web() {
                         .into_element(cx);
 
                     vec![
-                        fret_ui_shadcn::Item::new([
-                            fret_ui_shadcn::ItemHeader::new([image]).into_element(cx),
-                            fret_ui_shadcn::ItemContent::new([
-                                fret_ui_shadcn::ItemTitle::new(name).into_element(cx),
-                                fret_ui_shadcn::ItemDescription::new(desc).into_element(cx),
+                        shadcn::Item::new([
+                            shadcn::ItemHeader::new([image]).into_element(cx),
+                            shadcn::ItemContent::new([
+                                shadcn::ItemTitle::new(name).into_element(cx),
+                                shadcn::ItemDescription::new(desc).into_element(cx),
                             ])
                             .into_element(cx),
                         ])
-                        .variant(fret_ui_shadcn::ItemVariant::Outline)
+                        .variant(shadcn::ItemVariant::Outline)
                         .into_element(cx),
                     ]
                 },
@@ -1060,7 +1058,7 @@ fn web_vs_fret_layout_item_header_grid_item_rects_match_web() {
             items.push(item);
         }
 
-        let group = fret_ui_shadcn::ItemGroup::new(items)
+        let group = shadcn::ItemGroup::new(items)
             .grid(3)
             .gap(gap)
             .into_element(cx);
@@ -1147,23 +1145,23 @@ fn web_vs_fret_layout_item_image_list_item_heights_match_web() {
                         .into_element(cx);
 
                     vec![
-                        fret_ui_shadcn::Item::new([
-                            fret_ui_shadcn::ItemMedia::new([image])
-                                .variant(fret_ui_shadcn::ItemMediaVariant::Image)
+                        shadcn::Item::new([
+                            shadcn::ItemMedia::new([image])
+                                .variant(shadcn::ItemMediaVariant::Image)
                                 .into_element(cx),
-                            fret_ui_shadcn::ItemContent::new([
-                                fret_ui_shadcn::ItemTitle::new(format!("{title} - {album}"))
+                            shadcn::ItemContent::new([
+                                shadcn::ItemTitle::new(format!("{title} - {album}"))
                                     .into_element(cx),
-                                fret_ui_shadcn::ItemDescription::new(artist).into_element(cx),
+                                shadcn::ItemDescription::new(artist).into_element(cx),
                             ])
                             .into_element(cx),
-                            fret_ui_shadcn::ItemContent::new([
-                                fret_ui_shadcn::ItemDescription::new(duration).into_element(cx),
+                            shadcn::ItemContent::new([
+                                shadcn::ItemDescription::new(duration).into_element(cx)
                             ])
                             .refine_layout(LayoutRefinement::default().flex_none())
                             .into_element(cx),
                         ])
-                        .variant(fret_ui_shadcn::ItemVariant::Outline)
+                        .variant(shadcn::ItemVariant::Outline)
                         .into_element(cx),
                     ]
                 },
@@ -1171,9 +1169,7 @@ fn web_vs_fret_layout_item_image_list_item_heights_match_web() {
             rows.push(item);
         }
 
-        let group = fret_ui_shadcn::ItemGroup::new(rows)
-            .gap(gap)
-            .into_element(cx);
+        let group = shadcn::ItemGroup::new(rows).gap(gap).into_element(cx);
 
         vec![cx.column(
             ColumnProps {

@@ -4,6 +4,7 @@ use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -44,7 +45,7 @@ fn render_frame(
         bounds,
         "data-table-row-click-selection",
         move |cx| {
-            let table = fret_ui_shadcn::DataTable::new()
+            let table = shadcn::DataTable::new()
                 .row_click_selection(row_click_selection)
                 .into_element_retained(
                     cx,

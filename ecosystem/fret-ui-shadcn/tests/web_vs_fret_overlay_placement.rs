@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 #![cfg(feature = "web-goldens")]
 // Heavy, web-golden-backed conformance. Enable via:
 //   cargo nextest run -p fret-ui-shadcn --features web-goldens
@@ -350,7 +351,7 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
             },
         );
 
-        fret_ui_shadcn::NavigationMenuLink::new(model, vec![body])
+        shadcn::NavigationMenuLink::new(model, vec![body])
             .label(label)
             .into_element(cx)
     }
@@ -571,7 +572,7 @@ fn shadcn_nav_menu_demo_simple_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    use fret_ui_shadcn::NavigationMenuLink;
+    use shadcn::NavigationMenuLink;
 
     let link_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::NORMAL); // text-sm
 
@@ -625,7 +626,7 @@ fn shadcn_nav_menu_demo_with_icon_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    use fret_ui_shadcn::NavigationMenuLink;
+    use shadcn::NavigationMenuLink;
 
     let link_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::NORMAL); // text-sm
 
@@ -708,7 +709,7 @@ fn shadcn_nav_menu_demo_list_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    use fret_ui_shadcn::NavigationMenuLink;
+    use shadcn::NavigationMenuLink;
 
     let title_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::MEDIUM); // text-sm font-medium
     let desc_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::NORMAL); // text-sm
@@ -805,7 +806,7 @@ fn shadcn_nav_menu_demo_components_panel_impl<H: UiHost>(
     grid_width: Option<Px>,
     cols: u16,
 ) -> AnyElement {
-    use fret_ui_shadcn::NavigationMenuLink;
+    use shadcn::NavigationMenuLink;
 
     let title_style = shadcn_text_style(Px(14.0), Px(14.0), FontWeight::MEDIUM); // text-sm leading-none font-medium
     let desc_style = shadcn_text_style(Px(14.0), Px(19.25), FontWeight::NORMAL); // text-sm leading-snug
@@ -5819,7 +5820,7 @@ fn assert_dropdown_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, w
 }
 
 fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
-    use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
+    use shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -7016,7 +7017,7 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
         false,
         |cx| {
             let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+            use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
             let entries: Vec<SelectEntry> = vec![
                 SelectGroup::new(vec![
@@ -7030,9 +7031,9 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
                 .into(),
             ];
 
-            let content = fret_ui_shadcn::Select::new(value, open.clone())
+            let content = shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
-                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
+                .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
                 .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                 .entries(entries)
                 .into_element(cx);
@@ -7055,7 +7056,7 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
             request_semantics,
             |cx| {
                 let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-                use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+                use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
                 let entries: Vec<SelectEntry> = vec![
                     SelectGroup::new(vec![
@@ -7069,9 +7070,9 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
                     .into(),
                 ];
 
-                let content = fret_ui_shadcn::Select::new(value, open.clone())
+                let content = shadcn::Select::new(value, open.clone())
                     .a11y_label("Select")
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
+                    .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
                     .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                     .entries(entries)
                     .into_element(cx);
@@ -7214,7 +7215,7 @@ fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
         let entries: Vec<SelectEntry> = vec![
             SelectGroup::new(vec![
@@ -7266,9 +7267,9 @@ fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
             .into(),
         ];
 
-        fret_ui_shadcn::Select::new(value.clone(), open.clone())
+        shadcn::Select::new(value.clone(), open.clone())
             .a11y_label("Select")
-            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+            .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7415,7 +7416,7 @@ fn assert_select_scrollable_listbox_option_height_matches(web_name: &str) {
         let value = value.clone();
         let open = open.clone();
 
-        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
         let entries: Vec<SelectEntry> = vec![
             SelectGroup::new(vec![
                 SelectLabel::new("North America").into(),
@@ -7466,9 +7467,9 @@ fn assert_select_scrollable_listbox_option_height_matches(web_name: &str) {
             .into(),
         ];
 
-        fret_ui_shadcn::Select::new(value, open)
+        shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+            .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7550,7 +7551,7 @@ fn assert_select_scrollable_listbox_height_matches(web_name: &str) {
         let value = value.clone();
         let open = open.clone();
 
-        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
         let entries: Vec<SelectEntry> = vec![
             SelectGroup::new(vec![
                 SelectLabel::new("North America").into(),
@@ -7601,9 +7602,9 @@ fn assert_select_scrollable_listbox_height_matches(web_name: &str) {
             .into(),
         ];
 
-        fret_ui_shadcn::Select::new(value, open)
+        shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+            .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7681,7 +7682,7 @@ fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
         let value = value.clone();
         let open = open.clone();
 
-        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
         let entries: Vec<SelectEntry> = vec![
             SelectGroup::new(vec![
                 SelectLabel::new("North America").into(),
@@ -7732,9 +7733,9 @@ fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
             .into(),
         ];
 
-        fret_ui_shadcn::Select::new(value, open)
+        shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+            .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7937,7 +7938,7 @@ fn assert_select_scrollable_viewport_insets_match(web_name: &str) {
         let value = value.clone();
         let open = open.clone();
 
-        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
         let entries: Vec<SelectEntry> = vec![
             SelectGroup::new(vec![
                 SelectLabel::new("North America").into(),
@@ -7988,9 +7989,9 @@ fn assert_select_scrollable_viewport_insets_match(web_name: &str) {
             .into(),
         ];
 
-        fret_ui_shadcn::Select::new(value, open)
+        shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+            .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -8125,7 +8126,7 @@ fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        use shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
         let entries: Vec<SelectEntry> = vec![
             SelectGroup::new(vec![
@@ -8177,9 +8178,9 @@ fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
             .into(),
         ];
 
-        fret_ui_shadcn::Select::new(value.clone(), open.clone())
+        shadcn::Select::new(value.clone(), open.clone())
             .a11y_label("Select")
-            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+            .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -8279,7 +8280,7 @@ fn combobox_demo_open_snapshot(
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Combobox, ComboboxItem};
+        use shadcn::{Combobox, ComboboxItem};
 
         let items = vec![
             ComboboxItem::new("apple", "Apple"),
@@ -8295,11 +8296,11 @@ fn combobox_demo_open_snapshot(
             .items(items)
             .into_element_parts(cx, |_cx| {
                 vec![
-                    fret_ui_shadcn::ComboboxPart::from(
-                        fret_ui_shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
+                    shadcn::ComboboxPart::from(
+                        shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
                     ),
-                    fret_ui_shadcn::ComboboxPart::from(
-                        fret_ui_shadcn::ComboboxInput::new().placeholder("Select a fruit"),
+                    shadcn::ComboboxPart::from(
+                        shadcn::ComboboxInput::new().placeholder("Select a fruit"),
                     ),
                 ]
             })
@@ -8574,7 +8575,7 @@ fn assert_context_menu_demo_constrained_overlay_placement_matches(web_name: &str
             let checked_full_urls = cx.local_model_keyed("checked_full_urls", || false);
             let radio_person = cx.local_model_keyed("radio_person", || Some(Arc::from("pedro")));
 
-            fret_ui_shadcn::ContextMenu::from_open(open.clone())
+            shadcn::ContextMenu::from_open(open.clone())
                 // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
                 .min_width(Px(208.0))
                 // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
@@ -8597,84 +8598,84 @@ fn assert_context_menu_demo_constrained_overlay_placement_matches(web_name: &str
                     },
                     |cx| {
                         vec![
-                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                fret_ui_shadcn::ContextMenuItem::new("Back")
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Back")
                                     .inset(true)
                                     .trailing(
-                                        fret_ui_shadcn::ContextMenuShortcut::new("?[")
+                                        shadcn::ContextMenuShortcut::new("?[")
                                             .into_element(cx),
                                     ),
                             ),
-                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                fret_ui_shadcn::ContextMenuItem::new("Forward")
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Forward")
                                     .inset(true)
                                     .disabled(true)
                                     .trailing(
-                                        fret_ui_shadcn::ContextMenuShortcut::new("?]")
+                                        shadcn::ContextMenuShortcut::new("?]")
                                             .into_element(cx),
                                     ),
                             ),
-                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                fret_ui_shadcn::ContextMenuItem::new("Reload")
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Reload")
                                     .inset(true)
                                     .trailing(
-                                        fret_ui_shadcn::ContextMenuShortcut::new("?R")
+                                        shadcn::ContextMenuShortcut::new("?R")
                                             .into_element(cx),
                                     ),
                             ),
-                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                fret_ui_shadcn::ContextMenuItem::new("More Tools")
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("More Tools")
                                     .inset(true)
                                     .submenu(vec![
-                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                            fret_ui_shadcn::ContextMenuItem::new("Save Page..."),
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new("Save Page..."),
                                         ),
-                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                            fret_ui_shadcn::ContextMenuItem::new(
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new(
                                                 "Create Shortcut...",
                                             ),
                                         ),
-                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                            fret_ui_shadcn::ContextMenuItem::new("Name Window..."),
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new("Name Window..."),
                                         ),
-                                        fret_ui_shadcn::ContextMenuEntry::Separator,
-                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                            fret_ui_shadcn::ContextMenuItem::new(
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new(
                                                 "Developer Tools",
                                             ),
                                         ),
-                                        fret_ui_shadcn::ContextMenuEntry::Separator,
-                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                            fret_ui_shadcn::ContextMenuItem::new("Delete").variant(
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new("Delete").variant(
                                                 fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
                                             ),
                                         ),
                                     ]),
                             ),
-                            fret_ui_shadcn::ContextMenuEntry::Separator,
-                            fret_ui_shadcn::ContextMenuEntry::CheckboxItem(
-                                fret_ui_shadcn::ContextMenuCheckboxItem::new(
+                            shadcn::ContextMenuEntry::Separator,
+                            shadcn::ContextMenuEntry::CheckboxItem(
+                                shadcn::ContextMenuCheckboxItem::new(
                                     checked_bookmarks.clone(),
                                     "Show Bookmarks",
                                 ),
                             ),
-                            fret_ui_shadcn::ContextMenuEntry::CheckboxItem(
-                                fret_ui_shadcn::ContextMenuCheckboxItem::new(
+                            shadcn::ContextMenuEntry::CheckboxItem(
+                                shadcn::ContextMenuCheckboxItem::new(
                                     checked_full_urls.clone(),
                                     "Show Full URLs",
                                 ),
                             ),
-                            fret_ui_shadcn::ContextMenuEntry::Separator,
-                            fret_ui_shadcn::ContextMenuEntry::Label(
-                                fret_ui_shadcn::ContextMenuLabel::new("People").inset(true),
+                            shadcn::ContextMenuEntry::Separator,
+                            shadcn::ContextMenuEntry::Label(
+                                shadcn::ContextMenuLabel::new("People").inset(true),
                             ),
-                            fret_ui_shadcn::ContextMenuEntry::RadioGroup(
-                                fret_ui_shadcn::ContextMenuRadioGroup::new(radio_person.clone())
-                                    .item(fret_ui_shadcn::ContextMenuRadioItemSpec::new(
+                            shadcn::ContextMenuEntry::RadioGroup(
+                                shadcn::ContextMenuRadioGroup::new(radio_person.clone())
+                                    .item(shadcn::ContextMenuRadioItemSpec::new(
                                         "pedro",
                                         "Pedro Duarte",
                                     ))
-                                    .item(fret_ui_shadcn::ContextMenuRadioItemSpec::new(
+                                    .item(shadcn::ContextMenuRadioItemSpec::new(
                                         "colm",
                                         "Colm Tuite",
                                     )),
@@ -10231,8 +10232,8 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
         |cx| {
             let trigger_id_out = trigger_id_out.clone();
             let content_id_out = content_id_out.clone();
-            let trigger = fret_ui_shadcn::Button::new("Hover")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            let trigger = shadcn::Button::new("Hover")
+                .variant(shadcn::ButtonVariant::Outline)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(trigger_w))
@@ -10240,7 +10241,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                 )
                 .into_element(cx);
             trigger_id_out.set(Some(trigger.id));
-            let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Add to library")])
+            let content = shadcn::TooltipContent::new(vec![cx.text("Add to library")])
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(content_w))
@@ -10248,7 +10249,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                 )
                 .into_element(cx);
             content_id_out.set(Some(content.id));
-            let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
+            let tooltip = shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
             vec![pad_root(cx, Px(0.0), tooltip)]
         },
     );
@@ -10272,8 +10273,8 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
             |cx| {
                 let trigger_id_out = trigger_id_out.clone();
                 let content_id_out = content_id_out.clone();
-                let trigger = fret_ui_shadcn::Button::new("Hover")
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                let trigger = shadcn::Button::new("Hover")
+                    .variant(shadcn::ButtonVariant::Outline)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(trigger_w))
@@ -10281,7 +10282,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                     )
                     .into_element(cx);
                 trigger_id_out.set(Some(trigger.id));
-                let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Add to library")])
+                let content = shadcn::TooltipContent::new(vec![cx.text("Add to library")])
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(content_w))
@@ -10289,7 +10290,7 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                     )
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
-                let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
+                let tooltip = shadcn::Tooltip::new(cx, trigger, content).into_element(cx);
                 vec![pad_root(cx, Px(0.0), tooltip)]
             },
         );
@@ -10397,8 +10398,8 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
         |cx| {
             let trigger_id_out = trigger_id_out.clone();
             let content_id_out = content_id_out.clone();
-            let trigger = fret_ui_shadcn::Button::new("@nextjs")
-                .variant(fret_ui_shadcn::ButtonVariant::Link)
+            let trigger = shadcn::Button::new("@nextjs")
+                .variant(shadcn::ButtonVariant::Link)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(trigger_w))
@@ -10407,7 +10408,7 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                 .into_element(cx);
             trigger_id_out.set(Some(trigger.id));
 
-            let content = fret_ui_shadcn::HoverCardContent::new(vec![cx.text("@nextjs")])
+            let content = shadcn::HoverCardContent::new(vec![cx.text("@nextjs")])
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
                         .w_px(Px(content_w))
@@ -10416,7 +10417,7 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                 .into_element(cx);
             content_id_out.set(Some(content.id));
 
-            let hover_card = fret_ui_shadcn::HoverCard::new(cx, trigger, content)
+            let hover_card = shadcn::HoverCard::new(cx, trigger, content)
                 .open_delay_frames(0)
                 .close_delay_frames(0)
                 .into_element(cx);
@@ -10454,8 +10455,8 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
             |cx| {
                 let trigger_id_out = trigger_id_out.clone();
                 let content_id_out = content_id_out.clone();
-                let trigger = fret_ui_shadcn::Button::new("@nextjs")
-                    .variant(fret_ui_shadcn::ButtonVariant::Link)
+                let trigger = shadcn::Button::new("@nextjs")
+                    .variant(shadcn::ButtonVariant::Link)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(trigger_w))
@@ -10464,7 +10465,7 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                     .into_element(cx);
                 trigger_id_out.set(Some(trigger.id));
 
-                let content = fret_ui_shadcn::HoverCardContent::new(vec![cx.text("@nextjs")])
+                let content = shadcn::HoverCardContent::new(vec![cx.text("@nextjs")])
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(content_w))
@@ -10473,7 +10474,7 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
 
-                let hover_card = fret_ui_shadcn::HoverCard::new(cx, trigger, content)
+                let hover_card = shadcn::HoverCard::new(cx, trigger, content)
                     .open_delay_frames(0)
                     .close_delay_frames(0)
                     .into_element(cx);
@@ -10595,30 +10596,30 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         true,
         |cx| {
             let items = vec![
-                fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                shadcn::NavigationMenuItem::new(
                     "components",
                     "Components",
                     vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "list",
                     "List",
                     vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "simple",
                     "Simple",
                     vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "with-icon",
                     "With Icon",
                     vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
                 ),
             ];
 
-            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+            let el = shadcn::NavigationMenu::new(model.clone())
                 .viewport(false)
                 .indicator(false)
                 .items(items)
@@ -10697,30 +10698,30 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
                         vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "list",
                         "List",
                         vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "simple",
                         "Simple",
                         vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "with-icon",
                         "With Icon",
                         vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
                     ),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(false)
                     .indicator(false)
                     .items(items)
@@ -10840,15 +10841,15 @@ fn web_vs_fret_navigation_menu_demo_hover_switch_overlay_placement_matches(
         true,
         |cx| {
             let items = vec![
-                fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                shadcn::NavigationMenuItem::new(
                     "components",
                     "Components",
                     vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
                 ),
             ];
 
-            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+            let el = shadcn::NavigationMenu::new(model.clone())
                 .viewport(false)
                 .indicator(false)
                 .items(items)
@@ -10929,15 +10930,15 @@ fn web_vs_fret_navigation_menu_demo_hover_switch_overlay_placement_matches(
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
                         vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
                     ),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(false)
                     .indicator(false)
                     .items(items)
@@ -11019,15 +11020,15 @@ fn web_vs_fret_navigation_menu_demo_hover_switch_overlay_placement_matches(
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
                         vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
                     ),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(false)
                     .indicator(false)
                     .items(items)
@@ -11151,12 +11152,12 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
         true,
         |cx| {
             let items = vec![
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "home",
                     "Home",
                     vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "components",
                     "Components",
                     vec![shadcn_nav_menu_demo_components_mobile_panel(
@@ -11164,10 +11165,10 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
                         model.clone(),
                     )],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
             ];
 
-            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+            let el = shadcn::NavigationMenu::new(model.clone())
                 .viewport(true)
                 .indicator(false)
                 .items(items)
@@ -11248,12 +11249,12 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "home",
                         "Home",
                         vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
                         vec![shadcn_nav_menu_demo_components_mobile_panel(
@@ -11261,10 +11262,10 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
                             model.clone(),
                         )],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                    shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(true)
                     .indicator(false)
                     .items(items)
@@ -11415,12 +11416,12 @@ fn assert_navigation_menu_demo_mobile_viewport_insets_match(web_name: &str, trig
         true,
         |cx| {
             let items = vec![
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "home",
                     "Home",
                     vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "components",
                     "Components",
                     vec![shadcn_nav_menu_demo_components_mobile_panel(
@@ -11428,10 +11429,10 @@ fn assert_navigation_menu_demo_mobile_viewport_insets_match(web_name: &str, trig
                         model.clone(),
                     )],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
             ];
 
-            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+            let el = shadcn::NavigationMenu::new(model.clone())
                 .viewport(true)
                 .indicator(false)
                 .items(items)
@@ -11506,12 +11507,12 @@ fn assert_navigation_menu_demo_mobile_viewport_insets_match(web_name: &str, trig
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "home",
                         "Home",
                         vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
                         vec![shadcn_nav_menu_demo_components_mobile_panel(
@@ -11519,10 +11520,10 @@ fn assert_navigation_menu_demo_mobile_viewport_insets_match(web_name: &str, trig
                             model.clone(),
                         )],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                    shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(true)
                     .indicator(false)
                     .items(items)
@@ -11661,12 +11662,12 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
         true,
         |cx| {
             let items = vec![
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "home",
                     "Home",
                     vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "components",
                     "Components",
                     vec![shadcn_nav_menu_demo_components_mobile_panel(
@@ -11674,25 +11675,25 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
                         model.clone(),
                     )],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                shadcn::NavigationMenuItem::new(
                     "list",
                     "List",
                     vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "simple",
                     "Simple",
                     vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "with-icon",
                     "With Icon",
                     vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
                 ),
             ];
 
-            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+            let el = shadcn::NavigationMenu::new(model.clone())
                 .viewport(true)
                 .indicator(false)
                 .items(items)
@@ -11773,12 +11774,12 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "home",
                         "Home",
                         vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
                         vec![shadcn_nav_menu_demo_components_mobile_panel(
@@ -11786,25 +11787,25 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
                             model.clone(),
                         )],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                    shadcn::NavigationMenuItem::new(
                         "list",
                         "List",
                         vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "simple",
                         "Simple",
                         vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "with-icon",
                         "With Icon",
                         vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
                     ),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(true)
                     .indicator(false)
                     .items(items)
@@ -11886,12 +11887,12 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "home",
                         "Home",
                         vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
                         vec![shadcn_nav_menu_demo_components_mobile_panel(
@@ -11899,10 +11900,10 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
                             model.clone(),
                         )],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                    shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(true)
                     .indicator(false)
                     .items(items)
@@ -12057,16 +12058,16 @@ fn navigation_menu_demo_home_mobile_small_viewport_height_matches_legacy() {
         true,
         |cx| {
             let items = vec![
-                fret_ui_shadcn::NavigationMenuItem::new(
+                shadcn::NavigationMenuItem::new(
                     "home",
                     "Home",
                     vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
-                fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
+                shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
             ];
 
-            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+            let el = shadcn::NavigationMenu::new(model.clone())
                 .viewport(true)
                 .indicator(false)
                 .items(items)
@@ -12136,16 +12137,16 @@ fn navigation_menu_demo_home_mobile_small_viewport_height_matches_legacy() {
             request_semantics,
             |cx| {
                 let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new(
+                    shadcn::NavigationMenuItem::new(
                         "home",
                         "Home",
                         vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
-                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                    shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
+                    shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
                 ];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(true)
                     .indicator(false)
                     .items(items)
@@ -14003,25 +14004,25 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Button, CommandDialog};
+        use shadcn::{Button, CommandDialog};
 
         let entries = vec![
-            fret_ui_shadcn::CommandGroup::new(vec![
-                fret_ui_shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
-                fret_ui_shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
-                fret_ui_shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
+            shadcn::CommandGroup::new(vec![
+                shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
+                shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
+                shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
             ])
             .heading("Suggestions")
             .into(),
-            fret_ui_shadcn::CommandSeparator::new().into(),
-            fret_ui_shadcn::CommandGroup::new(vec![
-                fret_ui_shadcn::CommandItem::new("Profile")
+            shadcn::CommandSeparator::new().into(),
+            shadcn::CommandGroup::new(vec![
+                shadcn::CommandItem::new("Profile")
                     .shortcut("⌘P")
                     .on_select("command.profile"),
-                fret_ui_shadcn::CommandItem::new("Billing")
+                shadcn::CommandItem::new("Billing")
                     .shortcut("⌘B")
                     .on_select("command.billing"),
-                fret_ui_shadcn::CommandItem::new("Settings")
+                shadcn::CommandItem::new("Settings")
                     .shortcut("⌘S")
                     .on_select("command.settings"),
             ])
@@ -14204,7 +14205,7 @@ fn assert_sonner_toast_rect_matches_web(
     web_name: &str,
     web: &WebGolden,
     dispatch_toast: impl FnOnce(
-        &fret_ui_shadcn::Sonner,
+        &shadcn::Sonner,
         &mut dyn fret_ui::action::UiActionHost,
         AppWindowId,
     ),
@@ -14229,10 +14230,10 @@ fn assert_sonner_toast_rect_matches_web(
         bounds,
         FrameId(1),
         false,
-        |cx| vec![fret_ui_shadcn::Toaster::new().into_element(cx)],
+        |cx| vec![shadcn::Toaster::new().into_element(cx)],
     );
 
-    let sonner = fret_ui_shadcn::Sonner::global(&mut app);
+    let sonner = shadcn::Sonner::global(&mut app);
     {
         let mut host = fret_ui::action::UiActionHostAdapter { app: &mut app };
         dispatch_toast(&sonner, &mut host, window);
@@ -14248,7 +14249,7 @@ fn assert_sonner_toast_rect_matches_web(
             bounds,
             FrameId(frame_id),
             frame_id == 24,
-            |cx| vec![fret_ui_shadcn::Toaster::new().into_element(cx)],
+            |cx| vec![shadcn::Toaster::new().into_element(cx)],
         );
     }
 

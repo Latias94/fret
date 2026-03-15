@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_card_with_form_width() {
@@ -22,13 +23,13 @@ fn web_vs_fret_layout_card_with_form_width() {
     );
 
     let snap = run_fret_root(bounds, |cx| {
-        let card = fret_ui_shadcn::Card::new(vec![
-            fret_ui_shadcn::CardHeader::new(vec![
-                fret_ui_shadcn::CardTitle::new("Title").into_element(cx),
-                fret_ui_shadcn::CardDescription::new("Description").into_element(cx),
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Title").into_element(cx),
+                shadcn::CardDescription::new("Description").into_element(cx),
             ])
             .into_element(cx),
-            fret_ui_shadcn::CardContent::new(vec![cx.text("Content")]).into_element(cx),
+            shadcn::CardContent::new(vec![cx.text("Content")]).into_element(cx),
         ])
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_card.rect.w)))
         .into_element(cx);
@@ -106,14 +107,14 @@ fn card_header_action_gap_matches_shadcn_gap_2() {
             )
             .test_id("test.card.header.description");
 
-        let action = fret_ui_shadcn::CardAction::new([cx
+        let action = shadcn::CardAction::new([cx
             .container(ContainerProps::default(), |_cx| Vec::new())
             .test_id("test.card.header.action")])
         .into_element(cx);
 
-        let header = fret_ui_shadcn::CardHeader::new([title, description, action]).into_element(cx);
+        let header = shadcn::CardHeader::new([title, description, action]).into_element(cx);
 
-        let card = fret_ui_shadcn::Card::new([header])
+        let card = shadcn::Card::new([header])
             .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
             .into_element(cx);
 

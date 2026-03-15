@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use crate::test_id::test_id_slug;
 use fret_core::time::Duration;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
@@ -1383,7 +1383,7 @@ impl ContextMenuRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -1947,7 +1947,7 @@ impl ContextMenuContentRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -2496,7 +2496,7 @@ fn menu_row_children<H: UiHost>(
     text_disabled: fret_core::Color,
     chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
-    let direction = crate::use_direction(cx, None);
+    let direction = crate::direction::use_direction(cx, None);
     let label_test_id = chrome_test_id
         .as_ref()
         .map(|id| Arc::<str>::from(format!("{id}-label")));
@@ -3970,7 +3970,7 @@ impl ContextMenu {
                                             for entry in entries_for_panel {
                                                 match entry {
                                                     ContextMenuEntry::Label(label) => {
-                                                        let dir = crate::use_direction(cx, None);
+                                                        let dir = crate::direction::use_direction(cx, None);
                                                         let pad_left =
                                                             if label.inset { pad_x_inset } else { pad_x };
                                                         let text = label.text.clone();

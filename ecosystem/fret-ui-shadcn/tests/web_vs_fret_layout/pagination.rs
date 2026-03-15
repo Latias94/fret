@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_pagination_demo_active_link_size_matches_web() {
@@ -12,7 +13,7 @@ fn web_vs_fret_layout_pagination_demo_active_link_size_matches_web() {
     );
 
     let snap = run_fret_root(bounds, |cx| {
-        let link = fret_ui_shadcn::PaginationLink::new(vec![ui::text("2").into_element(cx)])
+        let link = shadcn::PaginationLink::new(vec![ui::text("2").into_element(cx)])
             .active(true)
             .into_element(cx);
         let link = cx.semantics(
@@ -60,7 +61,7 @@ fn web_vs_fret_layout_pagination_demo_inactive_link_size_matches_web() {
     );
 
     let snap = run_fret_root(bounds, |cx| {
-        let link = fret_ui_shadcn::PaginationLink::new(vec![ui::text("1").into_element(cx)])
+        let link = shadcn::PaginationLink::new(vec![ui::text("1").into_element(cx)])
             .active(false)
             .into_element(cx);
         let link = cx.semantics(
@@ -114,7 +115,7 @@ fn web_vs_fret_layout_pagination_demo_ellipsis_size_matches_web() {
     );
 
     let snap = run_fret_root(bounds, |cx| {
-        let ellipsis = fret_ui_shadcn::PaginationEllipsis::new().into_element(cx);
+        let ellipsis = shadcn::PaginationEllipsis::new().into_element(cx);
         let ellipsis = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,

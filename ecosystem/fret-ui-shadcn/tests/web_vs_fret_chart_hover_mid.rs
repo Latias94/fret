@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 mod chart_test_data;
@@ -233,13 +234,10 @@ fn assert_chart_hover_tooltip_size_matches_web(web_name: &str, tooltip_label: &s
     let web_w = Px(web_tooltip.rect.w);
 
     let snap = run_fret_root(bounds, move |cx| {
-        let tooltip = fret_ui_shadcn::ChartTooltipContent::new()
+        let tooltip = shadcn::ChartTooltipContent::new()
             .label(tooltip_label.clone())
             .fixed_width_border_box(web_w)
-            .items([fret_ui_shadcn::ChartTooltipItem::new(
-                "Page Views",
-                value.clone(),
-            )])
+            .items([shadcn::ChartTooltipItem::new("Page Views", value.clone())])
             .into_element(cx);
 
         let tooltip = cx.semantics(

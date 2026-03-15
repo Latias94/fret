@@ -7,6 +7,7 @@ use fret_runtime::Effect;
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -83,8 +84,8 @@ fn render_frame(
     window: AppWindowId,
     bounds: Rect,
     frame_id: FrameId,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<shadcn::CarouselApiSnapshot>,
+    opts: shadcn::CarouselOptions,
 ) -> Vec<Effect> {
     app.set_frame_id(frame_id);
     OverlayController::begin_frame(app, window);
@@ -97,7 +98,7 @@ fn render_frame(
         "carousel-reduced-motion",
         |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_snapshot_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -144,10 +145,10 @@ fn carousel_respects_reduced_motion_and_does_not_request_continuous_frames() {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let api: Model<fret_ui_shadcn::CarouselApiSnapshot> = app
+    let api: Model<shadcn::CarouselApiSnapshot> = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let opts = fret_ui_shadcn::CarouselOptions::new().embla_engine(true);
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let opts = shadcn::CarouselOptions::new().embla_engine(true);
 
     let mut before = None;
     for i in 1..=12_u64 {

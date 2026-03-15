@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -395,7 +395,7 @@ impl RadioGroup {
                 default_value.clone()
             })
             .model();
-            let is_rtl = crate::use_direction(cx, None)
+            let is_rtl = crate::direction::use_direction(cx, None)
                 == LayoutDirection::Rtl;
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();

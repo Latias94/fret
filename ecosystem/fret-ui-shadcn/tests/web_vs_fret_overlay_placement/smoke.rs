@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 
 #[test]
@@ -19,15 +20,15 @@ fn web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures() {
                     &case.web_name,
                     Some("dialog"),
                     |cx, open| {
-                        fret_ui_shadcn::Popover::from_open(open.clone()).into_element_with(
+                        shadcn::Popover::from_open(open.clone()).into_element_with(
                             cx,
                             |cx| {
-                                fret_ui_shadcn::Button::new("Open popover")
-                                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                                shadcn::Button::new("Open popover")
+                                    .variant(shadcn::ButtonVariant::Outline)
                                     .into_element(cx)
                             },
                             |cx| {
-                                let content = fret_ui_shadcn::PopoverContent::new(Vec::new())
+                                let content = shadcn::PopoverContent::new(Vec::new())
                                     .refine_layout(
                                         fret_ui_kit::LayoutRefinement::default()
                                             .w_px(Px(320.0))
@@ -68,7 +69,7 @@ fn web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures() {
                             .insert(CalendarMonth::new(2026, Month::January));
                         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
-                        fret_ui_shadcn::DatePicker::new(open.clone(), month, selected)
+                        shadcn::DatePicker::new(open.clone(), month, selected)
                             .refine_layout(
                                 LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))),
                             )

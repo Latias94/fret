@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -62,7 +63,7 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
 
                 let mut services = StyleAwareServices::default();
                 let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
-                    use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+                    use shadcn::{Button, ButtonSize, ButtonVariant};
 
                     let icon = decl_icon::icon_with(
                         cx,
@@ -133,8 +134,8 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                         .size(ButtonSize::Sm)
                         .into_element(cx);
 
-                    let root = fret_ui_shadcn::Empty::new(vec![header, content, learn_more])
-                        .into_element(cx);
+                    let root =
+                        shadcn::Empty::new(vec![header, content, learn_more]).into_element(cx);
                     vec![cx.semantics(
                         fret_ui::element::SemanticsProps {
                             role: SemanticsRole::Panel,
@@ -228,13 +229,13 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                     .into_element(cx);
                     let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
 
-                    let button = fret_ui_shadcn::Button::new("Refresh")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                        .size(fret_ui_shadcn::ButtonSize::Sm)
+                    let button = shadcn::Button::new("Refresh")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
                         .into_element(cx);
                     let content = EmptyContent::new(vec![button]).into_element(cx);
 
-                    let root = fret_ui_shadcn::Empty::new(vec![header, content]).into_element(cx);
+                    let root = shadcn::Empty::new(vec![header, content]).into_element(cx);
                     vec![cx.semantics(
                         fret_ui::element::SemanticsProps {
                             role: SemanticsRole::Panel,
@@ -297,13 +298,13 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                     .into_element(cx);
                     let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
 
-                    let button = fret_ui_shadcn::Button::new("Upload Files")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                        .size(fret_ui_shadcn::ButtonSize::Sm)
+                    let button = shadcn::Button::new("Upload Files")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
                         .into_element(cx);
                     let content = EmptyContent::new(vec![button]).into_element(cx);
 
-                    let root = fret_ui_shadcn::Empty::new(vec![header, content]).into_element(cx);
+                    let root = shadcn::Empty::new(vec![header, content]).into_element(cx);
                     vec![cx.semantics(
                         fret_ui::element::SemanticsProps {
                             role: SemanticsRole::Panel,
@@ -372,7 +373,7 @@ fn web_vs_fret_layout_empty_icon_geometry_matches_web() {
             let title = EmptyTitle::new(title).into_element(cx);
             let desc = EmptyDescription::new(desc).into_element(cx);
             let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
-            let card = fret_ui_shadcn::Empty::new(vec![header]).into_element(cx);
+            let card = shadcn::Empty::new(vec![header]).into_element(cx);
             cx.semantics(
                 fret_ui::element::SemanticsProps {
                     role: SemanticsRole::Panel,

@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, Modifiers, MouseButton, Point, Px, Rect, Size as Co
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -48,11 +49,11 @@ fn field_label_click_focuses_textarea_control() {
         |cx: &mut ElementContext<'_, App>| {
             vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                 vec![
-                    fret_ui_shadcn::FieldLabel::new("Message")
+                    shadcn::FieldLabel::new("Message")
                         .for_control(control_id.clone())
                         .test_id("textarea.label")
                         .into_element(cx),
-                    fret_ui_shadcn::Textarea::new(model.clone())
+                    shadcn::Textarea::new(model.clone())
                         .control_id(control_id.clone())
                         .into_element(cx),
                 ]

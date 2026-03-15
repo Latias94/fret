@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 use fret_app::App;
@@ -139,14 +140,10 @@ fn web_vs_fret_date_picker_with_presets_preset_tomorrow_trigger_text_and_selecte
 
     let build = |cx: &mut fret_ui::ElementContext<'_, App>| {
         vec![
-            fret_ui_shadcn::DatePickerWithPresets::new(
-                open.clone(),
-                month.clone(),
-                selected.clone(),
-            )
-            .today(Date::from_calendar_date(2026, Month::January, 15).expect("today"))
-            .preset_value_model(preset_value.clone())
-            .into_element(cx),
+            shadcn::DatePickerWithPresets::new(open.clone(), month.clone(), selected.clone())
+                .today(Date::from_calendar_date(2026, Month::January, 15).expect("today"))
+                .preset_value_model(preset_value.clone())
+                .into_element(cx),
         ]
     };
 
