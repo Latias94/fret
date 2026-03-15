@@ -24,17 +24,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         // Web/WASM cannot access system fonts. Install the framework-owned bundled baseline as
         // soon as the renderer becomes available, then let startup policy fill missing UI lanes.
-        let _ = super::super::font_catalog::install_default_bundled_font_baseline(
-            &mut self.app,
-            &mut gfx.renderer,
-        );
-
-        // Font catalog refresh trigger (ADR 0258): initial renderer availability (adopt gfx).
-        let _update = super::super::font_catalog::initialize_startup_font_environment(
+        let _ = super::super::font_catalog::initialize_web_startup_font_environment(
             &mut self.app,
             &mut gfx.renderer,
             self.config.text_font_families.clone(),
-            super::super::font_catalog::StartupFontEnvironmentMode::WebBundledSync,
         );
 
         self.gfx = Some(gfx);

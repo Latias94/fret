@@ -656,25 +656,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     .set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
                 renderer.set_path_msaa_samples(self.config.path_msaa_samples);
 
-                // Desktop also starts from the framework-owned bundled baseline. System font
-                // discovery augments it later without changing the startup baseline contract.
-                let _ = super::super::super::font_catalog::install_default_bundled_font_baseline(
-                    &mut self.app,
-                    &mut renderer,
-                );
-
                 let startup_async = Self::system_font_rescan_async_enabled()
                     && Self::system_font_catalog_startup_async_enabled();
-                let _ = super::super::super::font_catalog::initialize_startup_font_environment(
-                    &mut self.app,
-                    &mut renderer,
-                    self.config.text_font_families.clone(),
-                    if startup_async {
-                        super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopAsync
-                    } else {
-                        super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopSync
-                    },
-                );
+                // Desktop also starts from the framework-owned bundled baseline. System font
+                // discovery augments it later without changing the startup baseline contract.
+                let _ =
+                    super::super::super::font_catalog::initialize_desktop_startup_font_environment(
+                        &mut self.app,
+                        &mut renderer,
+                        self.config.text_font_families.clone(),
+                        startup_async,
+                    );
 
                 self.context = Some(context);
                 self.renderer = Some(renderer);
@@ -874,24 +866,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
             renderer.set_path_msaa_samples(self.config.path_msaa_samples);
 
-            // Desktop also starts from the framework-owned bundled baseline. System font
-            // discovery augments it later without changing the startup baseline contract.
-            let _ = super::super::super::font_catalog::install_default_bundled_font_baseline(
-                &mut self.app,
-                &mut renderer,
-            );
-
             let startup_async = Self::system_font_rescan_async_enabled()
                 && Self::system_font_catalog_startup_async_enabled();
-            let _ = super::super::super::font_catalog::initialize_startup_font_environment(
+            // Desktop also starts from the framework-owned bundled baseline. System font
+            // discovery augments it later without changing the startup baseline contract.
+            let _ = super::super::super::font_catalog::initialize_desktop_startup_font_environment(
                 &mut self.app,
                 &mut renderer,
                 self.config.text_font_families.clone(),
-                if startup_async {
-                    super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopAsync
-                } else {
-                    super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopSync
-                },
+                startup_async,
             );
 
             self.context = Some(context);

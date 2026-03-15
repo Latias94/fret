@@ -124,6 +124,43 @@ pub fn install_default_bundled_font_baseline(
     added
 }
 
+#[doc(hidden)]
+#[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
+pub fn initialize_web_startup_font_environment(
+    app: &mut impl GlobalsHost,
+    renderer: &mut (impl RendererFontEnvironmentHost + BundledFontBaselineHost),
+    config: TextFontFamilyConfig,
+) -> FontCatalogUpdate {
+    let _ = install_default_bundled_font_baseline(app, renderer);
+    initialize_startup_font_environment(
+        app,
+        renderer,
+        config,
+        StartupFontEnvironmentMode::WebBundledSync,
+    )
+}
+
+#[doc(hidden)]
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+pub fn initialize_desktop_startup_font_environment(
+    app: &mut impl GlobalsHost,
+    renderer: &mut (impl RendererFontEnvironmentHost + BundledFontBaselineHost),
+    config: TextFontFamilyConfig,
+    startup_async: bool,
+) -> FontCatalogUpdate {
+    let _ = install_default_bundled_font_baseline(app, renderer);
+    initialize_startup_font_environment(
+        app,
+        renderer,
+        config,
+        if startup_async {
+            StartupFontEnvironmentMode::DesktopAsync
+        } else {
+            StartupFontEnvironmentMode::DesktopSync
+        },
+    )
+}
+
 #[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
 fn startup_font_defaults_policy(mode: StartupFontEnvironmentMode) -> FontFamilyDefaultsPolicy {
     match mode {
@@ -313,10 +350,6 @@ mod tests {
         last_config: Option<TextFontFamilyConfig>,
         last_locale: Option<Option<String>>,
         entries: Vec<FontCatalogEntry>,
-    }
-
-    #[derive(Default)]
-    struct TestBundledFontBaselineHost {
         font_blobs: Vec<Vec<u8>>,
     }
 
@@ -345,7 +378,7 @@ mod tests {
         }
     }
 
-    impl BundledFontBaselineHost for TestBundledFontBaselineHost {
+    impl BundledFontBaselineHost for TestRenderer {
         fn add_font_blobs<I>(&mut self, fonts: I) -> usize
         where
             I: IntoIterator<Item = Vec<u8>>,
@@ -659,16 +692,16 @@ mod tests {
     #[test]
     fn install_default_bundled_font_baseline_adds_fonts_and_publishes_snapshot() {
         let mut app = TestApp::default();
-        let mut host = TestBundledFontBaselineHost::default();
+        let mut renderer = TestRenderer::default();
 
-        let added = install_default_bundled_font_baseline(&mut app, &mut host);
+        let added = install_default_bundled_font_baseline(&mut app, &mut renderer);
 
         let expected_fonts = fret_fonts::default_fonts()
             .iter()
             .map(|bytes| bytes.to_vec())
             .collect::<Vec<_>>();
         assert_eq!(added, expected_fonts.len());
-        assert_eq!(host.font_blobs, expected_fonts);
+        assert_eq!(renderer.font_blobs, expected_fonts);
         assert_eq!(
             app.global::<fret_runtime::BundledFontBaselineSnapshot>()
                 .cloned()
@@ -678,28 +711,96 @@ mod tests {
     }
 
     #[test]
-    fn web_and_desktop_startup_share_bundled_baseline_but_keep_distinct_defaults_policy() {
+    fn initialize_web_startup_font_environment_installs_baseline_and_seeds_missing_families() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+
+        let update = initialize_web_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            TextFontFamilyConfig::default(),
+        );
+
+        assert_eq!(renderer.font_blobs.len(), fret_fonts::default_fonts().len());
+        assert_eq!(
+            app.global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("web baseline snapshot"),
+            default_bundled_font_baseline_snapshot(),
+        );
+        assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
+        assert!(
+            !update.config.ui_mono.is_empty(),
+            "expected web startup to seed missing UI families"
+        );
+    }
+
+    #[test]
+    fn initialize_desktop_startup_font_environment_installs_baseline_for_sync_and_async_modes() {
+        let mut sync_app = TestApp::default();
+        let mut async_app = TestApp::default();
+        let mut sync_renderer = TestRenderer::default();
+        let mut async_renderer = TestRenderer::default();
+        let sync_update = initialize_desktop_startup_font_environment(
+            &mut sync_app,
+            &mut sync_renderer,
+            TextFontFamilyConfig::default(),
+            false,
+        );
+        let async_update = initialize_desktop_startup_font_environment(
+            &mut async_app,
+            &mut async_renderer,
+            TextFontFamilyConfig::default(),
+            true,
+        );
+
+        assert_eq!(
+            sync_renderer.font_blobs.len(),
+            fret_fonts::default_fonts().len()
+        );
+        assert_eq!(
+            async_renderer.font_blobs.len(),
+            fret_fonts::default_fonts().len()
+        );
+        assert_eq!(
+            sync_app
+                .global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("desktop sync baseline snapshot"),
+            async_app
+                .global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("desktop async baseline snapshot"),
+        );
+        assert_eq!(sync_renderer.steps, vec!["entries", "families", "locale"]);
+        assert_eq!(async_renderer.steps, vec!["families", "locale"]);
+        assert!(
+            sync_update.config.ui_mono.is_empty(),
+            "expected desktop sync startup to preserve an empty family config under native policy"
+        );
+        assert!(
+            async_update.config.ui_mono.is_empty(),
+            "expected desktop async startup to preserve an empty family config under native policy"
+        );
+    }
+
+    #[test]
+    fn platform_startup_helpers_share_bundled_baseline_but_keep_distinct_defaults_policy() {
         let mut web_app = TestApp::default();
         let mut desktop_app = TestApp::default();
-        let mut web_host = TestBundledFontBaselineHost::default();
-        let mut desktop_host = TestBundledFontBaselineHost::default();
         let mut web_renderer = TestRenderer::default();
         let mut desktop_renderer = TestRenderer::default();
 
-        let _ = install_default_bundled_font_baseline(&mut web_app, &mut web_host);
-        let _ = install_default_bundled_font_baseline(&mut desktop_app, &mut desktop_host);
-
-        let web_update = initialize_startup_font_environment(
+        let web_update = initialize_web_startup_font_environment(
             &mut web_app,
             &mut web_renderer,
             TextFontFamilyConfig::default(),
-            StartupFontEnvironmentMode::WebBundledSync,
         );
-        let desktop_update = initialize_startup_font_environment(
+        let desktop_update = initialize_desktop_startup_font_environment(
             &mut desktop_app,
             &mut desktop_renderer,
             TextFontFamilyConfig::default(),
-            StartupFontEnvironmentMode::DesktopSync,
+            false,
         );
 
         assert_eq!(
@@ -712,7 +813,7 @@ mod tests {
                 .cloned()
                 .expect("desktop baseline snapshot"),
         );
-        assert_eq!(web_host.font_blobs, desktop_host.font_blobs);
+        assert_eq!(web_renderer.font_blobs, desktop_renderer.font_blobs);
         assert!(
             !web_update.config.ui_mono.is_empty(),
             "expected web startup to seed missing UI families"
