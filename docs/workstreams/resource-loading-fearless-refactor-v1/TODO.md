@@ -202,9 +202,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - `BundledFontProfile::asset_entries()`.
     - bundled font profiles can now be mounted into the shared asset contract through
       `StaticAssetEntry` instead of existing only as ad-hoc byte bags for `Effect::TextAddFonts`.
+    - runner startup now consumes the same default profile manifest for both:
+      - mounting package-owned bundled font assets into the shared runtime resolver,
+      - injecting renderer font bytes from `BundledFontProfile::font_bytes()`.
+    - regression coverage now proves the startup helper resolves bundled font faces through the
+      runtime asset resolver and does not register duplicate font-asset resolver layers on
+      repeated baseline installation.
   - Remaining:
-    - make runner startup/publication consume the same bundled profile asset identity story instead
-      of only using raw `Vec<u8>` injection
     - define how mobile/package builds surface framework-owned bundled fonts on the builder/startup
       lane
 

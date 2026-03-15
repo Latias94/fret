@@ -17,6 +17,9 @@ pub trait BundledFontBaselineHost {
         I: IntoIterator<Item = Vec<u8>>;
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct DefaultBundledFontAssetsRegistered(bool);
+
 impl RendererFontEnvironmentHost for fret_render::Renderer {
     fn all_font_catalog_entries_runtime(&mut self) -> Vec<FontCatalogEntry> {
         self.all_font_catalog_entries()
@@ -110,16 +113,32 @@ pub fn default_bundled_font_baseline_snapshot() -> fret_runtime::BundledFontBase
     )
 }
 
+fn ensure_default_bundled_font_assets_registered(app: &mut impl GlobalsHost) -> bool {
+    app.with_global_mut(
+        DefaultBundledFontAssetsRegistered::default,
+        |registered, app| {
+            if registered.0 {
+                return false;
+            }
+            fret_runtime::register_bundle_asset_entries(
+                app,
+                fret_fonts::bundled_asset_bundle(),
+                fret_fonts::default_profile().asset_entries(),
+            );
+            registered.0 = true;
+            true
+        },
+    )
+}
+
 #[doc(hidden)]
 pub fn install_default_bundled_font_baseline(
     app: &mut impl GlobalsHost,
     renderer: &mut impl BundledFontBaselineHost,
 ) -> usize {
-    let added = renderer.add_font_blobs(
-        fret_fonts::default_fonts()
-            .iter()
-            .map(|bytes| bytes.to_vec()),
-    );
+    let profile = fret_fonts::default_profile();
+    let _ = ensure_default_bundled_font_assets_registered(app);
+    let added = renderer.add_font_blobs(profile.font_bytes().map(|bytes| bytes.to_vec()));
     let _ = publish_bundled_font_baseline_snapshot(app, default_bundled_font_baseline_snapshot());
     added
 }
@@ -696,8 +715,8 @@ mod tests {
 
         let added = install_default_bundled_font_baseline(&mut app, &mut renderer);
 
-        let expected_fonts = fret_fonts::default_fonts()
-            .iter()
+        let expected_fonts = fret_fonts::default_profile()
+            .font_bytes()
             .map(|bytes| bytes.to_vec())
             .collect::<Vec<_>>();
         assert_eq!(added, expected_fonts.len());
@@ -711,6 +730,52 @@ mod tests {
     }
 
     #[test]
+    fn install_default_bundled_font_baseline_registers_profile_assets_in_runtime_resolver() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+        let face = fret_fonts::default_profile()
+            .faces
+            .first()
+            .copied()
+            .expect("default bundled profile should expose at least one face");
+
+        let _ = install_default_bundled_font_baseline(&mut app, &mut renderer);
+
+        let resolved = fret_runtime::resolve_asset_bytes(&app, &face.asset_request())
+            .expect("default bundled font face should resolve through the runtime asset resolver");
+
+        assert_eq!(resolved.locator, face.asset_locator());
+        assert_eq!(resolved.revision, face.asset_entry().revision);
+        assert_eq!(resolved.bytes.as_ref(), face.bytes);
+        assert_eq!(
+            resolved
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some(face.media_type)
+        );
+    }
+
+    #[test]
+    fn install_default_bundled_font_baseline_registers_assets_only_once_per_app() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+
+        let _ = install_default_bundled_font_baseline(&mut app, &mut renderer);
+        let first_layer_count = fret_runtime::asset_resolver(&app)
+            .map(|service| service.layered_resolvers().len())
+            .expect("asset resolver should exist after baseline install");
+
+        let _ = install_default_bundled_font_baseline(&mut app, &mut renderer);
+        let second_layer_count = fret_runtime::asset_resolver(&app)
+            .map(|service| service.layered_resolvers().len())
+            .expect("asset resolver should remain available after repeated baseline install");
+
+        assert_eq!(first_layer_count, 1);
+        assert_eq!(second_layer_count, first_layer_count);
+    }
+
+    #[test]
     fn initialize_web_startup_font_environment_installs_baseline_and_seeds_missing_families() {
         let mut app = TestApp::default();
         let mut renderer = TestRenderer::default();
@@ -721,7 +786,10 @@ mod tests {
             TextFontFamilyConfig::default(),
         );
 
-        assert_eq!(renderer.font_blobs.len(), fret_fonts::default_fonts().len());
+        assert_eq!(
+            renderer.font_blobs.len(),
+            fret_fonts::default_profile().faces.len()
+        );
         assert_eq!(
             app.global::<fret_runtime::BundledFontBaselineSnapshot>()
                 .cloned()
@@ -756,11 +824,11 @@ mod tests {
 
         assert_eq!(
             sync_renderer.font_blobs.len(),
-            fret_fonts::default_fonts().len()
+            fret_fonts::default_profile().faces.len()
         );
         assert_eq!(
             async_renderer.font_blobs.len(),
-            fret_fonts::default_fonts().len()
+            fret_fonts::default_profile().faces.len()
         );
         assert_eq!(
             sync_app

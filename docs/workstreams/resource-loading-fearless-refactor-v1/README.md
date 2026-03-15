@@ -138,6 +138,9 @@ This workstream takes a fearless posture:
 - startup publication now also has an explicit runtime-global slot for that baseline identity:
   - `fret_runtime::BundledFontBaselineSnapshot` records which bundled profile/bundle/asset keys
     the runner chose,
+  - startup now also mounts `fret-fonts::default_profile().asset_entries()` into the shared
+    runtime asset resolver, so the framework-owned default font baseline is backed by the same
+    package-owned `bundle + key` contract that it publishes diagnostically,
   - web and the current non-wasm winit startup path now both publish the current
     `fret-fonts::default_profile()` contract before startup font-environment initialization,
   - native startup still keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation stays
