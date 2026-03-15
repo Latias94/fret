@@ -207,26 +207,37 @@ impl CjkConformanceDriver {
                 .max_w(Px(960.0))
                 .into_element(cx);
 
-            let page = ui::container(|cx| {
-                [ui::v_flex(|_cx| [card])
-                    .w_full()
-                    .h_full()
-                    .justify_center()
-                    .items_center()
-                    .into_element(cx)]
-            })
-            .bg(ColorRef::Color(theme.color_token("muted")))
-            .p(Space::N6)
-            .w_full()
-            .h_full()
-            .into_element(cx);
-
-            ui::children![cx; page]
+            ui::children![cx; cjk_conformance_page(cx, theme, card)]
         });
 
         state.ui.set_root(root);
         state.root = Some(root);
     }
+}
+
+fn cjk_conformance_page<C>(
+    cx: &mut fret_ui::ElementContext<'_, App>,
+    theme: fret_ui::ThemeSnapshot,
+    card: C,
+) -> impl fret_ui_kit::IntoUiElement<App> + use<C>
+where
+    C: fret_ui_kit::IntoUiElement<App>,
+{
+    ui::container(move |cx| {
+        ui::children![
+            cx;
+            ui::v_flex(move |_cx| [card])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+        ]
+    })
+    .bg(ColorRef::Color(theme.color_token("muted")))
+    .p(Space::N6)
+    .w_full()
+    .h_full()
+    .into_element(cx)
 }
 
 fn create_window_state(

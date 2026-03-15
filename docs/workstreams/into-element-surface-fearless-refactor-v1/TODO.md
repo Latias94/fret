@@ -59,6 +59,10 @@ Execution note on 2026-03-14:
 - the advanced `query_demo` and `query_async_tokio_demo` examples now follow the same rule:
   `query_page(cx, ...) -> Ui` owns the centered card-shell landing, so the render path no longer
   teaches inline root wrapper chrome for that query authoring pair.
+- the manual `App + UiTree` examples now also have an explicit typed root-helper rule instead of
+  keeping inline page wrappers inside `render_root(...)` closures:
+  `simple_todo_demo`, `cjk_conformance_demo`, and `emoji_conformance_demo` now keep their root
+  shells on local `ElementContext<'_, App>` helpers returning `IntoUiElement<App>`.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

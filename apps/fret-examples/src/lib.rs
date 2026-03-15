@@ -413,6 +413,27 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        assert!(normalized.contains("UiTree<App>"));
+        assert!(!normalized.contains("KernelApp"));
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
     fn assert_selected_view_runtime_examples_prefer_grouped_helpers(
         src: &str,
         required_markers: &[&str],
@@ -522,6 +543,51 @@ mod authoring_surface_policy_tests {
         assert!(SIMPLE_TODO_DEMO.contains("fn todo_row("));
         assert!(SIMPLE_TODO_DEMO.contains(") -> impl fret_ui_kit::IntoUiElement<App> + use<> {"));
         assert!(!SIMPLE_TODO_DEMO.contains(") -> fret_ui::element::AnyElement {"));
+    }
+
+    #[test]
+    fn manual_ui_tree_examples_keep_root_wrappers_on_local_typed_helpers() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            SIMPLE_TODO_DEMO,
+            &[
+                "fn simple_todo_page<C>(",
+                "cx: &mut fret_ui::ElementContext<'_, App>,",
+                "theme: fret_ui::ThemeSnapshot,",
+                "card: C,",
+                ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
+                "C: fret_ui_kit::IntoUiElement<App>,",
+                "ui::children![cx; simple_todo_page(cx, theme, card)]",
+            ],
+            &["let page = ui::container(|cx| {"],
+        );
+
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            CJK_CONFORMANCE_DEMO,
+            &[
+                "fn cjk_conformance_page<C>(",
+                "cx: &mut fret_ui::ElementContext<'_, App>,",
+                "theme: fret_ui::ThemeSnapshot,",
+                "card: C,",
+                ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
+                "C: fret_ui_kit::IntoUiElement<App>,",
+                "ui::children![cx; cjk_conformance_page(cx, theme, card)]",
+            ],
+            &["let page = ui::container(|cx| {"],
+        );
+
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            EMOJI_CONFORMANCE_DEMO,
+            &[
+                "fn emoji_conformance_page<C>(",
+                "cx: &mut fret_ui::ElementContext<'_, App>,",
+                "theme: fret_ui::ThemeSnapshot,",
+                "card: C,",
+                ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
+                "C: fret_ui_kit::IntoUiElement<App>,",
+                "ui::children![cx; emoji_conformance_page(cx, theme, card)]",
+            ],
+            &["let page = ui::container(|cx| {"],
+        );
     }
 
     #[test]

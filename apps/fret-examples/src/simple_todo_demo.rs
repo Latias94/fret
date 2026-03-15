@@ -154,21 +154,7 @@ impl SimpleTodoDriver {
                     .w_full()
                     .max_w(Px(520.0));
 
-                    let page = ui::container(|cx| {
-                        let centered = ui::v_flex(|cx| ui::children![cx; card])
-                            .w_full()
-                            .h_full()
-                            .justify_center()
-                            .items_center()
-                            .into_element(cx);
-                        ui::children![cx; centered]
-                    })
-                    .bg(ColorRef::Color(theme.color_token("muted")))
-                    .p(Space::N6)
-                    .w_full()
-                    .h_full();
-
-                    ui::children![cx; page.into_element(cx)]
+                    ui::children![cx; simple_todo_page(cx, theme, card)]
                 });
 
         state.ui.set_root(root);
@@ -239,6 +225,31 @@ impl SimpleTodoDriver {
             }
         }
     }
+}
+
+fn simple_todo_page<C>(
+    cx: &mut fret_ui::ElementContext<'_, App>,
+    theme: fret_ui::ThemeSnapshot,
+    card: C,
+) -> impl fret_ui_kit::IntoUiElement<App> + use<C>
+where
+    C: fret_ui_kit::IntoUiElement<App>,
+{
+    ui::container(move |cx| {
+        ui::children![
+            cx;
+            ui::v_flex(move |cx| ui::children![cx; card])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+        ]
+    })
+    .bg(ColorRef::Color(theme.color_token("muted")))
+    .p(Space::N6)
+    .w_full()
+    .h_full()
+    .into_element(cx)
 }
 
 fn todo_row(

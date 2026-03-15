@@ -116,6 +116,12 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use
   `&mut UiCx<'_>` plus typed content and return `Ui`, so their parent `render(...)` / `view(...)`
   paths no longer teach a root-local `let page = ...; page.into()` pattern just to attach wrapper
   styling or diagnostics metadata.
+- direct `App + UiTree` examples should follow the same ownership rule on their lower-level lane:
+  when a manual `render_root(...)` closure still uses `fret_ui::ElementContext<'_, App>` directly,
+  keep the root chrome on a local helper such as
+  `simple_todo_page(...)`, `cjk_conformance_page(...)`, or `emoji_conformance_page(...)`
+  returning `IntoUiElement<App>` rather than leaving an inline `let page = ...` wrapper in the
+  closure body.
 - Rust 2024 precise captures note: if the helper wants `+ use<...>` and also accepts a flexible
   label/input argument, prefer a named generic such as `fn helper<L>(..., label: L) -> impl
   IntoUiElement<KernelApp> + use<L> where L: Into<Arc<str>>` rather than argument-position
