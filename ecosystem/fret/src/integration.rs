@@ -58,8 +58,15 @@ impl_install_into_app_tuple!(A => a, B => b, C => c, D => d);
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use fret_icons::{IconId, IconRegistry, ids};
+
     use super::InstallIntoApp;
     use crate::app::App;
+    use crate::assets::{
+        self, AssetBundleId, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry,
+    };
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     struct Marker(u32);
@@ -122,5 +129,113 @@ mod tests {
         assert_eq!(app.global::<Marker>().copied(), Some(Marker(1)));
         assert_eq!(app.global::<MarkerB>().copied(), Some(MarkerB(2)));
         assert_eq!(app.global::<MarkerC>().copied(), Some(MarkerC(3)));
+    }
+
+    fn resolved_icon_bytes(registry: &IconRegistry, id: IconId) -> Vec<u8> {
+        registry
+            .resolve_owned(&id)
+            .unwrap_or_else(|err| panic!("expected `{}` to resolve: {err:?}", id.as_str()))
+            .as_bytes()
+            .to_vec()
+    }
+
+    struct DemoDependencyBundle;
+
+    impl InstallIntoApp for DemoDependencyBundle {
+        fn install_into_app(self, app: &mut App) {
+            app.with_global_mut(IconRegistry::default, |icons, _app| {
+                let _ = icons.register_svg_bytes(
+                    IconId::new_static("demo-kit.search"),
+                    Arc::from(br#"<svg id="dependency-search"></svg>"#.as_slice()),
+                );
+                let _ =
+                    icons.alias_if_missing(ids::ui::SEARCH, IconId::new_static("demo-kit.search"));
+            });
+
+            assets::register_bundle_entries(
+                app,
+                AssetBundleId::package("demo-kit"),
+                [StaticAssetEntry::new(
+                    "images/logo.svg",
+                    AssetRevision(1),
+                    br#"<svg id="dependency-logo"></svg>"#,
+                )
+                .with_media_type("image/svg+xml")],
+            );
+        }
+    }
+
+    fn install_app_search_override(app: &mut App) {
+        app.with_global_mut(IconRegistry::default, |icons, _app| {
+            let _ = icons.register_svg_bytes(
+                IconId::new_static("app.search"),
+                Arc::from(br#"<svg id="app-search"></svg>"#.as_slice()),
+            );
+            let _ = icons.alias(ids::ui::SEARCH, IconId::new_static("app.search"));
+        });
+    }
+
+    #[test]
+    fn ecosystem_bundle_installer_can_publish_package_assets_and_icons() {
+        let mut app = App::new();
+
+        DemoDependencyBundle.install_into_app(&mut app);
+
+        let request = AssetRequest::new(AssetLocator::bundle(
+            AssetBundleId::package("demo-kit"),
+            "images/logo.svg",
+        ));
+        let resolved = fret_runtime::resolve_asset_bytes(&app, &request)
+            .expect("expected package bundle asset to resolve");
+        assert_eq!(
+            resolved.bytes.as_ref(),
+            br#"<svg id="dependency-logo"></svg>"#
+        );
+
+        let registry = app
+            .global::<IconRegistry>()
+            .expect("expected dependency bundle to install icon registry");
+        assert_eq!(
+            resolved_icon_bytes(registry, IconId::new_static("demo-kit.search")),
+            br#"<svg id="dependency-search"></svg>"#
+        );
+        assert_eq!(
+            resolved_icon_bytes(registry, ids::ui::SEARCH),
+            br#"<svg id="dependency-search"></svg>"#
+        );
+    }
+
+    #[test]
+    fn app_follow_up_installer_can_override_semantic_icon_without_replaying_bundle_mounts() {
+        let mut app = App::new();
+
+        (DemoDependencyBundle, install_app_search_override).install_into_app(&mut app);
+
+        let request = AssetRequest::new(AssetLocator::bundle(
+            AssetBundleId::package("demo-kit"),
+            "images/logo.svg",
+        ));
+        let resolved = fret_runtime::resolve_asset_bytes(&app, &request)
+            .expect("expected dependency asset to remain available after app override");
+        assert_eq!(
+            resolved.bytes.as_ref(),
+            br#"<svg id="dependency-logo"></svg>"#
+        );
+
+        let registry = app
+            .global::<IconRegistry>()
+            .expect("expected icon registry to stay installed");
+        assert_eq!(
+            resolved_icon_bytes(registry, IconId::new_static("demo-kit.search")),
+            br#"<svg id="dependency-search"></svg>"#
+        );
+        assert_eq!(
+            resolved_icon_bytes(registry, IconId::new_static("app.search")),
+            br#"<svg id="app-search"></svg>"#
+        );
+        assert_eq!(
+            resolved_icon_bytes(registry, ids::ui::SEARCH),
+            br#"<svg id="app-search"></svg>"#
+        );
     }
 }

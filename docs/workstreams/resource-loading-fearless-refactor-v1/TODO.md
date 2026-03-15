@@ -134,6 +134,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `ecosystem/fret-icons-lucide/src/app.rs`
     - `crates/fret-assets/src/lib.rs`
     - `crates/fret-runtime/src/asset_resolver.rs`
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`
   - Current landed slice:
     - cookbook asset basics now models a reusable app-facing bundle that installs package-owned
       logical assets plus an icon pack behind one `.setup(...)` value
@@ -144,6 +145,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `IconRegistry::alias_if_missing(...)` makes `ui.*` aliases first-writer-wins, vendor ids stay
       namespaced (`lucide.*`, `radix.*`, ...), and app/bootstrap code can still intentionally
       override with an explicit follow-up alias
+    - `ECOSYSTEM_INSTALLER_COMPOSITION.md` now documents the expected publication/composition model:
+      ecosystem crates own internal icon/bundle registration, apps compose one installer/bundle
+      surface, logical package assets stay on `AssetBundleId::package(...)`, and app follow-up
+      installers can override semantic icon aliases without replaying dependency asset mounts
+    - `fret::integration` now has an integration test proving that one ecosystem installer can
+      publish package-owned assets plus semantic/vendor icons together, and that a later app
+      installer can override `ui.*` aliases while leaving dependency bundle assets untouched
   - Remaining:
     - first-party docs should show when bundle ownership belongs in the generated asset module vs a
       hand-written higher-level recipe bundle that also composes icon packs
