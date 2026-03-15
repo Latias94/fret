@@ -23,7 +23,9 @@ use crate::primitives::chrome::{
     joined_text_area_style, joined_text_input_style, resolve_editor_text_area_field_style,
     resolve_editor_text_field_style,
 };
-use crate::primitives::input_group::{editor_clear_button_segment, editor_joined_input_frame};
+use crate::primitives::input_group::{
+    editor_clear_button_segment, editor_clear_button_segment_multiline, editor_joined_input_frame,
+};
 use crate::primitives::style::EditorStyle;
 use crate::primitives::text_entry::{
     EditorTextCancelBehavior, EditorTextSelectionBehavior, editor_text_entry_focus_state,
@@ -644,14 +646,26 @@ impl TextField {
                     })
                 };
 
-                vec![editor_clear_button_segment(
-                    cx,
-                    density,
-                    enabled_for_paint,
-                    Arc::from("Clear text"),
-                    clear_test_id.clone(),
-                    on_activate,
-                )]
+                if multiline {
+                    vec![editor_clear_button_segment_multiline(
+                        cx,
+                        density,
+                        frame_chrome,
+                        enabled_for_paint,
+                        Arc::from("Clear text"),
+                        clear_test_id.clone(),
+                        on_activate,
+                    )]
+                } else {
+                    vec![editor_clear_button_segment(
+                        cx,
+                        density,
+                        enabled_for_paint,
+                        Arc::from("Clear text"),
+                        clear_test_id.clone(),
+                        on_activate,
+                    )]
+                }
             },
         );
 

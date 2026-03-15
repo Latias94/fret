@@ -304,6 +304,45 @@ pub(crate) fn editor_clear_button_segment<H: UiHost>(
     )
 }
 
+pub(crate) fn editor_clear_button_segment_multiline<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    chrome: ResolvedEditorFrameChrome,
+    enabled_for_paint: bool,
+    a11y_label: std::sync::Arc<str>,
+    test_id: Option<std::sync::Arc<str>>,
+    on_activate: OnActivate,
+) -> AnyElement {
+    let affordance_extent = density.affordance_extent();
+    let button = editor_clear_button_segment(
+        cx,
+        density,
+        enabled_for_paint,
+        a11y_label,
+        test_id,
+        on_activate,
+    );
+
+    editor_input_group_segment(
+        cx,
+        LayoutStyle {
+            size: SizeStyle {
+                width: Length::Px(affordance_extent),
+                height: Length::Fill,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        Edges {
+            top: chrome.padding.top,
+            right: Px(0.0),
+            bottom: Px(0.0),
+            left: Px(0.0),
+        },
+        button,
+    )
+}
+
 pub(crate) fn editor_icon_segment<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     density: EditorDensity,

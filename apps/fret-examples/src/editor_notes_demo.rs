@@ -4,6 +4,7 @@ use fret::app::prelude::*;
 use fret::{FretApp, shadcn};
 use fret_app::Model;
 use fret_core::Px;
+use fret_ui::Theme;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextProps};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
@@ -13,7 +14,8 @@ use fret_ui_editor::controls::{
     EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldOptions,
     TextFieldOutcome,
 };
-use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, ModelWatchExt as _};
+use fret_ui_kit::{ColorRef, Space};
 
 const ENV_EDITOR_PRESET: &str = "FRET_EDITOR_NOTES_DEMO_PRESET";
 const TEST_ID_ROOT: &str = "editor-notes-demo.root";

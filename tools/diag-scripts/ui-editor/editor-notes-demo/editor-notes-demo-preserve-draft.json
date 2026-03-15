@@ -13,7 +13,8 @@
     ],
     "target_hints": [
       "Uses the app-local editor_notes_demo inspector surface instead of the proof-only imui demo.",
-      "Proves multiline Notes keeps a local draft across blur, commits only on Ctrl+Enter, and restores the committed value on Escape."
+      "Proves multiline Notes keeps a local draft across blur, commits only on Ctrl+Enter, and restores the committed value on Escape.",
+      "The initial screenshot also pins the multiline Notes clear affordance against the textarea's top content edge."
     ],
     "env_defaults": {
       "FRET_EDITOR_NOTES_DEMO_PRESET": "default"

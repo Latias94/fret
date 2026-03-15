@@ -233,7 +233,9 @@ Interaction contract:
       on obvious visual seams. The shared numeric policy now also suppresses duplicate joined
       prefix/suffix chrome whenever the formatter text already carries the same unit, and
       multiline `TextField` now defaults to stable editor line boxes so textarea/note rows stop
-      visibly changing height while the user edits.
+      visibly changing height while the user edits. Multiline notes now also pin their trailing
+      clear affordance to the textarea's top content edge instead of leaving it vertically centered
+      in the full notes block.
       The same seam now also has a second reusable consumer via `InspectorPanel` search history,
       and trigger-owned `EnumSelect` popup/list lifecycle now also reuses the shared
       `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and

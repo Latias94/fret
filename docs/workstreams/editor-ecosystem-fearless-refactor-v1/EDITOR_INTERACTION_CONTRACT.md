@@ -241,6 +241,8 @@ Default multiline presentation baseline for promoted editor text fields:
 - the text style should use a fixed-from-style line-height policy plus a forced strut,
 - and the line box should align to bounds-based placement so focus/caret activity does not make the
   field height visibly "breathe" between idle and editing states.
+- when a multiline field exposes a trailing clear affordance, that affordance should anchor to the
+  textarea's top content block rather than floating at the vertical midpoint of the full field.
 
 Current promoted opt-in blur exceptions above that baseline:
 

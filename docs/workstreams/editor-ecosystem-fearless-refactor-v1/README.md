@@ -179,6 +179,10 @@ Current checkpoint:
 - the full authoring proof surface now also has a focused affordance screenshot gate for populated
   text-field clear buttons and percent slider readouts so icon alignment and affix composition stay
   reviewable under proof-demo refactors,
+- multiline notes now also follow the same review discipline on the app-local `editor_notes_demo`
+  surface: the preserve-draft gate's initial screenshot pins the trailing clear affordance to the
+  textarea's top content edge instead of letting it float at the vertical midpoint of the notes
+  block,
 - that full authoring surface now also keeps its explanatory/meta text compressed into a shorter
   preface plus two-line shared-state readout, so screenshot review stays focused on the paired
   authoring columns instead of the proof chrome around them,
