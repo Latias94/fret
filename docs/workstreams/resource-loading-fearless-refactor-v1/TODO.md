@@ -29,8 +29,11 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Closure and truthfulness
 
-- [ ] RESLOAD-build-030 Make `cargo check -p fret-launch --target wasm32-unknown-unknown` green.
+- [x] RESLOAD-build-030 Make `cargo check -p fret-launch --target wasm32-unknown-unknown` green.
   - This is not the full refactor, but it is the minimum portability honesty gate.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs`
+    - `cargo check -p fret-launch --target wasm32-unknown-unknown`
 
 - [ ] RESLOAD-cap-040 Publish a first-class asset capability matrix for desktop/web/mobile.
   - Minimum capability axes:
@@ -43,7 +46,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Core asset contract
 
-- [ ] RESLOAD-core-100 Introduce a core asset contract crate (recommended: `crates/fret-assets`).
+- [x] RESLOAD-core-100 Introduce a core asset contract crate (recommended: `crates/fret-assets`).
   - Minimum types:
     - `AssetLocator`
     - `AssetKey`
@@ -51,13 +54,24 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `AssetRevision`
     - `AssetCapabilities`
     - `AssetLoadError`
+  - Evidence:
+    - `crates/fret-assets/src/lib.rs`
+    - `cargo test -p fret-assets`
 
-- [ ] RESLOAD-core-110 Define resolver/loader traits and result payloads.
+- [~] RESLOAD-core-110 Define resolver/loader traits and result payloads.
   - The design must support:
     - bytes resolution,
     - explicit external URI/path handoff for system APIs,
     - diagnostics,
     - revision tracking.
+  - Current landed slice:
+    - `AssetResolver` / `ResolvedAssetBytes` in `crates/fret-assets`
+    - runtime host mounting via `crates/fret-runtime/src/asset_resolver.rs`
+    - UI bridge helpers via `ecosystem/fret-ui-assets/src/asset_resolver.rs`
+  - Remaining:
+    - explicit external URI/path handoff contract
+    - structured diagnostics surface
+    - non-UI first-party resolver implementations
 
 - [ ] RESLOAD-core-120 Decide the authoritative bundle identity model.
   - Required outcomes:
@@ -115,8 +129,11 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Public API cleanup
 
-- [ ] RESLOAD-api-500 Rename or replace misleading install surfaces in `fret-ui-assets`.
+- [x] RESLOAD-api-500 Rename or replace misleading install surfaces in `fret-ui-assets`.
   - `install()` must either perform complete wiring or stop being called `install()`.
+  - Evidence:
+    - `ecosystem/fret-ui-assets/src/app.rs`
+    - `ecosystem/fret-ui-assets/src/advanced.rs`
 
 - [ ] RESLOAD-api-510 Design the golden-path authoring API for app and ecosystem authors.
   - Target qualities:

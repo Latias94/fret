@@ -1,6 +1,6 @@
 # Resource Loading Fearless Refactor v1
 
-Status: Draft (audit complete; contract reset not started)
+Status: In progress (audit complete; contract reset started)
 
 Tracking files:
 
@@ -37,13 +37,21 @@ This workstream takes a fearless posture:
 
 ## Current status (practical)
 
-- `fret-ui-assets` can load images and drive async invalidation when the event pipeline is wired.
-- SVG rendering works when bytes are already available, but file-based SVG loading is a separate
-  native-only helper path.
-- Font startup works, but desktop, web, and SVG text do not share one deterministic baseline.
-- The web portability story is not closed yet:
-  `cargo check -p fret-launch --target wasm32-unknown-unknown` currently fails in
-  `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs`.
+- The first core asset contract slice exists in `crates/fret-assets`:
+  - locator vocabulary,
+  - revision/result payloads,
+  - capability reporting,
+  - resolver trait.
+- The wasm portability honesty gate is now green:
+  - `cargo check -p fret-launch --target wasm32-unknown-unknown`
+- Runtime host attachment has started:
+  - `crates/fret-runtime/src/asset_resolver.rs` now exposes a host-level
+    `AssetResolverService`.
+- `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
+  image and SVG bytes, while keeping the existing async image invalidation ergonomics.
+- Legacy file-path helpers still exist only as migration/dev/native compatibility shims.
+- Font startup still remains split across desktop/web/SVG text and is not solved by the current
+  slice.
 
 ## Current incorrect logic (must be corrected, not preserved)
 
@@ -148,7 +156,10 @@ The current resource/runtime graph is not even compile-closed for wasm because
 - `crates/fret-render-wgpu/src/renderer/render_plan_dump_assemble.rs`
 - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs`
 
-Before changing author-facing resource APIs, we need a truthful platform-closure baseline.
+Before changing author-facing resource APIs, we needed a truthful platform-closure baseline.
+
+This specific compile break has now been fixed, but the broader cross-platform asset/runtime story
+is still being refactored.
 
 ## Non-negotiable constraints
 

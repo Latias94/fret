@@ -464,6 +464,8 @@ impl AssetResolver for InMemoryAssetResolver {
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
 pub enum AssetLoadError {
+    #[error("asset resolver is not installed on this host")]
+    ResolverUnavailable,
     #[error("asset locator kind {kind:?} is not supported on this host")]
     UnsupportedLocatorKind { kind: AssetLocatorKind },
     #[error("asset not found")]
