@@ -129,6 +129,12 @@ This workstream takes a fearless posture:
   - host-level resolution via `crates/fret-runtime/src/asset_resolver.rs`,
   - app-facing facade helpers via `fret::assets::resolve_reference(...)` and
     `fret::assets::resolve_locator_reference(...)`.
+- `crates/fret-fonts` now also exposes a package-scoped asset-contract surface for bundled
+  framework fonts:
+  - `bundled_asset_bundle()` returns the logical package bundle id,
+  - bundled font faces now carry stable logical keys/media types,
+  - bundled profiles now expose `asset_entries()` so the framework-owned font baseline can mount
+    through `StaticAssetEntry` instead of existing only as raw byte arrays.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract

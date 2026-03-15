@@ -11,6 +11,7 @@ documentation.workspace = true
 description = "Bundled font assets and loading helpers for Fret."
 
 [dependencies]
+fret-assets = { version = "0.1.0", path = "../fret-assets" }
 
 [dev-dependencies]
 read-fonts.workspace = true

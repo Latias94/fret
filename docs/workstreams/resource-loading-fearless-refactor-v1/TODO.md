@@ -174,11 +174,24 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 - [ ] RESLOAD-font-310 Ensure desktop/web/mobile all publish the same conceptual font-environment
       snapshot shape, even when capabilities differ.
 
-- [ ] RESLOAD-font-320 Define bundled font profiles/manifests as a real product surface.
+- [~] RESLOAD-font-320 Define bundled font profiles/manifests as a real product surface.
   - Minimum guarantees:
     - UI sans/serif/monospace roles,
     - emoji fallback,
     - any promised CJK fallback coverage.
+  - Current landed slice:
+    - `crates/fret-fonts` now publishes package-scoped logical asset identity alongside the
+      existing profile manifest:
+      - `bundled_asset_bundle()`,
+      - `BundledFontFaceSpec::{asset_key,asset_locator(),asset_request(),asset_entry()}`,
+      - `BundledFontProfile::asset_entries()`.
+    - bundled font profiles can now be mounted into the shared asset contract through
+      `StaticAssetEntry` instead of existing only as ad-hoc byte bags for `Effect::TextAddFonts`.
+  - Remaining:
+    - make runner startup/publication consume the same bundled profile asset identity story instead
+      of only using raw `Vec<u8>` injection
+    - define how mobile/package builds surface framework-owned bundled fonts on the builder/startup
+      lane
 
 - [ ] RESLOAD-font-330 Make system-font scan an optional augmentation layer, not the baseline
       identity of the framework.

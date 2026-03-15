@@ -1,5 +1,6 @@
 use crate::profiles::{DEFAULT_EXPECTED_FAMILIES, DEFAULT_PROVIDED_ROLES};
 use crate::*;
+use fret_assets::{AssetLocator, AssetResolver, InMemoryAssetResolver};
 use read_fonts::tables::name::NameId;
 use read_fonts::{FontRef, TableProvider as _};
 use std::collections::BTreeSet;
@@ -17,6 +18,10 @@ fn dedupe_families(values: impl IntoIterator<Item = &'static str>) -> Vec<&'stat
 
 fn profile_face_families(profile: &'static BundledFontProfile) -> Vec<&'static str> {
     dedupe_families(profile.faces.iter().map(|face| face.family))
+}
+
+fn profile_face_asset_keys(profile: &'static BundledFontProfile) -> Vec<&'static str> {
+    dedupe_families(profile.faces.iter().map(|face| face.asset_key))
 }
 
 fn families_for_role(
@@ -171,6 +176,14 @@ fn assert_profile_manifest_consistency(profile: &'static BundledFontProfile) {
         "expected font_bytes() to preserve face ordering for profile {}",
         profile.name
     );
+    assert_eq!(
+        profile
+            .face_for_asset_key(profile.faces[0].asset_key)
+            .map(|face| face.family),
+        Some(profile.faces[0].family),
+        "expected face_for_asset_key to round-trip the first face for profile {}",
+        profile.name
+    );
 }
 
 fn assert_role_families_cover_codepoints(
@@ -234,6 +247,59 @@ fn bundled_face_family_names_match_name_tables() {
                 face.family,
                 family_names,
                 profile.name
+            );
+        }
+    }
+}
+
+#[test]
+fn bundled_profile_asset_keys_are_unique_per_profile() {
+    for profile in [crate::bootstrap_profile(), crate::default_profile()] {
+        let asset_keys = profile_face_asset_keys(profile);
+        assert_eq!(
+            asset_keys.len(),
+            profile.faces.len(),
+            "expected asset keys to be unique for profile {}",
+            profile.name
+        );
+    }
+}
+
+#[test]
+fn bundled_face_asset_requests_are_font_bundle_requests() {
+    let bundle = crate::bundled_asset_bundle();
+    for profile in [crate::bootstrap_profile(), crate::default_profile()] {
+        for face in profile.faces {
+            let request = face.asset_request();
+            assert_eq!(request.kind_hint, Some(fret_assets::AssetKindHint::Font));
+            assert_eq!(
+                request.locator,
+                AssetLocator::bundle(bundle.clone(), face.asset_key),
+                "expected face {} in profile {} to expose a package-scoped font locator",
+                face.family,
+                profile.name
+            );
+        }
+    }
+}
+
+#[test]
+fn bundled_profile_asset_entries_round_trip_through_bundle_resolver() {
+    let bundle = crate::bundled_asset_bundle();
+    for profile in [crate::bootstrap_profile(), crate::default_profile()] {
+        let mut resolver = InMemoryAssetResolver::new();
+        resolver.insert_bundle_entries(bundle.clone(), profile.asset_entries());
+
+        for face in profile.faces {
+            let resolved = resolver
+                .resolve_bytes(&face.asset_request())
+                .expect("expected bundled font face to resolve from profile asset entries");
+            let expected_entry = face.asset_entry();
+            assert_eq!(resolved.bytes.as_ref(), face.bytes);
+            assert_eq!(resolved.revision, expected_entry.revision);
+            assert_eq!(
+                resolved.media_type.as_ref().map(|value| value.as_str()),
+                Some(face.media_type)
             );
         }
     }

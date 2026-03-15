@@ -16,11 +16,18 @@ The canonical API is:
 - `fret_fonts::bootstrap_fonts()` — bootstrap fonts only (never includes emoji).
 - `fret_fonts::default_profile()` / `fret_fonts::bootstrap_profile()` — manifest-backed bundled
   profile metadata (roles, expected family names, generic guarantees, fallback families).
+- `fret_fonts::bundled_asset_bundle()` — package-scoped logical bundle id for the shipped font
+  assets (`pkg:fret-fonts`).
+- `fret_fonts::default_profile().asset_entries()` /
+  `fret_fonts::bootstrap_profile().asset_entries()` — `StaticAssetEntry` iterators that publish the
+  bundled faces on the shared asset contract.
+- `BundledFontFaceSpec::asset_locator()` / `asset_request()` — face-level logical asset identity for
+  resolvers, installers, or diagnostics that need to reference one bundled face explicitly.
 - `fret_fonts::default_profile().font_bytes_for_role(...)` — role-scoped bytes derived from the
   manifest contract when a caller specifically needs emoji or CJK fallback faces.
 
 The byte-returning functions are intended to be fed into `Effect::TextAddFonts`. The profile
-surfaces are the contract source for bundled roles and guarantees.
+surfaces are the contract source for bundled roles, guarantees, and logical asset identity.
 
 ## Size strategy (WASM)
 
