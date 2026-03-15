@@ -180,6 +180,63 @@ struct BufferedTextFieldState {
     pending_blur: Option<TextFieldBlurBehavior>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BufferedTextFieldPendingBlurPlan {
+    Keep,
+    Clear,
+    Arm(TextFieldBlurBehavior),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct BufferedTextFieldFocusPlan {
+    begin_session: bool,
+    cancel_pending_blur: bool,
+    pending_blur: BufferedTextFieldPendingBlurPlan,
+}
+
+fn plan_buffered_text_field_focus_transition(
+    was_focused: bool,
+    session_active: bool,
+    is_focused: bool,
+    blur_behavior: TextFieldBlurBehavior,
+    has_pending_blur: bool,
+) -> BufferedTextFieldFocusPlan {
+    if is_focused {
+        return BufferedTextFieldFocusPlan {
+            begin_session: !session_active,
+            cancel_pending_blur: has_pending_blur,
+            pending_blur: BufferedTextFieldPendingBlurPlan::Clear,
+        };
+    }
+
+    if was_focused && session_active {
+        return BufferedTextFieldFocusPlan {
+            begin_session: false,
+            cancel_pending_blur: has_pending_blur,
+            pending_blur: match blur_behavior {
+                TextFieldBlurBehavior::Commit | TextFieldBlurBehavior::Cancel => {
+                    BufferedTextFieldPendingBlurPlan::Arm(blur_behavior)
+                }
+                TextFieldBlurBehavior::PreserveDraft => BufferedTextFieldPendingBlurPlan::Clear,
+            },
+        };
+    }
+
+    if session_active {
+        return BufferedTextFieldFocusPlan {
+            begin_session: false,
+            cancel_pending_blur: false,
+            pending_blur: BufferedTextFieldPendingBlurPlan::Keep,
+        };
+    }
+
+    BufferedTextFieldFocusPlan {
+        begin_session: false,
+        cancel_pending_blur: has_pending_blur,
+        pending_blur: BufferedTextFieldPendingBlurPlan::Clear,
+    }
+}
+
 impl TextField {
     pub fn new(model: Model<String>) -> Self {
         Self {
@@ -653,39 +710,39 @@ fn sync_buffered_text_field_session<H: UiHost>(
 ) {
     let (begin_session, cancel_blur_token, arm_blur_token) = {
         let mut state = buffered_state.lock().unwrap_or_else(|e| e.into_inner());
-        let mut begin_session = false;
-        let was_focused = state.was_focused;
+        let plan = plan_buffered_text_field_focus_transition(
+            state.was_focused,
+            state.session.is_active(),
+            is_focused,
+            blur_behavior,
+            state.blur_timer.is_some() || state.pending_blur.is_some(),
+        );
 
-        let (cancel_blur_token, arm_blur_token) = if is_focused {
-            let cancel_blur_token = state.blur_timer.take();
-            state.pending_blur = None;
-            if !state.session.is_active() {
-                state.session.begin(current_text.to_owned());
-                begin_session = true;
+        let cancel_blur_token = if plan.cancel_pending_blur {
+            state.blur_timer.take()
+        } else {
+            None
+        };
+        let arm_blur_token = match plan.pending_blur {
+            BufferedTextFieldPendingBlurPlan::Keep => None,
+            BufferedTextFieldPendingBlurPlan::Clear => {
+                state.blur_timer = None;
+                state.pending_blur = None;
+                None
             }
-            (cancel_blur_token, None)
-        } else if was_focused && state.session.is_active() {
-            let cancel_blur_token = state.blur_timer.take();
-            state.pending_blur = None;
-            let arm_blur_token = if !matches!(blur_behavior, TextFieldBlurBehavior::PreserveDraft) {
+            BufferedTextFieldPendingBlurPlan::Arm(next_blur_behavior) => {
                 let token = cx.app.next_timer_token();
                 state.blur_timer = Some(token);
-                state.pending_blur = Some(blur_behavior);
+                state.pending_blur = Some(next_blur_behavior);
                 Some(token)
-            } else {
-                None
-            };
-            (cancel_blur_token, arm_blur_token)
-        } else if state.session.is_active() {
-            (None, None)
-        } else {
-            let cancel_blur_token = state.blur_timer.take();
-            state.pending_blur = None;
-            (cancel_blur_token, None)
+            }
         };
+        if plan.begin_session {
+            state.session.begin(current_text.to_owned());
+        }
 
         state.was_focused = is_focused;
-        (begin_session, cancel_blur_token, arm_blur_token)
+        (plan.begin_session, cancel_blur_token, arm_blur_token)
     };
 
     if let Some(token) = cancel_blur_token {
@@ -833,4 +890,138 @@ fn cancel_buffered_text_field(
 
 fn is_multiline_buffered_commit_shortcut(down: KeyDownCx) -> bool {
     (down.modifiers.ctrl || down.modifiers.meta) && !down.modifiers.alt && !down.modifiers.alt_gr
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        BufferedTextFieldFocusPlan, BufferedTextFieldPendingBlurPlan, TextFieldBlurBehavior,
+        plan_buffered_text_field_focus_transition,
+    };
+
+    #[test]
+    fn focus_begin_starts_session_and_clears_pending_blur() {
+        assert_eq!(
+            plan_buffered_text_field_focus_transition(
+                false,
+                false,
+                true,
+                TextFieldBlurBehavior::Commit,
+                true,
+            ),
+            BufferedTextFieldFocusPlan {
+                begin_session: true,
+                cancel_pending_blur: true,
+                pending_blur: BufferedTextFieldPendingBlurPlan::Clear,
+            }
+        );
+    }
+
+    #[test]
+    fn refocus_cancels_pending_blur_without_restarting_active_session() {
+        assert_eq!(
+            plan_buffered_text_field_focus_transition(
+                false,
+                true,
+                true,
+                TextFieldBlurBehavior::Commit,
+                true,
+            ),
+            BufferedTextFieldFocusPlan {
+                begin_session: false,
+                cancel_pending_blur: true,
+                pending_blur: BufferedTextFieldPendingBlurPlan::Clear,
+            }
+        );
+    }
+
+    #[test]
+    fn blur_commit_arms_pending_commit() {
+        assert_eq!(
+            plan_buffered_text_field_focus_transition(
+                true,
+                true,
+                false,
+                TextFieldBlurBehavior::Commit,
+                false,
+            ),
+            BufferedTextFieldFocusPlan {
+                begin_session: false,
+                cancel_pending_blur: false,
+                pending_blur: BufferedTextFieldPendingBlurPlan::Arm(TextFieldBlurBehavior::Commit),
+            }
+        );
+    }
+
+    #[test]
+    fn blur_cancel_arms_pending_cancel() {
+        assert_eq!(
+            plan_buffered_text_field_focus_transition(
+                true,
+                true,
+                false,
+                TextFieldBlurBehavior::Cancel,
+                false,
+            ),
+            BufferedTextFieldFocusPlan {
+                begin_session: false,
+                cancel_pending_blur: false,
+                pending_blur: BufferedTextFieldPendingBlurPlan::Arm(TextFieldBlurBehavior::Cancel),
+            }
+        );
+    }
+
+    #[test]
+    fn blur_preserve_draft_clears_pending_blur_without_arming_timer() {
+        assert_eq!(
+            plan_buffered_text_field_focus_transition(
+                true,
+                true,
+                false,
+                TextFieldBlurBehavior::PreserveDraft,
+                true,
+            ),
+            BufferedTextFieldFocusPlan {
+                begin_session: false,
+                cancel_pending_blur: true,
+                pending_blur: BufferedTextFieldPendingBlurPlan::Clear,
+            }
+        );
+    }
+
+    #[test]
+    fn active_unfocused_session_keeps_existing_pending_blur_state() {
+        assert_eq!(
+            plan_buffered_text_field_focus_transition(
+                false,
+                true,
+                false,
+                TextFieldBlurBehavior::Commit,
+                true,
+            ),
+            BufferedTextFieldFocusPlan {
+                begin_session: false,
+                cancel_pending_blur: false,
+                pending_blur: BufferedTextFieldPendingBlurPlan::Keep,
+            }
+        );
+    }
+
+    #[test]
+    fn inactive_unfocused_state_clears_stale_pending_blur() {
+        assert_eq!(
+            plan_buffered_text_field_focus_transition(
+                false,
+                false,
+                false,
+                TextFieldBlurBehavior::Commit,
+                true,
+            ),
+            BufferedTextFieldFocusPlan {
+                begin_session: false,
+                cancel_pending_blur: true,
+                pending_blur: BufferedTextFieldPendingBlurPlan::Clear,
+            }
+        );
+    }
 }

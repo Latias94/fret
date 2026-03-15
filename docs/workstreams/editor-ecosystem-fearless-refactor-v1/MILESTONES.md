@@ -116,8 +116,9 @@ Deliverables:
 - focused popup screenshot/diag evidence across the other real popup consumers as well, so
   trigger-owned select lists and color-edit popovers share the same review discipline instead of
   depending on ad-hoc manual screenshots,
-- focused diag coverage for buffered blur commit, multiline explicit commit, and Escape cancel on
-  the promoted proof surface,
+- focused diag coverage for default buffered blur commit plus the first editor opt-in blur
+  exceptions (`Cancel` for inline rename, `PreserveDraft` for multiline notes), alongside
+  multiline explicit commit and Escape cancel on the promoted proof surface,
 - and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
 
 Exit gates:
@@ -134,8 +135,9 @@ Exit gates:
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
 - repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
   launch,
-- buffered text-session proof coverage demonstrates blur commit, multiline explicit commit, and
-  cancel/revert without relying on manual inspection,
+- buffered text-session proof coverage demonstrates default blur commit, inline-rename
+  cancel-on-blur, multiline preserve-draft, explicit multiline commit, and cancel/revert without
+  relying on manual inspection,
 - a promoted text-assist/history proof plus diag gate demonstrate input-owned assist semantics
   (`expanded`, controlled listbox relation, `active_descendant`) and Enter-accept behavior without
   moving primary focus into the popup, and that proof is backed by shared `fret-ui-kit`
