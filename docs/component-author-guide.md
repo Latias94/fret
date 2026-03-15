@@ -95,11 +95,48 @@ Rules:
 
 - Idempotent: calling twice should not double-register or double-install default bindings.
 - No hidden side-channels: prefer commands/effects/models instead of global singletons.
+- If your crate depends on an icon pack or ships package-owned images/SVGs/fonts, keep that
+  composition behind this one installer surface. App code should compose one installer value, while
+  widget code stays on semantic `IconId`s and logical `AssetLocator::bundle(...)` lookups.
 
 Practical note:
 
 - Consider gating this behind a feature (e.g. `app-integration`) so pure UI crates can remain `fret-ui`-only.
   Feature names are a convention, not a requirement.
+
+For reusable ecosystem crates that install transitive icon packs plus shipped package assets,
+prefer:
+
+```rust
+use fret::assets::{self, AssetBundleId, AssetRevision, StaticAssetEntry};
+use fret::integration::InstallIntoApp;
+
+pub struct MyKitBundle;
+
+impl InstallIntoApp for MyKitBundle {
+    fn install_into_app(self, app: &mut fret::app::App) {
+        fret_icons_lucide::app::install(app);
+        assets::register_bundle_entries(
+            app,
+            AssetBundleId::package("my-kit"),
+            [StaticAssetEntry::new(
+                "images/logo.svg",
+                AssetRevision(1),
+                br#"<svg></svg>"#,
+            )
+            .with_media_type("image/svg+xml")],
+        );
+    }
+}
+```
+
+Keep the low-level registration inside the ecosystem crate. The app should call
+`FretApp::setup(MyKitBundle)` or compose it with other installers; it should not replay
+`IconRegistry` mutation or `register_bundle_entries(...)` for your crate's internal resources by
+hand.
+
+For the broader ownership model, see
+`docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`.
 
 ### 2.1) (Recommended) Opt into the unified `ui()` builder surface
 

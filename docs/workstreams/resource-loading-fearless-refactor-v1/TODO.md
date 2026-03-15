@@ -453,6 +453,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - UI Gallery `AI Attachments` preview-bearing variants (`Usage`, `Grid`, `Inline`, `List`) now
       resolve thumbnails from gallery-owned logical package bundle requests rather than synthesizing
       inline RGBA previews inside each snippet.
+    - Public guidance now links the transitive icon-pack + package-bundle composition story back to
+      one ecosystem-owned installer surface instead of teaching apps to replay low-level icon or
+      asset registration manually.
   - Evidence:
     - `apps/fret-cookbook/examples/app_owned_bundle_assets_basics.rs`
     - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
@@ -465,6 +468,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_inline.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_list.rs`
     - `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs`
+    - `docs/crate-usage-guide.md`
+    - `docs/component-author-guide.md`
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`
+    - `ecosystem/fret-ui-shadcn/README.md`
     - `apps/fretboard/src/scaffold/templates.rs`
       (`todo_template_mounts_generated_assets_when_ui_assets_are_enabled`,
       `simple_todo_template_mounts_generated_assets_when_ui_assets_are_enabled`)
@@ -474,8 +481,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       rendering, prioritizing AI/media/file-preview surfaces over pure image-fit/aspect-ratio demos,
     - audit shadcn ecosystem recipes that ship icons/images so package-owned installers stay the
       default app integration story,
-    - document the transitive icon-pack + package-bundle composition story for ecosystem crates so
-      apps compose one installer instead of replaying low-level registrations manually.
+      and keep first-party docs/examples aligned when new ecosystem bundles are added.
   - Minimum surfaces:
     - cookbook examples,
     - UI Gallery,

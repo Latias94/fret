@@ -433,6 +433,18 @@ mod authoring_surface_policy_tests {
             ICONS_AND_ASSETS_EXAMPLE.contains("AssetBundleId::package(PACKAGE_ASSET_BUNDLE_NAME)")
         );
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("assets::register_bundle_entries"));
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("the app never replays low-level icon or asset registration manually")
+        );
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("App setup bundle: composes transitive icon + asset installers")
+        );
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("Low-level registration stays internal to the dependency")
+        );
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains(".ui_assets_budgets("));
         assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("UiAssets::configure("));
         assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("AssetBundleId::app(\"fret-cookbook\")"));

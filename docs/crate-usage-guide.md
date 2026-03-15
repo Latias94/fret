@@ -444,6 +444,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - **Direct app wiring:** when you depend on a pack directly, use the explicit `crate::app` seam
   (`fret_icons_lucide::app::install`, `fret_icons_radix::app::install`) instead of root-level
   install helpers.
+- **Reusable ecosystem crates with transitive resources:** if a crate depends on a pack and also
+  ships images/SVGs/fonts, publish one installer/bundle surface that composes both. App code
+  should call `FretApp::setup(MyKitBundle)` (or compose named installers), not replay
+  `IconRegistry` mutation plus `register_bundle_entries(...)` manually for the dependency. See
+  `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`.
 
 ### `fret-ui-assets`
 
@@ -479,6 +484,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   and gate it behind an explicit feature (e.g. `app-integration`).
   If the crate ships its own bytes, keep them package-owned and expose one installer/mount helper
   instead of asking apps to know your internal asset bundle layout.
+- **Reusable ecosystem crates that also depend on icon packs:** keep icon-pack installation plus
+  package-bundle registration inside the same installer surface so apps compose one named
+  dependency bundle rather than replaying low-level icon + asset registrations by hand. See
+  `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`.
 
 ### `fret-bootstrap`
 

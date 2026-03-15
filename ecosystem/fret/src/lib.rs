@@ -1992,6 +1992,7 @@ mod authoring_surface_policy_tests {
         include_str!("../../../docs/examples/todo-app-golden-path.md");
     const AUTHORING_GOLDEN_PATH_V2: &str =
         include_str!("../../../docs/authoring-golden-path-v2.md");
+    const COMPONENT_AUTHOR_GUIDE: &str = include_str!("../../../docs/component-author-guide.md");
     const SHADCN_DECLARATIVE_PROGRESS: &str =
         include_str!("../../../docs/shadcn-declarative-progress.md");
     const AUTHORING_SURFACE_TARGET_INTERFACE_STATE: &str = include_str!(
@@ -1999,6 +2000,9 @@ mod authoring_surface_policy_tests {
     );
     const CRATE_README: &str = include_str!("../README.md");
     const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
+    const ECOSYSTEM_INSTALLER_COMPOSITION: &str = include_str!(
+        "../../../docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md"
+    );
     const INTEGRATING_TOKIO_AND_REQWEST: &str =
         include_str!("../../../docs/integrating-tokio-and-reqwest.md");
     const INTEGRATING_SQLITE_AND_SQLX: &str =
@@ -2535,6 +2539,7 @@ mod authoring_surface_policy_tests {
     fn usage_docs_link_ecosystem_trait_budget_and_anti_plugin_posture() {
         assert!(CRATE_USAGE_GUIDE.contains("## Ecosystem author checklist"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::integration::InstallIntoApp`"));
+        assert!(CRATE_USAGE_GUIDE.contains("one installer/bundle surface"));
         assert!(CRATE_USAGE_GUIDE.contains("`RouteCodec`"));
         assert!(CRATE_USAGE_GUIDE.contains("`DockPanelFactory`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret-app::Plugin`"));
@@ -2550,6 +2555,12 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(fret_icons_radix::app::install)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_lucide::app::install`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_radix::app::install`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(MyKitBundle)`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`IconRegistry` mutation plus `register_bundle_entries(...)` manually")
+        );
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::configure_caches_with_budgets(...)`")
         );
@@ -2565,6 +2576,22 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_USAGE_GUIDE.contains("`fret::router::install_app(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_icons_radix::install_app`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_assets::install_app_with_budgets`"));
+    }
+
+    #[test]
+    fn component_author_docs_keep_transitive_icon_and_asset_registration_on_one_bundle_surface() {
+        assert!(COMPONENT_AUTHOR_GUIDE.contains(
+            "If your crate depends on an icon pack or ships package-owned images/SVGs/fonts"
+        ));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("widget code stays on semantic `IconId`s and logical `AssetLocator::bundle(...)` lookups"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("impl InstallIntoApp for MyKitBundle"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("AssetBundleId::package(\"my-kit\")"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`FretApp::setup(MyKitBundle)`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`"));
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION.contains("the app composes one installer/bundle value")
+        );
+        assert!(ECOSYSTEM_INSTALLER_COMPOSITION.contains("The app should not usually do this:"));
     }
 
     #[test]

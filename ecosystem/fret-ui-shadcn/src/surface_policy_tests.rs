@@ -170,6 +170,9 @@ fn visit_rust_files(dir: &std::path::Path, f: &mut impl FnMut(&std::path::Path, 
 #[test]
 fn app_integration_stays_under_explicit_app_module() {
     assert!(README.contains("`fret_ui_shadcn::app::{install, install_with, ...}`"));
+    assert!(README.contains("`fret_ui_shadcn::app::install(...)` installs theme/app wiring only"));
+    assert!(README.contains("`fret_icons_lucide::app::install`"));
+    assert!(README.contains("`fret_icons_radix::app::install`"));
     assert!(LIB_RS.contains("pub mod app;"));
     assert!(APP_RS.contains("pub struct InstallConfig"));
     assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
@@ -182,10 +185,16 @@ fn app_integration_stays_under_explicit_app_module() {
 
 #[test]
 fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
+    assert!(README.contains("use fret_icons::ids;"));
     assert!(README.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
-    assert!(README.contains("let _button = shadcn::Button::new(\"Save\");"));
+    assert!(README.contains("fret_icons_lucide::app::install(app);"));
+    assert!(
+        README
+            .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);")
+    );
     assert!(!README.contains("recipes/components stay under `fret_ui_shadcn::*`"));
     assert!(README.contains("`fret_ui_shadcn::raw::*` access stays the escape hatch"));
+    assert!(README.contains("Hidden flat crate-root component exports have been removed"));
 
     assert!(LIB_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
     assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` plus explicit"));

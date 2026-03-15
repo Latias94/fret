@@ -29,6 +29,13 @@ Keep the component taxonomy and app wiring separate:
 - app-owned setup stays under `fret_ui_shadcn::app::*`
 - environment / `UiServices`-boundary hooks stay under `fret_ui_shadcn::advanced::*`
 - explicit `fret_ui_shadcn::raw::*` access stays the escape hatch for low-level/internal use
+- Hidden flat crate-root component exports have been removed; curated docs/examples should teach
+  `facade as shadcn` as the default lane, with `fret_ui_shadcn::raw::*` reserved for explicit
+  escape-hatch use
+- `fret_ui_shadcn::app::install(...)` installs theme/app wiring only; icon packs stay explicit
+  and should be composed through app setup (`fret_icons_lucide::app::install`,
+  `fret_icons_radix::app::install`, or your own bundle surface) rather than hidden inside
+  component code
 - thin helper constructors prefer typed `IntoUiElement<H>` outputs by default; explicit raw helper
   seams are intentionally rare and documented when concrete landed-child storage still requires
   them
@@ -36,11 +43,13 @@ Keep the component taxonomy and app wiring separate:
 Example:
 
 ```rust
+use fret_icons::ids;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fret_ui_shadcn::app::install(app);
+fret_icons_lucide::app::install(app);
 
-let _button = shadcn::Button::new("Save");
+let _button = shadcn::Button::new("Save").leading_icon(ids::ui::SEARCH);
 ```
 
 ## Upstream references (non-normative)

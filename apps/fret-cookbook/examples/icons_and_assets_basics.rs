@@ -135,7 +135,7 @@ impl View for IconsAndAssetsBasicsView {
                 cx;
                 shadcn::card_title("Icons + assets basics"),
                 shadcn::card_description(
-                    "A reusable bundle installs lucide icons plus package-owned logical assets behind one `.setup(...)` value.",
+                    "A reusable dependency bundle installs lucide icons plus package-owned logical assets behind one `.setup(...)` value, so the app never replays low-level icon or asset registration manually.",
                 ),
             ]
         });
@@ -144,7 +144,9 @@ impl View for IconsAndAssetsBasicsView {
             ui::children![cx;
                 shadcn::Badge::new("Package bundle locator: reusable crate-owned asset namespace")
                     .variant(shadcn::BadgeVariant::Secondary),
-                shadcn::Badge::new("App setup bundle: installs transitive icon + asset globals")
+                shadcn::Badge::new("App setup bundle: composes transitive icon + asset installers")
+                    .variant(shadcn::BadgeVariant::Secondary),
+                shadcn::Badge::new("Low-level registration stays internal to the dependency")
                     .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new("RGBA8 source: deterministic in-memory escape hatch")
                     .variant(shadcn::BadgeVariant::Secondary)
