@@ -10,6 +10,13 @@ pub(super) const ENTRIES: &[PostRunCheckEntry] = &[
         run: run_asset_load_missing_bundle_assets_max,
     },
     PostRunCheckEntry {
+        id: "asset_load_stale_manifest_max",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_asset_load_stale_manifest_max,
+        run: run_asset_load_stale_manifest_max,
+    },
+    PostRunCheckEntry {
         id: "asset_load_unsupported_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -58,6 +65,24 @@ fn run_asset_load_missing_bundle_assets_max(
         return Ok(());
     };
     crate::stats::check_bundle_for_asset_load_missing_bundle_assets_max(
+        ctx.bundle_path,
+        max_allowed,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_asset_load_stale_manifest_max(checks: &RunChecks) -> bool {
+    checks.check_asset_load_stale_manifest_max.is_some()
+}
+
+fn run_asset_load_stale_manifest_max(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    let Some(max_allowed) = checks.check_asset_load_stale_manifest_max else {
+        return Ok(());
+    };
+    crate::stats::check_bundle_for_asset_load_stale_manifest_max(
         ctx.bundle_path,
         max_allowed,
         ctx.warmup_frames,

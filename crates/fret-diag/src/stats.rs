@@ -73,6 +73,7 @@ pub(super) use resource_loading::{
     check_bundle_for_asset_load_external_reference_unavailable_max,
     check_bundle_for_asset_load_missing_bundle_assets_max,
     check_bundle_for_asset_load_revision_changes_max,
+    check_bundle_for_asset_load_stale_manifest_max,
     check_bundle_for_asset_load_unsupported_file_max,
     check_bundle_for_asset_load_unsupported_url_max, check_bundle_for_bundled_font_baseline_source,
 };
@@ -143,6 +144,7 @@ pub(super) use resource_loading::{
     check_bundle_for_asset_load_external_reference_unavailable_max_json,
     check_bundle_for_asset_load_missing_bundle_assets_max_json,
     check_bundle_for_asset_load_revision_changes_max_json,
+    check_bundle_for_asset_load_stale_manifest_max_json,
     check_bundle_for_asset_load_unsupported_file_max_json,
     check_bundle_for_asset_load_unsupported_url_max_json,
     check_bundle_for_bundled_font_baseline_source_json,

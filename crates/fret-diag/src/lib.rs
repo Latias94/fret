@@ -481,6 +481,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_baseline_seed_specs: Vec<String> = Vec::new();
     let mut check_idle_no_paint_min: Option<u64> = None;
     let mut check_asset_load_missing_bundle_assets_max: Option<u64> = None;
+    let mut check_asset_load_stale_manifest_max: Option<u64> = None;
     let mut check_asset_load_unsupported_file_max: Option<u64> = None;
     let mut check_asset_load_unsupported_url_max: Option<u64> = None;
     let mut check_asset_load_external_reference_unavailable_max: Option<u64> = None;
@@ -1766,6 +1767,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-asset-load-missing-bundle-assets-max".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-asset-load-stale-manifest-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-load-stale-manifest-max".to_string()
+                    );
+                };
+                check_asset_load_stale_manifest_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-asset-load-stale-manifest-max".to_string()
+                })?);
                 i += 1;
             }
             "--check-asset-load-unsupported-file-max" => {
@@ -3259,6 +3272,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
         check_idle_no_paint_min: check_idle_no_paint_min.clone(),
         check_asset_load_missing_bundle_assets_max: check_asset_load_missing_bundle_assets_max.clone(),
+        check_asset_load_stale_manifest_max: check_asset_load_stale_manifest_max.clone(),
         check_asset_load_unsupported_file_max: check_asset_load_unsupported_file_max.clone(),
         check_asset_load_unsupported_url_max: check_asset_load_unsupported_url_max.clone(),
         check_asset_load_external_reference_unavailable_max: check_asset_load_external_reference_unavailable_max.clone(),
@@ -3556,6 +3570,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
                 check_idle_no_paint_min: check_idle_no_paint_min.clone(),
                 check_asset_load_missing_bundle_assets_max: check_asset_load_missing_bundle_assets_max.clone(),
+                check_asset_load_stale_manifest_max: check_asset_load_stale_manifest_max.clone(),
                 check_asset_load_unsupported_file_max: check_asset_load_unsupported_file_max.clone(),
                 check_asset_load_unsupported_url_max: check_asset_load_unsupported_url_max.clone(),
                 check_asset_load_external_reference_unavailable_max: check_asset_load_external_reference_unavailable_max.clone(),
@@ -3739,6 +3754,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_stale_scene_eps,
                 check_idle_no_paint_min,
                 check_asset_load_missing_bundle_assets_max,
+                check_asset_load_stale_manifest_max,
                 check_asset_load_unsupported_file_max,
                 check_asset_load_unsupported_url_max,
                 check_asset_load_external_reference_unavailable_max,

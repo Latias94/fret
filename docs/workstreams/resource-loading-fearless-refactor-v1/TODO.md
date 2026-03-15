@@ -347,7 +347,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Diagnostics and gates
 
-- [~] RESLOAD-diag-600 Add diagnostics for:
+- [x] RESLOAD-diag-600 Add diagnostics for:
   - missing bundle asset,
   - unsupported file/url capability,
   - stale/missing manifest mapping,
@@ -374,17 +374,20 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       recent debug-snapshot predicate evaluation for both docking and resource-loading surfaces, and
       `assert` / `wait` / `drag` script steps can consume the new resource-loading predicates from
       recent snapshots.
+    - `crates/fret-assets/src/file_manifest.rs` now reports a typed runtime
+      `AssetLoadError::StaleManifestMapping` when a file-backed manifest entry still resolves the
+      logical bundle/key mapping but its mapped host file path is gone.
+    - `crates/fret-runtime/src/asset_resolver.rs` now keeps `stale_manifest_requests` and
+      `stale_manifest` recent outcomes distinct from true missing bundle assets.
     - `crates/fret-diag/src/stats/resource_loading.rs` plus
       `crates/fret-diag/src/registry/checks/builtin_post_run/resource_loading.rs` now add
       post-run `fretboard diag` gates for:
       - asset-load missing-bundle counter max,
+      - asset-load stale-manifest counter max,
       - unsupported file/url counter max,
       - external-reference-unavailable counter max,
       - revision-change counter max,
       - bundled font baseline source equality.
-  - Remaining:
-    - emit a more explicit stale-manifest vs truly-missing-bundle distinction when file-backed
-      manifest resolvers can surface it
 
 - [~] RESLOAD-test-610 Add portable contract tests for asset capability and fallback behavior.
   - Current landed slice:

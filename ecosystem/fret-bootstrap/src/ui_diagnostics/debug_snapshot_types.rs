@@ -222,6 +222,8 @@ pub struct UiAssetLoadDiagnosticsSnapshotV1 {
     pub bytes_requests: u64,
     pub reference_requests: u64,
     pub missing_bundle_asset_requests: u64,
+    #[serde(default)]
+    pub stale_manifest_requests: u64,
     pub unsupported_file_requests: u64,
     pub unsupported_url_requests: u64,
     pub external_reference_unavailable_requests: u64,
@@ -237,6 +239,7 @@ impl UiAssetLoadDiagnosticsSnapshotV1 {
             bytes_requests: snapshot.bytes_requests,
             reference_requests: snapshot.reference_requests,
             missing_bundle_asset_requests: snapshot.missing_bundle_asset_requests,
+            stale_manifest_requests: snapshot.stale_manifest_requests,
             unsupported_file_requests: snapshot.unsupported_file_requests,
             unsupported_url_requests: snapshot.unsupported_url_requests,
             external_reference_unavailable_requests: snapshot
@@ -287,6 +290,7 @@ impl UiAssetLoadDiagnosticEventV1 {
             outcome_kind: match event.outcome_kind {
                 fret_runtime::AssetLoadOutcomeKind::Resolved => "resolved",
                 fret_runtime::AssetLoadOutcomeKind::Missing => "missing",
+                fret_runtime::AssetLoadOutcomeKind::StaleManifest => "stale_manifest",
                 fret_runtime::AssetLoadOutcomeKind::UnsupportedLocatorKind => {
                     "unsupported_locator_kind"
                 }

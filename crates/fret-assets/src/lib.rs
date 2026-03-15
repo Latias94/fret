@@ -701,6 +701,8 @@ pub enum AssetLoadError {
     ExternalReferenceUnavailable { kind: AssetLocatorKind },
     #[error("asset not found")]
     NotFound,
+    #[error("asset manifest entry points at a missing file: {path}")]
+    StaleManifestMapping { path: SmolStr },
     #[error("asset access denied")]
     AccessDenied,
     #[error("asset load failed: {message}")]

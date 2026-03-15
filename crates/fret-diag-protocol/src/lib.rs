@@ -1825,6 +1825,13 @@ pub enum UiPredicateV1 {
     AssetLoadMissingBundleAssetRequestsGe {
         min: u64,
     },
+    /// True when `debug.resource_loading.asset_load.stale_manifest_requests >= min`.
+    ///
+    /// This is intended for native/package-dev file-backed manifest lanes where the logical
+    /// bundle/key mapping still exists but the manifest-backed file path has gone stale.
+    AssetLoadStaleManifestRequestsGe {
+        min: u64,
+    },
     /// True when `debug.resource_loading.asset_load.unsupported_file_requests >= min`.
     ///
     /// This is intended to gate portable capability degradations where file locators must stay
@@ -1857,6 +1864,7 @@ pub enum UiPredicateV1 {
     /// Supported values currently mirror the debug snapshot surface:
     /// - `resolved`
     /// - `missing`
+    /// - `stale_manifest`
     /// - `unsupported_locator_kind`
     /// - `external_reference_unavailable`
     /// - `resolver_unavailable`

@@ -452,11 +452,13 @@ fn collect_bundle_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AssetM
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn map_fs_read_error(source: std::io::Error) -> AssetLoadError {
+fn map_fs_read_error_for_manifest_entry(path: &Path, source: std::io::Error) -> AssetLoadError {
     use std::io::ErrorKind;
 
     match source.kind() {
-        ErrorKind::NotFound => AssetLoadError::NotFound,
+        ErrorKind::NotFound => AssetLoadError::StaleManifestMapping {
+            path: path.to_string_lossy().into_owned().into(),
+        },
         ErrorKind::PermissionDenied => AssetLoadError::AccessDenied,
         _ => AssetLoadError::Message {
             message: source.to_string().into(),
@@ -466,7 +468,8 @@ fn map_fs_read_error(source: std::io::Error) -> AssetLoadError {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn read_file_bytes_with_revision(path: &Path) -> Result<(Vec<u8>, AssetRevision), AssetLoadError> {
-    let bytes = std::fs::read(path).map_err(map_fs_read_error)?;
+    let bytes =
+        std::fs::read(path).map_err(|source| map_fs_read_error_for_manifest_entry(path, source))?;
     let revision = AssetRevision(hash_bytes(&bytes));
     Ok((bytes, revision))
 }
@@ -695,6 +698,70 @@ mod tests {
 
         assert_eq!(resolved.bytes.as_ref(), b"bundle-dir");
         assert_eq!(resolver.entry_count(), 1);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn file_manifest_resolver_reports_stale_manifest_mapping_for_missing_file_bytes() {
+        let root = make_temp_dir("fret-assets-file-manifest-stale-bytes");
+        let missing_path = root.join("images/missing.png");
+
+        let manifest = FileAssetManifestV1::new([FileAssetManifestBundleV1::new(
+            app_bundle(),
+            [FileAssetManifestEntryV1::new("images/logo.png").with_path(missing_path.clone())],
+        )]);
+        let resolver = FileAssetManifestResolver::from_manifest_with_base_dir(
+            manifest,
+            &root,
+            root.join("inline.manifest.json"),
+        )
+        .expect("manifest resolver should build");
+
+        let err = resolver
+            .resolve_bytes(&AssetRequest::new(AssetLocator::bundle(
+                app_bundle(),
+                "images/logo.png",
+            )))
+            .expect_err("missing mapped file should fail");
+
+        assert_eq!(
+            err,
+            AssetLoadError::StaleManifestMapping {
+                path: missing_path.to_string_lossy().into_owned().into(),
+            }
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn file_manifest_resolver_reports_stale_manifest_mapping_for_missing_file_reference() {
+        let root = make_temp_dir("fret-assets-file-manifest-stale-reference");
+        let missing_path = root.join("icons/missing.svg");
+
+        let manifest = FileAssetManifestV1::new([FileAssetManifestBundleV1::new(
+            app_bundle(),
+            [FileAssetManifestEntryV1::new("icons/search.svg").with_path(missing_path.clone())],
+        )]);
+        let resolver = FileAssetManifestResolver::from_manifest_with_base_dir(
+            manifest,
+            &root,
+            root.join("inline.manifest.json"),
+        )
+        .expect("manifest resolver should build");
+
+        let err = resolver
+            .resolve_reference(&AssetRequest::new(AssetLocator::bundle(
+                app_bundle(),
+                "icons/search.svg",
+            )))
+            .expect_err("missing mapped file should fail");
+
+        assert_eq!(
+            err,
+            AssetLoadError::StaleManifestMapping {
+                path: missing_path.to_string_lossy().into_owned().into(),
+            }
+        );
     }
 
     #[cfg(not(target_arch = "wasm32"))]

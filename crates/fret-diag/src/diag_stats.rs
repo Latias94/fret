@@ -26,6 +26,7 @@ pub(crate) struct StatsCmdContext {
     pub check_stale_scene_eps: f32,
     pub check_idle_no_paint_min: Option<u64>,
     pub check_asset_load_missing_bundle_assets_max: Option<u64>,
+    pub check_asset_load_stale_manifest_max: Option<u64>,
     pub check_asset_load_unsupported_file_max: Option<u64>,
     pub check_asset_load_unsupported_url_max: Option<u64>,
     pub check_asset_load_external_reference_unavailable_max: Option<u64>,
@@ -69,6 +70,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_stale_scene_eps,
         check_idle_no_paint_min,
         check_asset_load_missing_bundle_assets_max,
+        check_asset_load_stale_manifest_max,
         check_asset_load_unsupported_file_max,
         check_asset_load_unsupported_url_max,
         check_asset_load_external_reference_unavailable_max,
@@ -290,6 +292,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         stats::check_bundle_for_asset_load_missing_bundle_assets_max(
+            bundle_path.as_path(),
+            max_allowed,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max_allowed) = check_asset_load_stale_manifest_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-load-stale-manifest-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_load_stale_manifest_max(
             bundle_path.as_path(),
             max_allowed,
             warmup_frames,

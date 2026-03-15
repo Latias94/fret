@@ -23,6 +23,7 @@ pub enum AssetLoadAccessKind {
 pub enum AssetLoadOutcomeKind {
     Resolved,
     Missing,
+    StaleManifest,
     UnsupportedLocatorKind,
     ExternalReferenceUnavailable,
     ResolverUnavailable,
@@ -55,6 +56,7 @@ pub struct AssetLoadDiagnosticsSnapshot {
     pub bytes_requests: u64,
     pub reference_requests: u64,
     pub missing_bundle_asset_requests: u64,
+    pub stale_manifest_requests: u64,
     pub unsupported_file_requests: u64,
     pub unsupported_url_requests: u64,
     pub external_reference_unavailable_requests: u64,
@@ -169,6 +171,11 @@ impl AssetLoadDiagnosticsStore {
             Err(err) => {
                 let outcome_kind = match err {
                     AssetLoadError::NotFound => AssetLoadOutcomeKind::Missing,
+                    AssetLoadError::StaleManifestMapping { .. } => {
+                        state.snapshot.stale_manifest_requests =
+                            state.snapshot.stale_manifest_requests.saturating_add(1);
+                        AssetLoadOutcomeKind::StaleManifest
+                    }
                     AssetLoadError::UnsupportedLocatorKind { kind } => {
                         match kind {
                             AssetLocatorKind::File => {
@@ -212,6 +219,7 @@ impl AssetLoadDiagnosticsStore {
                     state.last_seen_revisions.get(locator).copied(),
                     None,
                     match err {
+                        AssetLoadError::StaleManifestMapping { path } => Some(path.to_string()),
                         AssetLoadError::Message { message } => Some(message.to_string()),
                         _ => None,
                     },
@@ -1126,6 +1134,57 @@ mod tests {
         assert_eq!(
             resolved.reference,
             fret_assets::AssetExternalReference::file_path("assets/earlier.png")
+        );
+    }
+
+    #[test]
+    fn stale_manifest_layer_blocks_earlier_bundle_fallback_and_is_counted() {
+        let mut host = TestHost::default();
+
+        let mut earlier = InMemoryAssetResolver::new();
+        earlier.insert_bundle("app", "images/logo.png", AssetRevision(1), [1u8, 2, 3]);
+        register_asset_resolver(&mut host, Arc::new(earlier));
+
+        struct StaleManifestResolver;
+
+        impl AssetResolver for StaleManifestResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    memory: false,
+                    embedded: false,
+                    bundle_asset: true,
+                    file: false,
+                    url: false,
+                    file_watch: false,
+                    system_font_scan: false,
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::StaleManifestMapping {
+                    path: format!("/tmp/stale/{}", debug_asset_locator(&request.locator)).into(),
+                })
+            }
+        }
+
+        register_asset_resolver(&mut host, Arc::new(StaleManifestResolver));
+
+        let err =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect_err("stale manifest layer should block fallback");
+
+        assert!(matches!(err, AssetLoadError::StaleManifestMapping { .. }));
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+        assert_eq!(snapshot.stale_manifest_requests, 1);
+        assert_eq!(snapshot.missing_bundle_asset_requests, 0);
+        assert_eq!(
+            snapshot.recent[0].outcome_kind,
+            AssetLoadOutcomeKind::StaleManifest
         );
     }
 

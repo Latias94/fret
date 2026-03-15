@@ -398,6 +398,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockGraphSignatureContains { .. }
                 | UiPredicateV1::DockGraphSignatureFingerprint64Is { .. }
                 | UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { .. }
+                | UiPredicateV1::AssetLoadStaleManifestRequestsGe { .. }
                 | UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { .. }
                 | UiPredicateV1::AssetLoadUnsupportedUrlRequestsGe { .. }
                 | UiPredicateV1::AssetLoadExternalReferenceUnavailableRequestsGe { .. }

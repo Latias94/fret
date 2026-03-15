@@ -201,6 +201,10 @@ The v1 meaning is:
 - `UnsupportedLocatorKind`: no participating resolver stack can support the requested locator kind
   on this host.
 - `NotFound`: the locator kind is supported, but the requested logical asset is absent.
+- `StaleManifestMapping`: a file-backed manifest still claims the logical bundle/key mapping
+  exists, but the mapped host file path is gone. This must not be collapsed into `NotFound`
+  because the runtime did resolve the logical mapping and found a stale development/package-dev
+  manifest contract instead of a truly missing logical asset.
 - `AccessDenied`: the host or platform denied access.
 - `Message`: bounded escape hatch for resolver-specific failures until richer typed diagnostics are
   added.

@@ -2801,6 +2801,7 @@ mod tests {
                     bytes_requests: 3,
                     reference_requests: 1,
                     missing_bundle_asset_requests: 2,
+                    stale_manifest_requests: 1,
                     unsupported_file_requests: 1,
                     unsupported_url_requests: 0,
                     external_reference_unavailable_requests: 1,
@@ -2815,6 +2816,16 @@ mod tests {
                             previous_revision: Some(1),
                             revision_transition: Some("changed".to_string()),
                             message: None,
+                        },
+                        UiAssetLoadDiagnosticEventV1 {
+                            access_kind: "external_reference".to_string(),
+                            locator_kind: "bundle_asset".to_string(),
+                            locator_debug: "bundle:app:icons/search.svg".to_string(),
+                            outcome_kind: "stale_manifest".to_string(),
+                            revision: None,
+                            previous_revision: Some(2),
+                            revision_transition: None,
+                            message: Some("/tmp/dev-assets/icons/search.svg".to_string()),
                         },
                         UiAssetLoadDiagnosticEventV1 {
                             access_kind: "external_reference".to_string(),
@@ -2858,6 +2869,22 @@ mod tests {
                 &UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { min: 2 },
             ),
             Some(false)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadStaleManifestRequestsGe { min: 1 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadRecentOutcomeSeen {
+                    outcome_kind: "stale_manifest".to_string(),
+                },
+            ),
+            Some(true)
         );
         assert_eq!(
             eval_debug_snapshot_predicate(

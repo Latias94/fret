@@ -5,6 +5,7 @@ use crate::stats::{
     check_bundle_for_asset_load_external_reference_unavailable_max_json,
     check_bundle_for_asset_load_missing_bundle_assets_max_json,
     check_bundle_for_asset_load_revision_changes_max_json,
+    check_bundle_for_asset_load_stale_manifest_max_json,
     check_bundle_for_asset_load_unsupported_file_max_json,
     check_bundle_for_asset_load_unsupported_url_max_json,
     check_bundle_for_bundled_font_baseline_source_json,
@@ -6767,6 +6768,7 @@ fn asset_load_counter_gates_pass_on_allowed_maxima() {
                             "resource_loading": {
                                 "asset_load": {
                                     "missing_bundle_asset_requests": 1,
+                                    "stale_manifest_requests": 1,
                                     "unsupported_file_requests": 2,
                                     "unsupported_url_requests": 0,
                                     "external_reference_unavailable_requests": 1,
@@ -6786,6 +6788,7 @@ fn asset_load_counter_gates_pass_on_allowed_maxima() {
 
     check_bundle_for_asset_load_missing_bundle_assets_max_json(&bundle, &bundle_path, 1, 0)
         .unwrap();
+    check_bundle_for_asset_load_stale_manifest_max_json(&bundle, &bundle_path, 1, 0).unwrap();
     check_bundle_for_asset_load_unsupported_file_max_json(&bundle, &bundle_path, 2, 0).unwrap();
     check_bundle_for_asset_load_unsupported_url_max_json(&bundle, &bundle_path, 0, 0).unwrap();
     check_bundle_for_asset_load_external_reference_unavailable_max_json(
@@ -6829,6 +6832,38 @@ fn asset_load_missing_bundle_gate_fails_when_counter_exceeds_max() {
         check_bundle_for_asset_load_missing_bundle_assets_max_json(&bundle, &bundle_path, 1, 0)
             .unwrap_err();
     assert!(err.contains("asset_load_missing_bundle_assets_max gate failed"));
+}
+
+#[test]
+fn asset_load_stale_manifest_gate_fails_when_counter_exceeds_max() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_load": {
+                                    "stale_manifest_requests": 2
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_load_stale_manifest_gate_fails");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    let err = check_bundle_for_asset_load_stale_manifest_max_json(&bundle, &bundle_path, 1, 0)
+        .unwrap_err();
+    assert!(err.contains("asset_load_stale_manifest_max gate failed"));
 }
 
 #[test]

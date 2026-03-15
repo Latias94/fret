@@ -135,6 +135,13 @@ fn eval_resource_loading_predicate_from_debug_snapshot(
                 .missing_bundle_asset_requests
                 >= *min,
         ),
+        UiPredicateV1::AssetLoadStaleManifestRequestsGe { min } => Some(
+            resource_loading
+                .asset_load
+                .as_ref()?
+                .stale_manifest_requests
+                >= *min,
+        ),
         UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { min } => Some(
             resource_loading
                 .asset_load
