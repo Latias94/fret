@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Command-First Retained Seams Decision Draft
 
 Status: draft, retained-seam decision
-Last updated: 2026-03-09
+Last updated: 2026-03-15
 
 Related:
 
@@ -42,6 +42,8 @@ The main default-facing pressure has already been reduced:
 
 - button-like app-facing widgets have action-first aliases,
 - menu-family builders now expose `action(...)`,
+- toast/message helpers now expose `action_id(...)` / `cancel_id(...)` where the product surface is
+  message-style rather than raw primitive-oriented,
 - curated internal/app-facing menu residue has also been aligned where it matters.
 
 That means the remaining command-shaped surface is no longer the same problem as before.
@@ -105,6 +107,7 @@ default path:
 
 - `DataTable` business-table wiring,
 - curated internal helper surfaces,
+- low-level toast primitives such as `ToastAction::new(...)` / direct `ToastRequest` assembly,
 - advanced/reference demos where explicit command routing is part of the point.
 
 Rule:
