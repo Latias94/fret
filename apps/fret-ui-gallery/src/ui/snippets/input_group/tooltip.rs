@@ -19,7 +19,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
             let info_icon = |cx: &mut UiCx<'_>| {
-                fret_ui_shadcn::icon::icon(cx, IconId::new_static("lucide.info"))
+                icon::icon(cx, IconId::new_static("lucide.info"))
             };
 
             let password_tooltip = {
@@ -47,7 +47,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([fret_ui_shadcn::icon::icon(
+                    .children([icon::icon(
                         cx,
                         IconId::new_static("lucide.circle-help"),
                     )])
@@ -70,7 +70,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([fret_ui_shadcn::icon::icon(
+                    .children([icon::icon(
                         cx,
                         IconId::new_static("lucide.circle-help"),
                     )])

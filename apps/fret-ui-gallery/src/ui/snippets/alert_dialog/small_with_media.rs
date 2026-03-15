@@ -21,7 +21,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         },
         move |cx| {
             shadcn::AlertDialogContent::build(move |cx, children| {
-                let icon = fret_ui_shadcn::icon::icon_with(
+                let icon = shadcn::raw::icon::icon_with(
                     cx,
                     fret_icons::IconId::new_static("lucide.bluetooth"),
                     Some(Px(32.0)),

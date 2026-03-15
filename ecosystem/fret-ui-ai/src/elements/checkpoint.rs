@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
-use fret_ui_shadcn::button::ButtonStyle;
+use fret_ui_shadcn::raw::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Separator, Tooltip, TooltipAlign, TooltipSide,
 };

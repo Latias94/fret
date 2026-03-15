@@ -33,7 +33,7 @@ fn rotated_lucide<H: UiHost>(
             transform,
         },
         move |cx| {
-            vec![fret_ui_shadcn::icon::icon_with(
+            vec![icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static(id),
                 Some(size),

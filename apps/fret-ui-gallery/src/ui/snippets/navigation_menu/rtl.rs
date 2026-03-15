@@ -96,7 +96,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     label: &'static str,
                     test_id: &'static str,
                     command: &'static str| {
-        let icon_el = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
+        let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
         let label_el = cx.text(label);
         let row = ui::h_row(move |_cx| [icon_el, label_el])
             .gap(Space::N2)

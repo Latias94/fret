@@ -34,7 +34,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuSeparator::new().into(),
                 shadcn::DropdownMenuItem::new("Log out")
                     .leading_icon(IconId::new_static("lucide.log-out"))
-                    .variant(fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
                     .into(),
             ])
     })

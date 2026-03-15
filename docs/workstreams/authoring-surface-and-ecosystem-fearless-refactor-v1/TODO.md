@@ -135,12 +135,24 @@ Priority correction on 2026-03-15:
 - [ ] Remove component-author overlap from `fret::app::prelude::*`.
   - Goal: an ordinary app author should not discover the same style/layout/semantics helper
     families from both `fret::app::prelude::*` and `fret::component::prelude::*`.
+  - [x] First batch on 2026-03-15: move overlap-heavy extension traits (`TrackedStateExt`,
+    `StyledExt`, `UiExt`, `AnyElementSemanticsExt`, `ElementContextThemeExt`,
+    `UiElementA11yExt`, `UiElementKeyContextExt`, `UiElementTestIdExt`) to anonymous app-prelude
+    imports so their methods remain usable without turning the trait names into default app-lane
+    vocabulary.
+  - [x] First batch on 2026-03-15: remove raw `on_activate`, `on_activate_notify`,
+    `on_activate_request_redraw`, and `on_activate_request_redraw_notify` free-function exports
+    from `fret::app::prelude::*`; the default app lane now teaches widget-local
+    `.on_activate(cx.actions().dispatch::<A>())` / `.listener(...)` instead.
   - Minimum audit set:
     - broad styling/layout patch traits and types that primarily serve reusable component authors,
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
     - raw `on_activate*` helper exports that now compete with the grouped app-facing
       `cx.actions().dispatch/listener` story.
+    - remaining high-frequency style/token/theme nouns (`Space`, `Radius`, `LayoutRefinement`,
+      `Theme`, `ThemeSnapshot`, `IconId`) that may still justify app-lane presence but need an
+      explicit target decision rather than accidental overlap.
   - Exit condition: the app prelude teaches the app nouns plus a small set of app-justified helper
     traits, while reusable component plumbing remains discoverable through the component lane.
 - [ ] Update crate-level docs to teach the new split.
@@ -189,6 +201,12 @@ Priority correction on 2026-03-15:
     - Exit condition: docs and status docs stop talking about crate root / facade as peer teaching
       lanes, and the remaining root-level exposure is explicitly classified as retained raw or
       compatibility surface.
+    - 2026-03-15 follow-up: first-party UI Gallery snippet/page surfaces no longer use
+      `fret_ui_shadcn::icon::*`, `fret_ui_shadcn::empty::*`, `fret_ui_shadcn::select::*`,
+      `fret_ui_shadcn::tabs::*`, or similar flat root/module lanes; gallery authoring now flows
+      through `shadcn::*`, `shadcn::raw::*`, or prelude glue only.
+    - Remaining bounded cleanup after the gallery pass: non-gallery first-party consumers
+      (`ecosystem/fret-ui-ai`, `ecosystem/fret-bootstrap`, selected internal tests/docs strings).
 - [x] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.
@@ -247,6 +265,9 @@ Priority correction on 2026-03-15:
 - [ ] Keep first-party docs/examples/UI Gallery copy aligned with the next-phase target:
   app-facing lanes teach `Ui` / `UiChild`, while reusable generic helpers move to the unified
   component conversion trait once that workstream lands it.
+  - 2026-03-15: UI Gallery code examples and helper snippets were normalized away from
+    `fret_ui_shadcn::*` flat root/module paths; remaining stale references are bounded to a small
+    set of narrative copy strings and non-gallery first-party crates.
 
 ## M5 — Delete the old surface
 

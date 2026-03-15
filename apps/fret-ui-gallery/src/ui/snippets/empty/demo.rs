@@ -6,8 +6,7 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let icon =
-        fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
+    let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
 
     shadcn::empty(|cx| {
         ui::children![
@@ -16,7 +15,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::empty_media(|cx| ui::children![cx; icon])
-                        .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon),
+                        .variant(shadcn::EmptyMediaVariant::Icon),
                     shadcn::empty_title("No Projects Yet").test_id("ui-gallery-empty-demo-title"),
                     shadcn::empty_description(
                         "You haven't created any projects yet. Get started by creating your first project.",

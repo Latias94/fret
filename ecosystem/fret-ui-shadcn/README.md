@@ -28,7 +28,7 @@ Keep the component taxonomy and app wiring separate:
   `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
 - app-owned setup stays under `fret_ui_shadcn::app::*`
 - environment / `UiServices`-boundary hooks stay under `fret_ui_shadcn::advanced::*`
-- raw root access stays an explicit escape hatch for low-level/internal use
+- explicit `fret_ui_shadcn::raw::*` access stays the escape hatch for low-level/internal use
 - thin helper constructors prefer typed `IntoUiElement<H>` outputs by default; explicit raw helper
   seams are intentionally rare and documented when concrete landed-child storage still requires
   them

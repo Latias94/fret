@@ -434,7 +434,7 @@ where
 // Typed icon relay: the shared icon facade still lands a concrete icon leaf internally, but
 // doc-layout callers no longer need to spell that raw detail on their own helper signatures.
 pub(in crate::ui) fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl UiChild + use<> {
-    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+    shadcn::raw::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 #[allow(dead_code)]

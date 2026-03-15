@@ -21,7 +21,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
-use fret_ui_shadcn::button::ButtonStyle;
+use fret_ui_shadcn::raw::button::ButtonStyle;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, facade as shadcn};
 
 pub type OnAttachmentActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;

@@ -4,6 +4,7 @@ use fret_genui_core::props::ResolvedProps;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
 
 use super::ShadcnResolver;
@@ -20,11 +21,11 @@ impl ShadcnResolver {
             .and_then(|v| v.as_str())
             .unwrap_or("h2");
         match level {
-            "h1" => fret_ui_shadcn::typography::h1(text).into_element(cx),
-            "h2" => fret_ui_shadcn::typography::h2(text).into_element(cx),
-            "h3" => fret_ui_shadcn::typography::h3(text).into_element(cx),
-            "h4" => fret_ui_shadcn::typography::h4(text).into_element(cx),
-            _ => fret_ui_shadcn::typography::h2(text).into_element(cx),
+            "h1" => shadcn::raw::typography::h1(text).into_element(cx),
+            "h2" => shadcn::raw::typography::h2(text).into_element(cx),
+            "h3" => shadcn::raw::typography::h3(text).into_element(cx),
+            "h4" => shadcn::raw::typography::h4(text).into_element(cx),
+            _ => shadcn::raw::typography::h2(text).into_element(cx),
         }
     }
 
@@ -72,13 +73,13 @@ impl ShadcnResolver {
 
         // Note: `src` is a URL in json-render; Fret's AvatarImage expects an `ImageId`.
         // Until we have a URL → ImageId pipeline in GenUI, always render the fallback.
-        let fallback = fret_ui_shadcn::AvatarFallback::new(Arc::<str>::from(fallback));
+        let fallback = shadcn::AvatarFallback::new(Arc::<str>::from(fallback));
 
         let mut out: Vec<AnyElement> = Vec::new();
         out.extend(children);
         out.push(fallback.into_element(cx));
 
-        fret_ui_shadcn::Avatar::new(out).into_element(cx)
+        shadcn::Avatar::new(out).into_element(cx)
     }
 
     pub(super) fn render_bar_chart<H: UiHost>(
@@ -117,8 +118,8 @@ impl ShadcnResolver {
 
         let body = fret_ui_kit::ui::v_flex(move |_cx| {
             vec![
-                fret_ui_shadcn::CardTitle::new(title).into_element(_cx),
-                fret_ui_shadcn::CardDescription::new(msg).into_element(_cx),
+                shadcn::CardTitle::new(title).into_element(_cx),
+                shadcn::CardDescription::new(msg).into_element(_cx),
             ]
         })
         .gap(fret_ui_kit::Space::N2)
@@ -126,7 +127,7 @@ impl ShadcnResolver {
         .w_full()
         .into_element(cx);
 
-        fret_ui_shadcn::Card::new([fret_ui_shadcn::CardContent::new([body]).into_element(cx)])
+        shadcn::Card::new([shadcn::CardContent::new([body]).into_element(cx)])
             .into_element(cx)
     }
 }

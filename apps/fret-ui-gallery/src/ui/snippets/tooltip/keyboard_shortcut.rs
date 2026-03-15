@@ -10,7 +10,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
-            let keyboard_icon = fret_ui_shadcn::icon::icon(cx, IconId::new_static("lucide.save"))
+            let keyboard_icon = icon::icon(cx, IconId::new_static("lucide.save"))
                 .test_id("ui-gallery-tooltip-keyboard-icon");
             let keyboard_trigger = shadcn::Button::new("")
                 .a11y_label("Save")

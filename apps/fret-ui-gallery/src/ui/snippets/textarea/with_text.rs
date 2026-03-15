@@ -23,7 +23,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx),
             ui::text("Your message will be copied to the support team.")
                 .text_sm()
-                .text_color(fret_ui_shadcn::ColorRef::Token {
+                .text_color(ColorRef::Token {
                     key: "muted-foreground",
                     fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
                 })

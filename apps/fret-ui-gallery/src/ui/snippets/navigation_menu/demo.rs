@@ -8,7 +8,6 @@ use fret_ui::Invalidation;
 use fret_ui::element::LayoutQueryRegionProps;
 use fret_ui::element::{LayoutStyle, Length, TextProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_shadcn::navigation_menu::NavigationMenuMdBreakpointQuery;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -88,7 +87,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     label: &'static str,
                     test_id: &'static str,
                     command: &'static str| {
-        let icon_el = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
+        let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
         let label_el = cx.text(label);
         let row = ui::h_row(move |_cx| [icon_el, label_el])
             .gap(Space::N2)
@@ -355,9 +354,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .action(CMD_APP_OPEN);
 
             let md_query = if use_container_query {
-                NavigationMenuMdBreakpointQuery::Container
+                shadcn::NavigationMenuMdBreakpointQuery::Container
             } else {
-                NavigationMenuMdBreakpointQuery::Viewport
+                shadcn::NavigationMenuMdBreakpointQuery::Viewport
             };
 
             let mut nav_menu = shadcn::navigation_menu(cx, demo_value.clone(), |_cx| {

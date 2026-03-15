@@ -33,7 +33,7 @@ fn rotated_lucide<H: UiHost>(
             transform,
         },
         move |cx| {
-            vec![fret_ui_shadcn::icon::icon_with(
+            vec![icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static(id),
                 Some(size),
@@ -50,7 +50,7 @@ fn file_leaf<H: UiHost>(
 ) -> impl IntoUiElement<H> + use<H> {
     let row = ui::h_flex(|cx| {
         vec![
-            fret_ui_shadcn::icon::icon_with(
+            icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static("lucide.file"),
                 Some(Px(16.0)),
@@ -98,7 +98,7 @@ fn folder<H: UiHost>(
                 let row = ui::h_flex(|cx| {
                     vec![
                         chevron,
-                        fret_ui_shadcn::icon::icon_with(cx, icon, Some(Px(16.0)), None),
+                        icon::icon_with(cx, icon, Some(Px(16.0)), None),
                         cx.text(label),
                     ]
                 })

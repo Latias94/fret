@@ -30,7 +30,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             otp.test_id("ui-gallery-input-otp-controlled"),
             ui::label(message)
                 .text_size_px(Px(14.0))
-                .text_color(fret_ui_shadcn::ColorRef::Color(
+                .text_color(ColorRef::Color(
                     theme.color_token("muted-foreground"),
                 ))
                 .into_element(cx),

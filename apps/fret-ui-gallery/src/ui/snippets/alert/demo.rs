@@ -120,7 +120,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::alert(|cx| {
                 ui::children![
                     cx;
-                    fret_ui_shadcn::icon::icon(
+                    icon::icon(
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),
@@ -141,7 +141,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::alert(|cx| {
                 ui::children![
                     cx;
-                    fret_ui_shadcn::icon::icon(
+                    icon::icon(
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),
@@ -172,7 +172,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::alert(|cx| {
                 ui::children![
                     cx;
-                    fret_ui_shadcn::icon::icon(
+                    icon::icon(
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),
@@ -189,7 +189,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::alert(|cx| {
                 ui::children![
                     cx;
-                    fret_ui_shadcn::icon::icon(
+                    icon::icon(
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),
@@ -205,7 +205,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::alert(|cx| {
                 ui::children![
                     cx;
-                    fret_ui_shadcn::icon::icon(
+                    icon::icon(
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),
@@ -221,7 +221,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::alert(|cx| {
                 ui::children![
                     cx;
-                    fret_ui_shadcn::icon::icon(
+                    icon::icon(
                         cx,
                         fret_icons::IconId::new_static("lucide.circle-alert"),
                     ),

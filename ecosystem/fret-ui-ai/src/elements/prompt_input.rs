@@ -15,7 +15,7 @@ use fret_ui_kit::{
     WidgetStateProperty, WidgetStates,
 };
 
-use fret_ui_shadcn::button::ButtonStyle;
+use fret_ui_shadcn::raw::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
     DropdownMenuItem, DropdownMenuSide, InputGroup, Kbd, Tooltip, TooltipContent, TooltipSide,

@@ -65,7 +65,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                 if selected_now.is_none() {
                     button =
-                        button.style(fret_ui_shadcn::button::ButtonStyle::default().foreground(
+                        button.style(shadcn::raw::button::ButtonStyle::default().foreground(
                             fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
                                 key: "muted-foreground",
                                 fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,

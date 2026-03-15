@@ -5,6 +5,7 @@ use fret_genui_core::spec::ElementKey;
 use fret_ui::action::{ActivateReason, OnActivate, OnKeyDown};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::Value;
 
 use super::ShadcnResolver;
@@ -17,7 +18,7 @@ impl ShadcnResolver {
         children: Vec<AnyElement>,
     ) -> AnyElement {
         let text = Self::json_to_label(resolved_props.get("text"));
-        let label = fret_ui_shadcn::Label::new(text).into_element(cx);
+        let label = shadcn::Label::new(text).into_element(cx);
         if children.is_empty() {
             label
         } else {
@@ -97,7 +98,7 @@ impl ShadcnResolver {
             let _ = cx.app.models_mut().update(&model, |v| *v = desired.clone());
         }
 
-        let mut input = fret_ui_shadcn::Input::new(model);
+        let mut input = shadcn::Input::new(model);
         if let Some(placeholder) = placeholder {
             input = input.placeholder(placeholder);
         }
@@ -143,7 +144,7 @@ impl ShadcnResolver {
         fret_ui_kit::ui::v_flex(move |_cx| {
             let mut out = Vec::with_capacity(children.len().saturating_add(2));
             if let Some(label) = label.clone() {
-                out.push(fret_ui_shadcn::Label::new(label).into_element(_cx));
+                out.push(shadcn::Label::new(label).into_element(_cx));
             }
             out.push(input);
             out.extend(children);
@@ -240,7 +241,7 @@ impl ShadcnResolver {
             layout = layout.min_w_0();
         }
 
-        let textarea = fret_ui_shadcn::Textarea::new(model)
+        let textarea = shadcn::Textarea::new(model)
             .disabled(disabled)
             .aria_invalid(aria_invalid)
             .min_height(fret_core::Px(min_height_px))
@@ -260,7 +261,7 @@ impl ShadcnResolver {
         fret_ui_kit::ui::v_flex(move |_cx| {
             let mut out = Vec::with_capacity(children.len().saturating_add(2));
             if let Some(label) = label.clone() {
-                out.push(fret_ui_shadcn::Label::new(label).into_element(_cx));
+                out.push(shadcn::Label::new(label).into_element(_cx));
             }
             out.push(textarea);
             out.extend(children);
@@ -358,7 +359,7 @@ impl ShadcnResolver {
             }
         }
 
-        let sw = fret_ui_shadcn::Switch::new(model)
+        let sw = shadcn::Switch::new(model)
             .disabled(disabled)
             .into_element(cx);
 

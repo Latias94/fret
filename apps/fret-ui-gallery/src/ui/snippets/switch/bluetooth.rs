@@ -7,7 +7,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let blue = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x3B_82_F6));
-    let style = fret_ui_shadcn::switch::SwitchStyle::default().track_background(
+    let style = shadcn::raw::switch::SwitchStyle::default().track_background(
         fret_ui_kit::WidgetStateProperty::new(None)
             .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),
     );

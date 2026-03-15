@@ -6,7 +6,7 @@ use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let media = shadcn::ItemMedia::new([fret_ui_shadcn::icon::icon(
+    let media = shadcn::ItemMedia::new([icon::icon(
         cx,
         fret_icons::IconId::new_static("lucide.inbox"),
     )])

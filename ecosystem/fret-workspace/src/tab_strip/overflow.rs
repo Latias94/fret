@@ -8,7 +8,7 @@ use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
 use fret_ui_headless::tab_strip_overflow_menu::{
     OverflowMenuActivePolicy, OverflowMenuEmptyOverflowedPolicy, compute_overflow_menu_item_indices,
 };
-use fret_ui_shadcn::{DropdownMenuEntry, DropdownMenuItem};
+use fret_ui_shadcn::facade as shadcn;
 
 use super::WorkspaceTab;
 use super::state::WorkspaceTabStripRevealHint;
@@ -41,7 +41,7 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
     reveal_hint_model: Model<WorkspaceTabStripRevealHint>,
     text_style: TextStyle,
     inactive_fg: Color,
-) -> (Option<Arc<str>>, Vec<DropdownMenuEntry>) {
+) -> (Option<Arc<str>>, Vec<shadcn::DropdownMenuEntry>) {
     let button_test_id = root_test_id.map(|id| Arc::<str>::from(format!("{id}.overflow_button")));
 
     let active_index = active.and_then(|active| {
@@ -83,7 +83,7 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
                 )
             });
 
-            let mut item = DropdownMenuItem::new(tab.title.clone())
+            let mut item = shadcn::DropdownMenuItem::new(tab.title.clone())
                 .close_on_select(true)
                 .on_activate({
                     let reveal_hint_model = reveal_hint_model.clone();
@@ -105,7 +105,7 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
             if let Some(close_slot) = close_slot {
                 item = item.trailing(close_slot);
             }
-            Some(DropdownMenuEntry::Item(item))
+            Some(shadcn::DropdownMenuEntry::Item(item))
         })
         .collect::<Vec<_>>();
 

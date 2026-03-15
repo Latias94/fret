@@ -19,7 +19,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::motion::drive_loop_progress;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
-use fret_ui_shadcn::button::ButtonStyle;
+use fret_ui_shadcn::raw::button::ButtonStyle;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, Spinner};
 
 pub type OnSpeechInputListeningChange =

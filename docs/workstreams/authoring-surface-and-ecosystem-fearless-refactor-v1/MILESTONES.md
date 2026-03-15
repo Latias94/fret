@@ -29,7 +29,9 @@ Closeout note on 2026-03-15:
 - the app/component/advanced split is now effectively the settled first-party posture,
 - the highest-value first-party docs/examples/gates are already aligned to that posture,
 - but the closeout is **not** complete while:
-  - `fret::app::prelude::*` still overlaps too heavily with `fret::component::prelude::*`,
+  - `fret::app::prelude::*` still overlaps too heavily with `fret::component::prelude::*` on some
+    named high-frequency types even after the first cleanup batch hid overlap-heavy extension
+    trait names and removed raw `on_activate*` helper exports from the app lane,
   - shadcn first-contact discovery still depends on source-policy tests to keep crate-root/facade
     lanes from competing in first-party teaching surfaces,
   - status docs imply the surface is more closed than the active conversion-surface tracker
@@ -44,8 +46,9 @@ reopening this one.
 
 ## Current next-step order (2026-03-15)
 
-1. Narrow `fret::app::prelude::*` until autocomplete and imports stop blending app and component
-   author concerns.
+1. Continue narrowing `fret::app::prelude::*` from the first landed batch (anonymous extension
+   trait imports + app-lane removal of raw `on_activate*` helpers) until autocomplete and imports
+   stop blending app and component author concerns.
 2. Simplify shadcn first-contact discovery so `facade as shadcn` is the only taught lane and
    crate-root exposure is treated as retained compatibility/raw surface.
 3. Finish the conversion-surface reset under
@@ -163,6 +166,8 @@ Deliverables:
 - docs consistency gates,
 - template authoring-surface gates,
 - UI Gallery source gates for first-party teaching surfaces,
+- 2026-03-15 follow-up: UI Gallery snippet/page surfaces no longer route through
+  `fret_ui_shadcn::*` flat root/module paths for shadcn authoring,
 - ecosystem extension-seam checks.
 
 Exit criteria:

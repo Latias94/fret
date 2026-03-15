@@ -63,7 +63,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             shadcn::ContextMenuItem::new("Delete")
                                 .action(CommandId::new("ui_gallery.context_menu.rtl.delete"))
                                 .test_id("ui-gallery-context-menu-rtl-item-delete")
-                                .variant(fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive),
+                                .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive),
                         ),
                     ]
                 },

@@ -13,7 +13,7 @@ use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::prelude::AnyElement;
+use fret_ui::element::AnyElement;
 use std::sync::Arc;
 
 const DIAG_SEED_MESSAGES_ENV: &str = "FRET_UI_GALLERY_AI_CONVERSATION_SEED_MESSAGES";

@@ -15,7 +15,7 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let responsive = snippets::responsive::render(cx);
     let rtl = snippets::rtl::render(cx);
     let api_reference = doc_layout::notes_block([
-        "`fret_ui_shadcn::Breadcrumb` remains the compact builder for standard trails: `Breadcrumb::new().items([...])`.",
+        "`shadcn::Breadcrumb` remains the compact builder for standard trails: `Breadcrumb::new().items([...])`.",
         "For upstream parity, `breadcrumb::primitives::{Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis}` keep the shadcn-shaped composition surface.",
         "`BreadcrumbLink` and `BreadcrumbPage` now expose `.children(|cx| [...])` as the default typed alternative to upstream arbitrary React children, while `children_raw(...)` stays explicit for pre-landed content and `href(...)`, `on_click(...)`, and `on_activate(...)` keep navigation typed instead of introducing generic `Slot` / `asChild` prop merging.",
         "`BreadcrumbSeparator` keeps a narrow typed override surface through `BreadcrumbSeparatorKind` because the documented parity cases are icon/text separators rather than arbitrary slot-prop merging.",

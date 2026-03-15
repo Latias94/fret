@@ -67,10 +67,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ui::h_row(|cx| {
             let (hover_icon, hover_container) = cx.with_theme(|theme| {
                 (
-                    fret_ui_shadcn::ColorRef::Color(
+                    ColorRef::Color(
                         theme.color_token("md.sys.color.on-tertiary-container"),
                     ),
-                    fret_ui_shadcn::ColorRef::Color(
+                    ColorRef::Color(
                         theme.color_token("md.sys.color.tertiary-container"),
                     ),
                 )
@@ -137,13 +137,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ui::h_row(|cx| {
             let (hover_container, hover_icon, hover_outline) = cx.with_theme(|theme| {
                 (
-                    fret_ui_shadcn::ColorRef::Color(
+                    ColorRef::Color(
                         theme.color_token("md.sys.color.tertiary-container"),
                     ),
-                    fret_ui_shadcn::ColorRef::Color(
+                    ColorRef::Color(
                         theme.color_token("md.sys.color.on-tertiary-container"),
                     ),
-                    fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary")),
+                    ColorRef::Color(theme.color_token("md.sys.color.tertiary")),
                 )
             });
             let hover_style = material3::CheckboxStyle::default()
@@ -175,10 +175,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .style({
                         let (hover_track, hover_handle) = cx.with_theme(|theme| {
                             (
-                                fret_ui_shadcn::ColorRef::Color(
+                                ColorRef::Color(
                                     theme.color_token("md.sys.color.tertiary-container"),
                                 ),
-                                fret_ui_shadcn::ColorRef::Color(
+                                ColorRef::Color(
                                     theme.color_token("md.sys.color.on-tertiary-container"),
                                 ),
                             )
@@ -204,7 +204,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ];
 
                     let hover_color = cx.with_theme(|theme| {
-                        fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
+                        ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
                     });
                     let hover_style = material3::RadioStyle::default()
                         .icon_color(fret_ui_kit::WidgetStateProperty::new(None).when(
@@ -264,7 +264,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     out.push(
         ui::v_stack(|cx| {
             let hover = cx.with_theme(|theme| {
-                fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
+                ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
             });
             let hover_style = material3::TextFieldStyle::default()
                 .outline_color(
@@ -309,7 +309,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ];
 
             let hover_color = cx.with_theme(|theme| {
-                fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
+                ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
             });
             let hover_style = material3::TabsStyle::default()
                 .label_color(fret_ui_kit::WidgetStateProperty::new(None).when(

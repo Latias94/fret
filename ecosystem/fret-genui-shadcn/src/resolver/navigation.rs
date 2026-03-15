@@ -4,6 +4,7 @@ use fret_genui_core::spec::ElementKey;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::{Map, Value, json};
 
 use super::ShadcnResolver;
@@ -125,9 +126,9 @@ impl ShadcnResolver {
         // First
         {
             let disabled = current == 1 || action.is_none();
-            let mut b = fret_ui_shadcn::Button::new(Arc::<str>::from("First"))
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            let mut b = shadcn::Button::new(Arc::<str>::from("First"))
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(disabled);
             if let Some(on_activate) = mk_activate(1) {
                 b = b.on_activate(on_activate);
@@ -139,9 +140,9 @@ impl ShadcnResolver {
         {
             let target = current.saturating_sub(1).max(1);
             let disabled = current == 1 || action.is_none();
-            let mut b = fret_ui_shadcn::Button::new(Arc::<str>::from("Prev"))
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            let mut b = shadcn::Button::new(Arc::<str>::from("Prev"))
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(disabled);
             if let Some(on_activate) = mk_activate(target) {
                 b = b.on_activate(on_activate);
@@ -157,13 +158,13 @@ impl ShadcnResolver {
                     let disabled = action.is_none();
                     let label = Arc::<str>::from(page.to_string());
                     let variant = if active {
-                        fret_ui_shadcn::ButtonVariant::Secondary
+                        shadcn::ButtonVariant::Secondary
                     } else {
-                        fret_ui_shadcn::ButtonVariant::Ghost
+                        shadcn::ButtonVariant::Ghost
                     };
-                    let mut b = fret_ui_shadcn::Button::new(label)
+                    let mut b = shadcn::Button::new(label)
                         .variant(variant)
-                        .size(fret_ui_shadcn::ButtonSize::Sm)
+                        .size(shadcn::ButtonSize::Sm)
                         .disabled(disabled);
                     if let Some(on_activate) = mk_activate(page) {
                         b = b.on_activate(on_activate);
@@ -172,9 +173,9 @@ impl ShadcnResolver {
                 }
                 PaginationToken::Ellipsis => {
                     buttons.push(
-                        fret_ui_shadcn::Button::new(Arc::<str>::from("…"))
-                            .variant(fret_ui_shadcn::ButtonVariant::Ghost)
-                            .size(fret_ui_shadcn::ButtonSize::Sm)
+                        shadcn::Button::new(Arc::<str>::from("…"))
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Sm)
                             .disabled(true)
                             .into_element(cx),
                     );
@@ -186,9 +187,9 @@ impl ShadcnResolver {
         {
             let target = (current + 1).min(total);
             let disabled = current >= total || action.is_none();
-            let mut b = fret_ui_shadcn::Button::new(Arc::<str>::from("Next"))
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            let mut b = shadcn::Button::new(Arc::<str>::from("Next"))
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(disabled);
             if let Some(on_activate) = mk_activate(target) {
                 b = b.on_activate(on_activate);
@@ -199,9 +200,9 @@ impl ShadcnResolver {
         // Last
         {
             let disabled = current >= total || action.is_none();
-            let mut b = fret_ui_shadcn::Button::new(Arc::<str>::from("Last"))
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            let mut b = shadcn::Button::new(Arc::<str>::from("Last"))
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(disabled);
             if let Some(on_activate) = mk_activate(total) {
                 b = b.on_activate(on_activate);

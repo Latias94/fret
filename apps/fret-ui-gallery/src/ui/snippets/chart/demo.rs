@@ -289,8 +289,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let trending_footer = |cx: &mut UiCx<'_>,
                            secondary: &'static str|
      -> impl IntoUiElement<fret_app::App> + use<> {
-        let icon =
-            fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
+        let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
         ui::v_flex(|cx| {
             vec![
                 ui::h_row(|cx| {

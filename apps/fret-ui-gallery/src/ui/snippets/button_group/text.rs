@@ -12,7 +12,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     shadcn::ButtonGroup::new([
         shadcn::ButtonGroupText::new_children([
-            fret_ui_shadcn::icon::icon(cx, icon_id("lucide.globe")),
+            icon::icon(cx, icon_id("lucide.globe")),
             ui::text("https://")
                 .text_sm()
                 .font_weight(FontWeight::MEDIUM)

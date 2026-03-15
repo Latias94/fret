@@ -5,6 +5,7 @@ use fret_genui_core::spec::ElementKey;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::Value;
 
 use super::ShadcnResolver;
@@ -76,7 +77,7 @@ impl ShadcnResolver {
             layout = layout.min_w_0();
         }
 
-        let mut slider = fret_ui_shadcn::Slider::new(model.clone())
+        let mut slider = shadcn::Slider::new(model.clone())
             .range(min, max)
             .step(step)
             .disabled(disabled)

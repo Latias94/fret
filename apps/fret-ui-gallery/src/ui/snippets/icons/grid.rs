@@ -13,7 +13,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let icon_cell = |cx: &mut UiCx<'_>, label: &'static str, icon_id: fret_icons::IconId| {
         let row = ui::h_flex(|cx| {
             vec![
-                fret_ui_shadcn::icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
+                icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
                 cx.text(label),
             ]
         })

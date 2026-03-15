@@ -8,7 +8,6 @@ use fret_ui::Invalidation;
 use fret_ui::element::{LayoutStyle, Length, TextProps};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_shadcn::navigation_menu::NavigationMenuMdBreakpointQuery;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -84,7 +83,7 @@ fn icon_row(
     test_id: &'static str,
     command: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
-    let icon_el = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
+    let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
     let label_el = cx.text(label);
     let row = ui::h_row(move |_cx| [icon_el, label_el])
         .gap(Space::N2)
@@ -310,7 +309,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::navigation_menu(cx, demo_value.clone(), |_cx| {
         vec![getting_started, components, with_icon, docs]
     })
-    .md_breakpoint_query(NavigationMenuMdBreakpointQuery::Viewport)
+    .md_breakpoint_query(shadcn::NavigationMenuMdBreakpointQuery::Viewport)
     .viewport_test_id("ui-gallery-navigation-menu-docs-demo-viewport")
     .into_element(cx)
     .test_id("ui-gallery-navigation-menu-docs-demo")

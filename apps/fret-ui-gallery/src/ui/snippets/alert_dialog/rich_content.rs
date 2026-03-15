@@ -68,7 +68,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
             let cancel_visual = ui::h_row(|cx| {
                 vec![
-                    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
+                    icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
                     ui::text("Back to safety").into_element(cx),
                 ]
             })
@@ -78,7 +78,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
             let action_visual = ui::h_row(|cx| {
                 vec![
-                    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
+                    icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
                     ui::text("Delete project").into_element(cx),
                 ]
             })

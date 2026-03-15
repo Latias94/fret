@@ -7,6 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost, UiActionHostExt};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::Value;
 
 use super::ShadcnResolver;
@@ -49,8 +50,8 @@ impl ShadcnResolver {
         component: &str,
     ) -> AnyElement {
         let msg = Arc::<str>::from(format!("Unknown GenUI component: {component} ({:?})", key));
-        fret_ui_shadcn::Card::new([
-            fret_ui_shadcn::CardContent::new([Self::text_element(cx, msg)]).into_element(cx),
+        shadcn::Card::new([
+            shadcn::CardContent::new([Self::text_element(cx, msg)]).into_element(cx),
         ])
         .into_element(cx)
     }
@@ -80,9 +81,9 @@ impl ShadcnResolver {
 
     pub(super) fn parse_badge_variant(
         v: Option<&serde_json::Value>,
-    ) -> Option<fret_ui_shadcn::BadgeVariant> {
+    ) -> Option<shadcn::BadgeVariant> {
         let s = v?.as_str()?;
-        use fret_ui_shadcn::BadgeVariant;
+        use shadcn::BadgeVariant;
         Some(match s {
             "default" => BadgeVariant::Default,
             "secondary" => BadgeVariant::Secondary,
@@ -94,9 +95,9 @@ impl ShadcnResolver {
 
     pub(super) fn parse_button_variant(
         v: Option<&serde_json::Value>,
-    ) -> Option<fret_ui_shadcn::ButtonVariant> {
+    ) -> Option<shadcn::ButtonVariant> {
         let s = v?.as_str()?;
-        use fret_ui_shadcn::ButtonVariant;
+        use shadcn::ButtonVariant;
         Some(match s {
             "default" => ButtonVariant::Default,
             "destructive" => ButtonVariant::Destructive,
@@ -110,9 +111,9 @@ impl ShadcnResolver {
 
     pub(super) fn parse_button_size(
         v: Option<&serde_json::Value>,
-    ) -> Option<fret_ui_shadcn::ButtonSize> {
+    ) -> Option<shadcn::ButtonSize> {
         let s = v?.as_str()?;
-        use fret_ui_shadcn::ButtonSize;
+        use shadcn::ButtonSize;
         Some(match s {
             "default" => ButtonSize::Default,
             "sm" => ButtonSize::Sm,

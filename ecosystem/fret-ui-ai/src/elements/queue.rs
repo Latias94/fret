@@ -25,7 +25,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
-use fret_ui_shadcn::button::ButtonStyle;
+use fret_ui_shadcn::raw::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, CollapsibleTrigger,
     ScrollArea,

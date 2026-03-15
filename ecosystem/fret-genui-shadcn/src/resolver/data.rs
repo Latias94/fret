@@ -7,6 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate, UiActionHost, UiActionHostExt};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui::UiElementSinkExt as _;
 use serde_json::{Map, Value};
@@ -209,8 +210,8 @@ impl ShadcnResolver {
 
         if items.is_empty() {
             let msg = Arc::<str>::from(empty_message);
-            return fret_ui_shadcn::Card::new([fret_ui_shadcn::CardContent::new([
-                fret_ui_shadcn::typography::muted(msg).into_element(cx),
+            return shadcn::Card::new([shadcn::CardContent::new([
+                shadcn::raw::typography::muted(msg).into_element(cx),
             ])
             .into_element(cx)])
             .into_element(cx);
@@ -238,20 +239,20 @@ impl ShadcnResolver {
             .map(|s| s.auto_apply_standard_actions)
             .unwrap_or(false);
 
-        fret_ui_shadcn::Table::build(|cx, out| {
+        shadcn::Table::build(|cx, out| {
             out.push_ui(
                 cx,
-                fret_ui_shadcn::TableHeader::build(|cx, out| {
+                shadcn::TableHeader::build(|cx, out| {
                     out.push_ui(
                         cx,
-                        fret_ui_shadcn::TableRow::build(cols, |cx, out| {
+                        shadcn::TableRow::build(cols, |cx, out| {
                             for c in columns.iter() {
-                                out.push_ui(cx, fret_ui_shadcn::TableHead::new(c.label.clone()));
+                                out.push_ui(cx, shadcn::TableHead::new(c.label.clone()));
                             }
                             if !row_actions.is_empty() {
                                 out.push_ui(
                                     cx,
-                                    fret_ui_shadcn::TableHead::new(Arc::<str>::from("Actions")),
+                                    shadcn::TableHead::new(Arc::<str>::from("Actions")),
                                 );
                             }
                         }),
@@ -261,25 +262,25 @@ impl ShadcnResolver {
 
             out.push_ui(
                 cx,
-                fret_ui_shadcn::TableBody::build(|cx, out| {
+                shadcn::TableBody::build(|cx, out| {
                     for (row_index, item) in items.iter().enumerate() {
                         let obj = item.as_object();
                         out.push_ui(
                             cx,
-                            fret_ui_shadcn::TableRow::build(cols, |cx, out| {
+                            shadcn::TableRow::build(cols, |cx, out| {
                                 for col in columns.iter() {
                                     let v = obj.and_then(|o| o.get(col.key.as_ref()));
                                     let text = cell_text_for_value(v);
                                     out.push_ui(
                                         cx,
-                                        fret_ui_shadcn::TableCell::build(fret_ui_kit::ui::text(text)),
+                                        shadcn::TableCell::build(fret_ui_kit::ui::text(text)),
                                     );
                                 }
 
                                 if !row_actions.is_empty() {
                                     out.push_ui(
                                         cx,
-                                        fret_ui_shadcn::TableCell::build(
+                                        shadcn::TableCell::build(
                                             fret_ui_kit::ui::h_flex_build(|cx, out| {
                                                 for ra in row_actions.iter() {
                                                     let label = ra.label.clone();
@@ -295,30 +296,28 @@ impl ShadcnResolver {
                                                     ));
                                                     let data_path = data_path.clone();
 
-                                                    let mut btn = fret_ui_shadcn::Button::new(
-                                                        label.clone(),
-                                                    )
-                                                    .disabled(disabled)
-                                                    .size(fret_ui_shadcn::ButtonSize::Sm);
+                                                    let mut btn = shadcn::Button::new(label.clone())
+                                                        .disabled(disabled)
+                                                        .size(shadcn::ButtonSize::Sm);
                                                     if let Some(variant) = ra.variant.as_ref() {
                                                         let parsed = match variant.as_ref() {
                                                             "default" => Some(
-                                                                fret_ui_shadcn::ButtonVariant::Default,
+                                                                shadcn::ButtonVariant::Default,
                                                             ),
                                                             "destructive" => Some(
-                                                                fret_ui_shadcn::ButtonVariant::Destructive,
+                                                                shadcn::ButtonVariant::Destructive,
                                                             ),
                                                             "outline" => Some(
-                                                                fret_ui_shadcn::ButtonVariant::Outline,
+                                                                shadcn::ButtonVariant::Outline,
                                                             ),
                                                             "secondary" => Some(
-                                                                fret_ui_shadcn::ButtonVariant::Secondary,
+                                                                shadcn::ButtonVariant::Secondary,
                                                             ),
                                                             "ghost" => Some(
-                                                                fret_ui_shadcn::ButtonVariant::Ghost,
+                                                                shadcn::ButtonVariant::Ghost,
                                                             ),
                                                             "link" => Some(
-                                                                fret_ui_shadcn::ButtonVariant::Link,
+                                                                shadcn::ButtonVariant::Link,
                                                             ),
                                                             _ => None,
                                                         };

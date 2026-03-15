@@ -72,7 +72,7 @@ let query = cx.local_model_keyed("query", String::new);
 
 shadcn::InputGroup::new(query)
     .placeholder("Search...")
-    .trailing([fret_ui_shadcn::icon::icon(
+    .trailing([icon::icon(
         cx,
         fret_icons::IconId::new_static("lucide.search"),
     )])

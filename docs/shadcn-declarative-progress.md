@@ -163,8 +163,8 @@ Guidelines:
   environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
   lanes (`typography` prose helpers, `extras`, breadcrumb primitives, and low-level icon helpers)
   instead of importing `fret_ui_shadcn::*` directly.
-- Treat the full `fret_ui_shadcn` crate root as a retained compatibility/implementation surface,
-  not as a peer first-contact discovery lane next to `facade as shadcn`.
+- Treat the flat `fret_ui_shadcn::*` root exports as a hidden compatibility/implementation
+  surface, not as a peer first-contact discovery lane next to `facade as shadcn`.
 - The current first-party source-policy tests that ban root-style imports are evidence of remaining
   public-surface duplication, not proof that the current three-lane discovery story is ideal.
   The next cleanup step is to make the curated facade lane more self-evident, not to normalize the
@@ -193,11 +193,11 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
   `IntoUiElement<H>`, so trigger/content/cell builders do not have to pre-land into `AnyElement`,
 - `UiHostBoundIntoElement`, `UiBuilderHostBoundIntoElementExt`, and `UiChildIntoElement` are
   already deleted from code and should not be taught on first-party shadcn surfaces,
-- authoring-critical first-party family lanes should stay reachable from both the crate root and
-  `fret_ui_shadcn::facade` as an implementation/compatibility constraint, but the curated
-  `facade` remains the only default teaching/discovery lane; source-policy tests now guard the
-  selected `Select` / `Combobox` / `ComboboxChips` / `Command` / `NavigationMenu` / `Pagination`
-  exports so compact/default examples do not depend on root-only names,
+- authoring-critical first-party family lanes should stay reachable from the hidden compatibility
+  root plus `fret_ui_shadcn::facade` as an implementation constraint, but the curated `facade`
+  remains the only default teaching/discovery lane; source-policy tests now guard the selected
+  `Select` / `Combobox` / `ComboboxChips` / `Command` / `NavigationMenu` / `Pagination` exports so
+  compact/default examples do not depend on root-only names,
 - keep `AnyElement` explicit only for justified raw seams such as diagnostics, overlay/controller
   internals, or low-level helper plumbing.
 - Current inventoried raw/bridge helpers on the shadcn lane are intentionally small:

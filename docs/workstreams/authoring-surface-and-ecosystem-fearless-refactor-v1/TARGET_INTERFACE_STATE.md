@@ -18,7 +18,9 @@ Closeout note on 2026-03-15:
 - this file now describes a mostly-settled surface rather than an open redesign backlog,
 - the app/component/advanced split is considered landed **at the lane-definition level**,
 - but the closeout is still incomplete while:
-  - `fret::app::prelude::*` exports remain wider than the target list below,
+  - `fret::app::prelude::*` exports remain wider than the target list below, even though the first
+    overlap-reduction batch has already landed (`as _` extension-trait imports plus removal of raw
+    `on_activate*` helper re-exports from the app lane),
   - shadcn first-contact discovery still relies on policy tests to keep crate root / facade / raw
     paths mentally separated,
   - the dedicated conversion-surface tracker is still actively deleting vocabulary families,
@@ -81,16 +83,24 @@ Target non-exports:
 - `Event`
 - `KernelApp`
 - `AppWindowId`
+- `TrackedStateExt` as a named app-prelude export
 - `ElementContext`
 - `UiTree`
 - `UiServices`
 - `UiHost`
 - `AnyElement`
+- `AnyElementSemanticsExt` as a named app-prelude export
+- `ElementContextThemeExt` as a named app-prelude export
 - `ModelStore`
 - `ActionId`
 - `TypedAction`
 - `UiBuilder`
 - `UiPatchTarget`
+- `StyledExt` as a named app-prelude export
+- `UiExt` as a named app-prelude export
+- `UiElementA11yExt` as a named app-prelude export
+- `UiElementKeyContextExt` as a named app-prelude export
+- `UiElementTestIdExt` as a named app-prelude export
 - `Length`
 - `SemanticsProps`
 - `HoverRegionProps`
@@ -116,6 +126,10 @@ Target non-exports:
 - `Corners4`
 - `Edges4`
 - `ViewportOrientation`
+- raw `on_activate`
+- raw `on_activate_notify`
+- raw `on_activate_request_redraw`
+- raw `on_activate_request_redraw_notify`
 - runner/driver traits
 - viewport/interop traits
 - broad component-author internals
@@ -135,6 +149,9 @@ Target rule:
   `fret::app::prelude`.
 - `fret::app::prelude` must use curated exports; it does not blanket re-export
   `fret_ui_kit::declarative::prelude::*`.
+- overlap-heavy extension traits may still arrive through anonymous `as _` imports so method calls
+  remain ergonomic, but those trait names are not part of the default app-lane vocabulary and
+  should not be taught as first-contact imports.
 - `AppUi` is taught through grouped helper families:
   `cx.state().local*`, `cx.actions().models/locals/transient`,
   `cx.actions().payload::<A>().models/locals/local_update_if`, `cx.data().selector/query*`, and
@@ -328,6 +345,9 @@ Direct crate usage rule for first-party recipe crates:
   `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
   `shadcn::raw::breadcrumb::primitives`, low-level `shadcn::raw::icon::*`, and
   explicitly justified retained/interop seams such as `fret::shadcn::raw::prelude::*`
+- 2026-03-15 implementation note: first-party UI Gallery snippet/page surfaces are now aligned to
+  this rule; remaining direct-crate cleanup is bounded to non-gallery first-party consumers and
+  selected internal tests/docs strings.
 
 ## Symbols to Remove
 

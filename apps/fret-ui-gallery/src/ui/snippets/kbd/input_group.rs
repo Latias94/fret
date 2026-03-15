@@ -11,7 +11,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app);
     let muted_fg = theme.color_token("muted-foreground");
 
-    let search_icon = fret_ui_shadcn::icon::icon_with(
+    let search_icon = icon::icon_with(
         cx,
         fret_icons::IconId::new_static("lucide.search"),
         Some(Px(16.0)),
@@ -22,7 +22,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .a11y_label("Search")
         .leading([search_icon])
         .trailing([
-            shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
+            shadcn::Kbd::from_children([shadcn::raw::kbd::kbd_icon(
                 cx,
                 fret_icons::IconId::new_static("lucide.command"),
             )])

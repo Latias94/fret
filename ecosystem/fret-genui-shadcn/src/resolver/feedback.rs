@@ -2,6 +2,7 @@ use fret_genui_core::props::ResolvedProps;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 
 use super::ShadcnResolver;
 
@@ -35,11 +36,11 @@ impl ShadcnResolver {
             .get("variant")
             .and_then(|v| v.as_str())
             .and_then(|s| match s {
-                "default" => Some(fret_ui_shadcn::AlertVariant::Default),
-                "destructive" => Some(fret_ui_shadcn::AlertVariant::Destructive),
+                "default" => Some(shadcn::AlertVariant::Default),
+                "destructive" => Some(shadcn::AlertVariant::Destructive),
                 _ => None,
             })
-            .unwrap_or(fret_ui_shadcn::AlertVariant::Default);
+            .unwrap_or(shadcn::AlertVariant::Default);
 
         let title = resolved_props
             .get("title")
@@ -50,14 +51,14 @@ impl ShadcnResolver {
 
         let mut out: Vec<AnyElement> = Vec::new();
         if let Some(title) = title {
-            out.push(fret_ui_shadcn::AlertTitle::new(title).into_element(cx));
+            out.push(shadcn::AlertTitle::new(title).into_element(cx));
         }
         if let Some(description) = description {
-            out.push(fret_ui_shadcn::AlertDescription::new(description).into_element(cx));
+            out.push(shadcn::AlertDescription::new(description).into_element(cx));
         }
         out.extend(children);
 
-        fret_ui_shadcn::Alert::new(out)
+        shadcn::Alert::new(out)
             .variant(variant)
             .into_element(cx)
     }
@@ -75,7 +76,7 @@ impl ShadcnResolver {
             .unwrap_or(16) as f32;
         let speed = parse_f32(resolved_props.get("speed")).unwrap_or(0.12);
 
-        let spinner = fret_ui_shadcn::Spinner::new()
+        let spinner = shadcn::Spinner::new()
             .speed(speed)
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
@@ -128,7 +129,7 @@ impl ShadcnResolver {
             layout = layout.w_full();
         }
 
-        let mut sk = fret_ui_shadcn::Skeleton::new()
+        let mut sk = shadcn::Skeleton::new()
             .animate_pulse(animate_pulse)
             .refine_layout(layout);
         if secondary {
@@ -185,7 +186,7 @@ impl ShadcnResolver {
             layout = layout.w_full();
         }
 
-        let progress = fret_ui_shadcn::Progress::new(model)
+        let progress = shadcn::Progress::new(model)
             .range(min, max)
             .mirror_in_rtl(mirror_in_rtl)
             .refine_layout(layout)

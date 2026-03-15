@@ -8,7 +8,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
-    let icon = fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.cloud"));
+    let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.cloud"));
 
     shadcn::empty(|cx| {
         ui::children![
@@ -17,7 +17,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::empty_media(|cx| ui::children![cx; icon])
-                        .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon),
+                        .variant(shadcn::EmptyMediaVariant::Icon),
                     shadcn::empty_title("Cloud Storage Empty")
                         .test_id("ui-gallery-empty-outline-title"),
                     shadcn::empty_description(

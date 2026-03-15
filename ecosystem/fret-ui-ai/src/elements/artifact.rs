@@ -13,7 +13,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Space,
     WidgetStateProperty, WidgetStates,
 };
-use fret_ui_shadcn::button::ButtonStyle;
+use fret_ui_shadcn::raw::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, ScrollArea, Tooltip, TooltipContent, TooltipProvider,
     TooltipTrigger,

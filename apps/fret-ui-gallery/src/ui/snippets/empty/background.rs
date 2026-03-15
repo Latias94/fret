@@ -54,16 +54,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 })
                 .unwrap_or_else(|| Paint::Solid(muted));
 
-            let refresh_icon =
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.refresh-cw"));
+            let refresh_icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.refresh-cw"));
             let refresh_text = cx.text("Refresh");
             let refresh_button = shadcn::Button::new("Refresh")
                 .variant(shadcn::ButtonVariant::Outline)
                 .children([refresh_icon, refresh_text])
                 .into_element(cx);
 
-            let header_icon =
-                fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bell"));
+            let header_icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.bell"));
             let empty = shadcn::empty(|cx| {
                 ui::children![
                     cx;
@@ -71,7 +69,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ui::children![
                             cx;
                             shadcn::empty_media(|cx| ui::children![cx; header_icon])
-                                .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon),
+                                .variant(shadcn::EmptyMediaVariant::Icon),
                             shadcn::empty_title("No Notifications"),
                             shadcn::empty_description(
                                 "You're all caught up. New notifications will appear here.",

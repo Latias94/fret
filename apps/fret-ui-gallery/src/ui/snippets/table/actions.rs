@@ -39,9 +39,8 @@ fn action_row(
                     shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Duplicate")),
                     shadcn::DropdownMenuEntry::Separator,
                     shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("Delete").variant(
-                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                        ),
+                        shadcn::DropdownMenuItem::new("Delete")
+                            .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive),
                     ),
                 ]
             },

@@ -342,7 +342,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
   For first-party prose/demo helpers, `shadcn::raw::typography::*` remains an explicit escape
   hatch. Only drop to `shadcn::raw::*` beyond these documented cases when you intentionally need
-  the full crate root.
+  the full uncurated module surface; the flat crate root is now treated as a hidden compatibility
+  layer rather than a teaching lane.
 - Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)`,
   `fret::shadcn::app::install(...)`, and only drop to `fret::shadcn::raw::*` when you need the
   full uncurated `fret_ui_shadcn` surface. That same raw escape hatch also carries advanced

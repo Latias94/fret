@@ -14,7 +14,7 @@ fn icon<H: UiHost>(
     size: Px,
     fg: ColorRef,
 ) -> impl IntoUiElement<H> + use<H> {
-    fret_ui_shadcn::icon::icon_with(
+    icon::icon_with(
         cx,
         fret_icons::IconId::new_static(name),
         Some(size),

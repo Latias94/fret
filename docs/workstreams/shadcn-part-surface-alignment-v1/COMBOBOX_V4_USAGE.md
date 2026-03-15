@@ -89,13 +89,13 @@ combobox-specific helper. Pass the resulting ID to `ComboboxContent::anchor_elem
 
 ```rust
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{ComboboxContent, PopoverAnchor};
+use fret_ui_shadcn::facade as shadcn;
 
-let anchor = PopoverAnchor::build(ui::label("anchor")).into_anchor(cx);
+let anchor = shadcn::PopoverAnchor::build(ui::label("anchor")).into_anchor(cx);
 let anchor_id = anchor.element_id();
 let _anchor_el = anchor.into_element(cx);
 
-let content = ComboboxContent::new([]).anchor_element_id(anchor_id);
+let content = shadcn::ComboboxContent::new([]).anchor_element_id(anchor_id);
 ```
 
 ## Popup trigger (docs “Popup” example)

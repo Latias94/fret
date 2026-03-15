@@ -13,7 +13,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::empty_media(|cx| ui::children![cx; shadcn::Spinner::new(),])
-                        .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon),
+                        .variant(shadcn::EmptyMediaVariant::Icon),
                     shadcn::empty_title("Processing your request"),
                     shadcn::empty_description(
                         "Please wait while we process your request. Do not refresh the page.",

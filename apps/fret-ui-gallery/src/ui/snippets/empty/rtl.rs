@@ -8,8 +8,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let query = cx.local_model_keyed("query", String::new);
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let icon =
-            fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
+        let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
         let input = shadcn::InputGroup::new(query)
             .a11y_label("RTL search")
             .leading([shadcn::InputGroupText::new("亘丨孬").into_element(cx)])
@@ -25,7 +24,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ui::children![
                         cx;
                         shadcn::empty_media(|cx| ui::children![cx; icon])
-                            .variant(fret_ui_shadcn::empty::EmptyMediaVariant::Icon),
+                            .variant(shadcn::EmptyMediaVariant::Icon),
                         shadcn::empty_title("RTL Empty State"),
                         shadcn::empty_description(
                             "This empty state uses RTL direction context for layout and alignment.",

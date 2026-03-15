@@ -12,7 +12,7 @@ fn panel(
     shadcn::alert(move |cx| {
         ui::children![
             cx;
-            fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
+            icon::icon(cx, fret_icons::IconId::new_static("lucide.sparkles")),
             shadcn::AlertTitle::new(title),
             shadcn::AlertDescription::new(description),
         ]

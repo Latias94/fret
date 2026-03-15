@@ -18,9 +18,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         match id {
             // shadcn/ui v4 demo: `BadgeCheckIcon className="size-5"`.
             "lucide.badge-check" => {
-                fret_ui_shadcn::icon::icon_with(cx, icon_id, Some(Px(20.0)), None)
+                icon::icon_with(cx, icon_id, Some(Px(20.0)), None)
             }
-            _ => fret_ui_shadcn::icon::icon(cx, icon_id),
+            _ => icon::icon(cx, icon_id),
         }
     };
 

@@ -9,7 +9,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::Sm)
         .refine_style(ChromeRefinement::default().pr(Space::N2))
-        .children([shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
+        .children([shadcn::Kbd::from_children([shadcn::raw::kbd::kbd_icon(
             cx,
             fret_icons::IconId::new_static("lucide.corner-down-left"),
         )])

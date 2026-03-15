@@ -20,7 +20,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx)
         },
         move |cx| {
-            let icon = fret_ui_shadcn::icon::icon_with(
+            let icon = shadcn::raw::icon::icon_with(
                 cx,
                 fret_icons::IconId::new_static("lucide.circle-plus"),
                 Some(Px(32.0)),

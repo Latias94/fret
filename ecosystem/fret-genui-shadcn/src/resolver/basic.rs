@@ -1,6 +1,7 @@
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
 
 use super::ShadcnResolver;
@@ -28,9 +29,9 @@ impl ShadcnResolver {
                 .w_full()
                 .p(fret_ui_kit::Space::N6)
                 .into_element(cx);
-            fret_ui_shadcn::Card::new([body]).into_element(cx)
+            shadcn::Card::new([body]).into_element(cx)
         } else {
-            fret_ui_shadcn::Card::new(children).into_element(cx)
+            shadcn::Card::new(children).into_element(cx)
         }
     }
 
@@ -39,7 +40,7 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        fret_ui_shadcn::CardHeader::new(children).into_element(cx)
+        shadcn::CardHeader::new(children).into_element(cx)
     }
 
     pub(super) fn render_card_content<H: UiHost>(
@@ -47,7 +48,7 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        fret_ui_shadcn::CardContent::new(children).into_element(cx)
+        shadcn::CardContent::new(children).into_element(cx)
     }
 
     pub(super) fn render_card_footer<H: UiHost>(
@@ -55,7 +56,7 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        fret_ui_shadcn::CardFooter::new(children).into_element(cx)
+        shadcn::CardFooter::new(children).into_element(cx)
     }
 
     pub(super) fn render_card_title<H: UiHost>(
@@ -68,7 +69,7 @@ impl ShadcnResolver {
                 .get("text")
                 .or_else(|| resolved_props.get("title")),
         );
-        fret_ui_shadcn::CardTitle::new(text).into_element(cx)
+        shadcn::CardTitle::new(text).into_element(cx)
     }
 
     pub(super) fn render_card_description<H: UiHost>(
@@ -81,7 +82,7 @@ impl ShadcnResolver {
                 .get("text")
                 .or_else(|| resolved_props.get("description")),
         );
-        fret_ui_shadcn::CardDescription::new(text).into_element(cx)
+        shadcn::CardDescription::new(text).into_element(cx)
     }
 
     pub(super) fn render_text<H: UiHost>(
@@ -104,16 +105,16 @@ impl ShadcnResolver {
             .unwrap_or(if muted { "muted" } else { "body" });
 
         match variant {
-            "body" => fret_ui_shadcn::typography::p(text).into_element(cx),
-            "muted" => fret_ui_shadcn::typography::muted(text).into_element(cx),
-            "small" => fret_ui_shadcn::typography::small(text).into_element(cx),
-            "lead" => fret_ui_shadcn::typography::lead(text).into_element(cx),
-            "large" => fret_ui_shadcn::typography::large(text).into_element(cx),
-            "h1" => fret_ui_shadcn::typography::h1(text).into_element(cx),
-            "h2" => fret_ui_shadcn::typography::h2(text).into_element(cx),
-            "h3" => fret_ui_shadcn::typography::h3(text).into_element(cx),
-            "h4" => fret_ui_shadcn::typography::h4(text).into_element(cx),
-            "inlineCode" => fret_ui_shadcn::typography::inline_code(text).into_element(cx),
+            "body" => shadcn::raw::typography::p(text).into_element(cx),
+            "muted" => shadcn::raw::typography::muted(text).into_element(cx),
+            "small" => shadcn::raw::typography::small(text).into_element(cx),
+            "lead" => shadcn::raw::typography::lead(text).into_element(cx),
+            "large" => shadcn::raw::typography::large(text).into_element(cx),
+            "h1" => shadcn::raw::typography::h1(text).into_element(cx),
+            "h2" => shadcn::raw::typography::h2(text).into_element(cx),
+            "h3" => shadcn::raw::typography::h3(text).into_element(cx),
+            "h4" => shadcn::raw::typography::h4(text).into_element(cx),
+            "inlineCode" => shadcn::raw::typography::inline_code(text).into_element(cx),
             _ => fret_ui_kit::ui::text(text).into_element(cx),
         }
     }
@@ -324,17 +325,17 @@ impl ShadcnResolver {
             .get("orientation")
             .and_then(|v| v.as_str())
             .and_then(|s| match s {
-                "horizontal" => Some(fret_ui_shadcn::SeparatorOrientation::Horizontal),
-                "vertical" => Some(fret_ui_shadcn::SeparatorOrientation::Vertical),
+                "horizontal" => Some(shadcn::SeparatorOrientation::Horizontal),
+                "vertical" => Some(shadcn::SeparatorOrientation::Vertical),
                 _ => None,
             })
-            .unwrap_or(fret_ui_shadcn::SeparatorOrientation::Horizontal);
+            .unwrap_or(shadcn::SeparatorOrientation::Horizontal);
         let flex_stretch_cross_axis = resolved_props
             .get("flexStretchCrossAxis")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        fret_ui_shadcn::Separator::new()
+        shadcn::Separator::new()
             .orientation(orientation)
             .flex_stretch_cross_axis(flex_stretch_cross_axis)
             .into_element(cx)
@@ -361,7 +362,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
-        fret_ui_shadcn::ScrollArea::new(children)
+        shadcn::ScrollArea::new(children)
             .axis(axis)
             .show_scrollbar(show_scrollbar)
             .into_element(cx)
@@ -381,9 +382,9 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let variant = Self::parse_button_variant(resolved_props.get("variant"))
-            .unwrap_or(fret_ui_shadcn::ButtonVariant::Default);
+            .unwrap_or(shadcn::ButtonVariant::Default);
         let size = Self::parse_button_size(resolved_props.get("size"))
-            .unwrap_or(fret_ui_shadcn::ButtonSize::Default);
+            .unwrap_or(shadcn::ButtonSize::Default);
         let w_full = resolved_props
             .get("wFull")
             .and_then(|v| v.as_bool())
@@ -408,7 +409,7 @@ impl ShadcnResolver {
             layout = layout.min_w_0();
         }
 
-        let mut button = fret_ui_shadcn::Button::new(label)
+        let mut button = shadcn::Button::new(label)
             .children(children)
             .disabled(disabled)
             .variant(variant)
@@ -461,7 +462,7 @@ impl ShadcnResolver {
                 .or_else(|| resolved_props.get("text")),
         );
         let variant = Self::parse_badge_variant(resolved_props.get("variant")).unwrap_or_default();
-        fret_ui_shadcn::Badge::new(label)
+        shadcn::Badge::new(label)
             .variant(variant)
             .children(children)
             .into_element(cx)

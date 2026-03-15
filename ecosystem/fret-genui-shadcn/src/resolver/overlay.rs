@@ -6,6 +6,7 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
 use serde_json::{Map, Value};
 
@@ -72,17 +73,17 @@ impl ShadcnResolver {
             .get("content")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        let content_el = fret_ui_shadcn::TooltipContent::build(cx, |_cx| {
-            [fret_ui_shadcn::TooltipContent::text(Arc::<str>::from(
+        let content_el = shadcn::TooltipContent::build(cx, |_cx| {
+            [shadcn::TooltipContent::text(Arc::<str>::from(
                 content,
             ))]
         })
         .into_element(cx);
 
         let trigger = if children.is_empty() {
-            fret_ui_shadcn::Button::new(Arc::<str>::from("?"))
-                .variant(fret_ui_shadcn::ButtonVariant::Ghost)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new(Arc::<str>::from("?"))
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::Sm)
                 .into_element(cx)
         } else if children.len() == 1 {
             children.into_iter().next().expect("single child")
@@ -93,7 +94,7 @@ impl ShadcnResolver {
                 .into_element(cx)
         };
 
-        fret_ui_shadcn::Tooltip::new(cx, trigger, content_el).into_element(cx)
+        shadcn::Tooltip::new(cx, trigger, content_el).into_element(cx)
     }
 
     pub(super) fn render_popover<H: UiHost>(
@@ -108,12 +109,11 @@ impl ShadcnResolver {
             .unwrap_or("Open");
         let trigger_text = Arc::<str>::from(trigger_text);
 
-        let trigger = fret_ui_shadcn::PopoverTrigger::build(
-            fret_ui_shadcn::Button::new(trigger_text)
-                .variant(fret_ui_shadcn::ButtonVariant::Outline),
+        let trigger = shadcn::PopoverTrigger::build(
+            shadcn::Button::new(trigger_text).variant(shadcn::ButtonVariant::Outline),
         );
-        let content = fret_ui_shadcn::PopoverContent::new(children);
-        fret_ui_shadcn::Popover::new(cx, trigger, content).into_element(cx)
+        let content = shadcn::PopoverContent::new(children);
+        shadcn::Popover::new(cx, trigger, content).into_element(cx)
     }
 
     pub(super) fn render_dropdown_menu<H: UiHost>(
@@ -133,16 +133,16 @@ impl ShadcnResolver {
         let scope = Self::genui_scope(cx);
         let element_key: Arc<str> = Arc::from(key.0.as_str());
 
-        let menu = fret_ui_shadcn::DropdownMenu::new_controllable(cx, None, false);
+        let menu = shadcn::DropdownMenu::new_controllable(cx, None, false);
         menu.into_element(
             cx,
             move |cx| {
-                fret_ui_shadcn::Button::new(trigger_text)
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                shadcn::Button::new(trigger_text)
+                    .variant(shadcn::ButtonVariant::Outline)
                     .into_element(cx)
             },
             move |_cx| {
-                let mut entries: Vec<fret_ui_shadcn::DropdownMenuEntry> = Vec::new();
+                let mut entries: Vec<shadcn::DropdownMenuEntry> = Vec::new();
                 let Some(items) = items.as_ref() else {
                     return entries;
                 };
@@ -151,7 +151,7 @@ impl ShadcnResolver {
                         continue;
                     };
                     if obj.get("type").and_then(|v| v.as_str()) == Some("separator") {
-                        entries.push(fret_ui_shadcn::DropdownMenuEntry::Separator);
+                        entries.push(shadcn::DropdownMenuEntry::Separator);
                         continue;
                     }
 
@@ -167,9 +167,9 @@ impl ShadcnResolver {
                     let variant = obj.get("variant").and_then(|v| v.as_str());
                     let variant = match variant {
                         Some("destructive") => {
-                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive
+                            shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive
                         }
-                        _ => fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Default,
+                        _ => shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Default,
                     };
 
                     let action = obj
@@ -183,10 +183,9 @@ impl ShadcnResolver {
                         .and_then(|v| v.as_str())
                         .map(Arc::<str>::from);
 
-                    let mut menu_item =
-                        fret_ui_shadcn::DropdownMenuItem::new(Arc::<str>::from(label))
-                            .disabled(disabled)
-                            .variant(variant);
+                    let mut menu_item = shadcn::DropdownMenuItem::new(Arc::<str>::from(label))
+                        .disabled(disabled)
+                        .variant(variant);
 
                     if let Some(test_id) = test_id {
                         menu_item = menu_item.test_id(test_id);
@@ -221,7 +220,7 @@ impl ShadcnResolver {
                         }
                     }
 
-                    entries.push(fret_ui_shadcn::DropdownMenuEntry::Item(menu_item));
+                    entries.push(shadcn::DropdownMenuEntry::Item(menu_item));
                 }
                 entries
             },
@@ -247,27 +246,27 @@ impl ShadcnResolver {
         let title = Arc::<str>::from(title);
         let description = resolved_props.get("description").and_then(|v| v.as_str());
 
-        let dialog = fret_ui_shadcn::Dialog::new_controllable(cx, None, false);
+        let dialog = shadcn::Dialog::new_controllable(cx, None, false);
         dialog.into_element(
             cx,
             move |cx| {
-                fret_ui_shadcn::Button::new(trigger_text)
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                shadcn::Button::new(trigger_text)
+                    .variant(shadcn::ButtonVariant::Outline)
                     .into_element(cx)
             },
             move |cx| {
                 let mut header_children: Vec<AnyElement> =
-                    vec![fret_ui_shadcn::DialogTitle::new(title).into_element(cx)];
+                    vec![shadcn::DialogTitle::new(title).into_element(cx)];
                 if let Some(desc) = description {
                     header_children
-                        .push(fret_ui_shadcn::DialogDescription::new(desc).into_element(cx));
+                        .push(shadcn::DialogDescription::new(desc).into_element(cx));
                 }
-                let header = fret_ui_shadcn::DialogHeader::new(header_children).into_element(cx);
+                let header = shadcn::DialogHeader::new(header_children).into_element(cx);
 
                 let mut out: Vec<AnyElement> = Vec::with_capacity(children.len().saturating_add(1));
                 out.push(header);
                 out.extend(children);
-                fret_ui_shadcn::DialogContent::new(out).into_element(cx)
+                shadcn::DialogContent::new(out).into_element(cx)
             },
         )
     }
@@ -292,33 +291,33 @@ impl ShadcnResolver {
         let description = resolved_props.get("description").and_then(|v| v.as_str());
         let side = resolved_props.get("side").and_then(|v| v.as_str());
         let side = match side {
-            Some("top") => fret_ui_shadcn::DrawerSide::Top,
-            Some("left") => fret_ui_shadcn::DrawerSide::Left,
-            Some("right") => fret_ui_shadcn::DrawerSide::Right,
-            _ => fret_ui_shadcn::DrawerSide::Bottom,
+            Some("top") => shadcn::DrawerSide::Top,
+            Some("left") => shadcn::DrawerSide::Left,
+            Some("right") => shadcn::DrawerSide::Right,
+            _ => shadcn::DrawerSide::Bottom,
         };
 
-        let drawer = fret_ui_shadcn::Drawer::new_controllable(cx, None, false).side(side);
+        let drawer = shadcn::Drawer::new_controllable(cx, None, false).side(side);
         drawer.into_element(
             cx,
             move |cx| {
-                fret_ui_shadcn::Button::new(trigger_text)
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                shadcn::Button::new(trigger_text)
+                    .variant(shadcn::ButtonVariant::Outline)
                     .into_element(cx)
             },
             move |cx| {
                 let mut header_children: Vec<AnyElement> =
-                    vec![fret_ui_shadcn::DrawerTitle::new(title).into_element(cx)];
+                    vec![shadcn::DrawerTitle::new(title).into_element(cx)];
                 if let Some(desc) = description {
                     header_children
-                        .push(fret_ui_shadcn::DrawerDescription::new(desc).into_element(cx));
+                        .push(shadcn::DrawerDescription::new(desc).into_element(cx));
                 }
-                let header = fret_ui_shadcn::DrawerHeader::new(header_children).into_element(cx);
+                let header = shadcn::DrawerHeader::new(header_children).into_element(cx);
 
                 let mut out: Vec<AnyElement> = Vec::with_capacity(children.len().saturating_add(1));
                 out.push(header);
                 out.extend(children);
-                fret_ui_shadcn::DrawerContent::new(out).into_element(cx)
+                shadcn::DrawerContent::new(out).into_element(cx)
             },
         )
     }

@@ -185,9 +185,10 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(README.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
     assert!(README.contains("let _button = shadcn::Button::new(\"Save\");"));
     assert!(!README.contains("recipes/components stay under `fret_ui_shadcn::*`"));
+    assert!(README.contains("`fret_ui_shadcn::raw::*` access stays the escape hatch"));
 
     assert!(LIB_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
-    assert!(LIB_RS.contains("crate root as a raw escape hatch"));
+    assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` plus explicit"));
     assert!(LIB_RS.contains("pub mod facade {"));
     assert!(LIB_RS.contains("pub mod themes {"));
     assert!(LIB_RS.contains("pub mod raw {"));
@@ -195,18 +196,20 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
         "pub use crate::app::{InstallConfig, install, install_with, install_with_theme};"
     ));
     assert!(LIB_RS.contains("pub use crate::shadcn_themes::{"));
-    assert!(LIB_RS.contains("pub use crate::*;"));
+    assert!(LIB_RS.contains("pub use crate::raw::*;"));
     assert!(LIB_RS.contains("pub mod advanced;"));
     assert!(LIB_RS.contains("pub use fret_ui_kit::IntoUiElement;"));
     assert!(LIB_RS.contains("UiElementTestIdExt"));
     assert!(LIB_RS.contains("UiElementA11yExt"));
     assert!(LIB_RS.contains("UiElementKeyContextExt"));
+    assert!(LIB_RS.contains("#[doc(hidden)]\npub use accordion::{"));
+    assert!(LIB_RS.contains("#[doc(hidden)]\npub use ::fret_ui_kit::declarative::icon;"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
 }
 
 #[test]
-fn authoring_critical_family_exports_stay_on_root_and_curated_facade() {
+fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_facade() {
     assert_root_and_facade_reexports(
         "select",
         &[

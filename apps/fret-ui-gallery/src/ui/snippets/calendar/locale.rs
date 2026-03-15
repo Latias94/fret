@@ -32,7 +32,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let selected = cx.local_model_keyed("selected", || Some(today));
 
     shadcn::Calendar::new(month, selected)
-        .locale(fret_ui_shadcn::calendar::CalendarLocale::Es)
+        .locale(shadcn::raw::calendar::CalendarLocale::Es)
         .week_start(time::Weekday::Monday)
         .test_id_prefix("ui-gallery.calendar.locale")
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))

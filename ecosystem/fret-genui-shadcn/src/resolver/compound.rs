@@ -6,6 +6,7 @@ use fret_genui_core::render::RenderedChildV1;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
 use serde_json::Value;
 
@@ -103,13 +104,13 @@ impl ShadcnResolver {
 
         let model = Self::ensure_optional_arc_str_model(cx, key, default_value);
 
-        let mut list = fret_ui_shadcn::TabsList::new();
-        let mut contents: Vec<fret_ui_shadcn::TabsContent> = Vec::new();
+        let mut list = shadcn::TabsList::new();
+        let mut contents: Vec<shadcn::TabsContent> = Vec::new();
 
         let mut included: BTreeSet<Arc<str>> = BTreeSet::new();
         for def in trigger_defs.iter() {
             included.insert(def.value.clone());
-            list = list.trigger(fret_ui_shadcn::TabsTrigger::new(
+            list = list.trigger(shadcn::TabsTrigger::new(
                 def.value.clone(),
                 def.label.clone(),
             ));
@@ -122,7 +123,7 @@ impl ShadcnResolver {
                     let msg = Arc::<str>::from(format!("Missing TabContent for '{}'", def.value));
                     fret_ui_kit::ui::text(msg).into_element(cx)
                 });
-            contents.push(fret_ui_shadcn::TabsContent::new(
+            contents.push(shadcn::TabsContent::new(
                 def.value.clone(),
                 [content],
             ));
@@ -136,7 +137,7 @@ impl ShadcnResolver {
             if included.contains(&value) {
                 continue;
             }
-            contents.push(fret_ui_shadcn::TabsContent::new(value.clone(), [content]));
+            contents.push(shadcn::TabsContent::new(value.clone(), [content]));
         }
 
         let force_mount_content = resolved
@@ -144,7 +145,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
-        fret_ui_shadcn::TabsRoot::new(model)
+        shadcn::TabsRoot::new(model)
             .list(list)
             .contents(contents)
             .force_mount_content(force_mount_content)
@@ -191,7 +192,7 @@ impl ShadcnResolver {
             })
             .unwrap_or_default();
 
-        let mut items: Vec<fret_ui_shadcn::AccordionItem> = Vec::new();
+        let mut items: Vec<shadcn::AccordionItem> = Vec::new();
         for child in children.into_iter() {
             if child.component != "AccordionItem" {
                 continue;
@@ -214,10 +215,10 @@ impl ShadcnResolver {
                 continue;
             };
 
-            let trigger_label = fret_ui_shadcn::typography::small(title.clone()).into_element(cx);
-            let trigger = fret_ui_shadcn::AccordionTrigger::new([trigger_label]);
-            let content = fret_ui_shadcn::AccordionContent::new([child.rendered]);
-            items.push(fret_ui_shadcn::AccordionItem::new(value, trigger, content));
+            let trigger_label = shadcn::raw::typography::small(title.clone()).into_element(cx);
+            let trigger = shadcn::AccordionTrigger::new([trigger_label]);
+            let content = shadcn::AccordionContent::new([child.rendered]);
+            items.push(shadcn::AccordionItem::new(value, trigger, content));
         }
 
         if items.is_empty() {
@@ -227,13 +228,13 @@ impl ShadcnResolver {
         match kind {
             "multiple" => {
                 let model = Self::ensure_vec_arc_str_model(cx, key, default_values);
-                fret_ui_shadcn::Accordion::multiple(model)
+                shadcn::Accordion::multiple(model)
                     .items(items)
                     .into_element(cx)
             }
             _ => {
                 let model = Self::ensure_optional_arc_str_model(cx, key, default_value);
-                fret_ui_shadcn::Accordion::single(model)
+                shadcn::Accordion::single(model)
                     .collapsible(collapsible)
                     .items(items)
                     .into_element(cx)

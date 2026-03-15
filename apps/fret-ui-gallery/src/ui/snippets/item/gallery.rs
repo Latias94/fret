@@ -10,7 +10,7 @@ use std::sync::Arc;
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn icon(cx: &mut UiCx<'_>, id: &'static str) -> impl IntoUiElement<fret_app::App> + use<> {
-    fret_ui_shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+    icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
 fn icon_button(

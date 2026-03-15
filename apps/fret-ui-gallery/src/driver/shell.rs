@@ -2,7 +2,7 @@ use fret_app::{App, Model};
 use fret_core::Px;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, ViewCacheProps};
 use fret_ui::{ElementContext, Invalidation};
-use fret_ui_shadcn::{decl_style, prelude::*};
+use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
 #[cfg(feature = "gallery-dev")]

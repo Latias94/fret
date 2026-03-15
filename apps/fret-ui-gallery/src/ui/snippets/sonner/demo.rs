@@ -57,16 +57,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .test_id(test_id);
 
         if active {
-            let bg = fret_ui_shadcn::ColorRef::Token {
+            let bg = ColorRef::Token {
                 key: "accent",
                 fallback: fret_ui_kit::ColorFallback::ThemeHoverBackground,
             };
-            let fg = fret_ui_shadcn::ColorRef::Token {
+            let fg = ColorRef::Token {
                 key: "accent-foreground",
                 fallback: fret_ui_kit::ColorFallback::ThemeTextPrimary,
             };
             button = button.style(
-                fret_ui_shadcn::button::ButtonStyle::default()
+                shadcn::raw::button::ButtonStyle::default()
                     .background(fret_ui_kit::WidgetStateProperty::new(Some(bg)))
                     .foreground(fret_ui_kit::WidgetStateProperty::new(Some(fg))),
             );

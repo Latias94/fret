@@ -40,7 +40,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .value(shadcn::SelectValue::new())
             .content(
                 shadcn::SelectContent::new()
-                    .position(fret_ui_shadcn::select::SelectPosition::Popper)
+                    .position(shadcn::raw::select::SelectPosition::Popper)
                     .align(shadcn::SelectAlign::Start),
             )
             .entries(entries)

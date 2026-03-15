@@ -18,7 +18,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         shadcn::Button::new("")
             .a11y_label("Search")
             .variant(shadcn::ButtonVariant::Outline)
-            .children([fret_ui_shadcn::icon::icon(cx, icon_id("lucide.search"))])
+            .children([icon::icon(cx, icon_id("lucide.search"))])
             .into(),
     ])
     .refine_layout(

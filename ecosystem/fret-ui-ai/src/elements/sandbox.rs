@@ -12,7 +12,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
-use fret_ui_shadcn::tabs::{TabsListHeightOverride, TabsListVariant};
+use fret_ui_shadcn::raw::tabs::{TabsListHeightOverride, TabsListVariant, TabsStyle};
 use fret_ui_shadcn::{Badge, Collapsible, CollapsibleContent, CollapsibleTrigger};
 use fret_ui_shadcn::{TabsContent, TabsList, TabsRoot};
 
@@ -317,7 +317,7 @@ impl SandboxTabs {
             key: "foreground",
             fallback: ColorFallback::ThemeTextPrimary,
         };
-        let line_style = fret_ui_shadcn::tabs::TabsStyle::default()
+        let line_style = TabsStyle::default()
             .trigger_background(WidgetStateProperty::new(Some(ColorRef::Color(
                 Color::TRANSPARENT,
             ))))

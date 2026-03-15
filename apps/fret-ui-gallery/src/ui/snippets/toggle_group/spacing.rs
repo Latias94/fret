@@ -4,7 +4,6 @@ pub const SOURCE: &str = include_str!("spacing.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Color;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
-use fret_ui_shadcn::toggle_group::ToggleGroupStyle;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn accent_item<H: UiHost>(
@@ -18,7 +17,7 @@ fn accent_item<H: UiHost>(
         .child(cx.text(label))
         .a11y_label(format!("Toggle {label}"))
         .style(
-            ToggleGroupStyle::default()
+            shadcn::raw::toggle_group::ToggleGroupStyle::default()
                 .item_background(WidgetStateProperty::new(None).when(
                     WidgetStates::SELECTED,
                     Some(ColorRef::Color(Color::TRANSPARENT)),

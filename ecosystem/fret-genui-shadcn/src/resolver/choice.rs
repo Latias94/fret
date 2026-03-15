@@ -4,6 +4,7 @@ use fret_genui_core::props::ResolvedProps;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::Value;
 
 use super::ShadcnResolver;
@@ -71,7 +72,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let checkbox = fret_ui_shadcn::Checkbox::new(model)
+        let checkbox = shadcn::Checkbox::new(model)
             .disabled(disabled)
             .into_element(cx);
 
@@ -194,7 +195,7 @@ impl ShadcnResolver {
             layout = layout.min_w_0();
         }
 
-        let options: Vec<fret_ui_shadcn::SelectItem> = resolved_props
+        let options: Vec<shadcn::SelectItem> = resolved_props
             .get("options")
             .and_then(|v| v.as_array())
             .map(|arr| {
@@ -208,7 +209,7 @@ impl ShadcnResolver {
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
                         Some(
-                            fret_ui_shadcn::SelectItem::new(Arc::<str>::from(value), label)
+                            shadcn::SelectItem::new(Arc::<str>::from(value), label)
                                 .disabled(disabled),
                         )
                     })
@@ -216,12 +217,12 @@ impl ShadcnResolver {
             })
             .unwrap_or_default();
 
-        let mut select = fret_ui_shadcn::Select::new(model, open)
+        let mut select = shadcn::Select::new(model, open)
             .items(options)
             .disabled(disabled)
             .refine_layout(layout);
         if let Some(placeholder) = placeholder {
-            select = select.value(fret_ui_shadcn::SelectValue::new().placeholder(placeholder));
+            select = select.value(shadcn::SelectValue::new().placeholder(placeholder));
         }
         select = select.aria_invalid(aria_invalid);
 
@@ -295,7 +296,7 @@ impl ShadcnResolver {
             let _ = cx.app.models_mut().update(&model, |m| *m = desired.clone());
         }
 
-        let options: Vec<fret_ui_shadcn::RadioGroupItem> = resolved_props
+        let options: Vec<shadcn::RadioGroupItem> = resolved_props
             .get("options")
             .and_then(|v| v.as_array())
             .map(|arr| {
@@ -309,7 +310,7 @@ impl ShadcnResolver {
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
                         Some(
-                            fret_ui_shadcn::RadioGroupItem::new(Arc::<str>::from(value), label)
+                            shadcn::RadioGroupItem::new(Arc::<str>::from(value), label)
                                 .disabled(disabled),
                         )
                     })
@@ -329,13 +330,13 @@ impl ShadcnResolver {
             .get("orientation")
             .and_then(|v| v.as_str())
             .and_then(|s| match s {
-                "vertical" => Some(fret_ui_shadcn::radio_group::RadioGroupOrientation::Vertical),
+                "vertical" => Some(shadcn::raw::radio_group::RadioGroupOrientation::Vertical),
                 "horizontal" => {
-                    Some(fret_ui_shadcn::radio_group::RadioGroupOrientation::Horizontal)
+                    Some(shadcn::raw::radio_group::RadioGroupOrientation::Horizontal)
                 }
                 _ => None,
             })
-            .unwrap_or(fret_ui_shadcn::radio_group::RadioGroupOrientation::Vertical);
+            .unwrap_or(shadcn::raw::radio_group::RadioGroupOrientation::Vertical);
 
         let w_full = resolved_props
             .get("wFull")
@@ -361,7 +362,7 @@ impl ShadcnResolver {
             layout = layout.min_w_0();
         }
 
-        let mut group = fret_ui_shadcn::RadioGroup::new(model)
+        let mut group = shadcn::RadioGroup::new(model)
             .disabled(disabled)
             .orientation(orientation)
             .refine_layout(layout);

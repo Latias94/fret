@@ -22,7 +22,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .a11y_label("More")
         .variant(shadcn::ButtonVariant::Outline)
         .refine_style(ChromeRefinement::default().pl(Space::N2))
-        .children([fret_ui_shadcn::icon::icon(
+        .children([icon::icon(
             cx,
             icon_id("lucide.chevron-down"),
         )])
@@ -65,9 +65,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Delete Conversation")
-                            .variant(
-                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                            )
+                            .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
                             .leading_icon(icon_id("lucide.trash")),
                     ),
                 ])),
