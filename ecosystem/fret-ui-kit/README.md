@@ -26,6 +26,27 @@ Default features are minimal. Opt in as needed:
 - `imui`: integration helpers for immediate-mode authoring frontends
 - `recipes`: opinionated helpers closer to recipes than substrate
 
+## Icons
+
+- Enabling the `icons` feature exposes semantic `IconId` integration and icon authoring helpers
+  against the shared registry contract; it does not install a default icon pack.
+- App/bootstrap code should compose an explicit provider (`fret_icons_lucide::app::install`,
+  `fret_icons_radix::app::install`, or a higher-level dependency bundle surface) when semantic
+  `ui.*` ids need to resolve.
+- Reusable crates built on `fret-ui-kit` should keep component APIs on semantic `IconId` / `ui.*`
+  ids and leave icon-pack selection to app/bootstrap code or one named installer/bundle surface.
+
+Example:
+
+```rust
+use fret_icons::ids;
+use fret_ui_kit::prelude::*;
+
+fret_icons_lucide::app::install(app);
+
+let _icon = icon(ids::ui::SEARCH);
+```
+
 ## References / Thanks
 
 This project is inspired by many open-source projects. Thanks to the authors and contributors of:

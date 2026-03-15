@@ -1,5 +1,18 @@
 This crate provides a Lucide SVG icon pack embedded via `rust-embed`.
 
+## Integration surface
+
+- `register_vendor_icons(...)` / `register_icons(...)` are the low-level registry hooks.
+- Enable `app-integration` when you want explicit installer surfaces under
+  `fret_icons_lucide::app::install(...)` and
+  `fret_icons_lucide::advanced::install_with_ui_services(...)`.
+- Component crates should stay on semantic `IconId` / `ui.*` ids; app/bootstrap code decides
+  whether this pack owns those semantic aliases.
+- Semantic `ui.*` aliases use first-writer-wins (`alias_if_missing(...)`), so later app installers
+  can intentionally override a semantic icon without mutating `lucide.*` vendor ids.
+- If a reusable ecosystem dependency ships this pack plus package bundle assets, compose both on
+  one installer/bundle surface so the app wires one named dependency.
+
 ## Attribution
 
 The SVG assets in `assets/icons/*.svg` are derived from the upstream Lucide icon set:
@@ -20,6 +33,8 @@ The SVG assets in `assets/icons/*.svg` are derived from the upstream Lucide icon
 ## Features
 
 - `semantic-ui` (default): registers the semantic `ui.*` ID aliases listed above.
+- `app-integration`: enables `fret_icons_lucide::app::install(...)` and
+  `fret_icons_lucide::advanced::install_with_ui_services(...)`.
 
 ## Vendor IDs
 

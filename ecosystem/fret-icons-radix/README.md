@@ -2,6 +2,19 @@ This crate provides a Radix Icons SVG icon pack embedded via `rust-embed`.
 
 Radix Icons are designed on a 15×15 grid, which is expected to scale to the requested icon size at render time.
 
+## Integration surface
+
+- `register_vendor_icons(...)` / `register_icons(...)` are the low-level registry hooks.
+- Enable `app-integration` when you want explicit installer surfaces under
+  `fret_icons_radix::app::install(...)` and
+  `fret_icons_radix::advanced::install_with_ui_services(...)`.
+- Component crates should stay on semantic `IconId` / `ui.*` ids; app/bootstrap code decides
+  whether this pack owns those semantic aliases.
+- Semantic `ui.*` aliases use first-writer-wins (`alias_if_missing(...)`), so later app installers
+  can intentionally override a semantic icon without mutating `radix.*` vendor ids.
+- If a reusable ecosystem dependency ships this pack plus package bundle assets, compose both on
+  one installer/bundle surface so the app wires one named dependency.
+
 ## Attribution
 
 The SVG assets in `assets/icons/*.svg` are derived from the upstream Radix Icons repository:
@@ -23,6 +36,8 @@ The SVG assets in `assets/icons/*.svg` are derived from the upstream Radix Icons
 ## Features
 
 - `semantic-ui` (default): registers the semantic `ui.*` IDs for the icons listed above.
+- `app-integration`: enables `fret_icons_radix::app::install(...)` and
+  `fret_icons_radix::advanced::install_with_ui_services(...)`.
 
 ## Vendor IDs
 

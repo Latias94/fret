@@ -152,6 +152,11 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `fret::integration` now has an integration test proving that one ecosystem installer can
       publish package-owned assets plus semantic/vendor icons together, and that a later app
       installer can override `ui.*` aliases while leaving dependency bundle assets untouched
+    - first-party public docs now keep icon-pack ownership explicit across the main component and
+      pack surfaces:
+      `ecosystem/fret-ui-kit/README.md`, `ecosystem/fret-ui-shadcn/README.md`,
+      `ecosystem/fret-ui-material3/README.md`, `ecosystem/fret-icons-lucide/README.md`, and
+      `ecosystem/fret-icons-radix/README.md`
   - Remaining:
     - first-party docs should show when bundle ownership belongs in the generated asset module vs a
       hand-written higher-level recipe bundle that also composes icon packs
