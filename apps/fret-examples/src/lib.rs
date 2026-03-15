@@ -233,6 +233,8 @@ mod authoring_surface_policy_tests {
     const EMPTY_IDLE_DEMO: &str = include_str!("empty_idle_demo.rs");
     const EMOJI_CONFORMANCE_DEMO: &str = include_str!("emoji_conformance_demo.rs");
     const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
+    const EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO: &str =
+        include_str!("external_texture_imports_web_demo.rs");
     const EXTERNAL_VIDEO_IMPORTS_AVF_DEMO: &str =
         include_str!("external_video_imports_avf_demo.rs");
     const EXTERNAL_VIDEO_IMPORTS_MF_DEMO: &str = include_str!("external_video_imports_mf_demo.rs");
@@ -434,6 +436,25 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_low_level_interop_examples_keep_direct_leaf_roots(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "unexpected marker present: {marker}"
+            );
+        }
+    }
+
     fn assert_selected_view_runtime_examples_prefer_grouped_helpers(
         src: &str,
         required_markers: &[&str],
@@ -552,6 +573,67 @@ mod authoring_surface_policy_tests {
             "fn hello_counter_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: impl UiChild) -> Ui"
         ));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
+    }
+
+    #[test]
+    fn low_level_interop_examples_keep_direct_leaf_root_contracts() {
+        assert_low_level_interop_examples_keep_direct_leaf_roots(
+            EXTERNAL_TEXTURE_IMPORTS_DEMO,
+            &[
+                "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsView) -> fret::Ui",
+                "cx.viewport_surface_props(ViewportSurfaceProps {",
+                ".test_id(\"external-texture-imports-root\"),",
+            ],
+            &["fn external_texture_imports_root("],
+        );
+
+        assert_low_level_interop_examples_keep_direct_leaf_roots(
+            EXTERNAL_TEXTURE_IMPORTS_WEB_DEMO,
+            &[
+                "cx.viewport_surface_props(ViewportSurfaceProps {",
+                ".test_id(\"external-texture-imports-web-root\"),",
+                "make_panel(cx, fret_core::ViewportFit::Contain, \"ext-tex-web-contain\")",
+            ],
+            &["fn external_texture_imports_web_root("],
+        );
+
+        assert_low_level_interop_examples_keep_direct_leaf_roots(
+            EXTERNAL_VIDEO_IMPORTS_AVF_DEMO,
+            &[
+                "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsAvfView) -> fret::Ui",
+                "cx.viewport_surface_props(ViewportSurfaceProps {",
+                ".test_id(\"external-video-imports-avf-root\"),",
+            ],
+            &["fn external_video_imports_avf_root("],
+        );
+
+        assert_low_level_interop_examples_keep_direct_leaf_roots(
+            EXTERNAL_VIDEO_IMPORTS_MF_DEMO,
+            &[
+                "fn render_view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsMfView) -> fret::Ui",
+                "cx.viewport_surface_props(ViewportSurfaceProps {",
+                ".test_id(\"external-video-imports-mf-root\"),",
+            ],
+            &["fn external_video_imports_mf_root("],
+        );
+
+        assert_low_level_interop_examples_keep_direct_leaf_roots(
+            CHART_DECLARATIVE_DEMO,
+            &[
+                "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui",
+                "chart_canvas_panel(cx.elements(), props).into()",
+            ],
+            &["fn chart_declarative_root("],
+        );
+
+        assert_low_level_interop_examples_keep_direct_leaf_roots(
+            NODE_GRAPH_DEMO,
+            &[
+                "fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui",
+                "node_graph_surface(cx.elements(), props).into()",
+            ],
+            &["fn node_graph_root("],
+        );
     }
 
     #[test]
