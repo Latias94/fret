@@ -134,6 +134,37 @@ fn public_non_method_anyelement_signatures(source: &str) -> Vec<String> {
         .collect()
 }
 
+fn visit_rust_files(dir: &std::path::Path, f: &mut impl FnMut(&std::path::Path, &str)) {
+    for entry in std::fs::read_dir(dir).unwrap_or_else(|err| {
+        panic!(
+            "failed to read source-policy directory {}: {err}",
+            dir.display()
+        )
+    }) {
+        let entry = entry.unwrap_or_else(|err| {
+            panic!(
+                "failed to read source-policy entry in {}: {err}",
+                dir.display()
+            )
+        });
+        let path = entry.path();
+        if path.is_dir() {
+            visit_rust_files(&path, f);
+            continue;
+        }
+        if path.extension().and_then(std::ffi::OsStr::to_str) != Some("rs") {
+            continue;
+        }
+        let source = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+            panic!(
+                "failed to read source-policy file {}: {err}",
+                path.display()
+            )
+        });
+        f(&path, &source);
+    }
+}
+
 #[test]
 fn app_integration_stays_under_explicit_app_module() {
     assert!(README.contains("`fret_ui_shadcn::app::{install, install_with, ...}`"));
@@ -1216,6 +1247,59 @@ fn state_helpers_prefer_typed_badge_outputs_when_no_runtime_landing_seam_is_requ
             "state.rs reintroduced eager `AnyElement` helper outputs for badge-only state helpers"
         );
     }
+}
+
+#[test]
+fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
+    let normalized_lib = normalize_ws(LIB_RS);
+    assert!(
+        normalized_lib.contains(
+            "#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]pubmodstate;"
+        ),
+        "lib.rs should keep the state helper module behind explicit opt-in features"
+    );
+    assert!(
+        normalized_lib
+            .contains("#[cfg(feature=\"state-selector\")]pubusecrate::state::use_selector_badge;"),
+        "lib.rs should re-export selector helpers only behind the selector feature gate"
+    );
+    assert!(
+        normalized_lib.contains(
+            "#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge};"
+        ),
+        "lib.rs should re-export query helpers only behind the query feature gate"
+    );
+    assert!(
+        STATE_RS.contains("use fret_query::{QueryState, QueryStatus};"),
+        "state.rs should remain the explicit query-aware helper seam"
+    );
+    assert!(
+        STATE_RS.contains("use fret_selector::ui::SelectorElementContextExt as _;"),
+        "state.rs should remain the explicit selector-aware helper seam"
+    );
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    visit_rust_files(&root, &mut |path, source| {
+        let rel = path.strip_prefix(&root).unwrap_or(path);
+        if rel == std::path::Path::new("state.rs")
+            || rel == std::path::Path::new("surface_policy_tests.rs")
+        {
+            return;
+        }
+
+        for marker in [
+            "use fret_query",
+            "fret_query::",
+            "use fret_selector",
+            "fret_selector::",
+        ] {
+            assert!(
+                !source.contains(marker),
+                "{} reintroduced state-stack marker `{marker}` outside the explicit `state.rs` seam",
+                rel.display()
+            );
+        }
+    });
 }
 
 #[test]

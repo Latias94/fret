@@ -259,7 +259,16 @@ surface.
     and
     `ecosystem/fret-router/src/query_integration.rs` only provides route-key helpers.
     This is not yet a second reusable consumer pair with a materially shared adapter contract.
-- [ ] Keep primitives and base recipes state-stack agnostic while the adapter design lands.
+- [x] Keep primitives and base recipes state-stack agnostic while the adapter design lands.
+  - Audit result on 2026-03-15:
+    `ecosystem/fret-ui-kit/src/lib.rs` source-policy tests now reject direct
+    `fret_query` / `fret_selector` imports across `src/primitives`, `src/recipes`, and the
+    neighboring `../fret-ui-headless/src` base-layer surface.
+  - Opt-in helper note on 2026-03-15:
+    query-aware watch helpers stay quarantined in
+    `ecosystem/fret-ui-kit/src/declarative/model_watch.rs` behind `state-query`, while
+    `ecosystem/fret-ui-shadcn/src/state.rs` remains the explicit recipe-layer home for
+    selector/query badges and alerts behind `state-selector` / `state-query`.
 - [x] Do not add a selector trait unless a concrete multi-crate need appears.
   - Current v1 posture remains explicit non-adoption.
 - [x] Keep official docs teaching grouped `cx.data().selector(...)` / `cx.data().query(...)` on the

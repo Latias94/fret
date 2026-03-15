@@ -182,6 +182,8 @@ Target rule:
 - reusable higher-level libraries may expose local adapters or wrappers without freezing a shared
   trait too early,
 - app docs still teach grouped data helpers first.
+- opt-in component-layer helpers may exist, but they stay quarantined to explicit seams rather
+  than leaking into primitives or base recipes.
 
 Current v1 defer rationale on 2026-03-15:
 
@@ -190,6 +192,16 @@ Current v1 defer rationale on 2026-03-15:
 - `ecosystem/fret-authoring/src/query.rs` exposes an authoring-surface wrapper over query helpers,
 - `ecosystem/fret-router/src/query_integration.rs` only contributes query-key helpers,
 - this is still not a second reusable-consumer pair with a materially shared adapter contract.
+
+Current guardrail posture on 2026-03-15:
+
+- `ecosystem/fret-ui-kit/src/declarative/model_watch.rs` keeps `QueryHandleWatchExt` behind the
+  `state-query` feature and off the default declarative prelude.
+- `ecosystem/fret-ui-shadcn/src/state.rs` remains the explicit recipe-layer home for selector/query
+  badges and alerts behind `state-selector` / `state-query`.
+- `ecosystem/fret-ui-kit/src/lib.rs` source-policy tests reject direct `fret_query` /
+  `fret_selector` imports across `src/primitives`, `src/recipes`, and the neighboring
+  `../fret-ui-headless/src` base-layer surface.
 
 ## 4. Ownership Boundaries
 
