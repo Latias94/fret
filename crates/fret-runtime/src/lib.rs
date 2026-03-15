@@ -82,7 +82,8 @@ pub mod window_text_input_snapshot;
 pub use action::{ActionId, ActionMeta, ActionRegistry, TypedAction};
 pub use action_payload::WindowPendingActionPayloadService;
 pub use asset_resolver::{
-    AssetResolverService, asset_capabilities, asset_resolver, resolve_asset_bytes,
+    AssetResolverService, asset_capabilities, asset_resolver, register_asset_resolver,
+    register_bundle_asset_entries, register_embedded_asset_entries, resolve_asset_bytes,
     resolve_asset_locator_bytes, set_asset_resolver,
 };
 pub use capabilities::{

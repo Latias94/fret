@@ -67,7 +67,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `AssetResolver` / `ResolvedAssetBytes` in `crates/fret-assets`
     - `StaticAssetEntry` plus bulk `InMemoryAssetResolver::insert_*_entries(...)`
-    - runtime host mounting via `crates/fret-runtime/src/asset_resolver.rs`
+    - composable runtime host mounting via `crates/fret-runtime/src/asset_resolver.rs`
+      (`register_asset_resolver`, `register_bundle_asset_entries`,
+      `register_embedded_asset_entries`)
     - UI bridge helpers via `ecosystem/fret-ui-assets/src/asset_resolver.rs`
   - Remaining:
     - explicit external URI/path handoff contract
@@ -146,7 +148,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       surfaces.
   - Current landed slice:
     - `apps/fret-cookbook/examples/icons_and_assets_basics.rs` now teaches
-      `bundle locator + host resolver + static asset entries`
+      `bundle locator + composable host resolver + static asset entries`
     - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` is explicitly labeled as the
       native/dev file-path escape hatch instead of the portable default story
   - Remaining:

@@ -47,6 +47,9 @@ This workstream takes a fearless posture:
 - Runtime host attachment has started:
   - `crates/fret-runtime/src/asset_resolver.rs` now exposes a host-level
     `AssetResolverService`.
+  - The host service is composable instead of replace-only:
+    - multiple resolver layers can be registered,
+    - static bundle/embedded entries can be registered incrementally by app or ecosystem code.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.

@@ -1,12 +1,9 @@
 use fret::{FretApp, advanced::prelude::*, shadcn};
-use fret_assets::{
-    AssetLocator, AssetRequest, AssetRevision, InMemoryAssetResolver, StaticAssetEntry,
-};
+use fret_assets::{AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry};
 use fret_core::{ImageColorSpace, ImageId};
 use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, LayoutStyle, SvgIconProps};
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
-use std::sync::Arc;
 
 const TEST_ID_ROOT: &str = "cookbook.icons_and_assets_basics.root";
 const TEST_ID_PANEL_ICONS: &str = "cookbook.icons_and_assets_basics.panel.icons";
@@ -74,8 +71,8 @@ fn render_image_preview(
 }
 
 fn install_demo_asset_resolver(app: &mut KernelApp) {
-    let mut resolver = InMemoryAssetResolver::new();
-    resolver.insert_bundle_entries(
+    fret_runtime::register_bundle_asset_entries(
+        app,
         COOKBOOK_ASSET_BUNDLE,
         [
             StaticAssetEntry::new(COOKBOOK_IMAGE_KEY, AssetRevision(1), COOKBOOK_IMAGE_BYTES)
@@ -84,7 +81,6 @@ fn install_demo_asset_resolver(app: &mut KernelApp) {
                 .with_media_type("image/svg+xml"),
         ],
     );
-    fret_runtime::set_asset_resolver(app, Arc::new(resolver));
 }
 
 struct IconsAndAssetsBasicsView {
