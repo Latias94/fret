@@ -32,32 +32,39 @@ Closeout note on 2026-03-15:
 - the app/component/advanced split itself does not need another broad redesign pass here,
 - remaining work is mainly docs cleanup, delete-ready follow-through, and keeping links/gates
   aligned with the now-separate conversion-surface closeout.
+- the next real product-surface pressure is no longer "how do we split app/component/advanced?",
+  but rather:
+  - finishing delete-ready cleanup on old root aliases and stale docs,
+  - keeping the conversion surface accurate in
+    `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
+  - handling any future action-surface ergonomics in
+    `docs/workstreams/action-first-authoring-fearless-refactor-v1/`.
 
 ## M0 — Freeze the target product surface
 
-- [ ] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for the desired public surface.
+- [x] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for the desired public surface.
 - [x] Finalize `MIGRATION_MATRIX.md` as the single execution tracker for old surface removal.
-- [ ] Decide and lock the canonical names:
+- [x] Decide and lock the canonical names:
   - [x] `FretApp`
   - [x] `App`
   - [x] `KernelApp`
   - [x] `WindowId`
   - [x] `AppUi`
   - [x] `Ui`
-- [ ] Define the three public surface tiers:
+- [x] Define the three public surface tiers:
   - [x] app surface
   - [x] component surface
   - [x] advanced surface
-- [ ] List every public-looking symbol that should be:
-  - [ ] kept on the app surface
-  - [ ] moved to the component surface
-  - [ ] moved to the advanced surface
-  - [ ] deleted entirely
-- [ ] Mark the initial status for every migration row:
-  - [ ] surface lanes
-  - [ ] ecosystem crates
-  - [ ] docs/templates/examples
-  - [ ] hard-delete rows
+- [x] List every public-looking symbol that should be:
+  - [x] kept on the app surface
+  - [x] moved to the component surface
+  - [x] moved to the advanced surface
+  - [x] deleted entirely
+- [x] Mark the initial status for every migration row:
+  - [x] surface lanes
+  - [x] ecosystem crates
+  - [x] docs/templates/examples
+  - [x] hard-delete rows
 
 ## M1 — Split the public preludes and imports
 
@@ -179,9 +186,11 @@ Closeout note on 2026-03-15:
   stay generic over `H: UiHost` or define an explicit advanced entry seam.
 - [x] Normalize the first-party UI Gallery routed page surface to `UiCx` and add source gates for
   the default app-facing teaching surface.
-- [ ] Keep the follow-on `into-element-surface-fearless-refactor-v1` tracker linked from repo
+- [x] Keep the follow-on `into-element-surface-fearless-refactor-v1` tracker linked from repo
   indexes and active workstream docs so conversion-surface cleanup has an explicit owner after the
   app/component/advanced split lands.
+- [x] Record that future default-authoring ergonomics work belongs to
+  `action-first-authoring-fearless-refactor-v1` rather than reopening this split workstream.
 - [x] Finish migrating the remaining first-party UI Gallery internal preview surface to `UiCx`
   before deleting the old `ElementContext<'_, App>` teaching seam.
   - Current bounded remainder on 2026-03-11 after the editor/torture batch: `0 / 92`
