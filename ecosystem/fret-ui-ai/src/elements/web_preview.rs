@@ -21,7 +21,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, Items, Justify, LayoutRefinement, Radius, Size,
     Space, ui,
 };
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, Input, OnInputSubmit,
     Tooltip, TooltipContent, TooltipTrigger,
 };

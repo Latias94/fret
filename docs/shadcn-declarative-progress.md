@@ -99,6 +99,9 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
   `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and
   `widget.listen(cx, |host, acx| { ... })` for activation-only surfaces via
   `fret::app::AppActivateSurface` / `AppActivateExt`.
+  That sugar intentionally works from both `View::render(&mut AppUi)` and extracted `UiCx`
+  helper functions, so first-party snippets do not need to reopen raw `.on_activate(...)` after
+  being factored into smaller helpers.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.
@@ -161,6 +164,18 @@ Guidelines:
 - Prefer composing shadcn components over introducing new wrapper nodes.
 - First-party app surfaces should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`;
   `apps/fret-examples` and the curated `apps/fret-ui-gallery` snippet batches are now gated this way.
+- First-party non-demo ecosystem crates should avoid the flat `fret_ui_shadcn::{Button, ...}` root
+  lane as well; `ecosystem/fret-ui-ai/src/elements/**` now stays on explicit `facade::*` /
+  documented `raw::*` imports, with both a crate-local source test and the repo-level
+  `tools/gate_fret_ui_ai_curated_shadcn_surfaces.py` check enforcing that rule.
+- For widgets that already expose stable action slots, prefer `.action(...)` /
+  `.action_payload(...)`; curated first-party button and action-capable UI Gallery slices are now
+  policy-gated away from legacy `.on_click(...)`.
+- For activation-only surfaces rendered inside a `fret` app shell, prefer
+  `use fret::view::AppActivateExt as _;` plus `.dispatch::<A>(cx)` /
+  `.dispatch_payload::<A>(cx, payload)` / `.listen(cx, ...)`; do not reopen raw `.on_activate(...)`
+  on first-party snippet surfaces unless the example is intentionally documenting a raw/advanced
+  seam.
 - Non-curated seams should stay explicit in app code: use `fret_ui_shadcn::advanced::*` for
   environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
   lanes (`typography` prose helpers, `extras`, breadcrumb primitives, and low-level icon helpers)

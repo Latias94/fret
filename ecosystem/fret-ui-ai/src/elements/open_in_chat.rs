@@ -12,7 +12,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ColorRef, Items, LayoutRefinement, Space};
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
     DropdownMenuSide,
 };

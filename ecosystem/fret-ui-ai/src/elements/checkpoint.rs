@@ -11,10 +11,10 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
-use fret_ui_shadcn::raw::button::ButtonStyle;
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Separator, Tooltip, TooltipAlign, TooltipSide,
 };
+use fret_ui_shadcn::raw::button::ButtonStyle;
 
 /// Checkpoint row aligned with AI Elements `Checkpoint`.
 #[derive(Debug)]

@@ -13,11 +13,11 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Space,
     WidgetStateProperty, WidgetStates,
 };
-use fret_ui_shadcn::raw::button::ButtonStyle;
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, ScrollArea, Tooltip, TooltipContent, TooltipProvider,
     TooltipTrigger,
 };
+use fret_ui_shadcn::raw::button::ButtonStyle;
 
 fn alpha_mul(color: Color, mul: f32) -> Color {
     let mul = mul.clamp(0.0, 1.0);

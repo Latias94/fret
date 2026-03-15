@@ -25,11 +25,11 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
-use fret_ui_shadcn::raw::button::ButtonStyle;
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, CollapsibleTrigger,
     ScrollArea,
 };
+use fret_ui_shadcn::raw::button::ButtonStyle;
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {

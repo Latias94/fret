@@ -143,9 +143,9 @@ Priority correction on 2026-03-15:
   - [x] First batch on 2026-03-15: remove raw `on_activate`, `on_activate_notify`,
     `on_activate_request_redraw`, and `on_activate_request_redraw_notify` free-function exports
     from `fret::app::prelude::*`; the default app lane now teaches widget-local
-    `.on_activate(cx.actions().dispatch::<A>())` / `.listener(...)` instead.
+    `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` / `.listen(cx, ...)` instead.
   - [x] Second batch on 2026-03-15: move high-frequency icon/style nouns off
-    `fret::app::prelude::*` into explicit `fret::icons::IconId` and `fret::style::{Theme,
+    `fret::app::prelude::*` into explicit `fret::icons::{icon, IconId}` and `fret::style::{Theme,
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space}`
     lanes, then migrate first-party cookbook/examples/templates/readmes to those explicit imports.
   - [x] Third batch on 2026-03-15: move adaptive declarative helpers (`tailwind`,
@@ -161,6 +161,14 @@ Priority correction on 2026-03-15:
     `.a11y_role(...)`, and `.test_id(...)` remain high-frequency first-party app/gallery
     capabilities and are therefore treated as app-justified helper affordances rather than more
     prelude debt to delete.
+  - [x] Sixth batch on 2026-03-15: keep `CommandId` on the default app lane, but remove it from
+    `fret::component::prelude::*` and point reusable component code at explicit
+    `fret::actions::CommandId` / `fret-runtime` imports instead.
+  - [x] Seventh batch on 2026-03-15: move `SemanticsRole` off `fret::app::prelude::*` into an
+    explicit `fret::semantics::SemanticsRole` lane while keeping the `.role(...)` /
+    `.a11y_role(...)` helper methods on the default app lane.
+  - [x] Eighth batch on 2026-03-15: audit `Px` and keep it intentionally on both app and
+    component preludes as the shared low-friction unit type for everyday Fret authoring.
   - Minimum audit set:
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
@@ -175,10 +183,17 @@ Priority correction on 2026-03-15:
     traits, while reusable component plumbing remains discoverable through the component lane.
 - [x] Update crate-level docs to teach the new split.
   - README todo taste example now imports `Space` explicitly from `fret::style`.
-  - `ecosystem/fret/README.md` calls out `fret::style::{...}`, `fret::icons::IconId`, and
+  - `ecosystem/fret/README.md` calls out `fret::style::{...}`, `fret::icons::{icon, IconId}`, and
     `fret::env::{...}` as the explicit secondary app lanes.
   - `docs/crate-usage-guide.md` now teaches style/icon nouns as explicit imports rather than part
     of `fret::app::prelude::*`, and points adaptive helpers at `fret::env::{...}`.
+  - `docs/crate-usage-guide.md` now also teaches reusable component authors to import
+    `fret::actions::CommandId` explicitly instead of expecting it from
+    `fret::component::prelude::*`.
+  - `ecosystem/fret/README.md` and `docs/crate-usage-guide.md` now teach
+    `fret::semantics::SemanticsRole` as the explicit app-facing semantic-role lane.
+  - `TARGET_INTERFACE_STATE.md` now records `Px` as an intentional shared primitive instead of
+    treating it as unresolved prelude overlap debt.
 
 ## M2 — Reset the app authoring API
 
@@ -232,6 +247,15 @@ Priority correction on 2026-03-15:
       `ecosystem/fret`, non-test first-party workspace code no longer contains
       `fret_ui_shadcn::*` flat root/component calls outside explicit `facade::*` / `raw::*` /
       `advanced::*` seams.
+    - 2026-03-15 progress: `ecosystem/fret-ui-ai/src/elements/**` now imports shadcn components
+      from `fret_ui_shadcn::facade::*` (with `raw::*` retained only for documented escape hatches).
+    - 2026-03-15 progress: `ecosystem/fret-ui-ai/tests/shadcn_import_surface.rs` records the
+      crate-local source policy, and `tools/gate_fret_ui_ai_curated_shadcn_surfaces.py` now keeps
+      the wider first-party workspace on the same curated-lane rule.
+    - 2026-03-15 progress: the repo-level gate is wired into `tools/pre_release.py`, and
+      `cargo check -p fret-ui-ai --lib` is green again after fixing the local `mic_selector.rs` /
+      `voice_selector.rs` `Vec::new()` inference residue that was masking the import-lane
+      closeout.
     - Remaining bounded cleanup after the gallery pass: non-gallery first-party consumers
       is now reduced to selected internal tests/docs strings plus any future crates that reintroduce
       flat root drift.
@@ -370,6 +394,9 @@ Priority correction on 2026-03-15:
 - [x] Add a gate that first-party ecosystem crates use documented extension seams.
   - [x] Shadcn docs/examples now gate the curated `shadcn::app::*` seam, explicit advanced hooks,
     and the documented raw escape-hatch lanes.
+  - [x] `fret-ui-ai` now also gates curated shadcn imports through both
+    `ecosystem/fret-ui-ai/tests/shadcn_import_surface.rs` and the repo-level
+    `tools/gate_fret_ui_ai_curated_shadcn_surfaces.py` check that runs in `tools/pre_release.py`.
   - [x] Router cookbook/docs now gate the `fret::router::*` seam.
   - [x] `fret-router-ui` now gates its thin adoption-layer posture and forbids growing a second
     app runtime surface.

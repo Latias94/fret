@@ -7,7 +7,7 @@ use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 };
 

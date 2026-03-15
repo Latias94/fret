@@ -127,6 +127,18 @@ def main(argv: list[str]) -> int:
         [py, str(repo_root / "tools/gate_menu_action_default_surfaces.py")],
     )
     _run_checked(
+        "Button default surface policy (prefer action)",
+        [py, str(repo_root / "tools/gate_button_action_default_surfaces.py")],
+    )
+    _run_checked(
+        "UI Gallery action-capable surface policy (prefer action)",
+        [py, str(repo_root / "tools/gate_gallery_action_alias_default_surfaces.py")],
+    )
+    _run_checked(
+        "AI elements shadcn import policy",
+        [py, str(repo_root / "tools/gate_fret_ui_ai_curated_shadcn_surfaces.py")],
+    )
+    _run_checked(
         "Curated internal menu surface policy (prefer action)",
         [py, str(repo_root / "tools/gate_menu_action_curated_internal_surfaces.py")],
     )
