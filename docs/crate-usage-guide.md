@@ -129,6 +129,8 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::IconId`.
+Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
+instead of treating breakpoint/media helpers as part of the default app vocabulary.
 
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now

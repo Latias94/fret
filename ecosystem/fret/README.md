@@ -120,6 +120,8 @@ fn main() -> fret::Result<()> {
 If app code needs explicit style/token nouns or icon IDs beyond the default lane, import them from
 `fret::style::{...}` and `fret::icons::IconId` instead of expecting them from
 `fret::app::prelude::*`.
+For adaptive UI helpers such as breakpoints, safe-area insets, pointer/media preferences, or
+Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
 
 ## Features
 

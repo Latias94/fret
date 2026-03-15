@@ -148,10 +148,12 @@ Priority correction on 2026-03-15:
     `fret::app::prelude::*` into explicit `fret::icons::IconId` and `fret::style::{Theme,
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space}`
     lanes, then migrate first-party cookbook/examples/templates/readmes to those explicit imports.
+  - [x] Third batch on 2026-03-15: move adaptive declarative helpers (`tailwind`,
+    container/viewport breakpoint helpers, safe-area/pointer/media preference helpers, related
+    inset probes) off `fret::app::prelude::*` into an explicit `fret::env::{...}` lane.
   - Minimum audit set:
-    - remaining broad declarative helper families in the app prelude that may still blur app vs
-      component authoring (`tailwind`, container/viewport query helpers, related environment
-      probes),
+    - any remaining broad declarative helper families in the app prelude that may still blur app
+      vs component authoring after the explicit `fret::env` split,
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
     - raw `on_activate*` helper exports that now compete with the grouped app-facing
@@ -162,10 +164,10 @@ Priority correction on 2026-03-15:
     traits, while reusable component plumbing remains discoverable through the component lane.
 - [x] Update crate-level docs to teach the new split.
   - README todo taste example now imports `Space` explicitly from `fret::style`.
-  - `ecosystem/fret/README.md` calls out `fret::style::{...}` / `fret::icons::IconId` as the
-    explicit secondary app lanes.
+  - `ecosystem/fret/README.md` calls out `fret::style::{...}`, `fret::icons::IconId`, and
+    `fret::env::{...}` as the explicit secondary app lanes.
   - `docs/crate-usage-guide.md` now teaches style/icon nouns as explicit imports rather than part
-    of `fret::app::prelude::*`.
+    of `fret::app::prelude::*`, and points adaptive helpers at `fret::env::{...}`.
 
 ## M2 — Reset the app authoring API
 

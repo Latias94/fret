@@ -90,6 +90,22 @@ pub mod style {
     };
 }
 
+/// Explicit environment and responsive helpers for app code that opts into adaptive UI logic.
+pub mod env {
+    pub use fret_ui_kit::declarative::{
+        accent_color, container_breakpoints, container_query_region,
+        container_query_region_with_id, container_width_at_least, contrast_preference,
+        forced_colors_active, forced_colors_mode, occlusion_insets, occlusion_insets_or_zero,
+        preferred_color_scheme, prefers_dark_color_scheme, prefers_more_contrast,
+        prefers_reduced_motion, prefers_reduced_transparency, primary_pointer_can_hover,
+        primary_pointer_is_coarse, primary_pointer_type, safe_area_insets,
+        safe_area_insets_or_zero, tailwind, text_scale_factor, viewport_aspect_ratio,
+        viewport_breakpoints, viewport_height_at_least, viewport_height_breakpoints,
+        viewport_is_landscape, viewport_is_portrait, viewport_orientation, viewport_tailwind,
+        viewport_width_at_least, window_insets_padding_refinement_or_zero,
+    };
+}
+
 pub mod actions;
 pub mod view;
 pub mod workspace_menu;
@@ -261,18 +277,6 @@ pub mod app {
         pub use fret_ui_kit::declarative::UiElementKeyContextExt as _;
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
         pub use fret_ui_kit::declarative::icon;
-        pub use fret_ui_kit::declarative::{
-            accent_color, container_breakpoints, container_query_region,
-            container_query_region_with_id, container_width_at_least, contrast_preference,
-            forced_colors_active, forced_colors_mode, occlusion_insets, occlusion_insets_or_zero,
-            preferred_color_scheme, prefers_dark_color_scheme, prefers_more_contrast,
-            prefers_reduced_motion, prefers_reduced_transparency, primary_pointer_can_hover,
-            primary_pointer_is_coarse, primary_pointer_type, safe_area_insets,
-            safe_area_insets_or_zero, tailwind, text_scale_factor, viewport_aspect_ratio,
-            viewport_breakpoints, viewport_height_at_least, viewport_height_breakpoints,
-            viewport_is_landscape, viewport_is_portrait, viewport_orientation, viewport_tailwind,
-            viewport_width_at_least, window_insets_padding_refinement_or_zero,
-        };
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
 
@@ -1537,6 +1541,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`state`: enable selector/query helpers on `AppUi`"));
         assert!(CRATE_README.contains("`fret::style::{...}`"));
         assert!(CRATE_README.contains("`fret::icons::IconId`"));
+        assert!(CRATE_README.contains("`fret::env::{...}`"));
         assert!(!CRATE_README.contains(".run_view::<"));
         assert!(!CRATE_README.contains(".install_app("));
         assert!(!CRATE_README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
@@ -1741,6 +1746,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::IconId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().dispatch::<A>())`"));
         assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().listener(...))`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
@@ -1954,6 +1960,13 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("ShadowPreset"));
         assert!(!app_prelude_exports_symbol("Size"));
         assert!(!app_prelude_exports_symbol("Space"));
+        assert!(!app_prelude_exports_symbol("accent_color"));
+        assert!(!app_prelude_exports_symbol("tailwind"));
+        assert!(!app_prelude_exports_symbol("container_breakpoints"));
+        assert!(!app_prelude_exports_symbol("preferred_color_scheme"));
+        assert!(!app_prelude_exports_symbol("safe_area_insets"));
+        assert!(!app_prelude_exports_symbol("viewport_breakpoints"));
+        assert!(!app_prelude_exports_symbol("viewport_tailwind"));
         assert!(!app_prelude_exports_symbol("on_activate"));
         assert!(!app_prelude_exports_symbol("on_activate_notify"));
         assert!(!app_prelude_exports_symbol("on_activate_request_redraw"));
@@ -2079,6 +2092,19 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
         assert!(root_header.contains("Radius, ShadowPreset, Size,"));
         assert!(root_header.contains("Space,"));
+    }
+
+    #[test]
+    fn root_surface_exposes_explicit_env_module() {
+        let root_header = root_surface_header_source();
+
+        assert!(root_header.contains("pub mod env {"));
+        assert!(root_header.contains("accent_color, container_breakpoints, container_query_region,"));
+        assert!(root_header.contains("preferred_color_scheme, prefers_dark_color_scheme"));
+        assert!(root_header.contains("safe_area_insets,"));
+        assert!(root_header.contains("viewport_breakpoints, viewport_height_at_least"));
+        assert!(root_header.contains("viewport_tailwind,"));
+        assert!(root_header.contains("window_insets_padding_refinement_or_zero,"));
     }
 
     #[test]

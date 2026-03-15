@@ -46,9 +46,9 @@ reopening this one.
 
 ## Current next-step order (2026-03-15)
 
-1. Finish the remaining `fret::app::prelude::*` narrowing after the landed style/icon split:
-   revisit declarative helper families that still blur app vs component authoring and decide which
-   stay app-justified vs move to explicit secondary lanes.
+1. Finish the remaining `fret::app::prelude::*` narrowing after the landed style/icon/env splits:
+   revisit whether any overlap-heavy semantics/test-id/key-context helpers still deserve app-lane
+   presence or should move to explicit secondary lanes.
 2. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
    maintenance/gates when new first-party code tries to reintroduce crate-root drift.
 3. Finish the conversion-surface reset under
