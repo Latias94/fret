@@ -158,6 +158,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       (`register_bundle_entries`, `register_embedded_entries`, `register_resolver`)
     - `register_file_manifest(...)` now exposes the first native/package-dev manifest lane on the
       app-facing facade
+    - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest
+      lane on the builder/startup surface
     - cookbook asset basics now teaches the facade lane instead of direct
       `fret-assets` / `fret-runtime` imports
   - Remaining:

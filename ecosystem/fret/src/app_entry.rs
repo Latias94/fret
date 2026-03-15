@@ -3,6 +3,8 @@
 //! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
 //! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
 
+use std::path::PathBuf;
+
 use crate::{Defaults, Result, UiAppBuilder, UiAppDriver, integration::InstallIntoApp};
 
 type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
@@ -19,6 +21,7 @@ pub struct FretApp {
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
     command_palette: bool,
+    asset_manifests: Vec<PathBuf>,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
 }
@@ -34,6 +37,7 @@ impl FretApp {
             main_window: None,
             defaults: Defaults::default(),
             command_palette: false,
+            asset_manifests: Vec::new(),
             setup_hooks: Vec::new(),
             install_hooks: Vec::new(),
         }
@@ -71,6 +75,15 @@ impl FretApp {
             svg_budget_bytes,
             svg_max_ready_entries,
         );
+        self
+    }
+
+    /// Register a native/package-dev asset manifest on the default app builder path.
+    ///
+    /// This keeps logical bundle keys on the builder surface instead of teaching ad-hoc runtime
+    /// resolver registration inside app setup or widget code.
+    pub fn asset_manifest(mut self, manifest_path: impl Into<PathBuf>) -> Self {
+        self.asset_manifests.push(manifest_path.into());
         self
     }
 
@@ -128,6 +141,7 @@ impl FretApp {
             main_window,
             defaults,
             command_palette,
+            asset_manifests,
             setup_hooks,
             install_hooks,
         } = self;
@@ -165,6 +179,7 @@ impl FretApp {
             root_name,
             main_window,
             defaults,
+            asset_manifests,
             setup_hooks,
             install_hooks,
             driver,
@@ -185,6 +200,7 @@ fn finish_builder<S: 'static>(
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
+    asset_manifests: Vec<PathBuf>,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     driver: UiAppDriver<S>,
@@ -205,6 +221,9 @@ fn finish_builder<S: 'static>(
         .map_err(crate::BootstrapError::from)?;
     let mut builder = UiAppBuilder::from_bootstrap(builder);
     builder = apply_main_window(root_name, main_window, builder);
+    for manifest_path in asset_manifests {
+        builder = builder.with_asset_manifest(manifest_path)?;
+    }
     Ok(builder)
 }
 

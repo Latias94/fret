@@ -138,6 +138,9 @@ Do the same for logical assets: import them intentionally from `fret::assets::{.
 On native/package-dev lanes, `fret::assets::register_file_manifest(...)` is the first-party
 file-backed manifest path when you need logical bundle keys to map to packaged or dev-time files
 without teaching raw repo-relative paths in app/widget code.
+If you are already on the `fret` builder path, prefer `FretApp::asset_manifest(...)` or
+`UiAppBuilder::with_asset_manifest(...)` so manifest validation fails early during startup
+configuration instead of being buried in app-local setup glue.
 
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
@@ -399,6 +402,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 - **Apps using `fret`:** keep logical asset identity on `fret::assets::{AssetLocator, AssetRequest, StaticAssetEntry, register_bundle_entries, register_embedded_entries, ...}` and enable
   `fret`'s `ui-assets` feature when you want the default image/SVG caches driven from the event pipeline.
+  On native/package-dev lanes, prefer `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)`
+  before dropping to `fret::assets::register_file_manifest(...)`.
 - **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or

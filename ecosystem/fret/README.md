@@ -127,6 +127,8 @@ For logical assets, use `fret::assets::{...}` and prefer `AssetBundleId::app(...
 keep `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches.
 On native/package-dev lanes, `fret::assets::register_file_manifest(...)` can mount a
 file-backed bundle manifest without pushing repo-relative paths into widget code.
+On the app-facing builder path, prefer `FretApp::asset_manifest(...)` or
+`UiAppBuilder::with_asset_manifest(...)` so manifest loading stays in startup/configuration code.
 
 ## Features
 
@@ -173,7 +175,8 @@ Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` 
 following seams first-class:
 
 - `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
-- `UiAppBuilder::{configure(...), setup(...), setup_with(...)}`
+- `FretApp::asset_manifest(...)` for native/package-dev logical bundle manifests
+- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_manifest(...)}`
 - `fret::advanced::FretAppAdvancedExt::install(...)`
 - `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
