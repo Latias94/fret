@@ -184,6 +184,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Renderer (ordering, batching, shapes/SDF)**: `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0002-display-list.md`
 - **Renderer clipping (soft/rounded)**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - **Icons (semantic keys + SVG-first packaging)**: `docs/adr/0065-icon-system-and-asset-packaging.md`
+- **Portable asset locator + resolver contract**: `docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md`, `docs/adr/0065-icon-system-and-asset-packaging.md`, `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
 - **Editor interaction affordances (selection/docking highlights)**: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0011-overlays-and-multi-root.md`
 - **Engine viewports (embedded 3D)**: `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - **Viewport tools and overlays**: `docs/adr/0153-viewport-tooling-host-helpers-and-arbitration-v1.md`, `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
@@ -330,6 +331,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `docs/adr/0099-markdown-rendering-streaming-and-injection.md`
 - `docs/adr/0065-icon-system-and-asset-packaging.md`
+- `docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
 - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
@@ -414,6 +416,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
 - `docs/adr/0111-ecosystem-integration-contracts.md`
 - `docs/adr/0112-ui-assets-facade-and-golden-path-wiring.md`
+- `docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md`
 - `docs/adr/0092-crate-structure-core-backends-apps.md`
 - `docs/adr/0089-radix-aligned-headless-primitives-in-fret-components-ui.md`
 - `docs/adr/0100-headless-table-engine.md`

@@ -8,6 +8,8 @@ Deliverables:
 - The wasm compile break is fixed.
 - The portability/capability matrix is written down in a way that matches reality.
 - The ADR/design documents for the new asset contract are ready for implementation.
+- Accepted ADR coverage now includes the icon ownership bridge (`0065`) and the general portable
+  locator/resolver contract (`0317`).
 
 Exit criteria:
 

@@ -11,7 +11,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Design lock
 
-- [~] RESLOAD-adr-010 Add or update the hard-contract ADR(s) for the portable asset model.
+- [x] RESLOAD-adr-010 Add or update the hard-contract ADR(s) for the portable asset model.
   - Minimum scope:
     - locator kinds,
     - bundle/key identity,
@@ -26,9 +26,13 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - app/bootstrap code may explicitly override afterwards,
       - reusable crates keep icon semantics on `IconId` while non-icon shipped bytes live on the
         package asset contract.
-  - Remaining:
-    - general asset locator/revision/capability/diagnostics contract still needs its own final ADR
-      or accepted ADR update beyond the icon-pack bridge
+    - `docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md` now locks:
+      - the portable default story as logical `bundle + key`,
+      - locator-kind semantics and truthful capability gating,
+      - ordered host resolver precedence,
+      - revision/invalidation expectations,
+      - runtime-vs-startup diagnostics boundaries,
+      - builder-lane vs installer-lane startup surfaces.
 
 - [ ] RESLOAD-audit-020 Record the current incorrect logic explicitly in the relevant audits and
       workstreams so the migration does not drift back toward path-first design.
@@ -128,8 +132,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Remaining:
     - first-party docs should show when bundle ownership belongs in the generated asset module vs a
       hand-written higher-level recipe bundle that also composes icon packs
-    - icon-pack conflict policy still needs one final public hard-contract write-up that connects
-      `IconRegistry` to the longer-term general asset contract
+    - first-party docs still need a cleaner “when to publish `Embedded` vs when to publish
+      `BundleAsset`” authoring note for reusable crates
 
 ## Packaging and startup
 
