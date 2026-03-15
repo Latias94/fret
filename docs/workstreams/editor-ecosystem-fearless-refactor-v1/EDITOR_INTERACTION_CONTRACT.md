@@ -194,8 +194,10 @@ Recommended first-party authoring pattern:
 - use `NumericPresentation<T>` when one surface needs to carry text formatting/parsing plus control
   chrome affixes as one reusable bundle,
 - keep editable unit text inside the formatter/parser pair rather than in chrome affixes,
-- and treat `presentation.parts()` as the preferred glue when wiring the same numeric story into
-  `DragValue`, `NumericInput`, `Slider`, or higher-level editor composites.
+- prefer per-control `from_presentation(...)` constructors when wiring the same numeric story into
+  `DragValue`, `NumericInput`, `Slider`, `VecEdit`, or other editor composites that expose that
+  lane, and treat `presentation.parts()` as fallback glue when a control does not yet have its own
+  constructor.
 
 ### Modifier defaults
 

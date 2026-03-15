@@ -26,8 +26,8 @@ use crate::primitives::numeric_text_entry::{
 };
 use crate::primitives::numeric_value::NumericValueConstraints;
 use crate::primitives::readout::EditorCompactReadoutStyle;
-use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
+use crate::primitives::{NumericPresentation, style::EditorStyle};
 use fret_core::text::TextOverflow;
 use fret_core::{Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign};
 use fret_runtime::Model;
@@ -253,6 +253,21 @@ where
             validate: None,
             options: SliderOptions::default(),
         }
+    }
+
+    /// Construct a slider from a shared editor authoring bundle.
+    pub fn from_presentation(
+        model: Model<T>,
+        min: f64,
+        max: f64,
+        presentation: NumericPresentation<T>,
+    ) -> Self {
+        let mut slider = Self::new(model, min, max);
+        slider.format = presentation.format();
+        slider.parse = presentation.parse();
+        slider.options.prefix = presentation.chrome_prefix().cloned();
+        slider.options.suffix = presentation.chrome_suffix().cloned();
+        slider
     }
 
     pub fn format(mut self, format: NumericFormatFn<T>) -> Self {
@@ -895,7 +910,10 @@ mod tests {
     use std::sync::Arc;
 
     use super::compose_affixed_value_text;
+    use crate::controls::Slider;
+    use crate::primitives::NumericPresentation;
     use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
+    use fret_app::App;
 
     #[test]
     fn compose_affixed_value_text_keeps_plain_value_when_no_affix() {
@@ -924,5 +942,21 @@ mod tests {
             compose_affixed_value_text(&value, None, suffix.as_ref()).as_ref(),
             "25%"
         );
+    }
+
+    #[test]
+    fn slider_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(0.25f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(1)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let slider = Slider::from_presentation(model, 0.0, 1.0, presentation);
+
+        assert_eq!((slider.format)(0.25).as_ref(), "0.2");
+        assert_eq!((slider.parse)("0.2"), Some(0.2));
+        assert_eq!(slider.options.prefix, Some(Arc::from("$")));
+        assert_eq!(slider.options.suffix, Some(Arc::from("ms")));
     }
 }

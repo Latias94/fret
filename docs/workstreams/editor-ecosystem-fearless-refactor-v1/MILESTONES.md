@@ -172,6 +172,8 @@ Goal:
 Deliverables:
 
 - `DragValue` closure for real editor workflows,
+- a preferred first-party numeric authoring lane (`NumericPresentation<T>` plus
+  `from_presentation(...)` constructors where controls/composites own prefix/suffix chrome),
 - richer text-input policy for editor surfaces beyond the shared buffered baseline
   (deciding where shared overlay/scroll/selection policy should live now that the
   popup-capable `fret-ui-kit` text-assist glue plus `TextAssistField` recipe have both object-name
@@ -184,6 +186,8 @@ Deliverables:
 Exit gates:
 
 - starter-set controls do not keep parallel declarative and `imui` implementations,
+- first-party numeric editor surfaces stop open-coding `(format, parse, prefix, suffix)` bundles
+  when the shared `NumericPresentation<T>` constructor lane already exists,
 - `imui_editor_proof_demo` or an equivalent promoted proof surface covers the core editor set,
 - focused gates exist for edit-session commit/cancel, state-identity correctness, and screenshot
   baseline review,

@@ -278,20 +278,24 @@ Interaction contract:
       editing now consumes that shared `°` story instead of keeping another ad-hoc closure pair.
       A first lightweight higher-level authoring bundle now also exists as
       `NumericPresentation<T>`, which groups `format` / `parse` with control-chrome affixes
-      without widening the public control API, and the promoted proof/demo surface now reuses it
-      for fixed-decimal numeric examples plus the currency-like `DragValue` / percent `Slider`
-      teaching surfaces. `GradientEditor` now also consumes the same bundle for angle and
-      stop-position editing, so the abstraction already has a non-proof first-party composite
-      consumer inside `fret-ui-editor`.
+      without widening the public control API. That surface now has a concrete first-party
+      constructor lane too: `NumericInput`, `DragValue`, `AxisDragValue`, `Slider`, and
+      `VecEdit` variants all expose `from_presentation(...)`, and the promoted proof/demo surface
+      now routes its fixed-decimal, currency-like, percent, and advanced-position examples
+      through that path instead of open-coding `(format, parse, prefix, suffix)` bundles.
+      `GradientEditor` now also consumes the same bundle for angle and stop-position editing, so
+      the abstraction already has a non-proof first-party composite consumer inside
+      `fret-ui-editor`.
       `VecEdit` now also exposes `(axis, outcome)` and `TransformEdit` now exposes
       `(section, axis, outcome)` at the same editor-layer seam, with promoted proof readouts at
       `imui-editor-proof.editor.advanced.position.outcome` and
       `imui-editor-proof.editor.advanced.transform.outcome`, plus a focused gate at
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`.
-      Remaining work: decide whether `NumericPresentation<T>` should become the recommended editor
-      authoring path for more first-party controls/composites, and only widen the composite outcome
-      payload beyond section/axis/session when a second consumer proves richer metadata is actually
-      needed.
+      Remaining work: keep `NumericPresentation<T>` as the recommended first-party authoring path
+      whenever one editor surface needs to carry formatting/parsing plus chrome affixes together,
+      decide whether any higher-level composite beyond `VecEdit` actually needs its own direct
+      `from_presentation(...)` lane, and only widen the composite outcome payload beyond
+      section/axis/session when a second consumer proves richer metadata is actually needed.
 - [~] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
       password mode, completion/history hook placeholders, and richer editing hooks.
       Recent progress: buffered `TextField` now covers both single-line and multiline edit sessions

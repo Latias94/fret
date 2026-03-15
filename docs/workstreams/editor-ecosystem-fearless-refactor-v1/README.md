@@ -145,13 +145,14 @@ Current checkpoint:
   numeric labels: `NumericTextAffixes`, `affixed_number_format`, `affixed_number_parse`,
   `degrees_format`, and `degrees_parse` now live in `fret-ui-editor::primitives`, and
   `GradientEditor` angle editing no longer keeps a private `°` formatter/parser pair,
-- the same numeric authoring surface now also has a first lightweight bundling layer above raw
-  `format` / `parse` closures: `NumericPresentation<T>` groups text formatting/parsing with
-  control-chrome affixes, the promoted proof/demo surface now reuses that bundle for
-  fixed-decimal numeric examples, currency-like `DragValue`, and percent `Slider` authoring
-  instead of wiring those pieces through ad-hoc formatter/parser pairs, and `GradientEditor` now
-  also consumes the same bundle for angle/stop-position authoring instead of keeping another pair
-  of raw formatter/parser closures,
+- the same numeric authoring surface now also exposes a preferred first-party constructor lane
+  above raw `format` / `parse` closures: `NumericPresentation<T>` groups text formatting/parsing
+  with control-chrome affixes, and `NumericInput`, `DragValue`, `AxisDragValue`, `Slider`, plus
+  `VecEdit` variants now expose `from_presentation(...)` constructors so first-party editor
+  surfaces stop open-coding `(format, parse, prefix, suffix)` bundles. The promoted proof/demo
+  surface now routes its fixed-decimal, currency-like, percent, and advanced-position examples
+  through that lane, and `GradientEditor` now also consumes the same bundle for angle and
+  stop-position authoring instead of keeping another pair of raw formatter/parser closures,
 - the same numeric edit-session seam now also propagates through composite editor controls:
   `VecEdit` exposes `(axis, outcome)`, `TransformEdit` exposes `(section, axis, outcome)`, the
   promoted proof surface now carries stable

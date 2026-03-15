@@ -25,8 +25,8 @@ use crate::primitives::numeric_text_entry::{
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{
-    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericValueConstraints,
-    constrain_numeric_value,
+    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
+    NumericValueConstraints, constrain_numeric_value,
 };
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
@@ -132,6 +132,14 @@ where
             on_outcome: None,
             options: DragValueOptions::default(),
         }
+    }
+
+    /// Construct a drag value from a shared editor authoring bundle.
+    pub fn from_presentation(model: Model<T>, presentation: NumericPresentation<T>) -> Self {
+        let mut drag_value = Self::new(model, presentation.format(), presentation.parse());
+        drag_value.options.prefix = presentation.chrome_prefix().cloned();
+        drag_value.options.suffix = presentation.chrome_suffix().cloned();
+        drag_value
     }
 
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
@@ -508,5 +516,29 @@ fn emit_drag_value_outcome(
 ) {
     if let Some(cb) = on_outcome {
         cb(host, action_cx, outcome);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DragValue;
+    use crate::primitives::NumericPresentation;
+    use fret_app::App;
+    use std::sync::Arc;
+
+    #[test]
+    fn drag_value_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(1.25f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(2)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let drag_value = DragValue::from_presentation(model, presentation);
+
+        assert_eq!((drag_value.format)(1.25).as_ref(), "1.25");
+        assert_eq!((drag_value.parse)("1.25"), Some(1.25));
+        assert_eq!(drag_value.options.prefix, Some(Arc::from("$")));
+        assert_eq!(drag_value.options.suffix, Some(Arc::from("ms")));
     }
 }

@@ -33,7 +33,7 @@ use crate::primitives::numeric_text_entry::{
     clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
     numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
 };
-use crate::primitives::style::EditorStyle;
+use crate::primitives::{NumericPresentation, style::EditorStyle};
 
 pub use crate::primitives::NumericInputSelectionBehavior;
 
@@ -138,6 +138,14 @@ where
             options: NumericInputOptions::default(),
             focus_target: None,
         }
+    }
+
+    /// Construct a numeric input from a shared editor authoring bundle.
+    pub fn from_presentation(model: Model<T>, presentation: NumericPresentation<T>) -> Self {
+        let mut input = Self::new(model, presentation.format(), presentation.parse());
+        input.options.prefix = presentation.chrome_prefix().cloned();
+        input.options.suffix = presentation.chrome_suffix().cloned();
+        input
     }
 
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
@@ -579,9 +587,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::editor_numeric_input_text_style;
+    use crate::controls::NumericInput;
     use crate::primitives::EditorDensity;
+    use crate::primitives::NumericPresentation;
+    use fret_app::App;
     use fret_core::Px;
     use fret_core::TextStyle;
+    use std::sync::Arc;
 
     #[test]
     fn numeric_input_text_style_uses_density_row_height_for_edit_line_box() {
@@ -598,6 +610,22 @@ mod tests {
         );
 
         assert_eq!(style.line_height, Some(Px(24.0)));
+    }
+
+    #[test]
+    fn numeric_input_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(1.25f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(2)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let input = NumericInput::from_presentation(model, presentation);
+
+        assert_eq!((input.format)(1.25).as_ref(), "1.25");
+        assert_eq!((input.parse)("1.25"), Some(1.25));
+        assert_eq!(input.options.prefix, Some(Arc::from("$")));
+        assert_eq!(input.options.suffix, Some(Arc::from("ms")));
     }
 }
 

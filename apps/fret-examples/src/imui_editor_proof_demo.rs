@@ -25,12 +25,11 @@ use fret_ui_editor::composites::{
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, DragValueOutcome,
     EditorTextSelectionBehavior, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
-    FieldStatusBadge, NumericFormatFn, NumericInput, NumericInputOptions, NumericParseFn,
-    NumericPresentation, NumericValidateFn, NumericValueConstraints, Slider, SliderOptions,
-    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField,
-    TextFieldBlurBehavior, TextFieldMode, TextFieldOptions, TextFieldOutcome, TransformEdit,
-    TransformEditAxisOutcome, TransformEditOptions, TransformEditSection, Vec3Edit, VecEditAxis,
-    VecEditAxisOutcome, VecEditOptions,
+    FieldStatusBadge, NumericInput, NumericInputOptions, NumericPresentation, NumericValidateFn,
+    NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
+    TextAssistFieldSurface, TextField, TextFieldBlurBehavior, TextFieldMode, TextFieldOptions,
+    TextFieldOutcome, TransformEdit, TransformEditAxisOutcome, TransformEditOptions,
+    TransformEditSection, Vec3Edit, VecEditAxis, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
@@ -614,9 +613,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     ui.add_ui(editor_label);
                 }
                 ui.mount(|cx| {
-                    let (fmt, parse, _) = editor_fixed_decimals_presentation().parts();
-                    let fmt: NumericFormatFn<f64> = fmt;
-                    let parse: NumericParseFn<f64> = parse;
+                    let fixed_presentation = editor_fixed_decimals_presentation();
                     let validate: NumericValidateFn<f64> = Arc::new(|v| {
                         if (0.0..=1.0).contains(&v) {
                             None
@@ -1325,8 +1322,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         cx,
                                         |_cx| None,
                                         move |cx| {
-                                            let fmt = fmt.clone();
-                                            let parse = parse.clone();
                                             let validate = material_validate.clone();
                                             vec![PropertyGrid::new().into_element(
                                                 cx,
@@ -1363,10 +1358,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 let outcome_model =
                                                                     editor_drag_value_outcome_model
                                                                         .clone();
-                                                                DragValue::new(
+                                                                DragValue::from_presentation(
                                                                     editor_value_model.clone(),
-                                                                    fmt.clone(),
-                                                                    parse.clone(),
+                                                                    fixed_presentation.clone(),
                                                                 )
                                                                 .validate(Some(validate.clone()))
                                                                 .on_outcome(Some(Arc::new(
@@ -1429,13 +1423,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                     }
 
                                                     if show_roughness {
-                                                        let (roughness_fmt, roughness_parse, _) =
-                                                            editor_percent_presentation().parts();
-                                                        let roughness_fmt: NumericFormatFn<f64> =
-                                                            roughness_fmt;
-                                                        let roughness_parse: NumericParseFn<f64> =
-                                                            roughness_parse;
-
                                                         let model_for_reset =
                                                             editor_roughness_model.clone();
                                                         let on_reset = Arc::new(
@@ -1462,13 +1449,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             )),
                                                             |cx| cx.text("Roughness"),
                                                             |cx| {
-                                                                Slider::new(
+                                                                Slider::from_presentation(
                                                                     editor_roughness_model.clone(),
                                                                     0.0,
                                                                     1.0,
+                                                                    editor_percent_presentation(),
                                                                 )
-                                                                .format(roughness_fmt.clone())
-                                                                .parse(roughness_parse.clone())
                                                                 .options(SliderOptions {
                                                                     a11y_label: Some(Arc::from(
                                                                         "Roughness",
@@ -1493,13 +1479,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                     }
 
                                                     if show_metallic {
-                                                        let (metallic_fmt, metallic_parse, _) =
-                                                            editor_percent_presentation().parts();
-                                                        let metallic_fmt: NumericFormatFn<f64> =
-                                                            metallic_fmt;
-                                                        let metallic_parse: NumericParseFn<f64> =
-                                                            metallic_parse;
-
                                                         let model_for_reset =
                                                             editor_metallic_model.clone();
                                                         let on_reset = Arc::new(
@@ -1526,13 +1505,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             )),
                                                             |cx| cx.text("Metallic"),
                                                             |cx| {
-                                                                Slider::new(
+                                                                Slider::from_presentation(
                                                                     editor_metallic_model.clone(),
                                                                     0.0,
                                                                     1.0,
+                                                                    editor_percent_presentation(),
                                                                 )
-                                                                .format(metallic_fmt.clone())
-                                                                .parse(metallic_parse.clone())
                                                                 .options(SliderOptions {
                                                                     a11y_label: Some(Arc::from(
                                                                         "Metallic",
@@ -1809,12 +1787,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         |_cx| None,
                                         move |cx| {
                                             let validate = advanced_validate.clone();
-                                            let (fmt_f64, parse_f64, _) =
-                                                editor_fixed_decimals_presentation().parts();
+                                            let fixed_presentation =
+                                                editor_fixed_decimals_presentation();
                                             let fmt_f64: fret_ui_editor::controls::NumericFormatFn<f64> =
-                                                fmt_f64;
+                                                fixed_presentation.format();
                                             let parse_f64: fret_ui_editor::controls::NumericParseFn<f64> =
-                                                parse_f64;
+                                                fixed_presentation.parse();
                                             let fmt_i32: fret_ui_editor::controls::NumericFormatFn<i32> =
                                                 Arc::new(|v| Arc::from(format!("{v}")));
                                             let parse_i32: fret_ui_editor::controls::NumericParseFn<i32> =
@@ -1861,12 +1839,11 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 let outcome_model =
                                                                     editor_position_outcome_model
                                                                         .clone();
-                                                                Vec3Edit::new(
+                                                                Vec3Edit::from_presentation(
                                                                     editor_pos_x.clone(),
                                                                     editor_pos_y.clone(),
                                                                     editor_pos_z.clone(),
-                                                                    fmt_f64.clone(),
-                                                                    parse_f64.clone(),
+                                                                    fixed_presentation.clone(),
                                                                 )
                                                                 .on_axis_outcome(Some(Arc::new(
                                                                     move |host, action_cx, outcome: VecEditAxisOutcome| {
@@ -2342,8 +2319,8 @@ fn render_authoring_parity_declarative_group(
     shading_model: Model<Option<Arc<str>>>,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let (value_fmt, value_parse, value_affixes) = authoring_parity_value_presentation().parts();
-    let (blend_fmt, blend_parse, _) = authoring_parity_blend_presentation().parts();
+    let value_presentation = authoring_parity_value_presentation();
+    let blend_presentation = authoring_parity_blend_presentation();
 
     PropertyGroup::new("Declarative authoring")
         .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -2391,17 +2368,14 @@ fn render_authoring_parity_declarative_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Value"),
                         |cx| {
-                            DragValue::new(
+                            DragValue::from_presentation(
                                 drag_value_model.clone(),
-                                value_fmt.clone(),
-                                value_parse.clone(),
+                                value_presentation.clone(),
                             )
                             .options(fret_ui_editor::controls::DragValueOptions {
                                 id_source: Some(Arc::from(
                                     "authoring-parity.declarative.drag-value",
                                 )),
-                                prefix: value_affixes.prefix.clone(),
-                                suffix: value_affixes.suffix.clone(),
                                 test_id: Some(Arc::from(
                                     "imui-editor-proof.authoring.declarative.value",
                                 )),
@@ -2417,14 +2391,17 @@ fn render_authoring_parity_declarative_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Blend"),
                         |cx| {
-                            Slider::new(slider_model.clone(), 0.0, 1.0)
-                                .format(blend_fmt.clone())
-                                .parse(blend_parse.clone())
-                                .options(authoring_parity_blend_slider_options(
-                                    "authoring-parity.declarative.slider",
-                                    "imui-editor-proof.authoring.declarative.blend",
-                                ))
-                                .into_element(cx)
+                            Slider::from_presentation(
+                                slider_model.clone(),
+                                0.0,
+                                1.0,
+                                blend_presentation.clone(),
+                            )
+                            .options(authoring_parity_blend_slider_options(
+                                "authoring-parity.declarative.slider",
+                                "imui-editor-proof.authoring.declarative.blend",
+                            ))
+                            .into_element(cx)
                         },
                         |_cx| None,
                     ));
@@ -2485,8 +2462,8 @@ fn render_authoring_parity_imui_group(
     shading_model: Model<Option<Arc<str>>>,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let (value_fmt, value_parse, value_affixes) = authoring_parity_value_presentation().parts();
-    let (blend_fmt, blend_parse, _) = authoring_parity_blend_presentation().parts();
+    let value_presentation = authoring_parity_value_presentation();
+    let blend_presentation = authoring_parity_blend_presentation();
 
     PropertyGroup::new("imui authoring")
         .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -2534,24 +2511,19 @@ fn render_authoring_parity_imui_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Value"),
                         |cx| {
-                            let value_fmt = value_fmt.clone();
-                            let value_parse = value_parse.clone();
-                            let value_affixes = value_affixes.clone();
+                            let value_presentation = value_presentation.clone();
                             render_authoring_parity_imui_host(cx, move |ui| {
                                 editor_imui::drag_value(
                                     ui,
-                                    DragValue::new(
+                                    DragValue::from_presentation(
                                         drag_value_model.clone(),
-                                        value_fmt.clone(),
-                                        value_parse.clone(),
+                                        value_presentation.clone(),
                                     )
                                     .options(
                                         fret_ui_editor::controls::DragValueOptions {
                                             id_source: Some(Arc::from(
                                                 "authoring-parity.imui.drag-value",
                                             )),
-                                            prefix: value_affixes.prefix.clone(),
-                                            suffix: value_affixes.suffix.clone(),
                                             test_id: Some(Arc::from(
                                                 "imui-editor-proof.authoring.imui.value",
                                             )),
@@ -2570,18 +2542,22 @@ fn render_authoring_parity_imui_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Blend"),
                         |cx| {
-                            let blend_fmt = blend_fmt.clone();
-                            let blend_parse = blend_parse.clone();
+                            let blend_presentation = blend_presentation.clone();
                             render_authoring_parity_imui_host(cx, move |ui| {
                                 editor_imui::slider(
                                     ui,
-                                    Slider::new(slider_model.clone(), 0.0, 1.0)
-                                        .format(blend_fmt.clone())
-                                        .parse(blend_parse.clone())
-                                        .options(authoring_parity_blend_slider_options(
+                                    Slider::from_presentation(
+                                        slider_model.clone(),
+                                        0.0,
+                                        1.0,
+                                        blend_presentation.clone(),
+                                    )
+                                    .options(
+                                        authoring_parity_blend_slider_options(
                                             "authoring-parity.imui.slider",
                                             "imui-editor-proof.authoring.imui.blend",
-                                        )),
+                                        ),
+                                    ),
                                 );
                             })
                             .into_element(cx)
