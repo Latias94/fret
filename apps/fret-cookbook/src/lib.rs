@@ -437,7 +437,10 @@ mod authoring_surface_policy_tests {
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvas"));
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains(".setup(shadcn::app::install)"));
+        assert!(
+            CHART_INTERACTIONS_EXAMPLE
+                .contains(".setup((shadcn::app::install, fret_icons_lucide::app::install))")
+        );
         assert!(!CHART_INTERACTIONS_EXAMPLE.contains(".setup(shadcn::install_app)"));
 
         assert!(CUSTOM_V1_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
@@ -458,7 +461,10 @@ mod authoring_surface_policy_tests {
         assert!(DOCKING_EXAMPLE.contains("DockPanelRegistryBuilder::new()"));
         assert!(DOCKING_EXAMPLE.contains("docking::handle_dock_op"));
         assert!(DOCKING_EXAMPLE.contains("impl InstallIntoApp for DockingBasicsBundle"));
-        assert!(DOCKING_EXAMPLE.contains(".setup(DockingBasicsBundle)"));
+        assert!(
+            DOCKING_EXAMPLE
+                .contains(".setup((DockingBasicsBundle, fret_icons_lucide::app::install))")
+        );
         assert!(!DOCKING_EXAMPLE.contains(".setup(shadcn::install_app)"));
         assert!(DOCKING_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
 
@@ -467,7 +473,10 @@ mod authoring_surface_policy_tests {
                 .contains("use fret::advanced::interop::embedded_viewport as embedded;")
         );
         assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains("ui_app_with_hooks("));
-        assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains(".setup(shadcn::app::install)"));
+        assert!(
+            EMBEDDED_VIEWPORT_EXAMPLE
+                .contains(".setup((shadcn::app::install, fret_icons_lucide::app::install))")
+        );
         assert!(
             EMBEDDED_VIEWPORT_EXAMPLE.contains("UiAppDriver<EmbeddedViewportBasicsWindowState>")
         );
@@ -476,7 +485,10 @@ mod authoring_surface_policy_tests {
             EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};")
         );
         assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("ui_app_with_hooks("));
-        assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".setup(shadcn::app::install)"));
+        assert!(
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE
+                .contains(".setup((shadcn::app::install, fret_icons_lucide::app::install))")
+        );
         assert!(!EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains(".setup(shadcn::install_app)"));
         assert!(
             EXTERNAL_TEXTURE_IMPORT_EXAMPLE
@@ -486,7 +498,10 @@ mod authoring_surface_policy_tests {
         assert!(GIZMO_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
         assert!(GIZMO_EXAMPLE.contains("GizmoInput"));
         assert!(GIZMO_EXAMPLE.contains("ui_app_with_hooks("));
-        assert!(GIZMO_EXAMPLE.contains(".setup(shadcn::app::install)"));
+        assert!(
+            GIZMO_EXAMPLE
+                .contains(".setup((shadcn::app::install, fret_icons_lucide::app::install))")
+        );
         assert!(!GIZMO_EXAMPLE.contains(".setup(shadcn::install_app)"));
 
         assert!(

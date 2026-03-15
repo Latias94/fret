@@ -153,9 +153,18 @@ surface.
     support small tuple composition directly for app-local wiring (`(a, b)`, `(a, b, c)`,
     `(a, b, c, d)`), keep reusable/published packs on named `InstallIntoApp` bundle types, and
     defer slice/vec-style dynamic composition until a concrete need appears.
-- [ ] Migrate first-party "app integration pack" examples to use one consistent bundle story.
+- [x] Migrate first-party "app integration pack" examples to use one consistent bundle story.
   - First landed example on 2026-03-11: `apps/fret-cookbook/examples/docking_basics.rs` now uses
-    `DockingBasicsBundle` via `.setup(DockingBasicsBundle)`.
+    `DockingBasicsBundle`.
+  - Extended on 2026-03-15:
+    the cookbook examples
+    `chart_interactions_basics.rs`,
+    `embedded_viewport_basics.rs`,
+    `external_texture_import_basics.rs`,
+    `gizmo_basics.rs`,
+    and `docking_basics.rs`
+    now all teach app-local installer composition through a single `.setup((..., ...))` pack
+    story instead of stacking multiple adjacent `.setup(...)` calls for the same local wiring.
 - [x] Keep advanced builder-only install paths explicit; do not let them leak onto the default app
   path.
   - Evidence on 2026-03-15:
