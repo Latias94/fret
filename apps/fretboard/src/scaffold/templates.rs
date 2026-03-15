@@ -1117,6 +1117,8 @@ pub(super) fn generated_assets_stub_rs(package_name: &str) -> String {
 // Scaffolded by `fretboard new --ui-assets`.
 // Regenerate this file after editing `assets/`:
 //   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force
+// Ecosystem/package crates can use `install(app)` on the app setup surface; apps on the builder
+// lane can use `mount(builder)`.
 
 use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, StaticAssetEntry}};
 
@@ -1132,6 +1134,10 @@ pub const ENTRIES: &[StaticAssetEntry] = &[];
 
 pub fn register(app: &mut fret::app::App) {{
     assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());
+}}
+
+pub fn install(app: &mut fret::app::App) {{
+    register(app);
 }}
 
 pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {{
@@ -1595,7 +1601,9 @@ mod tests {
         assert!(src.contains("AssetBundleId::app(\"todo-app\")"));
         assert!(src.contains("pub fn locator(key: impl Into<AssetKey>) -> AssetLocator"));
         assert!(src.contains("pub fn register(app: &mut fret::app::App)"));
+        assert!(src.contains("pub fn install(app: &mut fret::app::App)"));
         assert!(src.contains("pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>)"));
+        assert!(src.contains("register(app);"));
         assert!(src.contains(
             "fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force"
         ));
