@@ -36,8 +36,9 @@ surface, lock these decisions before adding public API:
 - treat `QueryAdapter` as deferred in v1 unless a second real reusable consumer appears with a
   materially shared adapter contract
 - keep reusable docs/examples aligned with the current conversion-surface target:
-  app-facing teaching helpers use `Ui` / `UiChild`, reusable generic helpers should move toward
-  the unified component conversion trait tracked in
+  app-facing teaching helpers use `Ui` / `UiChild`, pure app-facing page shells should avoid
+  carrying `UiCx` unless they really need runtime/context access, reusable generic helpers should
+  move toward the unified component conversion trait tracked in
   `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and raw
   `AnyElement` stays explicit
 - keep shipped resource ownership explicit:
@@ -138,6 +139,14 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For activation-only surfaces, prefer `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and `widget.listen(cx, |host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches.
 
+`fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they only cover
+activation-only widgets that expose the standard `OnActivate` slot. Typed payload/context
+callbacks remain component-owned surfaces even when they eventually dispatch app actions. Treat
+controls such as `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`,
+`ConversationDownload`, `PromptInputButton`, and `WebPreviewNavigationButton` as good fits for
+this lane; keep controls such as `Attachment`, `QueueItemAction`, `Test`, `FileTreeAction`,
+`Suggestion`, and `MessageBranch` on their explicit typed callback contracts.
+
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
 When app code needs explicit semantics nouns, import them intentionally from
@@ -147,6 +156,12 @@ import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` an
 `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
 Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
 instead of treating breakpoint/media helpers as part of the default app vocabulary.
+When a view intentionally opts into manual sink-style `*_build(|cx, out| ...)` composition, keep
+that helper off the default prelude too and import `fret::children::UiElementSinkExt as _`
+explicitly at the call site.
+When app code needs explicit command-availability reads such as `cx.action_is_enabled(...)`, import
+`fret::actions::ElementCommandGatingExt as _` explicitly instead of expecting command-gating traits
+from `fret::app::prelude::*`.
 Do the same for logical assets: import them intentionally from `fret::assets::{...}`, prefer
 `AssetBundleId::app(...)` / `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` and
 `register_bundle_entries(...)` as the portable default story, and keep
@@ -194,7 +209,10 @@ docs/examples should follow
 `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
 teaching the legacy split conversion trait names. When reusable component code needs explicit
 command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead
-of expecting `CommandId` from `fret::component::prelude::*`.
+of expecting `CommandId` from `fret::component::prelude::*`. When reusable component or advanced
+code intentionally needs raw activation helper glue, import `fret::activate::{on_activate,
+on_activate_notify, on_activate_request_redraw, on_activate_request_redraw_notify}` explicitly
+instead of expecting those helper names from the component prelude.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 
@@ -469,6 +487,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   For compile-time owned bytes, prefer generated modules that expose `mount(builder)` or the
   builder-path helpers `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)`
   before falling back to app-local setup glue.
+  If a crate only publishes shipped bytes, the generated `Bundle` / `install(app)` /
+  `mount(builder)` surface is usually enough. Once the crate also composes icon packs, commands,
+  settings, theme/bootstrap wiring, or multiple generated asset modules, wrap those low-level
+  generated helpers in one named installer/bundle surface and teach that wrapper instead.
   When you want to emit an explicit manifest artifact from a bundle directory, prefer
   `fretboard assets manifest write ...` over hand-authoring JSON.
   Direct host registrations preserve order across `set_primary_resolver(...)`,
@@ -484,6 +506,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   and gate it behind an explicit feature (e.g. `app-integration`).
   If the crate ships its own bytes, keep them package-owned and expose one installer/mount helper
   instead of asking apps to know your internal asset bundle layout.
+  Prefer `BundleAsset` when the bytes are part of the crate's public lookup story (`AssetLocator::bundle(...)`,
+  stable docs/examples, app overrides, or cross-crate composition). Use `Embedded` for lower-level
+  owner-scoped bytes that are not the public cross-package contract.
 - **Reusable ecosystem crates that also depend on icon packs:** keep icon-pack installation plus
   package-bundle registration inside the same installer surface so apps compose one named
   dependency bundle rather than replaying low-level icon + asset registrations by hand. See

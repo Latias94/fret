@@ -32,6 +32,13 @@ This keeps reusable component code on the curated component-author surface (`Com
 `UiBuilder`, `UiPatchTarget`, semantics/layout helpers) instead of the app-facing `fret::app`
 surface.
 
+If that reusable code intentionally needs the low-level activation helper family, add an explicit
+secondary import instead of widening the default component lane:
+
+```rust
+use fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw};
+```
+
 ### Typical dependency sets (examples)
 
 **A) Headless / engine crate**
@@ -135,6 +142,23 @@ Keep the low-level registration inside the ecosystem crate. The app should call
 `IconRegistry` mutation or `register_bundle_entries(...)` for your crate's internal resources by
 hand.
 
+Generated module vs higher-level bundle surface:
+
+- If your crate only needs to publish shipped bytes, the generated `--surface fret` asset module
+  can remain the app-facing surface (`Bundle`, `install(app)`, `register(app)`, `mount(builder)`).
+- Once the crate also composes icon packs, commands, settings, theme/bootstrap wiring, or multiple
+  generated asset modules, wrap those low-level generated helpers in one hand-written named
+  installer/bundle surface and teach that wrapper instead of the internals.
+
+`BundleAsset` vs `Embedded`:
+
+- Prefer `BundleAsset` for the default public lookup story. If widget code or app docs should
+  point at a stable logical asset identity, publish it as a bundle/key resource.
+- Use `Embedded` for lower-level owner-scoped bytes that are not the crate's public cross-package
+  lookup contract. Do not make downstream app authors depend on another crate's embedded locator
+  shape by default.
+- If unsure, choose `BundleAsset` first and treat `Embedded` as the lower-level/private lane.
+
 For the broader ownership model, see
 `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`.
 
@@ -225,6 +249,14 @@ Guidelines:
 - Put default shortcuts into `CommandMeta.default_keybindings`.
 - Use `when` expressions to guard context (e.g. disable global shortcuts when focus is in text input).
 - Keep raw key handling out of widgets unless you are implementing mechanism-level input behavior.
+
+`fret::app::AppActivateSurface` is not a generic escape hatch for every action-bearing widget. Do
+not generalize typed domain callbacks into `AppActivateSurface`; if a widget callback already
+carries domain data or a specialized callback signature, keep that contract explicit and local to
+the component. Do not introduce a parallel `AppActionCxSurface` / `AppActionCxExt` family just to
+route those typed callbacks back through the default app lane. Controls such as `Attachment`,
+`QueueItemAction`, `Test`, `FileTreeAction`, `Suggestion`, and `MessageBranch` should stay on
+their component-owned typed callback surfaces.
 
 Avoid:
 

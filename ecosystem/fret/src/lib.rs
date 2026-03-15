@@ -134,6 +134,20 @@ pub mod env {
     };
 }
 
+/// Explicit child-collection helpers for app code that opts into manual sink-style composition.
+pub mod children {
+    pub use fret_ui_kit::ui::UiElementSinkExt;
+}
+
+/// Explicit activation-helper glue for component or advanced code that intentionally authors raw
+/// `on_activate(...)` handlers.
+pub mod activate {
+    pub use fret_ui_kit::{
+        on_activate, on_activate_notify, on_activate_request_redraw,
+        on_activate_request_redraw_notify,
+    };
+}
+
 /// Explicit logical asset-contract vocabulary and host registration helpers for app code.
 ///
 /// The portable default story is bundle/embedded locators. Prefer `AssetBundleId::app(...)` and
@@ -443,11 +457,10 @@ pub mod app {
         pub use fret_ui_kit::declarative::UiElementA11yExt as _;
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
         pub use fret_ui_kit::ui;
-        pub use fret_ui_kit::ui::UiElementSinkExt as _;
     }
 
-    /// Explicit contract for custom app-facing widgets that only expose `on_activate(...)`.
-    pub use crate::view::AppActivateSurface;
+    /// Explicit contract and extension sugar for app-facing widgets that expose `on_activate(...)`.
+    pub use crate::view::{AppActivateExt, AppActivateSurface};
 }
 
 /// Component-author imports for reusable, portable UI crates.
@@ -478,8 +491,7 @@ pub mod component {
             MetricRef, OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
             OverlayRequest, OverlayStackEntryKind, Radius, ShadowPreset, Size, Space, UiBuilder,
             UiExt, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, WindowOverlayStackEntry,
-            WindowOverlayStackSnapshot, on_activate, on_activate_notify,
-            on_activate_request_redraw, on_activate_request_redraw_notify,
+            WindowOverlayStackSnapshot,
         };
 
         #[cfg(feature = "icons")]
@@ -2459,6 +2471,7 @@ mod authoring_surface_policy_tests {
         ));
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(FIRST_HOUR.contains("use fret::children::UiElementSinkExt as _;"));
         assert!(!FIRST_HOUR.contains("run_view::<"));
         assert!(!FIRST_HOUR.contains("ViewCx::"));
         assert!(!FIRST_HOUR.contains("`fret_ui_shadcn::prelude::*`"));
@@ -2474,6 +2487,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::{icon, IconId}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::semantics::SemanticsRole`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::children::UiElementSinkExt as _`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::ElementCommandGatingExt as _`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
         assert!(
@@ -2505,6 +2520,42 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
+    }
+
+    #[test]
+    fn usage_and_component_docs_keep_app_activate_surface_narrow() {
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::app::AppActivateSurface` / `AppActivateExt`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("activation-only widgets that expose the standard `OnActivate` slot")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("Typed payload/context"));
+        assert!(CRATE_USAGE_GUIDE.contains("callbacks remain component-owned surfaces"));
+        assert!(CRATE_USAGE_GUIDE.contains("`WorkflowControlsButton`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`MessageAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`ArtifactAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`ConversationDownload`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`PromptInputButton`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`WebPreviewNavigationButton`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`Attachment`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`QueueItemAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`Test`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FileTreeAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`Suggestion`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`MessageBranch`"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE.contains("typed domain callbacks into `AppActivateSurface`")
+        );
+        assert!(
+            COMPONENT_AUTHOR_GUIDE
+                .contains("parallel `AppActionCxSurface` / `AppActionCxExt` family")
+        );
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`Attachment`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`QueueItemAction`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`Test`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`FileTreeAction`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`Suggestion`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`MessageBranch`"));
     }
 
     #[test]
@@ -2576,6 +2627,22 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_USAGE_GUIDE.contains("`fret::router::install_app(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_icons_radix::install_app`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_assets::install_app_with_budgets`"));
+        assert!(CRATE_USAGE_GUIDE.contains("generated `Bundle` / `install(app)` /"));
+        assert!(CRATE_USAGE_GUIDE.contains("`mount(builder)` surface is usually enough."));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("settings, theme/bootstrap wiring, or multiple generated asset modules")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("wrap those low-level"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("generated helpers in one named installer/bundle surface")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "Prefer `BundleAsset` when the bytes are part of the crate's public lookup story"
+        ));
+        assert!(CRATE_USAGE_GUIDE.contains("Use `Embedded`"));
+        assert!(CRATE_USAGE_GUIDE.contains("owner-scoped bytes"));
+        assert!(CRATE_USAGE_GUIDE.contains("public cross-package contract"));
     }
 
     #[test]
@@ -2588,10 +2655,36 @@ mod authoring_surface_policy_tests {
         assert!(COMPONENT_AUTHOR_GUIDE.contains("AssetBundleId::package(\"my-kit\")"));
         assert!(COMPONENT_AUTHOR_GUIDE.contains("`FretApp::setup(MyKitBundle)`"));
         assert!(COMPONENT_AUTHOR_GUIDE.contains("`docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("generated `--surface fret` asset module"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("can remain the app-facing surface"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE
+                .contains("wrap those low-level generated helpers in one hand-written named")
+        );
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("installer/bundle surface"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("Prefer `BundleAsset`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("default public lookup story"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE.contains("Use `Embedded` for lower-level owner-scoped bytes")
+        );
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("crate's public cross-package"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("lookup contract"));
         assert!(
             ECOSYSTEM_INSTALLER_COMPOSITION.contains("the app composes one installer/bundle value")
         );
         assert!(ECOSYSTEM_INSTALLER_COMPOSITION.contains("The app should not usually do this:"));
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION
+                .contains("### Generated module vs higher-level installer")
+        );
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION
+                .contains("generated modules own low-level byte publication")
+        );
+        assert!(ECOSYSTEM_INSTALLER_COMPOSITION.contains("### `BundleAsset` vs `Embedded`"));
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION.contains("If you are unsure, choose `BundleAsset`.")
+        );
     }
 
     #[test]
@@ -2626,6 +2719,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`ComponentCx`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::activate::{on_activate,"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("without pulling in `FretApp`, `AppUi`, or runner-facing seams")
@@ -2708,7 +2802,7 @@ mod authoring_surface_policy_tests {
     fn app_prelude_stays_explicit_instead_of_reexporting_legacy_surface() {
         let app_prelude = app_prelude_source();
         assert!(!app_prelude.contains("pub use crate::prelude::*;"));
-        assert!(LIB_RS.contains("pub use crate::view::AppActivateSurface;"));
+        assert!(LIB_RS.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};"));
         assert!(app_prelude.contains("pub use crate::{"));
         assert!(app_prelude.contains("pub use crate::app::App;"));
         assert!(app_prelude_exports_symbol("App"));
@@ -2731,13 +2825,14 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::UiElementTestIdExt as _;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::StyledExt as _;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::UiExt as _;"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::ui::UiElementSinkExt as _;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::IntoUiElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiHostBoundIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiChildIntoElement;"));
-        assert!(!app_prelude_exports_symbol("AppActivateExt"));
-        assert!(app_prelude.contains("pub use crate::view::AppActivateSurface;"));
+        assert!(app_prelude_exports_symbol("AppActivateExt"));
+        assert!(app_prelude.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};"));
         assert!(!app_prelude_exports_symbol("TrackedStateExt"));
         assert!(!app_prelude_exports_symbol("AnyElementSemanticsExt"));
         assert!(!app_prelude_exports_symbol("ElementContextThemeExt"));
@@ -2786,6 +2881,11 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("DockPanelRegistry"));
         assert!(!app_prelude_exports_symbol("handle_dock_op"));
         assert!(!app_prelude_exports_symbol("InstallConfig"));
+    }
+
+    #[test]
+    fn app_module_explicitly_exports_activation_surface_and_extension() {
+        assert!(LIB_RS.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};"));
     }
 
     #[test]
@@ -2851,6 +2951,7 @@ mod authoring_surface_policy_tests {
         assert!(!root_header.contains("ActionMeta"));
         assert!(!root_header.contains("ActionRegistry"));
         assert!(root_header.contains("pub use fret_runtime::{ActionId, CommandId, TypedAction};"));
+        assert!(ACTIONS_RS.contains("pub use fret_ui_kit::command::ElementCommandGatingExt;"));
         assert!(ACTIONS_RS.contains(
             "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};"
         ));
@@ -2858,6 +2959,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("ActionRegistry"));
         assert!(!app_prelude.contains("ActionMeta"));
         assert!(!app_prelude.contains("ActionRegistry"));
+        assert!(!app_prelude.contains("ElementCommandGatingExt"));
     }
 
     #[test]
@@ -2893,9 +2995,17 @@ mod authoring_surface_policy_tests {
     fn root_surface_exposes_explicit_style_and_icon_modules() {
         let root_header = root_surface_header_source();
 
+        assert!(root_header.contains("pub mod activate {"));
+        assert!(root_header.contains("pub mod children {"));
         assert!(root_header.contains("pub mod icons {"));
         assert!(root_header.contains("pub mod semantics {"));
         assert!(root_header.contains("pub mod style {"));
+        assert!(root_header.contains("pub use fret_ui_kit::{"));
+        assert!(
+            root_header.contains("on_activate, on_activate_notify, on_activate_request_redraw,")
+        );
+        assert!(root_header.contains("on_activate_request_redraw_notify,"));
+        assert!(root_header.contains("pub use fret_ui_kit::ui::UiElementSinkExt;"));
         assert!(root_header.contains("pub use fret_icons::IconId;"));
         assert!(root_header.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
@@ -3017,6 +3127,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("HoverRegionProps"));
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("SemanticsProps"));
+        assert!(!app_prelude_exports_symbol("UiElementSinkExt"));
         assert!(!app_prelude_exports_symbol("ContainerQueryHysteresis"));
         assert!(!app_prelude_exports_symbol("ViewportQueryHysteresis"));
         assert!(!app_prelude_exports_symbol("ImageMetadata"));
@@ -3089,6 +3200,14 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol("UiIntoElement"));
         assert!(!component_prelude_exports_symbol("UiHostBoundIntoElement"));
         assert!(!component_prelude_exports_symbol("UiChildIntoElement"));
+        assert!(!component_prelude_exports_symbol("on_activate"));
+        assert!(!component_prelude_exports_symbol("on_activate_notify"));
+        assert!(!component_prelude_exports_symbol(
+            "on_activate_request_redraw"
+        ));
+        assert!(!component_prelude_exports_symbol(
+            "on_activate_request_redraw_notify"
+        ));
     }
 
     #[test]

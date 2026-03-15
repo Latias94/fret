@@ -47,6 +47,8 @@ mod authoring_surface_policy_tests {
     const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
         include_str!("../examples/simple_todo_v2_target.rs");
+    const APP_OWNED_BUNDLE_ASSETS_EXAMPLE: &str =
+        include_str!("../examples/app_owned_bundle_assets_basics.rs");
     const ASYNC_INBOX_EXAMPLE: &str = include_str!("../examples/async_inbox_basics.rs");
     const ASSETS_RELOAD_EPOCH_EXAMPLE: &str =
         include_str!("../examples/assets_reload_epoch_basics.rs");
@@ -215,8 +217,13 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(SIMPLE_TODO_EXAMPLE);
         assert_uses_app_surface(SIMPLE_TODO_V2_TARGET_EXAMPLE);
         assert!(HELLO_EXAMPLE.contains(
-            "fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) -> Ui"
+            "fn hello_page(render_marker: &'static str, count_value: u32) -> impl UiChild"
         ));
+        assert!(!HELLO_EXAMPLE.contains("fn hello_page(cx: &mut UiCx<'_>,"));
+        assert!(
+            HELLO_EXAMPLE
+                .contains("ui::children![cx; hello_page(render_marker, count_value)].into()")
+        );
         assert!(HELLO_EXAMPLE.contains("cx.state().local::<u32>()"));
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
@@ -445,6 +452,12 @@ mod authoring_surface_policy_tests {
             ICONS_AND_ASSETS_EXAMPLE
                 .contains("Low-level registration stays internal to the dependency")
         );
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains(
+            "Hand-written bundle wrapper: use when the crate also composes icons or app defaults"
+        ));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains(
+            "This is the hand-written wrapper lane to teach when a crate composes more than raw shipped bytes"
+        ));
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains(".ui_assets_budgets("));
         assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("UiAssets::configure("));
         assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("AssetBundleId::app(\"fret-cookbook\")"));
@@ -462,7 +475,26 @@ mod authoring_surface_policy_tests {
             !icons_and_assets_normalized
                 .contains(".setup((shadcn::app::install,fret_icons_lucide::app::install))")
         );
-
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE
+                .contains("Scaffold equivalent: `generated_assets::mount(builder)`")
+        );
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE
+                .contains("Generated module is enough when the crate only publishes shipped bytes")
+        );
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE
+                .contains("`BundleAsset` is the public lookup lane; `Embedded` stays lower-level")
+        );
+        assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains(
+            "This is the generated-module lane to teach when a crate only publishes shipped bytes."
+        ));
+        assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("`FretApp::asset_entries(...)`"));
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("without native-only file path assumptions.")
+        );
+        assert!(!APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("ImageSource::from_file_path"));
         assert!(
             ASSETS_RELOAD_EPOCH_EXAMPLE
                 .contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
