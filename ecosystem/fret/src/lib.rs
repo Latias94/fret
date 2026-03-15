@@ -1871,6 +1871,11 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn shadcn_docs_keep_advanced_hooks_off_curated_lane() {
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`widget.dispatch::<A>(cx)`"));
+        assert!(
+            SHADCN_DECLARATIVE_PROGRESS
+                .contains("`fret::app::AppActivateSurface` / `AppActivateExt`")
+        );
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_shadcn::advanced::*`"));
         assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`shadcn::advanced::*`"));
         assert!(AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret_ui_shadcn::advanced`"));

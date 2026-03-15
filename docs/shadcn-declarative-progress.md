@@ -94,9 +94,11 @@ App/editor-specific composition belongs in `fret-editor` and ecosystem app layer
 Cross-cutting interaction policies (toggle models, close overlays, selection writes, "dismiss on escape/outside press", etc.) are *component-owned*:
 
 - `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
-- The `fret` app-facing facade now groups default widget activation glue under `cx.actions()`
-  (`dispatch`, `dispatch_payload`, `listener`) so app authors stay on the same action namespace
-  while component/policy crates keep owning the hook implementations.
+- The `fret` app-facing facade now keeps the lower-level activation glue under `cx.actions()`
+  (`dispatch`, `dispatch_payload`, `listener`) and teaches the default app lane through
+  `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and
+  `widget.listen(cx, |host, acx| { ... })` for activation-only surfaces via
+  `fret::app::AppActivateSurface` / `AppActivateExt`.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.
