@@ -136,6 +136,11 @@ surface.
   - reusable generic helpers move toward the unified component conversion trait tracked by
     `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
   - raw `AnyElement` stays explicit for advanced/internal seams only.
+  - First landed follow-up on 2026-03-15:
+    `fret::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu}` and
+    `fret_workspace::WorkspacePaneContentFocusTarget`
+    now accept typed pane content via `IntoUiElement<H>` instead of forcing pane renderers to land
+    on `AnyElement` before the shell/focus-target seam.
 
 ## 3. `InstallIntoApp` Adoption
 
