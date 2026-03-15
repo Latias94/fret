@@ -125,10 +125,14 @@ Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
 For logical assets, use `fret::assets::{...}` and prefer `AssetBundleId::app(...)` /
 `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` / `register_bundle_entries(...)`;
 keep `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches.
-On native/package-dev lanes, `fret::assets::register_file_manifest(...)` can mount a
-file-backed bundle manifest without pushing repo-relative paths into widget code.
-On the app-facing builder path, prefer `FretApp::asset_manifest(...)` or
-`UiAppBuilder::with_asset_manifest(...)` so manifest loading stays in startup/configuration code.
+On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the convenience
+lane that scans one directory into one logical bundle without pushing repo-relative paths into
+widget code. `fret::assets::register_file_manifest(...)` is the explicit manifest-artifact lane
+when tooling already emits a reviewable/packageable mapping.
+On the app-facing builder path, prefer `FretApp::asset_dir(...)` /
+`UiAppBuilder::with_asset_dir(...)` for the generated-manifest convenience lane, or
+`FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have an
+explicit manifest file.
 
 ## Features
 
@@ -175,8 +179,9 @@ Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` 
 following seams first-class:
 
 - `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
+- `FretApp::asset_dir(...)` for native/package-dev generated bundle manifests
 - `FretApp::asset_manifest(...)` for native/package-dev logical bundle manifests
-- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_manifest(...)}`
+- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_dir(...), with_asset_manifest(...)}`
 - `fret::advanced::FretAppAdvancedExt::install(...)`
 - `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`

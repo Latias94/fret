@@ -89,7 +89,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `asset_app_bundle_id!()` / `asset_package_bundle_id!()` for caller-package defaults
   - Remaining:
     - final deprecation/removal posture for opaque legacy bundle strings
-    - generated manifest/tooling defaults that pick app vs package ownership automatically
+    - packaged/web/mobile tooling defaults that pick app vs package ownership automatically
 
 ## Packaging and startup
 
@@ -156,14 +156,19 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `ecosystem/fret/src/lib.rs` now exposes `fret::assets`
     - app-facing registration helpers exist on the facade
       (`register_bundle_entries`, `register_embedded_entries`, `register_resolver`)
+    - `register_file_bundle_dir(...)` now exposes the first generated-manifest directory lane on
+      the app-facing facade
     - `register_file_manifest(...)` now exposes the first native/package-dev manifest lane on the
       app-facing facade
+    - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep the directory-scanning
+      convenience lane on the builder/startup surface
     - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest
       lane on the builder/startup surface
     - cookbook asset basics now teaches the facade lane instead of direct
       `fret-assets` / `fret-runtime` imports
   - Remaining:
     - broader first-party packaged/web/mobile manifest tooling story
+    - clarify override/precedence guidance for multi-layer asset registration
     - ecosystem-oriented bundle identity guidance
     - final migration of first-party templates/gallery surfaces
 

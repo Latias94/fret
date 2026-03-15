@@ -5,7 +5,9 @@
 
 use std::path::PathBuf;
 
-use crate::{Defaults, Result, UiAppBuilder, UiAppDriver, integration::InstallIntoApp};
+use crate::{
+    Defaults, Result, UiAppBuilder, UiAppDriver, assets::AssetBundleId, integration::InstallIntoApp,
+};
 
 type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
 
@@ -21,6 +23,7 @@ pub struct FretApp {
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
     command_palette: bool,
+    asset_dirs: Vec<(AssetBundleId, PathBuf)>,
     asset_manifests: Vec<PathBuf>,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
@@ -37,6 +40,7 @@ impl FretApp {
             main_window: None,
             defaults: Defaults::default(),
             command_palette: false,
+            asset_dirs: Vec::new(),
             asset_manifests: Vec::new(),
             setup_hooks: Vec::new(),
             install_hooks: Vec::new(),
@@ -84,6 +88,18 @@ impl FretApp {
     /// resolver registration inside app setup or widget code.
     pub fn asset_manifest(mut self, manifest_path: impl Into<PathBuf>) -> Self {
         self.asset_manifests.push(manifest_path.into());
+        self
+    }
+
+    /// Register a native/package-dev asset directory under the default app bundle id.
+    ///
+    /// This convenience lane scans `dir` eagerly during builder assembly and exposes the files as
+    /// logical bundle assets under `AssetBundleId::app(root_name)`. Prefer
+    /// [`asset_manifest`](Self::asset_manifest) when tooling already emits an explicit manifest
+    /// artifact that should be reviewed or packaged directly.
+    pub fn asset_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.asset_dirs
+            .push((AssetBundleId::app(self.root_name), dir.into()));
         self
     }
 
@@ -141,6 +157,7 @@ impl FretApp {
             main_window,
             defaults,
             command_palette,
+            asset_dirs,
             asset_manifests,
             setup_hooks,
             install_hooks,
@@ -179,6 +196,7 @@ impl FretApp {
             root_name,
             main_window,
             defaults,
+            asset_dirs,
             asset_manifests,
             setup_hooks,
             install_hooks,
@@ -200,6 +218,7 @@ fn finish_builder<S: 'static>(
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
+    asset_dirs: Vec<(AssetBundleId, PathBuf)>,
     asset_manifests: Vec<PathBuf>,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
@@ -223,6 +242,9 @@ fn finish_builder<S: 'static>(
     builder = apply_main_window(root_name, main_window, builder);
     for manifest_path in asset_manifests {
         builder = builder.with_asset_manifest(manifest_path)?;
+    }
+    for (bundle, dir) in asset_dirs {
+        builder = builder.with_asset_dir(bundle, dir)?;
     }
     Ok(builder)
 }

@@ -61,13 +61,22 @@ This workstream takes a fearless posture:
 - A first native/package-dev manifest resolver now exists:
   - `crates/fret-assets/src/file_manifest.rs` defines a file-backed bundle manifest format and
     resolver,
+  - `FileAssetManifestBundleV1::scan_dir(...)` and
+    `FileAssetManifestResolver::from_bundle_dir(...)` now provide the first generated-manifest
+    convenience lane for one directory -> one logical bundle,
+  - `fret::assets::register_file_bundle_dir(...)` exposes that directory-scanning convenience on
+    the app-facing facade,
   - `fret::assets::register_file_manifest(...)` mounts that resolver on the app-facing facade
     without teaching repo-relative paths in widget code.
+  - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep that generated-manifest
+    convenience lane on the startup builder surface,
   - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` now keep that
     manifest lane on the startup builder surface instead of app-local setup glue.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.
+- Generated directory scanning is only a native/package-dev convenience lane today; it is not yet
+  a packaged web/mobile tooling story.
 - Font startup still remains split across desktop/web/SVG text and is not solved by the current
   slice.
 

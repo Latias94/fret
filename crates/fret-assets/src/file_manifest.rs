@@ -1,13 +1,19 @@
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::path::{Path, PathBuf};
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
+use crate::{AssetBundleId, AssetKey, AssetMediaType};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    AssetBundleId, AssetCapabilities, AssetKey, AssetLoadError, AssetLocator, AssetMediaType,
-    AssetRequest, AssetResolver, AssetRevision, ResolvedAssetBytes,
+    AssetCapabilities, AssetLoadError, AssetLocator, AssetRequest, AssetResolver, AssetRevision,
+    ResolvedAssetBytes,
 };
 
 pub const FILE_ASSET_MANIFEST_KIND_V1: &str = "fret_file_asset_manifest";
@@ -97,6 +103,33 @@ impl FileAssetManifestV1 {
         manifest.validate()?;
         Ok(manifest)
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn write_json_path(&self, path: impl AsRef<Path>) -> Result<(), AssetManifestLoadError> {
+        self.validate()?;
+
+        let path = path.as_ref();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|source| {
+                AssetManifestLoadError::WriteManifest {
+                    path: path.to_path_buf(),
+                    source,
+                }
+            })?;
+        }
+
+        let bytes = serde_json::to_vec_pretty(self).map_err(|source| {
+            AssetManifestLoadError::SerializeManifest {
+                path: path.to_path_buf(),
+                source,
+            }
+        })?;
+        std::fs::write(path, bytes).map_err(|source| AssetManifestLoadError::WriteManifest {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -123,6 +156,49 @@ impl FileAssetManifestBundleV1 {
     pub fn with_root(mut self, root: impl Into<PathBuf>) -> Self {
         self.root = Some(root.into());
         self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn scan_dir(
+        id: impl Into<AssetBundleId>,
+        root: impl AsRef<Path>,
+    ) -> Result<Self, AssetManifestLoadError> {
+        let id = id.into();
+        let root = root.as_ref();
+        let metadata =
+            std::fs::metadata(root).map_err(|source| AssetManifestLoadError::ReadBundleRoot {
+                path: root.to_path_buf(),
+                source,
+            })?;
+        if !metadata.is_dir() {
+            return Err(AssetManifestLoadError::InvalidManifest {
+                message: format!("bundle root is not a directory: {}", root.display()).into(),
+            });
+        }
+
+        let mut files = Vec::new();
+        collect_bundle_files(root, &mut files)?;
+        files.sort();
+
+        let entries = files
+            .into_iter()
+            .map(|path| {
+                let rel = path.strip_prefix(root).map_err(|_| {
+                    AssetManifestLoadError::InvalidManifest {
+                        message: format!(
+                            "failed to strip bundle root {} from {}",
+                            root.display(),
+                            path.display()
+                        )
+                        .into(),
+                    }
+                })?;
+                let key = rel.to_string_lossy().replace('\\', "/");
+                Ok(FileAssetManifestEntryV1::new(key))
+            })
+            .collect::<Result<Vec<_>, AssetManifestLoadError>>()?;
+
+        Ok(Self::new(id, entries).with_root(root.to_path_buf()))
     }
 }
 
@@ -169,6 +245,24 @@ pub enum AssetManifestLoadError {
         #[source]
         source: serde_json::Error,
     },
+    #[error("failed to serialize asset manifest {path}: {source}")]
+    SerializeManifest {
+        path: PathBuf,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("failed to write asset manifest {path}: {source}")]
+    WriteManifest {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to read asset bundle root {path}: {source}")]
+    ReadBundleRoot {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("invalid asset manifest: {message}")]
     InvalidManifest { message: SmolStr },
     #[error("duplicate asset manifest entry for bundle {bundle:?} key {key:?}")]
@@ -199,6 +293,16 @@ impl FileAssetManifestResolver {
         let manifest = FileAssetManifestV1::load_json_path(path)?;
         let base_dir = path.parent().unwrap_or_else(|| Path::new("."));
         Self::from_manifest_with_base_dir(manifest, base_dir, path.to_path_buf())
+    }
+
+    pub fn from_bundle_dir(
+        bundle: impl Into<AssetBundleId>,
+        root: impl AsRef<Path>,
+    ) -> Result<Self, AssetManifestLoadError> {
+        let root = root.as_ref();
+        let manifest =
+            FileAssetManifestV1::new([FileAssetManifestBundleV1::scan_dir(bundle, root)?]);
+        Self::from_manifest_with_base_dir(manifest, PathBuf::new(), root.to_path_buf())
     }
 
     pub fn from_manifest_with_base_dir(
@@ -292,6 +396,38 @@ fn resolve_manifest_path(base_dir: &Path, bundle_root: &Path, entry_path: &Path)
         base_dir.join(bundle_root)
     };
     joined_root.join(entry_path)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn collect_bundle_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AssetManifestLoadError> {
+    let mut entries =
+        std::fs::read_dir(dir).map_err(|source| AssetManifestLoadError::ReadBundleRoot {
+            path: dir.to_path_buf(),
+            source,
+        })?;
+    let mut paths = Vec::new();
+    while let Some(entry) = entries.next() {
+        let entry = entry.map_err(|source| AssetManifestLoadError::ReadBundleRoot {
+            path: dir.to_path_buf(),
+            source,
+        })?;
+        paths.push(entry.path());
+    }
+    paths.sort();
+
+    for path in paths {
+        let metadata =
+            std::fs::metadata(&path).map_err(|source| AssetManifestLoadError::ReadBundleRoot {
+                path: path.clone(),
+                source,
+            })?;
+        if metadata.is_dir() {
+            collect_bundle_files(&path, out)?;
+        } else if metadata.is_file() {
+            out.push(path);
+        }
+    }
+    Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -425,6 +561,65 @@ mod tests {
             )))
             .expect("bundle asset should resolve");
         assert_eq!(resolved.bytes.as_ref(), br#"<svg></svg>"#);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn scan_dir_builds_entries_from_bundle_root() {
+        let root = make_temp_dir("fret-assets-scan-dir");
+        std::fs::create_dir_all(root.join("icons")).expect("create icons dir");
+        std::fs::create_dir_all(root.join("images")).expect("create images dir");
+        std::fs::write(root.join("icons/search.svg"), br#"<svg></svg>"#).expect("write svg");
+        std::fs::write(root.join("images/logo.png"), b"png").expect("write png");
+
+        let bundle = FileAssetManifestBundleV1::scan_dir(app_bundle(), &root)
+            .expect("scan dir should build bundle");
+
+        assert_eq!(bundle.root.as_deref(), Some(root.as_path()));
+        assert_eq!(bundle.entries.len(), 2);
+        assert_eq!(bundle.entries[0].key.as_str(), "icons/search.svg");
+        assert_eq!(bundle.entries[1].key.as_str(), "images/logo.png");
+        assert!(bundle.entries.iter().all(|entry| entry.path.is_none()));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn write_json_path_round_trips_generated_manifest() {
+        let root = make_temp_dir("fret-assets-write-json");
+        std::fs::create_dir_all(root.join("images")).expect("create images dir");
+        std::fs::write(root.join("images/logo.png"), b"png").expect("write asset");
+
+        let manifest =
+            FileAssetManifestV1::new([FileAssetManifestBundleV1::scan_dir(app_bundle(), &root)
+                .expect("scan dir should succeed")]);
+        let manifest_path = root.join("out").join("assets.manifest.json");
+        manifest
+            .write_json_path(&manifest_path)
+            .expect("write json should succeed");
+
+        let loaded = FileAssetManifestV1::load_json_path(&manifest_path)
+            .expect("written manifest should parse");
+        assert_eq!(loaded, manifest);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn file_manifest_resolver_can_build_directly_from_bundle_dir() {
+        let root = make_temp_dir("fret-assets-bundle-dir-resolver");
+        std::fs::create_dir_all(root.join("images")).expect("create images dir");
+        std::fs::write(root.join("images/logo.png"), b"bundle-dir").expect("write asset");
+
+        let resolver = FileAssetManifestResolver::from_bundle_dir(app_bundle(), &root)
+            .expect("bundle dir should build resolver");
+        let resolved = resolver
+            .resolve_bytes(&AssetRequest::new(AssetLocator::bundle(
+                app_bundle(),
+                "images/logo.png",
+            )))
+            .expect("bundle dir asset should resolve");
+
+        assert_eq!(resolved.bytes.as_ref(), b"bundle-dir");
+        assert_eq!(resolver.entry_count(), 1);
     }
 
     #[cfg(not(target_arch = "wasm32"))]

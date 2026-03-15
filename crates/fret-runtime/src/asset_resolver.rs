@@ -132,7 +132,7 @@ impl AssetResolverService {
             }
         }
 
-        for resolver in self.layered_resolvers() {
+        for resolver in self.layered_resolvers().into_iter().rev() {
             match try_resolver_layer(resolver.as_ref(), request) {
                 Ok(Some(resolved)) => return Ok(resolved),
                 Ok(None) => saw_supported |= resolver.supports(&request.locator),
@@ -438,5 +438,25 @@ mod tests {
 
         assert_eq!(bundle.revision, AssetRevision(1));
         assert_eq!(embedded.revision, AssetRevision(4));
+    }
+
+    #[test]
+    fn later_layered_resolvers_override_earlier_layers_for_the_same_locator() {
+        let mut host = TestHost::default();
+
+        let mut earlier = InMemoryAssetResolver::new();
+        earlier.insert_bundle("app", "images/logo.png", AssetRevision(1), [1u8, 2, 3]);
+        register_asset_resolver(&mut host, Arc::new(earlier));
+
+        let mut later = InMemoryAssetResolver::new();
+        later.insert_bundle("app", "images/logo.png", AssetRevision(9), [9u8, 8, 7]);
+        register_asset_resolver(&mut host, Arc::new(later));
+
+        let resolved =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("later layered resolver should win");
+
+        assert_eq!(resolved.revision, AssetRevision(9));
+        assert_eq!(resolved.bytes.as_ref(), &[9, 8, 7]);
     }
 }
