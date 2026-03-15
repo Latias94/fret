@@ -134,7 +134,12 @@ pub mod assets {
     };
     pub use fret_runtime::AssetResolverService;
 
-    /// Replace the primary resolver layer for the current host.
+    /// Install or replace the primary resolver layer for the current host.
+    ///
+    /// The primary layer participates in the same ordered host resolver stack as every other
+    /// registration. Replacing an existing primary layer keeps that layer's current stack
+    /// position, so later registrations can still intentionally override it for the same logical
+    /// locator.
     pub fn set_primary_resolver(
         host: &mut impl fret_runtime::GlobalsHost,
         resolver: Arc<dyn AssetResolver>,
@@ -144,7 +149,8 @@ pub mod assets {
 
     /// Add an additional resolver layer without replacing earlier registrations.
     ///
-    /// Later layered registrations take precedence over earlier layered registrations for the same
+    /// Host resolver registrations preserve insertion order across primary, layered, and static
+    /// entry registrations, so later registrations take precedence over earlier ones for the same
     /// logical locator.
     pub fn register_resolver(
         host: &mut impl fret_runtime::GlobalsHost,
@@ -180,6 +186,9 @@ pub mod assets {
     }
 
     /// Register static bundle-scoped entries on the current host.
+    ///
+    /// These entries participate in the same ordered host resolver stack as other registrations,
+    /// so a later static registration can override an earlier resolver layer and vice versa.
     pub fn register_bundle_entries(
         host: &mut impl fret_runtime::GlobalsHost,
         bundle: impl Into<AssetBundleId>,
@@ -189,6 +198,9 @@ pub mod assets {
     }
 
     /// Register static embedded entries owned by a specific bundle or crate.
+    ///
+    /// These entries participate in the same ordered host resolver stack as other registrations,
+    /// so a later static registration can override an earlier resolver layer and vice versa.
     pub fn register_embedded_entries(
         host: &mut impl fret_runtime::GlobalsHost,
         owner: impl Into<AssetBundleId>,

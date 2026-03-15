@@ -132,7 +132,10 @@ when tooling already emits a reviewable/packageable mapping.
 On the app-facing builder path, prefer `FretApp::asset_dir(...)` /
 `UiAppBuilder::with_asset_dir(...)` for the generated-manifest convenience lane, or
 `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have an
-explicit manifest file.
+explicit manifest file. On the host path, `set_primary_resolver(...)`,
+`register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`
+participate in one ordered resolver stack, so later registrations override earlier ones for the
+same logical locator.
 
 ## Features
 

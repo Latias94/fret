@@ -168,14 +168,19 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       lane on the builder/startup surface
     - `FretApp` now preserves mixed `asset_dir(...)` / `asset_manifest(...)` call order so later
       builder calls override earlier ones consistently
+    - host-level resolver precedence is now unified across
+      `set_primary_resolver(...)`, `register_resolver(...)`,
+      `register_bundle_entries(...)`, and `register_embedded_entries(...)`
+    - static bundle/embedded registrations no longer bypass later resolver layers
+    - replacing the primary resolver now keeps its existing stack slot, so it does not silently
+      jump ahead of newer registrations
     - `fretboard` todo/simple-todo scaffolds now mount `assets/` through
       `FretApp::asset_dir("assets")` when `--ui-assets` is enabled
     - cookbook asset basics now teaches the facade lane instead of direct
       `fret-assets` / `fret-runtime` imports
   - Remaining:
     - broader first-party packaged/web/mobile manifest tooling story
-    - clarify broader override/precedence guidance across direct runtime registrations, builder
-      helpers, and future packaged-tooling layers
+    - packaged/web/mobile manifest layering guidance for future tooling stacks
     - ecosystem-oriented bundle identity guidance
     - final migration of remaining first-party gallery/bootstrap surfaces
 

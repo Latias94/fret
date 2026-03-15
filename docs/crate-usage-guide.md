@@ -148,6 +148,10 @@ If you are already on the `fret` builder path, prefer `FretApp::asset_dir(...)` 
 manifest file, so validation fails early during startup configuration instead of being buried in
 app-local setup glue. On the builder path, asset registrations preserve call order, so later
 registrations can intentionally override earlier ones for the same logical locator.
+On the host path, `set_primary_resolver(...)`, `register_resolver(...)`,
+`register_bundle_entries(...)`, and `register_embedded_entries(...)` now participate in the same
+ordered resolver stack, so later registrations override earlier ones for the same logical
+locator.
 
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
@@ -415,6 +419,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   or `fret::assets::register_file_manifest(...)`.
   When you want to emit an explicit manifest artifact from a bundle directory, prefer
   `fretboard assets manifest write ...` over hand-authoring JSON.
+  Direct host registrations preserve order across `set_primary_resolver(...)`,
+  `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`,
+  so later registrations intentionally override earlier ones for the same logical locator.
 - **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or

@@ -1,6 +1,6 @@
 use std::fmt;
 use std::sync::Arc;
-use std::sync::{Mutex, RwLock};
+use std::sync::RwLock;
 
 use fret_assets::{
     AssetBundleId, AssetCapabilities, AssetLoadError, AssetLocator, AssetRequest, AssetResolver,
@@ -10,17 +10,27 @@ use fret_assets::{
 use crate::GlobalsHost;
 
 struct AssetResolverServiceState {
-    primary: RwLock<Option<Arc<dyn AssetResolver>>>,
-    layered: RwLock<Vec<Arc<dyn AssetResolver>>>,
-    static_assets: Mutex<InMemoryAssetResolver>,
+    layers: RwLock<Vec<AssetResolverLayer>>,
+}
+
+#[derive(Clone)]
+enum AssetResolverLayer {
+    Primary(Arc<dyn AssetResolver>),
+    Registered(Arc<dyn AssetResolver>),
+}
+
+impl AssetResolverLayer {
+    fn resolver(&self) -> &Arc<dyn AssetResolver> {
+        match self {
+            Self::Primary(resolver) | Self::Registered(resolver) => resolver,
+        }
+    }
 }
 
 impl Default for AssetResolverServiceState {
     fn default() -> Self {
         Self {
-            primary: RwLock::default(),
-            layered: RwLock::default(),
-            static_assets: Mutex::new(InMemoryAssetResolver::new()),
+            layers: RwLock::default(),
         }
     }
 }
@@ -39,34 +49,51 @@ impl AssetResolverService {
 
     pub fn primary_resolver(&self) -> Option<Arc<dyn AssetResolver>> {
         self.state
-            .primary
+            .layers
             .read()
-            .expect("poisoned AssetResolverService primary lock")
-            .clone()
+            .expect("poisoned AssetResolverService layers lock")
+            .iter()
+            .find_map(|layer| match layer {
+                AssetResolverLayer::Primary(resolver) => Some(resolver.clone()),
+                AssetResolverLayer::Registered(_) => None,
+            })
     }
 
     pub fn layered_resolvers(&self) -> Vec<Arc<dyn AssetResolver>> {
         self.state
-            .layered
+            .layers
             .read()
-            .expect("poisoned AssetResolverService layered lock")
-            .clone()
+            .expect("poisoned AssetResolverService layers lock")
+            .iter()
+            .filter_map(|layer| match layer {
+                AssetResolverLayer::Primary(_) => None,
+                AssetResolverLayer::Registered(resolver) => Some(resolver.clone()),
+            })
+            .collect()
     }
 
     pub fn set_primary_resolver(&self, resolver: Arc<dyn AssetResolver>) {
-        *self
+        let mut layers = self
             .state
-            .primary
+            .layers
             .write()
-            .expect("poisoned AssetResolverService primary lock") = Some(resolver);
+            .expect("poisoned AssetResolverService layers lock");
+        if let Some(layer) = layers
+            .iter_mut()
+            .find(|layer| matches!(layer, AssetResolverLayer::Primary(_)))
+        {
+            *layer = AssetResolverLayer::Primary(resolver);
+        } else {
+            layers.push(AssetResolverLayer::Primary(resolver));
+        }
     }
 
     pub fn register_resolver(&self, resolver: Arc<dyn AssetResolver>) {
         self.state
-            .layered
+            .layers
             .write()
-            .expect("poisoned AssetResolverService layered lock")
-            .push(resolver);
+            .expect("poisoned AssetResolverService layers lock")
+            .push(AssetResolverLayer::Registered(resolver));
     }
 
     pub fn register_bundle_entries(
@@ -74,11 +101,9 @@ impl AssetResolverService {
         bundle: impl Into<AssetBundleId>,
         entries: impl IntoIterator<Item = StaticAssetEntry>,
     ) {
-        self.state
-            .static_assets
-            .lock()
-            .expect("poisoned AssetResolverService static-assets lock")
-            .insert_bundle_entries(bundle, entries);
+        let mut resolver = InMemoryAssetResolver::new();
+        resolver.insert_bundle_entries(bundle, entries);
+        self.register_resolver(Arc::new(resolver));
     }
 
     pub fn register_embedded_entries(
@@ -86,26 +111,24 @@ impl AssetResolverService {
         owner: impl Into<AssetBundleId>,
         entries: impl IntoIterator<Item = StaticAssetEntry>,
     ) {
+        let mut resolver = InMemoryAssetResolver::new();
+        resolver.insert_embedded_entries(owner, entries);
+        self.register_resolver(Arc::new(resolver));
+    }
+
+    fn resolver_layers(&self) -> Vec<AssetResolverLayer> {
         self.state
-            .static_assets
-            .lock()
-            .expect("poisoned AssetResolverService static-assets lock")
-            .insert_embedded_entries(owner, entries);
+            .layers
+            .read()
+            .expect("poisoned AssetResolverService layers lock")
+            .clone()
     }
 
     pub fn capabilities(&self) -> AssetCapabilities {
-        let mut caps = self
-            .state
-            .static_assets
-            .lock()
-            .expect("poisoned AssetResolverService static-assets lock")
-            .capabilities();
+        let mut caps = AssetCapabilities::default();
 
-        if let Some(primary) = self.primary_resolver() {
-            union_capabilities(&mut caps, primary.capabilities());
-        }
-        for resolver in self.layered_resolvers() {
-            union_capabilities(&mut caps, resolver.capabilities());
+        for layer in self.resolver_layers() {
+            union_capabilities(&mut caps, layer.resolver().capabilities());
         }
         caps
     }
@@ -118,21 +141,10 @@ impl AssetResolverService {
         &self,
         request: &AssetRequest,
     ) -> Result<ResolvedAssetBytes, AssetLoadError> {
-        if let Some(resolved) = self.try_static_assets(request)? {
-            return Ok(resolved);
-        }
-
         let mut saw_supported = false;
 
-        if let Some(primary) = self.primary_resolver() {
-            match try_resolver_layer(primary.as_ref(), request) {
-                Ok(Some(resolved)) => return Ok(resolved),
-                Ok(None) => saw_supported |= primary.supports(&request.locator),
-                Err(err) => return Err(err),
-            }
-        }
-
-        for resolver in self.layered_resolvers().into_iter().rev() {
+        for layer in self.resolver_layers().into_iter().rev() {
+            let resolver = layer.resolver();
             match try_resolver_layer(resolver.as_ref(), request) {
                 Ok(Some(resolved)) => return Ok(resolved),
                 Ok(None) => saw_supported |= resolver.supports(&request.locator),
@@ -140,7 +152,7 @@ impl AssetResolverService {
             }
         }
 
-        if saw_supported || self.supports(&request.locator) {
+        if saw_supported {
             Err(AssetLoadError::NotFound)
         } else {
             Err(AssetLoadError::UnsupportedLocatorKind {
@@ -154,28 +166,6 @@ impl AssetResolverService {
         locator: AssetLocator,
     ) -> Result<ResolvedAssetBytes, AssetLoadError> {
         self.resolve_bytes(&AssetRequest::new(locator))
-    }
-
-    fn try_static_assets(
-        &self,
-        request: &AssetRequest,
-    ) -> Result<Option<ResolvedAssetBytes>, AssetLoadError> {
-        let static_assets = self
-            .state
-            .static_assets
-            .lock()
-            .expect("poisoned AssetResolverService static-assets lock");
-
-        if !static_assets.capabilities().supports(&request.locator) {
-            return Ok(None);
-        }
-
-        match static_assets.resolve_bytes(request) {
-            Ok(resolved) => Ok(Some(resolved)),
-            Err(AssetLoadError::NotFound) => Ok(None),
-            Err(AssetLoadError::UnsupportedLocatorKind { .. }) => Ok(None),
-            Err(err) => Err(err),
-        }
     }
 }
 
@@ -455,6 +445,96 @@ mod tests {
         let resolved =
             resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
                 .expect("later layered resolver should win");
+
+        assert_eq!(resolved.revision, AssetRevision(9));
+        assert_eq!(resolved.bytes.as_ref(), &[9, 8, 7]);
+    }
+
+    #[test]
+    fn later_static_entry_layers_override_earlier_resolver_layers_for_the_same_locator() {
+        let mut host = TestHost::default();
+
+        let mut earlier = InMemoryAssetResolver::new();
+        earlier.insert_bundle("app", "images/logo.png", AssetRevision(1), [1u8, 2, 3]);
+        register_asset_resolver(&mut host, Arc::new(earlier));
+
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(9),
+                b"override",
+            )],
+        );
+
+        let resolved =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("later static entry layer should win");
+
+        assert_eq!(resolved.revision, AssetRevision(9));
+        assert_eq!(resolved.bytes.as_ref(), b"override");
+    }
+
+    #[test]
+    fn later_resolver_layers_override_earlier_static_entry_layers_for_the_same_locator() {
+        let mut host = TestHost::default();
+
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"earlier",
+            )],
+        );
+
+        let mut later = InMemoryAssetResolver::new();
+        later.insert_bundle("app", "images/logo.png", AssetRevision(9), [9u8, 8, 7]);
+        register_asset_resolver(&mut host, Arc::new(later));
+
+        let resolved =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("later resolver layer should win");
+
+        assert_eq!(resolved.revision, AssetRevision(9));
+        assert_eq!(resolved.bytes.as_ref(), &[9, 8, 7]);
+    }
+
+    #[test]
+    fn primary_resolver_replacement_keeps_its_existing_layer_position() {
+        let mut host = TestHost::default();
+
+        let mut earlier = InMemoryAssetResolver::new();
+        earlier.insert_bundle("app", "images/logo.png", AssetRevision(1), [1u8, 2, 3]);
+        register_asset_resolver(&mut host, Arc::new(earlier));
+
+        let mut first_primary = InMemoryAssetResolver::new();
+        first_primary.insert_bundle("app", "images/logo.png", AssetRevision(4), [4u8, 4, 4]);
+        set_asset_resolver(&mut host, Arc::new(first_primary));
+
+        let resolved =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("first primary should win when it is the latest registration");
+        assert_eq!(resolved.revision, AssetRevision(4));
+
+        let mut later = InMemoryAssetResolver::new();
+        later.insert_bundle("app", "images/logo.png", AssetRevision(9), [9u8, 8, 7]);
+        register_asset_resolver(&mut host, Arc::new(later));
+
+        let resolved =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("later layered resolver should win");
+        assert_eq!(resolved.revision, AssetRevision(9));
+
+        let mut replacement_primary = InMemoryAssetResolver::new();
+        replacement_primary.insert_bundle("app", "images/logo.png", AssetRevision(7), [7u8, 7, 7]);
+        set_asset_resolver(&mut host, Arc::new(replacement_primary));
+
+        let resolved =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("replacing primary should not jump ahead of later layers");
 
         assert_eq!(resolved.revision, AssetRevision(9));
         assert_eq!(resolved.bytes.as_ref(), &[9, 8, 7]);

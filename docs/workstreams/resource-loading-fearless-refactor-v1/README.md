@@ -50,6 +50,13 @@ This workstream takes a fearless posture:
   - The host service is composable instead of replace-only:
     - multiple resolver layers can be registered,
     - static bundle/embedded entries can be registered incrementally by app or ecosystem code.
+  - Host registrations now share one ordered resolver stack across:
+    - `set_primary_resolver(...)`,
+    - `register_resolver(...)`,
+    - `register_bundle_entries(...)`,
+    - `register_embedded_entries(...)`.
+  - Static entries no longer bypass later resolver layers, and replacing the primary resolver keeps
+    its existing stack slot instead of jumping ahead of newer registrations.
 - The app-facing `fret` facade now exposes `fret::assets`:
   - logical asset vocabulary is reachable without importing `fret-assets` / `fret-runtime`
     directly,
