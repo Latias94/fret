@@ -5,15 +5,17 @@ use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
+fn centered<B>(body: B) -> impl UiChild + use<B>
+where
+    B: UiChild,
+{
+    ui::h_flex(move |cx| [body.into_element(cx)])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_center()
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let values = cx.local_model(|| vec![50.0]);
-
-    let centered = |cx: &mut UiCx<'_>, body: AnyElement| {
-        ui::h_flex(move |_cx| [body])
-            .layout(LayoutRefinement::default().w_full())
-            .justify_center()
-            .into_element(cx)
-    };
 
     cx.keyed("ui_gallery.progress.controlled", |cx| {
         let body = ui::v_flex(|cx| {
@@ -33,7 +35,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
         .into_element(cx);
 
-        centered(cx, body).test_id("ui-gallery-progress-controlled")
+        centered(body).test_id("ui-gallery-progress-controlled")
     })
 }
 
