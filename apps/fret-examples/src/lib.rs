@@ -779,6 +779,17 @@ mod authoring_surface_policy_tests {
         );
 
         assert_advanced_helpers_prefer_uicx(
+            GENUI_DEMO,
+            &[
+                "fn genui_page<L, R>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, left: L, right: R) -> Ui",
+                "L: IntoUiElement<KernelApp>,",
+                "R: IntoUiElement<KernelApp>,",
+                "genui_page(cx, theme, left, right)",
+            ],
+            &["let page = ui::container(move |cx| {"],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
             HELLO_WORLD_COMPARE_DEMO,
             &["let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|"],
             &[

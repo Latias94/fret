@@ -1476,20 +1476,29 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
             .into_element(cx)
     };
 
-    let page = ui::container(move |cx| {
-        [ui::h_flex(move |_cx| [left, right])
-            .gap(Space::N3)
-            .w_full()
-            .h_full()
-            .into_element(cx)]
+    genui_page(cx, theme, left, right)
+}
+
+fn genui_page<L, R>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, left: L, right: R) -> Ui
+where
+    L: IntoUiElement<KernelApp>,
+    R: IntoUiElement<KernelApp>,
+{
+    ui::container(move |cx| {
+        ui::children![
+            cx;
+            ui::h_flex(move |cx| ui::children![cx; left, right])
+                .gap(Space::N3)
+                .w_full()
+                .h_full()
+        ]
     })
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N4)
     .w_full()
     .h_full()
-    .into_element(cx);
-
-    ui::children![cx; page].into()
+    .into_element(cx)
+    .into()
 }
 
 fn maybe_auto_fix_spec(enabled: bool, spec: &SpecV1) -> (SpecV1, SpecFixups) {
