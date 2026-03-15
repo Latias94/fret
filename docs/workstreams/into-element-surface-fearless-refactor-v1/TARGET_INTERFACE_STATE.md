@@ -116,6 +116,10 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use
   `&mut UiCx<'_>` plus typed content and return `Ui`, so their parent `render(...)` / `view(...)`
   paths no longer teach a root-local `let page = ...; page.into()` pattern just to attach wrapper
   styling or diagnostics metadata.
+- lightweight advanced compare samples should follow that same pattern too:
+  `apps/fret-examples/src/hello_world_compare_demo.rs::hello_world_compare_root(...)`
+  now keeps the final root panel on a named `UiCx -> Ui` helper instead of leaving the full root
+  panel chain inline inside `render(...)`.
 - direct `App + UiTree` examples should follow the same ownership rule on their lower-level lane:
   when a manual `render_root(...)` closure still uses `fret_ui::ElementContext<'_, App>` directly,
   keep the root chrome on a local helper such as

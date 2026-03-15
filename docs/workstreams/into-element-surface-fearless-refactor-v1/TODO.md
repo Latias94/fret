@@ -66,6 +66,9 @@ Execution note on 2026-03-14:
 - the first-contact `hello_counter_demo` on the default app lane now also keeps its root shell on
   `hello_counter_page(cx, ...) -> Ui`, so that example no longer teaches inline root wrapper
   chrome inside `render(...)`.
+- the advanced compare sample `hello_world_compare_demo` now also keeps its final root panel on a
+  local `hello_world_compare_root(cx, ...) -> Ui` helper instead of leaving the whole final
+  root-panel chain inline inside `render(...)`.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

@@ -886,7 +886,15 @@ mod authoring_surface_policy_tests {
 
         assert_advanced_helpers_prefer_uicx(
             HELLO_WORLD_COMPARE_DEMO,
-            &["let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|"],
+            &[
+                "let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|",
+                "fn hello_world_compare_root(",
+                "cx: &mut UiCx<'_>,",
+                "panel_bg: Color,",
+                "children: Vec<AnyElement>,",
+                ") -> Ui",
+                "hello_world_compare_root(cx.elements(), panel_bg, children)",
+            ],
             &[
                 "let swatch = |cx: &mut ElementContext<'_, KernelApp>,",
                 "let swatch = |cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32| -> AnyElement",

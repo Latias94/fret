@@ -1099,17 +1099,25 @@ impl View for HelloWorldCompareView {
             children.push(swatch_row);
         }
 
-        ui::v_flex(move |_cx| children)
-            .w_full()
-            .h_full()
-            .gap(Space::N3)
-            .items_center()
-            .justify_center()
-            .bg(ColorRef::Color(panel_bg))
-            .into_element(cx)
-            .test_id(TEST_ID_ROOT)
-            .into()
+        hello_world_compare_root(cx.elements(), panel_bg, children)
     }
+}
+
+fn hello_world_compare_root(
+    cx: &mut UiCx<'_>,
+    panel_bg: Color,
+    children: Vec<AnyElement>,
+) -> Ui {
+    ui::v_flex(move |_cx| children)
+        .w_full()
+        .h_full()
+        .gap(Space::N3)
+        .items_center()
+        .justify_center()
+        .bg(ColorRef::Color(panel_bg))
+        .into_element(cx)
+        .test_id(TEST_ID_ROOT)
+        .into()
 }
 
 pub fn run() -> anyhow::Result<()> {
