@@ -327,7 +327,7 @@ surface.
     no targeted first-party guidance now implies a universal ecosystem plugin model.
     Remaining `Plugin` references are app-owned (`fret-app::Plugin`) or domain-local
     (`GizmoPlugin`) and are explicitly not treated as the default ecosystem extension template.
-- [ ] Delete any temporary adapters that survive after official examples and templates no longer
+- [x] Delete any temporary adapters that survive after official examples and templates no longer
   need them.
   - First landed deletion on 2026-03-15:
     deleted the temporary `fret-ui-kit` canvas compat re-export modules
@@ -337,5 +337,9 @@ surface.
     `src/recipes/canvas_tool_router.rs`
     after migrating first-party in-tree consumers (`fret-chart`) to the canonical
     `fret_canvas::ui::*` owner seam.
+  - Closeout note on 2026-03-15:
+    the remaining explicitly labeled compatibility helpers are now domain-local aliases
+    (`fret-ui-editor::apply_editor_theme_patch_v1`, `fret-ui-kit::toggle_group_item_a11y`) rather
+    than temporary cross-ecosystem adapter layers, so they are no longer tracked by this item.
 - [ ] Keep the migration matrix updated until all tracked old postures are either deleted or
   intentionally retained as explicit advanced seams.
