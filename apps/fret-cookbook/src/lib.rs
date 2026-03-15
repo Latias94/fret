@@ -490,6 +490,10 @@ mod authoring_surface_policy_tests {
         assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains(
             "This is the generated-module lane to teach when a crate only publishes shipped bytes."
         ));
+        assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("`FretApp::asset_startup(...)`"));
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("`AssetStartupPlan::packaged_entries(...)`")
+        );
         assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("`FretApp::asset_entries(...)`"));
         assert!(
             APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("without native-only file path assumptions.")

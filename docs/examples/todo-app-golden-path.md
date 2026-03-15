@@ -392,9 +392,12 @@ If you want UI render asset conveniences (not an editor/project asset pipeline):
 
 - Enable `fret/ui-assets` (or scaffold with `cargo run -p fretboard -- new todo --ui-assets`) so the golden-path
   driver wires caches + budgets.
-- Prefer `FretApp::asset_dir("assets")` on the app-facing builder path for the native/package-dev
-  generated-manifest convenience lane; generated `fretboard` templates now wire this by default
-  when `--ui-assets` is enabled.
+- Prefer generated `src/generated_assets.rs` modules plus `generated_assets::mount(builder)` for
+  the default portable packaged lane; if startup needs one explicit development-vs-packaged
+  contract, use `fret::assets::{AssetStartupPlan, AssetStartupMode}` with
+  `FretApp::asset_startup(...)`.
+- Keep `FretApp::asset_dir("assets")` only as the lower-level native/package-dev convenience lane
+  when you intentionally want a file-backed development source on the builder path.
 - Optionally call `.ui_assets_budgets(...)` on `FretApp` to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.

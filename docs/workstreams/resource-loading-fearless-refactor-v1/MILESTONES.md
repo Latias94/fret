@@ -69,6 +69,9 @@ Deliverables:
 - The golden-path authoring API is bundle/key based.
 - Development manifests/directories and compile-time embedded assets can all mount through the
   same builder/startup surface with one ordering model.
+- The first-party startup surface can name the development-vs-packaged choice explicitly
+  (`AssetStartupPlan` + `AssetStartupMode`) instead of teaching ad-hoc branching at each app
+  entry point.
 - Generated `--surface fret` asset modules can participate on both the builder lane
   (`mount(builder)`) and the app setup lane (`Bundle` / `install(app)`).
 - Ecosystem libraries have one documented ownership rule for package resources and icon-pack

@@ -1,7 +1,10 @@
 use fret::{
     FretApp,
     advanced::prelude::*,
-    assets::{AssetBundleId, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry},
+    assets::{
+        AssetBundleId, AssetLocator, AssetRequest, AssetRevision, AssetStartupMode,
+        AssetStartupPlan, StaticAssetEntry,
+    },
     shadcn,
 };
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
@@ -53,6 +56,8 @@ impl View for AppOwnedBundleAssetsBasicsView {
                 shadcn::Badge::new("Scaffold equivalent: `generated_assets::mount(builder)`")
                     .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new("Generated module is enough when the crate only publishes shipped bytes")
+                    .variant(shadcn::BadgeVariant::Secondary),
+                shadcn::Badge::new("Higher-level startup seam: `FretApp::asset_startup(...)`")
                     .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new("Lower-level builder seam: `FretApp::asset_entries(...)`")
                     .variant(shadcn::BadgeVariant::Secondary),
@@ -187,7 +192,7 @@ fn render_image_panel(
                     cx;
                     shadcn::card_title("Image from app bundle locator"),
                     shadcn::card_description(
-                        "Loads `textures/test.jpg` through the app bundle namespace mounted on `FretApp::asset_entries(...)`, without native-only file path assumptions.",
+                        "Loads `textures/test.jpg` through the app bundle namespace mounted on `AssetStartupPlan::packaged_entries(...)` via `FretApp::asset_startup(...)`, without native-only file path assumptions.",
                     ),
                 ]
             }),
@@ -301,7 +306,10 @@ fn main() -> anyhow::Result<()> {
     FretApp::new(APP_ID)
         .window(APP_ID, (960.0, 780.0))
         .ui_assets_budgets(32 * 1024 * 1024, 1024, 8 * 1024 * 1024, 2048)
-        .asset_entries(APP_ASSET_ENTRIES)
+        .asset_startup(
+            AssetStartupMode::Packaged,
+            AssetStartupPlan::new().packaged_entries(APP_ASSET_ENTRIES),
+        )
         .setup(fret_cookbook::install_cookbook_defaults)
         .view::<AppOwnedBundleAssetsBasicsView>()?
         .run()

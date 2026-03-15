@@ -172,19 +172,44 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Packaging and startup
 
-- [ ] RESLOAD-pack-200 Define development vs packaged asset-bundle behavior.
+- [~] RESLOAD-pack-200 Define development vs packaged asset-bundle behavior.
   - Development:
     - real file roots,
     - watchers,
     - hot reload revisions.
   - Packaged:
     - emitted/embedded/mobile-bundled asset lookup by logical key.
+  - Current landed slice:
+    - `fret::assets::{AssetStartupPlan, AssetStartupMode}` now gives the `fret` facade one named
+      startup policy object for selecting development vs packaged publication on the builder path,
+    - `FretApp::asset_startup(...)` lowers that policy onto the default app-facing startup
+      surface while preserving fail-early builder semantics,
+    - `UiAppBuilder::with_asset_startup(...)` keeps the same policy available on the explicit
+      advanced builder lane,
+    - the plan intentionally lowers to the existing ordered builder registrations:
+      `asset_dir(...)`, `asset_manifest(...)`, `with_bundle_asset_entries(...)`, and
+      `with_embedded_asset_entries(...)`,
+    - missing selected lanes now fail as startup configuration errors instead of silently falling
+      through to ad-hoc runtime glue.
+  - Remaining:
+    - watcher/hot-reload policy is still implicit in the native file-manifest resolver layer,
+    - packaged-mode selection is still manual at startup sites until tooling owns the switch.
 
-- [ ] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.
+- [~] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.
   - Candidates:
     - `fret-launch`
     - `fret-bootstrap`
     - future `fretboard` asset manifest tooling
+  - Current landed slice:
+    - the first app-facing integration point is now explicit in `ecosystem/fret`:
+      `AssetStartupPlan` + `AssetStartupMode` on the builder surface,
+    - generated `--surface fret` modules already expose the packaged-lane ingredients
+      (`ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`, `mount(builder)`), so tooling can feed
+      the startup plan without inventing a second contract.
+  - Remaining:
+    - define who owns selecting `AssetStartupMode` for debug/dev/package workflows,
+    - decide whether `fretboard` should emit a higher-level helper around the startup plan,
+    - wire the same story through any future `fret-bootstrap` / `fret-launch` packaging helpers.
 
 ## Font baseline unification
 

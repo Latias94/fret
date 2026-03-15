@@ -149,6 +149,12 @@ this lane; keep controls such as `Attachment`, `QueueItemAction`, `Test`, `FileT
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
+When app code needs explicit theme snapshot value types in extracted helper signatures, import
+`fret::style::ThemeSnapshot` instead of expecting it from `fret::app::prelude::*`.
+When app code needs explicit local state-handle types in validators or helper signatures, import
+`fret::app::LocalState` instead of expecting it from `fret::app::prelude::*`.
+When app code needs explicit command identity values, import `fret::actions::CommandId` instead of
+expecting `CommandId` from the default prelude.
 When app code needs explicit semantics nouns, import them intentionally from
 `fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 When app code needs explicit selector/query nouns, keep them off the default prelude as well and
@@ -166,10 +172,17 @@ Do the same for logical assets: import them intentionally from `fret::assets::{.
 `AssetBundleId::app(...)` / `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` and
 `register_bundle_entries(...)` as the portable default story, and keep
 `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape hatches.
-For app-owned compile-time assets on the `fret` builder path, prefer generated modules that expose
-`generated_assets::mount(builder)` or call `UiAppBuilder::with_bundle_asset_entries(...)` /
-`UiAppBuilder::with_embedded_asset_entries(...)` directly; keep `FretApp::asset_dir(...)` /
-`UiAppBuilder::with_asset_dir(...)` as the native/package-dev convenience lane.
+For startup that needs one explicit development-vs-packaged switch, prefer
+`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`
+plus
+`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)`. Keep
+`development_dir(...)` / `development_manifest(...)` for native/package-dev file-backed inputs,
+and keep `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
+`packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes. Generated asset modules
+remain the packaged lane because they already expose `ENTRIES`, `bundle_id()`, `Bundle`,
+`install(app)`, and `mount(builder)`. Keep `FretApp::asset_dir(...)` /
+`UiAppBuilder::with_asset_dir(...)` as the lower-level native/package-dev convenience lane when
+you only need one lane or intentionally custom layering.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
 without teaching raw repo-relative paths in app/widget code.
@@ -187,11 +200,14 @@ artifact that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use
 `fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app`.
 If you are already on the `fret` builder path, prefer `FretApp::asset_dir(...)` /
-`UiAppBuilder::with_asset_dir(...)` for the convenience lane, or
+`UiAppBuilder::with_asset_dir(...)` for one-off convenience, or
 `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have a
 manifest file, so validation fails early during startup configuration instead of being buried in
-app-local setup glue. On the builder path, asset registrations preserve call order, so later
-registrations can intentionally override earlier ones for the same logical locator.
+app-local setup glue. When startup needs one named contract for both development and packaged
+builds, prefer `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` with
+`AssetStartupPlan` + `AssetStartupMode`. On the builder path, asset registrations preserve call
+order, so later registrations can intentionally override earlier ones for the same logical
+locator.
 For package-owned or generated compile-time bytes, the same ordered builder surface now includes
 `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
 `UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
@@ -203,9 +219,10 @@ locator.
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
 provides `ComponentCx`, `UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`, layout/style refinements,
-and semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams. The
-conversion surface is intentionally being collapsed to one public component conversion trait; new
-docs/examples should follow
+and semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams.
+Overlap-heavy helper traits remain anonymous `as _` imports on this lane so method ergonomics stay
+intact without widening autocomplete pressure. The conversion surface is intentionally being
+collapsed to one public component conversion trait; new docs/examples should follow
 `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
 teaching the legacy split conversion trait names. When reusable component code needs explicit
 command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead

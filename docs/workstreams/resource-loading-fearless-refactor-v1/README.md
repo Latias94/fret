@@ -86,6 +86,10 @@ This workstream takes a fearless posture:
     convenience lane on the startup builder surface,
   - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` now keep that
     manifest lane on the startup builder surface instead of app-local setup glue.
+  - `fret::assets::{AssetStartupPlan, AssetStartupMode}` plus
+    `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` now provide one named
+    first-party startup contract for choosing the development lane without re-teaching
+    path-first branching in app code.
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.
@@ -113,6 +117,9 @@ This workstream takes a fearless posture:
     `FretApp::embedded_asset_entries(...)`, `UiAppBuilder::with_bundle_asset_entries(...)`, and
     `UiAppBuilder::with_embedded_asset_entries(...)` now keep compile-time/static registrations on
     the same ordered builder/startup surface as `asset_dir(...)` and `asset_manifest(...)`.
+  - the same startup-plan surface now also selects this packaged lane explicitly through
+    `AssetStartupMode::Packaged`, so app/bootstrap code can name both development and packaged
+    behavior without re-encoding the low-level builder calls at every startup site.
 - `fret-ui-assets` now consumes the shared resolver contract for both bytes and explicit external
   references:
   - image helpers prefer target-appropriate reference handoff first (native file paths, wasm URL
