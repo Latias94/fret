@@ -82,10 +82,11 @@ pub mod window_text_input_snapshot;
 pub use action::{ActionId, ActionMeta, ActionRegistry, TypedAction};
 pub use action_payload::WindowPendingActionPayloadService;
 pub use asset_resolver::{
-    AssetResolverService, asset_capabilities, asset_resolver, register_asset_resolver,
-    register_bundle_asset_entries, register_embedded_asset_entries, resolve_asset_bytes,
-    resolve_asset_locator_bytes, resolve_asset_locator_reference, resolve_asset_reference,
-    set_asset_resolver,
+    AssetLoadAccessKind, AssetLoadDiagnosticEvent, AssetLoadDiagnosticsSnapshot,
+    AssetLoadOutcomeKind, AssetResolverService, AssetRevisionTransitionKind, asset_capabilities,
+    asset_resolver, register_asset_resolver, register_bundle_asset_entries,
+    register_embedded_asset_entries, resolve_asset_bytes, resolve_asset_locator_bytes,
+    resolve_asset_locator_reference, resolve_asset_reference, set_asset_resolver,
 };
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,

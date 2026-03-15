@@ -347,12 +347,31 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Diagnostics and gates
 
-- [ ] RESLOAD-diag-600 Add diagnostics for:
+- [~] RESLOAD-diag-600 Add diagnostics for:
   - missing bundle asset,
   - unsupported file/url capability,
   - stale/missing manifest mapping,
   - font baseline source,
   - revision transitions.
+  - Current landed slice:
+    - `crates/fret-runtime/src/asset_resolver.rs` now keeps a bounded diagnostics snapshot on the
+      shared resolver service, including:
+      - recent bytes/reference resolution outcomes,
+      - missing bundle asset counts,
+      - unsupported file/url capability counts,
+      - external-reference-unavailable counts,
+      - per-locator revision transition classification (`initial` / `stable` / `changed`).
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_{types,impl}.rs` now exposes
+      `debug.resource_loading` in bundle snapshots, including:
+      - recent asset-load diagnostic events,
+      - current bundled font baseline source/profile/bundle/key contract,
+      - current font catalog revision/family count,
+      - current `TextFontStackKey`,
+      - current native system-font rescan state.
+  - Remaining:
+    - emit a more explicit stale-manifest vs truly-missing-bundle distinction when file-backed
+      manifest resolvers can surface it
+    - add post-run `fretboard diag` checks / predicates over `debug.resource_loading`
 
 - [~] RESLOAD-test-610 Add portable contract tests for asset capability and fallback behavior.
   - Current landed slice:

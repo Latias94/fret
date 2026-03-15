@@ -126,6 +126,13 @@ pub struct UiTreeDebugSnapshotV1 {
     /// This records when the OS accessibility stack activates the AccessKit adapter for a window.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner_accessibility: Option<UiRunnerAccessibilitySnapshotV1>,
+    /// Best-effort resource-loading diagnostics snapshot.
+    ///
+    /// This surfaces recent asset resolution outcomes plus the current startup font baseline /
+    /// catalog state so resource-loading drift can be diagnosed from the bundle without scraping
+    /// logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_loading: Option<UiResourceLoadingDiagnosticsSnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -199,6 +206,172 @@ pub struct UiRunnerAccessibilitySnapshotV1 {
     pub last_activation_unix_ms: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_activation_frame_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiResourceLoadingDiagnosticsSnapshotV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_load: Option<UiAssetLoadDiagnosticsSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_environment: Option<UiFontEnvironmentDiagnosticsSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiAssetLoadDiagnosticsSnapshotV1 {
+    pub total_requests: u64,
+    pub bytes_requests: u64,
+    pub reference_requests: u64,
+    pub missing_bundle_asset_requests: u64,
+    pub unsupported_file_requests: u64,
+    pub unsupported_url_requests: u64,
+    pub external_reference_unavailable_requests: u64,
+    pub revision_change_requests: u64,
+    #[serde(default)]
+    pub recent: Vec<UiAssetLoadDiagnosticEventV1>,
+}
+
+impl UiAssetLoadDiagnosticsSnapshotV1 {
+    pub(super) fn from_runtime(snapshot: fret_runtime::AssetLoadDiagnosticsSnapshot) -> Self {
+        Self {
+            total_requests: snapshot.total_requests,
+            bytes_requests: snapshot.bytes_requests,
+            reference_requests: snapshot.reference_requests,
+            missing_bundle_asset_requests: snapshot.missing_bundle_asset_requests,
+            unsupported_file_requests: snapshot.unsupported_file_requests,
+            unsupported_url_requests: snapshot.unsupported_url_requests,
+            external_reference_unavailable_requests: snapshot
+                .external_reference_unavailable_requests,
+            revision_change_requests: snapshot.revision_change_requests,
+            recent: snapshot
+                .recent
+                .into_iter()
+                .map(UiAssetLoadDiagnosticEventV1::from_runtime)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiAssetLoadDiagnosticEventV1 {
+    pub access_kind: String,
+    pub locator_kind: String,
+    pub locator_debug: String,
+    pub outcome_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision_transition: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+impl UiAssetLoadDiagnosticEventV1 {
+    fn from_runtime(event: fret_runtime::AssetLoadDiagnosticEvent) -> Self {
+        Self {
+            access_kind: match event.access_kind {
+                fret_runtime::AssetLoadAccessKind::Bytes => "bytes",
+                fret_runtime::AssetLoadAccessKind::ExternalReference => "external_reference",
+            }
+            .to_string(),
+            locator_kind: match event.locator_kind {
+                fret_assets::AssetLocatorKind::Memory => "memory",
+                fret_assets::AssetLocatorKind::Embedded => "embedded",
+                fret_assets::AssetLocatorKind::BundleAsset => "bundle_asset",
+                fret_assets::AssetLocatorKind::File => "file",
+                fret_assets::AssetLocatorKind::Url => "url",
+            }
+            .to_string(),
+            locator_debug: event.locator_debug,
+            outcome_kind: match event.outcome_kind {
+                fret_runtime::AssetLoadOutcomeKind::Resolved => "resolved",
+                fret_runtime::AssetLoadOutcomeKind::Missing => "missing",
+                fret_runtime::AssetLoadOutcomeKind::UnsupportedLocatorKind => {
+                    "unsupported_locator_kind"
+                }
+                fret_runtime::AssetLoadOutcomeKind::ExternalReferenceUnavailable => {
+                    "external_reference_unavailable"
+                }
+                fret_runtime::AssetLoadOutcomeKind::ResolverUnavailable => "resolver_unavailable",
+                fret_runtime::AssetLoadOutcomeKind::AccessDenied => "access_denied",
+                fret_runtime::AssetLoadOutcomeKind::Message => "message",
+            }
+            .to_string(),
+            revision: event.revision.map(|revision| revision.0),
+            previous_revision: event.previous_revision.map(|revision| revision.0),
+            revision_transition: event.revision_transition.map(|transition| {
+                match transition {
+                    fret_runtime::AssetRevisionTransitionKind::Initial => "initial",
+                    fret_runtime::AssetRevisionTransitionKind::Stable => "stable",
+                    fret_runtime::AssetRevisionTransitionKind::Changed => "changed",
+                }
+                .to_string()
+            }),
+            message: event.message,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiFontEnvironmentDiagnosticsSnapshotV1 {
+    pub bundled_baseline_source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundled_profile_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundled_asset_bundle: Option<String>,
+    #[serde(default)]
+    pub bundled_asset_keys: Vec<String>,
+    #[serde(default)]
+    pub bundled_roles: Vec<String>,
+    #[serde(default)]
+    pub bundled_guaranteed_generic_families: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_catalog_revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_catalog_family_count: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_font_stack_key: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_font_rescan_in_flight: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_font_rescan_pending: Option<bool>,
+}
+
+impl UiFontEnvironmentDiagnosticsSnapshotV1 {
+    pub(super) fn from_runtime(
+        baseline: Option<&fret_runtime::BundledFontBaselineSnapshot>,
+        font_catalog: Option<&fret_runtime::FontCatalog>,
+        text_font_stack_key: Option<u64>,
+        system_font_rescan: Option<fret_runtime::SystemFontRescanState>,
+    ) -> Option<Self> {
+        if baseline.is_none()
+            && font_catalog.is_none()
+            && text_font_stack_key.is_none()
+            && system_font_rescan.is_none()
+        {
+            return None;
+        }
+
+        let baseline = baseline.cloned().unwrap_or_default();
+        Some(Self {
+            bundled_baseline_source: match baseline.source {
+                fret_runtime::BundledFontBaselineSource::None => "none",
+                fret_runtime::BundledFontBaselineSource::BundledProfile => "bundled_profile",
+            }
+            .to_string(),
+            bundled_profile_name: baseline.profile_name,
+            bundled_asset_bundle: baseline.asset_bundle,
+            bundled_asset_keys: baseline.asset_keys,
+            bundled_roles: baseline.provided_roles,
+            bundled_guaranteed_generic_families: baseline.guaranteed_generic_families,
+            font_catalog_revision: font_catalog.map(|catalog| catalog.revision),
+            font_catalog_family_count: font_catalog.map(|catalog| catalog.families.len() as u64),
+            text_font_stack_key,
+            system_font_rescan_in_flight: system_font_rescan.map(|state| state.in_flight),
+            system_font_rescan_pending: system_font_rescan.map(|state| state.pending),
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
