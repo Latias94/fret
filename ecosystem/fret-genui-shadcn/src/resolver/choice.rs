@@ -331,9 +331,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_str())
             .and_then(|s| match s {
                 "vertical" => Some(shadcn::raw::radio_group::RadioGroupOrientation::Vertical),
-                "horizontal" => {
-                    Some(shadcn::raw::radio_group::RadioGroupOrientation::Horizontal)
-                }
+                "horizontal" => Some(shadcn::raw::radio_group::RadioGroupOrientation::Horizontal),
                 _ => None,
             })
             .unwrap_or(shadcn::raw::radio_group::RadioGroupOrientation::Vertical);

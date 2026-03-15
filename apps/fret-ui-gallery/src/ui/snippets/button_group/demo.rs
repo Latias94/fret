@@ -75,7 +75,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Trash")
-                            .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                            .variant(
+                                shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            )
                             .leading_icon(icon_id("lucide.trash")),
                     ),
                 ])),

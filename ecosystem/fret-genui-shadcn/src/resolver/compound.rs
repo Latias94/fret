@@ -6,8 +6,8 @@ use fret_genui_core::render::RenderedChildV1;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::Value;
 
 use super::ShadcnResolver;
@@ -123,10 +123,7 @@ impl ShadcnResolver {
                     let msg = Arc::<str>::from(format!("Missing TabContent for '{}'", def.value));
                     fret_ui_kit::ui::text(msg).into_element(cx)
                 });
-            contents.push(shadcn::TabsContent::new(
-                def.value.clone(),
-                [content],
-            ));
+            contents.push(shadcn::TabsContent::new(def.value.clone(), [content]));
         }
 
         // Include any extra panels that weren't listed in `tabs`.

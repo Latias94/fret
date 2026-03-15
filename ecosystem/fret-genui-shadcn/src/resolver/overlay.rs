@@ -6,8 +6,8 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::{Map, Value};
 
 use super::ShadcnResolver;
@@ -74,9 +74,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_str())
             .unwrap_or("");
         let content_el = shadcn::TooltipContent::build(cx, |_cx| {
-            [shadcn::TooltipContent::text(Arc::<str>::from(
-                content,
-            ))]
+            [shadcn::TooltipContent::text(Arc::<str>::from(content))]
         })
         .into_element(cx);
 
@@ -258,8 +256,7 @@ impl ShadcnResolver {
                 let mut header_children: Vec<AnyElement> =
                     vec![shadcn::DialogTitle::new(title).into_element(cx)];
                 if let Some(desc) = description {
-                    header_children
-                        .push(shadcn::DialogDescription::new(desc).into_element(cx));
+                    header_children.push(shadcn::DialogDescription::new(desc).into_element(cx));
                 }
                 let header = shadcn::DialogHeader::new(header_children).into_element(cx);
 
@@ -309,8 +306,7 @@ impl ShadcnResolver {
                 let mut header_children: Vec<AnyElement> =
                     vec![shadcn::DrawerTitle::new(title).into_element(cx)];
                 if let Some(desc) = description {
-                    header_children
-                        .push(shadcn::DrawerDescription::new(desc).into_element(cx));
+                    header_children.push(shadcn::DrawerDescription::new(desc).into_element(cx));
                 }
                 let header = shadcn::DrawerHeader::new(header_children).into_element(cx);
 

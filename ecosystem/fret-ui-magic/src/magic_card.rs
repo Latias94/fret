@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::geometry::{Corners, Edges, Point, Size};
-use fret_core::scene::{ColorSpace, GradientStop, Paint, RadialGradient, TileMode, MAX_STOPS};
+use fret_core::scene::{ColorSpace, GradientStop, MAX_STOPS, Paint, RadialGradient, TileMode};
 use fret_core::{Color, Px};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, PointerRegionProps};

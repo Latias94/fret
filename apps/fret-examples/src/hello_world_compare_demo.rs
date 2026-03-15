@@ -1103,11 +1103,7 @@ impl View for HelloWorldCompareView {
     }
 }
 
-fn hello_world_compare_root(
-    cx: &mut UiCx<'_>,
-    panel_bg: Color,
-    children: Vec<AnyElement>,
-) -> Ui {
+fn hello_world_compare_root(cx: &mut UiCx<'_>, panel_bg: Color, children: Vec<AnyElement>) -> Ui {
     ui::v_flex(move |_cx| children)
         .w_full()
         .h_full()

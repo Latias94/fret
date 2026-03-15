@@ -64,13 +64,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-date-picker-demo-trigger");
 
                 if selected_now.is_none() {
-                    button =
-                        button.style(shadcn::raw::button::ButtonStyle::default().foreground(
-                            fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
-                                key: "muted-foreground",
-                                fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                            })),
-                        ));
+                    button = button.style(shadcn::raw::button::ButtonStyle::default().foreground(
+                        fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
+                            key: "muted-foreground",
+                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                        })),
+                    ));
                 }
 
                 button.into_element(cx)

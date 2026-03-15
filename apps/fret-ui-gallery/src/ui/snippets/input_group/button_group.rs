@@ -12,10 +12,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let group = shadcn::InputGroup::new(url)
         .a11y_label("URL")
         .control_test_id("ui-gallery-input-group-button-group-control")
-        .trailing([icon::icon(
-            cx,
-            IconId::new_static("lucide.link-2"),
-        )])
+        .trailing([icon::icon(cx, IconId::new_static("lucide.link-2"))])
         .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .into_element(cx);
 

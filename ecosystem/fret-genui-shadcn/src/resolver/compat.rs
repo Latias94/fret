@@ -4,8 +4,8 @@ use fret_genui_core::props::ResolvedProps;
 use fret_genui_core::spec::ElementKey;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::facade as shadcn;
 
 use super::ShadcnResolver;
 
@@ -127,7 +127,6 @@ impl ShadcnResolver {
         .w_full()
         .into_element(cx);
 
-        shadcn::Card::new([shadcn::CardContent::new([body]).into_element(cx)])
-            .into_element(cx)
+        shadcn::Card::new([shadcn::CardContent::new([body]).into_element(cx)]).into_element(cx)
     }
 }

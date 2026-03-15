@@ -1,8 +1,8 @@
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_shadcn::facade as shadcn;
 
 use super::ShadcnResolver;
 

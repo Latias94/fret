@@ -20,16 +20,16 @@ pub mod marquee;
 pub mod patterns;
 pub mod sparkles_text;
 
-pub use border_beam::{border_beam, BorderBeamProps};
-pub use dock::{dock, DockProps};
-pub use lens::{lens, LensProps};
-pub use magic_card::{magic_card, MagicCardProps};
-pub use marquee::{marquee, MarqueeDirection, MarqueeProps};
+pub use border_beam::{BorderBeamProps, border_beam};
+pub use dock::{DockProps, dock};
+pub use lens::{LensProps, lens};
+pub use magic_card::{MagicCardProps, magic_card};
+pub use marquee::{MarqueeDirection, MarqueeProps, marquee};
 pub use patterns::{
-    dot_pattern, grid_pattern, stripe_pattern, DotPatternProps, GridPatternProps,
-    PatternMotionProps, StripePatternProps,
+    DotPatternProps, GridPatternProps, PatternMotionProps, StripePatternProps, dot_pattern,
+    grid_pattern, stripe_pattern,
 };
-pub use sparkles_text::{sparkles_text, SparklesTextProps};
+pub use sparkles_text::{SparklesTextProps, sparkles_text};
 
 pub(crate) fn collect_children<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,

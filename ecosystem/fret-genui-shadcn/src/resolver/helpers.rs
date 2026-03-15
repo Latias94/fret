@@ -50,9 +50,9 @@ impl ShadcnResolver {
         component: &str,
     ) -> AnyElement {
         let msg = Arc::<str>::from(format!("Unknown GenUI component: {component} ({:?})", key));
-        shadcn::Card::new([
-            shadcn::CardContent::new([Self::text_element(cx, msg)]).into_element(cx),
-        ])
+        shadcn::Card::new(
+            [shadcn::CardContent::new([Self::text_element(cx, msg)]).into_element(cx)],
+        )
         .into_element(cx)
     }
 
@@ -109,9 +109,7 @@ impl ShadcnResolver {
         })
     }
 
-    pub(super) fn parse_button_size(
-        v: Option<&serde_json::Value>,
-    ) -> Option<shadcn::ButtonSize> {
+    pub(super) fn parse_button_size(v: Option<&serde_json::Value>) -> Option<shadcn::ButtonSize> {
         let s = v?.as_str()?;
         use shadcn::ButtonSize;
         Some(match s {

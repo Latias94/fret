@@ -22,10 +22,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .a11y_label("More")
         .variant(shadcn::ButtonVariant::Outline)
         .refine_style(ChromeRefinement::default().pl(Space::N2))
-        .children([icon::icon(
-            cx,
-            icon_id("lucide.chevron-down"),
-        )])
+        .children([icon::icon(cx, icon_id("lucide.chevron-down"))])
         .toggle_model(open.clone())
         .border_left_width_override(Px(0.0))
         .corner_radii_override(corners_last)
@@ -65,7 +62,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Delete Conversation")
-                            .variant(shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                            .variant(
+                                shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            )
                             .leading_icon(icon_id("lucide.trash")),
                     ),
                 ])),

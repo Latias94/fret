@@ -8,7 +8,7 @@ use fret_ui_kit::declarative::reduced_motion_queries;
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 use fret_ui_kit::recipes::catalog::VisualCatalog;
 use fret_ui_kit::recipes::resolve::{
-    report_recipe_degraded, DegradationReason, RecipeDegradedEvent,
+    DegradationReason, RecipeDegradedEvent, report_recipe_degraded,
 };
 
 use crate::collect_children;
@@ -260,8 +260,8 @@ where
             rgba(props.base),
             rgba(props.lines),
             [
-                props.spacing.0 .0,
-                props.spacing.1 .0,
+                props.spacing.0.0,
+                props.spacing.1.0,
                 props.line_width.0,
                 props.seed as f32,
             ],

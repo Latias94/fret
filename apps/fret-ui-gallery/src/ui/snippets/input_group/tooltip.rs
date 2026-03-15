@@ -18,9 +18,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
-            let info_icon = |cx: &mut UiCx<'_>| {
-                icon::icon(cx, IconId::new_static("lucide.info"))
-            };
+            let info_icon = |cx: &mut UiCx<'_>| icon::icon(cx, IconId::new_static("lucide.info"));
 
             let password_tooltip = {
                 let button = shadcn::InputGroupButton::new("")
@@ -47,10 +45,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([icon::icon(
-                        cx,
-                        IconId::new_static("lucide.circle-help"),
-                    )])
+                    .children([icon::icon(cx, IconId::new_static("lucide.circle-help"))])
                     .test_id("ui-gallery-input-group-tooltip-email-help")
                     .into_element(cx);
                 let content = shadcn::TooltipContent::build(cx, |_cx| {
@@ -70,10 +65,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .a11y_label("Help")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::InputGroupButtonSize::IconXs)
-                    .children([icon::icon(
-                        cx,
-                        IconId::new_static("lucide.circle-help"),
-                    )])
+                    .children([icon::icon(cx, IconId::new_static("lucide.circle-help"))])
                     .test_id("ui-gallery-input-group-tooltip-api-key-help")
                     .into_element(cx);
                 let content = shadcn::TooltipContent::build(cx, |_cx| {

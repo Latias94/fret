@@ -7,9 +7,9 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate, UiActionHost, UiActionHostExt};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_shadcn::facade as shadcn;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::ui::UiElementSinkExt as _;
+use fret_ui_shadcn::facade as shadcn;
 use serde_json::{Map, Value};
 
 use super::ShadcnResolver;
@@ -290,35 +290,35 @@ impl ShadcnResolver {
                                                     let element_key: Arc<str> = Arc::<str>::from(
                                                         format!("{}/row/{row_index}", key.0),
                                                     );
-                                                    let event: Arc<str> = Arc::<str>::from(format!(
-                                                        "rowAction.{}",
-                                                        action.as_ref()
-                                                    ));
+                                                    let event: Arc<str> = Arc::<str>::from(
+                                                        format!("rowAction.{}", action.as_ref()),
+                                                    );
                                                     let data_path = data_path.clone();
 
-                                                    let mut btn = shadcn::Button::new(label.clone())
-                                                        .disabled(disabled)
-                                                        .size(shadcn::ButtonSize::Sm);
+                                                    let mut btn =
+                                                        shadcn::Button::new(label.clone())
+                                                            .disabled(disabled)
+                                                            .size(shadcn::ButtonSize::Sm);
                                                     if let Some(variant) = ra.variant.as_ref() {
                                                         let parsed = match variant.as_ref() {
-                                                            "default" => Some(
-                                                                shadcn::ButtonVariant::Default,
-                                                            ),
+                                                            "default" => {
+                                                                Some(shadcn::ButtonVariant::Default)
+                                                            }
                                                             "destructive" => Some(
                                                                 shadcn::ButtonVariant::Destructive,
                                                             ),
-                                                            "outline" => Some(
-                                                                shadcn::ButtonVariant::Outline,
-                                                            ),
+                                                            "outline" => {
+                                                                Some(shadcn::ButtonVariant::Outline)
+                                                            }
                                                             "secondary" => Some(
                                                                 shadcn::ButtonVariant::Secondary,
                                                             ),
-                                                            "ghost" => Some(
-                                                                shadcn::ButtonVariant::Ghost,
-                                                            ),
-                                                            "link" => Some(
-                                                                shadcn::ButtonVariant::Link,
-                                                            ),
+                                                            "ghost" => {
+                                                                Some(shadcn::ButtonVariant::Ghost)
+                                                            }
+                                                            "link" => {
+                                                                Some(shadcn::ButtonVariant::Link)
+                                                            }
                                                             _ => None,
                                                         };
                                                         if let Some(parsed) = parsed {
@@ -329,8 +329,8 @@ impl ShadcnResolver {
                                                     if let Some(state_model) = state_model.clone() {
                                                         let queue = queue.clone();
                                                         let auto_apply = auto_apply;
-                                                        let on_activate: OnActivate = Arc::new(
-                                                            move |host, acx, _reason| {
+                                                        let on_activate: OnActivate =
+                                                            Arc::new(move |host, acx, _reason| {
                                                                 emit_row_action(
                                                                     host,
                                                                     acx,
@@ -344,8 +344,7 @@ impl ShadcnResolver {
                                                                     data_path.clone(),
                                                                     row_index,
                                                                 );
-                                                            },
-                                                        );
+                                                            });
                                                         btn = btn.on_activate(on_activate);
                                                     }
                                                     out.push(btn.into_element(cx));

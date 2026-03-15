@@ -67,12 +67,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ui::h_row(|cx| {
             let (hover_icon, hover_container) = cx.with_theme(|theme| {
                 (
-                    ColorRef::Color(
-                        theme.color_token("md.sys.color.on-tertiary-container"),
-                    ),
-                    ColorRef::Color(
-                        theme.color_token("md.sys.color.tertiary-container"),
-                    ),
+                    ColorRef::Color(theme.color_token("md.sys.color.on-tertiary-container")),
+                    ColorRef::Color(theme.color_token("md.sys.color.tertiary-container")),
                 )
             });
             let hover_style = material3::IconButtonStyle::default()
@@ -137,12 +133,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ui::h_row(|cx| {
             let (hover_container, hover_icon, hover_outline) = cx.with_theme(|theme| {
                 (
-                    ColorRef::Color(
-                        theme.color_token("md.sys.color.tertiary-container"),
-                    ),
-                    ColorRef::Color(
-                        theme.color_token("md.sys.color.on-tertiary-container"),
-                    ),
+                    ColorRef::Color(theme.color_token("md.sys.color.tertiary-container")),
+                    ColorRef::Color(theme.color_token("md.sys.color.on-tertiary-container")),
                     ColorRef::Color(theme.color_token("md.sys.color.tertiary")),
                 )
             });
@@ -263,9 +255,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     );
     out.push(
         ui::v_stack(|cx| {
-            let hover = cx.with_theme(|theme| {
-                ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
-            });
+            let hover =
+                cx.with_theme(|theme| ColorRef::Color(theme.color_token("md.sys.color.tertiary")));
             let hover_style = material3::TextFieldStyle::default()
                 .outline_color(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -308,9 +299,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 material3::TabItem::new("settings", "Settings"),
             ];
 
-            let hover_color = cx.with_theme(|theme| {
-                ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
-            });
+            let hover_color =
+                cx.with_theme(|theme| ColorRef::Color(theme.color_token("md.sys.color.tertiary")));
             let hover_style = material3::TabsStyle::default()
                 .label_color(fret_ui_kit::WidgetStateProperty::new(None).when(
                     fret_ui_kit::WidgetStates::HOVERED,

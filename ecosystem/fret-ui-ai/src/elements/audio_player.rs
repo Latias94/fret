@@ -17,8 +17,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef};
 use fret_ui_shadcn::facade::{
-    Button, ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonSize, ButtonVariant, Slider,
-    ButtonGroupText,
+    Button, ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupText, ButtonSize,
+    ButtonVariant, Slider,
 };
 
 pub type OnAudioPlayerPlayChange =

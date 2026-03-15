@@ -58,9 +58,7 @@ impl ShadcnResolver {
         }
         out.extend(children);
 
-        shadcn::Alert::new(out)
-            .variant(variant)
-            .into_element(cx)
+        shadcn::Alert::new(out).variant(variant).into_element(cx)
     }
 
     pub(super) fn render_spinner<H: UiHost>(

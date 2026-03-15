@@ -1,9 +1,9 @@
+use fret_core::Color;
 use fret_core::geometry::{Corners, Edges, Point, Px, Size};
 use fret_core::scene::{
-    BlendMode, ColorSpace, EffectChain, EffectMode, EffectStep, GradientStop, Paint,
-    RadialGradient, TileMode, MAX_STOPS,
+    BlendMode, ColorSpace, EffectChain, EffectMode, EffectStep, GradientStop, MAX_STOPS, Paint,
+    RadialGradient, TileMode,
 };
-use fret_core::Color;
 use fret_ui::element::{
     AnyElement, ContainerProps, FocusTraversalGateProps, HitTestGateProps, InsetStyle, LayoutStyle,
     Length, Overflow, PositionStyle, SizeStyle,

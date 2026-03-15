@@ -2070,23 +2070,20 @@ fn ui_app_render<S>(
                             Vec::new()
                         };
 
-                        let dialog = shadcn::CommandDialog::new(
-                            models.open,
-                            models.query,
-                            Vec::new(),
-                        )
-                        .entries(entries)
-                        .a11y_label("Command palette")
-                        .into_element(cx, |cx| {
-                            cx.interactivity_gate_props(
-                                fret_ui::element::InteractivityGateProps {
-                                    present: false,
-                                    interactive: false,
-                                    ..Default::default()
-                                },
-                                |_| vec![],
-                            )
-                        });
+                        let dialog =
+                            shadcn::CommandDialog::new(models.open, models.query, Vec::new())
+                                .entries(entries)
+                                .a11y_label("Command palette")
+                                .into_element(cx, |cx| {
+                                    cx.interactivity_gate_props(
+                                        fret_ui::element::InteractivityGateProps {
+                                            present: false,
+                                            interactive: false,
+                                            ..Default::default()
+                                        },
+                                        |_| vec![],
+                                    )
+                                });
                         out.push(dialog);
                     }
 
@@ -2129,23 +2126,20 @@ fn ui_app_render<S>(
                             Vec::new()
                         };
 
-                        let dialog = shadcn::CommandDialog::new(
-                            models.open,
-                            models.query,
-                            Vec::new(),
-                        )
-                        .entries(entries)
-                        .a11y_label("Command palette")
-                        .into_element(cx, |cx| {
-                            cx.interactivity_gate_props(
-                                fret_ui::element::InteractivityGateProps {
-                                    present: false,
-                                    interactive: false,
-                                    ..Default::default()
-                                },
-                                |_| vec![],
-                            )
-                        });
+                        let dialog =
+                            shadcn::CommandDialog::new(models.open, models.query, Vec::new())
+                                .entries(entries)
+                                .a11y_label("Command palette")
+                                .into_element(cx, |cx| {
+                                    cx.interactivity_gate_props(
+                                        fret_ui::element::InteractivityGateProps {
+                                            present: false,
+                                            interactive: false,
+                                            ..Default::default()
+                                        },
+                                        |_| vec![],
+                                    )
+                                });
                         out.push(dialog);
                     }
 

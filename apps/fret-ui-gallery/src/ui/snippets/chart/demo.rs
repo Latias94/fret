@@ -286,30 +286,29 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
     };
 
-    let trending_footer = |cx: &mut UiCx<'_>,
-                           secondary: &'static str|
-     -> impl IntoUiElement<fret_app::App> + use<> {
-        let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
-        ui::v_flex(|cx| {
-            vec![
-                ui::h_row(|cx| {
-                    vec![
-                        ui::text("Trending up by 5.2% this month")
-                            .font_medium()
-                            .into_element(cx),
-                        icon,
-                    ]
-                })
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                shadcn::raw::typography::muted(secondary).into_element(cx),
-            ]
-        })
-        .gap(Space::N2)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-    };
+    let trending_footer =
+        |cx: &mut UiCx<'_>, secondary: &'static str| -> impl IntoUiElement<fret_app::App> + use<> {
+            let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
+            ui::v_flex(|cx| {
+                vec![
+                    ui::h_row(|cx| {
+                        vec![
+                            ui::text("Trending up by 5.2% this month")
+                                .font_medium()
+                                .into_element(cx),
+                            icon,
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+                    shadcn::raw::typography::muted(secondary).into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+        };
 
     let chart_card = |cx: &mut UiCx<'_>,
                       title: &'static str,

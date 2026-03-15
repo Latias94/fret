@@ -1,8 +1,5 @@
 use fret::app::prelude::*;
-use fret::{
-    icons::IconId,
-    style::Space,
-};
+use fret::{icons::IconId, style::Space};
 
 mod act {
     fret::actions!([ToggleBookmark = "cookbook.toggle_basics.toggle_bookmark.v1"]);

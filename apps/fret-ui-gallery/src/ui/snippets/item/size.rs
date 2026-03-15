@@ -16,9 +16,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let icon = |cx: &mut UiCx<'_>, id: &'static str| {
         let icon_id = fret_icons::IconId::new_static(id);
         match id {
-            "lucide.badge-check" => {
-                icon::icon_with(cx, icon_id, Some(Px(20.0)), None)
-            }
+            "lucide.badge-check" => icon::icon_with(cx, icon_id, Some(Px(20.0)), None),
             _ => icon::icon(cx, icon_id),
         }
     };
