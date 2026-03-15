@@ -349,7 +349,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 - [ ] RESLOAD-test-610 Add portable contract tests for asset capability and fallback behavior.
 
-- [ ] RESLOAD-test-620 Add startup gates for the bundled-font baseline on desktop and web.
+- [~] RESLOAD-test-620 Add startup gates for the bundled-font baseline on desktop and web.
+  - Current landed slice:
+    - `crates/fret-launch/src/runner/font_catalog.rs` now has helper-level startup gates proving:
+      - bundled default fonts are installed before startup font-environment initialization,
+      - the same bundled baseline snapshot is published for desktop and web,
+      - web and desktop still diverge only on startup family-seeding policy.
+  - Remaining:
+    - add a higher-level runner gate that exercises the actual desktop/web startup entrypoints
+      instead of only the shared startup helper
 
 - [ ] RESLOAD-test-630 Add regression coverage proving that hot reload / invalidation works via
       revision changes rather than widget re-execution accidents.

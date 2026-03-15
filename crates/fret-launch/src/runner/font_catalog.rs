@@ -10,6 +10,13 @@ pub trait RendererFontEnvironmentHost {
     fn text_font_stack_key(&self) -> u64;
 }
 
+#[doc(hidden)]
+pub trait BundledFontBaselineHost {
+    fn add_font_blobs<I>(&mut self, fonts: I) -> usize
+    where
+        I: IntoIterator<Item = Vec<u8>>;
+}
+
 impl RendererFontEnvironmentHost for fret_render::Renderer {
     fn all_font_catalog_entries_runtime(&mut self) -> Vec<FontCatalogEntry> {
         self.all_font_catalog_entries()
@@ -43,6 +50,15 @@ impl RendererFontEnvironmentHost for fret_render::Renderer {
 
     fn text_font_stack_key(&self) -> u64 {
         self.text_font_stack_key()
+    }
+}
+
+impl BundledFontBaselineHost for fret_render::Renderer {
+    fn add_font_blobs<I>(&mut self, fonts: I) -> usize
+    where
+        I: IntoIterator<Item = Vec<u8>>,
+    {
+        self.add_fonts(fonts)
     }
 }
 
@@ -97,9 +113,9 @@ pub fn default_bundled_font_baseline_snapshot() -> fret_runtime::BundledFontBase
 #[doc(hidden)]
 pub fn install_default_bundled_font_baseline(
     app: &mut impl GlobalsHost,
-    renderer: &mut fret_render::Renderer,
+    renderer: &mut impl BundledFontBaselineHost,
 ) -> usize {
-    let added = renderer.add_fonts(
+    let added = renderer.add_font_blobs(
         fret_fonts::default_fonts()
             .iter()
             .map(|bytes| bytes.to_vec()),
@@ -299,6 +315,11 @@ mod tests {
         entries: Vec<FontCatalogEntry>,
     }
 
+    #[derive(Default)]
+    struct TestBundledFontBaselineHost {
+        font_blobs: Vec<Vec<u8>>,
+    }
+
     impl RendererFontEnvironmentHost for TestRenderer {
         fn all_font_catalog_entries_runtime(&mut self) -> Vec<FontCatalogEntry> {
             self.steps.push("entries");
@@ -321,6 +342,17 @@ mod tests {
 
         fn text_font_stack_key(&self) -> u64 {
             self.last_key
+        }
+    }
+
+    impl BundledFontBaselineHost for TestBundledFontBaselineHost {
+        fn add_font_blobs<I>(&mut self, fonts: I) -> usize
+        where
+            I: IntoIterator<Item = Vec<u8>>,
+        {
+            let start = self.font_blobs.len();
+            self.font_blobs.extend(fonts);
+            self.font_blobs.len() - start
         }
     }
 
@@ -621,6 +653,73 @@ mod tests {
                     .map(|family| bundled_generic_family_name(*family).to_string())
                     .collect(),
             )
+        );
+    }
+
+    #[test]
+    fn install_default_bundled_font_baseline_adds_fonts_and_publishes_snapshot() {
+        let mut app = TestApp::default();
+        let mut host = TestBundledFontBaselineHost::default();
+
+        let added = install_default_bundled_font_baseline(&mut app, &mut host);
+
+        let expected_fonts = fret_fonts::default_fonts()
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
+        assert_eq!(added, expected_fonts.len());
+        assert_eq!(host.font_blobs, expected_fonts);
+        assert_eq!(
+            app.global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("bundled font baseline snapshot"),
+            default_bundled_font_baseline_snapshot()
+        );
+    }
+
+    #[test]
+    fn web_and_desktop_startup_share_bundled_baseline_but_keep_distinct_defaults_policy() {
+        let mut web_app = TestApp::default();
+        let mut desktop_app = TestApp::default();
+        let mut web_host = TestBundledFontBaselineHost::default();
+        let mut desktop_host = TestBundledFontBaselineHost::default();
+        let mut web_renderer = TestRenderer::default();
+        let mut desktop_renderer = TestRenderer::default();
+
+        let _ = install_default_bundled_font_baseline(&mut web_app, &mut web_host);
+        let _ = install_default_bundled_font_baseline(&mut desktop_app, &mut desktop_host);
+
+        let web_update = initialize_startup_font_environment(
+            &mut web_app,
+            &mut web_renderer,
+            TextFontFamilyConfig::default(),
+            StartupFontEnvironmentMode::WebBundledSync,
+        );
+        let desktop_update = initialize_startup_font_environment(
+            &mut desktop_app,
+            &mut desktop_renderer,
+            TextFontFamilyConfig::default(),
+            StartupFontEnvironmentMode::DesktopSync,
+        );
+
+        assert_eq!(
+            web_app
+                .global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("web baseline snapshot"),
+            desktop_app
+                .global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("desktop baseline snapshot"),
+        );
+        assert_eq!(web_host.font_blobs, desktop_host.font_blobs);
+        assert!(
+            !web_update.config.ui_mono.is_empty(),
+            "expected web startup to seed missing UI families"
+        );
+        assert!(
+            desktop_update.config.ui_mono.is_empty(),
+            "expected desktop startup to preserve an empty family config under native policy"
         );
     }
 }
