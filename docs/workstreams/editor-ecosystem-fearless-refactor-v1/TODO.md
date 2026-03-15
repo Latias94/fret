@@ -201,8 +201,13 @@ Interaction contract:
       promoted proof now also locks the first two explicit opt-in blur policies above that
       baseline: inline rename uses `BlurBehavior::Cancel`, while multiline notes use
       `BlurBehavior::PreserveDraft` until explicit `Ctrl/Cmd+Enter` commit or Escape cancel.
-      Those choices currently stay proof-local policy evidence rather than graduating into a wider
-      public helper/API before a second real consumer exists. The focused launched diag gate was
+      `BlurBehavior::Cancel` now also has a first non-proof in-tree consumer via
+      `fret-node::ui::overlays::group_rename`: the node-graph rename overlay now cancels on focus
+      loss, closes, and restores focus to the canvas without queueing a rename transaction, which
+      makes the inline-rename semantic real outside the proof surface too. Those choices still do
+      not automatically justify a wider public helper/API though: the new consumer is retained
+      overlay-host code, while declarative `TextField` authoring only has proof evidence so far.
+      The focused launched diag gate was
       rerun on 2026-03-15 against `fret-demo --bin imui_editor_proof_demo`, so that proof-local
       split now has fresh packed evidence instead of only a script update. The same control also
       exposes password-mode rendering, a commit/cancel outcome hook, and
@@ -226,9 +231,10 @@ Interaction contract:
       `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and
       close-time query clearing rather than keeping a separate editor-local copy, while popup open
       now also reveals the selected row instead of restarting long lists at the top. The remaining
-      work is to prove whether these two opt-in blur policies deserve a non-proof consumer before
-      they graduate into a wider helper/API, and to keep multiline/editor proof coverage tight
-      before new promoted components land.
+      work is narrower now: decide whether inline-rename cancel should gain a declarative/shared
+      helper beyond the retained `fret-node` overlay consumer, find the first non-proof consumer
+      for `BlurBehavior::PreserveDraft`, and keep multiline/editor proof coverage tight before new
+      promoted components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 

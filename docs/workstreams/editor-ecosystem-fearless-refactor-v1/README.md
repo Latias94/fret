@@ -186,6 +186,10 @@ Current checkpoint:
   cancel-on-blur, multiline preserve-draft, explicit multiline commit, and Escape cancel all have
   promoted evidence anchors, and the launched packed diag rerun now passes on that updated proof
   surface as well,
+- inline-rename cancel-on-blur now also has its first non-proof in-tree consumer:
+  `fret-node`'s retained rename overlay host cancels on focus loss, closes the overlay, and
+  restores focus to the canvas without queueing a rename transaction, while multiline
+  preserve-draft still remains proof-only until another real consumer appears,
 - repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
   edited values stay attached to stable stop ids instead of drifting with row order,
 - the text-assist boundary is now split the way this workstream wanted it to be:

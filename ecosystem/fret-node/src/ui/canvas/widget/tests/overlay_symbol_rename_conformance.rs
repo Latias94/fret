@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
 use fret_runtime::ModelsHost as _;
+use fret_ui::Invalidation;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
@@ -265,6 +266,99 @@ fn symbol_rename_overlay_escape_closes_without_queueing_transaction() {
     assert!(
         pending.is_empty(),
         "expected Escape to close without queueing a rename transaction"
+    );
+}
+
+#[test]
+fn symbol_rename_overlay_focus_loss_cancels_without_queueing_transaction() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let symbol_id = SymbolId::new();
+    let mut graph_value = Graph::new(GraphId::new());
+    graph_value.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "Old".to_string(),
+            ty: None,
+            default_value: None,
+            meta: serde_json::Value::Null,
+        },
+    );
+    let (graph, _view) = insert_graph_view(&mut host, graph_value);
+    let edits = host.models.insert(NodeGraphEditQueue::default());
+    let overlays = host.models.insert(NodeGraphOverlayState::default());
+    let rename_text = host.models.insert(String::new());
+    let style = NodeGraphStyle::default();
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let overlay_host = NodeGraphOverlayHost::new(
+        graph.clone(),
+        overlays.clone(),
+        rename_text.clone(),
+        underlay,
+        style,
+    )
+    .with_edit_queue(edits.clone());
+    let overlay_host_node = ui.create_node_retained(overlay_host);
+    let overlay_child =
+        ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    ui.set_children(overlay_host_node, vec![overlay_child]);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, overlay_host_node]);
+    ui.set_root(editor);
+
+    open_symbol_rename_overlay(
+        &mut host,
+        &overlays,
+        symbol_id,
+        Point::new(Px(400.0), Px(300.0)),
+    );
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(overlay_child),
+        "expected symbol rename overlay to focus its text input child when opened"
+    );
+
+    let _ = rename_text.update(&mut host, |t, _cx| {
+        *t = "Draft".to_string();
+    });
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(underlay));
+    ui.invalidate(overlay_host_node, Invalidation::Layout);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    let closed = overlays
+        .read_ref(&host, |s| s.symbol_rename.is_none())
+        .ok()
+        .unwrap_or(false);
+    assert!(
+        closed,
+        "expected focus loss to close the symbol rename overlay"
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(underlay),
+        "expected focus loss to leave focus on the canvas node"
+    );
+
+    let pending = edits
+        .read_ref(&host, |q| q.pending.clone())
+        .ok()
+        .unwrap_or_default();
+    assert!(
+        pending.is_empty(),
+        "expected focus-loss cancel to avoid queueing a rename transaction"
     );
 }
 

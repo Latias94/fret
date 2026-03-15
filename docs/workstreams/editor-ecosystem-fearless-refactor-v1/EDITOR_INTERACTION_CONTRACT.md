@@ -235,11 +235,13 @@ Default commit points for the current buffered editor baseline:
 Current promoted opt-in blur exceptions above that baseline:
 
 - `TextFieldBlurBehavior::Cancel` is valid for inline-rename-style editor surfaces that should
-  abandon a local draft when focus leaves the field,
+  abandon a local draft when focus leaves the field; the first non-proof in-tree consumer now also
+  exists in `fret-node`'s retained rename overlay host, where focus loss cancels the rename
+  session and restores focus to the canvas without queueing a transaction,
 - `TextFieldBlurBehavior::PreserveDraft` is valid for multiline notes/description surfaces that
   should keep the local draft alive across blur until an explicit commit/cancel,
 - and both exceptions remain proofed editor-policy opt-ins rather than a promoted higher-level
-  helper/recipe until a second non-proof in-tree consumer exists.
+  helper/recipe; `Cancel` now has one non-proof consumer, while `PreserveDraft` still needs one.
 
 Editor-owned extension hooks already permitted on top of that baseline:
 
