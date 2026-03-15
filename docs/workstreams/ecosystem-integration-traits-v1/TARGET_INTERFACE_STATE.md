@@ -1,7 +1,7 @@
 # Ecosystem Integration Traits v1 — Target Interface State
 
 Status: Target state for the pre-release cleanup
-Last updated: 2026-03-11
+Last updated: 2026-03-15
 
 This document records the intended interface state for ecosystem integration surfaces.
 
@@ -20,7 +20,37 @@ It answers four concrete questions:
 | `CommandCatalog` | `fret-ui-kit::command` (or equivalent component-policy module) | data types + collector helpers (trait deferred until needed) | command palette / menu surfaces | Landed as data contract |
 | `RouteCodec` | `fret-router` | small trait | router-aware apps and router UI integrations | Migrated |
 | `DockPanelFactory` | `fret-docking` | small trait + registry builder | reusable panel packs, workspace shells | Migrated |
-| `QueryAdapter` | `fret-query` integration module | optional small trait | higher-level reusable libraries with optional query support | Planned / maybe deferred |
+| `QueryAdapter` | `fret-query` integration module | optional small trait | higher-level reusable libraries with optional query support | Deferred in v1 |
+
+### Evidence snapshot (2026-03-15)
+
+Accepted first-party seams now have an explicit evidence set:
+
+- `InstallIntoApp`:
+  `ecosystem/fret/src/integration.rs`,
+  `ecosystem/fret/src/app_entry.rs`,
+  `apps/fret-cookbook/examples/docking_basics.rs`
+- `CommandCatalog` data contract:
+  `ecosystem/fret-ui-kit/src/command.rs`,
+  `ecosystem/fret-ui-shadcn/src/command.rs`,
+  `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+- `RouteCodec`:
+  `ecosystem/fret-router/src/codec.rs`,
+  `ecosystem/fret-router-ui/src/lib.rs`,
+  `apps/fret-cookbook/examples/router_basics.rs`,
+  `apps/fret-ui-gallery/src/spec.rs`,
+  `apps/fret-demo-web/src/wasm.rs`
+- `DockPanelFactory`:
+  `ecosystem/fret-docking/src/dock/panel_registry.rs`,
+  `apps/fret-cookbook/examples/docking_basics.rs`,
+  `apps/fret-examples/src/docking_demo.rs`,
+  `apps/fret-examples/src/docking_arbitration_demo.rs`
+- `QueryAdapter` defer evidence:
+  there is still no in-tree implementation outside this workstream, while the current direct
+  query-pressure signals remain local and non-shared:
+  `ecosystem/fret-markdown/src/mermaid_svg_support.rs`,
+  `ecosystem/fret-authoring/src/query.rs`,
+  `ecosystem/fret-router/src/query_integration.rs`
 
 ## 2. Default Teaching Rule
 
@@ -143,14 +173,23 @@ Target export posture:
 | Surface | Purpose | Notes |
 | --- | --- | --- |
 | grouped `cx.data().selector(...)` / `cx.data().query(...)` | default app path | remains the canonical teaching surface |
-| `QueryAdapter` | optional reusable-library bridge | only for higher-level consumers |
+| `QueryAdapter` | optional reusable-library bridge | deferred in v1 until a second real reusable consumer appears |
 | selector integration | data-first, no shared trait in v1 | `DepsBuilder` / `DepsSignature` stay enough |
 
 Target rule:
 
 - primitives remain selector/query agnostic,
-- reusable higher-level libraries may expose optional state adapters,
+- reusable higher-level libraries may expose local adapters or wrappers without freezing a shared
+  trait too early,
 - app docs still teach grouped data helpers first.
+
+Current v1 defer rationale on 2026-03-15:
+
+- `ecosystem/fret-markdown` currently uses direct query-context helpers for a markdown-specific
+  resource-loading seam,
+- `ecosystem/fret-authoring/src/query.rs` exposes an authoring-surface wrapper over query helpers,
+- `ecosystem/fret-router/src/query_integration.rs` only contributes query-key helpers,
+- this is still not a second reusable-consumer pair with a materially shared adapter contract.
 
 ## 4. Ownership Boundaries
 

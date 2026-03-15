@@ -27,10 +27,9 @@ Status note on 2026-03-12:
 Closeout note on 2026-03-15:
 
 - treat this file as a narrow maintenance tracker, not an active trait-expansion backlog,
-- the remaining high-value items are the first-party closeout audit, delete-ready cleanup, and the
-  explicit `QueryAdapter` keep/defer call,
-- absent a second real consumer, the recommended v1 posture is to defer `QueryAdapter` rather than
-  spend trait budget speculatively.
+- the remaining high-value items are the first-party closeout audit and delete-ready cleanup,
+- the `QueryAdapter` v1 decision is now explicit: defer rather than spend trait budget
+  speculatively.
 
 This file tracks the execution work needed to turn the trait budget into a clean pre-release
 surface.
@@ -57,9 +56,13 @@ surface.
   - Landed on 2026-03-11: `DockPanelRegistry` remains the app-owned final aggregation seam,
     while `DockPanelFactory` + `DockPanelRegistryBuilder` provide the reusable contribution-level
     path.
-- [ ] Decide whether `QueryAdapter` is needed in v1 or should stay "design locked, implementation
+- [x] Decide whether `QueryAdapter` is needed in v1 or should stay "design locked, implementation
   deferred" until a second real consumer appears.
-  - Recommended closeout posture on 2026-03-15: defer unless a second real consumer appears.
+  - Decision on 2026-03-15: defer in v1.
+  - Audit result: there is still no in-tree `QueryAdapter` implementation, no second reusable
+    consumer, and no materially shared adapter contract across the current query-touching surfaces
+    (`ecosystem/fret-markdown`, `ecosystem/fret-authoring`, `ecosystem/fret-router` query-key
+    helpers).
 - [x] Record an explicit "do not add" policy for universal `Component` / giant ecosystem `Plugin`
   traits in the relevant docs.
   - Landed on 2026-03-11:
@@ -68,13 +71,20 @@ surface.
 
 ## 2. First-Party Surface Normalization
 
-- [ ] Ensure first-party ecosystem crates expose module boundaries consistent with the target tier
+- [x] Ensure first-party ecosystem crates expose module boundaries consistent with the target tier
   rules:
   - `app`
   - `themes` / `tokens` where applicable
   - `raw`
   - `core` / `headless` / `ui` where applicable
-- [ ] Normalize app integration naming where it is still mixed between `install_app`, `install`,
+  - Audit result on 2026-03-15: the currently in-scope first-party crates now expose the expected
+    explicit seams where applicable:
+    `fret-ui-shadcn` (`app`, `advanced`, `themes`, `raw`),
+    `fret-ui-assets` / `fret-icons-lucide` / `fret-icons-radix` / `fret-node`
+    (`app`, `advanced`),
+    `fret-router-ui` (`app`),
+    and `fret-ui-magic` (`advanced`).
+- [x] Normalize app integration naming where it is still mixed between `install_app`, `install`,
   and `install_into`.
   - Landed first-pass migration on 2026-03-11:
     `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node` now expose
@@ -84,16 +94,24 @@ surface.
     `fret-router-ui` now exposes command-registration setup through `crate::app::install(...)`,
     and the `fret::router` facade mirrors the same `app::install` seam instead of a root
     `install_app(...)` exception.
+  - Audit result on 2026-03-15:
+    there is no remaining root-level `pub fn install_app(...)` export across the targeted
+    first-party ecosystem crates.
+    Remaining `install_app` spellings are now app-local helper function names or
+    `fret-bootstrap::BootstrapBuilder::install_app(...)`, not mixed ecosystem export posture.
 - [x] Keep `FretApp::setup(...)` as the canonical app authoring story in docs and templates.
   - Extended on 2026-03-12: first-party docs/examples now document `.setup(...)` for named
     installers/tuples/bundles, keep inline closures on `UiAppBuilder::setup_with(...)`, and gate
     against `.setup(|app| ...)` on the default app-author path across both
     `apps/fret-examples` and `apps/fret-cookbook`.
-- [ ] Audit first-party crates for root-level exports that bypass curated facades.
+- [x] Audit first-party crates for root-level exports that bypass curated facades.
   - Landed first-pass migration on 2026-03-11 for
     `fret-ui-assets`, `fret-icons-lucide`, `fret-icons-radix`, and `fret-node`; keep auditing the
     remaining ecosystem crates rather than treating this checklist item as globally done yet.
-- [ ] Normalize advanced service/material helpers so they live on explicit advanced seams instead
+  - Audit result on 2026-03-15:
+    the targeted first-party crates now carry source-policy assertions preventing root-level
+    `advanced::*` shortcut re-exports or root-level `install_app(...)` drift.
+- [x] Normalize advanced service/material helpers so they live on explicit advanced seams instead
   of ambiguous integration modules.
   - Landed first-pass migration on 2026-03-11:
     `fret-ui-magic` now exposes its renderer/material helper as
@@ -208,15 +226,24 @@ surface.
 
 ## 7. `QueryAdapter` and Selector Boundaries
 
-- [ ] Audit higher-level component ecosystems for real query-integration pressure.
-  - Candidate areas: markdown, chart/plot, data-table, future router-aware data surfaces.
+- [x] Audit higher-level component ecosystems for real query-integration pressure.
+  - Audit result on 2026-03-15:
+    `ecosystem/fret-markdown` uses direct `fret_query` context helpers for Mermaid/MathJax
+    resource loading,
+    `ecosystem/fret-authoring/src/query.rs` exposes an authoring-specific `UiWriterQueryExt`,
+    and
+    `ecosystem/fret-router/src/query_integration.rs` only provides route-key helpers.
+    This is not yet a second reusable consumer pair with a materially shared adapter contract.
 - [ ] Keep primitives and base recipes state-stack agnostic while the adapter design lands.
-- [ ] Do not add a selector trait unless a concrete multi-crate need appears.
-- [ ] Keep official docs teaching grouped `cx.data().selector(...)` / `cx.data().query(...)` on the
+- [x] Do not add a selector trait unless a concrete multi-crate need appears.
+  - Current v1 posture remains explicit non-adoption.
+- [x] Keep official docs teaching grouped `cx.data().selector(...)` / `cx.data().query(...)` on the
   app path.
-- [ ] Record a final keep/defer note for `QueryAdapter` before this workstream is archived.
-  - Recommended direction: defer in v1 unless the audit above finds a second real consumer with a
-    materially shared adapter contract.
+  - Evidence: first-party docs/tests now gate the grouped app data surface and reject
+    `cx.use_query*` as the default teaching path.
+- [x] Record a final keep/defer note for `QueryAdapter` before this workstream is archived.
+  - Final direction on 2026-03-15: defer in v1 unless a second real reusable consumer appears
+    with a materially shared adapter contract.
 
 ## 8. Documentation and Guardrails
 
@@ -232,13 +259,20 @@ surface.
   - Landed on 2026-03-11 in `ecosystem/fret/src/lib.rs` authoring-surface policy tests.
   - Extended on 2026-03-12 with first-party source-policy coverage in
     `apps/fret-examples/src/lib.rs` and `apps/fret-cookbook/src/lib.rs`.
-- [ ] Add evidence anchors for the first in-tree implementation of each accepted trait.
+- [x] Add evidence anchors for the first in-tree implementation of each accepted trait.
+  - `TARGET_INTERFACE_STATE.md` and `MIGRATION_MATRIX.md` now record the concrete first-party
+    evidence set for `InstallIntoApp`, `CommandCatalog`, `RouteCodec`, and `DockPanelFactory`,
+    plus the v1 defer evidence for `QueryAdapter`.
 - [ ] Keep first-party ecosystem docs/examples aligned with the follow-on conversion-surface
   tracker so trait adoption does not re-teach the legacy split conversion traits.
 
 ## 9. Hard Deletion Work
 
-- [ ] Delete mixed or redundant first-party installer naming once official call sites are migrated.
+- [x] Delete mixed or redundant first-party installer naming once official call sites are migrated.
+  - Audit result on 2026-03-15:
+    root-level ecosystem `install_app(...)` exports are gone on the targeted first-party crates;
+    remaining `install_app` spellings are local app helper functions or the app-owned bootstrap
+    builder method, so they are no longer part of the mixed ecosystem naming story.
 - [ ] Delete legacy docs that imply every ecosystem crate should expose the same plugin shape.
 - [ ] Delete any temporary adapters that survive after official examples and templates no longer
   need them.

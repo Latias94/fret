@@ -28,6 +28,8 @@ surface, lock these decisions before adding public API:
   command catalog ownership in `fret-ui-kit::command`
 - keep selector/query integration optional for reusable kits; do not add a universal `Component`
   trait or widen `fret-app::Plugin` into the default ecosystem model
+- treat `QueryAdapter` as deferred in v1 unless a second real reusable consumer appears with a
+  materially shared adapter contract
 - keep reusable docs/examples aligned with the current conversion-surface target:
   app-facing teaching helpers use `Ui` / `UiChild`, reusable generic helpers should move toward
   the unified component conversion trait tracked in
