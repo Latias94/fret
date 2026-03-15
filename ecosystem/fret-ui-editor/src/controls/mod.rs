@@ -45,7 +45,8 @@ pub use text_field::{
 };
 pub use transform_edit::{
     OnTransformEditAxisOutcome, TransformEdit, TransformEditAxisOutcome,
-    TransformEditLayoutVariant, TransformEditOptions, TransformEditSection,
+    TransformEditLayoutVariant, TransformEditOptions, TransformEditPresentations,
+    TransformEditSection,
 };
 pub use vec_edit::{
     OnVecEditAxisOutcome, Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxis, VecEditAxisOutcome,

@@ -149,10 +149,13 @@ Current checkpoint:
   above raw `format` / `parse` closures: `NumericPresentation<T>` groups text formatting/parsing
   with control-chrome affixes, and `NumericInput`, `DragValue`, `AxisDragValue`, `Slider`, plus
   `VecEdit` variants now expose `from_presentation(...)` constructors so first-party editor
-  surfaces stop open-coding `(format, parse, prefix, suffix)` bundles. The promoted proof/demo
-  surface now routes its fixed-decimal, currency-like, percent, and advanced-position examples
-  through that lane, and `GradientEditor` now also consumes the same bundle for angle and
-  stop-position authoring instead of keeping another pair of raw formatter/parser closures,
+  surfaces stop open-coding `(format, parse, prefix, suffix)` bundles. `TransformEdit` now also
+  has a section-scoped direct lane via `TransformEditPresentations`, so higher-level composites do
+  not need to fan back out into ad-hoc shared closures once position/rotation/scale want to carry
+  their own numeric stories. The promoted proof/demo surface now routes its fixed-decimal,
+  currency-like, percent, advanced-position, exposure, and transform examples through that lane,
+  and `GradientEditor` now also consumes the same bundle for angle and stop-position authoring
+  instead of keeping another pair of raw formatter/parser closures,
 - the same numeric edit-session seam now also propagates through composite editor controls:
   `VecEdit` exposes `(axis, outcome)`, `TransformEdit` exposes `(section, axis, outcome)`, the
   promoted proof surface now carries stable

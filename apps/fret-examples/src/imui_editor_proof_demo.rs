@@ -29,7 +29,8 @@ use fret_ui_editor::controls::{
     NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
     TextAssistFieldSurface, TextField, TextFieldBlurBehavior, TextFieldMode, TextFieldOptions,
     TextFieldOutcome, TransformEdit, TransformEditAxisOutcome, TransformEditOptions,
-    TransformEditSection, Vec3Edit, VecEditAxis, VecEditAxisOutcome, VecEditOptions,
+    TransformEditPresentations, TransformEditSection, Vec3Edit, VecEditAxis, VecEditAxisOutcome,
+    VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
@@ -1789,10 +1790,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                             let validate = advanced_validate.clone();
                                             let fixed_presentation =
                                                 editor_fixed_decimals_presentation();
-                                            let fmt_f64: fret_ui_editor::controls::NumericFormatFn<f64> =
-                                                fixed_presentation.format();
-                                            let parse_f64: fret_ui_editor::controls::NumericParseFn<f64> =
-                                                fixed_presentation.parse();
                                             let fmt_i32: fret_ui_editor::controls::NumericFormatFn<i32> =
                                                 Arc::new(|v| Arc::from(format!("{v}")));
                                             let parse_i32: fret_ui_editor::controls::NumericParseFn<i32> =
@@ -1952,7 +1949,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 let outcome_model =
                                                                     editor_transform_outcome_model
                                                                         .clone();
-                                                                TransformEdit::new(
+                                                                TransformEdit::from_presentations(
                                                                     (
                                                                         editor_pos_x.clone(),
                                                                         editor_pos_y.clone(),
@@ -1968,8 +1965,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                         editor_scl_y.clone(),
                                                                         editor_scl_z.clone(),
                                                                     ),
-                                                                    fmt_f64.clone(),
-                                                                    parse_f64.clone(),
+                                                                    TransformEditPresentations::shared(
+                                                                        fixed_presentation.clone(),
+                                                                    ),
                                                                 )
                                                                 .on_axis_outcome(Some(Arc::new(
                                                                     move |host,
@@ -2101,10 +2099,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     cx,
                                                                     |cx| cx.text("Exposure"),
                                                                     |cx| {
-                                                                        NumericInput::new(
+                                                                        NumericInput::from_presentation(
                                                                             editor_exposure_model.clone(),
-                                                                            fmt_f64.clone(),
-                                                                            parse_f64.clone(),
+                                                                            fixed_presentation.clone(),
                                                                         )
                                                                         .validate(Some(validate.clone()))
                                                                         .options(NumericInputOptions {

@@ -281,10 +281,13 @@ Interaction contract:
       without widening the public control API. That surface now has a concrete first-party
       constructor lane too: `NumericInput`, `DragValue`, `AxisDragValue`, `Slider`, and
       `VecEdit` variants all expose `from_presentation(...)`, and the promoted proof/demo surface
-      now routes its fixed-decimal, currency-like, percent, and advanced-position examples
-      through that path instead of open-coding `(format, parse, prefix, suffix)` bundles.
-      `GradientEditor` now also consumes the same bundle for angle and stop-position editing, so
-      the abstraction already has a non-proof first-party composite consumer inside
+      now routes its fixed-decimal, currency-like, percent, advanced-position, and exposure
+      examples through that path instead of open-coding `(format, parse, prefix, suffix)`
+      bundles. `TransformEdit` now also has a direct section-scoped lane via
+      `TransformEditPresentations`, so the higher-level transform composite can keep position /
+      rotation / scale numeric stories together without falling back to one shared raw closure
+      pair. `GradientEditor` now also consumes the same bundle for angle and stop-position
+      editing, so the abstraction already has non-proof first-party composite consumers inside
       `fret-ui-editor`.
       `VecEdit` now also exposes `(axis, outcome)` and `TransformEdit` now exposes
       `(section, axis, outcome)` at the same editor-layer seam, with promoted proof readouts at
@@ -293,8 +296,9 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`.
       Remaining work: keep `NumericPresentation<T>` as the recommended first-party authoring path
       whenever one editor surface needs to carry formatting/parsing plus chrome affixes together,
-      decide whether any higher-level composite beyond `VecEdit` actually needs its own direct
-      `from_presentation(...)` lane, and only widen the composite outcome payload beyond
+      only add more composite-specific constructor lanes when a real heterogeneous numeric story
+      exists beyond what `VecEdit` / `TransformEditPresentations` already cover, and only widen
+      the composite outcome payload beyond
       section/axis/session when a second consumer proves richer metadata is actually needed.
 - [~] `EER-EDITOR-122` Close editor-grade text input policy beyond the baseline layer:
       password mode, completion/history hook placeholders, and richer editing hooks.
