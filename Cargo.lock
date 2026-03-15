@@ -1715,6 +1715,7 @@ name = "fret"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-assets",
  "fret-bootstrap",
  "fret-core",
  "fret-docking",
@@ -1769,6 +1770,7 @@ name = "fret-assets"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde_json",
  "smol_str 0.2.2",
  "thiserror 2.0.18",
 ]
@@ -1914,6 +1916,7 @@ dependencies = [
  "delinea",
  "fret",
  "fret-app",
+ "fret-assets",
  "fret-bootstrap",
  "fret-canvas",
  "fret-chart",
@@ -3056,6 +3059,7 @@ dependencies = [
 name = "fretboard"
 version = "0.1.0"
 dependencies = [
+ "fret-assets",
  "fret-diag",
  "fret-ui",
  "fret-vscode-theme",
