@@ -140,6 +140,8 @@ generated-manifest convenience path when you want one directory to become one lo
 without teaching raw repo-relative paths in app/widget code.
 Use `fret::assets::register_file_manifest(...)` when tooling already emits an explicit manifest
 artifact that should be reviewed, versioned, or packaged directly.
+For a first-party manifest artifact command, use
+`fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app`.
 If you are already on the `fret` builder path, prefer `FretApp::asset_dir(...)` /
 `UiAppBuilder::with_asset_dir(...)` for the convenience lane, or
 `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have a
@@ -410,6 +412,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   for the convenience lane or `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)`
   for explicit manifest artifacts before dropping to `fret::assets::register_file_bundle_dir(...)`
   or `fret::assets::register_file_manifest(...)`.
+  When you want to emit an explicit manifest artifact from a bundle directory, prefer
+  `fretboard assets manifest write ...` over hand-authoring JSON.
 - **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or

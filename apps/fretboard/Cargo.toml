@@ -13,6 +13,7 @@ publish = false
 [dependencies]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+fret-assets = { path = "../../crates/fret-assets" }
 fret-diag = { path = "../../crates/fret-diag" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-vscode-theme = { path = "../../ecosystem/fret-vscode-theme" }

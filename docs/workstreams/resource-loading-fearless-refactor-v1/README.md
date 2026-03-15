@@ -68,6 +68,8 @@ This workstream takes a fearless posture:
     the app-facing facade,
   - `fret::assets::register_file_manifest(...)` mounts that resolver on the app-facing facade
     without teaching repo-relative paths in widget code.
+  - `fretboard assets manifest write --dir ... --out ... --app-bundle ...` now emits an explicit
+    file-backed manifest artifact from a scanned bundle directory,
   - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep that generated-manifest
     convenience lane on the startup builder surface,
   - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` now keep that

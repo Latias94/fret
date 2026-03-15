@@ -9,6 +9,8 @@ fn main() {
 use std::process::ExitCode;
 
 #[cfg(not(target_arch = "wasm32"))]
+mod assets;
+#[cfg(not(target_arch = "wasm32"))]
 mod cli;
 #[cfg(not(target_arch = "wasm32"))]
 mod config;

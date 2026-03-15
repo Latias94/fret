@@ -160,6 +160,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       the app-facing facade
     - `register_file_manifest(...)` now exposes the first native/package-dev manifest lane on the
       app-facing facade
+    - `fretboard assets manifest write ...` now emits an explicit manifest artifact from a scanned
+      bundle directory
     - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep the directory-scanning
       convenience lane on the builder/startup surface
     - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest

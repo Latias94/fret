@@ -19,6 +19,7 @@ fn run() -> Result<(), String> {
 
     match cmd.as_str() {
         "help" | "-h" | "--help" => help(),
+        "assets" => crate::assets::assets_cmd(args.collect()),
         "init" => crate::scaffold::init_cmd(args.collect()),
         "new" => crate::scaffold::new_cmd(args.collect()),
         "config" => crate::config::config_cmd(args.collect()),
@@ -48,6 +49,7 @@ pub(crate) fn help() -> Result<(), String> {
 
 Usage:
   fretboard help
+  fretboard assets manifest write --dir <dir> --out <path> (--app-bundle <name> | --package-bundle <name> | --bundle <id>) [--force]
   fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette] [--no-check]
   fretboard new             # interactive wizard
   fretboard new todo        # non-interactive (template shortcut)
@@ -130,6 +132,7 @@ Usage:
   fretboard dev web --open [--no-open] [--port <port>] [--demo <demo> | --choose]
 
 Examples:
+  fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-todo
   fretboard new todo --name my-todo
   fretboard new simple-todo --name my-simple-todo
   fretboard new hello --name hello-world
