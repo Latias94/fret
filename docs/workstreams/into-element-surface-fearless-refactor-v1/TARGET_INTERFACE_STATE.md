@@ -126,6 +126,14 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use
   `simple_todo_page(...)`, `cjk_conformance_page(...)`, or `emoji_conformance_page(...)`
   returning `IntoUiElement<App>` rather than leaving an inline `let page = ...` wrapper in the
   closure body.
+- low-level interop/app-element-context examples are a separate pending lane, not an accident:
+  examples such as `external_texture_imports_demo`, `external_video_imports_*_demo`,
+  `chart_declarative_demo`, and `node_graph_demo` still expose dedicated direct-root functions like
+  `render_view(...)`, `chart_canvas_panel(...)`, or `node_graph_surface(...)`.
+  Do not force those surfaces through `UiCx -> Ui` wrappers just for uniformity.
+  The next follow-up on that lane is to document which of those direct roots are already
+  intentional leaf contracts and which still want a local typed root helper around surrounding
+  chrome.
 - Rust 2024 precise captures note: if the helper wants `+ use<...>` and also accepts a flexible
   label/input argument, prefer a named generic such as `fn helper<L>(..., label: L) -> impl
   IntoUiElement<KernelApp> + use<L> where L: Into<Arc<str>>` rather than argument-position

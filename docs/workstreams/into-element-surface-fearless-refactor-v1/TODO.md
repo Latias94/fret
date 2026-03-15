@@ -216,6 +216,10 @@ Closeout note on 2026-03-15:
 - this file is no longer the tracker for a broad migration sweep,
 - the remaining work here is maintenance only: explicit raw-seam inventory, source-policy gates,
   and target-state/docs closeout,
+- the only example-lane follow-up still worth reopening is explicit classification of the
+  low-level interop/app-element-context surfaces
+  (`external_texture_imports*`, `external_video_imports*`, `chart_declarative_demo`,
+  `node_graph_demo`) before anyone tries to normalize them onto the wrong lane,
 - if a future change reopens conversion-surface design, document the new boundary first instead of
   treating this TODO as a standing invitation to widen APIs again.
 
