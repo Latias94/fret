@@ -166,10 +166,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       packaged/web/mobile-friendly bundle assets
     - the generated Rust module supports both `--surface fret` and `--surface framework`
       consumption lanes
+    - the generated `--surface fret` module now exposes `mount(builder)` so compile-time embedded
+      assets can stay on the `UiAppBuilder` startup path instead of falling back to ad-hoc setup
+      hooks
     - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep the directory-scanning
       convenience lane on the builder/startup surface
     - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest
       lane on the builder/startup surface
+    - `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` now keep static
+      bundle/embedded registrations on the same builder/startup surface
+    - `UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}` now keep
+      compile-time static asset registration on the same ordered startup surface as manifest/dir
+      mounts
     - `FretApp` now preserves mixed `asset_dir(...)` / `asset_manifest(...)` call order so later
       builder calls override earlier ones consistently
     - host-level resolver precedence is now unified across
@@ -186,6 +194,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - broader first-party packaged/web/mobile manifest tooling story
     - packaged/web/mobile manifest layering guidance beyond generated Rust embedding
       (hashed web outputs, mobile bundle/resource mapping, hybrid packaged + remote lanes)
+    - first-party scaffold/docs guidance for preferring generated `mount(builder)` when assets are
+      compile-time owned
     - ecosystem-oriented bundle identity guidance
     - final migration of remaining first-party gallery/bootstrap surfaces
 

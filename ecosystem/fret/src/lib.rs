@@ -1162,6 +1162,43 @@ impl<S: 'static> UiAppBuilder<S> {
         })
     }
 
+    /// Register static bundle-scoped entries on the builder path.
+    ///
+    /// This is the packaged/web/mobile-friendly lane for compile-time owned assets such as
+    /// generated `include_bytes!` modules. Builder registrations preserve call order, so later
+    /// calls can intentionally override earlier ones for the same logical locator.
+    pub fn with_bundle_asset_entries(
+        self,
+        bundle: impl Into<crate::assets::AssetBundleId>,
+        entries: impl IntoIterator<Item = crate::assets::StaticAssetEntry>,
+    ) -> Self {
+        let bundle = bundle.into();
+        let entries = entries.into_iter().collect::<Vec<_>>();
+        Self {
+            inner: self.inner.init_app(move |app| {
+                crate::assets::register_bundle_entries(app, bundle, entries);
+            }),
+        }
+    }
+
+    /// Register static embedded entries on the builder path.
+    ///
+    /// This keeps compile-time owned embedded bytes on the same ordered startup surface as other
+    /// asset registrations instead of forcing callers back to ad-hoc setup hooks.
+    pub fn with_embedded_asset_entries(
+        self,
+        owner: impl Into<crate::assets::AssetBundleId>,
+        entries: impl IntoIterator<Item = crate::assets::StaticAssetEntry>,
+    ) -> Self {
+        let owner = owner.into();
+        let entries = entries.into_iter().collect::<Vec<_>>();
+        Self {
+            inner: self.inner.init_app(move |app| {
+                crate::assets::register_embedded_entries(app, owner, entries);
+            }),
+        }
+    }
+
     #[cfg(feature = "ui-assets")]
     pub fn with_ui_assets_budgets(
         self,
@@ -1330,7 +1367,7 @@ mod builder_surface_tests {
     use crate::view::View;
     use crate::{AppUi, Defaults, Error, Ui, WindowId};
     use fret_app::CreateWindowRequest;
-    use fret_assets::AssetBundleId;
+    use fret_assets::{AssetBundleId, AssetRevision, StaticAssetEntry};
     use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
     use fret_runtime::{CommandId, FrameId, TickId};
 
@@ -1603,6 +1640,49 @@ mod builder_surface_tests {
                 &asset_dir,
             )
             .expect("asset dir should load on ui app builder path");
+    }
+
+    #[test]
+    fn fret_app_asset_entries_install_on_builder_path() {
+        let _builder = FretApp::new("builder-view-asset-entries")
+            .asset_entries([StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"builder-bytes",
+            )])
+            .view::<SmokeView>()
+            .expect("asset entries should load on fret app builder path");
+    }
+
+    #[test]
+    fn ui_app_builder_with_bundle_asset_entries_installs_on_builder_path() {
+        let _builder = FretApp::new("builder-view-ui-builder-asset-entries")
+            .view::<SmokeView>()
+            .expect("view should build")
+            .with_bundle_asset_entries(
+                AssetBundleId::app("builder-view-ui-builder-asset-entries"),
+                [StaticAssetEntry::new(
+                    "images/logo.png",
+                    AssetRevision(1),
+                    b"builder-bytes",
+                )],
+            );
+    }
+
+    #[test]
+    fn ui_app_builder_with_embedded_asset_entries_installs_on_builder_path() {
+        let _builder = FretApp::new("builder-view-ui-builder-embedded-entries")
+            .view::<SmokeView>()
+            .expect("view should build")
+            .with_embedded_asset_entries(
+                AssetBundleId::package("demo-kit"),
+                [StaticAssetEntry::new(
+                    "icons/search.svg",
+                    AssetRevision(1),
+                    br#"<svg></svg>"#,
+                )
+                .with_media_type("image/svg+xml")],
+            );
     }
 
     #[test]

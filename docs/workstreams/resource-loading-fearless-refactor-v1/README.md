@@ -98,6 +98,14 @@ This workstream takes a fearless posture:
     - `--surface fret` for apps using the `fret` facade,
     - `--surface framework` for lower-level/runtime-facing crates that want direct
       `fret-assets` / `fret-runtime` integration.
+  - The `--surface fret` module now exposes both:
+    - `register(app)` for direct host/app registration,
+    - `mount(builder)` for `UiAppBuilder` startup-path mounting via
+      `with_bundle_asset_entries(...)`.
+  - `FretApp::asset_entries(...)`, `FretApp::bundle_asset_entries(...)`,
+    `FretApp::embedded_asset_entries(...)`, `UiAppBuilder::with_bundle_asset_entries(...)`, and
+    `UiAppBuilder::with_embedded_asset_entries(...)` now keep compile-time/static registrations on
+    the same ordered builder/startup surface as `asset_dir(...)` and `asset_manifest(...)`.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.

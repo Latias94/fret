@@ -414,7 +414,12 @@ fn render_rust_asset_module(
         RustSurface::Fret => {
             writeln!(
                 out,
-                "pub fn register(app: &mut fret::app::App) {{\n    assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());\n}}"
+                "pub fn register(app: &mut fret::app::App) {{\n    assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());\n}}\n"
+            )
+            .expect("write to string");
+            writeln!(
+                out,
+                "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {{\n    builder.with_bundle_asset_entries(bundle_id(), ENTRIES.iter().copied())\n}}"
             )
             .expect("write to string");
         }
@@ -662,6 +667,14 @@ mod tests {
         assert!(generated.contains(
             "assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());"
         ));
+        assert!(generated.contains(
+            "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S>"
+        ));
+        assert!(
+            generated.contains(
+                "builder.with_bundle_asset_entries(bundle_id(), ENTRIES.iter().copied())"
+            )
+        );
     }
 
     #[test]

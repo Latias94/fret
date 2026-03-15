@@ -6,7 +6,9 @@
 use std::path::PathBuf;
 
 use crate::{
-    Defaults, Result, UiAppBuilder, UiAppDriver, assets::AssetBundleId, integration::InstallIntoApp,
+    Defaults, Result, UiAppBuilder, UiAppDriver,
+    assets::{AssetBundleId, StaticAssetEntry},
+    integration::InstallIntoApp,
 };
 
 type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
@@ -14,8 +16,21 @@ type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, Clone)]
 enum AssetMount {
-    Dir { bundle: AssetBundleId, dir: PathBuf },
-    Manifest { path: PathBuf },
+    Dir {
+        bundle: AssetBundleId,
+        dir: PathBuf,
+    },
+    Manifest {
+        path: PathBuf,
+    },
+    BundleEntries {
+        bundle: AssetBundleId,
+        entries: Vec<StaticAssetEntry>,
+    },
+    EmbeddedEntries {
+        owner: AssetBundleId,
+        entries: Vec<StaticAssetEntry>,
+    },
 }
 
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
@@ -112,6 +127,52 @@ impl FretApp {
         self.asset_mounts.push(AssetMount::Dir {
             bundle: AssetBundleId::app(self.root_name),
             dir: dir.into(),
+        });
+        self
+    }
+
+    /// Register compile-time/static app bundle entries on the builder path.
+    ///
+    /// This is the packaged/web/mobile-friendly lane for assets already owned by the Rust build
+    /// (for example generated `include_bytes!` modules). Asset registrations preserve the builder
+    /// call order, so later calls can intentionally override earlier ones for the same logical
+    /// locator.
+    pub fn asset_entries(mut self, entries: impl IntoIterator<Item = StaticAssetEntry>) -> Self {
+        self.asset_mounts.push(AssetMount::BundleEntries {
+            bundle: AssetBundleId::app(self.root_name),
+            entries: entries.into_iter().collect(),
+        });
+        self
+    }
+
+    /// Register static bundle-scoped entries on the builder path under an explicit bundle id.
+    ///
+    /// This is useful when app startup needs to mount generated/package-owned bundle assets while
+    /// still preserving builder call order.
+    pub fn bundle_asset_entries(
+        mut self,
+        bundle: impl Into<AssetBundleId>,
+        entries: impl IntoIterator<Item = StaticAssetEntry>,
+    ) -> Self {
+        self.asset_mounts.push(AssetMount::BundleEntries {
+            bundle: bundle.into(),
+            entries: entries.into_iter().collect(),
+        });
+        self
+    }
+
+    /// Register static embedded entries owned by a specific bundle or crate on the builder path.
+    ///
+    /// This keeps packaged embedded bytes on the builder/startup surface instead of falling back
+    /// to ad-hoc setup hooks.
+    pub fn embedded_asset_entries(
+        mut self,
+        owner: impl Into<AssetBundleId>,
+        entries: impl IntoIterator<Item = StaticAssetEntry>,
+    ) -> Self {
+        self.asset_mounts.push(AssetMount::EmbeddedEntries {
+            owner: owner.into(),
+            entries: entries.into_iter().collect(),
         });
         self
     }
@@ -254,6 +315,12 @@ fn finish_builder<S: 'static>(
         builder = match mount {
             AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir)?,
             AssetMount::Manifest { path } => builder.with_asset_manifest(path)?,
+            AssetMount::BundleEntries { bundle, entries } => {
+                builder.with_bundle_asset_entries(bundle, entries)
+            }
+            AssetMount::EmbeddedEntries { owner, entries } => {
+                builder.with_embedded_asset_entries(owner, entries)
+            }
         };
     }
     Ok(builder)
@@ -275,15 +342,21 @@ fn apply_main_window<S: 'static>(
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
 mod tests {
     use super::*;
+    use crate::assets::AssetRevision;
 
     #[test]
     fn asset_mounts_preserve_builder_call_order() {
         let app = FretApp::new("demo-app")
             .asset_dir("assets/dev")
+            .asset_entries([StaticAssetEntry::new(
+                "icons/search.svg",
+                AssetRevision(1),
+                br#"<svg></svg>"#,
+            )])
             .asset_manifest("assets.manifest.json")
             .asset_dir("assets/override");
 
-        assert_eq!(app.asset_mounts.len(), 3);
+        assert_eq!(app.asset_mounts.len(), 4);
         match &app.asset_mounts[0] {
             AssetMount::Dir { bundle, dir } => {
                 assert_eq!(bundle, &AssetBundleId::app("demo-app"));
@@ -292,17 +365,26 @@ mod tests {
             other => panic!("expected dir mount first, got {other:?}"),
         }
         match &app.asset_mounts[1] {
+            AssetMount::BundleEntries { bundle, entries } => {
+                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
+                assert_eq!(entries.len(), 1);
+                assert_eq!(entries[0].key, "icons/search.svg");
+                assert_eq!(entries[0].revision, AssetRevision(1));
+            }
+            other => panic!("expected bundle entries mount second, got {other:?}"),
+        }
+        match &app.asset_mounts[2] {
             AssetMount::Manifest { path } => {
                 assert_eq!(path, &PathBuf::from("assets.manifest.json"));
             }
-            other => panic!("expected manifest mount second, got {other:?}"),
+            other => panic!("expected manifest mount third, got {other:?}"),
         }
-        match &app.asset_mounts[2] {
+        match &app.asset_mounts[3] {
             AssetMount::Dir { bundle, dir } => {
                 assert_eq!(bundle, &AssetBundleId::app("demo-app"));
                 assert_eq!(dir, &PathBuf::from("assets/override"));
             }
-            other => panic!("expected dir mount third, got {other:?}"),
+            other => panic!("expected dir mount fourth, got {other:?}"),
         }
     }
 }
