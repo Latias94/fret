@@ -1,7 +1,8 @@
 //! Development-oriented reload controls for UI assets.
 //!
-//! This is intentionally small and portable: instead of using OS-specific file watchers, apps can
-//! bump a global epoch to force re-decoding path-based image sources.
+//! UI-specific compatibility shims now sit on top of the shared runtime asset reload epoch.
+//! Desktop hosts may drive that epoch from native file watchers or metadata polling depending on
+//! startup policy and platform support.
 
 use fret_runtime::GlobalsHost;
 

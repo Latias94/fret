@@ -25,8 +25,21 @@ pub fn run_app_with_event_loop<D: super::WinitAppDriver + 'static>(
     app: App,
     driver: D,
 ) -> Result<(), RunnerError> {
+    run_app_with_event_loop_and_asset_reload(event_loop, config, app, driver, None)
+}
+
+fn run_app_with_event_loop_and_asset_reload<D: super::WinitAppDriver + 'static>(
+    event_loop: EventLoop,
+    config: super::WinitRunnerConfig,
+    app: App,
+    driver: D,
+    asset_reload: Option<super::asset_reload::AssetReloadController>,
+) -> Result<(), RunnerError> {
     crate::stacksafe_config::configure_stacksafe_from_env();
     let mut runner = super::WinitRunner::new_app(config, app, driver);
+    if let Some(asset_reload) = asset_reload {
+        runner.set_asset_reload_controller(asset_reload);
+    }
     #[cfg(target_os = "android")]
     runner.set_android_app(event_loop.android_app().clone());
     runner.set_event_loop_proxy(event_loop.create_proxy());
@@ -60,6 +73,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             config,
             app,
             driver,
+            asset_reload: None,
             dispatcher,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
@@ -153,6 +167,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         crate::dev_state::DevStateHooks::import_all(&mut runner.app);
         runner.publish_system_font_rescan_state();
         runner
+    }
+
+    pub(super) fn set_asset_reload_controller(
+        &mut self,
+        mut asset_reload: super::asset_reload::AssetReloadController,
+    ) {
+        asset_reload.publish_support(&mut self.app);
+        asset_reload.arm_for_startup(&mut self.app, Instant::now(), &mut self.timers);
+        self.asset_reload = Some(asset_reload);
     }
 }
 
@@ -347,7 +370,7 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
     pub fn run(self) -> Result<(), RunnerError> {
         let WinitAppBuilder {
             config,
-            mut app,
+            app,
             driver,
             windows_ime_msg_hook_enabled: _windows_ime_msg_hook_enabled,
             on_main_window_created,
@@ -358,20 +381,25 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
             asset_reload_targets,
         } = self;
 
-        let asset_reload = AssetReloadController::new(asset_reload_policy, asset_reload_targets);
-        if let Some(controller) = asset_reload.as_ref() {
-            controller.publish_support(&mut app);
-        }
+        let asset_reload = super::asset_reload::AssetReloadController::new(
+            asset_reload_policy,
+            asset_reload_targets,
+        );
 
         let driver = HookedDriver {
             inner: driver,
             on_main_window_created,
             on_gpu_ready,
-            asset_reload,
         };
 
         match event_loop {
-            Some(event_loop) => run_app_with_event_loop(event_loop, config, app, driver),
+            Some(event_loop) => run_app_with_event_loop_and_asset_reload(
+                event_loop,
+                config,
+                app,
+                driver,
+                asset_reload,
+            ),
             None => {
                 let mut builder = EventLoop::builder();
                 if let Some(hook) = event_loop_builder_hook {
@@ -388,7 +416,13 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
                 }
 
                 let event_loop = builder.build()?;
-                run_app_with_event_loop(event_loop, config, app, driver)
+                run_app_with_event_loop_and_asset_reload(
+                    event_loop,
+                    config,
+                    app,
+                    driver,
+                    asset_reload,
+                )
             }
         }
     }
@@ -417,248 +451,16 @@ fn apply_asset_mounts<D: super::WinitAppDriver + 'static>(
     mounts.into_iter().try_fold(builder, apply_asset_mount)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct FileStamp {
-    len: u64,
-    modified: Option<std::time::SystemTime>,
-}
-
-fn file_stamp(path: &std::path::Path) -> Option<FileStamp> {
-    let metadata = std::fs::metadata(path).ok()?;
-    Some(FileStamp {
-        len: metadata.len(),
-        modified: metadata.modified().ok(),
-    })
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum AssetReloadSnapshot {
-    Manifest {
-        manifest: Option<FileStamp>,
-        entries: std::collections::BTreeMap<std::path::PathBuf, Option<FileStamp>>,
-    },
-    Dir {
-        root: Option<FileStamp>,
-        files: std::collections::BTreeMap<std::path::PathBuf, FileStamp>,
-    },
-}
-
-#[derive(Debug, Clone)]
-struct AssetReloadWatchedTarget {
-    target: crate::assets::AssetReloadTarget,
-    snapshot: AssetReloadSnapshot,
-}
-
-impl AssetReloadWatchedTarget {
-    fn new(target: crate::assets::AssetReloadTarget) -> Self {
-        let snapshot = capture_asset_reload_snapshot(&target);
-        Self { target, snapshot }
-    }
-
-    fn poll_changed(&mut self) -> bool {
-        let next = capture_asset_reload_snapshot(&self.target);
-        if next == self.snapshot {
-            return false;
-        }
-
-        self.snapshot = next;
-        true
-    }
-}
-
-struct AssetReloadController {
-    interval: std::time::Duration,
-    targets: Vec<AssetReloadWatchedTarget>,
-    window_tokens: std::collections::HashMap<fret_core::AppWindowId, fret_runtime::TimerToken>,
-    window_notified_epoch: std::collections::HashMap<fret_core::AppWindowId, u64>,
-}
-
-impl AssetReloadController {
-    fn new(
-        policy: Option<crate::assets::AssetReloadPolicy>,
-        targets: Vec<crate::assets::AssetReloadTarget>,
-    ) -> Option<Self> {
-        let policy = policy?;
-        if targets.is_empty() {
-            return None;
-        }
-
-        Some(Self {
-            interval: policy.interval(),
-            targets: targets
-                .into_iter()
-                .map(AssetReloadWatchedTarget::new)
-                .collect(),
-            window_tokens: std::collections::HashMap::new(),
-            window_notified_epoch: std::collections::HashMap::new(),
-        })
-    }
-
-    fn publish_support(&self, app: &mut App) {
-        fret_runtime::set_asset_reload_support(
-            app,
-            fret_runtime::AssetReloadSupport { file_watch: true },
-        );
-    }
-
-    fn install_window(&mut self, app: &mut App, window: fret_core::AppWindowId) {
-        if self.window_tokens.contains_key(&window) {
-            return;
-        }
-
-        let token = app.next_timer_token();
-        app.push_effect(fret_runtime::Effect::SetTimer {
-            window: Some(window),
-            token,
-            after: self.interval,
-            repeat: Some(self.interval),
-        });
-        self.window_tokens.insert(window, token);
-        self.window_notified_epoch.insert(
-            window,
-            fret_runtime::asset_reload_epoch(app).unwrap_or_default().0,
-        );
-    }
-
-    fn uninstall_window(&mut self, app: &mut App, window: fret_core::AppWindowId) {
-        if let Some(token) = self.window_tokens.remove(&window) {
-            app.push_effect(fret_runtime::Effect::CancelTimer { token });
-        }
-        self.window_notified_epoch.remove(&window);
-    }
-
-    fn handle_event(
-        &mut self,
-        app: &mut App,
-        window: fret_core::AppWindowId,
-        event: &fret_core::Event,
-    ) -> bool {
-        let fret_core::Event::Timer { token } = event else {
-            return false;
-        };
-
-        if self.window_tokens.get(&window).copied() != Some(*token) {
-            return false;
-        }
-
-        if self
-            .targets
-            .iter_mut()
-            .any(AssetReloadWatchedTarget::poll_changed)
-        {
-            fret_runtime::bump_asset_reload_epoch(app);
-        }
-
-        let epoch = fret_runtime::asset_reload_epoch(app).unwrap_or_default().0;
-        let notified_epoch = self.window_notified_epoch.entry(window).or_insert(0);
-        if epoch > *notified_epoch {
-            app.request_redraw(window);
-            *notified_epoch = epoch;
-        }
-
-        true
-    }
-}
-
-fn capture_asset_reload_snapshot(target: &crate::assets::AssetReloadTarget) -> AssetReloadSnapshot {
-    match target {
-        crate::assets::AssetReloadTarget::Manifest { path } => {
-            capture_manifest_reload_snapshot(path.as_path())
-        }
-        crate::assets::AssetReloadTarget::Dir { path } => {
-            capture_dir_reload_snapshot(path.as_path())
-        }
-    }
-}
-
-fn capture_manifest_reload_snapshot(path: &std::path::Path) -> AssetReloadSnapshot {
-    let manifest = file_stamp(path);
-    let mut entries = std::collections::BTreeMap::new();
-
-    if let Ok(manifest_file) = crate::assets::FileAssetManifestV1::load_json_path(path) {
-        let base_dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
-        for bundle in manifest_file.bundles {
-            let bundle_root = bundle.root.unwrap_or_default();
-            for entry in bundle.entries {
-                let entry_path = entry
-                    .path
-                    .unwrap_or_else(|| std::path::PathBuf::from(entry.key.as_str()));
-                let resolved = resolve_manifest_entry_path(base_dir, &bundle_root, &entry_path);
-                entries.insert(resolved.clone(), file_stamp(&resolved));
-            }
-        }
-    }
-
-    AssetReloadSnapshot::Manifest { manifest, entries }
-}
-
-fn capture_dir_reload_snapshot(path: &std::path::Path) -> AssetReloadSnapshot {
-    let root = file_stamp(path);
-    let mut files = Vec::new();
-    let _ = collect_reload_dir_files(path, &mut files);
-
-    let files = files
-        .into_iter()
-        .filter_map(|path| file_stamp(&path).map(|stamp| (path, stamp)))
-        .collect();
-
-    AssetReloadSnapshot::Dir { root, files }
-}
-
-fn resolve_manifest_entry_path(
-    base_dir: &std::path::Path,
-    bundle_root: &std::path::Path,
-    entry_path: &std::path::Path,
-) -> std::path::PathBuf {
-    if entry_path.is_absolute() {
-        return entry_path.to_path_buf();
-    }
-
-    let joined_root = if bundle_root.is_absolute() {
-        bundle_root.to_path_buf()
-    } else {
-        base_dir.join(bundle_root)
-    };
-    joined_root.join(entry_path)
-}
-
-fn collect_reload_dir_files(
-    dir: &std::path::Path,
-    out: &mut Vec<std::path::PathBuf>,
-) -> std::io::Result<()> {
-    let mut entries = std::fs::read_dir(dir)?;
-    let mut paths = Vec::new();
-    while let Some(entry) = entries.next() {
-        paths.push(entry?.path());
-    }
-    paths.sort();
-
-    for path in paths {
-        let metadata = std::fs::metadata(&path)?;
-        if metadata.is_dir() {
-            collect_reload_dir_files(&path, out)?;
-        } else if metadata.is_file() {
-            out.push(path);
-        }
-    }
-
-    Ok(())
-}
-
 struct HookedDriver<D> {
     inner: D,
     on_main_window_created: Option<Box<OnMainWindowCreatedHook>>,
     on_gpu_ready: Option<Box<OnGpuReadyHook>>,
-    asset_reload: Option<AssetReloadController>,
 }
 
 impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
     type WindowState = D::WindowState;
 
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
-        if let Some(asset_reload) = self.asset_reload.as_mut() {
-            asset_reload.install_window(app, main_window);
-        }
         if let Some(hook) = self.on_main_window_created.take() {
             hook(app, main_window);
         }
@@ -803,11 +605,6 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
         context: super::WinitEventContext<'_, Self::WindowState>,
         event: &fret_core::Event,
     ) {
-        if let Some(asset_reload) = self.asset_reload.as_mut()
-            && asset_reload.handle_event(context.app, context.window, event)
-        {
-            return;
-        }
         self.inner.handle_event(context, event);
     }
 
@@ -829,18 +626,11 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
         request: &fret_app::CreateWindowRequest,
         new_window: fret_core::AppWindowId,
     ) {
-        if let Some(asset_reload) = self.asset_reload.as_mut() {
-            asset_reload.install_window(app, new_window);
-        }
         self.inner.window_created(app, request, new_window);
     }
 
     fn before_close_window(&mut self, app: &mut App, window: fret_core::AppWindowId) -> bool {
-        let should_close = self.inner.before_close_window(app, window);
-        if should_close && let Some(asset_reload) = self.asset_reload.as_mut() {
-            asset_reload.uninstall_window(app, window);
-        }
-        should_close
+        self.inner.before_close_window(app, window)
     }
 
     fn semantics_snapshot(
@@ -969,15 +759,13 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
 mod tests {
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
-    use std::time::Duration;
 
     use fret_app::App;
     use fret_assets::{AssetBundleId, AssetLocator, AssetRevision, StaticAssetEntry};
     use fret_core::AppWindowId;
-    use fret_runtime::{Effect, resolve_asset_locator_bytes};
-    use slotmap::KeyData;
+    use fret_runtime::resolve_asset_locator_bytes;
 
-    use super::{AssetReloadController, WinitAppBuilder};
+    use super::WinitAppBuilder;
     use crate::{RunnerError, WinitAppDriver};
 
     struct TestDriver;
@@ -1013,16 +801,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create temp dir");
         dir
-    }
-
-    fn redraw_windows(app: &mut App) -> Vec<AppWindowId> {
-        app.flush_effects()
-            .into_iter()
-            .filter_map(|effect| match effect {
-                Effect::Redraw(window) => Some(window),
-                _ => None,
-            })
-            .collect()
     }
 
     #[test]
@@ -1107,66 +885,5 @@ mod tests {
         )
         .expect("asset directory should register a bundle resolver");
         assert_eq!(resolved.bytes.as_ref(), b"launch-asset-dir");
-    }
-
-    #[test]
-    fn asset_reload_controller_bumps_epoch_and_redraws_each_window() {
-        let asset_dir = make_temp_dir("asset-reload-controller").join("assets");
-        std::fs::create_dir_all(asset_dir.join("images")).expect("create images dir");
-        std::fs::write(asset_dir.join("images/logo.png"), b"first").expect("write initial asset");
-
-        let mut app = App::new();
-        let mut controller = AssetReloadController::new(
-            Some(crate::assets::AssetReloadPolicy::poll_metadata(
-                Duration::from_millis(16),
-            )),
-            vec![crate::assets::AssetReloadTarget::Dir {
-                path: asset_dir.clone(),
-            }],
-        )
-        .expect("reload policy with file-backed targets should install a controller");
-
-        controller.publish_support(&mut app);
-        assert!(
-            fret_runtime::asset_capabilities(&app)
-                .expect("reload support should publish capabilities")
-                .file_watch
-        );
-
-        let window_a = AppWindowId::default();
-        let window_b = AppWindowId::from(KeyData::from_ffi(1));
-        controller.install_window(&mut app, window_a);
-        controller.install_window(&mut app, window_b);
-        let _ = app.flush_effects();
-
-        let token_a = controller.window_tokens[&window_a];
-        assert!(controller.handle_event(
-            &mut app,
-            window_a,
-            &fret_core::Event::Timer { token: token_a }
-        ));
-        assert_eq!(fret_runtime::asset_reload_epoch(&app), None);
-        assert!(redraw_windows(&mut app).is_empty());
-
-        std::fs::write(asset_dir.join("images/logo.png"), b"second-version")
-            .expect("rewrite asset with different length");
-        assert!(controller.handle_event(
-            &mut app,
-            window_a,
-            &fret_core::Event::Timer { token: token_a }
-        ));
-        assert_eq!(
-            fret_runtime::asset_reload_epoch(&app),
-            Some(fret_runtime::AssetReloadEpoch(1))
-        );
-        assert_eq!(redraw_windows(&mut app), vec![window_a]);
-
-        let token_b = controller.window_tokens[&window_b];
-        assert!(controller.handle_event(
-            &mut app,
-            window_b,
-            &fret_core::Event::Timer { token: token_b }
-        ));
-        assert_eq!(redraw_windows(&mut app), vec![window_b]);
     }
 }

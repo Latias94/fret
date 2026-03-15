@@ -948,6 +948,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 RunnerUserEvent::PlatformCompletion { window, completion } => {
                     self.deliver_platform_completion_now(window, completion);
                 }
+                RunnerUserEvent::AssetReloadWake => {
+                    let windows = self.windows.keys().collect::<Vec<_>>();
+                    if let Some(asset_reload) = self.asset_reload.as_mut() {
+                        let _ = asset_reload.handle_proxy_wake(&mut self.app, &windows);
+                    }
+                }
                 #[cfg(windows)]
                 RunnerUserEvent::WindowsMenuCommand { window, command } => {
                     self.app.push_effect(fret_app::Effect::Command {

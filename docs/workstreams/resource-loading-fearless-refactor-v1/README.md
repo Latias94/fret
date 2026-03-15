@@ -109,8 +109,9 @@ This workstream takes a fearless posture:
     - `BootstrapBuilder::with_asset_reload_policy(...)`,
     - `UiAppBuilder::with_asset_reload_policy(...)`,
     - `FretApp::asset_reload_policy(...)`.
-  - the current first-party implementation is explicit metadata polling for builder-mounted
-    manifests/directories:
+  - the current first-party desktop implementation uses a native watcher first and falls back to
+    metadata polling for builder-mounted manifests/directories when the watcher backend or watch
+    roots cannot be installed:
     - it bumps the shared `AssetReloadEpoch`,
     - publishes `AssetReloadSupport { file_watch: true }`,
     - and requests redraws for each tracked native window.
@@ -203,7 +204,8 @@ This workstream takes a fearless posture:
   generated Rust module is the first packaged/web/mobile-friendly lane, but it does not yet cover
   hashed web output rewriting or mobile platform-native bundle mapping.
 - The current first-party auto-reload lane is desktop-native only and intentionally limited:
-  - it is metadata polling, not an OS-specific watcher backend,
+  - desktop development now prefers a native watcher backend and falls back to metadata polling
+    when watcher installation fails,
   - it only tracks builder-mounted file manifests/directories,
   - and wasm/mobile still have no first-party automatic reload story today.
 - Font startup still remains split across mobile/SVG text and is not fully solved by the current

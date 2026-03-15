@@ -212,8 +212,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `fret-launch::assets::AssetReloadPolicy` plus
       `WinitAppBuilder::with_asset_reload_policy(...)` now define an explicit development reload
       automation surface for file-backed startup mounts,
-    - the current first-party desktop implementation uses metadata polling for builder-mounted
-      manifests/directories, bumps the shared `AssetReloadEpoch`, publishes
+    - the current first-party desktop implementation now prefers `AssetReloadPolicy::NativeWatcher`
+      on supported native hosts, falls back to metadata polling when watcher installation fails,
+      watches builder-mounted manifests/directories, bumps the shared `AssetReloadEpoch`, publishes
       `AssetReloadSupport { file_watch: true }`, and requests redraws for each tracked native
       window,
     - `BootstrapBuilder::with_asset_reload_policy(...)`,
@@ -222,8 +223,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - missing selected lanes now fail as startup configuration errors instead of silently falling
       through to ad-hoc runtime glue.
   - Remaining:
-    - there is still no first-party OS-specific watcher variant beyond metadata polling,
     - wasm/mobile still have no first-party automatic reload lane,
+    - desktop watcher-backed reload still only exists on the native winit runner path today,
     - broader first-party docs/examples still need to migrate from UI-specific reload nouns.
 
 - [~] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.

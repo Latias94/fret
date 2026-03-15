@@ -1,6 +1,6 @@
 # Resource Loading Fearless Refactor v1 — Capability Matrix
 
-Status: Published current-truth matrix (2026-03-15)
+Status: Published current-truth matrix (2026-03-16)
 
 ## Scope
 
@@ -28,7 +28,7 @@ escape hatches.
 | Embedded assets | Yes | Yes | Yes | Supported through static embedded entries; useful for lower-level/package-owned bytes. |
 | Raw files | Partial | No | No as a portable packaged story | On desktop, file-backed manifests/directories can mount files as logical bundle assets. Direct file-path UI helpers also exist, but they are legacy native/dev escape hatches. |
 | URLs | Custom only | Partial | No first-party story | No first-party general asset resolver currently resolves `AssetLocator::Url`. Web has a direct image URL helper, but that is not the general asset contract and does not cover SVG/fonts. |
-| File watching / hot reload | Partial | No first-party lane | No first-party lane | Desktop native can opt into automatic invalidation for builder-mounted manifests/directories through `AssetReloadPolicy::PollMetadata`; this publishes the shared `AssetReloadEpoch` and `file_watch = true`, but it is metadata polling rather than an OS event watcher. |
+| File watching / hot reload | Partial | No first-party lane | No first-party lane | Desktop native can opt into automatic invalidation for builder-mounted manifests/directories through `AssetReloadPolicy`; supported desktop hosts now prefer `NativeWatcher` with metadata polling fallback, publish the shared `AssetReloadEpoch`, and set `file_watch = true`. |
 | System font scan | Yes | No | No documented first-party story yet | Desktop runners expose system font rescan/update flows. Web explicitly cannot access system font databases. |
 
 ## Detailed notes
@@ -98,11 +98,11 @@ escape hatches.
 
 - First-party truth today:
   - desktop native can opt into automatic invalidation for builder-mounted manifests/directories
-    through `AssetReloadPolicy::PollMetadata`,
+    through `AssetReloadPolicy`,
   - that automation bumps the shared `AssetReloadEpoch` and publishes `file_watch = true` through
     the host-level capability snapshot,
-  - the current first-party implementation is metadata polling, not an OS-specific watcher
-    backend,
+  - supported desktop hosts now prefer a native watcher backend and fall back to metadata polling
+    if the watcher backend or current watch roots cannot be installed,
   - wasm/mobile still have no first-party automatic reload lane,
   - `UiAssetsReloadEpoch` remains only as a deprecated compatibility alias; new code should use
     the shared `AssetReloadEpoch`.
@@ -135,8 +135,8 @@ escape hatches.
     (`AssetStartupPlan::development_bundle_dir_if_native(...)` /
     `AssetStartupMode::preferred()`).
   - native desktop startup can also opt into automatic dev reload for builder-mounted file assets
-    through `AssetReloadPolicy` on `FretApp`, `UiAppBuilder`, or `BootstrapBuilder`; current
-    first-party behavior is metadata polling only.
+    through `AssetReloadPolicy` on `FretApp`, `UiAppBuilder`, or `BootstrapBuilder`; supported
+    desktop hosts now prefer a native watcher with metadata polling fallback.
   - direct bootstrap apps can use the same named startup contract through
     `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
     `BootstrapBuilder::with_asset_startup(...)`.

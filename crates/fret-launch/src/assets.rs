@@ -124,6 +124,9 @@ pub enum AssetReloadPolicy {
     /// Poll native file metadata for builder-mounted manifests/directories and bump the shared
     /// reload epoch when their observed stamp set changes.
     PollMetadata { interval: Duration },
+    /// Use a native filesystem watcher when available and fall back to metadata polling if the
+    /// watcher backend cannot be installed for the current host or watch roots.
+    NativeWatcher { fallback_poll_interval: Duration },
 }
 
 impl AssetReloadPolicy {
@@ -131,15 +134,25 @@ impl AssetReloadPolicy {
         Self::PollMetadata { interval }
     }
 
-    pub fn development_default() -> Self {
-        Self::PollMetadata {
-            interval: Duration::from_millis(250),
+    pub const fn native_watcher(fallback_poll_interval: Duration) -> Self {
+        Self::NativeWatcher {
+            fallback_poll_interval,
         }
     }
 
-    pub(crate) fn interval(self) -> Duration {
-        match self {
-            Self::PollMetadata { interval } => interval,
+    pub fn development_default() -> Self {
+        #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+        {
+            return Self::NativeWatcher {
+                fallback_poll_interval: Duration::from_millis(250),
+            };
+        }
+
+        #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+        {
+            Self::PollMetadata {
+                interval: Duration::from_millis(250),
+            }
         }
     }
 }
