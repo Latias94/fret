@@ -72,6 +72,9 @@ This workstream takes a fearless posture:
     convenience lane on the startup builder surface,
   - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` now keep that
     manifest lane on the startup builder surface instead of app-local setup glue.
+  - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold an
+    `assets/` directory and mount it via `FretApp::asset_dir("assets")` so first-contact app
+    templates do not bounce users back to path-first loading.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.

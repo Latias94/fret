@@ -164,13 +164,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       convenience lane on the builder/startup surface
     - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest
       lane on the builder/startup surface
+    - `fretboard` todo/simple-todo scaffolds now mount `assets/` through
+      `FretApp::asset_dir("assets")` when `--ui-assets` is enabled
     - cookbook asset basics now teaches the facade lane instead of direct
       `fret-assets` / `fret-runtime` imports
   - Remaining:
     - broader first-party packaged/web/mobile manifest tooling story
     - clarify override/precedence guidance for multi-layer asset registration
     - ecosystem-oriented bundle identity guidance
-    - final migration of first-party templates/gallery surfaces
+    - final migration of remaining first-party gallery/bootstrap surfaces
 
 - [~] RESLOAD-api-520 Remove path-first asset loading from cookbook/gallery/bootstrap teaching
       surfaces.

@@ -8,6 +8,14 @@ fn join_workspace_path(workspace_prefix: &str, subpath: &str) -> String {
     }
 }
 
+fn asset_dir_builder_step(opts: ScaffoldOptions) -> &'static str {
+    if opts.ui_assets {
+        "        // Mount the app-owned logical asset bundle on the builder path when enabled.\n        .asset_dir(\"assets\")\n"
+    } else {
+        ""
+    }
+}
+
 pub(super) fn template_gitignore() -> &'static str {
     r#"/target
 /.fret
@@ -237,6 +245,7 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
         }
         IconPack::Lucide | IconPack::None => "",
     };
+    let asset_dir_builder = asset_dir_builder_step(opts);
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 use std::time::Duration;
@@ -684,6 +693,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
         .setup(install_app)
+__ASSET_DIR_BUILDER__
         .view::<TodoView>()?
         .run()
         .map_err(anyhow::Error::from)
@@ -694,6 +704,7 @@ fn main() -> anyhow::Result<()> {
         .replace("__ADD_BTN_DEF__", add_btn_def)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
+        .replace("__ASSET_DIR_BUILDER__", asset_dir_builder)
         .replace("__PACKAGE_NAME__", package_name)
 }
 
@@ -813,6 +824,7 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
         }
         IconPack::Lucide | IconPack::None => "",
     };
+    let asset_dir_builder = asset_dir_builder_step(opts);
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 
@@ -1050,6 +1062,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
         .setup(install_app)
+__ASSET_DIR_BUILDER__
         .view::<TodoView>()?
         .run()
         .map_err(anyhow::Error::from)
@@ -1060,6 +1073,7 @@ fn main() -> anyhow::Result<()> {
         .replace("__ADD_BTN_DEF__", add_btn_def)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
+        .replace("__ASSET_DIR_BUILDER__", asset_dir_builder)
         .replace("__PACKAGE_NAME__", package_name)
 }
 
@@ -1073,9 +1087,11 @@ pub(super) fn empty_template_main_rs() -> &'static str {
 
 pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
-        "- UI assets: enabled (`fret/ui-assets`)\n"
+        format!(
+            "- UI assets: enabled (`fret/ui-assets` + `FretApp::asset_dir(\"assets\")`)\n- Asset bundle lane: place app-owned files under `assets/` and resolve them via `AssetBundleId::app(\"{package_name}\")` + logical keys\n"
+        )
     } else {
-        "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches)\n"
+        "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
     };
 
     let icons_line = match opts.icon_pack {
@@ -1154,9 +1170,11 @@ cargo run --release
 
 pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
-        "- UI assets: enabled (`fret/ui-assets`)\n"
+        format!(
+            "- UI assets: enabled (`fret/ui-assets` + `FretApp::asset_dir(\"assets\")`)\n- Asset bundle lane: place app-owned files under `assets/` and resolve them via `AssetBundleId::app(\"{package_name}\")` + logical keys\n"
+        )
     } else {
-        "- UI assets: disabled (use `fretboard new simple-todo --ui-assets` if you need images/SVG caches)\n"
+        "- UI assets: disabled (use `fretboard new simple-todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
     };
 
     let icons_line = match opts.icon_pack {
@@ -1268,6 +1286,13 @@ mod tests {
         }
     }
 
+    fn opts_with_ui_assets() -> ScaffoldOptions {
+        ScaffoldOptions {
+            ui_assets: true,
+            ..opts()
+        }
+    }
+
     #[test]
     fn todo_template_uses_default_authoring_dialect() {
         let src = todo_template_main_rs("todo-app", opts());
@@ -1338,6 +1363,12 @@ mod tests {
             into_element_count <= 18,
             "expected <= 18 explicit `.into_element(cx)` calls, got {into_element_count}"
         );
+    }
+
+    #[test]
+    fn todo_template_mounts_asset_dir_when_ui_assets_are_enabled() {
+        let src = todo_template_main_rs("todo-app", opts_with_ui_assets());
+        assert!(src.contains(".asset_dir(\"assets\")"));
     }
 
     #[test]
@@ -1424,6 +1455,12 @@ mod tests {
     }
 
     #[test]
+    fn simple_todo_template_mounts_asset_dir_when_ui_assets_are_enabled() {
+        let src = simple_todo_template_main_rs("simple-todo-app", opts_with_ui_assets());
+        assert!(src.contains(".asset_dir(\"assets\")"));
+    }
+
+    #[test]
     fn simple_todo_template_cargo_toml_has_no_query_selector_deps() {
         let toml = simple_todo_template_cargo_toml("simple-todo-app", opts(), ".");
         assert!(!toml.contains("fret-query"));
@@ -1461,6 +1498,11 @@ mod tests {
         assert!(simple.contains("second rung of the default onboarding path"));
         assert!(!simple.contains("on_action_notify_locals"));
 
+        let simple_with_assets =
+            simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets());
+        assert!(simple_with_assets.contains("`FretApp::asset_dir(\"assets\")`"));
+        assert!(simple_with_assets.contains("`AssetBundleId::app(\"simple-todo-app\")`"));
+
         let todo = todo_template_readme_md("todo-app", opts());
         assert!(todo.contains("For App-only effects, prefer `cx.actions().transient::<A>(...)`"));
         assert!(todo.contains("cookbook/reference-only host-side glue"));
@@ -1470,5 +1512,9 @@ mod tests {
         assert!(todo.contains("third rung of the default onboarding path"));
         assert!(!todo.contains("on_action_notify_locals"));
         assert!(!todo.contains("on_action_notify_transient"));
+
+        let todo_with_assets = todo_template_readme_md("todo-app", opts_with_ui_assets());
+        assert!(todo_with_assets.contains("`FretApp::asset_dir(\"assets\")`"));
+        assert!(todo_with_assets.contains("`AssetBundleId::app(\"todo-app\")`"));
     }
 }

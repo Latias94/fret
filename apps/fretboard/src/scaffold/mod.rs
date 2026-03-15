@@ -264,6 +264,7 @@ fn init_simple_todo_at(
         &out_dir.join("README.md"),
         &simple_todo_template_readme_md(package_name, opts),
     )?;
+    maybe_init_asset_dir(out_dir, opts)?;
 
     maybe_cargo_check(out_dir, run_check)?;
 
@@ -301,6 +302,7 @@ fn init_todo_at(
         &out_dir.join("README.md"),
         &todo_template_readme_md(package_name, opts),
     )?;
+    maybe_init_asset_dir(out_dir, opts)?;
 
     maybe_cargo_check(out_dir, run_check)?;
 
@@ -446,5 +448,88 @@ fn maybe_cargo_check(out_dir: &Path, run_check: bool) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("cargo check failed with status: {status}"))
+    }
+}
+
+fn maybe_init_asset_dir(out_dir: &Path, opts: ScaffoldOptions) -> Result<(), String> {
+    if !opts.ui_assets {
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(out_dir.join("assets")).map_err(|e| {
+        format!(
+            "failed to create default asset directory `{}`: {e}",
+            out_dir.join("assets").display()
+        )
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn make_temp_dir(prefix: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("{prefix}-{nonce}"));
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    fn opts_with_ui_assets() -> ScaffoldOptions {
+        ScaffoldOptions {
+            icon_pack: IconPack::Lucide,
+            command_palette: false,
+            ui_assets: true,
+        }
+    }
+
+    #[test]
+    fn todo_scaffold_with_ui_assets_creates_default_assets_dir() {
+        let workspace_root = make_temp_dir("fretboard-scaffold-todo-assets");
+        let out_dir = workspace_root.join("local").join("todo-app");
+
+        init_todo_at(
+            &workspace_root,
+            &out_dir,
+            "todo-app",
+            opts_with_ui_assets(),
+            false,
+        )
+        .expect("todo scaffold should succeed");
+
+        assert!(out_dir.join("assets").is_dir());
+        let main_rs = std::fs::read_to_string(out_dir.join("src/main.rs"))
+            .expect("generated main.rs should exist");
+        assert!(main_rs.contains(".asset_dir(\"assets\")"));
+
+        let readme = std::fs::read_to_string(out_dir.join("README.md"))
+            .expect("generated README.md should exist");
+        assert!(readme.contains("`FretApp::asset_dir(\"assets\")`"));
+        assert!(readme.contains("`AssetBundleId::app(\"todo-app\")`"));
+    }
+
+    #[test]
+    fn simple_todo_scaffold_without_ui_assets_skips_default_assets_dir() {
+        let workspace_root = make_temp_dir("fretboard-scaffold-simple-todo-no-assets");
+        let out_dir = workspace_root.join("local").join("simple-todo-app");
+
+        init_simple_todo_at(
+            &workspace_root,
+            &out_dir,
+            "simple-todo-app",
+            ScaffoldOptions {
+                icon_pack: IconPack::Lucide,
+                command_palette: false,
+                ui_assets: false,
+            },
+            false,
+        )
+        .expect("simple todo scaffold should succeed");
+
+        assert!(!out_dir.join("assets").exists());
     }
 }

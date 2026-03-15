@@ -68,6 +68,9 @@ To enable UI render asset caches (images/SVG), add `--ui-assets`:
 cargo run -p fretboard -- new todo --name my-todo --ui-assets
 ```
 
+That scaffold now also creates an `assets/` directory and mounts it through
+`FretApp::asset_dir("assets")`, so app-owned bundle assets already have a default logical lane.
+
 Notes:
 
 - `fret` defaults to a practical desktop setup (`desktop` + `app`).
@@ -379,6 +382,9 @@ If you want UI render asset conveniences (not an editor/project asset pipeline):
 
 - Enable `fret/ui-assets` (or scaffold with `cargo run -p fretboard -- new todo --ui-assets`) so the golden-path
   driver wires caches + budgets.
+- Prefer `FretApp::asset_dir("assets")` on the app-facing builder path for the native/package-dev
+  generated-manifest convenience lane; generated `fretboard` templates now wire this by default
+  when `--ui-assets` is enabled.
 - Optionally call `.ui_assets_budgets(...)` on `FretApp` to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.
