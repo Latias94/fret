@@ -1,34 +1,25 @@
 use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret_assets::{
+    AssetLocator, AssetRequest, AssetRevision, InMemoryAssetResolver, StaticAssetEntry,
+};
 use fret_core::{ImageColorSpace, ImageId};
 use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, LayoutStyle, SvgIconProps};
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
-use std::path::PathBuf;
 use std::sync::Arc;
 
-mod act {
-    fret::actions!([BumpReload = "cookbook.icons_and_assets_basics.bump_reload.v1"]);
-}
-
 const TEST_ID_ROOT: &str = "cookbook.icons_and_assets_basics.root";
-const TEST_ID_BUMP_RELOAD: &str = "cookbook.icons_and_assets_basics.bump_reload";
 const TEST_ID_PANEL_ICONS: &str = "cookbook.icons_and_assets_basics.panel.icons";
 const TEST_ID_PANEL_SVG: &str = "cookbook.icons_and_assets_basics.panel.svg";
 const TEST_ID_PANEL_IMAGE: &str = "cookbook.icons_and_assets_basics.panel.image";
 const TEST_ID_IMAGE_STATUS: &str = "cookbook.icons_and_assets_basics.image.status";
 const TEST_ID_SVG_STATUS: &str = "cookbook.icons_and_assets_basics.svg.status";
 
-fn repo_root_from_manifest_dir() -> PathBuf {
-    // Cookbook examples should not depend on the process CWD (fretboard/dev runners may vary it).
-    // Resolve paths relative to the workspace root via `CARGO_MANIFEST_DIR`.
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-}
-
-fn repo_path(rel: &str) -> Arc<PathBuf> {
-    Arc::new(repo_root_from_manifest_dir().join(rel))
-}
+const COOKBOOK_ASSET_BUNDLE: &str = "cookbook.demo_assets";
+const COOKBOOK_IMAGE_KEY: &str = "images/test.jpg";
+const COOKBOOK_SVG_KEY: &str = "icons/search.svg";
+const COOKBOOK_IMAGE_BYTES: &[u8] = include_bytes!("../../../assets/textures/test.jpg");
+const COOKBOOK_SVG_BYTES: &[u8] = include_bytes!("../../../assets/demo/icon-search.svg");
 
 fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
     let mut out = vec![0u8; (width * height * 4) as usize];
@@ -82,16 +73,28 @@ fn render_image_preview(
         .w_full()
 }
 
+fn install_demo_asset_resolver(app: &mut KernelApp) {
+    let mut resolver = InMemoryAssetResolver::new();
+    resolver.insert_bundle_entries(
+        COOKBOOK_ASSET_BUNDLE,
+        [
+            StaticAssetEntry::new(COOKBOOK_IMAGE_KEY, AssetRevision(1), COOKBOOK_IMAGE_BYTES)
+                .with_media_type("image/jpeg"),
+            StaticAssetEntry::new(COOKBOOK_SVG_KEY, AssetRevision(1), COOKBOOK_SVG_BYTES)
+                .with_media_type("image/svg+xml"),
+        ],
+    );
+    fret_runtime::set_asset_resolver(app, Arc::new(resolver));
+}
+
 struct IconsAndAssetsBasicsView {
-    window: AppWindowId,
-    applied_assets_reload_bumps: u64,
-    file_image: fret_ui_assets::ImageSource,
+    bundle_image: fret_ui_assets::ImageSource,
     memory_image: fret_ui_assets::ImageSource,
-    svg_file: fret_ui_assets::SvgFileSource,
+    svg_request: AssetRequest,
 }
 
 impl View for IconsAndAssetsBasicsView {
-    fn init(app: &mut KernelApp, window: AppWindowId) -> Self {
+    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         // Ensure the UI assets caches exist and set budgets explicitly (optional).
         fret_ui_assets::UiAssets::configure(
             app,
@@ -103,70 +106,49 @@ impl View for IconsAndAssetsBasicsView {
             },
         );
 
-        let file_image =
-            fret_ui_assets::ImageSource::from_file_path(repo_path("assets/textures/test.jpg"));
+        install_demo_asset_resolver(app);
+
+        let bundle_image = fret_ui_assets::resolve_image_source_from_host_locator(
+            app,
+            AssetLocator::bundle(COOKBOOK_ASSET_BUNDLE, COOKBOOK_IMAGE_KEY),
+        )
+        .expect("cookbook bundle image should resolve");
         let memory_image = fret_ui_assets::ImageSource::rgba8(
             128,
             128,
             checkerboard_rgba8(128, 128, 16),
             ImageColorSpace::Srgb,
         );
-
-        // `SvgIconProps` is an icon-style SVG element (monochrome + currentColor), not a full SVG
-        // image renderer. Use an icon-like SVG (stroke=currentColor, fill=none) for this demo.
-        let svg_file =
-            fret_ui_assets::SvgFileSource::from_file_path(repo_path("assets/demo/icon-search.svg"));
+        let svg_request = AssetRequest::new(AssetLocator::bundle(
+            COOKBOOK_ASSET_BUNDLE,
+            COOKBOOK_SVG_KEY,
+        ));
 
         Self {
-            window,
-            applied_assets_reload_bumps: 0,
-            file_image,
+            bundle_image,
             memory_image,
-            svg_file,
+            svg_request,
         }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
-        let assets_reload_bumps_state = cx.state().local::<u64>();
-
-        cx.actions()
-            .local_update::<act::BumpReload, u64>(&assets_reload_bumps_state, |value| {
-                *value = value.wrapping_add(1);
-            });
-
-        let bumps = cx
-            .state()
-            .watch(&assets_reload_bumps_state)
-            .layout()
-            .value_or(0);
-        if bumps != self.applied_assets_reload_bumps {
-            fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
-            self.applied_assets_reload_bumps = bumps;
-            cx.app.request_redraw(self.window);
-            cx.app
-                .push_effect(Effect::RequestAnimationFrame(self.window));
-        }
 
         let header = shadcn::card_header(|cx| {
             ui::children![
                 cx;
                 shadcn::card_title("Icons + assets basics"),
                 shadcn::card_description(
-                    "Icon packs (lucide), semantic ui.* aliases, and file-based SVG/images via fret-ui-assets.",
+                    "Icon packs (lucide), semantic ui.* aliases, and logical bundle assets resolved through a host-installed asset resolver.",
                 ),
             ]
         });
 
-        let actions = ui::h_flex(|cx| {
+        let callouts = ui::h_flex(|cx| {
             ui::children![cx;
-                shadcn::Button::new("Bump assets reload epoch")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .icon(IconId::new_static("ui.reset"))
-                    .action(act::BumpReload)
-                    .test_id(TEST_ID_BUMP_RELOAD),
-                shadcn::Badge::new("Tip: edit the files under `assets/` and click reload.")
+                shadcn::Badge::new("Bundle locator: no repo-relative filesystem assumption")
+                    .variant(shadcn::BadgeVariant::Secondary),
+                shadcn::Badge::new("RGBA8 source: deterministic in-memory escape hatch")
                     .variant(shadcn::BadgeVariant::Secondary)
             ]
         })
@@ -278,10 +260,10 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_ICONS);
 
-        let file_image_state = cx.use_image_source_state(&self.file_image);
+        let bundle_image_state = cx.use_image_source_state(&self.bundle_image);
         let memory_image_state = cx.use_image_source_state(&self.memory_image);
 
-        let image_status = match file_image_state.status {
+        let image_status = match bundle_image_state.status {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Loading => "loading",
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Loaded => "ready",
@@ -296,7 +278,7 @@ impl View for IconsAndAssetsBasicsView {
                         cx;
                         shadcn::card_title("Images"),
                         shadcn::card_description(
-                            "File-based decode is async; in-memory RGBA8 is immediate and useful for deterministic demos.",
+                            "Bundle-based decode is async; in-memory RGBA8 is immediate and useful for deterministic demos.",
                         ),
                     ]
                 }),
@@ -309,7 +291,7 @@ impl View for IconsAndAssetsBasicsView {
                                 ui::h_flex(|cx| {
                                     ui::children![
                                         cx;
-                                        shadcn::Label::new("File image status:"),
+                                        shadcn::Label::new("Bundle image status:"),
                                         shadcn::Badge::new(image_status)
                                             .variant(shadcn::BadgeVariant::Secondary)
                                             .test_id(TEST_ID_IMAGE_STATUS),
@@ -322,8 +304,8 @@ impl View for IconsAndAssetsBasicsView {
                                         cx;
                                         render_image_preview(
                                             cx,
-                                            "From path: `assets/textures/test.jpg`",
-                                            file_image_state.image,
+                                            "From bundle locator: `cookbook.demo_assets/images/test.jpg`",
+                                            bundle_image_state.image,
                                         ),
                                         render_image_preview(
                                             cx,
@@ -347,34 +329,27 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_IMAGE);
 
-        // SVG file loading is synchronous (cached) so we can surface useful error strings directly.
-        cx.observe_global::<fret_ui_assets::UiAssetsReloadEpoch>(Invalidation::Paint);
-        let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &self.svg_file);
-        let svg_status = if svg_file_state.error.is_some() {
-            "error"
-        } else if svg_file_state.bytes.is_some() {
-            "ready"
-        } else {
-            "missing"
-        };
+        let svg_source = fret_ui_assets::resolve_svg_source_from_host(&*cx.app, &self.svg_request);
+        let svg_status = if svg_source.is_ok() { "ready" } else { "error" };
+        let svg_foreground = theme.color_token("foreground");
+        let svg_error_color = ColorRef::Color(theme.color_token("destructive"));
 
-        let svg_box = ui::container(|cx| {
-            if let Some(err) = svg_file_state.error.clone() {
-                ui::children![cx;
-                    ui::text(format!("Failed to read SVG: {err}"))
-                        .text_color(ColorRef::Color(theme.color_token("destructive")))
-                ]
-            } else if let Some(bytes) = svg_file_state.bytes.clone() {
-                let mut props = SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes));
+        let svg_box = ui::container(move |cx| match svg_source.clone() {
+            Ok(source) => {
+                let mut props = SvgIconProps::new(source);
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(160.0));
                 layout.size.height = Length::Px(Px(160.0));
                 props.layout = layout;
                 props.fit = fret_core::SvgFit::Contain;
-                props.color = theme.color_token("foreground");
+                props.color = svg_foreground;
                 ui::children![cx; cx.svg_icon_props(props)]
-            } else {
-                ui::children![cx; cx.spinner()]
+            }
+            Err(err) => {
+                ui::children![cx;
+                    ui::text(format!("Failed to resolve SVG asset: {err}"))
+                        .text_color(svg_error_color)
+                ]
             }
         })
         .border_1()
@@ -388,9 +363,9 @@ impl View for IconsAndAssetsBasicsView {
                 shadcn::card_header(|cx| {
                     ui::children![
                         cx;
-                        shadcn::card_title("SVG icon from file"),
+                        shadcn::card_title("SVG icon from bundle locator"),
                         shadcn::card_description(
-                            "Loads an icon-style SVG from disk via `SvgFileSource` + `UiAssetsReloadEpoch` (ViewCache-safe dev reload).",
+                            "Resolves an SVG byte asset through the host asset resolver instead of reading from a raw filesystem path.",
                         ),
                     ]
                 }),
@@ -432,7 +407,7 @@ impl View for IconsAndAssetsBasicsView {
                     ui::children![
                         cx;
                         ui::v_flex(
-                            |cx| ui::children![cx; actions, icons_panel, svg_panel, image_panel],
+                            |cx| ui::children![cx; callouts, icons_panel, svg_panel, image_panel],
                         )
                         .gap(Space::N5)
                         .w_full(),

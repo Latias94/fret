@@ -142,8 +142,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - no filesystem assumptions,
     - easy escape hatches for file/url when explicitly needed.
 
-- [ ] RESLOAD-api-520 Remove path-first asset loading from cookbook/gallery/bootstrap teaching
+- [~] RESLOAD-api-520 Remove path-first asset loading from cookbook/gallery/bootstrap teaching
       surfaces.
+  - Current landed slice:
+    - `apps/fret-cookbook/examples/icons_and_assets_basics.rs` now teaches
+      `bundle locator + host resolver + static asset entries`
+  - Remaining:
+    - UI Gallery
+    - bootstrap templates
+    - dedicated dev/native escape-hatch examples should be labeled as such
 
 - [ ] RESLOAD-api-530 Decide deprecation/removal sequencing for:
   - `ImageSource::from_file_path(...)`

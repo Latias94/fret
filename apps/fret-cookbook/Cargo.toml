@@ -14,6 +14,7 @@ publish = false
 anyhow.workspace = true
 fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
 fret-app = { path = "../../crates/fret-app" }
+fret-assets = { path = "../../crates/fret-assets", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
@@ -48,7 +49,7 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 [features]
 default = []
 cookbook-diag = ["fret/diagnostics", "fret-bootstrap/diagnostics"]
-cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
+cookbook-assets = ["dep:fret-assets", "dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
 cookbook-image-assets = ["dep:fret-ui-assets"]
