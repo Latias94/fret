@@ -343,6 +343,35 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
+    fn resolve_svg_file_source_from_host_rejects_byte_only_bundle_assets_truthfully() {
+        let mut host = TestHost::default();
+        fret_runtime::register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [fret_assets::StaticAssetEntry::new(
+                "icons/search.svg",
+                AssetRevision(2),
+                br#"<svg viewBox="0 0 1 1"></svg>"#,
+            )
+            .with_media_type("image/svg+xml")],
+        );
+
+        let err = resolve_svg_file_source_from_host_locator(
+            &host,
+            AssetLocator::bundle("app", "icons/search.svg"),
+        )
+        .expect_err("byte-only bundle assets should not pretend to be SvgFileSource");
+
+        assert_eq!(
+            err,
+            AssetLoadError::ExternalReferenceUnavailable {
+                kind: fret_assets::AssetLocatorKind::BundleAsset,
+            }
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
     fn resolve_image_source_from_host_prefers_file_reference_for_file_backed_bundle_assets() {
         let root = TempAssetDir::new("image_file_reference", &[("images/logo.png", b"png")]);
         let resolver = fret_assets::FileAssetManifestResolver::from_bundle_dir("app", root.path())
@@ -382,6 +411,31 @@ mod tests {
         let expected = root.path().join("icons/search.svg");
 
         assert_eq!(source.path.as_ref(), expected.as_path());
+    }
+
+    #[test]
+    fn resolve_image_source_from_host_propagates_unsupported_file_locator_kind() {
+        let mut host = TestHost::default();
+        fret_runtime::register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [fret_assets::StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"png",
+            )],
+        );
+
+        let err =
+            resolve_image_source_from_host_locator(&host, AssetLocator::file("assets/logo.png"))
+                .expect_err("unsupported file locator should surface a capability error");
+
+        assert_eq!(
+            err,
+            AssetLoadError::UnsupportedLocatorKind {
+                kind: fret_assets::AssetLocatorKind::File,
+            }
+        );
     }
 
     #[cfg(not(target_arch = "wasm32"))]

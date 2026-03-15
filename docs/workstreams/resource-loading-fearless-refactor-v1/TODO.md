@@ -354,7 +354,22 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - font baseline source,
   - revision transitions.
 
-- [ ] RESLOAD-test-610 Add portable contract tests for asset capability and fallback behavior.
+- [~] RESLOAD-test-610 Add portable contract tests for asset capability and fallback behavior.
+  - Current landed slice:
+    - `crates/fret-runtime/src/asset_resolver.rs` now locks the resolver-service contract for:
+      - capability union across layered resolvers,
+      - `UnsupportedLocatorKind` vs `NotFound` truthfulness for file-capability lanes,
+      - bytes/reference fallback to earlier layers when a later supporting layer is simply missing
+        the requested locator.
+    - `ecosystem/fret-ui-assets/src/asset_resolver.rs` now locks the UI bridge contract for:
+      - image helpers propagating unsupported file-locator capability errors instead of swallowing
+        them,
+      - `SvgFileSource` staying truthful about requiring an external file reference instead of
+        silently treating byte-only bundle assets as native files.
+  - Remaining:
+    - add broader packaged/mobile-facing capability tests once builder/package startup lanes are
+      defined
+    - add revision-transition / hot-reload contract coverage via unified locator keys
 
 - [x] RESLOAD-test-620 Add startup gates for the bundled-font baseline on desktop and web.
   - Evidence:
