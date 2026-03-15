@@ -146,6 +146,9 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   `apps/fretboard/src/scaffold/templates.rs` take `&mut UiCx<'_>` and return `Ui`, so
   `todo_demo` plus both todo templates no longer teach `todo_page(...).into_element(cx).into()`
   as the default root story.
+- the onboarding cookbook `hello.rs` sample now follows the same posture through
+  `hello_page(cx, ...) -> Ui`, so the default first-contact example no longer keeps a root-local
+  `let root = ...; root.into_element(cx).into()` seam inside `render()`.
 - first-party page/snippet teaching rule:
   once a wrapper/helper family is promoted onto the default authoring path, Gallery pages and
   snippets should teach that wrapper family by default and should not silently fall back to eager

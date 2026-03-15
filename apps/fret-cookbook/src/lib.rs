@@ -214,8 +214,12 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(HELLO_EXAMPLE);
         assert_uses_app_surface(SIMPLE_TODO_EXAMPLE);
         assert_uses_app_surface(SIMPLE_TODO_V2_TARGET_EXAMPLE);
+        assert!(HELLO_EXAMPLE.contains(
+            "fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) -> Ui"
+        ));
         assert!(HELLO_EXAMPLE.contains("cx.state().local::<u32>()"));
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
+        assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
         assert!(SIMPLE_TODO_EXAMPLE.contains(".payload::<act::Toggle>()"));

@@ -43,6 +43,9 @@ Execution note on 2026-03-14:
   `apps/fretboard/src/scaffold/templates.rs` now also keep their `todo_page(...)` helpers on that
   same root-owned lane (`UiCx` -> `Ui`), so the canonical compare set no longer teaches
   `todo_page(...).into_element(cx).into()` as the default root wrapper pattern either.
+- the onboarding cookbook `hello.rs` sample now also uses `hello_page(cx, ...) -> Ui`, so the
+  first-contact app example no longer teaches `let root = ...; root.into_element(cx).into()` in
+  `render()`.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

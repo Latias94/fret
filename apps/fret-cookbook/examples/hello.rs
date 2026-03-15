@@ -46,25 +46,29 @@ impl View for HelloView {
         cx.actions()
             .availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
-        let root = ui::v_flex(|cx| {
-            ui::children![
-                cx;
-                shadcn::Label::new("Hello, Fret cookbook!").test_id(TEST_ID_LABEL),
-                cx.text(render_marker).test_id(TEST_ID_RENDER_MARKER),
-                cx.text(format!("Count: {count_value}")).test_id(TEST_ID_COUNT),
-                shadcn::Button::new("Click me")
-                    .action(act::Click)
-                    .test_id(TEST_ID_BUTTON),
-            ]
-        })
-        .size_full()
-        .gap(Space::N4)
-        .items_center()
-        .justify_center()
-        .test_id(TEST_ID_ROOT);
-
-        root.into_element(cx).into()
+        hello_page(cx, render_marker, count_value)
     }
+}
+
+fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) -> Ui {
+    ui::v_flex(|cx| {
+        ui::children![
+            cx;
+            shadcn::Label::new("Hello, Fret cookbook!").test_id(TEST_ID_LABEL),
+            cx.text(render_marker).test_id(TEST_ID_RENDER_MARKER),
+            cx.text(format!("Count: {count_value}")).test_id(TEST_ID_COUNT),
+            shadcn::Button::new("Click me")
+                .action(act::Click)
+                .test_id(TEST_ID_BUTTON),
+        ]
+    })
+    .size_full()
+    .gap(Space::N4)
+    .items_center()
+    .justify_center()
+    .test_id(TEST_ID_ROOT)
+    .into_element(cx)
+    .into()
 }
 
 fn main() -> anyhow::Result<()> {
