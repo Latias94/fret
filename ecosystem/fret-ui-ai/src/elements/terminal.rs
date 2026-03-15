@@ -24,7 +24,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
-use fret_ui_shadcn::ScrollArea;
+use fret_ui_shadcn::facade::ScrollArea;
 
 use super::Shimmer;
 pub type OnTerminalClear = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;

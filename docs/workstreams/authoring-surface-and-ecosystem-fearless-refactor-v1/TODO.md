@@ -205,8 +205,13 @@ Priority correction on 2026-03-15:
       `fret_ui_shadcn::icon::*`, `fret_ui_shadcn::empty::*`, `fret_ui_shadcn::select::*`,
       `fret_ui_shadcn::tabs::*`, or similar flat root/module lanes; gallery authoring now flows
       through `shadcn::*`, `shadcn::raw::*`, or prelude glue only.
+    - 2026-03-15 follow-up: after continuing through `fret-ui-ai`, `fret-bootstrap`, and
+      `ecosystem/fret`, non-test first-party workspace code no longer contains
+      `fret_ui_shadcn::*` flat root/component calls outside explicit `facade::*` / `raw::*` /
+      `advanced::*` seams.
     - Remaining bounded cleanup after the gallery pass: non-gallery first-party consumers
-      (`ecosystem/fret-ui-ai`, `ecosystem/fret-bootstrap`, selected internal tests/docs strings).
+      is now reduced to selected internal tests/docs strings plus any future crates that reintroduce
+      flat root drift.
 - [x] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.

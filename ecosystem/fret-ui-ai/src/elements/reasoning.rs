@@ -124,7 +124,7 @@ impl Reasoning {
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
-        use fret_ui_shadcn::Collapsible;
+        use fret_ui_shadcn::facade::Collapsible;
 
         let is_streaming = self.is_streaming;
         let resolved_default_open = self.default_open.unwrap_or(is_streaming);

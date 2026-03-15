@@ -8,7 +8,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space, ui,
 };
-use fret_ui_shadcn::{Separator, SeparatorOrientation};
+use fret_ui_shadcn::facade::{CardDescription, CardTitle, Separator, SeparatorOrientation};
 
 const NODE_ACTION_MARKER_TEST_ID: &str = "fret-ui-ai.workflow.node-action-marker";
 
@@ -371,8 +371,8 @@ impl WorkflowNodeAction {
     }
 }
 
-pub type WorkflowNodeTitle = fret_ui_shadcn::CardTitle;
-pub type WorkflowNodeDescription = fret_ui_shadcn::CardDescription;
+pub type WorkflowNodeTitle = CardTitle;
+pub type WorkflowNodeDescription = CardDescription;
 
 /// AI Elements-aligned workflow `NodeContent` chrome (UI-only).
 ///

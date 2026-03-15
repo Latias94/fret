@@ -13,8 +13,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
-use fret_ui_shadcn::button_group::ButtonGroupText;
-use fret_ui_shadcn::{Button, ButtonGroup, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::facade::{Button, ButtonGroup, ButtonGroupText, ButtonSize, ButtonVariant};
 
 pub type OnMessageBranchChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, usize) + 'static>;
 

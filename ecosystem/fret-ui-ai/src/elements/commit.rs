@@ -21,7 +21,9 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
     Space,
 };
-use fret_ui_shadcn::{Collapsible, CollapsibleContent};
+use fret_ui_shadcn::facade::{
+    Avatar, AvatarFallback, Collapsible, CollapsibleContent, CollapsibleTrigger,
+};
 
 pub type OnCommitFilePathClick = Arc<
     dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, Arc<str>) + 'static,
@@ -266,7 +268,7 @@ impl CommitHeader {
             vec![cx.opacity(opacity, move |_cx| vec![row])]
         });
 
-        let trigger = fret_ui_shadcn::CollapsibleTrigger::new(open_model, vec![row])
+        let trigger = CollapsibleTrigger::new(open_model, vec![row])
             .a11y_label("Toggle commit details")
             .into_element(cx, is_open);
 
@@ -565,7 +567,7 @@ impl CommitAuthorAvatar {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        fret_ui_shadcn::Avatar::new([fret_ui_shadcn::AvatarFallback::new(self.initials)
+        Avatar::new([AvatarFallback::new(self.initials)
             .delay_ms(0)
             .into_element(cx)])
         .refine_layout(

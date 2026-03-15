@@ -15,11 +15,12 @@ use fret_ui_kit::{
     WidgetStateProperty, WidgetStates,
 };
 
-use fret_ui_shadcn::raw::button::ButtonStyle;
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
-    DropdownMenuItem, DropdownMenuSide, InputGroup, Kbd, Tooltip, TooltipContent, TooltipSide,
+    DropdownMenuItem, DropdownMenuSide, InputGroup, Kbd, Spinner, Tooltip, TooltipContent,
+    TooltipSide,
 };
+use fret_ui_shadcn::raw::button::ButtonStyle;
 
 use crate::elements::attachments::{
     Attachment, AttachmentData, AttachmentFileData, AttachmentSourceDocumentData,
@@ -2613,9 +2614,9 @@ impl PromptInputSubmit {
 
         let (label, icon, activate, test_id) = if status.is_generating() {
             let icon = match status {
-                PromptInputStatus::Submitted => fret_ui_shadcn::Spinner::new().into_element(cx),
+                PromptInputStatus::Submitted => Spinner::new().into_element(cx),
                 PromptInputStatus::Streaming => decl_icon::icon(cx, IconId::new("lucide.square")),
-                _ => fret_ui_shadcn::Spinner::new().into_element(cx),
+                _ => Spinner::new().into_element(cx),
             };
             (
                 Arc::<str>::from("Stop"),

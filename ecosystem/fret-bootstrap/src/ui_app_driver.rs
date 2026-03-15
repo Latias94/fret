@@ -29,6 +29,9 @@ use fret_core::time::Instant;
 #[cfg(feature = "diagnostics")]
 use crate::ui_diagnostics::UiDiagnosticsService;
 
+#[cfg(feature = "ui-app-command-palette")]
+use fret_ui_shadcn::facade as shadcn;
+
 pub type ViewElements = Elements;
 
 type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> ViewElements;
@@ -2055,7 +2058,7 @@ fn ui_app_render<S>(
                     {
                         let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
                         command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
-                        let entries: Vec<fret_ui_shadcn::CommandEntry> = if open_now {
+                        let entries: Vec<shadcn::CommandEntry> = if open_now {
                             fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(
                                 cx,
                                 fret_ui_kit::command::CommandCatalogOptions::default(),
@@ -2067,7 +2070,7 @@ fn ui_app_render<S>(
                             Vec::new()
                         };
 
-                        let dialog = fret_ui_shadcn::CommandDialog::new(
+                        let dialog = shadcn::CommandDialog::new(
                             models.open,
                             models.query,
                             Vec::new(),
@@ -2114,7 +2117,7 @@ fn ui_app_render<S>(
                     {
                         let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
                         command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
-                        let entries: Vec<fret_ui_shadcn::CommandEntry> = if open_now {
+                        let entries: Vec<shadcn::CommandEntry> = if open_now {
                             fret_ui_kit::command::command_catalog_entries_from_host_commands_with_options(
                                 cx,
                                 fret_ui_kit::command::CommandCatalogOptions::default(),
@@ -2126,7 +2129,7 @@ fn ui_app_render<S>(
                             Vec::new()
                         };
 
-                        let dialog = fret_ui_shadcn::CommandDialog::new(
+                        let dialog = shadcn::CommandDialog::new(
                             models.open,
                             models.query,
                             Vec::new(),

@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::Spinner;
+use fret_ui_shadcn::facade::Spinner;
 
 fn muted_fg(theme: &Theme) -> Color {
     theme

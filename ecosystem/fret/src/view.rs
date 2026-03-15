@@ -420,14 +420,14 @@ impl<T: Any> TrackedStateExt<T> for Model<T> {
 }
 
 #[cfg(feature = "shadcn")]
-impl fret_ui_shadcn::IntoTextValueModel for LocalState<String> {
+impl fret_ui_shadcn::facade::IntoTextValueModel for LocalState<String> {
     fn into_text_value_model(self) -> Model<String> {
         self.clone_model()
     }
 }
 
 #[cfg(feature = "shadcn")]
-impl fret_ui_shadcn::IntoTextValueModel for &LocalState<String> {
+impl fret_ui_shadcn::facade::IntoTextValueModel for &LocalState<String> {
     fn into_text_value_model(self) -> Model<String> {
         self.clone_model()
     }
@@ -1579,8 +1579,8 @@ mod tests {
             model: host.models.insert(String::from("hello")),
         };
 
-        let _input = fret_ui_shadcn::Input::new(&local);
-        let _textarea = fret_ui_shadcn::Textarea::new(&local);
+        let _input = fret_ui_shadcn::facade::Input::new(&local);
+        let _textarea = fret_ui_shadcn::facade::Textarea::new(&local);
     }
 
     #[test]

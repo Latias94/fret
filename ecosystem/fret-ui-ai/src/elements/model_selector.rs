@@ -20,7 +20,10 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::visually_hidden::visually_hidden;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::{Command, CommandDialog, Dialog, DialogContent, DialogTitle};
+use fret_ui_shadcn::facade::{
+    Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+    CommandSeparator, CommandShortcut, Dialog, DialogContent, DialogTitle,
+};
 
 /// AI Elements-aligned `ModelSelector` root.
 ///
@@ -542,7 +545,7 @@ pub fn close_model_selector_dialog(
 /// `refine_*`).
 #[derive(Clone)]
 pub struct ModelSelectorInput {
-    inner: fret_ui_shadcn::CommandInput,
+    inner: CommandInput,
 }
 
 impl std::fmt::Debug for ModelSelectorInput {
@@ -554,7 +557,7 @@ impl std::fmt::Debug for ModelSelectorInput {
 impl ModelSelectorInput {
     pub fn new(model: fret_runtime::Model<String>) -> Self {
         Self {
-            inner: fret_ui_shadcn::CommandInput::new(model)
+            inner: CommandInput::new(model)
                 .wrapper_height_auto()
                 .input_height_auto()
                 // Tailwind `py-3.5` ≈ 14px.
@@ -597,9 +600,9 @@ impl ModelSelectorInput {
     }
 }
 
-pub type ModelSelectorList = fret_ui_shadcn::CommandList;
-pub type ModelSelectorEmpty = fret_ui_shadcn::CommandEmpty;
-pub type ModelSelectorGroup = fret_ui_shadcn::CommandGroup;
-pub type ModelSelectorItem = fret_ui_shadcn::CommandItem;
-pub type ModelSelectorShortcut = fret_ui_shadcn::CommandShortcut;
-pub type ModelSelectorSeparator = fret_ui_shadcn::CommandSeparator;
+pub type ModelSelectorList = CommandList;
+pub type ModelSelectorEmpty = CommandEmpty;
+pub type ModelSelectorGroup = CommandGroup;
+pub type ModelSelectorItem = CommandItem;
+pub type ModelSelectorShortcut = CommandShortcut;
+pub type ModelSelectorSeparator = CommandSeparator;

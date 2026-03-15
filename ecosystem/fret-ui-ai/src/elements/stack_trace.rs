@@ -26,7 +26,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
     Space,
 };
-use fret_ui_shadcn::{Collapsible, ScrollArea};
+use fret_ui_shadcn::facade::{Collapsible, CollapsibleContent, CollapsibleTrigger, ScrollArea};
 
 pub type OnStackTraceFilePathClick =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>, Option<u32>, Option<u32>) + 'static>;
@@ -542,7 +542,7 @@ impl StackTraceHeader {
             move |_cx| vec![row],
         );
 
-        let trigger = fret_ui_shadcn::CollapsibleTrigger::new(context.open, vec![header])
+        let trigger = CollapsibleTrigger::new(context.open, vec![header])
             .a11y_label("Toggle stack trace details")
             .into_element(cx, is_open);
 
@@ -938,7 +938,7 @@ impl StackTraceContent {
                     content
                 };
 
-                fret_ui_shadcn::CollapsibleContent::new([content]).into_element(cx)
+                CollapsibleContent::new([content]).into_element(cx)
             },
         )
     }

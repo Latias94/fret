@@ -21,7 +21,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
     Space,
 };
-use fret_ui_shadcn::{Collapsible, CollapsibleContent, CollapsibleTrigger};
+use fret_ui_shadcn::facade::{Collapsible, CollapsibleContent, CollapsibleTrigger, ScrollArea};
 
 pub type OnTestActivate = Arc<
     dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, Arc<str>) + 'static,
@@ -1692,7 +1692,7 @@ impl TestErrorStack {
             ink_overflow: Default::default(),
         });
 
-        let mut scroll = fret_ui_shadcn::ScrollArea::new([text])
+        let mut scroll = ScrollArea::new([text])
             .axis(fret_ui::element::ScrollAxis::Both)
             .refine_layout(LayoutRefinement::default().w_full().min_w_0());
         if let Some(max_height) = self.max_height {
