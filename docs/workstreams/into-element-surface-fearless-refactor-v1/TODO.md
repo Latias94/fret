@@ -177,6 +177,14 @@ Execution note on 2026-03-14:
   `overlay/flags.rs` diagnostics result vectors,
   and the two `apps/fret-ui-gallery/src/ui/snippets/scroll_area/*` diagnostics raw roots.
 
+Closeout note on 2026-03-15:
+
+- this file is no longer the tracker for a broad migration sweep,
+- the remaining work here is maintenance only: explicit raw-seam inventory, source-policy gates,
+  and target-state/docs closeout,
+- if a future change reopens conversion-surface design, document the new boundary first instead of
+  treating this TODO as a standing invitation to widen APIs again.
+
 ## M0 — Lock the target vocabulary
 
 - [x] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for conversion vocabulary.
@@ -1697,11 +1705,17 @@ Implementation note on 2026-03-12:
 
 ## M6 — Keep advanced/raw seams explicit and justified
 
-- [ ] Document the legitimate raw `AnyElement` cases:
+- [x] Document the legitimate raw `AnyElement` cases:
   - [x] overlay/controller internals.
     Evidence: `ecosystem/fret-ui-shadcn/src/ui_builder_ext/*.rs` still keeps
     `into_element(...) -> AnyElement` as the explicit landing seam while closure inputs are already
     typed via `IntoUiElement<H>`.
+  - [x] no-`cx` request constructors.
+    Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs::OverlayRequest` and the
+    request-constructor families in
+    `ecosystem/fret-ui-kit/src/primitives/{dialog,popover,alert_dialog,select,tooltip}.rs`
+    intentionally remain raw because typed children have already been landed before those request
+    payloads are assembled.
   - [x] diagnostics/harness helpers.
     Evidence: retained/manual-assembly seams such as
     `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...) -> AnyElement`

@@ -1,7 +1,7 @@
 # Into-Element Surface — Target Interface State
 
 Status: target state for the pre-release conversion-surface reset
-Last updated: 2026-03-14
+Last updated: 2026-03-15
 
 This document records the intended end state for the authoring conversion surface.
 
@@ -302,6 +302,34 @@ Target rule:
 
 - raw landed-element surfaces remain available,
 - but they are not the default authoring story for ordinary apps or reusable component examples.
+
+### Intentional raw request seams (2026-03-15)
+
+The remaining raw request constructors on this lane are intentional.
+
+Reason:
+
+- they assemble already-landed overlay payloads after typed children have been converted,
+- that boundary no longer has a live `ElementContext<'_, H>` available,
+- forcing those constructors to pretend they are typed would hide a real landing seam rather than
+  improve authoring.
+
+Final expected raw request seams:
+
+- `ecosystem/fret-ui-kit/src/overlay_controller.rs::OverlayRequest` constructors,
+- request-constructor families in
+  `ecosystem/fret-ui-kit/src/primitives/dialog.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/popover.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/select.rs`,
+  and `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`.
+
+Typed adapters that still do have a live `ElementContext` should stay typed on top of those seams.
+Current example:
+
+- `ecosystem/fret-ui-kit/src/primitives/tooltip.rs::TooltipRoot::request(...)` accepts
+  `IntoUiElement<H>` children and lands them before calling the final raw tooltip request
+  constructor.
 
 ## Target Helper Signatures
 

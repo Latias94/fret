@@ -1,7 +1,7 @@
 # Ecosystem Integration Traits v1 — Milestones
 
-Status: Active
-Last updated: 2026-03-12
+Status: Maintenance closeout
+Last updated: 2026-03-15
 
 Related:
 
@@ -10,25 +10,24 @@ Related:
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
 
-## Current execution stance (2026-03-12)
+## Current execution stance (2026-03-15)
 
-This workstream is still active, but it is now a **narrow follow-up lane** rather than the main
-authoring-surface refactor.
+This workstream is now a **maintenance closeout lane**.
 
 Current reading:
 
-- the core justified seams are already mostly landed (`InstallIntoApp`, the `CommandCatalog`
-  data contract, `RouteCodec`, `DockPanelFactory`),
-- the remaining high-value work is cleanup and closure,
-- conversion-surface redesign is owned by
+- the core justified seams are landed (`InstallIntoApp`, the `CommandCatalog` data contract,
+  `RouteCodec`, `DockPanelFactory`),
+- the remaining work is narrow: first-party docs/export cleanup, a final mixed-posture audit, and
+  the `QueryAdapter` keep/defer decision,
+- conversion-surface redesign remains owned by
   `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
 
-Recommended order:
+Recommended closeout order:
 
-1. let `into-element` land the unified conversion story first,
-2. then align ecosystem helper signatures and docs with that result,
-3. finish `QueryAdapter` keep/defer, bundle examples, old export deletion, and docs cleanup after
-   the conversion vocabulary is stable.
+1. keep ecosystem docs/examples aligned with the now-closed conversion story,
+2. finish the first-party installer/export audit and delete-ready cleanup,
+3. explicitly defer `QueryAdapter` unless a second real consumer appears.
 
 Progress note on 2026-03-12:
 

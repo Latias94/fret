@@ -1,7 +1,7 @@
 # Into-Element Surface — Migration Matrix
 
-Status: execution tracker
-Last updated: 2026-03-14
+Status: closeout tracker
+Last updated: 2026-03-15
 
 This matrix tracks how the current conversion surface should move toward the target state.
 
@@ -11,6 +11,15 @@ It focuses on:
 - helper return types,
 - first-party teaching surfaces,
 - and which old names become delete-ready.
+
+Closeout note on 2026-03-15:
+
+- the `fret-ui-kit` wrapper/helper migration is now effectively complete outside intentional
+  request/advanced seams,
+- the remaining raw `IntoIterator<Item = AnyElement>` signatures on this lane are expected
+  request-constructor or explicit landing seams, not broad migration debt,
+- treat the still-open rows below as inventory/gate maintenance unless a newly changed boundary
+  proves otherwise.
 
 ## Status Legend
 

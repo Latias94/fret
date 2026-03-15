@@ -2,27 +2,22 @@
 
 This file defines milestones for the workstream in `DESIGN.md`.
 
-## Current execution stance (2026-03-14)
+## Current execution stance (2026-03-15)
 
-This workstream is the **current main authoring lane**.
+This workstream should now be read as a **closeout / maintenance lane**, not the current main
+authoring lane.
 
-Reason:
+Closeout note on 2026-03-15:
 
-- the app-facing surface is already mostly converged,
-- the ecosystem trait budget is already mostly decided,
-- the clearest remaining "write UI" gap is still the fragmented conversion vocabulary.
+- the broad `IntoUiElement<H>` migration is now effectively landed across the first-party compare
+  set and the `fret-ui-kit` / Gallery wrapper-helper surfaces,
+- the remaining raw `AnyElement` seams on this lane are now intentionally classified
+  request/advanced seams rather than unresolved migration debt,
+- follow-up work here should stay narrow: keep the explicit seam inventory accurate, keep source
+  gates aligned, and avoid reopening broad root-builder invention unless one of those audited
+  boundaries actually changes.
 
-Execution rule:
-
-- prioritize M0/M1 here before reopening broader helper design elsewhere,
-- use the canonical compare set
-  (`simple_todo_v2_target`, `todo_demo`, scaffold simple-todo template)
-  as the first downstream proof that the new conversion surface improves authoring feel,
-- let ecosystem trait/docs cleanup follow this work rather than compete with it,
-- treat the remaining work primarily as **family-lane classification plus targeted closeout**,
-  not as an excuse to invent more root-builder variants.
-
-Current readout on 2026-03-14:
+Historical readout on 2026-03-14:
 
 | Milestone | State | Notes |
 | --- | --- | --- |
