@@ -84,7 +84,9 @@ impl View for AssetsReloadEpochBasicsView {
                     .test_id(TEST_ID_BUMP_RELOAD),
                 shadcn::Badge::new(format!("epoch: {epoch}"))
                     .variant(shadcn::BadgeVariant::Secondary),
-                shadcn::Badge::new("Tip: edit files under `assets/` then click reload.")
+                shadcn::Badge::new(
+                    "Native/dev escape hatch: edit files under `assets/`, then click reload.",
+                )
                     .variant(shadcn::BadgeVariant::Secondary),
             ]
         })
@@ -129,7 +131,7 @@ impl View for AssetsReloadEpochBasicsView {
                     ui::children![cx;
                         shadcn::card_title("Assets reload epoch basics"),
                         shadcn::card_description(
-                            "Load a file image + SVG icon and trigger a ViewCache-safe dev reload by bumping UiAssetsReloadEpoch.",
+                            "Demonstrates the native/dev file-path escape hatch: load a file image + SVG icon and trigger a ViewCache-safe dev reload by bumping UiAssetsReloadEpoch. Portable apps should prefer bundle locators plus a host-installed asset resolver.",
                         ),
                     ]
                 }),
@@ -185,7 +187,7 @@ fn render_image_panel(
             cx,
             ui::h_flex(|cx| {
                 ui::children![cx;
-                    shadcn::Label::new("File image status:"),
+                    shadcn::Label::new("Native file image status:"),
                     shadcn::Badge::new(status)
                         .variant(shadcn::BadgeVariant::Secondary)
                         .test_id(TEST_ID_IMAGE_STATUS),
@@ -212,9 +214,9 @@ fn render_image_panel(
         ui::children![cx;
             shadcn::card_header(|cx| {
                 ui::children![cx;
-                    shadcn::card_title("Image from disk"),
+                    shadcn::card_title("Image from native file path"),
                     shadcn::card_description(
-                        "Loads `assets/textures/test.jpg` via ImageSource + ImageAssetCache (async decode, cached upload).",
+                        "Loads `assets/textures/test.jpg` via the native/dev file-path escape hatch on top of ImageSource + ImageAssetCache (async decode, cached upload).",
                     ),
                 ]
             }),
@@ -292,9 +294,9 @@ fn render_svg_panel(
         ui::children![cx;
             shadcn::card_header(|cx| {
                 ui::children![cx;
-                    shadcn::card_title("SVG icon from disk"),
+                    shadcn::card_title("SVG icon from native file path"),
                     shadcn::card_description(
-                        "Loads `assets/demo/icon-search.svg` via SvgFileSource + UiAssetsReloadEpoch.",
+                        "Loads `assets/demo/icon-search.svg` via the native/dev file-path escape hatch with SvgFileSource + UiAssetsReloadEpoch.",
                     ),
                 ]
             }),

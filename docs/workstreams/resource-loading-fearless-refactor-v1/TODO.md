@@ -147,10 +147,12 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `apps/fret-cookbook/examples/icons_and_assets_basics.rs` now teaches
       `bundle locator + host resolver + static asset entries`
+    - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` is explicitly labeled as the
+      native/dev file-path escape hatch instead of the portable default story
   - Remaining:
     - UI Gallery
     - bootstrap templates
-    - dedicated dev/native escape-hatch examples should be labeled as such
+    - any remaining dedicated dev/native escape-hatch examples should be labeled as such
 
 - [ ] RESLOAD-api-530 Decide deprecation/removal sequencing for:
   - `ImageSource::from_file_path(...)`
