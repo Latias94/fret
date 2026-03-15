@@ -11,13 +11,24 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Design lock
 
-- [ ] RESLOAD-adr-010 Add or update the hard-contract ADR(s) for the portable asset model.
+- [~] RESLOAD-adr-010 Add or update the hard-contract ADR(s) for the portable asset model.
   - Minimum scope:
     - locator kinds,
     - bundle/key identity,
     - capability gating for file/url,
     - revision/invalidation semantics,
     - loader diagnostics contract.
+  - Current landed slice:
+    - `docs/adr/0065-icon-system-and-asset-packaging.md` now explicitly locks the hybrid icon
+      ownership model:
+      - vendor ids are namespaced,
+      - semantic `ui.*` aliases are `alias_if_missing(...)` / first-writer-wins,
+      - app/bootstrap code may explicitly override afterwards,
+      - reusable crates keep icon semantics on `IconId` while non-icon shipped bytes live on the
+        package asset contract.
+  - Remaining:
+    - general asset locator/revision/capability/diagnostics contract still needs its own final ADR
+      or accepted ADR update beyond the icon-pack bridge
 
 - [ ] RESLOAD-audit-020 Record the current incorrect logic explicitly in the relevant audits and
       workstreams so the migration does not drift back toward path-first design.
