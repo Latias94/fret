@@ -325,11 +325,18 @@ Important current gap:
 
 - generic resources now have a package-bundle story, but icon packs still primarily install through
   the global `IconRegistry` surface,
-- that is workable today, but the long-term story still needs one documented ownership rule for:
-  - semantic icon ids (`ui.*`),
-  - vendor icon ids (`lucide.*`, `radix.*`, ...),
-  - package-owned shipped bytes,
-  - and conflict/override behavior when multiple ecosystem crates participate.
+- that is workable today, but the long-term story still needs one documented ownership bridge
+  between `IconRegistry` and package-owned shipped bytes.
+
+Current explicit icon-pack conflict policy:
+
+- vendor ids (`lucide.*`, `radix.*`, ...) are namespaced and do not conflict,
+- semantic ids (`ui.*`) use a stable first-successful-alias-wins rule via
+  `IconRegistry::alias_if_missing(...)`,
+- app/bootstrap code may intentionally override a semantic alias afterwards with
+  `IconRegistry::alias(...)` or `register(...)`,
+- the default first-party preference remains Lucide on the `fret` batteries lane because bootstrap
+  only enables Radix semantic aliases when Lucide semantic aliases are not already selected.
 
 This is the pattern used by mature cross-platform systems:
 

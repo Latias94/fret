@@ -110,10 +110,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `fretboard assets rust write --surface fret ...` now emits a generated `Bundle` type that
       implements `fret::integration::InstallIntoApp`, so reusable crates can publish namespaced
       asset installers without hand-writing the boilerplate
+    - icon-pack semantic alias conflicts now have a central tested rule:
+      `IconRegistry::alias_if_missing(...)` makes `ui.*` aliases first-writer-wins, vendor ids stay
+      namespaced (`lucide.*`, `radix.*`, ...), and app/bootstrap code can still intentionally
+      override with an explicit follow-up alias
   - Remaining:
     - first-party docs should show when bundle ownership belongs in the generated asset module vs a
       hand-written higher-level recipe bundle that also composes icon packs
-    - icon-pack conflict policy still needs one final public hard-contract write-up
+    - icon-pack conflict policy still needs one final public hard-contract write-up that connects
+      `IconRegistry` to the longer-term general asset contract
 
 ## Packaging and startup
 
