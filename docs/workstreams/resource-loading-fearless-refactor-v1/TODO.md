@@ -472,6 +472,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `docs/component-author-guide.md`
     - `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`
     - `ecosystem/fret-ui-shadcn/README.md`
+    - `ecosystem/fret-ui-material3/README.md`
     - `apps/fretboard/src/scaffold/templates.rs`
       (`todo_template_mounts_generated_assets_when_ui_assets_are_enabled`,
       `simple_todo_template_mounts_generated_assets_when_ui_assets_are_enabled`)
