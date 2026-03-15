@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-13
+Last updated: 2026-03-15
 
 Related:
 
@@ -787,6 +787,8 @@ Current sequencing note (as of 2026-03-09):
   - Evidence target: at least one low-risk family (`BreadcrumbItem`, `NavigationMenu*`, or Material `Snackbar`) gains an action-first alias and docs/examples prefer it.
   - Status (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` now exposes `BreadcrumbItem::action(...)`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` now exposes `NavigationMenuLink::action(...)` and `NavigationMenuItem::action(...)`, `ecosystem/fret-ui-material3/src/snackbar.rs` now exposes `Snackbar::action_id(...)` / `Snackbar::action_command(...)`, the navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) plus the Material3 snackbar gallery snippet now prefer the action-first spelling, and the first navigation-menu/material3 coverage uses the aliases as the default public path.
   - Gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now keeps `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` on `action_id(...)`, and the canonical cross-platform runner `tools/pre_release.py` runs that narrow policy check.
+  - Extension update (as of 2026-03-15): the same alias pattern now also covers more default-facing app widgets outside the earlier navigation/material slice: `BreadcrumbLink` / `BreadcrumbLinkBuild`, `InputGroupButton`, `Item`, `PaginationLink` / `PaginationPrevious` / `PaginationNext` / `PaginationLinkBuild`, `TableRow` / `TableRowBuild`, and the `Sidebar*` clickable surfaces (`SidebarTrigger`, `SidebarRail`, `SidebarGroupAction`, `SidebarMenuAction`, `SidebarMenuSubButton`, `SidebarMenuButton`) all expose `action(...)` while still lowering through the same command pipeline.
+  - Source-policy update (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now locks those default-facing clickable surfaces on the action-first alias wording so future cleanup does not silently regress them back to command-shaped-only naming.
 
 - [x] AFA-postv1-021 Land the menu-family action-first alias pass for `ContextMenu*` / `Menubar*`.
   - Goal: remove the largest remaining command-shaped builder inconsistency from the default component surface without changing menu routing internals.

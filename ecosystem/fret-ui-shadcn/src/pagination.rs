@@ -257,6 +257,15 @@ impl PaginationLink {
         self
     }
 
+    /// Bind a stable action ID to this pagination link (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
         self
@@ -446,6 +455,15 @@ impl PaginationPrevious {
         }
     }
 
+    /// Bind a stable action ID to this pagination previous-link (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
         self
@@ -527,6 +545,15 @@ impl PaginationNext {
             text: None,
             test_id: None,
         }
+    }
+
+    /// Bind a stable action ID to this pagination next-link (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
     }
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
@@ -860,6 +887,15 @@ where
 
     pub fn active(mut self, active: bool) -> Self {
         self.is_active = active;
+        self
+    }
+
+    /// Bind a stable action ID to this pagination link build wrapper (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
         self
     }
 

@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Command-First Widget Contract Audit
 
 Status: draft, post-v1 audit
-Last updated: 2026-03-09
+Last updated: 2026-03-15
 
 Related:
 
@@ -257,6 +257,16 @@ Progress update (as of 2026-03-09):
   `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
 - A narrow default-surface gate now protects that choice:
   `tools/gate_material3_snackbar_default_surface.py`.
+- Alias-extension update (as of 2026-03-15):
+  `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`,
+  `ecosystem/fret-ui-shadcn/src/input_group.rs`,
+  `ecosystem/fret-ui-shadcn/src/item.rs`,
+  `ecosystem/fret-ui-shadcn/src/pagination.rs`,
+  `ecosystem/fret-ui-shadcn/src/table.rs`, and
+  `ecosystem/fret-ui-shadcn/src/sidebar.rs`
+  now extend the same public `action(...)` alias pattern to the remaining default-facing clickable
+  builders in those families, while `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` locks
+  the alias wording as a source-policy gate.
 
 ### Phase 2 — Menu-family public alias pass
 

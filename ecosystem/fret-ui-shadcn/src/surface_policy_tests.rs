@@ -33,6 +33,7 @@ const POPOVER_RS: &str = include_str!("popover.rs");
 const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
 const SLIDER_RS: &str = include_str!("slider.rs");
+const SIDEBAR_RS: &str = include_str!("sidebar.rs");
 const STATE_RS: &str = include_str!("state.rs");
 const TABLE_RS: &str = include_str!("table.rs");
 const TEXTAREA_RS: &str = include_str!("textarea.rs");
@@ -1487,6 +1488,73 @@ fn thin_constructor_trial_modules_keep_public_anyelement_free_functions_explicit
         )],
         "thin-constructor trial modules should not grow new public free-function `-> AnyElement` helpers without an explicit raw-seam decision"
     );
+}
+
+#[test]
+fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders() {
+    for (label, source, markers) in [
+        (
+            "breadcrumb.rs",
+            BREADCRUMB_RS,
+            &[
+                "self.link = self.link.action(action);",
+                "self.command = Some(action.into());",
+            ][..],
+        ),
+        (
+            "input_group.rs",
+            INPUT_GROUP_RS,
+            &["Bind a stable action ID to this input-group button (action-first authoring)."][..],
+        ),
+        (
+            "item.rs",
+            ITEM_RS,
+            &["Bind a stable action ID to this item (action-first authoring)."][..],
+        ),
+        (
+            "pagination.rs",
+            PAGINATION_RS,
+            &[
+                "Bind a stable action ID to this pagination link (action-first authoring).",
+                "Bind a stable action ID to this pagination previous-link (action-first authoring).",
+                "Bind a stable action ID to this pagination next-link (action-first authoring).",
+                "Bind a stable action ID to this pagination link build wrapper (action-first authoring).",
+            ][..],
+        ),
+        (
+            "table.rs",
+            TABLE_RS,
+            &[
+                "Bind a stable action ID to this table row (action-first authoring).",
+                "Bind a stable action ID to this table-row build wrapper (action-first authoring).",
+            ][..],
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            &[
+                "Bind a stable action ID to this sidebar trigger (action-first authoring).",
+                "Bind a stable action ID to this sidebar rail (action-first authoring).",
+                "Bind a stable action ID to this sidebar group action (action-first authoring).",
+                "Bind a stable action ID to this sidebar menu action (action-first authoring).",
+                "Bind a stable action ID to this sidebar menu sub-button (action-first authoring).",
+                "Bind a stable action ID to this sidebar menu button (action-first authoring).",
+            ][..],
+        ),
+    ] {
+        for marker in markers {
+            assert!(
+                source.contains(marker),
+                "{label} should keep action-first alias docs on default-facing clickable widgets"
+            );
+        }
+        assert!(
+            source.contains(
+                "pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {"
+            ),
+            "{label} should expose an action-first builder alias"
+        );
+    }
 }
 
 #[test]
