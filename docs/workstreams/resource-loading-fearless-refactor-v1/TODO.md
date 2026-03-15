@@ -98,7 +98,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - composable runtime host mounting via `crates/fret-runtime/src/asset_resolver.rs`
       (`register_asset_resolver`, `register_bundle_asset_entries`,
       `register_embedded_asset_entries`, `resolve_asset_reference`)
-    - UI bridge helpers via `ecosystem/fret-ui-assets/src/asset_resolver.rs`
+    - UI bridge helpers via `ecosystem/fret-ui-assets/src/asset_resolver.rs`, including:
+      - reference-aware image resolution that prefers target-appropriate external handoff and
+        falls back to bytes when the winning layer cannot provide a usable external reference,
+      - native bundle-locator -> `SvgFileSource` bridging for reloadable file-backed SVGs
     - app-facing facade reference helpers via `ecosystem/fret/src/lib.rs`
       (`resolve_reference`, `resolve_locator_reference`)
   - Remaining:
@@ -182,7 +185,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## SVG and image pipeline unification
 
-- [ ] RESLOAD-svg-400 Replace dedicated SVG file helpers with the unified asset locator story.
+- [~] RESLOAD-svg-400 Replace dedicated SVG file helpers with the unified asset locator story.
+  - Current landed slice:
+    - `resolve_svg_file_source(...)` /
+      `resolve_svg_file_source_from_host(...)` in
+      `ecosystem/fret-ui-assets/src/asset_resolver.rs` now bridge logical bundle locators into
+      `SvgFileSource` through the shared external-reference contract instead of teaching raw
+      widget-level file paths.
+  - Remaining:
+    - `SvgFileSource` still exists as a native/dev compatibility shim because `fret_ui::SvgSource`
+      is currently bytes-only.
 
 - [ ] RESLOAD-svg-410 Decide the short-term SVG text policy and enforce it in docs/tests.
   - Preferred truthful baseline:
@@ -192,8 +204,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 - [ ] RESLOAD-svg-420 Plan the long-term shared SVG-text font environment path.
   - The SVG renderer should not permanently own an unrelated `fontdb` universe.
 
-- [ ] RESLOAD-img-430 Move image loading onto the shared locator/resolver contract while preserving
+- [~] RESLOAD-img-430 Move image loading onto the shared locator/resolver contract while preserving
       the existing async/UI invalidation ergonomics.
+  - Current landed slice:
+    - `resolve_image_source(...)` / `resolve_image_source_from_host(...)` in
+      `ecosystem/fret-ui-assets/src/asset_resolver.rs` now prefer target-appropriate external
+      references first and fall back to bytes only when the winning layer cannot provide a usable
+      external reference handoff.
+  - Remaining:
+    - broader first-party docs/examples still need to stop teaching direct file-path constructors
+      as the default app story.
 
 ## Public API cleanup
 

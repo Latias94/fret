@@ -67,6 +67,11 @@ escape hatches.
   - those same bundle locators can now expose an explicit native file-reference handoff through
     `resolve_reference(...)` / `resolve_locator_reference(...)` without dropping back to raw
     path-first widget code.
+  - `fret-ui-assets::resolve_image_source*` now consumes that handoff on desktop, so logical
+    bundle locators can recover path-based native/dev image loading without apps writing raw file
+    paths directly.
+  - native `fret-ui-assets::resolve_svg_file_source*` provides the same bridge for reloadable SVG
+    file ergonomics while keeping the file-only shim explicit.
   - Direct `ImageSource::from_file_path(...)` and `SvgFileSource::from_file_path(...)` are legacy
     UI escape hatches that bypass the general asset resolver contract.
 - First-party truth today:
@@ -82,7 +87,8 @@ escape hatches.
 - First-party truth today:
   - the general asset contract has `AssetLocator::Url`, but there is no first-party resolver that
     resolves it on any target,
-  - web/WASM exposes `ImageSource::from_url(...)` as a direct image helper,
+  - web/WASM exposes `ImageSource::from_url(...)` as a direct image helper, and the
+    `resolve_image_source*` bridge can consume a resolver-provided URL reference there,
   - there is no matching first-party SVG/font URL lane.
 - Guidance:
   - treat URL loading as a custom-resolver or target-specific escape hatch,

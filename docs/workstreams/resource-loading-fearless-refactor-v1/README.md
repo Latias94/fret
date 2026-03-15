@@ -112,8 +112,15 @@ This workstream takes a fearless posture:
     `FretApp::embedded_asset_entries(...)`, `UiAppBuilder::with_bundle_asset_entries(...)`, and
     `UiAppBuilder::with_embedded_asset_entries(...)` now keep compile-time/static registrations on
     the same ordered builder/startup surface as `asset_dir(...)` and `asset_manifest(...)`.
-- `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
-  image and SVG bytes, while keeping the existing async image invalidation ergonomics.
+- `fret-ui-assets` now consumes the shared resolver contract for both bytes and explicit external
+  references:
+  - image helpers prefer target-appropriate reference handoff first (native file paths, wasm URL
+    references) and fall back to bytes when the current winning layer cannot provide a usable
+    external reference,
+  - native SVG helpers can now bridge logical bundle locators into `SvgFileSource` for reloadable
+    file-backed development ergonomics without teaching raw app paths as the primary authoring
+    story,
+  - byte-based SVG loading and the existing async image invalidation ergonomics remain intact.
 - The general asset contract now also models explicit external-reference handoff:
   - `ResolvedAssetReference` / `AssetExternalReference` in `crates/fret-assets`,
   - host-level resolution via `crates/fret-runtime/src/asset_resolver.rs`,
