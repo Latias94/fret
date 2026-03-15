@@ -160,7 +160,7 @@ impl ImageSource {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
+    pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
         let path: Arc<PathBuf> = path.into();
         let id = ImageSourceId(stable_hash(&(
             b"path.v1",
@@ -170,6 +170,12 @@ impl ImageSource {
             id,
             kind: ImageSourceKind::Path { path },
         }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[deprecated(note = "use from_file_path; raw file paths are a native/dev-only asset source")]
+    pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
+        Self::from_file_path(path)
     }
 }
 
@@ -1481,7 +1487,7 @@ mod tests {
 
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../assets/textures/test.jpg");
-        let src = ImageSource::from_path(path);
+        let src = ImageSource::from_file_path(path);
 
         let _ = use_image_source_state(&mut host, window, &src);
         let request0 = ImageSourceRequestKey {

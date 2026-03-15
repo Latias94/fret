@@ -104,7 +104,7 @@ impl View for IconsAndAssetsBasicsView {
         );
 
         let file_image =
-            fret_ui_assets::ImageSource::from_path(repo_path("assets/textures/test.jpg"));
+            fret_ui_assets::ImageSource::from_file_path(repo_path("assets/textures/test.jpg"));
         let memory_image = fret_ui_assets::ImageSource::rgba8(
             128,
             128,
@@ -115,7 +115,7 @@ impl View for IconsAndAssetsBasicsView {
         // `SvgIconProps` is an icon-style SVG element (monochrome + currentColor), not a full SVG
         // image renderer. Use an icon-like SVG (stroke=currentColor, fill=none) for this demo.
         let svg_file =
-            fret_ui_assets::SvgFileSource::from_path(repo_path("assets/demo/icon-search.svg"));
+            fret_ui_assets::SvgFileSource::from_file_path(repo_path("assets/demo/icon-search.svg"));
 
         Self {
             window,

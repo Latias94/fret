@@ -86,8 +86,7 @@ pub mod style {
     pub use fret_core::{TextOverflow, TextWrap};
     pub use fret_ui::Theme;
     pub use fret_ui_kit::{
-        ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size,
-        Space,
+        ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space,
     };
 }
 
@@ -1802,8 +1801,12 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(fret_icons_radix::app::install)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_lucide::app::install`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_radix::app::install`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::install_with_budgets(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_assets::advanced::{install_with_ui_services(...), install_with_ui_services_and_budgets(...)}`"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::configure_caches_with_budgets(...)`")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`fret_ui_assets::advanced::{configure_caches_with_ui_services(...), configure_caches_with_ui_services_and_budgets(...)}`"
+        ));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_node::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`BootstrapBuilder::register_icon_pack(...)`"));
@@ -1940,7 +1943,9 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("UiElementA11yExt"));
         assert!(!app_prelude_exports_symbol("UiElementKeyContextExt"));
         assert!(!app_prelude_exports_symbol("UiElementTestIdExt"));
-        assert!(!app_prelude.contains("pub use fret_ui_kit::command::ElementCommandGatingExt as _;"));
+        assert!(
+            !app_prelude.contains("pub use fret_ui_kit::command::ElementCommandGatingExt as _;")
+        );
         assert!(
             !app_prelude.contains("pub use fret_ui_kit::declarative::ElementContextThemeExt as _;")
         );
@@ -2101,7 +2106,9 @@ mod authoring_surface_policy_tests {
         let root_header = root_surface_header_source();
 
         assert!(root_header.contains("pub mod env {"));
-        assert!(root_header.contains("accent_color, container_breakpoints, container_query_region,"));
+        assert!(
+            root_header.contains("accent_color, container_breakpoints, container_query_region,")
+        );
         assert!(root_header.contains("preferred_color_scheme, prefers_dark_color_scheme"));
         assert!(root_header.contains("safe_area_insets,"));
         assert!(root_header.contains("viewport_breakpoints, viewport_height_at_least"));

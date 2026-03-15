@@ -38,9 +38,9 @@ impl View for AssetsReloadEpochBasicsView {
         fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
 
         let file_image =
-            fret_ui_assets::ImageSource::from_path(repo_path("assets/textures/test.jpg"));
+            fret_ui_assets::ImageSource::from_file_path(repo_path("assets/textures/test.jpg"));
         let svg_file =
-            fret_ui_assets::SvgFileSource::from_path(repo_path("assets/demo/icon-search.svg"));
+            fret_ui_assets::SvgFileSource::from_file_path(repo_path("assets/demo/icon-search.svg"));
 
         Self {
             window,

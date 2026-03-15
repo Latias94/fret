@@ -79,7 +79,6 @@ pub(super) struct JsonDumpTargetUsage {
     mask_uses: usize,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn summarize_custom_effects(
     passes: &[RenderPlanPass],
 ) -> Vec<JsonDumpCustomEffectSummary> {
@@ -210,7 +209,6 @@ pub(super) fn summarize_custom_effects(
     out
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn plan_target_index(t: PlanTarget) -> usize {
     match t {
         PlanTarget::Output => 0,
@@ -224,7 +222,6 @@ fn plan_target_index(t: PlanTarget) -> usize {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn bump_usage(
     usage: &mut [Option<JsonDumpTargetUsage>; 8],
     target: PlanTarget,
@@ -250,7 +247,6 @@ fn bump_usage(
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn summarize_target_usage(passes: &[RenderPlanPass]) -> Vec<JsonDumpTargetUsage> {
     let mut usage: [Option<JsonDumpTargetUsage>; 8] = std::array::from_fn(|_| None);
 
@@ -374,7 +370,6 @@ pub(super) fn summarize_target_usage(passes: &[RenderPlanPass]) -> Vec<JsonDumpT
     out
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn encode_custom_effect_v3_diagnostics_summary(
     snapshot: super::EffectDegradationSnapshot,
 ) -> JsonDumpCustomEffectV3DiagnosticsSummary {

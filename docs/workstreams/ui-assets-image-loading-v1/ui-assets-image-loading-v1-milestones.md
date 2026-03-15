@@ -26,6 +26,5 @@
 
 - `fret-query` integration behind a feature flag, without changing the base image loading contract.
 - Document the recommended patterns:
-  - no-query: `ImageSource::from_path/from_bytes` + `cx.use_image_source_state`
+  - no-query: `ImageSource::from_file_path/from_bytes` + `cx.use_image_source_state`
   - with-query: query provides the `ImageSource` / path resolution, UI stays the same
-

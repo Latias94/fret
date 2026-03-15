@@ -49,14 +49,14 @@ mod surface_policy_tests {
         assert!(public_surface.contains("pub mod advanced;"));
         assert!(!public_surface.contains("pub use app::"));
         assert!(!public_surface.contains("pub use advanced::"));
-        assert!(!public_surface.contains("pub fn install("));
-        assert!(!public_surface.contains("pub fn install_with_budgets("));
-        assert!(!public_surface.contains("pub fn install_with_ui_services("));
-        assert!(!public_surface.contains("pub fn install_with_ui_services_and_budgets("));
-        assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
-        assert!(APP_RS.contains("pub fn install_with_budgets("));
-        assert!(!APP_RS.contains("install_with_ui_services"));
-        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
-        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services_and_budgets("));
+        assert!(!public_surface.contains("pub fn configure_caches("));
+        assert!(!public_surface.contains("pub fn configure_caches_with_budgets("));
+        assert!(!public_surface.contains("pub fn configure_caches_with_ui_services("));
+        assert!(!public_surface.contains("pub fn configure_caches_with_ui_services_and_budgets("));
+        assert!(APP_RS.contains("pub fn configure_caches(app: &mut fret_app::App)"));
+        assert!(APP_RS.contains("pub fn configure_caches_with_budgets("));
+        assert!(!APP_RS.contains("configure_caches_with_ui_services"));
+        assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services("));
+        assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services_and_budgets("));
     }
 }

@@ -24,7 +24,7 @@
   - Provide a `Query`-friendly wrapper that yields `ImageSourceState` without forcing query usage.
   - Keep the base path/bytes API usable without query.
 - Consider an app-level asset resolver abstraction:
-  - `ImageSource::from_path` is fine for native dev, but long-term packaging may want a virtual path layer.
+  - `ImageSource::from_file_path` is fine for native dev, but long-term packaging may want a virtual path layer.
 
 ## Performance & memory
 
@@ -32,4 +32,3 @@
   - Document recommended defaults for image budgets per app class (gallery/editor).
 - Validate decoded-byte retention:
   - Ensure decoded bytes are dropped as soon as GPU-ready is observed.
-

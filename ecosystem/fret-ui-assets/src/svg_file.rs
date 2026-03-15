@@ -22,8 +22,13 @@ pub struct SvgFileSource {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl SvgFileSource {
-    pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
+    pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
         Self { path: path.into() }
+    }
+
+    #[deprecated(note = "use from_file_path; raw file paths are a native/dev-only asset source")]
+    pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
+        Self::from_file_path(path)
     }
 }
 
@@ -206,7 +211,7 @@ mod tests {
         tmp.push(unique);
 
         std::fs::write(&tmp, br#"<svg viewBox="0 0 1 1"></svg>"#).expect("write temp svg");
-        let src = SvgFileSource::from_path(Arc::new(tmp.clone()));
+        let src = SvgFileSource::from_file_path(Arc::new(tmp.clone()));
 
         let s0 = read_svg_file_cached(&mut host, &src);
         assert!(s0.error.is_none());

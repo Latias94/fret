@@ -49,7 +49,7 @@ These channels must work even when Rust hotpatch is not active (reload-boundary-
 - Theme: `.fret/theme.json` → `Theme::apply_config`
 - Hot literals: `.fret/literals.json` → global `HotLiterals`
 - Assets: `.fret/ui_assets.touch` bumps `UiAssetsReloadEpoch` to invalidate path-based asset caches
-  - path images: `ImageSource::from_path` cache key includes the epoch
+  - file-path images: `ImageSource::from_file_path` cache key includes the epoch
   - SVG files: `SvgFileSource` file bytes cache respects the epoch
 - Fonts: `.fret/fonts.json` (TTF/OTF/TTC list) applied via `Effect::TextAddFonts`
 
@@ -110,4 +110,3 @@ Hotpatch-ready authoring is about keeping integration points stable:
 - prefer a small number of stable entrypoints (view root + driver callbacks)
 - assume “reload boundary” resets retained registrations/caches
 - treat structural/layout-breaking Rust changes as rebuild/restart events
-
