@@ -1117,8 +1117,8 @@ pub(super) fn generated_assets_stub_rs(package_name: &str) -> String {
 // Scaffolded by `fretboard new --ui-assets`.
 // Regenerate this file after editing `assets/`:
 //   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force
-// Ecosystem/package crates can use `install(app)` on the app setup surface; apps on the builder
-// lane can use `mount(builder)`.
+// Ecosystem/package crates can use `Bundle` or `install(app)` on the app setup surface; apps on
+// the builder lane can use `mount(builder)`.
 
 use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, StaticAssetEntry}};
 
@@ -1138,6 +1138,14 @@ pub fn register(app: &mut fret::app::App) {{
 
 pub fn install(app: &mut fret::app::App) {{
     register(app);
+}}
+
+pub struct Bundle;
+
+impl fret::integration::InstallIntoApp for Bundle {{
+    fn install_into_app(self, app: &mut fret::app::App) {{
+        register(app);
+    }}
 }}
 
 pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {{
@@ -1602,6 +1610,8 @@ mod tests {
         assert!(src.contains("pub fn locator(key: impl Into<AssetKey>) -> AssetLocator"));
         assert!(src.contains("pub fn register(app: &mut fret::app::App)"));
         assert!(src.contains("pub fn install(app: &mut fret::app::App)"));
+        assert!(src.contains("pub struct Bundle;"));
+        assert!(src.contains("impl fret::integration::InstallIntoApp for Bundle"));
         assert!(src.contains("pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>)"));
         assert!(src.contains("register(app);"));
         assert!(src.contains(

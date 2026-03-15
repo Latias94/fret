@@ -91,7 +91,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - final deprecation/removal posture for opaque legacy bundle strings
     - packaged/web/mobile tooling defaults that pick app vs package ownership automatically
 
-- [ ] RESLOAD-core-125 Define ecosystem ownership rules for package resources and icon packs.
+- [~] RESLOAD-core-125 Define ecosystem ownership rules for package resources and icon packs.
   - Required outcomes:
     - package-owned images/SVGs/fonts default to `AssetBundleId::package(...)`,
     - apps compose ecosystem installer surfaces instead of redoing internal resource mounts,
@@ -104,6 +104,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `ecosystem/fret-icons-lucide/src/app.rs`
     - `crates/fret-assets/src/lib.rs`
     - `crates/fret-runtime/src/asset_resolver.rs`
+  - Current landed slice:
+    - cookbook asset basics now models a reusable app-facing bundle that installs package-owned
+      logical assets plus an icon pack behind one `.setup(...)` value
+    - `fretboard assets rust write --surface fret ...` now emits a generated `Bundle` type that
+      implements `fret::integration::InstallIntoApp`, so reusable crates can publish namespaced
+      asset installers without hand-writing the boilerplate
+  - Remaining:
+    - first-party docs should show when bundle ownership belongs in the generated asset module vs a
+      hand-written higher-level recipe bundle that also composes icon packs
+    - icon-pack conflict policy still needs one final public hard-contract write-up
 
 ## Packaging and startup
 
@@ -183,6 +193,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - the generated `--surface fret` module now exposes `mount(builder)` so compile-time embedded
       assets can stay on the `UiAppBuilder` startup path instead of falling back to ad-hoc setup
       hooks
+    - the generated `--surface fret` module now exposes a named `Bundle` type that implements
+      `fret::integration::InstallIntoApp`, so reusable crates can stay on the `.setup(...)`
+      surface without rewriting the generated registration boilerplate
     - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep the directory-scanning
       convenience lane on the builder/startup surface
     - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` keep that manifest

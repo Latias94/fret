@@ -353,7 +353,7 @@ fn render_rust_asset_module(
             .expect("write to string");
             writeln!(
                 out,
-                "// `--surface fret` modules expose `install(app)`, `register(app)`, and `mount(builder)`.\n"
+                "// `--surface fret` modules expose `Bundle`, `install(app)`, `register(app)`, and `mount(builder)`.\n"
             )
             .expect("write to string");
         }
@@ -430,6 +430,11 @@ fn render_rust_asset_module(
             writeln!(
                 out,
                 "pub fn install(app: &mut fret::app::App) {{\n    register(app);\n}}\n"
+            )
+            .expect("write to string");
+            writeln!(
+                out,
+                "pub struct Bundle;\n\nimpl fret::integration::InstallIntoApp for Bundle {{\n    fn install_into_app(self, app: &mut fret::app::App) {{\n        register(app);\n    }}\n}}\n"
             )
             .expect("write to string");
             writeln!(
@@ -676,13 +681,16 @@ mod tests {
         let generated = std::fs::read_to_string(&out).expect("read generated module");
         assert!(generated.contains("use fret::assets::{self, AssetBundleId, AssetKey, AssetLocator, AssetRevision, StaticAssetEntry};"));
         assert!(generated.contains(
-            "// `--surface fret` modules expose `install(app)`, `register(app)`, and `mount(builder)`."
+            "// `--surface fret` modules expose `Bundle`, `install(app)`, `register(app)`, and `mount(builder)`."
         ));
         assert!(generated.contains("AssetBundleId::app(\"demo-app\")"));
         assert!(generated.contains("include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", \"assets/icons/search.svg\"))"));
         assert!(generated.contains(".with_media_type(\"image/svg+xml\")"));
         assert!(generated.contains("pub fn register(app: &mut fret::app::App)"));
         assert!(generated.contains("pub fn install(app: &mut fret::app::App)"));
+        assert!(generated.contains("pub struct Bundle;"));
+        assert!(generated.contains("impl fret::integration::InstallIntoApp for Bundle"));
+        assert!(generated.contains("fn install_into_app(self, app: &mut fret::app::App)"));
         assert!(generated.contains("register(app);"));
         assert!(generated.contains(
             "assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());"
