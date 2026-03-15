@@ -764,6 +764,21 @@ mod authoring_surface_policy_tests {
         );
 
         assert_advanced_helpers_prefer_uicx(
+            EMBEDDED_VIEWPORT_DEMO,
+            &[
+                "fn embedded_viewport_page<C>(",
+                "cx: &mut UiCx<'_>,",
+                "theme: ThemeSnapshot,",
+                "viewport_card: C,",
+                "diag: bool,",
+                ") -> Ui",
+                "C: IntoUiElement<KernelApp>,",
+                "embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())",
+            ],
+            &[],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
             HELLO_WORLD_COMPARE_DEMO,
             &["let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|"],
             &[

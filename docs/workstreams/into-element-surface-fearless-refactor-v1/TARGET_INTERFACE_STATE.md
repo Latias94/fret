@@ -107,6 +107,13 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<KernelApp> + use
   status_badge}` now also follows the typed-helper rule: local composition stays on
   `IntoUiElement<KernelApp>`, while `TabsItem::new([..])`, `ScrollArea::new([..])`, and other
   heterogenous child arrays remain explicit landing seams.
+- advanced view-runtime root wrappers should also own their final landing when they are not
+  actually raw seams:
+  `apps/fret-examples/src/assets_demo.rs::assets_page(...)` and
+  `apps/fret-examples/src/embedded_viewport_demo.rs::embedded_viewport_page(...)` now take
+  `&mut UiCx<'_>` plus typed content and return `Ui`, so their parent `render(...)` paths no
+  longer teach a root-local `let page = ...; page.into()` pattern just to attach wrapper styling
+  or diagnostics metadata.
 - Rust 2024 precise captures note: if the helper wants `+ use<...>` and also accepts a flexible
   label/input argument, prefer a named generic such as `fn helper<L>(..., label: L) -> impl
   IntoUiElement<KernelApp> + use<L> where L: Into<Arc<str>>` rather than argument-position

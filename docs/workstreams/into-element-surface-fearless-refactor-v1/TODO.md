@@ -49,6 +49,10 @@ Execution note on 2026-03-14:
 - the advanced `assets_demo` example now also follows the typed root-helper rule:
   `assets_page(cx, ...) -> Ui` owns the final landing, so the advanced/manual lane does not have
   to keep a root-local `let page = ...; page.into()` seam when the page wrapper itself is not raw.
+- the advanced `embedded_viewport_demo` example now follows that same root-owned wrapper rule:
+  `embedded_viewport_page(cx, ...) -> Ui` owns the final landing plus the optional diagnostics
+  `test_id`, so the `render(...)` path no longer carries a separate root-local wrapper seam when
+  the page itself is still ordinary typed composition.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

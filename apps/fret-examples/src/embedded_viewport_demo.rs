@@ -155,28 +155,39 @@ impl View for EmbeddedViewportDemoView {
         cx.actions()
             .local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
 
-        let page = ui::container(|cx| {
-            ui::children![
-                cx;
-                ui::v_flex(|cx| ui::children![cx; viewport_card])
-                    .w_full()
-                    .h_full()
-                    .justify_center()
-                    .items_center()
-                    .into_element(cx),
-            ]
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .w_full()
-        .h_full()
-        .into_element(cx);
+        embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())
+    }
+}
 
-        if diag_enabled() {
-            page.test_id("embedded-viewport-demo.root").into()
-        } else {
-            page.into()
-        }
+fn embedded_viewport_page<C>(
+    cx: &mut UiCx<'_>,
+    theme: ThemeSnapshot,
+    viewport_card: C,
+    diag: bool,
+) -> Ui
+where
+    C: IntoUiElement<KernelApp>,
+{
+    let page = ui::container(move |cx| {
+        ui::children![
+            cx;
+            ui::v_flex(move |cx| ui::children![cx; viewport_card])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+        ]
+    })
+    .bg(ColorRef::Color(theme.color_token("background")))
+    .p(Space::N6)
+    .w_full()
+    .h_full()
+    .into_element(cx);
+
+    if diag {
+        page.test_id("embedded-viewport-demo.root").into()
+    } else {
+        page.into()
     }
 }
 
