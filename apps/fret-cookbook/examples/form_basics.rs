@@ -125,7 +125,7 @@ impl View for FormBasicsView {
                 shadcn::Input::new(&email_state)
                     .a11y_label("Email")
                     .placeholder("jane@example.com")
-                    .submit_command(act::Submit.into())
+                    .submit_action(act::Submit)
                     .test_id(TEST_ID_EMAIL),
             ]
         })

@@ -103,7 +103,7 @@ impl SimpleTodoDriver {
 
                     let input = shadcn::Input::new(draft_model.clone())
                         .placeholder("Add a task...")
-                        .submit_command(add_cmd)
+                        .submit_action(add_cmd)
                         .into_element(cx)
                         .test_id(TEST_ID_INPUT);
 

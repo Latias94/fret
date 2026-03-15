@@ -103,7 +103,7 @@ impl View for TodoDemoView {
         let input = shadcn::Input::new(&draft_state)
             .a11y_label("New task")
             .placeholder("Add a task?")
-            .submit_command(act::Add.into())
+            .submit_action(act::Add)
             .test_id(TEST_ID_DRAFT);
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])

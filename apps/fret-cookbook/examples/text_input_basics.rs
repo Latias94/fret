@@ -94,8 +94,8 @@ impl View for TextInputBasicsView {
         let input = shadcn::Input::new(&text_state)
             .a11y_label("Message")
             .placeholder("Type something, then press Enter (Escape clears).")
-            .submit_command(act::Submit.into())
-            .cancel_command(act::Clear.into())
+            .submit_action(act::Submit)
+            .cancel_action(act::Clear)
             .test_id(TEST_ID_INPUT);
 
         cx.actions().locals::<act::Submit>({

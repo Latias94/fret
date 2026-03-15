@@ -1581,6 +1581,49 @@ fn sonner_message_options_prefer_explicit_action_id_aliases_for_toast_actions() 
 }
 
 #[test]
+fn input_families_expose_action_first_submit_cancel_aliases() {
+    for (label, source, markers) in [
+        (
+            "input.rs",
+            INPUT_RS,
+            &[
+                "pub fn submit_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {",
+                "pub fn cancel_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {",
+                "Preferred action-first spelling for Enter submit dispatch.",
+                "Preferred action-first spelling for Escape cancel dispatch.",
+            ][..],
+        ),
+        (
+            "input_group.rs",
+            INPUT_GROUP_RS,
+            &[
+                "pub fn submit_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {",
+                "pub fn cancel_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {",
+            ][..],
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            &[
+                "pub fn submit_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {",
+                "pub fn cancel_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {",
+                "Preferred action-first spelling for Enter submit dispatch.",
+                "Preferred action-first spelling for Escape cancel dispatch.",
+            ][..],
+        ),
+    ] {
+        let normalized = normalize_ws(source);
+        for marker in markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "{label} should expose action-first submit/cancel aliases on default-facing text controls"
+            );
+        }
+    }
+}
+
+#[test]
 fn typography_helpers_keep_raw_namespace_but_expose_typed_conversion_outputs() {
     let normalized = normalize_ws(TYPOGRAPHY_RS);
 

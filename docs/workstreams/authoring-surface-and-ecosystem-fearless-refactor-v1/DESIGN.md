@@ -379,7 +379,7 @@ fn render(&mut self, cx: &mut AppUi<'_, '_, App>) -> Ui {
         }
     });
 
-    let input = shadcn::Input::new(&draft).submit_command(act::Add.into());
+    let input = shadcn::Input::new(&draft).submit_action(act::Add);
 
     ui::v_flex(|cx| ui::children![cx; input])
         .into_element(cx)

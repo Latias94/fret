@@ -155,16 +155,22 @@ Priority correction on 2026-03-15:
     (`ElementCommandGatingExt`, `ElementContextThemeExt`, `UiElementKeyContextExt`) from
     `fret::app::prelude::*`; those capabilities now stay on component/advanced or explicit direct
     imports instead of the default app lane.
+  - [x] Fifth batch on 2026-03-15: audit the remaining anonymous semantics/a11y/test-id helpers
+    (`AnyElementSemanticsExt`, `UiElementA11yExt`, `UiElementTestIdExt`) and keep them on the
+    default app lane intentionally. The trait names stay hidden, but `.role(...)`,
+    `.a11y_role(...)`, and `.test_id(...)` remain high-frequency first-party app/gallery
+    capabilities and are therefore treated as app-justified helper affordances rather than more
+    prelude debt to delete.
   - Minimum audit set:
-    - whether the remaining anonymous overlap traits in the app prelude
-      (`AnyElementSemanticsExt`, `UiElementA11yExt`, `UiElementTestIdExt`) are truly app-justified
-      or should move behind another explicit lane,
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
     - raw `on_activate*` helper exports that now compete with the grouped app-facing
       `cx.actions().dispatch/listener` story.
     - any remaining app-prelude nouns that still belong better on explicit secondary lanes rather
       than the default autocomplete surface.
+    - small-app authoring sugar that is better solved by action-first widget aliases than by more
+      prelude surgery (for example command-shaped submit/cancel setters on default-facing text
+      inputs).
   - Exit condition: the app prelude teaches the app nouns plus a small set of app-justified helper
     traits, while reusable component plumbing remains discoverable through the component lane.
 - [x] Update crate-level docs to teach the new split.

@@ -265,14 +265,18 @@ Progress update (as of 2026-03-09):
   `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` locks that dual-surface contract.
 - Alias-extension update (as of 2026-03-15):
   `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`,
+  `ecosystem/fret-ui-shadcn/src/input.rs`,
   `ecosystem/fret-ui-shadcn/src/input_group.rs`,
   `ecosystem/fret-ui-shadcn/src/item.rs`,
   `ecosystem/fret-ui-shadcn/src/pagination.rs`,
   `ecosystem/fret-ui-shadcn/src/table.rs`, and
   `ecosystem/fret-ui-shadcn/src/sidebar.rs`
   now extend the same public `action(...)` alias pattern to the remaining default-facing clickable
-  builders in those families, while `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` locks
-  the alias wording as a source-policy gate.
+  builders in those families; in addition, the default-facing text-input family
+  (`Input`, `InputGroup`, `InputGroupInput`, `InputGroupTextarea`, and `SidebarInput`) now exposes
+  `submit_action(...)` / `cancel_action(...)` aliases so Enter/Escape bindings read the same
+  action-first way as button/menu activations. `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
+  locks both alias shapes as source-policy gates.
 
 ### Phase 2 — Menu-family public alias pass
 

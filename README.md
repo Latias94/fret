@@ -174,7 +174,7 @@ impl View for TodoView {
         let input = shadcn::Input::new(&draft)
             .a11y_label("New task")
             .placeholder("Add a task…")
-            .submit_command(act::Add.into());
+            .submit_action(act::Add);
 
         let add_btn = shadcn::Button::new("Add").disabled(!enabled).action(act::Add);
 

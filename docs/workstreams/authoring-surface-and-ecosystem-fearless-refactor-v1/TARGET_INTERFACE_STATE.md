@@ -159,6 +159,9 @@ Target rule:
 - overlap-heavy extension traits may still arrive through anonymous `as _` imports so method calls
   remain ergonomic, but those trait names are not part of the default app-lane vocabulary and
   should not be taught as first-contact imports.
+- the remaining anonymous semantics/a11y/test-id helpers are intentionally retained on the app
+  lane: `.role(...)`, `.a11y_role(...)`, and `.test_id(...)` are treated as app-justified
+  diagnostics/accessibility affordances even though the underlying trait names stay hidden.
 - `AppUi` is taught through grouped helper families:
   `cx.state().local*`, `cx.actions().models/locals/transient`,
   `cx.actions().payload::<A>().models/locals/local_update_if`, `cx.data().selector/query*`, and

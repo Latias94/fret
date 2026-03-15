@@ -197,7 +197,7 @@ impl View for HelloCounterView {
 
         let step_input = shadcn::Input::new(&step_state)
             .placeholder("Step (e.g. 1)")
-            .submit_command(act::Inc.into())
+            .submit_action(act::Inc)
             .a11y_role(SemanticsRole::TextField)
             .test_id(TEST_ID_STEP_INPUT);
 

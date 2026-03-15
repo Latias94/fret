@@ -46,15 +46,14 @@ reopening this one.
 
 ## Current next-step order (2026-03-15)
 
-1. Finish the remaining `fret::app::prelude::*` narrowing after the landed style/icon/env splits
-   plus the removal of zero-usage theme/key/command-gating traits:
-   revisit whether the remaining semantics/a11y/test-id overlap helpers still deserve app-lane
-   presence or should move to explicit secondary lanes.
+1. Treat the remaining anonymous semantics/a11y/test-id helpers as the intentional app-lane
+   keeper set; they are no longer active app-prelude narrowing debt.
 2. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
    maintenance/gates when new first-party code tries to reintroduce crate-root drift.
 3. Finish the conversion-surface reset under
    `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
-4. Add thin small-app authoring sugar only after the lane above is stable.
+4. Continue thin small-app authoring sugar after the lane above is stable, starting with
+   action-first widget aliases where command-shaped builder names still leak into the default path.
 
 ## Milestone 0 — Lock the target product surface
 

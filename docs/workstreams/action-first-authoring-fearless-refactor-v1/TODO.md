@@ -789,6 +789,14 @@ Current sequencing note (as of 2026-03-09):
   - Status (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` now exposes `BreadcrumbItem::action(...)`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` now exposes `NavigationMenuLink::action(...)` and `NavigationMenuItem::action(...)`, `ecosystem/fret-ui-material3/src/snackbar.rs` now exposes `Snackbar::action_id(...)` / `Snackbar::action_command(...)`, the navigation-menu gallery snippets (`demo.rs`, `docs_demo.rs`, `rtl.rs`) plus the Material3 snackbar gallery snippet now prefer the action-first spelling, and the first navigation-menu/material3 coverage uses the aliases as the default public path.
   - Gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now keeps `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` on `action_id(...)`, and the canonical cross-platform runner `tools/pre_release.py` runs that narrow policy check.
   - Extension update (as of 2026-03-15): the same alias pattern now also covers more default-facing app widgets outside the earlier navigation/material slice: `BreadcrumbLink` / `BreadcrumbLinkBuild`, `InputGroupButton`, `Item`, `PaginationLink` / `PaginationPrevious` / `PaginationNext` / `PaginationLinkBuild`, `TableRow` / `TableRowBuild`, and the `Sidebar*` clickable surfaces (`SidebarTrigger`, `SidebarRail`, `SidebarGroupAction`, `SidebarMenuAction`, `SidebarMenuSubButton`, `SidebarMenuButton`) all expose `action(...)` while still lowering through the same command pipeline.
+  - Input follow-up (as of 2026-03-15): the default-facing text-input family now also exposes
+    action-first submit/cancel aliases instead of teaching only command-shaped setters:
+    `ecosystem/fret-ui-shadcn/src/input.rs` (`Input::submit_action(...)` /
+    `cancel_action(...)`), `ecosystem/fret-ui-shadcn/src/input_group.rs`
+    (`InputGroup`, `InputGroupInput`, `InputGroupTextarea`), and
+    `ecosystem/fret-ui-shadcn/src/sidebar.rs` (`SidebarInput`) all keep the same underlying
+    command pipeline while letting Enter/Escape bindings match the repo's action-first mental
+    model.
   - Source-policy update (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now locks those default-facing clickable surfaces on the action-first alias wording so future cleanup does not silently regress them back to command-shaped-only naming.
   - Toast follow-up (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/sonner.rs` now exposes `ToastMessageOptions::action_id(...)` / `action_command(...)` / `cancel_id(...)` / `cancel_command(...)`, and the primary Sonner gallery demo now prefers `action_id(...)` / `cancel_id(...)` while keeping the same toast dispatch internals.
 

@@ -377,7 +377,7 @@ Call-site before (today):
 ```rust
 let input = shadcn::Input::new(st.draft.clone())
     .placeholder("Add a task")
-    .submit_command(add_cmd.clone())
+    .submit_action(add_cmd.clone())
     .into_element(cx);
 
 let add_button = shadcn::Button::new("Add")
@@ -394,7 +394,7 @@ Call-site after (target posture):
 ```rust
 let input = shadcn::Input::new(st.draft.clone())
     .placeholder("Add a task")
-    .submit_command(add_cmd.clone());
+    .submit_action(add_cmd.clone());
 
 let add_button = shadcn::Button::new("Add")
     .on_click(add_cmd);

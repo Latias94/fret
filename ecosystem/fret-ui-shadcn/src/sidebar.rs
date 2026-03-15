@@ -1678,9 +1678,25 @@ impl SidebarInput {
         self
     }
 
+    /// Preferred action-first spelling for Enter submit dispatch.
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this lowers through
+    /// the existing text-input command pipeline.
+    pub fn submit_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.submit_command(action.into())
+    }
+
     pub fn cancel_command(mut self, command: impl Into<CommandId>) -> Self {
         self.cancel_command = Some(command.into());
         self
+    }
+
+    /// Preferred action-first spelling for Escape cancel dispatch.
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this lowers through
+    /// the existing text-input command pipeline.
+    pub fn cancel_action(self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.cancel_command(action.into())
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
