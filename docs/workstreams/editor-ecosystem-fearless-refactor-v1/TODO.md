@@ -257,6 +257,12 @@ Interaction contract:
 
 - [~] `EER-IMUI-120` Keep expanding `fret-ui-editor::imui` only as a thin facade over declarative
       controls; do not allow a second implementation tree to form.
+      Recent progress: the in-tree `imui` compile/smoke surface now follows the same numeric
+      authoring lane as declarative first-party surfaces instead of teaching a stale parallel
+      `format` / `parse` glue path. `imui_adapter_smoke` now builds `DragValue`,
+      `AxisDragValue`, `Slider`, `Vec3Edit`, and `TransformEdit` through
+      `NumericPresentation<T>` / `TransformEditPresentations`, which keeps the facade honest as a
+      thin wrapper over the same declarative constructors.
 - [~] `EER-EDITOR-121` Close `DragValue` for real editor workflows:
       prefix/suffix, clamp policy, step, decimals policy, unit helpers, and consistent commit/cancel.
       Recent progress: `DragValue` and `AxisDragValue` now expose a shared editor-layer
