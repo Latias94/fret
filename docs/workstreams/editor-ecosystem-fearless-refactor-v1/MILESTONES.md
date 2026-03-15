@@ -119,6 +119,8 @@ Deliverables:
 - focused diag coverage for default buffered blur commit plus the first editor opt-in blur
   exceptions (`Cancel` for inline rename, `PreserveDraft` for multiline notes), alongside
   multiline explicit commit and Escape cancel on the promoted proof surface,
+- one app-local non-proof consumer for `TextFieldBlurBehavior::PreserveDraft` so multiline
+  editor notes stop being proof-only before any shared notes recipe is considered,
 - and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
 
 Exit gates:
@@ -128,7 +130,8 @@ Exit gates:
 - proof/demo startup and host theme sync no longer silently erase the intended editor preset,
 - overview / typing / invalid screenshots are all meaningful and reproducible,
 - authoring-parity screenshots make clear-button alignment and percent slider composition reviewable
-  without manual proof setup,
+  without manual proof setup, including the "formatter owns the unit text" rule so joined percent
+  readouts do not double-render `%`,
 - the screenshot proof can switch into a review-only composition without manual window/layout setup,
 - idle proof-local outcome placeholders no longer waste right-lane width or idle row height on the
   promoted review surface while committed/canceled readouts remain diagnosable,
@@ -138,6 +141,9 @@ Exit gates:
 - buffered text-session proof coverage demonstrates default blur commit, inline-rename
   cancel-on-blur, multiline preserve-draft, explicit multiline commit, and cancel/revert without
   relying on manual inspection,
+- both opt-in blur exceptions now have at least one in-tree non-proof consumer without promoting a
+  shared helper prematurely (`Cancel` in retained rename overlays, `PreserveDraft` in app-local
+  declarative notes),
 - a promoted text-assist/history proof plus diag gate demonstrate input-owned assist semantics
   (`expanded`, controlled listbox relation, `active_descendant`) and Enter-accept behavior without
   moving primary focus into the popup, and that proof is backed by shared `fret-ui-kit`

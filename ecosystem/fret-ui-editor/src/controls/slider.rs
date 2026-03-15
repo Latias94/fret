@@ -19,6 +19,7 @@ use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_frame,
     editor_input_group_segment,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
@@ -377,8 +378,6 @@ where
         let show_value = self.options.show_value;
         let value_width = self.options.value_width;
         let allow_typing = self.options.allow_typing;
-        let prefix = self.options.prefix.clone();
-        let suffix = self.options.suffix.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
         let value_display_test_id = derived_test_id(self.options.test_id.as_ref(), "value_display");
 
@@ -391,6 +390,11 @@ where
 
         let format = self.format.clone();
         let value_text = (format)(T::from_f64(value_f));
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            value_text.as_ref(),
+            self.options.prefix.clone(),
+            self.options.suffix.clone(),
+        );
         let value_display_text =
             compose_affixed_value_text(&value_text, prefix.as_ref(), suffix.as_ref());
 
@@ -839,8 +843,8 @@ where
                 layout: input_layout,
                 enabled: enabled && typing,
                 focusable: enabled && typing,
-                prefix: self.options.prefix.clone(),
-                suffix: self.options.suffix.clone(),
+                prefix: prefix.clone(),
+                suffix: suffix.clone(),
                 selection_behavior: self.options.selection_behavior,
                 test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
@@ -891,6 +895,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::compose_affixed_value_text;
+    use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 
     #[test]
     fn compose_affixed_value_text_keeps_plain_value_when_no_affix() {
@@ -906,6 +911,18 @@ mod tests {
         assert_eq!(
             compose_affixed_value_text(&value, Some(&prefix), Some(&suffix)).as_ref(),
             "$12.0px"
+        );
+    }
+
+    #[test]
+    fn compose_affixed_value_text_can_skip_duplicate_suffix_chrome() {
+        let value = Arc::<str>::from("25%");
+        let (_prefix, suffix) =
+            suppress_duplicate_chrome_affixes(value.as_ref(), None, Some(Arc::from("%")));
+
+        assert_eq!(
+            compose_affixed_value_text(&value, None, suffix.as_ref()).as_ref(),
+            "25%"
         );
     }
 }

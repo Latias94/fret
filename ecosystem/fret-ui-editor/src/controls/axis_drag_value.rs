@@ -33,6 +33,7 @@ use crate::primitives::input_group::{
     editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
     editor_input_group_row, editor_text_segment,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
@@ -230,8 +231,11 @@ where
             (st.mode, st.scrub_revision)
         };
         let typing = mode == AxisDragValueMode::Typing;
-        let prefix = self.options.prefix.clone();
-        let suffix = self.options.suffix.clone();
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            value_text.as_ref(),
+            self.options.prefix.clone(),
+            self.options.suffix.clone(),
+        );
         let reset_action = self.options.reset.clone();
         let scrub_test_id = self.options.test_id.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");

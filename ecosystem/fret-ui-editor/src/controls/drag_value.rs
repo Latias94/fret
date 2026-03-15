@@ -17,6 +17,7 @@ use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
     editor_text_segment,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
@@ -188,8 +189,11 @@ where
         };
 
         let typing = mode == DragValueMode::Typing;
-        let prefix = self.options.prefix.clone();
-        let suffix = self.options.suffix.clone();
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            value_text.as_ref(),
+            self.options.prefix.clone(),
+            self.options.suffix.clone(),
+        );
         let scrub_test_id = self.options.test_id.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
         let prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
@@ -222,9 +226,13 @@ where
         let state_for_scrub = state.clone();
         let focus_handoff_for_scrub = focus_handoff.clone();
         let on_outcome_for_scrub = on_outcome.clone();
+        let prefix_for_scrub_root = prefix.clone();
+        let suffix_for_scrub_root = suffix.clone();
         let scrub = cx.keyed(
             ("fret-ui-editor.drag_value.scrub", scrub_revision),
             move |cx| {
+                let prefix_for_scrub = prefix_for_scrub_root.clone();
+                let suffix_for_scrub = suffix_for_scrub_root.clone();
                 let state_for_scrub_record = state_for_scrub.clone();
                 let focus_handoff_for_double_click = focus_handoff_for_scrub.clone();
                 let on_outcome_for_scrub_commit = on_outcome_for_scrub.clone();
@@ -349,7 +357,7 @@ where
                                         .a11y_label(value_text.clone());
                                 }
                                 let mut segments = Vec::new();
-                                if let Some(prefix) = prefix.clone() {
+                                if let Some(prefix) = prefix_for_scrub.clone() {
                                     let mut segment = editor_text_segment(
                                         cx,
                                         density,
@@ -366,7 +374,7 @@ where
                                     segments.push(editor_input_group_divider(cx, divider));
                                 }
                                 segments.push(value);
-                                if let Some(suffix) = suffix.clone() {
+                                if let Some(suffix) = suffix_for_scrub.clone() {
                                     segments.push(editor_input_group_divider(cx, divider));
                                     let mut segment = editor_text_segment(
                                         cx,
@@ -414,8 +422,8 @@ where
                 layout: input_layout,
                 enabled: typing,
                 focusable: typing,
-                prefix: self.options.prefix.clone(),
-                suffix: self.options.suffix.clone(),
+                prefix: prefix.clone(),
+                suffix: suffix.clone(),
                 selection_behavior: self.options.selection_behavior,
                 test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.

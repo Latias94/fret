@@ -205,9 +205,14 @@ Interaction contract:
       `fret-node::ui::overlays::group_rename`: the node-graph rename overlay now cancels on focus
       loss, closes, and restores focus to the canvas without queueing a rename transaction, which
       makes the inline-rename semantic real outside the proof surface too. Those choices still do
-      not automatically justify a wider public helper/API though: the new consumer is retained
-      overlay-host code, while declarative `TextField` authoring only has proof evidence so far.
-      The focused launched diag gate was
+      not automatically justify a wider public helper/API though: the new `Cancel` consumer is
+      retained overlay-host code, while `BlurBehavior::PreserveDraft` now only has one app-local
+      declarative consumer via `editor_notes_demo`'s inspector notes surface. That keeps the
+      behavior real outside the proof without forcing a shared notes recipe prematurely. Focused
+      diag coverage now exists for both the promoted proof surface and the app-local consumer. The
+      new app-local gate passed on 2026-03-15 against a direct
+      `target/debug/editor_notes_demo.exe` launch, and the focused launched diag gate for the
+      proof surface was
       rerun on 2026-03-15 against `fret-demo --bin imui_editor_proof_demo`, so that proof-local
       split now has fresh packed evidence instead of only a script update. The same control also
       exposes password-mode rendering, a commit/cancel outcome hook, and
@@ -225,16 +230,20 @@ Interaction contract:
       Authoring-parity percent sliders now also treat
       `percent_0_1_format(0)` as the sole `%` source, and the shared icon-button segment now
       centers trailing clear affordance icons so proof-surface text/numeric controls stop drifting
-      on obvious visual seams.
+      on obvious visual seams. The shared numeric policy now also suppresses duplicate joined
+      prefix/suffix chrome whenever the formatter text already carries the same unit, and
+      multiline `TextField` now defaults to stable editor line boxes so textarea/note rows stop
+      visibly changing height while the user edits.
       The same seam now also has a second reusable consumer via `InspectorPanel` search history,
       and trigger-owned `EnumSelect` popup/list lifecycle now also reuses the shared
       `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and
       close-time query clearing rather than keeping a separate editor-local copy, while popup open
       now also reveals the selected row instead of restarting long lists at the top. The remaining
       work is narrower now: decide whether inline-rename cancel should gain a declarative/shared
-      helper beyond the retained `fret-node` overlay consumer, find the first non-proof consumer
-      for `BlurBehavior::PreserveDraft`, and keep multiline/editor proof coverage tight before new
-      promoted components land.
+      helper beyond the retained `fret-node` overlay consumer, decide whether
+      `editor_notes_demo`'s app-local preserve-draft notes surface should remain app-owned until a
+      second declarative consumer appears, and keep multiline/editor proof coverage tight before
+      new promoted components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 

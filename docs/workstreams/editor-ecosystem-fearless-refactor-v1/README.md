@@ -106,8 +106,9 @@ Current checkpoint:
   initial typed edit", so affixed `NumericInput` / `DragValue` / `Slider` flows behave more like
   editor fields than generic app forms, `DragValue` / `Slider` double-click typing now routes
   focus through a shared delayed handoff so the nested text input becomes reliably focusable
-  before the first edit, and `AxisDragValue` no longer lags behind on validation affordances while
-  typing,
+  before the first edit, `AxisDragValue` no longer lags behind on validation affordances while
+  typing, and formatter-owned unit text now suppresses duplicate joined chrome affixes so percent
+  and currency-like editor readouts stay single-sourced,
 - editor text-like controls now also have an explicit lightweight policy split: general
   `TextField`s preserve caret/selection by default but can opt into select-all-on-focus, while
   `MiniSearchBox` defaults to select-all-on-focus plus Escape-to-clear and exposes a dedicated
@@ -118,7 +119,9 @@ Current checkpoint:
   plain Enter still inserts a newline, and the promoted proof now also locks the first two
   non-default editor opt-ins on top of that baseline: inline-rename style fields can choose
   cancel-on-blur, while multiline notes can keep a preserved draft across blur until an explicit
-  commit/cancel. Proof/diag now covers those draft-vs-committed paths directly,
+  commit/cancel. The promoted multiline baseline now also defaults to stable line boxes
+  (`FixedFromStyle` + forced strut + bounds-aligned placement) so textarea/note rows stop changing
+  height while the user edits. Proof/diag now covers those draft-vs-committed paths directly,
 - the same `TextField` surface now also has the first editor-grade extensibility hooks layered on
   top of that buffered baseline: password-mode rendering for single-line fields, explicit outcome
   callbacks for commit/cancel, assistive semantics placeholders for future completion/history
@@ -188,8 +191,14 @@ Current checkpoint:
   surface as well,
 - inline-rename cancel-on-blur now also has its first non-proof in-tree consumer:
   `fret-node`'s retained rename overlay host cancels on focus loss, closes the overlay, and
-  restores focus to the canvas without queueing a rename transaction, while multiline
-  preserve-draft still remains proof-only until another real consumer appears,
+  restores focus to the canvas without queueing a rename transaction, and multiline
+  preserve-draft now also has a first app-local non-proof in-tree consumer via
+  `editor_notes_demo`'s inspector notes surface. That demo keeps the policy app-local and
+  declarative on purpose instead of promoting a shared notes helper too early, and a focused
+  diagnostics script now exists at
+  `tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-preserve-draft.json`. The
+  launched packed rerun also passes on 2026-03-15 against the direct
+  `target/debug/editor_notes_demo.exe` path,
 - repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
   edited values stay attached to stable stop ids instead of drifting with row order,
 - the text-assist boundary is now split the way this workstream wanted it to be:
@@ -240,11 +249,11 @@ Current checkpoint:
   now keep popup geometry and chrome reviewable without reopening the full proof surface manually,
 - and the remaining foundation cleanup is now mostly about promoting the next layer above that
   baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
-  move further into shared kit policy, alongside richer password/history integrations, targeted
-  `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and final cleanup for
-  the remaining non-empty proof-local status/readout density plus dense-preset lane calibration now
-  that the worst wide-inspector slack, trailing idle-lane waste, and idle proof-row height have
-  all been pulled back.
+  move further into shared kit policy, alongside richer password/history integrations, a decision
+  on whether the new app-local `PreserveDraft` notes surface should stay app-owned until a second
+  declarative consumer appears, and final cleanup for the remaining non-empty proof-local
+  status/readout density plus dense-preset lane calibration now that the worst wide-inspector
+  slack, trailing idle-lane waste, and idle proof-row height have all been pulled back.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.

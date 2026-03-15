@@ -28,6 +28,7 @@ use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id, editor_icon_segment,
     editor_joined_input_frame_segments_with_overrides, editor_text_segment,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
     numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
@@ -223,8 +224,11 @@ where
         let error_display = options.error_display;
         let selection_behavior = options.selection_behavior;
         let focus_target = self.focus_target.clone();
-        let prefix = options.prefix.clone();
-        let suffix = options.suffix.clone();
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            current_text.as_ref(),
+            options.prefix.clone(),
+            options.suffix.clone(),
+        );
         let input_test_id = derived_test_id(options.test_id.as_ref(), "input");
         let prefix_test_id = derived_test_id(options.test_id.as_ref(), "prefix");
         let suffix_test_id = derived_test_id(options.test_id.as_ref(), "suffix");
