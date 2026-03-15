@@ -39,6 +39,29 @@ pub enum AssetLocatorKind {
     Url,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AssetBundleNamespace {
+    App,
+    Package,
+}
+
+impl AssetBundleNamespace {
+    pub fn as_prefix(self) -> &'static str {
+        match self {
+            Self::App => "app",
+            Self::Package => "pkg",
+        }
+    }
+
+    pub fn from_prefix(value: &str) -> Option<Self> {
+        match value {
+            "app" => Some(Self::App),
+            "pkg" => Some(Self::Package),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AssetBundleId(SmolStr);
 
@@ -47,8 +70,37 @@ impl AssetBundleId {
         Self(value.into())
     }
 
+    pub fn app(name: impl Into<SmolStr>) -> Self {
+        Self::scoped(AssetBundleNamespace::App, name)
+    }
+
+    pub fn package(name: impl Into<SmolStr>) -> Self {
+        Self::scoped(AssetBundleNamespace::Package, name)
+    }
+
     pub fn as_str(&self) -> &str {
         self.0.as_str()
+    }
+
+    pub fn namespace(&self) -> Option<AssetBundleNamespace> {
+        let (prefix, _) = self.as_str().split_once(':')?;
+        AssetBundleNamespace::from_prefix(prefix)
+    }
+
+    pub fn local_name(&self) -> &str {
+        self.as_str()
+            .split_once(':')
+            .map(|(_, name)| name)
+            .unwrap_or_else(|| self.as_str())
+    }
+
+    pub fn is_scoped(&self) -> bool {
+        self.namespace().is_some()
+    }
+
+    fn scoped(namespace: AssetBundleNamespace, name: impl Into<SmolStr>) -> Self {
+        let name = name.into();
+        Self(format!("{}:{}", namespace.as_prefix(), name).into())
     }
 }
 
@@ -68,6 +120,26 @@ impl From<SmolStr> for AssetBundleId {
     fn from(value: SmolStr) -> Self {
         Self::new(value)
     }
+}
+
+#[macro_export]
+macro_rules! asset_app_bundle_id {
+    () => {
+        $crate::AssetBundleId::app(env!("CARGO_PKG_NAME"))
+    };
+    ($name:expr) => {
+        $crate::AssetBundleId::app($name)
+    };
+}
+
+#[macro_export]
+macro_rules! asset_package_bundle_id {
+    () => {
+        $crate::AssetBundleId::package(env!("CARGO_PKG_NAME"))
+    };
+    ($name:expr) => {
+        $crate::AssetBundleId::package($name)
+    };
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -561,6 +633,44 @@ pub enum AssetLoadError {
 mod tests {
     use super::*;
 
+    fn app_bundle() -> AssetBundleId {
+        AssetBundleId::app("demo-app")
+    }
+
+    fn package_bundle() -> AssetBundleId {
+        AssetBundleId::package("fret-ui-shadcn")
+    }
+
+    #[test]
+    fn bundle_id_scoped_helpers_encode_namespace() {
+        let app = AssetBundleId::app("demo-app");
+        let pkg = AssetBundleId::package("fret-ui-shadcn");
+        let opaque = AssetBundleId::new("legacy-assets");
+
+        assert_eq!(app.as_str(), "app:demo-app");
+        assert_eq!(app.namespace(), Some(AssetBundleNamespace::App));
+        assert_eq!(app.local_name(), "demo-app");
+        assert!(app.is_scoped());
+
+        assert_eq!(pkg.as_str(), "pkg:fret-ui-shadcn");
+        assert_eq!(pkg.namespace(), Some(AssetBundleNamespace::Package));
+        assert_eq!(pkg.local_name(), "fret-ui-shadcn");
+        assert!(pkg.is_scoped());
+
+        assert_eq!(opaque.namespace(), None);
+        assert_eq!(opaque.local_name(), "legacy-assets");
+        assert!(!opaque.is_scoped());
+    }
+
+    #[test]
+    fn bundle_id_macros_default_to_current_package_name() {
+        let app = asset_app_bundle_id!();
+        let pkg = asset_package_bundle_id!();
+
+        assert_eq!(app, AssetBundleId::app(env!("CARGO_PKG_NAME")));
+        assert_eq!(pkg, AssetBundleId::package(env!("CARGO_PKG_NAME")));
+    }
+
     #[test]
     fn locator_kind_matches_variant() {
         assert_eq!(
@@ -568,11 +678,11 @@ mod tests {
             AssetLocatorKind::Memory
         );
         assert_eq!(
-            AssetLocator::embedded("fret-ui-shadcn", "icons/search.svg").kind(),
+            AssetLocator::embedded(package_bundle(), "icons/search.svg").kind(),
             AssetLocatorKind::Embedded
         );
         assert_eq!(
-            AssetLocator::bundle("app", "images/logo.png").kind(),
+            AssetLocator::bundle(app_bundle(), "images/logo.png").kind(),
             AssetLocatorKind::BundleAsset
         );
         assert_eq!(
@@ -597,15 +707,18 @@ mod tests {
             system_font_scan: false,
         };
 
-        assert!(caps.supports(&AssetLocator::bundle("app", "images/logo.png")));
-        assert!(caps.supports(&AssetLocator::embedded("ui-kit", "icons/close.svg")));
+        assert!(caps.supports(&AssetLocator::bundle(app_bundle(), "images/logo.png")));
+        assert!(caps.supports(&AssetLocator::embedded(
+            AssetBundleId::package("ui-kit"),
+            "icons/close.svg"
+        )));
         assert!(!caps.supports(&AssetLocator::file("assets/logo.png")));
     }
 
     #[test]
     fn resolved_asset_bytes_can_attach_media_type() {
         let resolved = ResolvedAssetBytes::new(
-            AssetLocator::bundle("app", "images/logo.png"),
+            AssetLocator::bundle(app_bundle(), "images/logo.png"),
             AssetRevision(7),
             Arc::<[u8]>::from([1u8, 2, 3]),
         )
@@ -651,11 +764,11 @@ mod tests {
         let resolver = TestResolver;
         let dyn_resolver: &dyn AssetResolver = &resolver;
 
-        assert!(dyn_resolver.supports(&AssetLocator::bundle("app", "images/logo.png")));
+        assert!(dyn_resolver.supports(&AssetLocator::bundle(app_bundle(), "images/logo.png")));
         assert!(!dyn_resolver.supports(&AssetLocator::file("assets/logo.png")));
 
         let resolved = dyn_resolver
-            .resolve_locator_bytes(AssetLocator::bundle("app", "images/logo.png"))
+            .resolve_locator_bytes(AssetLocator::bundle(app_bundle(), "images/logo.png"))
             .expect("bundle asset should resolve");
         assert_eq!(resolved.revision, AssetRevision(1));
         assert_eq!(resolved.bytes.as_ref(), &[9, 8, 7]);
@@ -664,19 +777,24 @@ mod tests {
     #[test]
     fn in_memory_asset_resolver_resolves_bundle_and_embedded_assets() {
         let mut resolver = InMemoryAssetResolver::new();
-        resolver.insert_bundle("app", "images/logo.png", AssetRevision(5), [1u8, 2, 3]);
+        resolver.insert_bundle(
+            app_bundle(),
+            "images/logo.png",
+            AssetRevision(5),
+            [1u8, 2, 3],
+        );
         resolver.insert_embedded(
-            "fret-ui-shadcn",
+            package_bundle(),
             "icons/search.svg",
             AssetRevision(9),
             [4u8, 5, 6],
         );
 
         let bundle = resolver
-            .resolve_locator_bytes(AssetLocator::bundle("app", "images/logo.png"))
+            .resolve_locator_bytes(AssetLocator::bundle(app_bundle(), "images/logo.png"))
             .expect("bundle asset should resolve");
         let embedded = resolver
-            .resolve_locator_bytes(AssetLocator::embedded("fret-ui-shadcn", "icons/search.svg"))
+            .resolve_locator_bytes(AssetLocator::embedded(package_bundle(), "icons/search.svg"))
             .expect("embedded asset should resolve");
 
         assert_eq!(bundle.revision, AssetRevision(5));
@@ -689,7 +807,7 @@ mod tests {
     fn static_asset_entries_support_media_type_and_bulk_registration() {
         let mut resolver = InMemoryAssetResolver::new();
         resolver.insert_bundle_entries(
-            "app",
+            app_bundle(),
             [
                 StaticAssetEntry::new("images/logo.png", AssetRevision(3), b"png-bytes")
                     .with_media_type("image/png"),
@@ -702,7 +820,7 @@ mod tests {
             ],
         );
         resolver.insert_embedded_entries(
-            "fret-ui-shadcn",
+            package_bundle(),
             [
                 StaticAssetEntry::new("fonts/ui-sans.ttf", AssetRevision(8), b"font-bytes")
                     .with_media_type("font/ttf"),
@@ -710,14 +828,14 @@ mod tests {
         );
 
         let bundle = resolver
-            .resolve_locator_bytes(AssetLocator::bundle("app", "images/logo.png"))
+            .resolve_locator_bytes(AssetLocator::bundle(app_bundle(), "images/logo.png"))
             .expect("bundle asset should resolve");
         let svg = resolver
-            .resolve_locator_bytes(AssetLocator::bundle("app", "icons/search.svg"))
+            .resolve_locator_bytes(AssetLocator::bundle(app_bundle(), "icons/search.svg"))
             .expect("svg asset should resolve");
         let embedded = resolver
             .resolve_locator_bytes(AssetLocator::embedded(
-                "fret-ui-shadcn",
+                package_bundle(),
                 "fonts/ui-sans.ttf",
             ))
             .expect("embedded asset should resolve");

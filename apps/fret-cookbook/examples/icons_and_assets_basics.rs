@@ -1,7 +1,7 @@
 use fret::{
     FretApp,
     advanced::prelude::*,
-    assets::{self, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry},
+    assets::{self, AssetBundleId, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry},
     shadcn,
 };
 use fret_core::{ImageColorSpace, ImageId};
@@ -16,11 +16,14 @@ const TEST_ID_PANEL_IMAGE: &str = "cookbook.icons_and_assets_basics.panel.image"
 const TEST_ID_IMAGE_STATUS: &str = "cookbook.icons_and_assets_basics.image.status";
 const TEST_ID_SVG_STATUS: &str = "cookbook.icons_and_assets_basics.svg.status";
 
-const COOKBOOK_ASSET_BUNDLE: &str = "cookbook.demo_assets";
 const COOKBOOK_IMAGE_KEY: &str = "images/test.jpg";
 const COOKBOOK_SVG_KEY: &str = "icons/search.svg";
 const COOKBOOK_IMAGE_BYTES: &[u8] = include_bytes!("../../../assets/textures/test.jpg");
 const COOKBOOK_SVG_BYTES: &[u8] = include_bytes!("../../../assets/demo/icon-search.svg");
+
+fn cookbook_asset_bundle() -> AssetBundleId {
+    AssetBundleId::app("fret-cookbook")
+}
 
 fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
     let mut out = vec![0u8; (width * height * 4) as usize];
@@ -77,7 +80,7 @@ fn render_image_preview(
 fn install_demo_asset_resolver(app: &mut KernelApp) {
     assets::register_bundle_entries(
         app,
-        COOKBOOK_ASSET_BUNDLE,
+        cookbook_asset_bundle(),
         [
             StaticAssetEntry::new(COOKBOOK_IMAGE_KEY, AssetRevision(1), COOKBOOK_IMAGE_BYTES)
                 .with_media_type("image/jpeg"),
@@ -110,7 +113,7 @@ impl View for IconsAndAssetsBasicsView {
 
         let bundle_image = fret_ui_assets::resolve_image_source_from_host_locator(
             app,
-            AssetLocator::bundle(COOKBOOK_ASSET_BUNDLE, COOKBOOK_IMAGE_KEY),
+            AssetLocator::bundle(cookbook_asset_bundle(), COOKBOOK_IMAGE_KEY),
         )
         .expect("cookbook bundle image should resolve");
         let memory_image = fret_ui_assets::ImageSource::rgba8(
@@ -120,7 +123,7 @@ impl View for IconsAndAssetsBasicsView {
             ImageColorSpace::Srgb,
         );
         let svg_request = AssetRequest::new(AssetLocator::bundle(
-            COOKBOOK_ASSET_BUNDLE,
+            cookbook_asset_bundle(),
             COOKBOOK_SVG_KEY,
         ));
 

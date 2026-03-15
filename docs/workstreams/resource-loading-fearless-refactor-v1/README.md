@@ -55,6 +55,9 @@ This workstream takes a fearless posture:
     directly,
   - bundle/embedded registration now has an app-facing authoring lane
     (`register_bundle_entries(...)`, `register_embedded_entries(...)`).
+  - structured bundle ids now have first-party constructors:
+    - `AssetBundleId::app(...)`
+    - `AssetBundleId::package(...)`
 - A first native/package-dev manifest resolver now exists:
   - `crates/fret-assets/src/file_manifest.rs` defines a file-backed bundle manifest format and
     resolver,
@@ -245,6 +248,14 @@ Important rule:
 
 The portable identity should be “bundle + key”, not “current working directory + relative path”.
 
+The bundle side should not stay an unstructured global string forever. The recommended direction is
+to namespace it explicitly:
+
+- app-owned bundles:
+  - `AssetBundleId::app(...)`
+- ecosystem/package-owned bundles:
+  - `AssetBundleId::package(...)`
+
 Examples of what this enables:
 
 - an app bundle can ship `textures/test.jpg`,
@@ -320,9 +331,10 @@ Recommended golden-path authoring should look like logical asset selection, not 
 Representative examples:
 
 ```rust
-let photo = ImageAsset::bundle("app", "photos/avatar.png");
-let icon = SvgAsset::bundle("app", "icons/search.svg");
-let font = FontAsset::bundle("app", "fonts/InterVariable.ttf");
+let app_assets = AssetBundleId::app("my-app");
+let photo = ImageAsset::bundle(app_assets.clone(), "photos/avatar.png");
+let icon = SvgAsset::bundle(app_assets.clone(), "icons/search.svg");
+let font = FontAsset::bundle(app_assets, "fonts/InterVariable.ttf");
 ```
 
 Escape hatches should stay explicit:

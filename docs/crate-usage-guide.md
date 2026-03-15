@@ -132,9 +132,9 @@ them intentionally from `fret::style::{...}` and `fret::icons::IconId`.
 Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
 instead of treating breakpoint/media helpers as part of the default app vocabulary.
 Do the same for logical assets: import them intentionally from `fret::assets::{...}`, prefer
-`AssetLocator::bundle(...)` plus `register_bundle_entries(...)` as the portable default story, and
-keep `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape
-hatches.
+`AssetBundleId::app(...)` / `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` and
+`register_bundle_entries(...)` as the portable default story, and keep
+`AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape hatches.
 On native/package-dev lanes, `fret::assets::register_file_manifest(...)` is the first-party
 file-backed manifest path when you need logical bundle keys to map to packaged or dev-time files
 without teaching raw repo-relative paths in app/widget code.

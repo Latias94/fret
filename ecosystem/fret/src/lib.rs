@@ -57,10 +57,11 @@
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
-//! - use `fret::assets::{AssetLocator, AssetRequest, StaticAssetEntry, register_bundle_entries, ...}`
-//!   for logical bundle/embedded assets; on native/package-dev lanes you can also mount a
-//!   file-backed bundle manifest via `register_file_manifest(...)`; treat `AssetLocator::file(...)`
-//!   and `AssetLocator::url(...)` as capability-gated escape hatches
+//! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
+//!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
+//!   `AssetBundleId::package(...)` over raw global strings; on native/package-dev lanes you can
+//!   also mount a file-backed bundle manifest via `register_file_manifest(...)`; treat
+//!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
 //!   curated default design-system surface; advanced environment / `UiServices` hooks stay on
 //!   `fret::shadcn::raw::advanced::*`
@@ -112,7 +113,8 @@ pub mod env {
 
 /// Explicit logical asset-contract vocabulary and host registration helpers for app code.
 ///
-/// The portable default story is bundle/embedded locators. Native/package-dev builds can also
+/// The portable default story is bundle/embedded locators. Prefer `AssetBundleId::app(...)` and
+/// `AssetBundleId::package(...)` over ad-hoc global strings. Native/package-dev builds can also
 /// mount file-backed manifests without leaking raw paths into widget code. Raw files and URLs stay
 /// explicit, capability-gated escape hatches.
 pub mod assets {
@@ -121,10 +123,11 @@ pub mod assets {
     #[cfg(not(target_arch = "wasm32"))]
     pub use fret_assets::FileAssetManifestResolver;
     pub use fret_assets::{
-        AssetBundleId, AssetCapabilities, AssetKey, AssetKindHint, AssetLoadError, AssetLocator,
-        AssetLocatorKind, AssetManifestLoadError, AssetMediaType, AssetMemoryKey, AssetRequest,
-        AssetResolver, AssetRevision, FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1,
-        FileAssetManifestEntryV1, FileAssetManifestV1, ResolvedAssetBytes, StaticAssetEntry,
+        AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetKey, AssetKindHint,
+        AssetLoadError, AssetLocator, AssetLocatorKind, AssetManifestLoadError, AssetMediaType,
+        AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision, FILE_ASSET_MANIFEST_KIND_V1,
+        FileAssetManifestBundleV1, FileAssetManifestEntryV1, FileAssetManifestV1,
+        ResolvedAssetBytes, StaticAssetEntry, asset_app_bundle_id, asset_package_bundle_id,
     };
     pub use fret_runtime::AssetResolverService;
 
@@ -1638,6 +1641,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`fret::icons::IconId`"));
         assert!(CRATE_README.contains("`fret::env::{...}`"));
         assert!(CRATE_README.contains("`fret::assets::{...}`"));
+        assert!(CRATE_README.contains("`AssetBundleId::app(...)`"));
+        assert!(CRATE_README.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_README.contains("`AssetLocator::bundle(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
         assert!(!CRATE_README.contains(".run_view::<"));
@@ -1777,6 +1782,8 @@ mod authoring_surface_policy_tests {
     #[test]
     fn readme_and_rustdoc_expose_explicit_assets_surface() {
         assert!(CRATE_README.contains("`fret::assets::{...}`"));
+        assert!(CRATE_README.contains("`AssetBundleId::app(...)`"));
+        assert!(CRATE_README.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_README.contains("`AssetLocator::bundle(...)`"));
         assert!(CRATE_README.contains("`register_bundle_entries(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
@@ -1784,8 +1791,10 @@ mod authoring_surface_policy_tests {
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains(
-            "`fret::assets::{AssetLocator, AssetRequest, StaticAssetEntry, register_bundle_entries, ...}`"
+            "`fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`"
         ));
+        assert!(rustdoc.contains("`AssetBundleId::app(...)`"));
+        assert!(rustdoc.contains("`AssetBundleId::package(...)`"));
         assert!(rustdoc.contains("`register_file_manifest(...)`"));
         assert!(rustdoc.contains("`AssetLocator::file(...)`"));
         assert!(rustdoc.contains("`AssetLocator::url(...)`"));
@@ -1866,6 +1875,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::IconId`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AssetBundleId::app(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetLocator::bundle(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`register_bundle_entries(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_manifest(...)`"));
@@ -2240,14 +2251,18 @@ mod authoring_surface_policy_tests {
 
         assert!(root_header.contains("pub mod assets {"));
         assert!(root_header.contains("pub use fret_assets::{"));
-        assert!(root_header.contains("AssetBundleId, AssetCapabilities, AssetKey, AssetKindHint"));
+        assert!(root_header.contains(
+            "AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetKey, AssetKindHint"
+        ));
         assert!(root_header.contains("AssetLoadError, AssetLocator,"));
-        assert!(root_header.contains("AssetManifestLoadError, AssetMediaType, AssetMemoryKey"));
+        assert!(root_header.contains("AssetManifestLoadError, AssetMediaType,"));
+        assert!(root_header.contains("AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision"));
         assert!(root_header.contains("AssetRequest,"));
         assert!(root_header.contains("AssetResolver, AssetRevision, FILE_ASSET_MANIFEST_KIND_V1"));
         assert!(root_header.contains("FileAssetManifestBundleV1,"));
         assert!(root_header.contains("FileAssetManifestEntryV1, FileAssetManifestV1"));
-        assert!(root_header.contains("ResolvedAssetBytes, StaticAssetEntry,"));
+        assert!(root_header.contains("ResolvedAssetBytes, StaticAssetEntry, asset_app_bundle_id,"));
+        assert!(root_header.contains("asset_package_bundle_id,"));
         assert!(root_header.contains("pub use fret_runtime::AssetResolverService;"));
         assert!(root_header.contains("pub use fret_assets::FileAssetManifestResolver;"));
         assert!(root_header.contains("pub fn set_primary_resolver("));
@@ -2334,6 +2349,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("Edges4"));
         assert!(!app_prelude_exports_symbol("ViewportOrientation"));
         assert!(!app_prelude_exports_symbol("AssetBundleId"));
+        assert!(!app_prelude_exports_symbol("AssetBundleNamespace"));
         assert!(!app_prelude_exports_symbol("AssetCapabilities"));
         assert!(!app_prelude_exports_symbol("AssetKey"));
         assert!(!app_prelude_exports_symbol("AssetLocator"));

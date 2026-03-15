@@ -321,10 +321,14 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     use std::time::{SystemTime, UNIX_EPOCH};
 
+    fn app_bundle() -> AssetBundleId {
+        AssetBundleId::app("demo-app")
+    }
+
     #[test]
     fn manifest_validation_rejects_duplicate_bundle_keys() {
         let manifest = FileAssetManifestV1::new([FileAssetManifestBundleV1::new(
-            "app",
+            app_bundle(),
             [
                 FileAssetManifestEntryV1::new("images/logo.png"),
                 FileAssetManifestEntryV1::new("images/logo.png"),
@@ -340,7 +344,7 @@ mod tests {
     #[test]
     fn manifest_entries_default_to_key_as_file_path() {
         let manifest = FileAssetManifestV1::new([FileAssetManifestBundleV1::new(
-            "app",
+            app_bundle(),
             [FileAssetManifestEntryV1::new("images/logo.png")],
         )
         .with_root("assets")]);
@@ -362,7 +366,7 @@ mod tests {
         std::fs::write(&logo_path, b"hello-manifest").expect("write asset file");
 
         let manifest = FileAssetManifestV1::new([FileAssetManifestBundleV1::new(
-            "app",
+            app_bundle(),
             [FileAssetManifestEntryV1::new("images/logo.png")
                 .with_path("images/logo.txt")
                 .with_media_type("text/plain")],
@@ -379,7 +383,7 @@ mod tests {
             .expect("manifest resolver should load");
         let resolved = resolver
             .resolve_bytes(&AssetRequest::new(AssetLocator::bundle(
-                "app",
+                app_bundle(),
                 "images/logo.png",
             )))
             .expect("bundle asset should resolve");
@@ -403,7 +407,7 @@ mod tests {
         std::fs::write(&icon_path, br#"<svg></svg>"#).expect("write icon file");
 
         let manifest = FileAssetManifestV1::new([FileAssetManifestBundleV1::new(
-            "app",
+            app_bundle(),
             [FileAssetManifestEntryV1::new("icons/search.svg").with_media_type("image/svg+xml")],
         )
         .with_root("assets")]);
@@ -416,7 +420,7 @@ mod tests {
 
         let resolved = resolver
             .resolve_bytes(&AssetRequest::new(AssetLocator::bundle(
-                "app",
+                app_bundle(),
                 "icons/search.svg",
             )))
             .expect("bundle asset should resolve");

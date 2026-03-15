@@ -78,11 +78,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - structured diagnostics surface
     - non-UI first-party resolver implementations
 
-- [ ] RESLOAD-core-120 Decide the authoritative bundle identity model.
+- [~] RESLOAD-core-120 Decide the authoritative bundle identity model.
   - Required outcomes:
     - app bundle story,
     - ecosystem/library bundle story,
     - no collision-prone global string soup.
+  - Current landed slice:
+    - `AssetBundleId::app(...)`
+    - `AssetBundleId::package(...)`
+    - `asset_app_bundle_id!()` / `asset_package_bundle_id!()` for caller-package defaults
+  - Remaining:
+    - final deprecation/removal posture for opaque legacy bundle strings
+    - generated manifest/tooling defaults that pick app vs package ownership automatically
 
 ## Packaging and startup
 
