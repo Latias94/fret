@@ -2,12 +2,14 @@ use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
 use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 mod act {
     fret::actions!([BumpReload = "cookbook.assets_reload_epoch_basics.bump_reload.v1"]);
 }
 
+const APP_ID: &str = "cookbook-assets-reload-epoch-basics";
+const IMAGE_KEY: &str = "textures/test.jpg";
+const SVG_KEY: &str = "demo/icon-search.svg";
 const TEST_ID_ROOT: &str = "cookbook.assets_reload_epoch_basics.root";
 const TEST_ID_BUMP_RELOAD: &str = "cookbook.assets_reload_epoch_basics.bump_reload";
 const TEST_ID_IMAGE_STATUS: &str = "cookbook.assets_reload_epoch_basics.image.status";
@@ -21,15 +23,19 @@ fn repo_root_from_manifest_dir() -> PathBuf {
         .join("..")
 }
 
-fn repo_path(rel: &str) -> Arc<PathBuf> {
-    Arc::new(repo_root_from_manifest_dir().join(rel))
+fn assets_dir_from_manifest_dir() -> PathBuf {
+    repo_root_from_manifest_dir().join("assets")
+}
+
+fn demo_app_bundle() -> fret::assets::AssetBundleId {
+    fret::assets::AssetBundleId::app(APP_ID)
 }
 
 struct AssetsReloadEpochBasicsView {
     window: AppWindowId,
     applied_bumps: u64,
-    file_image: fret_ui_assets::ImageSource,
-    svg_file: fret_ui_assets::SvgFileSource,
+    image_source: fret_ui_assets::ImageSource,
+    svg_source: fret_ui_assets::SvgFileSource,
 }
 
 impl View for AssetsReloadEpochBasicsView {
@@ -37,16 +43,22 @@ impl View for AssetsReloadEpochBasicsView {
         // Optional: configure budgets explicitly so this example is self-contained.
         fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
 
-        let file_image =
-            fret_ui_assets::ImageSource::from_file_path(repo_path("assets/textures/test.jpg"));
-        let svg_file =
-            fret_ui_assets::SvgFileSource::from_file_path(repo_path("assets/demo/icon-search.svg"));
+        let image_source = fret_ui_assets::resolve_image_source_from_host_locator(
+            app,
+            fret::assets::AssetLocator::bundle(demo_app_bundle(), IMAGE_KEY),
+        )
+        .expect("builder-mounted image bundle asset should resolve");
+        let svg_source = fret_ui_assets::resolve_svg_file_source_from_host_locator(
+            app,
+            fret::assets::AssetLocator::bundle(demo_app_bundle(), SVG_KEY),
+        )
+        .expect("builder-mounted svg bundle asset should resolve to a native file source");
 
         Self {
             window,
             applied_bumps: 0,
-            file_image,
-            svg_file,
+            image_source,
+            svg_source,
         }
     }
 
@@ -85,7 +97,7 @@ impl View for AssetsReloadEpochBasicsView {
                 shadcn::Badge::new(format!("epoch: {epoch}"))
                     .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new(
-                    "Native/dev escape hatch: edit files under `assets/`, then click reload.",
+                    "Native/package-dev bridge: edit files under `assets/`, then click reload.",
                 )
                     .variant(shadcn::BadgeVariant::Secondary),
             ]
@@ -93,12 +105,12 @@ impl View for AssetsReloadEpochBasicsView {
         .gap(Space::N2)
         .items_center();
 
-        let file_image_state = cx.use_image_source_state(&self.file_image);
+        let file_image_state = cx.use_image_source_state(&self.image_source);
         let image_panel = render_image_panel(cx, &theme, file_image_state);
 
         // SVG file loading is synchronous (cached) so we can surface useful error strings directly.
         cx.observe_global::<fret_ui_assets::UiAssetsReloadEpoch>(Invalidation::Paint);
-        let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &self.svg_file);
+        let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &self.svg_source);
         let svg_panel = render_svg_panel(cx, &theme, svg_file_state);
 
         let images = fret_ui_assets::UiAssets::image_stats(&mut *cx.app);
@@ -131,7 +143,7 @@ impl View for AssetsReloadEpochBasicsView {
                     ui::children![cx;
                         shadcn::card_title("Assets reload epoch basics"),
                         shadcn::card_description(
-                            "Demonstrates the native/dev file-path escape hatch: load a file image + SVG icon and trigger a ViewCache-safe dev reload by bumping UiAssetsReloadEpoch. Portable apps should prefer bundle locators plus a host-installed asset resolver.",
+                            "Demonstrates the native/package-dev bundle-dir lane: mount `assets/` with `FretApp::asset_dir(...)`, resolve logical bundle locators into image/SVG sources, and trigger a ViewCache-safe reload by bumping `UiAssetsReloadEpoch`.",
                         ),
                     ]
                 }),
@@ -187,7 +199,7 @@ fn render_image_panel(
             cx,
             ui::h_flex(|cx| {
                 ui::children![cx;
-                    shadcn::Label::new("Native file image status:"),
+                    shadcn::Label::new("Bundle image status:"),
                     shadcn::Badge::new(status)
                         .variant(shadcn::BadgeVariant::Secondary)
                         .test_id(TEST_ID_IMAGE_STATUS),
@@ -214,9 +226,9 @@ fn render_image_panel(
         ui::children![cx;
             shadcn::card_header(|cx| {
                 ui::children![cx;
-                    shadcn::card_title("Image from native file path"),
+                    shadcn::card_title("Image from logical bundle locator"),
                     shadcn::card_description(
-                        "Loads `assets/textures/test.jpg` via the native/dev file-path escape hatch on top of ImageSource + ImageAssetCache (async decode, cached upload).",
+                        "Loads `textures/test.jpg` from the default app bundle mounted by `FretApp::asset_dir(...)`; on native/package-dev lanes the resolver bridges that logical locator back to a file reference for `ImageSource` + `ImageAssetCache`.",
                     ),
                 ]
             }),
@@ -276,7 +288,7 @@ fn render_svg_panel(
         ui::children![cx;
             ui::h_flex(|cx| {
                 ui::children![cx;
-                    shadcn::Label::new("SVG status:"),
+                    shadcn::Label::new("Bundle SVG status:"),
                     shadcn::Badge::new(status)
                         .variant(shadcn::BadgeVariant::Secondary)
                         .test_id(TEST_ID_SVG_STATUS),
@@ -294,9 +306,9 @@ fn render_svg_panel(
         ui::children![cx;
             shadcn::card_header(|cx| {
                 ui::children![cx;
-                    shadcn::card_title("SVG icon from native file path"),
+                    shadcn::card_title("SVG icon from logical bundle locator"),
                     shadcn::card_description(
-                        "Loads `assets/demo/icon-search.svg` via the native/dev file-path escape hatch with SvgFileSource + UiAssetsReloadEpoch.",
+                        "Loads `demo/icon-search.svg` from the default app bundle mounted by `FretApp::asset_dir(...)`; on native/package-dev lanes the resolver bridges that logical locator into `SvgFileSource` for cached reloadable file reads.",
                     ),
                 ]
             }),
@@ -308,9 +320,10 @@ fn render_svg_panel(
 }
 
 fn main() -> anyhow::Result<()> {
-    FretApp::new("cookbook-assets-reload-epoch-basics")
-        .window("cookbook-assets-reload-epoch-basics", (960.0, 780.0))
+    FretApp::new(APP_ID)
+        .window(APP_ID, (960.0, 780.0))
         .config_files(false)
+        .asset_dir(assets_dir_from_manifest_dir())
         .setup(fret_cookbook::install_cookbook_defaults)
         .view::<AssetsReloadEpochBasicsView>()?
         .run()

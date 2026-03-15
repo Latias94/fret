@@ -67,7 +67,11 @@
 //!   `UiAppBuilder::with_asset_dir(...)`, or `register_file_bundle_dir(...)`; use
 //!   `FretApp::asset_manifest(...)`, `UiAppBuilder::with_asset_manifest(...)`, or
 //!   `register_file_manifest(...)` when tooling already emits an explicit manifest artifact; treat
-//!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches
+//!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches;
+//!   when native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
+//!   logical bundle locators and let `fret-ui-assets::resolve_image_source_from_host_locator(...)`
+//!   or native `fret-ui-assets::resolve_svg_file_source_from_host_locator(...)` consume the
+//!   resolver's external-reference handoff instead of constructing raw file-path sources directly
 //! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
 //!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
@@ -2338,6 +2342,13 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`FretApp::asset_manifest(...)`"));
         assert!(CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(
+            CRATE_README.contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`")
+        );
+        assert!(
+            CRATE_README
+                .contains("`fret-ui-assets::resolve_svg_file_source_from_host_locator(...)`")
+        );
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
@@ -2354,6 +2365,10 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("`register_file_manifest(...)`"));
         assert!(rustdoc.contains("`AssetLocator::file(...)`"));
         assert!(rustdoc.contains("`AssetLocator::url(...)`"));
+        assert!(rustdoc.contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`"));
+        assert!(
+            rustdoc.contains("`fret-ui-assets::resolve_svg_file_source_from_host_locator(...)`")
+        );
         assert!(public_surface.contains("pub mod assets {"));
         assert!(!public_surface.contains("pub use fret_runtime::register_bundle_asset_entries;"));
     }
@@ -2461,6 +2476,14 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`")
+        );
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`fret-ui-assets::resolve_svg_file_source_from_host_locator(...)`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>(cx)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(cx, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(cx, |host, acx| { ... })`"));

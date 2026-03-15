@@ -138,6 +138,11 @@ On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is th
 lane that scans one directory into one logical bundle without pushing repo-relative paths into
 widget code. `fret::assets::register_file_manifest(...)` is the explicit manifest-artifact lane
 when tooling already emits a reviewable/packageable mapping.
+When native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
+logical bundle locators and let `fret-ui-assets::resolve_image_source_from_host_locator(...)` or
+native `fret-ui-assets::resolve_svg_file_source_from_host_locator(...)` consume the resolver's
+external-reference handoff instead of constructing `ImageSource::from_file_path(...)` /
+`SvgFileSource::from_file_path(...)` directly.
 On the app-facing builder path, prefer `FretApp::asset_dir(...)` /
 `UiAppBuilder::with_asset_dir(...)` for the generated-manifest convenience lane, or
 `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have an
