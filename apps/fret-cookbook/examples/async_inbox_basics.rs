@@ -7,6 +7,10 @@ use std::{
 };
 
 use fret::app::prelude::*;
+use fret::{
+    icons::IconId,
+    style::{Size, Space},
+};
 use fret_executor::{
     BackgroundTask, CancellationToken, Executors, Inbox, InboxConfig, InboxDrainer,
 };

@@ -144,18 +144,28 @@ Priority correction on 2026-03-15:
     `on_activate_request_redraw`, and `on_activate_request_redraw_notify` free-function exports
     from `fret::app::prelude::*`; the default app lane now teaches widget-local
     `.on_activate(cx.actions().dispatch::<A>())` / `.listener(...)` instead.
+  - [x] Second batch on 2026-03-15: move high-frequency icon/style nouns off
+    `fret::app::prelude::*` into explicit `fret::icons::IconId` and `fret::style::{Theme,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space}`
+    lanes, then migrate first-party cookbook/examples/templates/readmes to those explicit imports.
   - Minimum audit set:
-    - broad styling/layout patch traits and types that primarily serve reusable component authors,
+    - remaining broad declarative helper families in the app prelude that may still blur app vs
+      component authoring (`tailwind`, container/viewport query helpers, related environment
+      probes),
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
     - raw `on_activate*` helper exports that now compete with the grouped app-facing
       `cx.actions().dispatch/listener` story.
-    - remaining high-frequency style/token/theme nouns (`Space`, `Radius`, `LayoutRefinement`,
-      `Theme`, `ThemeSnapshot`, `IconId`) that may still justify app-lane presence but need an
-      explicit target decision rather than accidental overlap.
+    - any remaining app-prelude nouns that still belong better on explicit secondary lanes rather
+      than the default autocomplete surface.
   - Exit condition: the app prelude teaches the app nouns plus a small set of app-justified helper
     traits, while reusable component plumbing remains discoverable through the component lane.
-- [ ] Update crate-level docs to teach the new split.
+- [x] Update crate-level docs to teach the new split.
+  - README todo taste example now imports `Space` explicitly from `fret::style`.
+  - `ecosystem/fret/README.md` calls out `fret::style::{...}` / `fret::icons::IconId` as the
+    explicit secondary app lanes.
+  - `docs/crate-usage-guide.md` now teaches style/icon nouns as explicit imports rather than part
+    of `fret::app::prelude::*`.
 
 ## M2 — Reset the app authoring API
 

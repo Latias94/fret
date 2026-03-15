@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret::{FretApp, shadcn};
+use fret::{
+    FretApp,
+    icons::IconId,
+    shadcn,
+    style::{ChromeRefinement, ColorRef, Radius, Space, Theme},
+};
 use fret_core::Corners;
-use fret_icons::IconId;
 use fret_ui::element::TextProps;
 use fret_ui_kit::declarative::icon;
 

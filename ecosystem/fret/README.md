@@ -117,6 +117,10 @@ fn main() -> fret::Result<()> {
 }
 ```
 
+If app code needs explicit style/token nouns or icon IDs beyond the default lane, import them from
+`fret::style::{...}` and `fret::icons::IconId` instead of expecting them from
+`fret::app::prelude::*`.
+
 ## Features
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.

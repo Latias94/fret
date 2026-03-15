@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::style::{ColorRef, Space, Theme};
 use fret_ui::element::SemanticsDecoration;
 
 mod act {

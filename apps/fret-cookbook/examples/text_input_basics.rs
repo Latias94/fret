@@ -1,4 +1,5 @@
 use fret::app::prelude::*;
+use fret::style::Space;
 use fret_app::{CommandMeta, CommandScope};
 use fret_ui::{CommandAvailability, element::SemanticsDecoration};
 

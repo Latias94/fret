@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::{
+    icons::IconId,
+    style::{LayoutRefinement, Space, Theme},
+};
 use fret_runtime::Model;
 use fret_ui::{
     ScrollStrategy,

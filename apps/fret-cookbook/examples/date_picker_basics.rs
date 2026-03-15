@@ -1,4 +1,5 @@
 use fret::app::prelude::*;
+use fret::style::Space;
 use time::{Date, Month};
 
 const TEST_ID_ROOT: &str = "cookbook.date_picker_basics.root";

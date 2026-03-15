@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::style::Space;
 
 mod act {
     fret::payload_actions!([Remove(u64) = "cookbook.payload_actions.remove.v2"]);

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::style::Space;
 use fret_genui_core::catalog::CatalogActionV1;
 use fret_genui_core::render::{GenUiRuntime, RenderLimits, render_spec};
 use fret_genui_core::spec::SpecV1;

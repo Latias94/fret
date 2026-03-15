@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::{
+    icons::IconId,
+    style::{LayoutRefinement, MetricRef, Size, Space},
+};
 use fret_code_view::CodeBlockWrap;
 use fret_markdown as markdown;
 

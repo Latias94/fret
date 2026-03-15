@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::style::{LayoutRefinement, Space};
 use fret::router::{
     MemoryHistory, NavigationAction, PathPattern, RouteCodec, RouteHooks, RouteLocation, RouteNode,
     RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, RouterOutlet, RouterUiStore,

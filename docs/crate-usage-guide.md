@@ -127,6 +127,9 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. Use widget-local `.on_activate(cx.actions().dispatch::<A>())` / `.on_activate(cx.actions().listener(...))` only for activation-only surfaces. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `on_activate*` helper families as cookbook/reference-only host-side glue.
 
+When app code needs explicit styling or icon nouns, keep them off the default prelude and import
+them intentionally from `fret::style::{...}` and `fret::icons::IconId`.
+
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
 provides `ComponentCx`, `UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`, layout/style refinements,

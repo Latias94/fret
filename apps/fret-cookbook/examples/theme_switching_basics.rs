@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::style::{LayoutRefinement, Space};
 use fret_app::Effect;
 
 const TEST_ID_ROOT: &str = "cookbook.theme_switching_basics.root";

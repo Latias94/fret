@@ -144,6 +144,7 @@ This is the interface style we optimize for: typed state, typed actions, and sha
 
 ```rust
 use fret::app::prelude::*;
+use fret::style::Space;
 
 mod act {
     fret::actions!([Add = "app.todo.add.v1"]);

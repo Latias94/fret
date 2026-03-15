@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::app::prelude::*;
+use fret::style::Space;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_ui::CommandAvailability;
 

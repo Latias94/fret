@@ -76,6 +76,20 @@ pub use fret_ui_shadcn::facade as shadcn;
 /// Re-export portable action/command identity types for app code and macros.
 pub use fret_runtime::{ActionId, CommandId, TypedAction};
 
+/// Explicit icon identifiers for app and component code that opt into icon-specific authoring.
+pub mod icons {
+    pub use fret_icons::IconId;
+}
+
+/// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
+pub mod style {
+    pub use fret_ui::Theme;
+    pub use fret_ui_kit::{
+        ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size,
+        Space,
+    };
+}
+
 pub mod actions;
 pub mod view;
 pub mod workspace_menu;
@@ -235,9 +249,8 @@ pub mod app {
         pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
         pub use crate::{actions, workspace_menu};
         pub use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
-        pub use fret_icons::IconId;
         pub use fret_runtime::CommandId;
-        pub use fret_ui::{Theme, ThemeSnapshot};
+        pub use fret_ui::ThemeSnapshot;
         pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::StyledExt as _;
         pub use fret_ui_kit::UiExt as _;
@@ -262,10 +275,6 @@ pub mod app {
         };
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
-        pub use fret_ui_kit::{
-            ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size,
-            Space,
-        };
 
         #[cfg(feature = "state-query")]
         pub use fret_query::{CancellationToken, QueryError, QueryHandle, QueryKey, QueryPolicy};
@@ -1526,6 +1535,8 @@ mod authoring_surface_policy_tests {
             "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
         assert!(CRATE_README.contains("`state`: enable selector/query helpers on `AppUi`"));
+        assert!(CRATE_README.contains("`fret::style::{...}`"));
+        assert!(CRATE_README.contains("`fret::icons::IconId`"));
         assert!(!CRATE_README.contains(".run_view::<"));
         assert!(!CRATE_README.contains(".install_app("));
         assert!(!CRATE_README.contains("fret::FretApp::new(...).window(...).ui(...)?"));
@@ -1534,6 +1545,7 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn root_readme_and_golden_path_prefer_builder_then_run() {
+        assert!(ROOT_README.contains("use fret::style::Space;"));
         assert!(ROOT_README.contains(".view::<TodoView>()?"));
         assert!(ROOT_README.contains(".run()"));
         assert!(!ROOT_README.contains(".run_view::<"));
@@ -1727,6 +1739,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::IconId`"));
         assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().dispatch::<A>())`"));
         assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().listener(...))`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
@@ -1899,9 +1913,8 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("KernelApp"));
         assert!(app_prelude.contains("UiChild"));
         assert!(app_prelude.contains("WindowId"));
-        assert!(app_prelude.contains("pub use fret_icons::IconId;"));
         assert!(app_prelude.contains("pub use fret_runtime::CommandId;"));
-        assert!(app_prelude.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
+        assert!(app_prelude.contains("pub use fret_ui::ThemeSnapshot;"));
         assert!(app_prelude.contains("pub use fret_selector::{DepsSignature, ui::DepsBuilder};"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
@@ -1931,6 +1944,16 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("UiElementTestIdExt"));
         assert!(!app_prelude_exports_symbol("StyledExt"));
         assert!(!app_prelude_exports_symbol("UiExt"));
+        assert!(!app_prelude_exports_symbol("IconId"));
+        assert!(!app_prelude_exports_symbol("Theme"));
+        assert!(!app_prelude_exports_symbol("ChromeRefinement"));
+        assert!(!app_prelude_exports_symbol("ColorRef"));
+        assert!(!app_prelude_exports_symbol("LayoutRefinement"));
+        assert!(!app_prelude_exports_symbol("MetricRef"));
+        assert!(!app_prelude_exports_symbol("Radius"));
+        assert!(!app_prelude_exports_symbol("ShadowPreset"));
+        assert!(!app_prelude_exports_symbol("Size"));
+        assert!(!app_prelude_exports_symbol("Space"));
         assert!(!app_prelude_exports_symbol("on_activate"));
         assert!(!app_prelude_exports_symbol("on_activate_notify"));
         assert!(!app_prelude_exports_symbol("on_activate_request_redraw"));
@@ -2043,6 +2066,19 @@ mod authoring_surface_policy_tests {
         assert!(!APP_ENTRY_RS.contains("pub fn register_icon_pack("));
         assert!(!ui_app_builder.contains("pub fn register_icon_pack("));
         assert!(!ui_app_builder.contains("pub fn with_lucide_icons("));
+    }
+
+    #[test]
+    fn root_surface_exposes_explicit_style_and_icon_modules() {
+        let root_header = root_surface_header_source();
+
+        assert!(root_header.contains("pub mod icons {"));
+        assert!(root_header.contains("pub mod style {"));
+        assert!(root_header.contains("pub use fret_icons::IconId;"));
+        assert!(root_header.contains("pub use fret_ui::Theme;"));
+        assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
+        assert!(root_header.contains("Radius, ShadowPreset, Size,"));
+        assert!(root_header.contains("Space,"));
     }
 
     #[test]

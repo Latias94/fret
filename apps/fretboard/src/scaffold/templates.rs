@@ -242,6 +242,10 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
 use std::time::Duration;
 
 use fret::app::prelude::*;
+use fret::{
+    icons::IconId,
+    style::{ColorRef, Radius, Space, Theme},
+};
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus};
 
 mod act {
@@ -710,6 +714,7 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
 
     format!(
         r#"use fret::app::prelude::*;
+use fret::style::Space;
 
 mod act {{
     fret::actions!([Click = "{package_name}.hello.click.v1"]);
@@ -809,6 +814,10 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
     const TEMPLATE: &str = r#"use std::sync::Arc;
 
 use fret::app::prelude::*;
+use fret::{
+    icons::IconId,
+    style::{ColorRef, Radius, Space, Theme},
+};
 
 mod act {
     fret::actions!([
@@ -1257,6 +1266,8 @@ mod tests {
     fn todo_template_uses_default_authoring_dialect() {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("icons::IconId,"));
+        assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("cx: &mut UiCx<'_>,"));
@@ -1326,6 +1337,7 @@ mod tests {
     fn hello_template_uses_default_authoring_dialect() {
         let src = hello_template_main_rs("hello-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("use fret::style::Space;"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("ui::v_flex("));
@@ -1346,6 +1358,8 @@ mod tests {
     fn simple_todo_template_has_low_adapter_noise_and_no_query_selector() {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
+        assert!(src.contains("icons::IconId,"));
+        assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("impl UiChild"));

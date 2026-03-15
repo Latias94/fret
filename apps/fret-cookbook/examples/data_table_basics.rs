@@ -1,4 +1,5 @@
 use fret::app::prelude::*;
+use fret::style::{ColorRef, Space, Theme};
 use fret_runtime::Model;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use std::sync::Arc;

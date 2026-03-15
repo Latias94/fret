@@ -18,9 +18,10 @@ Closeout note on 2026-03-15:
 - this file now describes a mostly-settled surface rather than an open redesign backlog,
 - the app/component/advanced split is considered landed **at the lane-definition level**,
 - but the closeout is still incomplete while:
-  - `fret::app::prelude::*` exports remain wider than the target list below, even though the first
-    overlap-reduction batch has already landed (`as _` extension-trait imports plus removal of raw
-    `on_activate*` helper re-exports from the app lane),
+  - `fret::app::prelude::*` exports remain wider than the target list below, even though two
+    overlap-reduction batches have already landed (`as _` extension-trait imports, removal of raw
+    `on_activate*` helper re-exports from the app lane, and an explicit `fret::style` /
+    `fret::icons` split for high-frequency icon/style nouns),
   - shadcn first-contact discovery still relies on policy tests to keep crate root / facade / raw
     paths mentally separated,
   - the dedicated conversion-surface tracker is still actively deleting vocabulary families,
@@ -149,6 +150,9 @@ Target rule:
   `fret::app::prelude`.
 - `fret::app::prelude` must use curated exports; it does not blanket re-export
   `fret_ui_kit::declarative::prelude::*`.
+- app code that needs explicit icon/style nouns should import them from `fret::icons::IconId` and
+  `fret::style::{Theme, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius,
+  ShadowPreset, Size, Space}` rather than expecting them from the default prelude.
 - overlap-heavy extension traits may still arrive through anonymous `as _` imports so method calls
   remain ergonomic, but those trait names are not part of the default app-lane vocabulary and
   should not be taught as first-contact imports.

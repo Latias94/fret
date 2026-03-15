@@ -46,11 +46,11 @@ reopening this one.
 
 ## Current next-step order (2026-03-15)
 
-1. Continue narrowing `fret::app::prelude::*` from the first landed batch (anonymous extension
-   trait imports + app-lane removal of raw `on_activate*` helpers) until autocomplete and imports
-   stop blending app and component author concerns.
-2. Simplify shadcn first-contact discovery so `facade as shadcn` is the only taught lane and
-   crate-root exposure is treated as retained compatibility/raw surface.
+1. Finish the remaining `fret::app::prelude::*` narrowing after the landed style/icon split:
+   revisit declarative helper families that still blur app vs component authoring and decide which
+   stay app-justified vs move to explicit secondary lanes.
+2. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
+   maintenance/gates when new first-party code tries to reintroduce crate-root drift.
 3. Finish the conversion-surface reset under
    `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
 4. Add thin small-app authoring sugar only after the lane above is stable.
