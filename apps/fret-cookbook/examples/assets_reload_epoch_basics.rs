@@ -34,7 +34,7 @@ fn demo_app_bundle() -> fret::assets::AssetBundleId {
 struct AssetsReloadEpochBasicsView {
     window: AppWindowId,
     applied_bumps: u64,
-    image_source: fret_ui_assets::ImageSource,
+    image_request: fret::assets::AssetRequest,
     svg_request: fret::assets::AssetRequest,
 }
 
@@ -43,11 +43,10 @@ impl View for AssetsReloadEpochBasicsView {
         // Optional: configure budgets explicitly so this example is self-contained.
         fret_ui_assets::UiAssets::configure(app, fret_ui_assets::UiAssetsBudgets::default());
 
-        let image_source = fret_ui_assets::resolve_image_source_from_host_locator(
-            app,
-            fret::assets::AssetLocator::bundle(demo_app_bundle(), IMAGE_KEY),
-        )
-        .expect("builder-mounted image bundle asset should resolve");
+        let image_request = fret::assets::AssetRequest::new(fret::assets::AssetLocator::bundle(
+            demo_app_bundle(),
+            IMAGE_KEY,
+        ));
         let svg_request = fret::assets::AssetRequest::new(fret::assets::AssetLocator::bundle(
             demo_app_bundle(),
             SVG_KEY,
@@ -56,7 +55,7 @@ impl View for AssetsReloadEpochBasicsView {
         Self {
             window,
             applied_bumps: 0,
-            image_source,
+            image_request,
             svg_request,
         }
     }
@@ -104,7 +103,7 @@ impl View for AssetsReloadEpochBasicsView {
         .gap(Space::N2)
         .items_center();
 
-        let file_image_state = cx.use_image_source_state(&self.image_source);
+        let file_image_state = cx.use_image_source_state_from_asset_request(&self.image_request);
         let image_panel = render_image_panel(cx, &theme, file_image_state);
 
         let svg_file_state = cx.svg_source_state_from_asset_request(&self.svg_request);
@@ -225,7 +224,7 @@ fn render_image_panel(
                 ui::children![cx;
                     shadcn::card_title("Image from logical bundle locator"),
                     shadcn::card_description(
-                        "Loads `textures/test.jpg` from the default app bundle mounted by `FretApp::asset_dir(...)`; on native/package-dev lanes the resolver bridges that logical locator back to a file reference for `ImageSource` + `ImageAssetCache`.",
+                        "Loads `textures/test.jpg` from the default app bundle mounted by `FretApp::asset_dir(...)`; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code constructing `ImageSource` directly.",
                     ),
                 ]
             }),

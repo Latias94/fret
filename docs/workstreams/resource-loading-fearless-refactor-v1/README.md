@@ -116,7 +116,9 @@ This workstream takes a fearless posture:
   references:
   - image helpers prefer target-appropriate reference handoff first (native file paths, wasm URL
     references) and fall back to bytes when the current winning layer cannot provide a usable
-    external reference,
+    external reference; `ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
+    now keeps the UI-facing app/widget story locator-first instead of forcing app code to resolve
+    `ImageSource` eagerly,
   - native SVG helpers can now bridge logical bundle locators into `SvgFileSource` for reloadable
     file-backed development ergonomics without teaching raw app paths as the primary authoring
     story, and `fret-ui-assets::ui::SvgAssetElementContextExt` now keeps the UI-facing app/widget

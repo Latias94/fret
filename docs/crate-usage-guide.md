@@ -159,12 +159,14 @@ On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is th
 generated-manifest convenience path when you want one directory to become one logical bundle
 without teaching raw repo-relative paths in app/widget code.
 When a native/dev-only UI helper still needs real file reload ergonomics, keep the app/widget
-surface on logical bundle locators and let `fret-ui-assets::resolve_image_source_from_host_locator(...)`
+surface on logical bundle locators and let
+`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
 or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
-consume the resolver's bundle/reference bridge instead of constructing
-`ImageSource::from_file_path(...)` / `SvgFileSource::from_file_path(...)` directly in app code.
-Keep `resolve_svg_file_source_from_host_locator(...)` as the lower-level compatibility seam when a
-non-UI integration truly needs the native file handoff object itself.
+consume the resolver's bundle/reference bridge instead of constructing `ImageSource::from_file_path(...)`
+/ `SvgFileSource::from_file_path(...)` directly in app code. Keep
+`resolve_image_source_from_host_locator(...)` / `resolve_svg_file_source_from_host_locator(...)`
+as the lower-level compatibility seam when a non-UI integration truly needs the bridged source or
+native file handoff object itself.
 Use `fret::assets::register_file_manifest(...)` when tooling already emits an explicit manifest
 artifact that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use

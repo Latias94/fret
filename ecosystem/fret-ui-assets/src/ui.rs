@@ -37,6 +37,31 @@ pub trait ImageSourceElementContextExt {
         options: ImageSourceOptions,
         invalidation: Invalidation,
     ) -> ImageSourceState;
+
+    fn use_image_source_state_from_asset_request(
+        &mut self,
+        request: &AssetRequest,
+    ) -> ImageSourceState;
+
+    fn use_image_source_state_from_asset_request_with_options(
+        &mut self,
+        request: &AssetRequest,
+        options: ImageSourceOptions,
+    ) -> ImageSourceState;
+
+    fn use_image_source_state_from_asset_request_with_options_and_invalidation(
+        &mut self,
+        request: &AssetRequest,
+        options: ImageSourceOptions,
+        invalidation: Invalidation,
+    ) -> ImageSourceState;
+
+    fn use_image_source_state_from_asset_locator(
+        &mut self,
+        locator: AssetLocator,
+    ) -> ImageSourceState {
+        self.use_image_source_state_from_asset_request(&AssetRequest::new(locator))
+    }
 }
 
 impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
@@ -86,6 +111,52 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
         }
 
         crate::use_image_source_state_with_options(self.app, self.window, source, options)
+    }
+
+    fn use_image_source_state_from_asset_request(
+        &mut self,
+        request: &AssetRequest,
+    ) -> ImageSourceState {
+        self.use_image_source_state_from_asset_request_with_options(
+            request,
+            ImageSourceOptions::default(),
+        )
+    }
+
+    fn use_image_source_state_from_asset_request_with_options(
+        &mut self,
+        request: &AssetRequest,
+        options: ImageSourceOptions,
+    ) -> ImageSourceState {
+        self.use_image_source_state_from_asset_request_with_options_and_invalidation(
+            request,
+            options,
+            Invalidation::Paint,
+        )
+    }
+
+    fn use_image_source_state_from_asset_request_with_options_and_invalidation(
+        &mut self,
+        request: &AssetRequest,
+        options: ImageSourceOptions,
+        invalidation: Invalidation,
+    ) -> ImageSourceState {
+        match crate::resolve_image_source_from_host(self.app, request) {
+            Ok(source) => self.use_image_source_state_with_options_and_invalidation(
+                &source,
+                options,
+                invalidation,
+            ),
+            Err(err) => {
+                self.observe_global::<UiAssetsReloadEpoch>(invalidation);
+                ImageSourceState {
+                    image: None,
+                    status: crate::image_asset_state::ImageLoadingStatus::Error,
+                    intrinsic_size_px: None,
+                    error: Some(Arc::<str>::from(err.to_string())),
+                }
+            }
+        }
     }
 }
 

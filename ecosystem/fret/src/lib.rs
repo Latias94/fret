@@ -69,11 +69,13 @@
 //!   `register_file_manifest(...)` when tooling already emits an explicit manifest artifact; treat
 //!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches;
 //!   when native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
-//!   logical bundle locators and let `fret-ui-assets::resolve_image_source_from_host_locator(...)`
+//!   logical bundle locators and let
+//!   `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
 //!   or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
 //!   consume the resolver's bundle/reference bridge instead of constructing raw file-path sources
-//!   directly; keep `resolve_svg_file_source_from_host_locator(...)` as the lower-level
-//!   compatibility seam when a non-UI integration truly needs the native file handoff object
+//!   directly; keep `resolve_image_source_from_host_locator(...)` /
+//!   `resolve_svg_file_source_from_host_locator(...)` as the lower-level compatibility seam when a
+//!   non-UI integration truly needs the bridged source or native file handoff object
 //! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
 //!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
@@ -2344,9 +2346,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`FretApp::asset_manifest(...)`"));
         assert!(CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
-        assert!(
-            CRATE_README.contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`")
-        );
+        assert!(CRATE_README.contains(
+            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
+        ));
         assert!(
             CRATE_README.contains(
                 "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
@@ -2368,7 +2370,9 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("`register_file_manifest(...)`"));
         assert!(rustdoc.contains("`AssetLocator::file(...)`"));
         assert!(rustdoc.contains("`AssetLocator::url(...)`"));
-        assert!(rustdoc.contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`"));
+        assert!(rustdoc.contains(
+            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
+        ));
         assert!(
             rustdoc.contains(
                 "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
@@ -2481,10 +2485,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_manifest(...)`"));
-        assert!(
-            CRATE_USAGE_GUIDE
-                .contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`")
-        );
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
+        ));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains(

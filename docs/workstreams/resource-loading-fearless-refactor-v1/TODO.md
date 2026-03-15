@@ -214,6 +214,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `ecosystem/fret-ui-assets/src/asset_resolver.rs` now prefer target-appropriate external
       references first and fall back to bytes only when the winning layer cannot provide a usable
       external reference handoff.
+    - `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
+      now lets ordinary UI code stay on logical bundle locators while reusing the existing async
+      image decode/upload state machine and ViewCache invalidation wiring.
   - Remaining:
     - broader first-party docs/examples still need to stop teaching direct file-path constructors
       as the default app story.
