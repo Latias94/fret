@@ -1,7 +1,7 @@
 # Authoring v2 Golden Path (Draft)
 
 Status: draft, post-v1 guidance
-Last updated: 2026-03-12
+Last updated: 2026-03-15
 
 Related:
 
@@ -26,6 +26,11 @@ If the common path is unclear, prefer the following defaults:
 - actions: `cx.on_action_notify_models::<A>(|models| ...)` by default; use local-state-specific helpers
   only for straightforward local writes, and stay on the generic models path when command/keymap
   gating or broader coordination is involved
+- widget wiring: prefer `.action(...)` / `.action_payload(...)` whenever the widget already exposes
+  a stable action slot; for activation-only surfaces prefer
+  `.on_activate(cx.actions().dispatch::<A>())`,
+  `.on_activate(cx.actions().dispatch_payload::<A>(...))`, and
+  `.on_activate(cx.actions().listener(...))` before reopening raw `Arc<dyn Fn...>` seams
 - invalidation: tracked state writes should usually rerender implicitly; keep explicit `notify()` for
   imperative/cache-oriented escape hatches
 - composition: stay on builder-first paths until the final runtime boundary

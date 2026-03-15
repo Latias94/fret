@@ -17,6 +17,7 @@ Related:
 - Default-path productization audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md`
 - Invalidation/local-state review: `docs/workstreams/action-first-authoring-fearless-refactor-v1/INVALIDATION_LOCAL_STATE_REVIEW.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
+- Event surface unification: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVENT_SURFACE_UNIFICATION_DESIGN.md`
 - DataTable audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_AUTHORING_AUDIT.md`
 - DataTable golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DATA_TABLE_GOLDEN_PATH.md`
 - Teaching-surface inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TEACHING_SURFACE_LOCAL_STATE_INVENTORY.md`
@@ -1008,11 +1009,20 @@ Current sequencing note (as of 2026-03-09):
     - track density/ergonomics work in a separate post-v1 phase,
     - do not add more tiny helpers until another round of template/demo evidence shows repeated pressure.
 - Helper visibility policy snapshot (as of 2026-03-06):
-  - Default teaching surface: `cx.on_action_notify_models::<A>(|models| ...)`, `cx.on_action_notify_transient::<A>(...)`, and local `on_activate(...)` / `on_activate_notify(...)` only.
+  - Default teaching surface (updated 2026-03-15): `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.on_activate(cx.actions().dispatch::<A>())`, `.on_activate(cx.actions().dispatch_payload::<A>(...))`, and `.on_activate(cx.actions().listener(...))`.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
   - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
   - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme` and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, `embedded_viewport_demo` now uses `use_local_with(...)` + `on_action_notify_local_set(...)` for its view-local size preset while keeping viewport interop/render-time effects explicit, and `hello_counter_demo` plus both query demos remain the intentional `use_local` prototypes that still keep the default `on_action_notify_models` action surface for coordinated writes.
+- [~] AFA-postv1-022 Start event-surface unification under `cx.actions()`.
+  - Goal: move default widget-side activation glue onto the same grouped action namespace as root/view action registration, without rewriting runtime dispatch.
+  - Evidence target: a design note, grouped `dispatch` / `dispatch_payload` / `listener` helpers on `AppUiActions`, and at least one docs/source-policy update that treats them as the preferred widget-local glue surface.
+  - Status (as of 2026-03-15): `EVENT_SURFACE_UNIFICATION_DESIGN.md` now records the target split, `ecosystem/fret/src/view.rs` now exposes `cx.actions().dispatch::<A>()`, `cx.actions().dispatch_payload::<A>(...)`, and `cx.actions().listener(...)`, and the source-policy test in that file locks those helpers onto the grouped default app surface.
+- [ ] AFA-postv1-024 Add only thin activatable-widget sugar after the docs/template rewrite proves it is still needed.
+  - Goal: if activation-only surfaces still feel materially noisier than `.action(...)`-capable widgets, add a single app-facing extension trait in `ecosystem/fret` rather than another helper family.
+  - Recommended target: `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and `widget.listen(cx, |host, acx| ...)` for types that already expose `on_activate(...)`.
+  - Guardrails: do not replace `.action(...)` / `.action_payload(...)` as the default for widgets that already have stable action slots; do not add `click` / `submit` / `listener_notify` style helper taxonomies.
+  - Sequencing: do this only after the app-prelude narrowing and conversion-surface closeout stop moving the default teaching lane; otherwise the sugar will land on top of a still-shifting public surface.
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 

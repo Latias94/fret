@@ -79,7 +79,7 @@ actions:
 
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
-- Handle actions via `cx.actions().locals::<A>(...)`, `cx.actions().models::<A>(...)` (shared graphs), `cx.actions().transient::<A>(...)`, and local `on_activate*` by default; keep raw `AppUi::on_action_notify*` for cookbook/reference host-side cases.
+- Handle actions via `cx.actions().locals::<A>(...)`, `cx.actions().models::<A>(...)` (shared graphs), `cx.actions().transient::<A>(...)`, plus widget-local `.on_activate(cx.actions().dispatch::<A>())` / `.dispatch_payload::<A>(...)` / `.listener(...)` by default; keep raw `AppUi::on_action_notify*` and low-level `on_activate*` helpers for cookbook/reference host-side cases.
 - If advanced code intentionally wants the raw model-backed hook, import `use fret::advanced::AppUiRawStateExt;` and call `cx.use_state::<T>()` explicitly instead of treating it as part of the default `AppUi` surface.
 
 Authoring and historical note:
@@ -148,7 +148,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- typed action handlers (`cx.actions().locals::<A>(...)`, `cx.actions().models::<A>(...)`, `cx.actions().transient::<A>(...)`, `on_activate*`, and rare cookbook/reference `AppUi::on_action_notify*`) plus action IDs
+- typed action handlers (`cx.actions().locals::<A>(...)`, `cx.actions().models::<A>(...)`, `cx.actions().transient::<A>(...)`, widget-local `.on_activate(cx.actions().dispatch::<A>())` / `.listener(...)`, and rare cookbook/reference `AppUi::on_action_notify*`) plus action IDs
 
 ### Prefer templates and golden demos as migration references
 

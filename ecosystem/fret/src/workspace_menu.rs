@@ -3145,7 +3145,9 @@ mod tests {
             .unwrap_or(false);
         let registry_open_id_before_render = app
             .models_mut()
-            .read(&handle.trigger_registry, |v| v.first().map(|entry| entry.open.id()))
+            .read(&handle.trigger_registry, |v| {
+                v.first().map(|entry| entry.open.id())
+            })
             .ok()
             .flatten();
         let panel_key_capture_hits = app
@@ -3184,7 +3186,9 @@ mod tests {
             .unwrap_or(false);
         let registry_open_id_after_render = app
             .models_mut()
-            .read(&refreshed_handle.trigger_registry, |v| v.first().map(|entry| entry.open.id()))
+            .read(&refreshed_handle.trigger_registry, |v| {
+                v.first().map(|entry| entry.open.id())
+            })
             .ok()
             .flatten();
         assert!(

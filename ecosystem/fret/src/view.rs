@@ -14,10 +14,11 @@
 
 use std::any::Any;
 use std::hash::Hash;
+use std::sync::Arc;
 
 use fret_core::AppWindowId;
 use fret_runtime::{Model, ModelStore, ModelUpdateError};
-use fret_ui::action::{OnCommand, OnCommandAvailability};
+use fret_ui::action::{ActionCx, OnActivate, OnCommand, OnCommandAvailability, UiActionHost};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 #[cfg(feature = "state-query")]
 use std::future::Future;
@@ -537,7 +538,58 @@ pub struct AppUiPayloadActions<'view, 'cx, 'a, H: UiHost, A> {
     _marker: std::marker::PhantomData<A>,
 }
 
+fn dispatch_action_listener<A>() -> OnActivate
+where
+    A: crate::TypedAction,
+{
+    let action = A::action_id();
+    Arc::new(move |host, action_cx, reason| {
+        host.record_pending_command_dispatch_source(action_cx, &action, reason);
+        host.dispatch_command(Some(action_cx.window), action.clone());
+    })
+}
+
+fn dispatch_payload_action_listener<A>(payload: A::Payload) -> OnActivate
+where
+    A: crate::actions::TypedPayloadAction,
+    A::Payload: Clone,
+{
+    let action = A::action_id();
+    Arc::new(move |host, action_cx, reason| {
+        host.record_pending_command_dispatch_source(action_cx, &action, reason);
+        host.record_pending_action_payload(action_cx, &action, Box::new(payload.clone()));
+        host.dispatch_command(Some(action_cx.window), action.clone());
+    })
+}
+
+fn action_listener(f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
+    Arc::new(move |host, action_cx, _reason| f(host, action_cx))
+}
+
 impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
+    /// Build a widget-local activation handler that dispatches the typed action through the
+    /// existing command/action pipeline.
+    pub fn dispatch<A>(self) -> OnActivate
+    where
+        A: crate::TypedAction,
+    {
+        dispatch_action_listener::<A>()
+    }
+
+    /// Build a widget-local activation handler that dispatches a typed payload action.
+    pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate
+    where
+        A: crate::actions::TypedPayloadAction,
+        A::Payload: Clone,
+    {
+        dispatch_payload_action_listener::<A>(payload)
+    }
+
+    /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
+    pub fn listener(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
+        action_listener(f)
+    }
+
     pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
     where
         A: crate::TypedAction,
@@ -1240,17 +1292,40 @@ pub fn view_record_engine_frame<V: View>(
 
 #[cfg(test)]
 mod tests {
-    use super::LocalState;
+    use super::{
+        LocalState, action_listener, dispatch_action_listener, dispatch_payload_action_listener,
+    };
+    use std::any::Any;
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
     use fret_core::AppWindowId;
-    use fret_runtime::{Effect, ModelStore, TimerToken};
-    use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
+    use fret_runtime::{ActionId, CommandId, Effect, ModelStore, TimerToken};
+    use fret_ui::action::{ActionCx, ActivateReason, UiActionHost, UiFocusActionHost};
+
+    struct DispatchAction;
+    impl fret_runtime::TypedAction for DispatchAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.dispatch_action.v1")
+        }
+    }
+
+    struct DispatchPayloadAction;
+    impl fret_runtime::TypedAction for DispatchPayloadAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.dispatch_payload_action.v1")
+        }
+    }
+    impl crate::actions::TypedPayloadAction for DispatchPayloadAction {
+        type Payload = u64;
+    }
 
     #[derive(Default)]
     struct FakeHost {
         models: ModelStore,
         redraws: Vec<AppWindowId>,
         notifies: Vec<ActionCx>,
+        effects: Vec<Effect>,
+        dispatch_sources: Vec<(ActionCx, CommandId, ActivateReason)>,
+        payloads: Vec<(ActionCx, ActionId, Box<dyn Any + Send + Sync>)>,
         next_timer: u64,
     }
 
@@ -1259,7 +1334,9 @@ mod tests {
             &mut self.models
         }
 
-        fn push_effect(&mut self, _effect: Effect) {}
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
 
         fn request_redraw(&mut self, window: AppWindowId) {
             self.redraws.push(window);
@@ -1281,6 +1358,24 @@ mod tests {
 
         fn notify(&mut self, cx: ActionCx) {
             self.notifies.push(cx);
+        }
+
+        fn record_pending_command_dispatch_source(
+            &mut self,
+            cx: ActionCx,
+            command: &CommandId,
+            reason: ActivateReason,
+        ) {
+            self.dispatch_sources.push((cx, command.clone(), reason));
+        }
+
+        fn record_pending_action_payload(
+            &mut self,
+            cx: ActionCx,
+            action: &ActionId,
+            payload: Box<dyn Any + Send + Sync>,
+        ) {
+            self.payloads.push((cx, action.clone(), payload));
         }
     }
 
@@ -1403,6 +1498,79 @@ mod tests {
         assert_eq!(host.notifies, vec![action_cx]);
     }
 
+    #[test]
+    fn dispatch_listener_queues_a_command_effect() {
+        let mut host = FakeHost::default();
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(17),
+        };
+
+        let dispatch = dispatch_action_listener::<DispatchAction>();
+        dispatch(&mut host, action_cx, ActivateReason::Pointer);
+
+        assert_eq!(
+            host.effects,
+            vec![Effect::Command {
+                window: Some(action_cx.window),
+                command: <DispatchAction as fret_runtime::TypedAction>::action_id(),
+            }]
+        );
+        assert_eq!(
+            host.dispatch_sources,
+            vec![(
+                action_cx,
+                <DispatchAction as fret_runtime::TypedAction>::action_id(),
+                ActivateReason::Pointer
+            )]
+        );
+    }
+
+    #[test]
+    fn dispatch_payload_listener_records_payload_before_dispatch() {
+        let mut host = FakeHost::default();
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(23),
+        };
+
+        let dispatch = dispatch_payload_action_listener::<DispatchPayloadAction>(42);
+        dispatch(&mut host, action_cx, ActivateReason::Keyboard);
+
+        assert_eq!(
+            host.effects,
+            vec![Effect::Command {
+                window: Some(action_cx.window),
+                command: <DispatchPayloadAction as fret_runtime::TypedAction>::action_id(),
+            }]
+        );
+        assert_eq!(host.payloads.len(), 1);
+        assert_eq!(host.payloads[0].0, action_cx);
+        assert_eq!(
+            host.payloads[0].1,
+            <DispatchPayloadAction as fret_runtime::TypedAction>::action_id()
+        );
+        assert_eq!(host.payloads[0].2.downcast_ref::<u64>().copied(), Some(42));
+    }
+
+    #[test]
+    fn action_listener_hides_activate_reason_for_simple_widget_glue() {
+        let mut host = FakeHost::default();
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(31),
+        };
+
+        let listener = action_listener(move |host, cx| {
+            host.request_redraw(cx.window);
+            host.notify(cx);
+        });
+        listener(&mut host, action_cx, ActivateReason::Keyboard);
+
+        assert_eq!(host.redraws, vec![action_cx.window]);
+        assert_eq!(host.notifies, vec![action_cx]);
+    }
+
     #[cfg(feature = "shadcn")]
     #[test]
     fn local_state_supports_text_value_widgets() {
@@ -1443,6 +1611,12 @@ mod tests {
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains("pub fn dispatch<A>(self) -> OnActivate"));
+        assert!(
+            api_source
+                .contains("pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate")
+        );
+        assert!(api_source.contains("pub fn listener("));
         assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
         assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));
     }

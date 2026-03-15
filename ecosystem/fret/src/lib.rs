@@ -1713,6 +1713,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().dispatch::<A>())`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().listener(...))`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
@@ -1723,6 +1725,11 @@ mod authoring_surface_policy_tests {
     fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.on_activate(cx.actions().dispatch::<A>())`"));
+        assert!(
+            AUTHORING_GOLDEN_PATH_V2
+                .contains("`.on_activate(cx.actions().listener(|host, acx| { ... }))`")
+        );
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
     }

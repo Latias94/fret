@@ -94,6 +94,9 @@ App/editor-specific composition belongs in `fret-editor` and ecosystem app layer
 Cross-cutting interaction policies (toggle models, close overlays, selection writes, "dismiss on escape/outside press", etc.) are *component-owned*:
 
 - `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
+- The `fret` app-facing facade now groups default widget activation glue under `cx.actions()`
+  (`dispatch`, `dispatch_payload`, `listener`) so app authors stay on the same action namespace
+  while component/policy crates keep owning the hook implementations.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.
@@ -160,6 +163,12 @@ Guidelines:
   environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
   lanes (`typography` prose helpers, `extras`, breadcrumb primitives, and low-level icon helpers)
   instead of importing `fret_ui_shadcn::*` directly.
+- Treat the full `fret_ui_shadcn` crate root as a retained compatibility/implementation surface,
+  not as a peer first-contact discovery lane next to `facade as shadcn`.
+- The current first-party source-policy tests that ban root-style imports are evidence of remaining
+  public-surface duplication, not proof that the current three-lane discovery story is ideal.
+  The next cleanup step is to make the curated facade lane more self-evident, not to normalize the
+  crate root as another default authoring path.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 
@@ -185,9 +194,10 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
 - `UiHostBoundIntoElement`, `UiBuilderHostBoundIntoElementExt`, and `UiChildIntoElement` are
   already deleted from code and should not be taught on first-party shadcn surfaces,
 - authoring-critical first-party family lanes should stay reachable from both the crate root and
-  `fret_ui_shadcn::facade`; source-policy tests now guard the selected `Select` / `Combobox` /
-  `ComboboxChips` / `Command` / `NavigationMenu` / `Pagination` exports so compact/default
-  examples do not depend on root-only names,
+  `fret_ui_shadcn::facade` as an implementation/compatibility constraint, but the curated
+  `facade` remains the only default teaching/discovery lane; source-policy tests now guard the
+  selected `Select` / `Combobox` / `ComboboxChips` / `Command` / `NavigationMenu` / `Pagination`
+  exports so compact/default examples do not depend on root-only names,
 - keep `AnyElement` explicit only for justified raw seams such as diagnostics, overlay/controller
   internals, or low-level helper plumbing.
 - Current inventoried raw/bridge helpers on the shadcn lane are intentionally small:

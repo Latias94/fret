@@ -16,9 +16,15 @@ It is intentionally concrete:
 Closeout note on 2026-03-15:
 
 - this file now describes a mostly-settled surface rather than an open redesign backlog,
-- the app/component/advanced split is considered landed,
-- remaining work is narrow follow-through:
-  delete-ready cleanup, stale-doc correction, and coordination with follow-on workstreams such as
+- the app/component/advanced split is considered landed **at the lane-definition level**,
+- but the closeout is still incomplete while:
+  - `fret::app::prelude::*` exports remain wider than the target list below,
+  - shadcn first-contact discovery still relies on policy tests to keep crate root / facade / raw
+    paths mentally separated,
+  - the dedicated conversion-surface tracker is still actively deleting vocabulary families,
+- remaining work is therefore narrow follow-through rather than broad redesign:
+  delete-ready cleanup, app-prelude narrowing, shadcn discovery-lane tightening, stale-doc
+  correction, and coordination with follow-on workstreams such as
   `into-element-surface-fearless-refactor-v1` and `action-first-authoring-fearless-refactor-v1`.
 
 ## Public Surface Tiers
@@ -316,6 +322,8 @@ Direct crate usage rule for first-party recipe crates:
   `fret::shadcn::raw::advanced::*` when intentionally exiting the curated `fret` facade)
 - theme presets stay on `shadcn::themes::*`
 - full crate-root escape hatches must be explicit via `shadcn::raw::*`
+- the full `fret_ui_shadcn` crate root is retained as a compatibility/implementation surface, not
+  as a co-equal first-contact discovery lane
 - first-party teaching surfaces may currently use only the documented raw lanes:
   `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
   `shadcn::raw::breadcrumb::primitives`, low-level `shadcn::raw::icon::*`, and
@@ -335,12 +343,12 @@ These names/surfaces should disappear entirely if the replacement exists:
 
 | Area | Target status |
 | --- | --- |
-| app prelude is app-only | done |
+| app prelude is app-only | in progress |
 | component prelude is explicit | done |
 | advanced surface is explicit | done |
 | canonical naming reset landed | in progress |
 | grouped `AppUi` namespaces landed | done |
-| first-party ecosystems migrated | done |
+| first-party ecosystems migrated | in progress |
 | templates/docs aligned | in progress |
 | old surface deleted | in progress |
 | guards/gates added | done |

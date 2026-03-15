@@ -24,6 +24,9 @@ missing default guideline).
 | 1-slot action write | `cx.actions().local_set/update` | Keeps the notify/dirty closure correct. |
 | Multi-slot LocalState transaction | `cx.actions().locals::<A>(|tx| ...)` | Hides `ModelStore` for LocalState-only coordination. |
 | Multi-slot payload transaction | `cx.actions().payload::<A>().locals(|tx, payload| ...)` | Use when one payload action updates multiple locals. |
+| Widget action binding | `.action(...)` / `.action_payload(...)` | Prefer this whenever the widget already exposes a stable action slot. |
+| Widget-local action dispatch | `.on_activate(cx.actions().dispatch::<A>())` | Use only for activation-only surfaces that do not already expose `.action(...)`. |
+| Widget-local imperative glue | `.on_activate(cx.actions().listener(|host, acx| { ... }))` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks. |
 | Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper. |
 | Derived values | `cx.data().selector(deps, compute)` | Prefer `DepsBuilder` with tracked locals/models. |
 | Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key. |
@@ -75,6 +78,26 @@ let rows = ui::v_flex(|cx| {
             .action_payload(row.id)
     })
 });
+```
+
+## Example: widget-local activation glue
+
+```rust,ignore
+mod act {
+    fret::actions!([Save = "app.save.v1"]);
+}
+
+shadcn::Button::new("Save")
+    .action(act::Save);
+
+widget_that_only_exposes_on_activate()
+    .on_activate(cx.actions().dispatch::<act::Save>());
+
+shadcn::Button::new("Close")
+    .on_activate(cx.actions().listener(|host, acx| {
+        host.request_redraw(acx.window);
+        host.notify(acx);
+    }));
 ```
 
 If a row helper genuinely needs the inner keyed child scope, drop to

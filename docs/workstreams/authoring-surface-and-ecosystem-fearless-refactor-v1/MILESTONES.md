@@ -28,12 +28,29 @@ Closeout note on 2026-03-15:
 
 - the app/component/advanced split is now effectively the settled first-party posture,
 - the highest-value first-party docs/examples/gates are already aligned to that posture,
-- any still-unchecked early TODO bullets in this folder should now be read as historical
-  bookkeeping residue unless they map to a specific maintenance closeout task.
+- but the closeout is **not** complete while:
+  - `fret::app::prelude::*` still overlaps too heavily with `fret::component::prelude::*`,
+  - shadcn first-contact discovery still depends on source-policy tests to keep crate-root/facade
+    lanes from competing in first-party teaching surfaces,
+  - status docs imply the surface is more closed than the active conversion-surface tracker
+    actually allows,
+- any still-unchecked early TODO bullets in this folder should now be read as either:
+  - historical bookkeeping residue, or
+  - one of the targeted surface-closeout tasks above.
 
 If a proposed change is mainly about "too many `into_element` concepts" or "helper/component code
 still falls back to raw conversion vocabulary", it belongs in the follow-on workstream rather than
 reopening this one.
+
+## Current next-step order (2026-03-15)
+
+1. Narrow `fret::app::prelude::*` until autocomplete and imports stop blending app and component
+   author concerns.
+2. Simplify shadcn first-contact discovery so `facade as shadcn` is the only taught lane and
+   crate-root exposure is treated as retained compatibility/raw surface.
+3. Finish the conversion-surface reset under
+   `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
+4. Add thin small-app authoring sugar only after the lane above is stable.
 
 ## Milestone 0 — Lock the target product surface
 
@@ -64,10 +81,15 @@ Deliverables:
 - `fret::app::prelude::*` becomes the canonical app import.
 - `fret::component::prelude::*` exists and is documented.
 - `fret::advanced::*` becomes the explicit place for low-level seams.
+- the app prelude stops exporting helper families whose main audience is reusable component
+  authors.
 
 Exit criteria:
 
-- A new app author cannot accidentally discover most advanced/runtime mechanisms through the app surface.
+- A new app author cannot accidentally discover most advanced/runtime mechanisms through the app
+  surface.
+- A new app author also should not have to sort through most component-author styling/layout/raw
+  seams before reaching the default app nouns.
 
 ## Milestone 2 — Shrink the default app mental model
 
@@ -101,10 +123,15 @@ Deliverables:
   - `fret-query`
   - `fret-router`
 - clear app/component/advanced ownership per ecosystem crate.
+- one taught first-contact lane for `fret-ui-shadcn`
+  (`use fret_ui_shadcn::{facade as shadcn, prelude::*};`) with raw/advanced/root residuals kept
+  explicit rather than peer-discoverable.
 
 Exit criteria:
 
 - The same extension seams are used by first-party and expected of third-party libraries.
+- First-party shadcn teaching surfaces no longer need to compensate for multiple peer discovery
+  lanes beyond the explicitly documented raw/advanced escape hatches.
 
 ## Milestone 4 — Delete the old surface and clean the docs
 

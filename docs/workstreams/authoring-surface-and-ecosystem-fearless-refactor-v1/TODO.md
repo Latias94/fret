@@ -28,17 +28,38 @@ Status note:
 
 Closeout note on 2026-03-15:
 
-- this workstream is effectively in maintenance mode,
+- this workstream should now be treated as a **targeted closeout lane**, not as a broad redesign
+  backlog and not as a "maintenance only" archive,
 - the app/component/advanced split itself does not need another broad redesign pass here,
-- remaining work is mainly docs cleanup, delete-ready follow-through, and keeping links/gates
-  aligned with the now-separate conversion-surface closeout.
+- but three high-priority closeout tasks still belong here because they materially affect the
+  public product surface:
+  - narrowing `fret::app::prelude::*` so it is materially smaller than
+    `fret::component::prelude::*` in both exports and autocomplete pressure,
+  - reducing shadcn first-contact discovery to the curated facade lane rather than relying on
+    source-policy tests to keep crate-root/facade/raw paths mentally sorted,
+  - keeping `TARGET_INTERFACE_STATE.md` and its status matrix honest while
+    `into-element-surface-fearless-refactor-v1` is still actively deleting surface families,
+- remaining work is therefore a mix of docs cleanup, delete-ready follow-through, and explicit
+  surface narrowing that is already implied by the target state but not yet fully reflected in the
+  shipped exports.
 - the next real product-surface pressure is no longer "how do we split app/component/advanced?",
   but rather:
   - finishing delete-ready cleanup on old root aliases and stale docs,
+  - narrowing the default app prelude until it stops overlapping with the component prelude on
+    styling/layout/semantics helper families,
   - keeping the conversion surface accurate in
     `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
+  - simplifying the shadcn discovery lane so `facade as shadcn` is the only first-contact story,
   - handling any future action-surface ergonomics in
     `docs/workstreams/action-first-authoring-fearless-refactor-v1/`.
+
+Priority correction on 2026-03-15:
+
+1. narrow `fret::app::prelude::*`
+2. simplify shadcn first-contact discovery (`facade` first, `raw` explicit, crate root de-emphasized)
+3. finish the conversion-surface reset under
+   `docs/workstreams/into-element-surface-fearless-refactor-v1/`
+4. only then add more small-app authoring sugar on top of the stabilized lane
 
 ## M0 — Freeze the target product surface
 
@@ -111,6 +132,17 @@ Closeout note on 2026-03-15:
   - [x] `UiHost`
   - [x] `AnyElement`
   - [ ] other runner/maintainer-only types
+- [ ] Remove component-author overlap from `fret::app::prelude::*`.
+  - Goal: an ordinary app author should not discover the same style/layout/semantics helper
+    families from both `fret::app::prelude::*` and `fret::component::prelude::*`.
+  - Minimum audit set:
+    - broad styling/layout patch traits and types that primarily serve reusable component authors,
+    - semantics/test-id/key-context helper families that are still duplicated across app and
+      component preludes without an app-specific justification,
+    - raw `on_activate*` helper exports that now compete with the grouped app-facing
+      `cx.actions().dispatch/listener` story.
+  - Exit condition: the app prelude teaches the app nouns plus a small set of app-justified helper
+    traits, while reusable component plumbing remains discoverable through the component lane.
 - [ ] Update crate-level docs to teach the new split.
 
 ## M2 — Reset the app authoring API
@@ -148,6 +180,15 @@ Closeout note on 2026-03-15:
     `use fret_ui_shadcn as shadcn;`, `shadcn::shadcn_themes::*`, or root
     `shadcn::typography::*`.
   - [x] Audit remaining first-party docs/examples for root-level shadcn app-install teaching.
+  - [ ] Reduce first-contact shadcn discovery to one taught lane.
+    - Goal: `use fret_ui_shadcn::{facade as shadcn, prelude::*};` is the only default first-contact
+      story, while crate-root exports are treated as compatibility/implementation residue and
+      `shadcn::raw::*` stays explicit.
+    - This is not just a docs issue: if first-party tests must keep forbidding alternative import
+      paths, the public surface still needs more self-constraint.
+    - Exit condition: docs and status docs stop talking about crate root / facade as peer teaching
+      lanes, and the remaining root-level exposure is explicitly classified as retained raw or
+      compatibility surface.
 - [x] Migrate `fret-docking` to the component/advanced split without redefining the app authoring model.
   - [x] Add an explicit `fret::docking` facade module behind a `fret/docking` feature.
   - [x] Move the cookbook docking example to the `fret::docking::*` seam.
