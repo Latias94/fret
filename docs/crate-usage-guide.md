@@ -146,7 +146,8 @@ If you are already on the `fret` builder path, prefer `FretApp::asset_dir(...)` 
 `UiAppBuilder::with_asset_dir(...)` for the convenience lane, or
 `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have a
 manifest file, so validation fails early during startup configuration instead of being buried in
-app-local setup glue.
+app-local setup glue. On the builder path, asset registrations preserve call order, so later
+registrations can intentionally override earlier ones for the same logical locator.
 
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now

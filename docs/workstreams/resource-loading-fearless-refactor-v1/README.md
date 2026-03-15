@@ -74,6 +74,9 @@ This workstream takes a fearless posture:
     convenience lane on the startup builder surface,
   - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` now keep that
     manifest lane on the startup builder surface instead of app-local setup glue.
+  - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
+    `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
+    composable resolver stack.
   - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold an
     `assets/` directory and mount it via `FretApp::asset_dir("assets")` so first-contact app
     templates do not bounce users back to path-first loading.

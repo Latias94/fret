@@ -11,6 +11,13 @@ use crate::{
 
 type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[derive(Debug, Clone)]
+enum AssetMount {
+    Dir { bundle: AssetBundleId, dir: PathBuf },
+    Manifest { path: PathBuf },
+}
+
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
 ///
 /// Notes:
@@ -23,8 +30,7 @@ pub struct FretApp {
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
     command_palette: bool,
-    asset_dirs: Vec<(AssetBundleId, PathBuf)>,
-    asset_manifests: Vec<PathBuf>,
+    asset_mounts: Vec<AssetMount>,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
 }
@@ -40,8 +46,7 @@ impl FretApp {
             main_window: None,
             defaults: Defaults::default(),
             command_palette: false,
-            asset_dirs: Vec::new(),
-            asset_manifests: Vec::new(),
+            asset_mounts: Vec::new(),
             setup_hooks: Vec::new(),
             install_hooks: Vec::new(),
         }
@@ -85,9 +90,13 @@ impl FretApp {
     /// Register a native/package-dev asset manifest on the default app builder path.
     ///
     /// This keeps logical bundle keys on the builder surface instead of teaching ad-hoc runtime
-    /// resolver registration inside app setup or widget code.
+    /// resolver registration inside app setup or widget code. Asset registrations preserve the
+    /// builder call order, so later calls can intentionally override earlier ones for the same
+    /// logical locator.
     pub fn asset_manifest(mut self, manifest_path: impl Into<PathBuf>) -> Self {
-        self.asset_manifests.push(manifest_path.into());
+        self.asset_mounts.push(AssetMount::Manifest {
+            path: manifest_path.into(),
+        });
         self
     }
 
@@ -96,10 +105,14 @@ impl FretApp {
     /// This convenience lane scans `dir` eagerly during builder assembly and exposes the files as
     /// logical bundle assets under `AssetBundleId::app(root_name)`. Prefer
     /// [`asset_manifest`](Self::asset_manifest) when tooling already emits an explicit manifest
-    /// artifact that should be reviewed or packaged directly.
+    /// artifact that should be reviewed or packaged directly. Asset registrations preserve the
+    /// builder call order, so later calls can intentionally override earlier ones for the same
+    /// logical locator.
     pub fn asset_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.asset_dirs
-            .push((AssetBundleId::app(self.root_name), dir.into()));
+        self.asset_mounts.push(AssetMount::Dir {
+            bundle: AssetBundleId::app(self.root_name),
+            dir: dir.into(),
+        });
         self
     }
 
@@ -157,8 +170,7 @@ impl FretApp {
             main_window,
             defaults,
             command_palette,
-            asset_dirs,
-            asset_manifests,
+            asset_mounts,
             setup_hooks,
             install_hooks,
         } = self;
@@ -196,8 +208,7 @@ impl FretApp {
             root_name,
             main_window,
             defaults,
-            asset_dirs,
-            asset_manifests,
+            asset_mounts,
             setup_hooks,
             install_hooks,
             driver,
@@ -218,8 +229,7 @@ fn finish_builder<S: 'static>(
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
-    asset_dirs: Vec<(AssetBundleId, PathBuf)>,
-    asset_manifests: Vec<PathBuf>,
+    asset_mounts: Vec<AssetMount>,
     setup_hooks: Vec<AppSetupHook>,
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
     driver: UiAppDriver<S>,
@@ -240,11 +250,11 @@ fn finish_builder<S: 'static>(
         .map_err(crate::BootstrapError::from)?;
     let mut builder = UiAppBuilder::from_bootstrap(builder);
     builder = apply_main_window(root_name, main_window, builder);
-    for manifest_path in asset_manifests {
-        builder = builder.with_asset_manifest(manifest_path)?;
-    }
-    for (bundle, dir) in asset_dirs {
-        builder = builder.with_asset_dir(bundle, dir)?;
+    for mount in asset_mounts {
+        builder = match mount {
+            AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir)?,
+            AssetMount::Manifest { path } => builder.with_asset_manifest(path)?,
+        };
     }
     Ok(builder)
 }
@@ -260,4 +270,39 @@ fn apply_main_window<S: 'static>(
     }
 
     builder.with_main_window(root_name, (960.0, 720.0))
+}
+
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn asset_mounts_preserve_builder_call_order() {
+        let app = FretApp::new("demo-app")
+            .asset_dir("assets/dev")
+            .asset_manifest("assets.manifest.json")
+            .asset_dir("assets/override");
+
+        assert_eq!(app.asset_mounts.len(), 3);
+        match &app.asset_mounts[0] {
+            AssetMount::Dir { bundle, dir } => {
+                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
+                assert_eq!(dir, &PathBuf::from("assets/dev"));
+            }
+            other => panic!("expected dir mount first, got {other:?}"),
+        }
+        match &app.asset_mounts[1] {
+            AssetMount::Manifest { path } => {
+                assert_eq!(path, &PathBuf::from("assets.manifest.json"));
+            }
+            other => panic!("expected manifest mount second, got {other:?}"),
+        }
+        match &app.asset_mounts[2] {
+            AssetMount::Dir { bundle, dir } => {
+                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
+                assert_eq!(dir, &PathBuf::from("assets/override"));
+            }
+            other => panic!("expected dir mount third, got {other:?}"),
+        }
+    }
 }
