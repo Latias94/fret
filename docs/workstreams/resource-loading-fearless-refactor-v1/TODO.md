@@ -415,8 +415,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `crates/fret-launch/src/runner/web/gfx_init.rs`
     - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
 
-- [ ] RESLOAD-test-630 Add regression coverage proving that hot reload / invalidation works via
+- [x] RESLOAD-test-630 Add regression coverage proving that hot reload / invalidation works via
       revision changes rather than widget re-execution accidents.
+  - Evidence:
+    - `ecosystem/fret-ui-assets/src/image_source.rs`
+      (`bundle_asset_request_same_revision_reuses_signal_model_and_request_key`,
+      `bundle_asset_request_revision_change_creates_new_signal_model_and_request_key`)
+  - Locked invariants:
+    - same logical locator + same revision must reuse the same signal model/request key even if the
+      resolver is reinstalled or the widget helper re-executes,
+    - same logical locator + changed revision must create a new signal model/request key so the UI
+      asset helper path observes the change through revision semantics instead of accidental
+      subtree rebuilds.
 
 ## Migration and cleanup
 
