@@ -120,7 +120,7 @@
           "kind": "test_id",
           "id": "imui-editor-proof.editor.advanced.transform.scale.y.value"
         },
-        "text": "1.000"
+        "text": "100%"
       },
       "timeout_frames": 240
     },

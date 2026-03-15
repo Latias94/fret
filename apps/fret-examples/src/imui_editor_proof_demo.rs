@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
 use fret::view::ViewWindowState;
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{advanced::prelude::*, shadcn, FretApp};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
 use fret_core::{Color, PanelKind, Px, TextAlign};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
+    runtime as dock_runtime, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
+    DockPanelRegistryBuilder, DockPanelRegistryService, ViewportPanel,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -36,8 +36,8 @@ use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::headless::text_assist::{
-    TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
-    input_owned_text_assist_expanded,
+    controller_with_active_item_id, input_owned_text_assist_expanded, TextAssistItem,
+    TextAssistMatch, TextAssistMatchMode,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -93,8 +93,24 @@ fn editor_fixed_decimals_presentation() -> NumericPresentation<f64> {
     NumericPresentation::fixed_decimals(3)
 }
 
+fn editor_position_presentation() -> NumericPresentation<f64> {
+    editor_fixed_decimals_presentation().with_chrome_suffix("m")
+}
+
+fn editor_rotation_presentation() -> NumericPresentation<f64> {
+    NumericPresentation::degrees(0)
+}
+
 fn editor_percent_presentation() -> NumericPresentation<f64> {
     NumericPresentation::percent_0_1(0)
+}
+
+fn editor_transform_presentations() -> TransformEditPresentations {
+    TransformEditPresentations::new(
+        editor_position_presentation(),
+        editor_rotation_presentation(),
+        editor_percent_presentation(),
+    )
 }
 
 fn authoring_parity_value_presentation() -> NumericPresentation<f64> {
@@ -1790,6 +1806,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                             let validate = advanced_validate.clone();
                                             let fixed_presentation =
                                                 editor_fixed_decimals_presentation();
+                                            let position_presentation =
+                                                editor_position_presentation();
+                                            let transform_presentations =
+                                                editor_transform_presentations();
                                             let fmt_i32: fret_ui_editor::controls::NumericFormatFn<i32> =
                                                 Arc::new(|v| Arc::from(format!("{v}")));
                                             let parse_i32: fret_ui_editor::controls::NumericParseFn<i32> =
@@ -1840,7 +1860,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     editor_pos_x.clone(),
                                                                     editor_pos_y.clone(),
                                                                     editor_pos_z.clone(),
-                                                                    fixed_presentation.clone(),
+                                                                    position_presentation.clone(),
                                                                 )
                                                                 .on_axis_outcome(Some(Arc::new(
                                                                     move |host, action_cx, outcome: VecEditAxisOutcome| {
@@ -1965,9 +1985,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                         editor_scl_y.clone(),
                                                                         editor_scl_z.clone(),
                                                                     ),
-                                                                    TransformEditPresentations::shared(
-                                                                        fixed_presentation.clone(),
-                                                                    ),
+                                                                    transform_presentations.clone(),
                                                                 )
                                                                 .on_axis_outcome(Some(Arc::new(
                                                                     move |host,
@@ -3324,6 +3342,20 @@ mod tests {
             imui.test_id.as_deref(),
             Some("imui-editor-proof.authoring.imui.blend")
         );
+    }
+
+    #[test]
+    fn advanced_transform_proof_uses_heterogeneous_numeric_presentations() {
+        let position = editor_position_presentation();
+        let rotation = editor_rotation_presentation();
+        let scale = editor_transform_presentations().scale;
+
+        assert_eq!(position.format()(1.25).as_ref(), "1.250");
+        assert_eq!(position.chrome_suffix().map(Arc::as_ref), Some("m"));
+        assert_eq!(rotation.format()(90.0).as_ref(), "90°");
+        assert!(rotation.chrome_suffix().is_none());
+        assert_eq!(scale.format()(1.0).as_ref(), "100%");
+        assert!(scale.chrome_suffix().is_none());
     }
 
     #[test]

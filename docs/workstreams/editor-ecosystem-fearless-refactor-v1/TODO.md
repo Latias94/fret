@@ -292,9 +292,11 @@ Interaction contract:
       bundles. `TransformEdit` now also has a direct section-scoped lane via
       `TransformEditPresentations`, so the higher-level transform composite can keep position /
       rotation / scale numeric stories together without falling back to one shared raw closure
-      pair. `GradientEditor` now also consumes the same bundle for angle and stop-position
-      editing, so the abstraction already has non-proof first-party composite consumers inside
-      `fret-ui-editor`.
+      pair. The promoted advanced proof now also uses that lane heterogeneously instead of as one
+      shared fixed-decimal passthrough: position carries a chrome `m` suffix, rotation owns `°`
+      inside the editable text story, and scale uses normalized percent formatting. `GradientEditor`
+      now also consumes the same bundle for angle and stop-position editing, so the abstraction
+      already has non-proof first-party composite consumers inside `fret-ui-editor`.
       `VecEdit` now also exposes `(axis, outcome)` and `TransformEdit` now exposes
       `(section, axis, outcome)` at the same editor-layer seam, with promoted proof readouts at
       `imui-editor-proof.editor.advanced.position.outcome` and
