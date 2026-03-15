@@ -3160,6 +3160,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_windowed_rows_offset_changes_min: _,
         check_windowed_rows_visible_start_changes_repainted: _,
         dump_semantics_changed_repainted_json: _,
+        ..
     } = checks;
 
     // Tool-launched suites default to *not* redacting text to keep authoring/debugging ergonomic.

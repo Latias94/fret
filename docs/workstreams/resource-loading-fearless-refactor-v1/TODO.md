@@ -368,10 +368,23 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - current font catalog revision/family count,
       - current `TextFontStackKey`,
       - current native system-font rescan state.
+    - `crates/fret-diag-protocol/src/lib.rs` now exposes typed `UiPredicateV1` variants over
+      `debug.resource_loading` instead of requiring stringly JSON-pointer predicates.
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs` now centralizes
+      recent debug-snapshot predicate evaluation for both docking and resource-loading surfaces, and
+      `assert` / `wait` / `drag` script steps can consume the new resource-loading predicates from
+      recent snapshots.
+    - `crates/fret-diag/src/stats/resource_loading.rs` plus
+      `crates/fret-diag/src/registry/checks/builtin_post_run/resource_loading.rs` now add
+      post-run `fretboard diag` gates for:
+      - asset-load missing-bundle counter max,
+      - unsupported file/url counter max,
+      - external-reference-unavailable counter max,
+      - revision-change counter max,
+      - bundled font baseline source equality.
   - Remaining:
     - emit a more explicit stale-manifest vs truly-missing-bundle distinction when file-backed
       manifest resolvers can surface it
-    - add post-run `fretboard diag` checks / predicates over `debug.resource_loading`
 
 - [~] RESLOAD-test-610 Add portable contract tests for asset capability and fallback behavior.
   - Current landed slice:

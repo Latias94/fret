@@ -1,96 +1,5 @@
 use super::*;
 
-fn eval_docking_predicate_from_recent_debug_snapshot(
-    svc: &UiDiagnosticsService,
-    window: AppWindowId,
-    predicate: &UiPredicateV1,
-    max_age_ms: u64,
-) -> Option<bool> {
-    let ring = svc.per_window.get(&window)?;
-    let snapshot = ring.snapshots.back()?;
-    let age_ms = unix_ms_now().saturating_sub(snapshot.timestamp_unix_ms);
-    if age_ms > max_age_ms {
-        return None;
-    }
-    let docking = snapshot.debug.docking_interaction.as_ref()?;
-
-    match predicate {
-        UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
-            let preview = docking.dock_drop_resolve.as_ref()?.preview.as_ref()?;
-            let have = match preview.kind {
-                UiDockDropPreviewKindDiagnosticsV1::WrapBinary => "wrap_binary",
-                UiDockDropPreviewKindDiagnosticsV1::InsertIntoSplit { .. } => "insert_into_split",
-            };
-            Some(have == preview_kind.as_str())
-        }
-        UiPredicateV1::DockDropResolveSourceIs { source } => {
-            let resolve = docking.dock_drop_resolve.as_ref()?;
-            let have = match resolve.source {
-                UiDockDropResolveSourceV1::InvertDocking => "invert_docking",
-                UiDockDropResolveSourceV1::OutsideWindow => "outside_window",
-                UiDockDropResolveSourceV1::FloatZone => "float_zone",
-                UiDockDropResolveSourceV1::EmptyDockSpace => "empty_dock_space",
-                UiDockDropResolveSourceV1::LayoutBoundsMiss => "layout_bounds_miss",
-                UiDockDropResolveSourceV1::LatchedPreviousHover => "latched_previous_hover",
-                UiDockDropResolveSourceV1::TabBar => "tab_bar",
-                UiDockDropResolveSourceV1::FloatingTitleBar => "floating_title_bar",
-                UiDockDropResolveSourceV1::OuterHintRect => "outer_hint_rect",
-                UiDockDropResolveSourceV1::InnerHintRect => "inner_hint_rect",
-                UiDockDropResolveSourceV1::None => "none",
-            };
-            Some(have == source.as_str())
-        }
-        UiPredicateV1::DockDropResolvedIsSome { some } => {
-            Some(docking.dock_drop_resolve.as_ref()?.resolved.is_some() == *some)
-        }
-        UiPredicateV1::DockDropResolvedZoneIs { zone } => {
-            let resolved = docking.dock_drop_resolve.as_ref()?.resolved.as_ref()?;
-            let have = match resolved.zone {
-                UiDropZoneV1::Center => "center",
-                UiDropZoneV1::Left => "left",
-                UiDropZoneV1::Right => "right",
-                UiDropZoneV1::Top => "top",
-                UiDropZoneV1::Bottom => "bottom",
-            };
-            Some(have == zone.as_str())
-        }
-        UiPredicateV1::DockDropResolvedInsertIndexIs { index } => {
-            let resolved = docking.dock_drop_resolve.as_ref()?.resolved.as_ref()?;
-            Some(resolved.insert_index == Some(*index as u64))
-        }
-        UiPredicateV1::DockGraphCanonicalIs { canonical } => {
-            Some(docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical)
-        }
-        UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => Some(
-            docking
-                .dock_graph_stats
-                .as_ref()?
-                .has_nested_same_axis_splits
-                == *has_nested,
-        ),
-        UiPredicateV1::DockGraphNodeCountLe { max } => {
-            Some(docking.dock_graph_stats.as_ref()?.node_count <= *max)
-        }
-        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => {
-            Some(docking.dock_graph_stats.as_ref()?.max_split_depth <= *max)
-        }
-        UiPredicateV1::DockGraphSignatureIs { signature } => {
-            Some(docking.dock_graph_signature.as_ref()?.signature == *signature)
-        }
-        UiPredicateV1::DockGraphSignatureContains { needle } => Some(
-            docking
-                .dock_graph_signature
-                .as_ref()?
-                .signature
-                .contains(needle),
-        ),
-        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => {
-            Some(docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64)
-        }
-        _ => None,
-    }
-}
-
 pub(super) fn handle_wait_bounds_stable_step(
     svc: &mut UiDiagnosticsService,
     window: AppWindowId,
@@ -830,7 +739,7 @@ pub(super) fn handle_wait_until_step(
             UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
             UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
             _ => {
-                if let Some(ok) = eval_docking_predicate_from_recent_debug_snapshot(
+                if let Some(ok) = eval_debug_snapshot_predicate_from_recent_snapshot(
                     svc,
                     predicate_window,
                     &predicate,

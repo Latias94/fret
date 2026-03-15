@@ -25,6 +25,12 @@ pub(crate) struct StatsCmdContext {
     pub check_stale_scene_test_id: Option<String>,
     pub check_stale_scene_eps: f32,
     pub check_idle_no_paint_min: Option<u64>,
+    pub check_asset_load_missing_bundle_assets_max: Option<u64>,
+    pub check_asset_load_unsupported_file_max: Option<u64>,
+    pub check_asset_load_unsupported_url_max: Option<u64>,
+    pub check_asset_load_external_reference_unavailable_max: Option<u64>,
+    pub check_asset_load_revision_changes_max: Option<u64>,
+    pub check_bundled_font_baseline_source: Option<String>,
     pub check_pixels_changed_test_id: Option<String>,
     pub check_pixels_unchanged_test_id: Option<String>,
     pub check_semantics_changed_repainted: bool,
@@ -62,6 +68,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_stale_scene_test_id,
         check_stale_scene_eps,
         check_idle_no_paint_min,
+        check_asset_load_missing_bundle_assets_max,
+        check_asset_load_unsupported_file_max,
+        check_asset_load_unsupported_url_max,
+        check_asset_load_external_reference_unavailable_max,
+        check_asset_load_revision_changes_max,
+        check_bundled_font_baseline_source,
         check_pixels_changed_test_id,
         check_pixels_unchanged_test_id,
         check_semantics_changed_repainted,
@@ -269,6 +281,84 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         } else {
             stats::check_bundle_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
         }
+    }
+    if let Some(max_allowed) = check_asset_load_missing_bundle_assets_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-load-missing-bundle-assets-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_load_missing_bundle_assets_max(
+            bundle_path.as_path(),
+            max_allowed,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max_allowed) = check_asset_load_unsupported_file_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-load-unsupported-file-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_load_unsupported_file_max(
+            bundle_path.as_path(),
+            max_allowed,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max_allowed) = check_asset_load_unsupported_url_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-load-unsupported-url-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_load_unsupported_url_max(
+            bundle_path.as_path(),
+            max_allowed,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max_allowed) = check_asset_load_external_reference_unavailable_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-load-external-reference-unavailable-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_load_external_reference_unavailable_max(
+            bundle_path.as_path(),
+            max_allowed,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max_allowed) = check_asset_load_revision_changes_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-load-revision-changes-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_load_revision_changes_max(
+            bundle_path.as_path(),
+            max_allowed,
+            warmup_frames,
+        )?;
+    }
+    if let Some(expected_source) = check_bundled_font_baseline_source.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-bundled-font-baseline-source",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_bundled_font_baseline_source(
+            bundle_path.as_path(),
+            expected_source,
+            warmup_frames,
+        )?;
     }
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
         ensure_check_supported_in_stats_mode(

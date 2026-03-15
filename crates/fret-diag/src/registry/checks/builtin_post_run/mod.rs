@@ -11,6 +11,7 @@ use crate::diag_run::RunChecks;
 mod base;
 mod engine;
 mod misc;
+mod resource_loading;
 mod ui_gallery;
 
 #[allow(dead_code)]
@@ -93,6 +94,7 @@ fn builtin_post_run_checks() -> &'static [PostRunCheckEntry] {
             out.extend_from_slice(ui_gallery::entries());
             out.extend_from_slice(engine::ENTRIES);
             out.extend_from_slice(misc::ENTRIES);
+            out.extend_from_slice(resource_loading::ENTRIES);
             out
         })
         .as_slice()

@@ -415,170 +415,201 @@ pub(super) fn handle_drag_pointer_until_step(
             let app_snapshot = svc.app_snapshot_for_window(app, window);
             let move_steps = state.playback.steps.max(1);
             let reached_end = state.playback.frame > move_steps;
-            let predicate_ok_without_semantics = match &state.predicate {
-                UiPredicateV1::EventKindSeen { event_kind } => svc
-                    .per_window
-                    .get(&window)
-                    .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
-                UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
-                    text_font_stack_key_stable_frames >= *stable_frames
-                }
-                UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
-                UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
-                UiPredicateV1::KnownWindowCountGe { n } => open_window_count >= *n,
-                UiPredicateV1::KnownWindowCountIs { n } => open_window_count == *n,
-                UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => platform_caps
-                    .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
-                UiPredicateV1::DockDragCurrentWindowIs {
-                    window: target_window,
-                } => resolve_window_target_from_known_windows(
+            let predicate_ok_without_semantics = if let Some(ok) =
+                eval_debug_snapshot_predicate_from_recent_snapshot(
+                    svc,
                     window,
-                    svc.known_windows.as_slice(),
-                    *target_window,
-                )
-                .is_some_and(|target_window| {
-                    dock_drag_runtime
-                        .as_ref()
-                        .is_some_and(|drag| drag.dragging && drag.current_window == target_window)
-                }),
-                UiPredicateV1::DockDragActiveIs { active } => {
-                    let dragging = dock_drag_runtime.as_ref().is_some_and(|drag| drag.dragging);
-                    dragging == *active
-                }
-                UiPredicateV1::DockDropResolveSourceIs { source } => {
-                    if let Some(resolve) = docking_diag.and_then(|d| d.dock_drop_resolve.as_ref()) {
-                        let have = match resolve.source {
-                            fret_runtime::DockDropResolveSource::InvertDocking => "invert_docking",
-                            fret_runtime::DockDropResolveSource::OutsideWindow => "outside_window",
-                            fret_runtime::DockDropResolveSource::FloatZone => "float_zone",
-                            fret_runtime::DockDropResolveSource::EmptyDockSpace => {
-                                "empty_dock_space"
-                            }
-                            fret_runtime::DockDropResolveSource::LayoutBoundsMiss => {
-                                "layout_bounds_miss"
-                            }
-                            fret_runtime::DockDropResolveSource::LatchedPreviousHover => {
-                                "latched_previous_hover"
-                            }
-                            fret_runtime::DockDropResolveSource::TabBar => "tab_bar",
-                            fret_runtime::DockDropResolveSource::FloatingTitleBar => {
-                                "floating_title_bar"
-                            }
-                            fret_runtime::DockDropResolveSource::OuterHintRect => "outer_hint_rect",
-                            fret_runtime::DockDropResolveSource::InnerHintRect => "inner_hint_rect",
-                            fret_runtime::DockDropResolveSource::None => "none",
-                        };
-                        have == source.as_str()
-                    } else {
-                        false
-                    }
-                }
-                UiPredicateV1::DockDropResolvedIsSome { some } => docking_diag
-                    .and_then(|d| d.dock_drop_resolve.as_ref())
-                    .is_some_and(|d| d.resolved.is_some() == *some),
-                UiPredicateV1::DockDropResolvedZoneIs { zone } => {
-                    if let Some(resolved) = docking_diag
-                        .and_then(|d| d.dock_drop_resolve.as_ref())
-                        .and_then(|d| d.resolved.as_ref())
-                    {
-                        let have = match resolved.zone {
-                            fret_core::dock::DropZone::Center => "center",
-                            fret_core::dock::DropZone::Left => "left",
-                            fret_core::dock::DropZone::Right => "right",
-                            fret_core::dock::DropZone::Top => "top",
-                            fret_core::dock::DropZone::Bottom => "bottom",
-                        };
-                        have == zone.as_str()
-                    } else {
-                        false
-                    }
-                }
-                UiPredicateV1::DockDropResolvedInsertIndexIs { index } => docking_diag
-                    .and_then(|d| d.dock_drop_resolve.as_ref())
-                    .and_then(|d| d.resolved.as_ref())
-                    .is_some_and(|d| d.insert_index == Some(*index as usize)),
-                UiPredicateV1::DockGraphCanonicalIs { canonical } => docking_diag
-                    .and_then(|d| d.dock_graph_stats)
-                    .is_some_and(|s| s.canonical_ok == *canonical),
-                UiPredicateV1::DockGraphSignatureIs { signature } => docking_diag
-                    .and_then(|d| d.dock_graph_signature.as_ref())
-                    .is_some_and(|s| s.signature == *signature),
-                UiPredicateV1::DockGraphSignatureContains { needle } => docking_diag
-                    .and_then(|d| d.dock_graph_signature.as_ref())
-                    .is_some_and(|s| s.signature.contains(needle)),
-                UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => docking_diag
-                    .and_then(|d| d.dock_graph_signature.as_ref())
-                    .is_some_and(|s| s.fingerprint64 == *fingerprint64),
-                UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => {
-                    workspace_diag
-                        .and_then(|w| {
-                            w.tab_strip_active_visibility.iter().rev().find(|s| {
-                                s.status
-                                    == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
-                                    && pane_id.as_ref().is_none_or(|id| {
-                                        s.pane_id
-                                            .as_ref()
-                                            .is_some_and(|p| p.as_ref() == id.as_str())
-                                    })
-                            })
-                        })
-                        .is_some_and(|s| s.overflow == *overflow)
-                }
-                UiPredicateV1::WorkspaceTabStripActiveVisibleIs { visible, pane_id } => {
-                    workspace_diag
-                        .and_then(|w| {
-                            w.tab_strip_active_visibility.iter().rev().find(|s| {
-                                s.status
-                                    == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
-                                    && pane_id.as_ref().is_none_or(|id| {
-                                        s.pane_id
-                                            .as_ref()
-                                            .is_some_and(|p| p.as_ref() == id.as_str())
-                                    })
-                            })
-                        })
-                        .is_some_and(|s| s.active_visible == *visible)
-                }
-                UiPredicateV1::WorkspaceTabStripActiveScrollPxGe { px, pane_id } => workspace_diag
-                    .and_then(|w| {
-                        w.tab_strip_active_visibility.iter().rev().find(|s| {
-                            s.status
-                                == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
-                                && pane_id.as_ref().is_none_or(|id| {
-                                    s.pane_id
-                                        .as_ref()
-                                        .is_some_and(|p| p.as_ref() == id.as_str())
-                                })
-                        })
-                    })
-                    .is_some_and(|s| s.scroll_x.0 >= *px),
-                UiPredicateV1::WorkspaceTabStripActiveScrollPxLe { px, pane_id } => workspace_diag
-                    .and_then(|w| {
-                        w.tab_strip_active_visibility.iter().rev().find(|s| {
-                            s.status
-                                == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
-                                && pane_id.as_ref().is_none_or(|id| {
-                                    s.pane_id
-                                        .as_ref()
-                                        .is_some_and(|p| p.as_ref() == id.as_str())
-                                })
-                        })
-                    })
-                    .is_some_and(|s| s.scroll_x.0 <= *px),
-                _ => eval_predicate_without_semantics(
-                    window,
-                    svc.known_windows.as_slice(),
-                    open_window_count,
-                    app_snapshot.as_ref(),
-                    platform_caps,
-                    app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
-                    app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
-                    docking_diag,
-                    workspace_diag,
-                    dock_drag_runtime.as_ref(),
                     &state.predicate,
-                )
-                .unwrap_or(false),
+                    250,
+                ) {
+                ok
+            } else {
+                match &state.predicate {
+                        UiPredicateV1::EventKindSeen { event_kind } => svc
+                            .per_window
+                            .get(&window)
+                            .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                        UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
+                            text_font_stack_key_stable_frames >= *stable_frames
+                        }
+                        UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
+                        UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
+                        UiPredicateV1::KnownWindowCountGe { n } => open_window_count >= *n,
+                        UiPredicateV1::KnownWindowCountIs { n } => open_window_count == *n,
+                        UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => platform_caps
+                            .is_some_and(|c| {
+                                c.ui.window_hover_detection.as_str() == quality.as_str()
+                            }),
+                        UiPredicateV1::DockDragCurrentWindowIs {
+                            window: target_window,
+                        } => resolve_window_target_from_known_windows(
+                            window,
+                            svc.known_windows.as_slice(),
+                            *target_window,
+                        )
+                        .is_some_and(|target_window| {
+                            dock_drag_runtime
+                                .as_ref()
+                                .is_some_and(|drag| drag.dragging && drag.current_window == target_window)
+                        }),
+                        UiPredicateV1::DockDragActiveIs { active } => {
+                            let dragging =
+                                dock_drag_runtime.as_ref().is_some_and(|drag| drag.dragging);
+                            dragging == *active
+                        }
+                        UiPredicateV1::DockDropResolveSourceIs { source } => {
+                            if let Some(resolve) =
+                                docking_diag.and_then(|d| d.dock_drop_resolve.as_ref())
+                            {
+                                let have = match resolve.source {
+                                    fret_runtime::DockDropResolveSource::InvertDocking => {
+                                        "invert_docking"
+                                    }
+                                    fret_runtime::DockDropResolveSource::OutsideWindow => {
+                                        "outside_window"
+                                    }
+                                    fret_runtime::DockDropResolveSource::FloatZone => {
+                                        "float_zone"
+                                    }
+                                    fret_runtime::DockDropResolveSource::EmptyDockSpace => {
+                                        "empty_dock_space"
+                                    }
+                                    fret_runtime::DockDropResolveSource::LayoutBoundsMiss => {
+                                        "layout_bounds_miss"
+                                    }
+                                    fret_runtime::DockDropResolveSource::LatchedPreviousHover => {
+                                        "latched_previous_hover"
+                                    }
+                                    fret_runtime::DockDropResolveSource::TabBar => "tab_bar",
+                                    fret_runtime::DockDropResolveSource::FloatingTitleBar => {
+                                        "floating_title_bar"
+                                    }
+                                    fret_runtime::DockDropResolveSource::OuterHintRect => {
+                                        "outer_hint_rect"
+                                    }
+                                    fret_runtime::DockDropResolveSource::InnerHintRect => {
+                                        "inner_hint_rect"
+                                    }
+                                    fret_runtime::DockDropResolveSource::None => "none",
+                                };
+                                have == source.as_str()
+                            } else {
+                                false
+                            }
+                        }
+                        UiPredicateV1::DockDropResolvedIsSome { some } => docking_diag
+                            .and_then(|d| d.dock_drop_resolve.as_ref())
+                            .is_some_and(|d| d.resolved.is_some() == *some),
+                        UiPredicateV1::DockDropResolvedZoneIs { zone } => {
+                            if let Some(resolved) = docking_diag
+                                .and_then(|d| d.dock_drop_resolve.as_ref())
+                                .and_then(|d| d.resolved.as_ref())
+                            {
+                                let have = match resolved.zone {
+                                    fret_core::dock::DropZone::Center => "center",
+                                    fret_core::dock::DropZone::Left => "left",
+                                    fret_core::dock::DropZone::Right => "right",
+                                    fret_core::dock::DropZone::Top => "top",
+                                    fret_core::dock::DropZone::Bottom => "bottom",
+                                };
+                                have == zone.as_str()
+                            } else {
+                                false
+                            }
+                        }
+                        UiPredicateV1::DockDropResolvedInsertIndexIs { index } => docking_diag
+                            .and_then(|d| d.dock_drop_resolve.as_ref())
+                            .and_then(|d| d.resolved.as_ref())
+                            .is_some_and(|d| d.insert_index == Some(*index as usize)),
+                        UiPredicateV1::DockGraphCanonicalIs { canonical } => docking_diag
+                            .and_then(|d| d.dock_graph_stats)
+                            .is_some_and(|s| s.canonical_ok == *canonical),
+                        UiPredicateV1::DockGraphSignatureIs { signature } => docking_diag
+                            .and_then(|d| d.dock_graph_signature.as_ref())
+                            .is_some_and(|s| s.signature == *signature),
+                        UiPredicateV1::DockGraphSignatureContains { needle } => docking_diag
+                            .and_then(|d| d.dock_graph_signature.as_ref())
+                            .is_some_and(|s| s.signature.contains(needle)),
+                        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => {
+                            docking_diag
+                                .and_then(|d| d.dock_graph_signature.as_ref())
+                                .is_some_and(|s| s.fingerprint64 == *fingerprint64)
+                        }
+                        UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => {
+                            workspace_diag
+                                .and_then(|w| {
+                                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                                        s.status
+                                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                                            && pane_id.as_ref().is_none_or(|id| {
+                                                s.pane_id
+                                                    .as_ref()
+                                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                                            })
+                                    })
+                                })
+                                .is_some_and(|s| s.overflow == *overflow)
+                        }
+                        UiPredicateV1::WorkspaceTabStripActiveVisibleIs { visible, pane_id } => {
+                            workspace_diag
+                                .and_then(|w| {
+                                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                                        s.status
+                                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                                            && pane_id.as_ref().is_none_or(|id| {
+                                                s.pane_id
+                                                    .as_ref()
+                                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                                            })
+                                    })
+                                })
+                                .is_some_and(|s| s.active_visible == *visible)
+                        }
+                        UiPredicateV1::WorkspaceTabStripActiveScrollPxGe { px, pane_id } => {
+                            workspace_diag
+                                .and_then(|w| {
+                                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                                        s.status
+                                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                                            && pane_id.as_ref().is_none_or(|id| {
+                                                s.pane_id
+                                                    .as_ref()
+                                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                                            })
+                                    })
+                                })
+                                .is_some_and(|s| s.scroll_x.0 >= *px)
+                        }
+                        UiPredicateV1::WorkspaceTabStripActiveScrollPxLe { px, pane_id } => {
+                            workspace_diag
+                                .and_then(|w| {
+                                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                                        s.status
+                                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                                            && pane_id.as_ref().is_none_or(|id| {
+                                                s.pane_id
+                                                    .as_ref()
+                                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                                            })
+                                    })
+                                })
+                                .is_some_and(|s| s.scroll_x.0 <= *px)
+                        }
+                        _ => eval_predicate_without_semantics(
+                            window,
+                            svc.known_windows.as_slice(),
+                            open_window_count,
+                            app_snapshot.as_ref(),
+                            platform_caps,
+                            app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
+                            app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
+                            docking_diag,
+                            workspace_diag,
+                            dock_drag_runtime.as_ref(),
+                            &state.predicate,
+                        )
+                        .unwrap_or(false),
+                    }
             };
             let input_ctx = app
                 .global::<fret_runtime::WindowInputContextService>()

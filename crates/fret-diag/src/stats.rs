@@ -16,6 +16,7 @@ mod notify_gates;
 mod notify_gates_streaming;
 mod overlay_gates;
 mod pixels_changed;
+mod resource_loading;
 mod retained_vlist_gates;
 mod retained_vlist_gates_streaming;
 mod script_runtime;
@@ -67,6 +68,13 @@ pub(super) use notify_gates::check_bundle_for_notify_hotspot_file_max;
 pub(super) use overlay_gates::check_bundle_for_overlay_synthesis_min;
 pub(super) use pixels_changed::{
     check_out_dir_for_pixels_changed, check_out_dir_for_pixels_unchanged,
+};
+pub(super) use resource_loading::{
+    check_bundle_for_asset_load_external_reference_unavailable_max,
+    check_bundle_for_asset_load_missing_bundle_assets_max,
+    check_bundle_for_asset_load_revision_changes_max,
+    check_bundle_for_asset_load_unsupported_file_max,
+    check_bundle_for_asset_load_unsupported_url_max, check_bundle_for_bundled_font_baseline_source,
 };
 pub(super) use retained_vlist_gates::{
     check_bundle_for_retained_vlist_attach_detach_max,
@@ -129,6 +137,16 @@ pub(super) use notify_gates::check_bundle_for_notify_hotspot_file_max_json;
 #[cfg(test)]
 #[allow(unused_imports)]
 pub(super) use overlay_gates::check_bundle_for_overlay_synthesis_min_json;
+#[cfg(test)]
+#[allow(unused_imports)]
+pub(super) use resource_loading::{
+    check_bundle_for_asset_load_external_reference_unavailable_max_json,
+    check_bundle_for_asset_load_missing_bundle_assets_max_json,
+    check_bundle_for_asset_load_revision_changes_max_json,
+    check_bundle_for_asset_load_unsupported_file_max_json,
+    check_bundle_for_asset_load_unsupported_url_max_json,
+    check_bundle_for_bundled_font_baseline_source_json,
+};
 #[cfg(test)]
 #[allow(unused_imports)]
 pub(super) use retained_vlist_gates::{
