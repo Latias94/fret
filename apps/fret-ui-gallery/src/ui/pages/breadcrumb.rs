@@ -38,56 +38,53 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = DocSection::build(cx, "Notes", notes)
         .title_test_id("ui-gallery-breadcrumb-section-title-notes")
         .description("Implementation notes and regression guidelines.");
+    let responsive = DocSection::build(cx, "Responsive", responsive)
+        .title_test_id("ui-gallery-breadcrumb-section-title-responsive")
+        .description("Fret-specific responsive breadcrumb: dropdown on desktop, drawer on mobile.")
+        .code_rust_from_file_region(snippets::responsive::SOURCE, "example");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .title_test_id("ui-gallery-breadcrumb-section-title-demo")
+        .description("Basic breadcrumb recipe with ellipsis and current page.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-breadcrumb-section-title-usage")
+        .description("Copyable upstream-shaped primitives usage for Breadcrumb.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .title_test_id("ui-gallery-breadcrumb-section-title-basic")
+        .description("A basic breadcrumb with a home link and a components link.")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let custom_separator = DocSection::build(cx, "Custom Separator", custom_separator)
+        .title_test_id("ui-gallery-breadcrumb-section-title-custom-separator")
+        .description("Use a custom separator component for parity with docs.")
+        .code_rust_from_file_region(snippets::custom_separator::SOURCE, "example");
+    let dropdown = DocSection::build(cx, "Dropdown", dropdown)
+        .title_test_id("ui-gallery-breadcrumb-section-title-dropdown")
+        .description("Compose a dropdown menu inside the breadcrumb trail.")
+        .code_rust_from_file_region(snippets::dropdown::SOURCE, "example");
+    let collapsed = DocSection::build(cx, "Collapsed", collapsed)
+        .title_test_id("ui-gallery-breadcrumb-section-title-collapsed")
+        .description("Use `BreadcrumbEllipsis` to show a collapsed breadcrumb state.")
+        .code_rust_from_file_region(snippets::collapsed::SOURCE, "example");
+    let link_component = DocSection::build(cx, "Link Component", link_component)
+        .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
+        .description(
+            "Use the typed link surface to model router-integrated breadcrumb items; `.children(|cx| [...])` is the default Fret alternative to upstream `render` / `asChild`.",
+        )
+        .code_rust_from_file_region(snippets::link_component::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
+        .description("Breadcrumb layout should follow right-to-left direction context.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
             "Preview follows the shadcn Breadcrumb docs path first, then appends a Fret-specific responsive recipe for viewport-vs-drawer behavior.",
         ),
-        vec![
-            DocSection::new("Demo", demo)
-                .title_test_id("ui-gallery-breadcrumb-section-title-demo")
-                .description("Basic breadcrumb recipe with ellipsis and current page.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-breadcrumb-section-title-usage")
-                .description("Copyable upstream-shaped primitives usage for Breadcrumb.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Basic", basic)
-                .title_test_id("ui-gallery-breadcrumb-section-title-basic")
-                .description("A basic breadcrumb with a home link and a components link.")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("Custom Separator", custom_separator)
-                .title_test_id("ui-gallery-breadcrumb-section-title-custom-separator")
-                .description("Use a custom separator component for parity with docs.")
-                .code_rust_from_file_region(snippets::custom_separator::SOURCE, "example"),
-            DocSection::new("Dropdown", dropdown)
-                .title_test_id("ui-gallery-breadcrumb-section-title-dropdown")
-                .description("Compose a dropdown menu inside the breadcrumb trail.")
-                .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
-            DocSection::new("Collapsed", collapsed)
-                .title_test_id("ui-gallery-breadcrumb-section-title-collapsed")
-                .description("Use `BreadcrumbEllipsis` to show a collapsed breadcrumb state.")
-                .code_rust_from_file_region(snippets::collapsed::SOURCE, "example"),
-            DocSection::new("Link Component", link_component)
-                .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
-                .description(
-                    "Use the typed link surface to model router-integrated breadcrumb items; `.children(|cx| [...])` is the default Fret alternative to upstream `render` / `asChild`.",
-                )
-                .code_rust_from_file_region(snippets::link_component::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
-                .description("Breadcrumb layout should follow right-to-left direction context.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            api_reference,
-            DocSection::new("Responsive", responsive)
-                .title_test_id("ui-gallery-breadcrumb-section-title-responsive")
-                .description("Fret-specific responsive breadcrumb: dropdown on desktop, drawer on mobile.")
-                .code_rust_from_file_region(snippets::responsive::SOURCE, "example"),
-            notes,
-        ],
+        vec![demo, usage, basic, custom_separator, dropdown, collapsed, link_component, rtl, api_reference, responsive, notes],
     )
     .test_id("ui-gallery-breadcrumb-component");
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

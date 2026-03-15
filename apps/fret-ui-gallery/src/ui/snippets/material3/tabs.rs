@@ -3,11 +3,14 @@ pub const SOURCE: &str = include_str!("tabs.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let tabs = material3::Tabs::uncontrolled(cx, "overview");
+    let value = tabs.value_model();
     let current = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
@@ -15,7 +18,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>)
     let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
     let active_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
 
-    let fixed_tabs = material3::Tabs::new(value.clone())
+    let fixed_tabs = tabs
         .a11y_label("Material 3 Tabs")
         .test_id("ui-gallery-material3-tabs")
         .items(vec![

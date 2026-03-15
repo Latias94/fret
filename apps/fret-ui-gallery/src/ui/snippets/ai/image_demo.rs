@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("image_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{ImageColorSpace, Px};
 use fret_ui_ai as ui_ai;
 use fret_ui_assets as ui_assets;
@@ -69,7 +70,7 @@ fn demo_avatar_rgba8(width: u32, height: u32) -> Vec<u8> {
     out
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let state = cx.use_image_source_state(demo_image_source());
     let status_line = cx
         .text(format!("status={:?}", state.status))

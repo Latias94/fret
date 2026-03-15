@@ -11,11 +11,11 @@ pub(super) fn preview_ai_task_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<Any
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Task", demo)
+            DocSection::build(cx, "Task", demo)
                 .test_id_prefix("ui-gallery-ai-task-demo")
                 .code_rust_from_file_region(snippets::task_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

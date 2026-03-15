@@ -411,6 +411,8 @@ pub(super) fn handle_drag_pointer_until_step(
             // previous frame), release immediately.
             let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
             let open_window_count = UiDiagnosticsService::open_window_count_for_predicates(app);
+            let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
+            let app_snapshot = svc.app_snapshot_for_window(app, window);
             let move_steps = state.playback.steps.max(1);
             let reached_end = state.playback.frame > move_steps;
             let predicate_ok_without_semantics = match &state.predicate {
@@ -425,8 +427,7 @@ pub(super) fn handle_drag_pointer_until_step(
                 UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
                 UiPredicateV1::KnownWindowCountGe { n } => open_window_count >= *n,
                 UiPredicateV1::KnownWindowCountIs { n } => open_window_count == *n,
-                UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => app
-                    .global::<fret_runtime::PlatformCapabilities>()
+                UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => platform_caps
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
                 UiPredicateV1::DockDragCurrentWindowIs {
                     window: target_window,
@@ -564,7 +565,20 @@ pub(super) fn handle_drag_pointer_until_step(
                         })
                     })
                     .is_some_and(|s| s.scroll_x.0 <= *px),
-                _ => false,
+                _ => eval_predicate_without_semantics(
+                    window,
+                    svc.known_windows.as_slice(),
+                    open_window_count,
+                    app_snapshot.as_ref(),
+                    platform_caps,
+                    app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
+                    app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
+                    docking_diag,
+                    workspace_diag,
+                    dock_drag_runtime.as_ref(),
+                    &state.predicate,
+                )
+                .unwrap_or(false),
             };
             let input_ctx = app
                 .global::<fret_runtime::WindowInputContextService>()
@@ -581,9 +595,10 @@ pub(super) fn handle_drag_pointer_until_step(
                         .and_then(|svc| svc.snapshot(window)),
                     app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                     app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                    app_snapshot.as_ref(),
                     svc.known_windows.as_slice(),
                     open_window_count,
-                    app.global::<fret_runtime::PlatformCapabilities>(),
+                    platform_caps,
                     app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
                     app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
                     docking_diag,

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("flex_1_items.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn text_item<H: UiHost>(
@@ -11,7 +12,7 @@ fn text_item<H: UiHost>(
     shadcn::ToggleGroupItem::new(value, [cx.text(label)]).a11y_label(format!("Toggle {label}"))
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::ToggleGroup::single_uncontrolled(Some("left"))
         .variant(shadcn::ToggleVariant::Outline)
         .items_flex_1(true)

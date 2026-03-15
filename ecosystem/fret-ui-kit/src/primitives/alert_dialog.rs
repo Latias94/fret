@@ -25,7 +25,7 @@ use crate::declarative::ModelWatchExt;
 use crate::primitives::dialog as dialog_prim;
 use crate::primitives::dialog::DialogOptions;
 use crate::primitives::trigger_a11y;
-use crate::{OverlayPresence, OverlayRequest};
+use crate::{IntoUiElement, OverlayPresence, OverlayRequest, collect_children};
 
 /// Stable per-overlay root naming convention for alert dialogs.
 pub fn alert_dialog_root_name(id: GlobalElementId) -> String {
@@ -113,19 +113,28 @@ impl AlertDialogRoot {
         dialog_options_for_alert_dialog(cx, open_id, self.options.clone())
     }
 
-    pub fn modal_request<H: UiHost>(
+    pub fn modal_request<H: UiHost, I, T>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
-        children: impl IntoIterator<Item = AnyElement>,
-    ) -> OverlayRequest {
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
         let open = self.open_model(cx);
         let options = self.dialog_options(cx);
 
         dialog_prim::modal_dialog_request_with_options(
-            id, trigger, open, presence, options, children,
+            id,
+            trigger,
+            open,
+            presence,
+            options,
+            collect_children(cx, children),
         )
     }
 }
@@ -239,22 +248,30 @@ pub fn alert_dialog_modal_barrier_layout() -> LayoutStyle {
 }
 
 /// Builds a Radix-style alert-dialog modal barrier (non-dismissable by outside press).
-pub fn alert_dialog_modal_barrier<H: UiHost>(
+pub fn alert_dialog_modal_barrier<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     dialog_prim::modal_barrier(cx, open, false, children)
 }
 
 /// Convenience helper to assemble alert dialog overlay children in a Radix-like order: barrier then
 /// content.
-pub fn alert_dialog_modal_layer_elements<H: UiHost>(
+pub fn alert_dialog_modal_layer_elements<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     Elements::from([
         alert_dialog_modal_barrier(cx, open, barrier_children),
         content,

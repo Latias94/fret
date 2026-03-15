@@ -1015,6 +1015,16 @@ impl<H: UiHost, TTrigger> SheetComposition<H, TTrigger> {
     }
 }
 
+impl<H: UiHost, TTrigger> IntoUiElement<H> for SheetComposition<H, TTrigger>
+where
+    TTrigger: SheetCompositionTriggerArg<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetComposition::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `SheetClose` (v4).
 ///
 /// Upstream `SheetClose` is a thin wrapper around the underlying primitive's `Close` component.

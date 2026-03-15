@@ -18,7 +18,7 @@ pub(super) fn preview_ai_speech_input_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             "Preview stays close to the official AI Elements docs example while preserving Fret's UI-only seam: apps own microphone capture, transcription, and browser capability decisions.",
         ),
         vec![
-            DocSection::new("Speech Input", demo)
+            DocSection::build(cx, "Speech Input", demo)
                 .description("Docs-aligned speech input flow with transcript feedback and a deterministic processing phase.")
                 .test_id_prefix("ui-gallery-ai-speech-input-demo")
                 .code_rust_from_file_region(snippets::speech_input_demo::SOURCE, "example"),
@@ -27,5 +27,8 @@ pub(super) fn preview_ai_speech_input_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-speech-input-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-speech-input-demo")
+            .into_element(cx),
+    ]
 }

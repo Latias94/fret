@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("suggestions_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{Corners, Edges, Px, SemanticsRole};
 use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme};
@@ -11,7 +12,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let clicked = cx.local_model_keyed("clicked", || false);
     let prompt = cx.local_model_keyed("prompt", String::new);
 

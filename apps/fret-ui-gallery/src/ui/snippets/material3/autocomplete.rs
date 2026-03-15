@@ -3,21 +3,22 @@ pub const SOURCE: &str = include_str!("autocomplete.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    disabled: Model<bool>,
-    error: Model<bool>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let outlined_autocomplete = material3::Autocomplete::uncontrolled(cx);
     let value = outlined_autocomplete.query_model();
     let dialog = material3::Dialog::uncontrolled(cx);
     let dialog_open = dialog.open_model();
+    let disabled_toggle = material3::Switch::uncontrolled(cx, false);
+    let disabled = disabled_toggle.selected_model();
+    let error_toggle = material3::Switch::uncontrolled(cx, false);
+    let error = error_toggle.selected_model();
     let disabled_now = cx
         .get_model_copied(&disabled, Invalidation::Layout)
         .unwrap_or(false);
@@ -51,12 +52,14 @@ pub fn render<H: UiHost>(
     let toggles = ui::h_row(move |cx| {
         vec![
             cx.text("disabled"),
-            material3::Switch::new(disabled.clone())
+            disabled_toggle
+                .clone()
                 .a11y_label("Disable autocomplete")
                 .test_id("ui-gallery-material3-autocomplete-disabled")
                 .into_element(cx),
             cx.text("error"),
-            material3::Switch::new(error.clone())
+            error_toggle
+                .clone()
                 .a11y_label("Toggle autocomplete error state")
                 .test_id("ui-gallery-material3-autocomplete-error")
                 .into_element(cx),

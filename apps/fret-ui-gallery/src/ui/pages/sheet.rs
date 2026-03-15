@@ -23,7 +23,7 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Preview mirrors the shadcn Sheet docs path after `Installation`: `Demo`, `Usage`, `Side`, `No Close Button`, `RTL`, and `API Reference`.",
         "`Sheet::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
         "Default close affordance lives in `SheetContent`, matching upstream; disable it with `show_close_button(false)`.",
-        "`Parts` stays after `API Reference` as a focused Fret follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",
+        "`Usage` is the default copyable path; `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .max_w(Px(980.0))
@@ -34,43 +34,51 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .max_w(Px(980.0))
         .no_shell()
         .test_id_prefix("ui-gallery-sheet-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-sheet-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .max_w(Px(980.0))
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable shadcn-style composition reference for Sheet.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let side = DocSection::build(cx, "Side", side)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-sheet-side")
+        .code_rust_from_file_region(snippets::side::SOURCE, "example");
+    let no_close_button = DocSection::build(cx, "No Close Button", no_close_button)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-sheet-no-close")
+        .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-sheet-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let parts = DocSection::build(cx, "Parts", parts)
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-sheet-parts")
+        .description(
+            "Advanced part surface adapters for explicit Trigger/Portal/Overlay ownership.",
+        )
+        .code_rust_from_file_region(snippets::parts::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Sheet docs path after `Installation`, then keeps the Fret-only `Parts` adapter section explicit.",
+            "Preview mirrors the shadcn Sheet docs path after `Installation`, then keeps the advanced Fret-only `Parts` adapter section explicit.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-sheet-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .max_w(Px(980.0))
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable shadcn-style composition reference for Sheet.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Side", side)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-sheet-side")
-                .code_rust_from_file_region(snippets::side::SOURCE, "example"),
-            DocSection::new("No Close Button", no_close_button)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-sheet-no-close")
-                .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-sheet-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            side,
+            no_close_button,
+            rtl,
             api_reference,
-            DocSection::new("Parts", parts)
-                .max_w(Px(980.0))
-                .test_id_prefix("ui-gallery-sheet-parts")
-                .description("Fret-specific part surface adapters (Trigger/Portal/Overlay).")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
+            parts,
             notes,
         ],
     );
 
-    vec![body.test_id("ui-gallery-sheet")]
+    vec![body.test_id("ui-gallery-sheet").into_element(cx)]
 }

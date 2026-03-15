@@ -1,6 +1,6 @@
 use super::GlyphQuadKind;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
-use fret_render_text::font_instance_key::FontFaceKey;
+use fret_render_text::FontFaceKey;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

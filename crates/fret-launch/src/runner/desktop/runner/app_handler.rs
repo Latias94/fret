@@ -658,13 +658,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 let startup_async = Self::system_font_rescan_async_enabled()
                     && Self::system_font_catalog_startup_async_enabled();
-                let _ =
-                    super::super::super::font_catalog::initialize_desktop_startup_font_environment(
-                        &mut self.app,
-                        &mut renderer,
-                        self.config.text_font_families.clone(),
-                        startup_async,
-                    );
+                let _ = super::super::super::font_catalog::initialize_startup_font_environment(
+                    &mut self.app,
+                    &mut renderer,
+                    self.config.text_font_families.clone(),
+                    if startup_async {
+                        super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopAsync
+                    } else {
+                        super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopSync
+                    },
+                );
 
                 self.context = Some(context);
                 self.renderer = Some(renderer);
@@ -866,11 +869,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
             let startup_async = Self::system_font_rescan_async_enabled()
                 && Self::system_font_catalog_startup_async_enabled();
-            let _ = super::super::super::font_catalog::initialize_desktop_startup_font_environment(
+            let _ = super::super::super::font_catalog::initialize_startup_font_environment(
                 &mut self.app,
                 &mut renderer,
                 self.config.text_font_families.clone(),
-                startup_async,
+                if startup_async {
+                    super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopAsync
+                } else {
+                    super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopSync
+                },
             );
 
             self.context = Some(context);

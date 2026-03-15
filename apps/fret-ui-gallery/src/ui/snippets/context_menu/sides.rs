@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
@@ -57,30 +58,26 @@ fn side_menu<H: UiHost>(
 
     shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id(content_test_id)
-        .build_parts(
-            cx,
-            trigger,
-            shadcn::ContextMenuContent::new().side(side),
-            |_cx| {
-                vec![
-                    shadcn::ContextMenuGroup::new(vec![
-                        shadcn::ContextMenuItem::new("Back")
-                            .action(CommandId::new("ui_gallery.context_menu.sides.back"))
-                            .into(),
-                        shadcn::ContextMenuItem::new("Forward")
-                            .action(CommandId::new("ui_gallery.context_menu.sides.forward"))
-                            .into(),
-                        shadcn::ContextMenuItem::new("Reload")
-                            .action(CommandId::new("ui_gallery.context_menu.sides.reload"))
-                            .into(),
-                    ])
+        .compose()
+        .trigger(trigger)
+        .content(shadcn::ContextMenuContent::new().side(side))
+        .entries(vec![
+            shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuItem::new("Back")
+                    .action(CommandId::new("ui_gallery.context_menu.sides.back"))
                     .into(),
-                ]
-            },
-        )
+                shadcn::ContextMenuItem::new("Forward")
+                    .action(CommandId::new("ui_gallery.context_menu.sides.forward"))
+                    .into(),
+                shadcn::ContextMenuItem::new("Reload")
+                    .action(CommandId::new("ui_gallery.context_menu.sides.reload"))
+                    .into(),
+            ])
+            .into(),
+        ])
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
     let gap = MetricRef::space(Space::N4).resolve(&theme);
     let layout = decl_style::layout_style(

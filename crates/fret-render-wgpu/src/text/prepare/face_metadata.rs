@@ -1,8 +1,6 @@
 use super::super::{TextShape, TextSystem};
 use fret_core::{TextConstraints, TextStyle};
-use fret_render_text::decorations::TextDecorationMetricsPx;
-use fret_render_text::font_instance_key::FontFaceKey;
-use fret_render_text::font_trace::FontTraceFamilyResolved;
+use fret_render_text::{FontFaceKey, FontTraceFamilyResolved, TextDecorationMetricsPx};
 use std::sync::Arc;
 
 impl TextSystem {
@@ -69,7 +67,7 @@ impl TextSystem {
             .unwrap_or(&[]);
 
         let ppem = style.size.0 * scale;
-        fret_render_text::decorations::decoration_metrics_px_for_font_bytes(
+        fret_render_text::decoration_metrics_px_for_font_bytes(
             font_data.data.data(),
             usage.face_index,
             coords,
@@ -91,10 +89,8 @@ impl TextSystem {
             .face_cache
             .font_data_by_face
             .get(&(font_data_id, face_index))?;
-        let name = fret_render_text::font_names::best_family_name_from_font_bytes(
-            font_data.data.data(),
-            face_index,
-        )?;
+        let name =
+            fret_render_text::best_family_name_from_font_bytes(font_data.data.data(), face_index)?;
         self.face_cache
             .font_face_family_name_cache
             .insert((font_data_id, face_index), name.clone());

@@ -282,7 +282,7 @@ impl View for RouterBasicsView {
 
         let outlet = RouterOutlet::new(snapshot_model.clone())
             .test_id(TEST_ID_OUTLET)
-            .into_element_by_leaf_ui(
+            .into_element_by_leaf(
                 cx,
                 |_cx, route, snap| {
                     let leaf = snap.leaf_match().expect("leaf match should exist");
@@ -404,7 +404,7 @@ impl View for RouterBasicsView {
         .w_full()
         .max_w(Px(980.0));
 
-        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }
 }
 

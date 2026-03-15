@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("button_group_select.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{FontId, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let currency_value = cx.local_model_keyed("currency_value", || Some(Arc::<str>::from("$")));
     let currency_open = cx.local_model_keyed("currency_open", || false);
     let amount_value = cx.local_model_keyed("amount_value", String::new);
@@ -31,21 +32,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
         shadcn::Select::new(currency_value.clone(), currency_open.clone())
             .trigger_test_id("ui-gallery-button-group-select-currency-trigger")
-            .into_element_parts(
-                cx,
-                |_cx| {
-                    shadcn::SelectTrigger::new()
-                        .font(FontId::monospace())
-                        .label_policy(shadcn::SelectTriggerLabelPolicy::Value)
-                },
-                |_cx| shadcn::SelectValue::new(),
-                move |_cx| {
-                    shadcn::SelectContent::new()
-                        .position(fret_ui_shadcn::select::SelectPosition::Popper)
-                        .align(shadcn::SelectAlign::Start)
-                        .with_entries(entries)
-                },
+            .trigger(
+                shadcn::SelectTrigger::new()
+                    .font(FontId::monospace())
+                    .label_policy(shadcn::SelectTriggerLabelPolicy::Value),
             )
+            .value(shadcn::SelectValue::new())
+            .content(
+                shadcn::SelectContent::new()
+                    .position(fret_ui_shadcn::select::SelectPosition::Popper)
+                    .align(shadcn::SelectAlign::Start),
+            )
+            .entries(entries)
+            .into_element(cx)
     };
 
     let amount = shadcn::Input::new(amount_value)

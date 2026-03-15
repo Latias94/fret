@@ -29,53 +29,68 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .description("Public surface summary and ownership notes.");
 
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Single checkbox with a label.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Copyable minimal usage for `Checkbox`.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let checked_state = DocSection::build(cx, "Checked State", checked_state)
+        .description("Controlled checked model and optional/indeterminate model.")
+        .code_rust_from_file_region(snippets::checked_state::SOURCE, "example");
+    let invalid_state = DocSection::build(cx, "Invalid State", invalid_state)
+        .description(
+            "Invalid styling uses `aria_invalid` on the checkbox and destructive field text.",
+        )
+        .code_rust_from_file_region(snippets::invalid_state::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .description("Field plus checkbox plus label composition.")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
+    let description_section = DocSection::build(cx, "Description", description_section)
+        .description("`FieldContent` keeps label and helper text aligned with the control.")
+        .code_rust_from_file_region(snippets::description::SOURCE, "example");
+    let disabled_section = DocSection::build(cx, "Disabled", disabled_section)
+        .description("Disabled checkboxes block interaction and use muted styling.")
+        .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
+    let group = DocSection::build(cx, "Group", group)
+        .description("Checkbox list pattern with per-item descriptions.")
+        .code_rust_from_file_region(snippets::group::SOURCE, "example");
+    let table = DocSection::build(cx, "Table", table)
+        .description("Table selection pattern with header and row checkboxes.")
+        .code_rust_from_file_region(snippets::table::SOURCE, "example");
+    let rtl_section = DocSection::build(cx, "RTL", rtl_section)
+        .description("Checkbox and label alignment under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let label = DocSection::build(cx, "Label Association (Fret)", label)
+        .description("Use `FieldLabel::for_control` plus `Checkbox::control_id` so label clicks toggle the checkbox.")
+        .test_id_prefix("ui-gallery-checkbox-label")
+        .code_rust_from_file_region(snippets::label::SOURCE, "example");
+    let with_title_section = DocSection::build(cx, "With Title (Fret)", with_title_section)
+        .description("`FieldLabel` can wrap a full field layout for card-style checkbox rows.")
+        .code_rust_from_file_region(snippets::with_title::SOURCE, "example");
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
             "Preview mirrors the shadcn Checkbox docs path first, then keeps `Label Association` and `With Title` as focused Fret follow-ups.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Single checkbox with a label.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Copyable minimal usage for `Checkbox`.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Checked State", checked_state)
-                .description("Controlled checked model and optional/indeterminate model.")
-                .code_rust_from_file_region(snippets::checked_state::SOURCE, "example"),
-            DocSection::new("Invalid State", invalid_state)
-                .description("Invalid styling uses `aria_invalid` on the checkbox and destructive field text.")
-                .code_rust_from_file_region(snippets::invalid_state::SOURCE, "example"),
-            DocSection::new("Basic", basic)
-                .description("Field plus checkbox plus label composition.")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
-            DocSection::new("Description", description_section)
-                .description("`FieldContent` keeps label and helper text aligned with the control.")
-                .code_rust_from_file_region(snippets::description::SOURCE, "example"),
-            DocSection::new("Disabled", disabled_section)
-                .description("Disabled checkboxes block interaction and use muted styling.")
-                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
-            DocSection::new("Group", group)
-                .description("Checkbox list pattern with per-item descriptions.")
-                .code_rust_from_file_region(snippets::group::SOURCE, "example"),
-            DocSection::new("Table", table)
-                .description("Table selection pattern with header and row checkboxes.")
-                .code_rust_from_file_region(snippets::table::SOURCE, "example"),
-            DocSection::new("RTL", rtl_section)
-                .description("Checkbox and label alignment under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            checked_state,
+            invalid_state,
+            basic,
+            description_section,
+            disabled_section,
+            group,
+            table,
+            rtl_section,
             api_reference,
-            DocSection::new("Label Association (Fret)", label)
-                .description("Use `FieldLabel::for_control` plus `Checkbox::control_id` so label clicks toggle the checkbox.")
-                .test_id_prefix("ui-gallery-checkbox-label")
-                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
-            DocSection::new("With Title (Fret)", with_title_section)
-                .description("`FieldLabel` can wrap a full field layout for card-style checkbox rows.")
-                .code_rust_from_file_region(snippets::with_title::SOURCE, "example"),
+            label,
+            with_title_section,
         ],
     );
 
-    vec![body.test_id("ui-gallery-checkbox")]
+    vec![body.test_id("ui-gallery-checkbox").into_element(cx)]
 }

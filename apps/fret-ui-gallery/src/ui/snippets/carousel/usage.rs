@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -43,12 +43,12 @@ fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + u
     ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let items = (1..=3)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx).into_element(cx)))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -56,11 +56,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-usage")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

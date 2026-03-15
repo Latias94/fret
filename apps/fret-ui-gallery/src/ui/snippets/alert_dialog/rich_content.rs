@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rich_content.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use std::sync::Arc;
 
 use fret_core::{AttributedText, DecorationLineStyle, TextPaintStyle, TextSpan, UnderlineStyle};
@@ -25,7 +26,7 @@ fn rich_title_text() -> AttributedText {
     AttributedText::new(text, Arc::<[TextSpan]>::from([plain, underlined, trailing]))
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
 
     let trigger = shadcn::AlertDialogTrigger::new(

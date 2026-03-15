@@ -1732,6 +1732,15 @@ mod tests {
             .any(|child| has_semantics_role(child, role))
     }
 
+    fn count_semantics_role(node: &AnyElement, role: SemanticsRole) -> usize {
+        let mut out =
+            usize::from(node.semantics_decoration.as_ref().and_then(|d| d.role) == Some(role));
+        for child in &node.children {
+            out += count_semantics_role(child, role);
+        }
+        out
+    }
+
     #[test]
     fn input_otp_parts_infer_length_and_respect_explicit_separators() {
         use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
@@ -1775,6 +1784,38 @@ mod tests {
             has_semantics_role(&element, SemanticsRole::Separator),
             "expected InputOTPSeparator to emit separator semantics like upstream role=separator"
         );
+    }
+
+    #[test]
+    fn input_otp_group_size_auto_separators_cover_the_default_gallery_lane() {
+        use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+        use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let model = app.models_mut().insert("123456".to_string());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "input_otp_group_size",
+            |cx| {
+                InputOtp::new(model.clone())
+                    .length(6)
+                    .group_size(Some(3))
+                    .into_element(cx)
+            },
+        );
+
+        assert_eq!(count_svg_icons(&element), 1);
+        assert_eq!(count_semantics_role(&element, SemanticsRole::Separator), 1);
     }
 
     #[test]

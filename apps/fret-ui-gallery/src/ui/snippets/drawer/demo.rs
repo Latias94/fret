@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px};
@@ -92,7 +93,7 @@ fn goal_chart<H: UiHost>(
     )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let goal_model = cx.local_model(|| 350);
     let current_goal = cx.watch_model(&goal_model).copied().unwrap_or(350);
     let theme = Theme::global(&*cx.app).snapshot();

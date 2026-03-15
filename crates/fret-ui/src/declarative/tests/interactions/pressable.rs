@@ -86,6 +86,102 @@ fn pressable_state_reports_focused_when_focused() {
 }
 
 #[test]
+fn element_context_reports_focus_within_for_focused_descendant() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let focus_within = Rc::new(Cell::new(false));
+    let outer_element_id: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let inner_element_id: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+
+    fn render_frame(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        focus_within_out: Rc<Cell<bool>>,
+        outer_id_out: Rc<Cell<Option<crate::elements::GlobalElementId>>>,
+        inner_id_out: Rc<Cell<Option<crate::elements::GlobalElementId>>>,
+    ) -> NodeId {
+        render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "element-context-focus-within",
+            move |cx| {
+                let focus_within_out = focus_within_out.clone();
+                let outer_id_out = outer_id_out.clone();
+                let inner_id_out = inner_id_out.clone();
+                vec![cx.pressable_with_id(
+                    crate::element::PressableProps::default(),
+                    move |cx, _st, outer_id| {
+                        outer_id_out.set(Some(outer_id));
+                        focus_within_out.set(cx.is_focus_within_element(outer_id));
+                        let inner_id_out = inner_id_out.clone();
+                        vec![cx.pressable_with_id(
+                            crate::element::PressableProps::default(),
+                            move |cx, _st, inner_id| {
+                                inner_id_out.set(Some(inner_id));
+                                vec![cx.text("inner")]
+                            },
+                        )]
+                    },
+                )]
+            },
+        )
+    }
+
+    let root = render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        focus_within.clone(),
+        outer_element_id.clone(),
+        inner_element_id.clone(),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(!focus_within.get());
+
+    let inner_element = inner_element_id.get().expect("inner element id");
+    let inner_node =
+        crate::elements::node_for_element(&mut app, window, inner_element).expect("inner node");
+    ui.set_focus(Some(inner_node));
+
+    app.advance_frame();
+    let root = render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        focus_within.clone(),
+        outer_element_id,
+        inner_element_id,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(focus_within.get());
+}
+
+#[test]
 fn pressable_on_activate_hook_runs_on_pointer_activation() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

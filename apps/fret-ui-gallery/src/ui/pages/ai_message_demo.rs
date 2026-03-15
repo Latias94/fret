@@ -15,11 +15,11 @@ pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     ]);
 
     let mut sections = vec![
-        DocSection::new("Usage with Conversation + PromptInput", usage)
+        DocSection::build(cx, "Usage with Conversation + PromptInput", usage)
             .description("Rust/Fret analogue of the official AI Elements Message usage example.")
             .test_id_prefix("ui-gallery-ai-message-usage")
             .code_rust_from_file_region(snippets::message_usage::SOURCE, "example"),
-        DocSection::new("Core Surface", demo)
+        DocSection::build(cx, "Core Surface", demo)
             .description("Focused alignment + bubble + actions + markdown response surface.")
             .test_id_prefix("ui-gallery-ai-message-demo")
             .code_rust_from_file_region(snippets::message_demo::SOURCE, "example"),
@@ -29,7 +29,7 @@ pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
     {
         let branch = snippets::message_branch_demo::render(cx);
         sections.push(
-            DocSection::new("Branching", branch)
+            DocSection::build(cx, "Branching", branch)
                 .description("Message branching is part of the upstream Message suite and stays available as a dedicated demo as well.")
                 .test_id_prefix("ui-gallery-ai-message-branch-inline")
                 .code_rust_from_file_region(snippets::message_branch_demo::SOURCE, "example"),
@@ -49,5 +49,8 @@ pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         sections,
     );
 
-    vec![body.test_id("ui-gallery-page-ai-message-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-message-demo")
+            .into_element(cx),
+    ]
 }

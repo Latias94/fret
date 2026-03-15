@@ -22,6 +22,27 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
     let notes_stack =
         DocSection::build(cx, "Notes", notes_stack).description("API surface and parity notes.");
+    let demo_cards = DocSection::build(cx, "Demo", demo_cards)
+        .no_shell()
+        .max_w(Px(1100.0))
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description(
+            "Copyable minimal usage for the chart container + tooltip/legend recipe surface.",
+        )
+        .test_id_prefix("ui-gallery-chart-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let contracts_overview = DocSection::build(cx, "Contracts", contracts_overview)
+        .code_rust_from_file_region(snippets::contracts::SOURCE, "example");
+    let tooltip_content = DocSection::build(cx, "Tooltip", tooltip_content)
+        .test_id_prefix("ui-gallery-chart-tooltip")
+        .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
+    let legend_content = DocSection::build(cx, "Legend", legend_content)
+        .test_id_prefix("ui-gallery-chart-legend")
+        .code_rust_from_file_region(snippets::legend::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .test_id_prefix("ui-gallery-chart-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -29,28 +50,15 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview follows shadcn Chart docs flow: Demo -> Usage -> Tooltip/Legend contracts. Fret-specific chart-engine notes stay explicit so parity gaps remain visible.",
         ),
         vec![
-            DocSection::new("Demo", demo_cards)
-                .no_shell()
-                .max_w(Px(1100.0))
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for the chart container + tooltip/legend recipe surface.")
-                .test_id_prefix("ui-gallery-chart-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Contracts", contracts_overview)
-                .code_rust_from_file_region(snippets::contracts::SOURCE, "example"),
-            DocSection::new("Tooltip", tooltip_content)
-                .test_id_prefix("ui-gallery-chart-tooltip")
-                .code_rust_from_file_region(snippets::tooltip::SOURCE, "example"),
-            DocSection::new("Legend", legend_content)
-                .test_id_prefix("ui-gallery-chart-legend")
-                .code_rust_from_file_region(snippets::legend::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .test_id_prefix("ui-gallery-chart-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo_cards,
+            usage,
+            contracts_overview,
+            tooltip_content,
+            legend_content,
+            rtl,
             notes_stack,
         ],
     );
 
-    vec![body.test_id("ui-gallery-chart-component")]
+    vec![body.test_id("ui-gallery-chart-component").into_element(cx)]
 }

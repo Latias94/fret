@@ -555,7 +555,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
 
     let page = doc_layout::wrap_preview_page(cx, None, "Markdown", vec![header, body]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }
 
 pub(in crate::ui) fn selection_perf_source() -> Arc<str> {

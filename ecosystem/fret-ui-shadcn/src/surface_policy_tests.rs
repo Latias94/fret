@@ -60,6 +60,35 @@ fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
 }
 
+fn normalized_reexport_block(source: &str, marker: &str) -> String {
+    let start = source
+        .find(marker)
+        .unwrap_or_else(|| panic!("missing re-export marker `{marker}`"));
+    let tail = &source[start + marker.len()..];
+    let end = tail
+        .find("};")
+        .unwrap_or_else(|| panic!("unterminated re-export block for `{marker}`"));
+    normalize_ws(&tail[..end])
+}
+
+fn assert_root_and_facade_reexports(module: &str, names: &[&str]) {
+    let root_marker = format!("pub use {module}::{{");
+    let facade_marker = format!("pub use crate::{module}::{{");
+    let root_block = normalized_reexport_block(LIB_RS, &root_marker);
+    let facade_block = normalized_reexport_block(LIB_RS, &facade_marker);
+
+    for name in names {
+        assert!(
+            root_block.contains(name),
+            "{module} should re-export `{name}` from the crate root"
+        );
+        assert!(
+            facade_block.contains(name),
+            "{module} should re-export `{name}` from the curated facade"
+        );
+    }
+}
+
 fn public_anyelement_signatures(source: &str) -> Vec<String> {
     let normalized = source.split_whitespace().collect::<Vec<_>>().join(" ");
     let mut out = Vec::new();
@@ -141,6 +170,74 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("UiElementKeyContextExt"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+}
+
+#[test]
+fn authoring_critical_family_exports_stay_on_root_and_curated_facade() {
+    assert_root_and_facade_reexports(
+        "select",
+        &[
+            "Select",
+            "SelectTrigger",
+            "SelectValue",
+            "SelectContent",
+            "SelectItem",
+        ],
+    );
+    assert_root_and_facade_reexports(
+        "combobox",
+        &[
+            "Combobox",
+            "ComboboxTrigger",
+            "ComboboxInput",
+            "ComboboxClear",
+            "ComboboxContent",
+            "ComboboxValue",
+        ],
+    );
+    assert_root_and_facade_reexports("combobox_chips", &["ComboboxChips", "ComboboxChipsPart"]);
+    assert_root_and_facade_reexports(
+        "command",
+        &[
+            "Command",
+            "CommandPalette",
+            "CommandInput",
+            "CommandList",
+            "CommandItem",
+            "command",
+        ],
+    );
+    assert_root_and_facade_reexports(
+        "navigation_menu",
+        &[
+            "NavigationMenu",
+            "NavigationMenuRoot",
+            "NavigationMenuList",
+            "NavigationMenuItem",
+            "NavigationMenuTrigger",
+            "NavigationMenuContent",
+            "NavigationMenuLink",
+            "NavigationMenuViewport",
+            "NavigationMenuIndicator",
+            "navigation_menu",
+            "navigation_menu_uncontrolled",
+        ],
+    );
+    assert_root_and_facade_reexports(
+        "pagination",
+        &[
+            "Pagination",
+            "PaginationContent",
+            "PaginationItem",
+            "PaginationLink",
+            "PaginationPrevious",
+            "PaginationNext",
+            "pagination",
+            "pagination_content",
+            "pagination_item",
+            "pagination_link",
+        ],
+    );
 }
 
 #[test]
@@ -797,6 +894,7 @@ fn dropdown_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_
         "pub fn from_open(open: Model<bool>) -> Self {",
         "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
         "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+        "pub fn compose<H: UiHost>(self) -> DropdownMenuComposition<H> {",
         "pub fn build<H: UiHost, I>(",
         "pub fn build_parts<H: UiHost, I>(",
     ];
@@ -805,7 +903,7 @@ fn dropdown_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_
         let marker = normalize_ws(marker);
         assert!(
             normalized.contains(&marker),
-            "dropdown_menu.rs should promote `uncontrolled(...)` + `build(...)` / `build_parts(...)` for the default authoring path while keeping managed-open seams explicit"
+            "dropdown_menu.rs should promote `uncontrolled(...)` + `compose(...)` for the default authoring path while keeping `build(...)` / `build_parts(...)` and managed-open seams explicit"
         );
     }
 }
@@ -818,6 +916,7 @@ fn context_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_s
         "pub fn from_open(open: Model<bool>) -> Self {",
         "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
         "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self {",
+        "pub fn compose<H: UiHost>(self) -> ContextMenuComposition<H> {",
         "pub fn build<H: UiHost, I>(",
         "pub fn build_parts<H: UiHost, I>(",
     ];
@@ -826,7 +925,7 @@ fn context_menu_root_promotes_uncontrolled_builder_path_and_keeps_managed_open_s
         let marker = normalize_ws(marker);
         assert!(
             normalized.contains(&marker),
-            "context_menu.rs should promote `uncontrolled(...)` + `build(...)` / `build_parts(...)` for the default authoring path while keeping managed-open seams explicit"
+            "context_menu.rs should promote `uncontrolled(...)` + `compose(...)` for the default authoring path while keeping `build(...)` / `build_parts(...)` and managed-open seams explicit"
         );
     }
 }

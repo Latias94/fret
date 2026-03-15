@@ -1,12 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::Theme;
 use fret_ui::action::OnActivate;
-use fret_ui::element::AnyElement;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -161,7 +160,7 @@ fn bottom_controls(
     .gap(Space::N2)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let assets = cx.slot_state(
         || {
             let data: Arc<[PaymentRow]> = Arc::from(vec![

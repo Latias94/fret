@@ -161,18 +161,18 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
             ]
         });
 
+    let canvas = DocSection::build(cx, "Canvas", canvas)
+        .description("Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles.")
+        .no_shell()
+        .max_w(Px(980.0));
+
     let page = doc_layout::render_doc_page(
         cx,
         Some(
             "Goal: stress a pan/zoom canvas scene with viewport-driven culling (candidate for prepaint-windowed cull windows).",
         ),
-        vec![DocSection::new("Canvas", canvas)
-            .description(
-                "Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles.",
-            )
-            .no_shell()
-            .max_w(Px(980.0))],
+        vec![canvas],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

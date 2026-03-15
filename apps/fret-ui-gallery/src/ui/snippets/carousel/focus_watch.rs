@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("focus_watch.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -9,7 +9,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let items = (1..=5)
         .map(|idx| {
             let theme = Theme::global(&*cx.app).snapshot();
@@ -45,7 +45,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .map(shadcn::CarouselItem::new)
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .opts(
             shadcn::CarouselOptions::new()
                 .watch_focus(true)
@@ -64,11 +64,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .refine_viewport_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .test_id("ui-gallery-carousel-focus")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

@@ -3,6 +3,20 @@ use crate::widget::{CommandAvailability, CommandAvailabilityCx};
 use fret_runtime::CommandScope;
 
 impl<H: UiHost> UiTree<H> {
+    fn focus_menu_bar_command_availability(&self, app: &mut H) -> CommandAvailability {
+        let Some(window) = self.window else {
+            return CommandAvailability::NotHandled;
+        };
+        let present = app
+            .global::<fret_runtime::WindowMenuBarFocusService>()
+            .is_some_and(|svc| svc.present(window));
+        if present {
+            CommandAvailability::Available
+        } else {
+            CommandAvailability::NotHandled
+        }
+    }
+
     #[stacksafe::stacksafe]
     pub fn is_command_available(&mut self, app: &mut H, command: &CommandId) -> bool {
         self.command_availability(app, command) == CommandAvailability::Available
@@ -28,6 +42,10 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         command: &CommandId,
     ) -> CommandAvailability {
+        if command.as_str() == "focus.menu_bar" {
+            return self.focus_menu_bar_command_availability(app);
+        }
+
         let Some(base_root) = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))

@@ -39,6 +39,8 @@ fn empty_row<H: UiHost>(row_h: Px) -> impl IntoUiElement<H> + use<H> {
     ui::container_props(row_props, |_cx| Vec::<AnyElement>::new())
 }
 
+// Intentional diagnostics raw boundary: this harness keeps the pinned-extents regression probe as
+// one landed root, while the page registers that landed root through `DocSection::build(cx, ...)`.
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.named("ui-gallery.scroll_area.expand_at_bottom", |cx| {
         let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());

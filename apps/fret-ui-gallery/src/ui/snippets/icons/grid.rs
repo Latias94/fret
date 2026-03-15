@@ -1,18 +1,16 @@
 pub const SOURCE: &str = include_str!("grid.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use fret_icons::ids;
 
-    let icon_cell = |cx: &mut ElementContext<'_, H>,
-                     label: &'static str,
-                     icon_id: fret_icons::IconId|
-     -> AnyElement {
+    let icon_cell = |cx: &mut UiCx<'_>, label: &'static str, icon_id: fret_icons::IconId| {
         let row = ui::h_flex(|cx| {
             vec![
                 fret_ui_shadcn::icon::icon_with(cx, icon_id, Some(Px(16.0)), None),

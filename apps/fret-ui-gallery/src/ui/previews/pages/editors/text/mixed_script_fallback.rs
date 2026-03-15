@@ -1,5 +1,6 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiChild;
 use fret::UiCx;
 
 pub(in crate::ui) fn preview_text_mixed_script_fallback(
@@ -47,7 +48,7 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
         label: &'static str,
         sample: &'static str,
         test_id: &'static str,
-    ) -> AnyElement {
+    ) -> impl UiChild + use<> {
         let label = shadcn::FieldLabel::new(label).into_element(cx);
         let text = cx
             .text_props(TextProps {
@@ -130,5 +131,5 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
     let page =
         doc_layout::wrap_preview_page(cx, None, "Mixed-script fallback", vec![header, panel]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

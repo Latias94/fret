@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("dropdown.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", String::new);
     let open = cx.local_model_keyed("open", || false);
 
@@ -43,21 +44,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     shadcn::InputGroup::new(value)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .placeholder("Enter file name")
+        .a11y_label("File name")
+        .control_test_id("ui-gallery-input-group-dropdown-control")
+        .trailing([dropdown])
+        .trailing_has_button(true)
         .test_id("ui-gallery-input-group-dropdown")
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::InputGroupPart::input(
-                    shadcn::InputGroupInput::new()
-                        .a11y_label("File name")
-                        .placeholder("Enter file name")
-                        .test_id("ui-gallery-input-group-dropdown-control"),
-                ),
-                shadcn::InputGroupPart::addon(
-                    shadcn::InputGroupAddon::new([dropdown])
-                        .align(shadcn::InputGroupAddonAlign::InlineEnd)
-                        .has_button(true),
-                ),
-            ]
-        })
+        .into_element(cx)
 }
 // endregion: example

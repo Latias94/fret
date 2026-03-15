@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("upstream_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::form::{FormRegistry, FormRegistryOptions, FormRevalidateMode};
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
@@ -8,7 +9,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_sm = LayoutRefinement::default()
         .w_full()
         .min_w_0()
@@ -369,26 +370,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items_start()
             .into_element(cx);
 
-            let item_row = |cx: &mut ElementContext<'_, H>,
-                            model: Model<bool>,
-                            id: &'static str,
-                            label: &'static str| {
-                ui::h_flex(|cx| {
-                    vec![
-                        shadcn::Checkbox::new(model)
-                            .control_id(id)
-                            .a11y_label(label)
-                            .into_element(cx),
-                        shadcn::FieldLabel::new(label)
-                            .for_control(id)
-                            .into_element(cx),
-                    ]
-                })
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .into_element(cx)
-            };
+            let item_row =
+                |cx: &mut UiCx<'_>, model: Model<bool>, id: &'static str, label: &'static str| {
+                    ui::h_flex(|cx| {
+                        vec![
+                            shadcn::Checkbox::new(model)
+                                .control_id(id)
+                                .a11y_label(label)
+                                .into_element(cx),
+                            shadcn::FieldLabel::new(label)
+                                .for_control(id)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N3)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx)
+                };
 
             let list = ui::v_flex(|cx| {
                 vec![

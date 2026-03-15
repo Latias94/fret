@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::geometry::{Corners, Edges, Point, Px, Size};
-use fret_core::scene::{ColorSpace, GradientStop, MAX_STOPS, Mask, RadialGradient, TileMode};
+use fret_core::scene::{ColorSpace, GradientStop, Mask, RadialGradient, TileMode, MAX_STOPS};
 use fret_core::{Color, Transform2D};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
@@ -10,6 +10,8 @@ use fret_ui::element::{
     VisualTransformProps,
 };
 use fret_ui::{ElementContext, Invalidation, UiHost};
+
+use crate::collect_children;
 
 #[derive(Debug, Clone)]
 pub struct LensProps {
@@ -92,13 +94,14 @@ fn zoom_about(center: Point, scale: f32) -> Transform2D {
 }
 
 #[track_caller]
-pub fn lens<H: UiHost, I>(
+pub fn lens<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: LensProps,
     mut children: impl FnMut(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let pointer_local = cx.local_model(|| None::<Point>);
 
@@ -168,7 +171,8 @@ where
                     };
 
                     vec![cx.container(container_props, |cx| {
-                        let mut out: Vec<AnyElement> = children(cx).into_iter().collect::<Vec<_>>();
+                        let items = children(cx);
+                        let mut out = collect_children(cx, items);
 
                         let position = if props.is_static {
                             Some(props.position)
@@ -241,7 +245,10 @@ where
                                                             layout: zoom_layout,
                                                             transform,
                                                         },
-                                                        |cx| children(cx),
+                                                        |cx| {
+                                                            let items = children(cx);
+                                                            collect_children(cx, items)
+                                                        },
                                                     )]
                                                 },
                                             )]

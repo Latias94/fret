@@ -27,46 +27,44 @@ pub(super) fn preview_kbd(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .description("Public surface summary and ownership notes.");
-
-    let body = doc_layout::render_doc_page(
-        cx,
-        Some(
-            "Preview mirrors the shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, RTL, and API Reference.",
-        ),
-        vec![
-            DocSection::new("Demo", demo)
-                .description("Two shortcut display patterns: icon-based chord and textual chord.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Kbd` and `KbdGroup`.")
-                .code_rust(
-                    r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Two shortcut display patterns: icon-based chord and textual chord.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for `Kbd` and `KbdGroup`.")
+        .code_rust(
+            r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 shadcn::KbdGroup::new([
     shadcn::Kbd::new("Ctrl").into_element(cx),
     shadcn::Kbd::new("B").into_element(cx),
 ])
 .into_element(cx);"#,
-                ),
-            DocSection::new("Group", group)
-                .description("Use `KbdGroup` to keep spacing consistent across tokens.")
-                .code_rust_from_file_region(snippets::group::SOURCE, "example"),
-            DocSection::new("Button", button)
-                .description("kbd tokens can be composed into button labels for discoverability.")
-                .code_rust_from_file_region(snippets::button::SOURCE, "example"),
-            DocSection::new("Tooltip", tooltip)
-                .description("Tooltips often include shortcut hints for expert users.")
-                .code_rust_from_file_region(snippets::tooltip::SOURCE, "example"),
-            DocSection::new("Input Group", input_group)
-                .description("Trailing kbd hints can be rendered inside an input group.")
-                .code_rust_from_file_region(snippets::input_group::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("kbd token order should respect right-to-left direction context.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            api_reference,
-        ],
+        );
+    let group = DocSection::build(cx, "Group", group)
+        .description("Use `KbdGroup` to keep spacing consistent across tokens.")
+        .code_rust_from_file_region(snippets::group::SOURCE, "example");
+    let button = DocSection::build(cx, "Button", button)
+        .description("kbd tokens can be composed into button labels for discoverability.")
+        .code_rust_from_file_region(snippets::button::SOURCE, "example");
+    let tooltip = DocSection::build(cx, "Tooltip", tooltip)
+        .description("Tooltips often include shortcut hints for expert users.")
+        .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
+    let input_group = DocSection::build(cx, "Input Group", input_group)
+        .description("Trailing kbd hints can be rendered inside an input group.")
+        .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("kbd token order should respect right-to-left direction context.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+
+    let body = doc_layout::render_doc_page(
+        cx,
+        Some(
+            "Preview mirrors the shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, RTL, and API Reference.",
+        ),
+        vec![demo, usage, group, button, tooltip, input_group, rtl, api_reference],
     )
     .test_id("ui-gallery-kbd-component");
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

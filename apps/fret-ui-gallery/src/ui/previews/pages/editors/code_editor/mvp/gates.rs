@@ -1,12 +1,9 @@
 use super::prelude::*;
+use fret::UiChild;
 use fret::UiCx;
 use fret_ui_kit::IntoUiElement;
 
-fn gate_panel<B>(
-    cx: &mut UiCx<'_>,
-    theme: &Theme,
-    child: B,
-) -> impl IntoUiElement<fret_app::App> + use<B>
+fn gate_panel<B>(cx: &mut UiCx<'_>, theme: &Theme, child: B) -> impl UiChild + use<B>
 where
     B: IntoUiElement<fret_app::App>,
 {
@@ -21,7 +18,7 @@ where
                 .w_full()
                 .h_px(MetricRef::Px(Px(92.0))),
         ),
-        move |cx| vec![child.into_element(cx)],
+        move |cx| ui::children![cx; child],
     )
 }
 
@@ -29,7 +26,7 @@ pub(super) fn word_boundary_gate(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let gate_editor = code_editor::CodeEditor::new(handle)
         .key(2)
         .overscan(8)
@@ -37,14 +34,14 @@ pub(super) fn word_boundary_gate(
         .a11y_label("Code editor word gate")
         .viewport_test_id("ui-gallery-code-editor-word-gate-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor).into_element(cx)
+    gate_panel(cx, theme, gate_editor)
 }
 
 pub(super) fn word_boundary_soft_wrap_gate(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let gate_editor = code_editor::CodeEditor::new(handle)
         .key(9)
         .overscan(8)
@@ -52,14 +49,14 @@ pub(super) fn word_boundary_soft_wrap_gate(
         .a11y_label("Code editor word gate soft wrap")
         .viewport_test_id("ui-gallery-code-editor-word-gate-soft-wrap-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor).into_element(cx)
+    gate_panel(cx, theme, gate_editor)
 }
 
 pub(super) fn a11y_selection_gate(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let gate_editor = code_editor::CodeEditor::new(handle)
         .key(3)
         .overscan(8)
@@ -67,14 +64,14 @@ pub(super) fn a11y_selection_gate(
         .a11y_label("Code editor a11y selection gate")
         .viewport_test_id("ui-gallery-code-editor-a11y-selection-gate-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor).into_element(cx)
+    gate_panel(cx, theme, gate_editor)
 }
 
 pub(super) fn a11y_composition_gate(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let gate_editor = code_editor::CodeEditor::new(handle.clone())
         .key(4)
         .overscan(8)
@@ -235,14 +232,13 @@ pub(super) fn a11y_composition_gate(
     ui::v_flex(|_cx| vec![controls, platform_controls, panel])
         .layout(LayoutRefinement::default().w_full())
         .gap(Space::N1)
-        .into_element(cx)
 }
 
 pub(super) fn a11y_selection_wrap_gate(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let gate_editor = code_editor::CodeEditor::new(handle)
         .key(5)
         .overscan(8)
@@ -250,14 +246,14 @@ pub(super) fn a11y_selection_wrap_gate(
         .a11y_label("Code editor a11y selection wrap gate")
         .viewport_test_id("ui-gallery-code-editor-a11y-selection-wrap-gate-viewport")
         .into_element(cx);
-    gate_panel(cx, theme, gate_editor).into_element(cx)
+    gate_panel(cx, theme, gate_editor)
 }
 
 pub(super) fn a11y_composition_wrap_gate(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let gate_editor = code_editor::CodeEditor::new(handle.clone())
         .key(6)
         .overscan(8)
@@ -342,14 +338,13 @@ pub(super) fn a11y_composition_wrap_gate(
     ui::v_flex(|_cx| vec![controls, panel])
         .layout(LayoutRefinement::default().w_full())
         .gap(Space::N1)
-        .into_element(cx)
 }
 
 pub(super) fn a11y_composition_drag_gate(
     cx: &mut UiCx<'_>,
     theme: &Theme,
     handle: code_editor::CodeEditorHandle,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let gate_editor = code_editor::CodeEditor::new(handle.clone())
         .key(7)
         .overscan(8)
@@ -434,5 +429,4 @@ pub(super) fn a11y_composition_drag_gate(
     ui::v_flex(|_cx| vec![controls, panel])
         .layout(LayoutRefinement::default().w_full())
         .gap(Space::N1)
-        .into_element(cx)
 }

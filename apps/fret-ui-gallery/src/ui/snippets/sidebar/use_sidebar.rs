@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("use_sidebar.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let content = shadcn::SidebarProvider::new()
         .width(Px(272.0))
         .width_icon(Px(56.0))

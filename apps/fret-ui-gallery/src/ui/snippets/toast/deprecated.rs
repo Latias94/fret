@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("deprecated.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -17,7 +17,7 @@ where
         .justify_center()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(_cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let deprecated_card = shadcn::card(|cx| {
         ui::children![
             cx;
@@ -51,10 +51,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         ]
     })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
-    .into_element(cx)
     .test_id("ui-gallery-toast-deprecated");
 
-    centered(deprecated_card).into_element(cx)
+    centered(deprecated_card)
 }
 
 // endregion: example

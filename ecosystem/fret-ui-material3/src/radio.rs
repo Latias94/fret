@@ -20,6 +20,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::pixel_snap;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
@@ -106,6 +107,28 @@ impl RadioGroup {
             test_id: None,
             style: RadioStyle::default(),
         }
+    }
+
+    pub fn new_controllable<H: UiHost, T: Into<Arc<str>>>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Option<Arc<str>>>>,
+        default_value: Option<T>,
+    ) -> Self {
+        let default_value = default_value.map(Into::into);
+        let value =
+            controllable_state::use_controllable_model(cx, value, || default_value.clone()).model();
+        Self::new(value)
+    }
+
+    pub fn uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+        cx: &mut ElementContext<'_, H>,
+        default_value: Option<T>,
+    ) -> Self {
+        Self::new_controllable(cx, None, default_value)
+    }
+
+    pub fn value_model(&self) -> Model<Option<Arc<str>>> {
+        self.model.clone()
     }
 
     pub fn items(mut self, items: impl Into<Arc<[RadioGroupItem]>>) -> Self {
@@ -579,6 +602,29 @@ impl Radio {
         }
     }
 
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        selected: Option<Model<bool>>,
+        default_selected: bool,
+    ) -> Self {
+        let selected =
+            controllable_state::use_controllable_model(cx, selected, || default_selected).model();
+        Self::new(selected)
+    }
+
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_selected: bool) -> Self {
+        Self::new_controllable(cx, None, default_selected)
+    }
+
+    pub fn selected_model(&self) -> Model<bool> {
+        match &self.selection {
+            RadioSelectionModel::Bool(model) => model.clone(),
+            RadioSelectionModel::Group { .. } => {
+                panic!("Radio selected_model() is only available for standalone bool radios")
+            }
+        }
+    }
+
     /// A radio item bound to a shared group-value model.
     pub fn new_value(value: impl Into<Arc<str>>, group_value: Model<Option<Arc<str>>>) -> Self {
         Self {
@@ -1000,4 +1046,116 @@ fn radio_icon<H: UiHost>(
 
 fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
     Arc::new(|_host, _cx, down| matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter))
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(220.0), Px(140.0)),
+        )
+    }
+
+    #[test]
+    fn radio_group_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-radio-group-controlled",
+            |cx| {
+                let group = RadioGroup::new_controllable(
+                    cx,
+                    Some(controlled.clone()),
+                    Some(Arc::<str>::from("alpha")),
+                );
+                assert_eq!(group.value_model(), controlled);
+            },
+        );
+    }
+
+    #[test]
+    fn radio_group_new_controllable_applies_default_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-radio-group-default", |cx| {
+            let group = RadioGroup::new_controllable(cx, None, Some("alpha"));
+            let value = cx
+                .watch_model(&group.value_model())
+                .layout()
+                .cloned()
+                .unwrap_or(None);
+            assert_eq!(value.as_deref(), Some("alpha"));
+        });
+    }
+
+    #[test]
+    fn radio_group_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-radio-group-uncontrolled",
+            |cx| {
+                let a = RadioGroup::uncontrolled(cx, Some("alpha"));
+                let b = RadioGroup::uncontrolled(cx, Some("beta"));
+                assert_ne!(a.value_model(), b.value_model());
+            },
+        );
+    }
+
+    #[test]
+    fn radio_new_controllable_uses_controlled_selected_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(true);
+
+        with_element_cx(&mut app, window, bounds(), "m3-radio-controlled", |cx| {
+            let radio = Radio::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(radio.selected_model(), controlled);
+        });
+    }
+
+    #[test]
+    fn radio_new_controllable_applies_default_selected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-radio-default", |cx| {
+            let radio = Radio::new_controllable(cx, None, true);
+            let selected = cx
+                .watch_model(&radio.selected_model())
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            assert!(selected);
+        });
+    }
+
+    #[test]
+    fn radio_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-radio-uncontrolled", |cx| {
+            let a = Radio::uncontrolled(cx, false);
+            let b = Radio::uncontrolled(cx, true);
+            assert_ne!(a.selected_model(), b.selected_model());
+        });
+    }
 }

@@ -24,6 +24,13 @@ Closeout note on 2026-03-12:
 - remaining work is mainly continued first-party helper cleanup and broader conversion-surface
   closure under the dedicated into-element workstream.
 
+Closeout note on 2026-03-15:
+
+- the app/component/advanced split is now effectively the settled first-party posture,
+- the highest-value first-party docs/examples/gates are already aligned to that posture,
+- any still-unchecked early TODO bullets in this folder should now be read as historical
+  bookkeeping residue unless they map to a specific maintenance closeout task.
+
 If a proposed change is mainly about "too many `into_element` concepts" or "helper/component code
 still falls back to raw conversion vocabulary", it belongs in the follow-on workstream rather than
 reopening this one.

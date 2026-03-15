@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("label_in_field.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let email = cx.local_model(String::new);
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
     let control_id = "work_email";

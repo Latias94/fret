@@ -26,6 +26,13 @@ Status note:
   still map to an active closeout task below,
 - when this file and the matrix disagree, prefer the matrix plus the current source gates/tests.
 
+Closeout note on 2026-03-15:
+
+- this workstream is effectively in maintenance mode,
+- the app/component/advanced split itself does not need another broad redesign pass here,
+- remaining work is mainly docs cleanup, delete-ready follow-through, and keeping links/gates
+  aligned with the now-separate conversion-surface closeout.
+
 ## M0 — Freeze the target product surface
 
 - [ ] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for the desired public surface.

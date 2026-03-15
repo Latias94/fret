@@ -18,6 +18,32 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = DocSection::build(cx, "Notes", notes)
         .description("API reference pointers and authoring notes.")
         .code_rust_from_file_region(snippets::notes::SOURCE, "example");
+    let upstream_demo = DocSection::build(cx, "Form Demo", upstream_demo)
+        .description("Aligned with shadcn/ui `form-demo.tsx` (new-york-v4).")
+        .code_rust_from_file_region(snippets::upstream_demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description(
+            "Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface.",
+        )
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("FieldSet + FieldGroup recipe with multiple controls.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let input = DocSection::build(cx, "Input", input)
+        .description("A model-bound input control.")
+        .code_rust_from_file_region(snippets::input::SOURCE, "example");
+    let textarea = DocSection::build(cx, "Textarea", textarea)
+        .description("A model-bound textarea control with fixed height.")
+        .code_rust_from_file_region(snippets::textarea::SOURCE, "example");
+    let controls = DocSection::build(cx, "Checkbox + Switch", controls)
+        .description("Basic checkbox + switch controls with labels.")
+        .code_rust_from_file_region(snippets::controls::SOURCE, "example");
+    let fieldset = DocSection::build(cx, "Fieldset", fieldset)
+        .description("FieldSet recipe with grouped fields and action row.")
+        .code_rust_from_file_region(snippets::fieldset::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Form composition under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -25,33 +51,17 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Start with an upstream-aligned FormDemo, then provide a copyable Usage section and gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet.",
         ),
         vec![
-            DocSection::new("Form Demo", upstream_demo)
-                .description("Aligned with shadcn/ui `form-demo.tsx` (new-york-v4).")
-                .code_rust_from_file_region(snippets::upstream_demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Demo", demo)
-                .description("FieldSet + FieldGroup recipe with multiple controls.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Input", input)
-                .description("A model-bound input control.")
-                .code_rust_from_file_region(snippets::input::SOURCE, "example"),
-            DocSection::new("Textarea", textarea)
-                .description("A model-bound textarea control with fixed height.")
-                .code_rust_from_file_region(snippets::textarea::SOURCE, "example"),
-            DocSection::new("Checkbox + Switch", controls)
-                .description("Basic checkbox + switch controls with labels.")
-                .code_rust_from_file_region(snippets::controls::SOURCE, "example"),
-            DocSection::new("Fieldset", fieldset)
-                .description("FieldSet recipe with grouped fields and action row.")
-                .code_rust_from_file_region(snippets::fieldset::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Form composition under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            upstream_demo,
+            usage,
+            demo,
+            input,
+            textarea,
+            controls,
+            fieldset,
+            rtl,
             notes,
         ],
     );
 
-    vec![body.test_id("ui-gallery-form")]
+    vec![body.test_id("ui-gallery-form").into_element(cx)]
 }

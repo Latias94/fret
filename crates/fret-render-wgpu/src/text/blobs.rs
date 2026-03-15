@@ -8,7 +8,7 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let entries = fret_render_text::cache_tuning::released_blob_cache_entries();
+        let entries = fret_render_text::released_blob_cache_entries();
 
         let Some(b) = self.blob_state.blobs.get_mut(blob) else {
             return;
@@ -91,7 +91,7 @@ impl TextSystem {
         if let Some(key) = self.blob_state.blob_key_by_id.remove(&blob) {
             self.blob_state.blob_cache.remove(&key);
             if remove_shape {
-                let shape_key = fret_render_text::cache_keys::TextShapeKey::from_blob_key(&key);
+                let shape_key = fret_render_text::TextShapeKey::from_blob_key(&key);
                 self.layout_cache.shape_cache.remove(&shape_key);
             }
         }

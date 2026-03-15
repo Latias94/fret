@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{FontWeight, Px};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let invoice_w = Px(100.0);
 
     shadcn::table(|cx| {

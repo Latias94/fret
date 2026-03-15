@@ -46,8 +46,13 @@ Key upstream behaviors/surfaces:
   - `modal=true` enables underlay pointer blocking while menus are open.
 - Pass: root-level disabled gate now forces closed-state render semantics (menu content hidden and
   trigger `expanded=false`) even when an internal menu open model was previously `true`.
+- Pass: Fret's compact root lane is `Menubar::new([MenubarMenu::new(...).entries([...])])`,
+  which keeps typed `MenubarEntry` ownership explicit for Fret-first call sites.
 - Pass: `MenubarTrigger::into_menu().entries_parts(...)` already acts as the recipe-level
   composition bridge for shadcn-style `MenubarTrigger` / `MenubarContent` authoring.
+- Pass: First-party gallery examples now treat that `entries_parts(...)` path as the upstream-shaped
+  copyable lane, while a focused `Parts` example stays on the same lane rather than being taught as
+  an advanced escape hatch.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `Menubar`
   today. The root already consumes typed `MenubarMenu` values, and the parts bridge keeps content
   entry modeling explicit without weakening menu semantics.

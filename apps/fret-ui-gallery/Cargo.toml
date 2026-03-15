@@ -15,7 +15,7 @@ default-run = "fret-ui-gallery"
 default = []
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 gallery-ai = ["dep:fret-ui-ai"]
-gallery-web-ime-harness = []
+gallery-web-ime-harness = ["fret-fonts/emoji"]
 gallery-dev = [
     "gallery-ai",
     "gallery-web-ime-harness",

@@ -2521,6 +2521,7 @@ dependencies = [
 name = "fret-render-text"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "fret-core",
  "fret-fonts",
  "parley",

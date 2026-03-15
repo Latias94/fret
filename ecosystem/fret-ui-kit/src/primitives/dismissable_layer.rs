@@ -12,9 +12,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{AppWindowId, NodeId, Rect, UiServices};
-use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
+
+use crate::IntoUiElement;
 
 pub use fret_ui::action::{
     ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, UiActionHost,
@@ -25,7 +26,7 @@ pub use fret_ui::action::{OnDismissiblePointerMove, PointerMoveCx};
 ///
 /// This is a Radix-aligned naming alias for `render_dismissible_root_with_hooks`.
 #[allow(clippy::too_many_arguments)]
-pub fn render_dismissable_root_with_hooks<H: UiHost + 'static, I>(
+pub fn render_dismissable_root_with_hooks<H: UiHost + 'static, I, T>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,
@@ -35,7 +36,8 @@ pub fn render_dismissable_root_with_hooks<H: UiHost + 'static, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> fret_core::NodeId
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     crate::declarative::dismissible::render_dismissible_root_with_hooks(
         ui, app, services, window, bounds, root_name, render,

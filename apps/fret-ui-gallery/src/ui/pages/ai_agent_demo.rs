@@ -18,7 +18,7 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
             "Docs-aligned Agent example mirroring the official AI Elements composition: model badge, instructions, expandable tool schemas, and output schema.",
         ),
         vec![
-            DocSection::new("Usage", demo)
+            DocSection::build(cx, "Usage", demo)
                 .description(
                     "Copyable example aligned with the upstream Agent docs, adapted to Fret's JSON-schema tool definition surface.",
                 )
@@ -29,5 +29,8 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-agent-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-agent-demo")
+            .into_element(cx),
+    ]
 }

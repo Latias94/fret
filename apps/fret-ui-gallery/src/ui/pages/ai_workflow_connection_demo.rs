@@ -14,11 +14,11 @@ pub(super) fn preview_ai_workflow_connection_demo(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Workflow Connection", demo)
+            DocSection::build(cx, "Workflow Connection", demo)
                 .test_id_prefix("ui-gallery-ai-workflow-connection-demo")
                 .code_rust_from_file_region(snippets::workflow_connection_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

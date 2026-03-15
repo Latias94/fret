@@ -1,6 +1,6 @@
 use super::TextBlob;
 use fret_core::TextBlobId;
-use fret_render_text::cache_keys::TextBlobKey;
+use fret_render_text::TextBlobKey;
 use slotmap::SlotMap;
 use std::collections::{HashMap, HashSet, VecDeque};
 

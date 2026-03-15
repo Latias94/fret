@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("modal_navigation_drawer.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::ids;
 use fret_ui::action::OnActivate;
@@ -10,11 +11,10 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    value: Model<Arc<str>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let modal = material3::ModalNavigationDrawer::uncontrolled(cx);
+    let open = modal.open_model();
+    let value = cx.local_model_keyed("value", || Arc::<str>::from("search"));
     let is_open = cx
         .get_model_copied(&open, Invalidation::Layout)
         .unwrap_or(false);
@@ -30,12 +30,12 @@ pub fn render<H: UiHost>(
         })
     };
 
-    let modal = material3::ModalNavigationDrawer::new(open.clone())
+    let modal = modal
         .test_id("ui-gallery-material3-modal-navigation-drawer")
         .into_element(
             cx,
             move |cx| {
-                material3::NavigationDrawer::new(value)
+                material3::NavigationDrawer::new(value.clone())
                     .variant(material3::NavigationDrawerVariant::Modal)
                     .a11y_label("Material 3 Modal Navigation Drawer")
                     .test_id("ui-gallery-material3-modal-navigation-drawer-panel")

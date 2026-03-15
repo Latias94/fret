@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("conformance_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -19,20 +19,15 @@ pub fn render(
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Model<String>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox demo")
         .auto_highlight(true)
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-demo")
         .items(base_items())
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(260.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new().placeholder("Select a fruit"),
-                ),
-            ]
-        })
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Select a fruit"))
+        .into_element(cx)
 }
 // endregion: example

@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::{Px, TextConstraints, TextInputRef, TextOverflow, TextWrap};
-use fret_render_text::parley_shaper::ParleyShaper;
+use fret_render_text::ParleyShaper;
 use fret_ui::Theme;
 use fret_ui_material3::tokens::v30::{
     ColorSchemeOptions, TypographyOptions, theme_config_with_colors,
@@ -11,8 +11,15 @@ fn shaper_with_bundled_fonts() -> ParleyShaper {
     let added = shaper.add_fonts(
         fret_fonts::bootstrap_fonts()
             .iter()
-            .chain(fret_fonts::emoji_fonts().iter())
-            .chain(fret_fonts::cjk_lite_fonts().iter())
+            .copied()
+            .chain(
+                fret_fonts::default_profile()
+                    .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+            )
+            .chain(
+                fret_fonts::default_profile()
+                    .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+            )
             .map(|b| b.to_vec()),
     );
     assert!(added > 0, "expected bundled fonts to load");
@@ -50,15 +57,9 @@ fn material3_control_text_keeps_metrics_stable_across_fallback_runs() {
 
     let mut baseline_for = |text: &str| {
         let input = TextInputRef::plain(text, &style);
-        let wrapped =
-            fret_render_text::wrapper::wrap_with_constraints(&mut shaper, input, constraints);
-        let prepared = fret_render_text::prepare_layout::prepare_layout_from_wrapped(
-            text,
-            wrapped,
-            constraints,
-            scale,
-            true,
-        );
+        let wrapped = fret_render_text::wrap_with_constraints(&mut shaper, input, constraints);
+        let prepared =
+            fret_render_text::prepare_layout_from_wrapped(text, wrapped, constraints, scale, true);
 
         assert_eq!(
             prepared.metrics.size.height, expected_line_height,

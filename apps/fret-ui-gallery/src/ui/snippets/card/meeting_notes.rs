@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("meeting_notes.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::ImageColorSpace;
 use fret_ui::Theme;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
@@ -105,7 +105,7 @@ fn item(
     }
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let max_w_sm = LayoutRefinement::default()

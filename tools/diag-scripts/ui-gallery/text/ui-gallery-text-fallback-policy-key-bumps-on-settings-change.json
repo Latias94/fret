@@ -5,7 +5,8 @@
     "tags": ["ui-gallery", "text", "fonts", "gate"],
     "target_hints": ["fret-ui-gallery"],
     "env_defaults": {
-      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
+      "FRET_UI_GALLERY_DISABLE_WINDOWS_COMMON_FALLBACK_OVERRIDE": "1"
     }
   },
   "steps": [
@@ -13,35 +14,97 @@
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" },
+      "timeout_frames": 300
     },
-    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "cmd.settings"
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": true
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-settings-apply"
+        }
+      },
+      "timeout_frames": 300
+    },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-text-fallback-policy-before"
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-settings-text-common-fallback-injection"
-      }
+      },
+      "timeout_frames": 300
     },
-    { "type": "wait_frames", "n": 6 },
     {
-      "type": "click",
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-settings-text-common-fallback-injection-common-fallback"
+        }
+      },
+      "timeout_frames": 300
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-settings-text-common-fallback-injection-common-fallback"
-      }
+      },
+      "timeout_frames": 300
     },
     { "type": "wait_frames", "n": 4 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" },
+      "timeout_frames": 300
     },
-    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "settings.apply"
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/settings_open",
+        "value": false
+      },
+      "timeout_frames": 300
+    },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-text-fallback-policy-after"

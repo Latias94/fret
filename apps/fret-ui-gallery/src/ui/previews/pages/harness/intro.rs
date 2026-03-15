@@ -1,22 +1,22 @@
 use super::super::super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
+use fret::UiChild;
 use fret::UiCx;
 
-pub(in crate::ui) fn preview_intro(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
-    let card = |cx: &mut UiCx<'_>, title: &str, desc: &str| -> AnyElement {
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new(title).into_element(cx),
-                shadcn::CardDescription::new(desc).into_element(cx),
-            ])
-            .into_element(cx),
+fn card(cx: &mut UiCx<'_>, title: &'static str, desc: &'static str) -> impl UiChild + use<> {
+    shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new(title).into_element(cx),
+            shadcn::CardDescription::new(desc).into_element(cx),
         ])
-        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-        .into_element(cx)
-    };
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+}
 
+pub(in crate::ui) fn preview_intro(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyElement> {
     let grid = ui::h_flex(|cx| {
-        vec![
+        ui::children![cx;
             card(
                 cx,
                 "Core",
@@ -71,16 +71,15 @@ pub(in crate::ui) fn preview_intro(cx: &mut UiCx<'_>, theme: &Theme) -> Vec<AnyE
         .gap(Space::N4)
         .items_start()
         .into_element(cx);
+    let overview = DocSection::build(cx, "Overview", preview)
+        .no_shell()
+        .max_w(Px(980.0));
 
     let page = doc_layout::render_doc_page(
         cx,
         Some("Pick a page from the sidebar to explore UI contracts and composed recipes."),
-        vec![
-            DocSection::new("Overview", preview)
-                .no_shell()
-                .max_w(Px(980.0)),
-        ],
+        vec![overview],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

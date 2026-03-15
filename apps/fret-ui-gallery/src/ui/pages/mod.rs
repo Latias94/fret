@@ -647,11 +647,8 @@ pub(super) fn preview_accordion(
     accordion::preview_accordion(cx, value)
 }
 
-pub(super) fn preview_avatar(
-    cx: &mut UiCx<'_>,
-    avatar_image: Model<Option<ImageId>>,
-) -> Vec<AnyElement> {
-    avatar::preview_avatar(cx, avatar_image)
+pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    avatar::preview_avatar(cx)
 }
 
 pub(super) fn preview_button(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
@@ -683,11 +680,8 @@ pub(super) fn preview_aspect_ratio(
     aspect_ratio::preview_aspect_ratio(cx, wide_image, tall_image, square_image)
 }
 
-pub(super) fn preview_card(
-    cx: &mut UiCx<'_>,
-    event_cover_image: Model<Option<ImageId>>,
-) -> Vec<AnyElement> {
-    card::preview_card(cx, event_cover_image)
+pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    card::preview_card(cx)
 }
 
 #[cfg(feature = "gallery-dev")]
@@ -695,22 +689,8 @@ pub(super) fn preview_icons(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     icons::preview_icons(cx)
 }
 
-pub(super) fn preview_image_object_fit(
-    cx: &mut UiCx<'_>,
-    theme: &Theme,
-    square_image: Model<Option<ImageId>>,
-    wide_image: Model<Option<ImageId>>,
-    tall_image: Model<Option<ImageId>>,
-    streaming_image: Model<Option<ImageId>>,
-) -> Vec<AnyElement> {
-    image_object_fit::preview_image_object_fit(
-        cx,
-        theme,
-        square_image,
-        wide_image,
-        tall_image,
-        streaming_image,
-    )
+pub(super) fn preview_image_object_fit(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    image_object_fit::preview_image_object_fit(cx)
 }
 
 pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
@@ -747,11 +727,8 @@ pub(super) fn preview_combobox(
     combobox::preview_combobox(cx, value, open, query)
 }
 
-pub(super) fn preview_command_palette(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    command::preview_command_palette(cx, last_action)
+pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    command::preview_command_palette(cx)
 }
 
 pub(super) fn preview_toast(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
@@ -762,19 +739,11 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     context_menu::preview_context_menu(cx)
 }
 
-pub(super) fn preview_data_table(
-    cx: &mut UiCx<'_>,
-    state: Model<fret_ui_headless::table::TableState>,
-) -> Vec<AnyElement> {
-    data_table::preview_data_table(cx, state)
+pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    data_table::preview_data_table(cx)
 }
-pub(super) fn preview_date_picker(
-    cx: &mut UiCx<'_>,
-    open: Model<bool>,
-    month: Model<fret_ui_headless::calendar::CalendarMonth>,
-    selected: Model<Option<Date>>,
-) -> Vec<AnyElement> {
-    date_picker::preview_date_picker(cx, open, month, selected)
+pub(super) fn preview_date_picker(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    date_picker::preview_date_picker(cx)
 }
 
 pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
@@ -874,18 +843,10 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
 pub(super) fn preview_motion_presets(
     cx: &mut UiCx<'_>,
-    theme: &Theme,
     motion_preset: Model<Option<Arc<str>>>,
     motion_preset_open: Model<bool>,
-    dialog_open: Model<bool>,
 ) -> Vec<AnyElement> {
-    motion_presets::preview_motion_presets(
-        cx,
-        theme,
-        motion_preset,
-        motion_preset_open,
-        dialog_open,
-    )
+    motion_presets::preview_motion_presets(cx, motion_preset, motion_preset_open)
 }
 
 #[cfg(feature = "gallery-dev")]
@@ -901,12 +862,8 @@ pub(super) fn preview_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     slider::preview_slider(cx)
 }
 
-pub(super) fn preview_sonner(
-    cx: &mut UiCx<'_>,
-    last_action: Model<Arc<str>>,
-    sonner_position: Model<shadcn::ToastPosition>,
-) -> Vec<AnyElement> {
-    sonner::preview_sonner(cx, last_action, sonner_position)
+pub(super) fn preview_sonner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    sonner::preview_sonner(cx)
 }
 
 pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {

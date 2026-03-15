@@ -1,14 +1,15 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::ui;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let page_number = |cx: &mut ElementContext<'_, H>, label: &'static str| {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let page_number = |cx: &mut UiCx<'_>, label: &'static str| {
         fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)
     };
 

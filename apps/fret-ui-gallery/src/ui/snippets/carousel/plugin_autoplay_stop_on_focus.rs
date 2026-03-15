@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("plugin_autoplay_stop_on_focus.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, SpacingLength, TextProps};
@@ -62,7 +62,7 @@ fn slide(
     ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);
@@ -87,7 +87,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx)))
         .collect::<Vec<_>>();
 
-    let carousel = shadcn::Carousel::default()
+    let carousel = shadcn::Carousel::new(items)
         .controls(false)
         .plugins([shadcn::CarouselPlugin::Autoplay(
             shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
@@ -96,7 +96,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 .stop_on_interaction(true),
         )])
         .autoplay_api_handle_model(autoplay_api.clone())
-        .items(items)
         .refine_layout(LayoutRefinement::default().w_full())
         .test_id("ui-gallery-carousel-plugin-stop-on-interaction-focus")
         .into_element(cx);

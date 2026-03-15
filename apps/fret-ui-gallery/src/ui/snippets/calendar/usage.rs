@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
@@ -24,7 +25,7 @@ fn today_from_env_or_now() -> Date {
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let today = today_from_env_or_now();
     let selected = cx.local_model_keyed("selected", || Some(today));
 

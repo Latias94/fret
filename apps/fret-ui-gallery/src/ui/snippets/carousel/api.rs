@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("api.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, TextProps};
@@ -50,7 +50,7 @@ fn slide_card(
     shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
@@ -92,16 +92,11 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     let items = (1..=5)
         .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx, api_visual).into_element(cx)))
         .collect::<Vec<_>>();
-    let api_carousel = shadcn::Carousel::default()
+    let api_carousel = shadcn::Carousel::new(items)
         .api_handle_model(api_handle.clone())
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-api")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        );
+        .into_element(cx);
 
     let current = cx.watch_model(&api_effect_current).copied().unwrap_or(0);
     let count = cx.watch_model(&api_effect_count).copied().unwrap_or(0);

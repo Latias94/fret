@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -56,7 +57,10 @@ fn ratio_example<H: UiHost>(
         .justify_center()
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+// Kept as the copyable app-facing snippet surface; the gallery preview uses `render_preview(...)`
+// so it can swap in asset-backed media when available.
+#[allow(dead_code)]
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
         ratio_example(
             cx,
@@ -77,7 +81,17 @@ pub fn render_preview<H: UiHost>(
 ) -> impl IntoUiElement<H> + use<H> {
     let asset_image = super::images::landscape_image_id(cx);
     if asset_image.is_none() && demo_image.is_none() {
-        return render(cx);
+        return with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
+            ratio_example(
+                cx,
+                16.0 / 9.0,
+                Px(384.0),
+                "ui-gallery-aspect-ratio-rtl",
+                "ui-gallery-aspect-ratio-rtl-content",
+                None,
+            )
+            .into_element(cx)
+        });
     }
 
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {

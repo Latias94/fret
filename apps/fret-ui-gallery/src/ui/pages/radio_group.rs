@@ -83,5 +83,5 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-radio-group")]
+    vec![body.test_id("ui-gallery-radio-group").into_element(cx)]
 }

@@ -1,18 +1,22 @@
 pub const SOURCE: &str = include_str!("checkbox.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, checked: Model<bool>) -> AnyElement {
-    let tristate = cx.local_model_keyed("tristate", || None::<bool>);
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let checkbox = material3::Checkbox::uncontrolled(cx, false);
+    let checked = checkbox.checked_model();
+    let tristate = material3::Checkbox::uncontrolled_optional(cx, None);
+    let tristate_model = tristate.optional_checked_model();
 
     let value = cx
         .get_model_copied(&checked, Invalidation::Layout)
         .unwrap_or(false);
     let tristate_value = cx
-        .get_model_cloned(&tristate, Invalidation::Layout)
+        .get_model_cloned(&tristate_model, Invalidation::Layout)
         .unwrap_or(None);
 
     let row = ui::h_row(move |cx| {
@@ -27,7 +31,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, checked: Model<bool>) -
                 Some(ColorRef::Color(selected_accent)),
             ));
         vec![
-            material3::Checkbox::new(checked.clone())
+            checkbox
+                .clone()
                 .a11y_label("Material 3 Checkbox")
                 .test_id("ui-gallery-material3-checkbox")
                 .into_element(cx),
@@ -55,7 +60,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, checked: Model<bool>) -
             None => "indeterminate",
         };
         vec![
-            material3::Checkbox::new_optional(tristate.clone())
+            tristate
+                .clone()
                 .a11y_label("Material 3 Checkbox (tri-state)")
                 .test_id("ui-gallery-material3-checkbox-tristate")
                 .into_element(cx),

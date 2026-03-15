@@ -1,6 +1,9 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use crate::ui::snippets::sonner::{last_action_model, message_request, request};
+use fret::{UiChild, UiCx};
+use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -17,16 +20,13 @@ fn wrap_controls_row<H: UiHost>(
         .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Keep the action id in one place so UI Gallery's driver can record it.
     // Replace this with your app's command id.
     const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
 
     let sonner = shadcn::Sonner::global(&mut *cx.app);
-
+    let last_action = last_action_model(cx);
     let pending_promise = cx.local_model_keyed("pending_promise", || None::<shadcn::ToastId>);
     let active_type = cx.local_model_keyed("active_type", || Arc::<str>::from("Default"));
 
@@ -34,7 +34,7 @@ pub fn render<H: UiHost>(
         .get_model_cloned(&active_type, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("Default"));
 
-    let action_button = |cx: &mut ElementContext<'_, H>,
+    let action_button = |cx: &mut UiCx<'_>,
                          label: &'static str,
                          variant: shadcn::ButtonVariant,
                          test_id: &'static str,
@@ -46,7 +46,7 @@ pub fn render<H: UiHost>(
             .into_element(cx)
     };
 
-    let type_button = |cx: &mut ElementContext<'_, H>,
+    let type_button = |cx: &mut UiCx<'_>,
                        label: &'static str,
                        test_id: &'static str,
                        on_activate: fret_ui::action::OnActivate| {
@@ -80,11 +80,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "My first toast",
-                shadcn::ToastMessageOptions::new(),
+                message_request(
+                    "My first toast",
+                    shadcn::ToastVariant::Default,
+                    shadcn::ToastMessageOptions::new(),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Default");
@@ -108,13 +111,16 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new()
-                    .description("Sunday, December 03, 2023 at 9:00 AM")
-                    .action("Undo", CMD_TOAST_ACTION),
+                message_request(
+                    "Event has been created",
+                    shadcn::ToastVariant::Default,
+                    shadcn::ToastMessageOptions::new()
+                        .description("Sunday, December 03, 2023 at 9:00 AM")
+                        .action("Undo", CMD_TOAST_ACTION),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Action");
@@ -138,11 +144,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new(),
+                message_request(
+                    "Event has been created",
+                    shadcn::ToastVariant::Default,
+                    shadcn::ToastMessageOptions::new(),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Default");
@@ -165,11 +174,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new().description("Monday, January 3rd at 6:00pm"),
+                message_request(
+                    "Event has been created",
+                    shadcn::ToastVariant::Default,
+                    shadcn::ToastMessageOptions::new().description("Monday, January 3rd at 6:00pm"),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Description");
@@ -192,11 +204,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_success_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new(),
+                message_request(
+                    "Event has been created",
+                    shadcn::ToastVariant::Success,
+                    shadcn::ToastMessageOptions::new(),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Success");
@@ -219,11 +234,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_info_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Be at the area 10 minutes before the event time",
-                shadcn::ToastMessageOptions::new(),
+                message_request(
+                    "Be at the area 10 minutes before the event time",
+                    shadcn::ToastVariant::Info,
+                    shadcn::ToastMessageOptions::new(),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Info");
@@ -241,11 +259,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_warning_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event start time cannot be earlier than 8am",
-                shadcn::ToastMessageOptions::new(),
+                message_request(
+                    "Event start time cannot be earlier than 8am",
+                    shadcn::ToastVariant::Warning,
+                    shadcn::ToastMessageOptions::new(),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Warning");
@@ -268,11 +289,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_error_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event has not been created",
-                shadcn::ToastMessageOptions::new(),
+                message_request(
+                    "Event has not been created",
+                    shadcn::ToastVariant::Error,
+                    shadcn::ToastMessageOptions::new(),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Error");
@@ -290,11 +314,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new().action("Undo", CMD_TOAST_ACTION),
+                message_request(
+                    "Event has been created",
+                    shadcn::ToastVariant::Default,
+                    shadcn::ToastMessageOptions::new().action("Undo", CMD_TOAST_ACTION),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Action");
@@ -312,11 +339,14 @@ pub fn render<H: UiHost>(
         let last_action_model = last_action.clone();
         let active_type_model = active_type.clone();
         let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            sonner.toast_message(
+            sonner.toast(
                 host,
                 action_cx.window,
-                "Event has been created",
-                shadcn::ToastMessageOptions::new().cancel("Cancel", CMD_TOAST_ACTION),
+                message_request(
+                    "Event has been created",
+                    shadcn::ToastVariant::Default,
+                    shadcn::ToastMessageOptions::new().cancel("Cancel", CMD_TOAST_ACTION),
+                ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
                 *v = Arc::<str>::from("Cancel");
@@ -348,7 +378,8 @@ pub fn render<H: UiHost>(
                     *v = Arc::<str>::from("sonner.types.promise.resolve");
                 });
             } else {
-                let promise = sonner.toast_promise(host, action_cx.window, "Loading...");
+                let promise =
+                    sonner.toast_promise_with(host, action_cx.window, request("Loading..."));
                 let _ = host
                     .models_mut()
                     .update(&pending_model, |slot| *slot = Some(promise.id()));
@@ -374,7 +405,7 @@ pub fn render<H: UiHost>(
         .flatten()
         .is_some();
 
-    let buttons = wrap_controls_row::<H>(
+    let buttons = wrap_controls_row::<fret_app::App>(
         Space::N2,
         vec![
             give_me,

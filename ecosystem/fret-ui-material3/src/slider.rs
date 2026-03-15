@@ -27,7 +27,7 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
-    resolve_override_slot_with,
+    declarative::controllable_state, resolve_override_slot_with,
 };
 
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
@@ -264,6 +264,23 @@ impl Slider {
         }
     }
 
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<f32>>,
+        default_value: f32,
+    ) -> Self {
+        let value = controllable_state::use_controllable_model(cx, value, || default_value).model();
+        Self::new(value)
+    }
+
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_value: f32) -> Self {
+        Self::new_controllable(cx, None, default_value)
+    }
+
+    pub fn value_model(&self) -> Model<f32> {
+        self.value.clone()
+    }
+
     pub fn range(mut self, min: f32, max: f32) -> Self {
         self.min = min;
         self.max = max;
@@ -340,6 +357,27 @@ impl RangeSlider {
             test_id: None,
             style: SliderStyle::default(),
         }
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        values: Option<Model<[f32; 2]>>,
+        default_values: [f32; 2],
+    ) -> Self {
+        let values =
+            controllable_state::use_controllable_model(cx, values, || default_values).model();
+        Self::new(values)
+    }
+
+    pub fn uncontrolled<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        default_values: [f32; 2],
+    ) -> Self {
+        Self::new_controllable(cx, None, default_values)
+    }
+
+    pub fn values_model(&self) -> Model<[f32; 2]> {
+        self.values.clone()
     }
 
     pub fn range(mut self, min: f32, max: f32) -> Self {
@@ -2214,4 +2252,119 @@ pub fn range_slider<H: UiHost>(
             })]
         })]
     })
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(140.0)),
+        )
+    }
+
+    #[test]
+    fn slider_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(0.25f32);
+
+        with_element_cx(&mut app, window, bounds(), "m3-slider-controlled", |cx| {
+            let slider = Slider::new_controllable(cx, Some(controlled.clone()), 0.5);
+            assert_eq!(slider.value_model(), controlled);
+        });
+    }
+
+    #[test]
+    fn slider_new_controllable_applies_default_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-slider-default", |cx| {
+            let slider = Slider::new_controllable(cx, None, 0.3);
+            let value = cx
+                .watch_model(&slider.value_model())
+                .layout()
+                .copied()
+                .unwrap_or_default();
+            assert_eq!(value, 0.3);
+        });
+    }
+
+    #[test]
+    fn slider_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-slider-uncontrolled", |cx| {
+            let a = Slider::uncontrolled(cx, 0.1);
+            let b = Slider::uncontrolled(cx, 0.9);
+            assert_ne!(a.value_model(), b.value_model());
+        });
+    }
+
+    #[test]
+    fn range_slider_new_controllable_uses_controlled_values_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert([0.2f32, 0.8f32]);
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-range-slider-controlled",
+            |cx| {
+                let slider =
+                    RangeSlider::new_controllable(cx, Some(controlled.clone()), [0.3, 0.7]);
+                assert_eq!(slider.values_model(), controlled);
+            },
+        );
+    }
+
+    #[test]
+    fn range_slider_new_controllable_applies_default_values() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-range-slider-default",
+            |cx| {
+                let slider = RangeSlider::new_controllable(cx, None, [0.25, 0.75]);
+                let values = cx
+                    .watch_model(&slider.values_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or_default();
+                assert_eq!(values, [0.25, 0.75]);
+            },
+        );
+    }
+
+    #[test]
+    fn range_slider_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-range-slider-uncontrolled",
+            |cx| {
+                let a = RangeSlider::uncontrolled(cx, [0.1, 0.4]);
+                let b = RangeSlider::uncontrolled(cx, [0.6, 0.9]);
+                assert_ne!(a.values_model(), b.values_model());
+            },
+        );
+    }
 }

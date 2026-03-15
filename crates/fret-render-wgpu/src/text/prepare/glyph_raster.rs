@@ -1,6 +1,6 @@
 use super::super::GlyphQuadKind;
 use super::super::atlas::{GlyphAtlas, GlyphKey};
-use fret_render_text::font_instance_key::FontFaceKey;
+use fret_render_text::FontFaceKey;
 
 pub(super) struct PreparedGlyphRaster {
     glyph_key: GlyphKey,

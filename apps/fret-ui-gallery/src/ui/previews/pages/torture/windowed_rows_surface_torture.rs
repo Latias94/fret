@@ -84,16 +84,18 @@ pub(in crate::ui) fn preview_windowed_rows_surface_torture(
             ]
         });
 
+    let surface = DocSection::build(cx, "Surface", surface)
+        .description(
+            "This is the 'single-node surface' escape hatch: paint only visible rows, avoid per-row subtrees.",
+        )
+        .no_shell()
+        .max_w(Px(980.0));
+
     let page = doc_layout::render_doc_page(
         cx,
         Some("Goal: baseline scroll windowing via a stable element tree (Scroll + Canvas)."),
-        vec![DocSection::new("Surface", surface)
-            .description(
-                "This is the 'single-node surface' escape hatch: paint only visible rows, avoid per-row subtrees.",
-            )
-            .no_shell()
-            .max_w(Px(980.0))],
+        vec![surface],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

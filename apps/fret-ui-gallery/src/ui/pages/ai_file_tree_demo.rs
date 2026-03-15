@@ -14,7 +14,7 @@ pub(super) fn preview_ai_file_tree_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Demo", demo)
+            DocSection::build(cx, "Demo", demo)
                 .test_id_prefix("ui-gallery-ai-file-tree-demo")
                 .code_rust_from_file_region(snippets::file_tree_demo::SOURCE, "example"),
             DocSection::build(cx, "Basic Usage", basic)
@@ -33,5 +33,5 @@ pub(super) fn preview_ai_file_tree_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Ve
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

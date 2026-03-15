@@ -463,6 +463,10 @@ mod tests {
             ("dropdown_menu.rs", include_str!("dropdown_menu.rs")),
             ("dialog.rs", include_str!("dialog.rs")),
             ("bottom_sheet.rs", include_str!("bottom_sheet.rs")),
+            (
+                "modal_navigation_drawer.rs",
+                include_str!("modal_navigation_drawer.rs"),
+            ),
         ];
 
         let required_markers = [
@@ -561,6 +565,185 @@ mod tests {
             assert!(
                 normalized.contains(&marker),
                 "select.rs should keep `new(selected_value)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, and `value_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_selection_roots_offer_uncontrolled_copyable_value_paths_while_keeping_controlled_new()
+     {
+        let sources = [
+            ("tabs.rs", include_str!("tabs.rs")),
+            ("navigation_bar.rs", include_str!("navigation_bar.rs")),
+            ("navigation_rail.rs", include_str!("navigation_rail.rs")),
+            ("navigation_drawer.rs", include_str!("navigation_drawer.rs")),
+            ("list.rs", include_str!("list.rs")),
+        ];
+
+        let required_markers = [
+            "pub fn new(model: Model<Arc<str>>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Option<Model<Arc<str>>>, default_value: impl Into<Arc<str>>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>( cx: &mut ElementContext<'_, H>, default_value: impl Into<Arc<str>>, ) -> Self {",
+            "pub fn value_model(&self) -> Model<Arc<str>> {",
+        ];
+
+        for (file, src) in sources {
+            let normalized = normalize_ws(src);
+
+            for marker in required_markers {
+                let marker = normalize_ws(marker);
+                assert!(
+                    normalized.contains(&marker),
+                    "{file} should keep `new(model)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx, default)`, and `value_model()` for copyable teaching surfaces"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn material3_text_field_offers_uncontrolled_copyable_value_path_while_keeping_controlled_new() {
+        let normalized = normalize_ws(include_str!("text_field.rs"));
+        let required_markers = [
+            "pub fn new(model: Model<String>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Option<Model<String>>, default_value: impl Into<String>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn value_model(&self) -> Model<String> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "text_field.rs should keep `new(model)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, and `value_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_checkbox_offers_uncontrolled_copyable_checked_paths() {
+        let normalized = normalize_ws(include_str!("checkbox.rs"));
+        let required_markers = [
+            "pub fn new(checked: Model<bool>) -> Self {",
+            "pub fn new_optional(checked: Model<Option<bool>>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, checked: Option<Model<bool>>, default_checked: bool, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_checked: bool) -> Self {",
+            "pub fn checked_model(&self) -> Model<bool> {",
+            "pub fn new_optional_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, checked: Option<Model<Option<bool>>>, default_checked: Option<bool>, ) -> Self {",
+            "pub fn uncontrolled_optional<H: UiHost>( cx: &mut ElementContext<'_, H>, default_checked: Option<bool>, ) -> Self {",
+            "pub fn optional_checked_model(&self) -> Model<Option<bool>> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "checkbox.rs should keep `new(checked)` / `new_optional(checked)` as explicit controlled seams and expose controllable/uncontrolled helpers plus model accessors for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_switch_offers_uncontrolled_copyable_selected_path_while_keeping_controlled_new() {
+        let normalized = normalize_ws(include_str!("switch.rs"));
+        let required_markers = [
+            "pub fn new(selected: Model<bool>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<bool>>, default_selected: bool, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_selected: bool) -> Self {",
+            "pub fn selected_model(&self) -> Model<bool> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "switch.rs should keep `new(selected)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx, default)`, and `selected_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_radio_offers_uncontrolled_copyable_group_and_standalone_paths() {
+        let normalized = normalize_ws(include_str!("radio.rs"));
+        let required_markers = [
+            "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
+            "pub fn new_controllable<H: UiHost, T: Into<Arc<str>>>( cx: &mut ElementContext<'_, H>, value: Option<Model<Option<Arc<str>>>>, default_value: Option<T>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost, T: Into<Arc<str>>>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, ) -> Self {",
+            "pub fn value_model(&self) -> Model<Option<Arc<str>>> {",
+            "pub fn new(selected: Model<bool>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<bool>>, default_selected: bool, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_selected: bool) -> Self {",
+            "pub fn selected_model(&self) -> Model<bool> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "radio.rs should keep controlled `RadioGroup::new(model)` / `Radio::new(selected)` seams and expose controllable/uncontrolled helpers plus model accessors for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_slider_offers_uncontrolled_copyable_value_paths() {
+        let normalized = normalize_ws(include_str!("slider.rs"));
+        let required_markers = [
+            "pub fn new(value: Model<f32>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, value: Option<Model<f32>>, default_value: f32, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_value: f32) -> Self {",
+            "pub fn value_model(&self) -> Model<f32> {",
+            "pub fn new(values: Model<[f32; 2]>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, values: Option<Model<[f32; 2]>>, default_values: [f32; 2], ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>( cx: &mut ElementContext<'_, H>, default_values: [f32; 2], ) -> Self {",
+            "pub fn values_model(&self) -> Model<[f32; 2]> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "slider.rs should keep controlled `Slider::new(value)` / `RangeSlider::new(values)` seams and expose controllable/uncontrolled helpers plus model accessors for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_date_picker_dialog_offers_uncontrolled_copyable_open_month_and_selected_paths() {
+        let normalized = normalize_ws(include_str!("date_picker.rs"));
+        let required_markers = [
+            "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<Option<Date>>, ) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, month: Option<Model<CalendarMonth>>, default_month: CalendarMonth, selected: Option<Model<Option<Date>>>, default_selected: Option<Date>, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn open_model(&self) -> Model<bool> {",
+            "pub fn month_model(&self) -> Model<CalendarMonth> {",
+            "pub fn selected_model(&self) -> Model<Option<Date>> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "date_picker.rs should keep `new(open, month, selected)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, `open_model()`, `month_model()`, and `selected_model()` for copyable teaching surfaces"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_time_picker_dialog_offers_uncontrolled_copyable_open_and_selected_paths() {
+        let normalized = normalize_ws(include_str!("time_picker.rs"));
+        let required_markers = [
+            "pub fn new(open: Model<bool>, selected: Model<Time>) -> Self {",
+            "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, selected: Option<Model<Time>>, default_selected: Time, ) -> Self {",
+            "pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {",
+            "pub fn open_model(&self) -> Model<bool> {",
+            "pub fn selected_model(&self) -> Model<Time> {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "time_picker.rs should keep `new(open, selected)` as the explicit controlled seam and expose `new_controllable(...)`, `uncontrolled(cx)`, `open_model()`, and `selected_model()` for copyable teaching surfaces"
             );
         }
     }

@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let media = shadcn::ItemMedia::new([fret_ui_shadcn::icon::icon(
         cx,
         fret_icons::IconId::new_static("lucide.inbox"),

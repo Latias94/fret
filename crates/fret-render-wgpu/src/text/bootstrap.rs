@@ -9,13 +9,13 @@ use super::frame_perf::TextFramePerfState;
 use super::layout_cache_state::TextLayoutCacheState;
 use super::pin_state::TextPinState;
 use super::quality::{TextQualitySettings, TextQualityState};
-use fret_render_text::fallback_policy::TextFallbackPolicyV1;
+use fret_render_text::TextFallbackPolicyV1;
 
 const TEXT_ATLAS_WIDTH: u32 = 2048;
 const TEXT_ATLAS_HEIGHT: u32 = 2048;
 
 pub(super) struct TextBootstrapResources {
-    pub(super) parley_shaper: crate::text::parley_shaper::ParleyShaper,
+    pub(super) parley_shaper: fret_render_text::ParleyShaper,
     pub(super) fallback_policy: TextFallbackPolicyV1,
     pub(super) atlas_bind_group_layout: wgpu::BindGroupLayout,
     pub(super) mask_atlas: GlyphAtlas,
@@ -49,7 +49,7 @@ pub(super) fn bootstrap_text_resources(device: &wgpu::Device) -> TextBootstrapRe
         wgpu::TextureFormat::Rgba8Unorm,
     );
 
-    let parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
+    let parley_shaper = fret_render_text::ParleyShaper::new();
     let fallback_policy = TextFallbackPolicyV1::new(&parley_shaper);
 
     TextBootstrapResources {

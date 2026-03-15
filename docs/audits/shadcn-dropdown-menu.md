@@ -56,8 +56,9 @@ Key upstream behaviors/surfaces:
 - Pass: Dismissible popover (outside press + Escape) via `window_overlays`.
 - Pass: On open, focus moves to the first focusable descendant (driven by overlay policy), enabling
   keyboard navigation inside the menu.
-- Pass: The default copyable root path is now `DropdownMenu::uncontrolled(cx)`, so common
-  shadcn-style examples do not need to spell an explicit open model.
+- Pass: The default copyable root path is now
+  `DropdownMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)`, so common
+  shadcn-style examples do not need to spell an explicit open model or a root closure bridge.
 - Pass: Controlled/uncontrolled open state parity remains available via
   `DropdownMenu::new_controllable(cx, open, default_open)` (Base UI / Radix `open` + `defaultOpen`).
 - Pass: The explicit managed-open seams are `DropdownMenu::from_open(open)` and
@@ -112,7 +113,9 @@ Still missing (relative to upstream shadcn/ui v4):
 Notes on API mapping:
 
 - Pass: Fret still supports the direct typed builder entry point
-  `DropdownMenu::uncontrolled(cx).build(cx, trigger, entries)` for the default authoring path.
+  `DropdownMenu::uncontrolled(cx).build(cx, trigger, entries)` as a compact adapter when the
+  default content shell is enough, even though the default copyable root path now goes through
+  `compose().trigger(...).content(...).entries(...)`.
 - Pass: Fret also exposes a parts bridge via `DropdownMenu::into_element_parts(...)`, so shadcn-style
   `DropdownMenuTrigger` / `DropdownMenuContent` call sites no longer need to be translated into a
   different authoring shape.
@@ -123,12 +126,11 @@ Notes on API mapping:
   - `DropdownMenuRadioGroup::from_value(...)` + `.on_value_change(...)`
 - Pass: `DropdownMenu::test_id_prefix(...)` derives the content id on the `role=menu` semantics
   node itself (for example `dd-content`) and keeps deterministic item ids for automation.
-- Note: Fret intentionally does not add a separate generic `compose()` builder for `DropdownMenu`
-  today. The typed `DropdownMenuEntry` model is already the important contract, and the parts bridge
-  keeps placement/content slots explicit without weakening entry semantics.
-- Note: A generic `compose()` / nested children API is still not the next recommended step. The
-  parts bridge already covers the docs-style `Trigger` / `Content` path, and typed entries remain
-  the more important contract boundary.
+- Pass: `DropdownMenu::compose()` is now the default recipe-level composition bridge, while
+  `build_parts(...)` / `into_element_parts(...)` remain available as lower-level closure adapters.
+- Pass: The typed `compose()` root keeps the explicit `DropdownMenuEntry` model while moving the
+  final root landing seam back to the true call site instead of forcing extracted helpers through
+  `build_parts(...) -> AnyElement`.
 - Groups/labels/shortcuts/destructive variant are modeled via:
   `DropdownMenuEntry::{Group,Label}`, `DropdownMenuItem::{shortcut,trailing,variant}`, and
   matching shortcut helpers on checkbox/radio items.

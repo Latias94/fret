@@ -32,7 +32,7 @@ fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
         ));
         bytes = bytes.saturating_add(mul(
             line.clusters().len(),
-            std::mem::size_of::<fret_render_text::geometry::TextLineCluster>(),
+            std::mem::size_of::<fret_render_text::TextLineCluster>(),
         ));
     }
 

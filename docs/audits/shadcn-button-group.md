@@ -30,6 +30,10 @@ base example implementations in `repo-ref/ui`.
 - Pass: `ButtonGroup::a11y_label(...)` provides the `aria-label` equivalent required by the upstream accessibility guidance.
 - Pass: `ButtonGroupSeparator::new().orientation(...)` maps directly to the documented separator surface.
 - Pass: `ButtonGroupText::new(...)` and `ButtonGroupText::children(...)` cover the upstream `ButtonGroupText` use cases without adding a generic `asChild` slot merge surface.
+- Pass: first-party composition examples now also follow the child family defaults: the embedded
+  `InputGroup` example uses the compact slot shorthand, and the embedded `Select` example uses the
+  compact direct root chain instead of reintroducing child-family parts adapters inside
+  `ButtonGroup`.
 - Note: Fret intentionally keeps `ButtonGroup` distinct from `ToggleGroup`; pressed-state behavior remains owned by `toggle_group` rather than being overloaded into the action-group recipe.
 
 ### Layout & default-style ownership

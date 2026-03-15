@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("prompt_input_provider_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{Corners, Edges, Px, SemanticsRole};
 use fret_ui::Invalidation;
 use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
@@ -10,7 +11,7 @@ use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let text = cx.local_model_keyed("text", String::new);
     let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
     let sent_count = cx.local_model_keyed("sent_count", || 0u32);

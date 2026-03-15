@@ -3,23 +3,32 @@ pub const SOURCE: &str = include_str!("gallery.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_icons::ids;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
-    material3_tabs_value: Model<Arc<str>>,
-    material3_list_value: Model<Arc<str>>,
-    material3_navigation_bar_value: Model<Arc<str>>,
-    material3_text_field_value: Model<String>,
-    material3_text_field_disabled: Model<bool>,
-    material3_text_field_error: Model<bool>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
+    let material3_checkbox = checkbox_root.checked_model();
+    let switch_root = material3::Switch::uncontrolled(cx, false);
+    let material3_switch = switch_root.selected_model();
+    let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);
+    let material3_radio_value = radio_group_root.value_model();
+    let tabs_root = material3::Tabs::uncontrolled(cx, "overview");
+    let material3_tabs_value = tabs_root.value_model();
+    let list_root = material3::List::uncontrolled(cx, "alpha");
+    let material3_list_value = list_root.value_model();
+    let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, "search");
+    let material3_navigation_bar_value = navigation_bar_root.value_model();
+    let text_field_root = material3::TextField::uncontrolled(cx);
+    let material3_text_field_value = text_field_root.value_model();
+    let text_field_disabled_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_disabled = text_field_disabled_root.selected_model();
+    let text_field_error_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_error = text_field_error_root.selected_model();
+
     let disabled = cx
         .get_model_copied(&material3_text_field_disabled, Invalidation::Layout)
         .unwrap_or(false);
@@ -152,16 +161,15 @@ pub fn render<H: UiHost>(
                 );
 
             vec![
-                material3::Checkbox::new(material3_checkbox.clone())
+                checkbox_root
+                    .clone()
                     .a11y_label("Checkbox")
                     .into_element(cx),
                 material3::Checkbox::new(material3_checkbox.clone())
                     .a11y_label("Checkbox Override")
                     .style(hover_style)
                     .into_element(cx),
-                material3::Switch::new(material3_switch.clone())
-                    .a11y_label("Switch")
-                    .into_element(cx),
+                switch_root.clone().a11y_label("Switch").into_element(cx),
                 material3::Switch::new(material3_switch.clone())
                     .a11y_label("Switch Override")
                     .style({
@@ -210,7 +218,8 @@ pub fn render<H: UiHost>(
 
                     vec![
                         cx.text("Radio Group"),
-                        material3::RadioGroup::new(material3_radio_value.clone())
+                        radio_group_root
+                            .clone()
                             .a11y_label("Radio Group")
                             .items(items.clone())
                             .into_element(cx),
@@ -236,11 +245,13 @@ pub fn render<H: UiHost>(
     out.push(
         ui::h_row(|cx| {
             vec![
-                shadcn::Switch::new(material3_text_field_disabled.clone())
+                text_field_disabled_root
+                    .clone()
                     .a11y_label("Disable Text Field")
                     .into_element(cx),
                 cx.text("Disabled"),
-                shadcn::Switch::new(material3_text_field_error.clone())
+                text_field_error_root
+                    .clone()
                     .a11y_label("Text Field Error")
                     .into_element(cx),
                 cx.text("Error"),

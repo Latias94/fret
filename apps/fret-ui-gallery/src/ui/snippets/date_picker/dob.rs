@@ -1,16 +1,18 @@
 pub const SOURCE: &str = include_str!("dob.rs");
 
 // region: example
+use crate::ui::snippets::date_picker::{default_month, fixed_today};
+use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    month: Model<CalendarMonth>,
-    selected: Model<Option<Date>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let today = fixed_today();
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || default_month(today));
+    let selected = cx.local_model_keyed("selected", || None::<Date>);
+
     let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
     if let Some(selected_now) = selected_now {
         let _ = cx

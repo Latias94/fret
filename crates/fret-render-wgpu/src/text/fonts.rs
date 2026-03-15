@@ -153,7 +153,7 @@ impl TextSystem {
         &mut self,
         config: &TextFontFamilyConfig,
     ) -> (bool, bool, bool) {
-        fret_render_text::font_stack::apply_font_families_inner(
+        fret_render_text::apply_font_families_inner(
             &mut self.parley_shaper,
             &mut self.font_runtime.fallback_policy,
             &mut self.font_runtime.generic_injections,

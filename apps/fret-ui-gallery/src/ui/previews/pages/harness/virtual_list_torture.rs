@@ -575,13 +575,17 @@ pub(in crate::ui) fn preview_virtual_list_torture(
             .test_id("ui-gallery-virtual-list-torture-root"),
     );
 
+    let harness = DocSection::build(cx, "Harness", root)
+        .no_shell()
+        .max_w(Px(980.0));
+
     let page = doc_layout::render_doc_page(
         cx,
         Some(
             "Deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit).",
         ),
-        vec![DocSection::new("Harness", root).no_shell().max_w(Px(980.0))],
+        vec![harness],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

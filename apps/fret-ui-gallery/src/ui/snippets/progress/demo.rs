@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::{SemanticsRole, TimerToken};
 use fret_runtime::Effect;
 use fret_ui::Invalidation;
@@ -10,7 +10,7 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || 13.0);
     let timer_token = cx.local_model_keyed("timer_token", || None::<TimerToken>);
 

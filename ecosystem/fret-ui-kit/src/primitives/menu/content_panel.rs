@@ -16,17 +16,19 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::primitives::portal_inherited;
+use crate::{IntoUiElement, collect_children};
 
 /// Render a menu content semantics wrapper (`role=menu`) and return its stable element id.
 ///
 /// This is intended for `aria-controls`-style trigger relationships (`controls_element`).
-pub fn menu_content_semantics_with_id<H: UiHost, I>(
+pub fn menu_content_semantics_with_id<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutStyle,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> (GlobalElementId, AnyElement)
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     menu_content_semantics_with_id_props(
         cx,
@@ -43,16 +45,20 @@ where
 ///
 /// Callers may set relationship fields like `labelled_by_element` to mirror Radix `aria-*`
 /// outcomes, while `role` is forced to `SemanticsRole::Menu`.
-pub fn menu_content_semantics_with_id_props<H: UiHost, I>(
+pub fn menu_content_semantics_with_id_props<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     mut props: SemanticsProps,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> (GlobalElementId, AnyElement)
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     props.role = SemanticsRole::Menu;
-    let element = cx.semantics_with_id(props, move |cx, _id| f(cx));
+    let element = cx.semantics_with_id(props, move |cx, _id| {
+        let items = f(cx);
+        collect_children(cx, items)
+    });
     (element.id, element)
 }
 
@@ -66,7 +72,7 @@ pub fn menu_content_semantics_id<H: UiHost>(
 ) -> GlobalElementId {
     let inherited = portal_inherited::PortalInherited::capture(cx);
     portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
-        menu_content_semantics_with_id(cx, LayoutStyle::default(), |_cx| Vec::new()).0
+        menu_content_semantics_with_id(cx, LayoutStyle::default(), |_cx| Vec::<AnyElement>::new()).0
     })
 }
 
@@ -74,14 +80,15 @@ pub fn menu_content_semantics_id<H: UiHost>(
 ///
 /// This is useful when a wrapper already provides a `SemanticsRole::Menu` element and only wants
 /// to reuse the absolute-positioned container layout.
-pub fn menu_panel_container_at<H: UiHost, I>(
+pub fn menu_panel_container_at<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let layout = LayoutStyle {
         position: PositionStyle::Absolute,
@@ -98,18 +105,22 @@ where
         overflow: Overflow::Clip,
         ..Default::default()
     };
-    cx.container(build_container(layout), f)
+    cx.container(build_container(layout), move |cx| {
+        let items = f(cx);
+        collect_children(cx, items)
+    })
 }
 
 /// Render a menu panel at `placed` with `role=menu` semantics.
-pub fn menu_panel_at<H: UiHost, I>(
+pub fn menu_panel_at<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let layout = LayoutStyle {
         position: PositionStyle::Absolute,
@@ -144,7 +155,7 @@ where
 
 /// Render a menu panel at `placed` with `role=menu` semantics and an optional `labelled_by`
 /// relationship.
-pub fn menu_panel_at_with_labelled_by_element<H: UiHost, I>(
+pub fn menu_panel_at_with_labelled_by_element<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     labelled_by_element: Option<GlobalElementId>,
@@ -152,7 +163,8 @@ pub fn menu_panel_at_with_labelled_by_element<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let layout = LayoutStyle {
         position: PositionStyle::Absolute,

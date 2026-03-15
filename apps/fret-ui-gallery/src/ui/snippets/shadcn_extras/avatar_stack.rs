@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("avatar_stack.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let a = shadcn::Avatar::new([shadcn::AvatarFallback::new("A").into_element(cx)]);
     let b = shadcn::Avatar::new([shadcn::AvatarFallback::new("B").into_element(cx)]);
     let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("C").into_element(cx)]);

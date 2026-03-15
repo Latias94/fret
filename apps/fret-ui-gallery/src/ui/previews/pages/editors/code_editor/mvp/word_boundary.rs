@@ -1,4 +1,5 @@
 use super::prelude::*;
+use fret::UiChild;
 use fret::UiCx;
 
 pub(super) fn word_boundary_controls(
@@ -8,7 +9,7 @@ pub(super) fn word_boundary_controls(
     word_idx: Rc<Cell<usize>>,
     word_debug: Rc<std::cell::RefCell<String>>,
     boundary_identifier: Model<bool>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     ui::h_row(move |cx| {
         let text = word_handle.with_buffer(|b| b.text_string());
         let caret = word_handle.selection().caret().min(text.len());
@@ -221,7 +222,7 @@ pub(super) fn word_boundary_debug_view(
     theme: &Theme,
     word_handle: code_editor::CodeEditorHandle,
     word_debug: Rc<std::cell::RefCell<String>>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     ui::v_flex(move |cx| {
         let fixture_editor = code_editor::CodeEditor::new(word_handle.clone())
             .key(1)

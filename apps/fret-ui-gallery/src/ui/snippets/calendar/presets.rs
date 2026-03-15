@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("presets.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -27,34 +28,31 @@ fn today_from_env_or_now() -> Date {
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let today = today_from_env_or_now();
     let preset_date = time::Date::from_calendar_date(today.year(), time::Month::February, 12)
         .expect("valid preset date");
     let month = cx.local_model_keyed("month", || CalendarMonth::from_date(preset_date));
     let selected = cx.local_model_keyed("selected", || Some(preset_date));
 
-    let preset_button = |cx: &mut ElementContext<'_, H>,
-                         label: &'static str,
-                         test_id: &'static str,
-                         days: i64|
-     -> AnyElement {
-        let month = month.clone();
-        let selected = selected.clone();
-        shadcn::Button::new(label)
-            .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Sm)
-            .refine_layout(LayoutRefinement::default().flex_1().min_w(Px(72.0)))
-            .test_id(test_id)
-            .on_activate(Arc::new(move |host, _acx, _reason| {
-                let new_date = today + time::Duration::days(days);
-                let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
-                let _ = host.models_mut().update(&month, |m| {
-                    *m = CalendarMonth::from_date(new_date);
-                });
-            }))
-            .into_element(cx)
-    };
+    let preset_button =
+        |cx: &mut UiCx<'_>, label: &'static str, test_id: &'static str, days: i64| -> AnyElement {
+            let month = month.clone();
+            let selected = selected.clone();
+            shadcn::Button::new(label)
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .refine_layout(LayoutRefinement::default().flex_1().min_w(Px(72.0)))
+                .test_id(test_id)
+                .on_activate(Arc::new(move |host, _acx, _reason| {
+                    let new_date = today + time::Duration::days(days);
+                    let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
+                    let _ = host.models_mut().update(&month, |m| {
+                        *m = CalendarMonth::from_date(new_date);
+                    });
+                }))
+                .into_element(cx)
+        };
 
     let calendar = shadcn::Calendar::new(month.clone(), selected.clone())
         .test_id_prefix("ui-gallery.calendar.presets")

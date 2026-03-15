@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("groups.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_runtime::CommandId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -15,7 +16,7 @@ fn trigger_surface<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id("ui-gallery-context-menu-groups-content")
         .build(

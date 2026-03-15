@@ -1,43 +1,21 @@
 pub const SOURCE: &str = include_str!("loading.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
+use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let last_action = super::last_action_model(cx);
     let query = cx.local_model_keyed("query", String::new);
     let loading_enabled = cx.local_model_keyed("loading_enabled", || false);
+    let on_select = super::on_select_for_last_action(last_action.clone());
+    let loading_enabled_value = cx
+        .get_model_copied(&loading_enabled, Invalidation::Layout)
+        .unwrap_or(false);
 
-    let on_select = {
-        let last_action = last_action.clone();
-        move |tag: Arc<str>| {
-            let last_action = last_action.clone();
-            Arc::new(
-                move |host: &mut dyn fret_ui::action::UiActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      _reason: fret_ui::action::ActivateReason| {
-                    let value = tag.clone();
-                    let _ = host
-                        .models_mut()
-                        .update(&last_action, |cur: &mut Arc<str>| {
-                            *cur = value.clone();
-                        });
-                    host.request_redraw(action_cx.window);
-                },
-            ) as fret_ui::action::OnActivate
-        }
-    };
-
-    ui::v_flex(move |cx: &mut ElementContext<'_, H>| {
-        let loading_enabled_value = cx
-            .app
-            .models()
-            .get_cloned(&loading_enabled)
-            .unwrap_or(false);
-
+    ui::v_flex(|cx| {
         let entries: Vec<shadcn::CommandEntry> = if loading_enabled_value {
             vec![
                 shadcn::CommandLoading::new("Fetching commands…")

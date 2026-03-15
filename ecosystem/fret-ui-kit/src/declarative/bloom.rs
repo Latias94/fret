@@ -6,9 +6,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::ChromeRefinement;
 use crate::recipes::bloom::{BloomEffect, bloom_effect_chain};
 use crate::recipes::surface::{SurfaceTokenKeys, resolve_surface_chrome};
+use crate::{ChromeRefinement, IntoUiElement, collect_children};
 
 #[derive(Debug, Clone)]
 pub struct BloomPanelProps {
@@ -43,13 +43,14 @@ impl Default for BloomPanelProps {
     }
 }
 
-pub fn bloom_panel<H: UiHost, I>(
+pub fn bloom_panel<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: BloomPanelProps,
     mut children: impl FnMut(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let theme = Theme::global(&*cx.app);
     let chrome = resolve_surface_chrome(theme, &props.chrome, props.chrome_keys);
@@ -81,8 +82,10 @@ where
             ..Default::default()
         };
 
-        let base_children: Vec<AnyElement> = children(cx).into_iter().collect();
-        let glow_children: Vec<AnyElement> = children(cx).into_iter().collect();
+        let base_items = children(cx);
+        let base_children = collect_children(cx, base_items);
+        let glow_items = children(cx);
+        let glow_children = collect_children(cx, glow_items);
 
         let base = cx.container(inner, move |_cx| base_children);
 

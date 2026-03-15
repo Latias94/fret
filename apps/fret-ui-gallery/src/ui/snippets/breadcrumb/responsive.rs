@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("responsive.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
@@ -23,7 +23,7 @@ fn close_model_on_activate(open: Model<bool>) -> fret_ui::action::OnActivate {
     })
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
 
     let is_desktop = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(

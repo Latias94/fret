@@ -22,7 +22,8 @@ By default the gallery only exposes a small set of Core pages + the Shadcn compo
 
 - `gallery-dev`: shows internal harness/debug pages (perf torture pages, AI/Magic spikes, etc).
 - `gallery-web-ime-harness`: enables the lightweight text diagnostics harness pages used for IME and
-  bundled font fallback probes.
+  bundled font fallback probes, and pulls in the optional bundled emoji fallback for those
+  conformance runs.
 - `gallery-material3`: enables Material 3 pages (pulls in optional `fret-ui-material3`).
 - `gallery-full`: enables everything (`gallery-dev` + `gallery-material3`).
 

@@ -6,6 +6,8 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::reduced_motion_queries;
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 
+use crate::collect_children;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MarqueeDirection {
     #[default]
@@ -40,13 +42,14 @@ impl Default for MarqueeProps {
     }
 }
 
-pub fn marquee<H: UiHost, I>(
+pub fn marquee<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: MarqueeProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let prefers_reduced_motion =
         reduced_motion_queries::prefers_reduced_motion(cx, Invalidation::Paint, false);
@@ -92,7 +95,10 @@ where
                 layout: inner_layout,
                 transform: Transform2D::translation(Point::new(dx, Px(0.0))),
             },
-            children,
+            move |cx| {
+                let items = children(cx);
+                collect_children(cx, items)
+            },
         )]
     })
 }

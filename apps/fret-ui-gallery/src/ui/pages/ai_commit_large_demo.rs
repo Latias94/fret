@@ -11,11 +11,11 @@ pub(super) fn preview_ai_commit_large_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Commit (Large)", demo)
+            DocSection::build(cx, "Commit (Large)", demo)
                 .test_id_prefix("ui-gallery-ai-commit-large-demo")
                 .code_rust_from_file_region(snippets::commit_large_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("checked_state.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let checked_controlled = cx.local_model_keyed("checked_controlled", || true);
     let checked_optional = cx.local_model_keyed("checked_optional", || None::<bool>);
 

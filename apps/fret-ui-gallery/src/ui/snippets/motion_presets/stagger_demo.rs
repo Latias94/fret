@@ -1,14 +1,14 @@
 pub const SOURCE: &str = include_str!("stagger_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui::element::LayoutStyle;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
-pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))
@@ -21,17 +21,18 @@ pub fn render(cx: &mut UiCx<'_>, theme: &Theme) -> AnyElement {
         .copied()
         .unwrap_or(false);
 
+    let theme = Theme::global(&*cx.app);
     let duration_ms = theme
         .duration_ms_by_key("duration.motion.stack.shift")
         .unwrap_or_else(|| theme.duration_ms_token("duration.motion.presence.enter"));
-    let duration = Duration::from_millis(duration_ms as u64);
     let each_delay_ms = theme
         .duration_ms_by_key("duration.motion.stack.shift.stagger")
         .unwrap_or(24);
-    let each_delay = Duration::from_millis(each_delay_ms as u64);
     let easing = theme
         .easing_by_key("easing.motion.stack.shift")
         .unwrap_or_else(|| theme.easing_token("easing.motion.standard"));
+    let duration = Duration::from_millis(duration_ms as u64);
+    let each_delay = Duration::from_millis(each_delay_ms as u64);
     let easing_headless =
         fret_ui_headless::easing::CubicBezier::new(easing.x1, easing.y1, easing.x2, easing.y2);
 

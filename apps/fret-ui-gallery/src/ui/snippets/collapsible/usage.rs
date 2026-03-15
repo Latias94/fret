@@ -1,12 +1,13 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::collapsible::primitives::{
     Collapsible, CollapsibleContent, CollapsibleTrigger,
 };
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     Collapsible::new().into_element(cx, |cx| {
         vec![
             CollapsibleTrigger::new([ui::text("Can I use this in my project?").into_element(cx)])

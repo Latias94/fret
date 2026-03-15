@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("trigger_delays.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
@@ -45,7 +46,7 @@ fn demo_content<H: UiHost>(
     shadcn::HoverCardContent::new(vec![body]).test_id(test_id)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let instant_content = demo_content(
         cx,
         "Instant",

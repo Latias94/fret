@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("with_form.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -14,7 +15,7 @@ where
         .justify_center()
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let width = cx.local_model_keyed("width", || String::from("100%"));
     let height = cx.local_model_keyed("height", || String::from("25px"));
 

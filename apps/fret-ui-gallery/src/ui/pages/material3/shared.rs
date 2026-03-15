@@ -20,7 +20,7 @@ where
         DocSection::build(cx, "Demo", demo).code_rust_from_file_region(source, "example");
     let page = doc_layout::render_doc_page(cx, intro, vec![demo_section]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }
 
 pub(in crate::ui) fn material3_scoped_page<'a, I, F>(

@@ -1,6 +1,8 @@
 pub const SOURCE: &str = include_str!("position.rs");
 
 // region: example
+use crate::ui::snippets::sonner::{last_action_model, position_model, request};
+use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -28,18 +30,16 @@ fn wrap_controls_row<H: UiHost>(
         .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-    sonner_position: Model<shadcn::ToastPosition>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
+    let last_action = last_action_model(cx);
+    let sonner_position = position_model(cx);
 
     let current = cx
         .get_model_copied(&sonner_position, Invalidation::Layout)
         .unwrap_or(shadcn::ToastPosition::TopCenter);
 
-    let action_button = |cx: &mut ElementContext<'_, H>,
+    let action_button = |cx: &mut UiCx<'_>,
                          label: &'static str,
                          test_id: &'static str,
                          target: shadcn::ToastPosition| {
@@ -51,7 +51,7 @@ pub fn render<H: UiHost>(
             sonner.toast(
                 host,
                 action_cx.window,
-                shadcn::ToastRequest::new("Event has been created")
+                request("Event has been created")
                     .position(target)
                     .description(format!("position: {}", toast_position_key(target))),
             );
@@ -88,7 +88,7 @@ pub fn render<H: UiHost>(
             shadcn::ToastPosition::TopRight,
         ),
     ];
-    let top_row = wrap_controls_row::<H>(Space::N2, top_children).into_element(cx);
+    let top_row = wrap_controls_row::<fret_app::App>(Space::N2, top_children).into_element(cx);
 
     let bottom_children = vec![
         action_button(
@@ -110,7 +110,8 @@ pub fn render<H: UiHost>(
             shadcn::ToastPosition::BottomRight,
         ),
     ];
-    let bottom_row = wrap_controls_row::<H>(Space::N2, bottom_children).into_element(cx);
+    let bottom_row =
+        wrap_controls_row::<fret_app::App>(Space::N2, bottom_children).into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

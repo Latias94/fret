@@ -1,19 +1,20 @@
 #[cfg(test)]
-use fret_render_text::cache_keys::TextBlobKey;
+use fret_render_text::TextBlobKey;
 #[cfg(test)]
-use fret_render_text::cache_keys::TextShapeKey;
+use fret_render_text::TextShapeKey;
 
 #[cfg(test)]
-use fret_render_text::cache_keys::spans_paint_fingerprint;
-pub use fret_render_text::decorations::{TextDecoration, TextDecorationKind};
+pub(crate) use fret_render_text::FontFaceKey;
+use fret_render_text::ParleyShaper;
+#[cfg(test)]
+use fret_render_text::TextFallbackPolicyV1;
 pub(crate) use fret_render_text::effective_text_scale_factor;
 #[cfg(test)]
-use fret_render_text::fallback_policy::TextFallbackPolicyV1;
-#[cfg(test)]
-pub(crate) use fret_render_text::font_instance_key::FontFaceKey;
+use fret_render_text::spans_paint_fingerprint;
 pub use fret_render_text::{
     FontCatalogEntryMetadata, SystemFontRescanResult, SystemFontRescanSeed,
 };
+pub use fret_render_text::{TextDecoration, TextDecorationKind};
 
 mod atlas;
 mod atlas_epoch;
@@ -54,16 +55,8 @@ pub use self::types::{
     GlyphInstance, GlyphQuadKind, TextBlob, TextFontFamilyConfig, TextLine, TextShape,
 };
 
-pub(crate) mod parley_shaper {
-    pub use fret_render_text::parley_shaper::*;
-}
-
-pub(crate) mod wrapper {
-    pub use fret_render_text::wrapper::*;
-}
-
 pub struct TextSystem {
-    parley_shaper: crate::text::parley_shaper::ParleyShaper,
+    parley_shaper: ParleyShaper,
     parley_scale: parley::swash::scale::ScaleContext,
     font_runtime: TextFontRuntimeState,
     quality: TextQualityState,

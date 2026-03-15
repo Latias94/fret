@@ -1,7 +1,6 @@
 use super::{PrepareShapeBuildContext, TextSystem};
 use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextSpan, TextStyle};
-use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
-use fret_render_text::spans::{ResolvedSpan, resolve_spans_for_text};
+use fret_render_text::{ResolvedSpan, TextBlobKey, TextShapeKey, resolve_spans_for_text};
 use std::sync::Arc;
 
 impl TextSystem {
@@ -94,7 +93,7 @@ impl TextSystem {
             mut lines,
         } = self.begin_prepare_shape_build(text, style, spans, constraints);
 
-        let prepared = fret_render_text::prepare_layout::prepare_layout_from_wrapped(
+        let prepared = fret_render_text::prepare_layout_from_wrapped(
             text,
             wrapped,
             constraints,

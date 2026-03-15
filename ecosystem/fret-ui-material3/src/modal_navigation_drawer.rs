@@ -16,6 +16,7 @@ use fret_ui::element::{
     LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
@@ -56,6 +57,29 @@ impl ModalNavigationDrawer {
             on_dismiss_request: None,
             test_id: None,
         }
+    }
+
+    /// Creates a modal navigation drawer with a controlled/uncontrolled open model.
+    ///
+    /// When `open` is `None`, the drawer stores its internal open model at the root call site and
+    /// initializes it from `default_open`.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = controllable_state::use_controllable_model(cx, open, || default_open).model();
+        Self::new(open)
+    }
+
+    /// Default teaching-surface constructor for a modal drawer that owns its open model.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, false)
+    }
+
+    /// Returns the resolved open model, including the internally owned model for uncontrolled use.
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
     }
 
     pub fn open_duration_ms(mut self, ms: Option<u32>) -> Self {
@@ -334,4 +358,82 @@ impl ModalNavigationDrawer {
 
 fn with_alpha(c: Color, a: f32) -> Color {
     Color { a, ..c }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    #[test]
+    fn modal_navigation_drawer_new_controllable_uses_controlled_open_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_open = app.models_mut().insert(true);
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-modal-navigation-drawer-controlled",
+            |cx| {
+                let drawer = ModalNavigationDrawer::new_controllable(
+                    cx,
+                    Some(controlled_open.clone()),
+                    false,
+                );
+                assert_eq!(drawer.open_model(), controlled_open);
+            },
+        );
+    }
+
+    #[test]
+    fn modal_navigation_drawer_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-modal-navigation-drawer-default-open",
+            |cx| {
+                let drawer = ModalNavigationDrawer::new_controllable(cx, None, true);
+                let open = cx
+                    .watch_model(&drawer.open_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+                assert!(open);
+            },
+        );
+    }
+
+    #[test]
+    fn modal_navigation_drawer_uncontrolled_multiple_instances_do_not_share_open_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-modal-navigation-drawer-uncontrolled-scope",
+            |cx| {
+                let a = ModalNavigationDrawer::uncontrolled(cx);
+                let b = ModalNavigationDrawer::uncontrolled(cx);
+                assert_ne!(a.open_model(), b.open_model());
+            },
+        );
+    }
 }

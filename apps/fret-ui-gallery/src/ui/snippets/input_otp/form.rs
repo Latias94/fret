@@ -1,13 +1,14 @@
 pub const SOURCE: &str = include_str!("form.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons_lucide::generated_ids::lucide::REFRESH_CW;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CONTROL_ID: &str = "ui-gallery-input-otp-form-verification";
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let otp = cx.local_model(String::new);
     let card_layout = LayoutRefinement::default()
         .w_full()
@@ -37,24 +38,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::InputOTP::new(otp)
             .control_id(CONTROL_ID)
             .aria_required(true)
+            .group_size(Some(3))
             .slot_size_px(Px(44.0), Px(48.0))
             .slot_text_px(Px(20.0))
             .slot_line_height_px(Px(28.0))
-            .into_element_parts(cx, |_cx| {
-                vec![
-                    shadcn::InputOtpPart::group(shadcn::InputOTPGroup::new([
-                        shadcn::InputOTPSlot::new(0),
-                        shadcn::InputOTPSlot::new(1),
-                        shadcn::InputOTPSlot::new(2),
-                    ])),
-                    shadcn::InputOtpPart::separator(shadcn::InputOtpSeparator),
-                    shadcn::InputOtpPart::group(shadcn::InputOTPGroup::new([
-                        shadcn::InputOTPSlot::new(3),
-                        shadcn::InputOTPSlot::new(4),
-                        shadcn::InputOTPSlot::new(5),
-                    ])),
-                ]
-            }),
+            .into_element(cx),
         shadcn::FieldDescription::new("I no longer have access to this email address.")
             .for_control(CONTROL_ID)
             .into_element(cx),

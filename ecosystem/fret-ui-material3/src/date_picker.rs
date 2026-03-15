@@ -16,6 +16,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
@@ -263,6 +264,59 @@ impl DatePickerDialog {
             on_dismiss_request: None,
             test_id: None,
         }
+    }
+
+    /// Creates a date picker dialog with controlled/uncontrolled open, month, and selection
+    /// models.
+    ///
+    /// When a model is `None`, it is stored at the root call site and initialized from the
+    /// corresponding default value.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+        month: Option<Model<CalendarMonth>>,
+        default_month: CalendarMonth,
+        selected: Option<Model<Option<Date>>>,
+        default_selected: Option<Date>,
+    ) -> Self {
+        let open = controllable_state::use_controllable_model(cx, open, || default_open).model();
+        let month =
+            controllable_state::use_controllable_model(cx, month, || default_month.clone()).model();
+        let selected =
+            controllable_state::use_controllable_model(cx, selected, || default_selected.clone())
+                .model();
+        Self::new(open, month, selected)
+    }
+
+    /// Default teaching-surface constructor for a date picker dialog that owns its root models.
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        let today = OffsetDateTime::now_utc().date();
+        Self::new_controllable(
+            cx,
+            None,
+            false,
+            None,
+            CalendarMonth::from_date(today),
+            None,
+            None,
+        )
+    }
+
+    /// Returns the resolved open model, including the internally owned model for uncontrolled use.
+    pub fn open_model(&self) -> Model<bool> {
+        self.open.clone()
+    }
+
+    /// Returns the resolved month model, including the internally owned model for uncontrolled use.
+    pub fn month_model(&self) -> Model<CalendarMonth> {
+        self.month.clone()
+    }
+
+    /// Returns the resolved selected-date model, including the internally owned model for
+    /// uncontrolled use.
+    pub fn selected_model(&self) -> Model<Option<Date>> {
+        self.selected.clone()
     }
 
     pub fn scrim_opacity(mut self, opacity: f32) -> Self {
@@ -1156,8 +1210,9 @@ fn absolute_fill_layout() -> LayoutStyle {
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{Point, Rect, Size};
+    use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::{ElementKind, Length, TextProps};
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
     use time::Month;
 
     fn bounds() -> Rect {
@@ -1179,7 +1234,7 @@ mod tests {
 
     #[test]
     fn date_picker_month_titles_can_truncate_between_nav_buttons() {
-        let window = fret_core::AppWindowId::default();
+        let window = AppWindowId::default();
         let mut app = App::new();
         let month = Date::from_calendar_date(2026, Month::September, 1).expect("date");
         let month_model = app.models_mut().insert(CalendarMonth::from_date(month));
@@ -1210,7 +1265,7 @@ mod tests {
 
     #[test]
     fn date_picker_modal_titles_can_truncate_within_dialog_width() {
-        let window = fret_core::AppWindowId::default();
+        let window = AppWindowId::default();
         let mut app = App::new();
         let month = Date::from_calendar_date(2026, Month::September, 1).expect("date");
         let month_model = app.models_mut().insert(CalendarMonth::from_date(month));
@@ -1240,5 +1295,101 @@ mod tests {
         assert_eq!(title.overflow, TextOverflow::Ellipsis);
         assert_eq!(title.layout.size.width, Length::Fill);
         assert_eq!(title.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn date_picker_dialog_new_controllable_uses_controlled_models_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled_open = app.models_mut().insert(true);
+        let month = Date::from_calendar_date(2026, Month::September, 1).expect("date");
+        let controlled_month = app.models_mut().insert(CalendarMonth::from_date(month));
+        let controlled_selected = app.models_mut().insert(Some(month));
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-date-picker-controlled",
+            |cx| {
+                let dialog = DatePickerDialog::new_controllable(
+                    cx,
+                    Some(controlled_open.clone()),
+                    false,
+                    Some(controlled_month.clone()),
+                    CalendarMonth::from_date(month),
+                    Some(controlled_selected.clone()),
+                    None,
+                );
+                assert_eq!(dialog.open_model(), controlled_open);
+                assert_eq!(dialog.month_model(), controlled_month);
+                assert_eq!(dialog.selected_model(), controlled_selected);
+            },
+        );
+    }
+
+    #[test]
+    fn date_picker_dialog_new_controllable_applies_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let default_month_date = Date::from_calendar_date(2026, Month::December, 1).expect("date");
+        let default_month = CalendarMonth::from_date(default_month_date);
+        let default_selected = Date::from_calendar_date(2026, Month::December, 24).expect("date");
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-date-picker-defaults",
+            |cx| {
+                let dialog = DatePickerDialog::new_controllable(
+                    cx,
+                    None,
+                    true,
+                    None,
+                    default_month.clone(),
+                    None,
+                    Some(default_selected),
+                );
+                let open = cx
+                    .watch_model(&dialog.open_model())
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+                let month = cx
+                    .watch_model(&dialog.month_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or_else(|| CalendarMonth::from_date(default_month_date));
+                let selected = cx
+                    .watch_model(&dialog.selected_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or(None);
+                assert!(open);
+                assert_eq!(month, default_month);
+                assert_eq!(selected, Some(default_selected));
+            },
+        );
+    }
+
+    #[test]
+    fn date_picker_dialog_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "material3-date-picker-uncontrolled-scope",
+            |cx| {
+                let a = DatePickerDialog::uncontrolled(cx);
+                let b = DatePickerDialog::uncontrolled(cx);
+                assert_ne!(a.open_model(), b.open_model());
+                assert_ne!(a.month_model(), b.month_model());
+                assert_ne!(a.selected_model(), b.selected_model());
+            },
+        );
     }
 }

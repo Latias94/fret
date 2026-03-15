@@ -5,20 +5,8 @@ use crate::ui::snippets;
 
 use super::shared::{MATERIAL3_INTRO, render_material3_demo_page};
 
-pub(in crate::ui) fn preview_material3_touch_targets(
-    cx: &mut UiCx<'_>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
-    material3_tabs_value: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::touch_targets::render(
-        cx,
-        material3_checkbox,
-        material3_switch,
-        material3_radio_value,
-        material3_tabs_value,
-    );
+pub(in crate::ui) fn preview_material3_touch_targets(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::touch_targets::render(cx);
 
     render_material3_demo_page(
         cx,
@@ -52,11 +40,8 @@ pub(in crate::ui) fn preview_material3_icon_button(cx: &mut UiCx<'_>) -> Vec<Any
     )
 }
 
-pub(in crate::ui) fn preview_material3_checkbox(
-    cx: &mut UiCx<'_>,
-    checked: Model<bool>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::checkbox::render(cx, checked);
+pub(in crate::ui) fn preview_material3_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::checkbox::render(cx);
 
     render_material3_demo_page(
         cx,
@@ -66,11 +51,8 @@ pub(in crate::ui) fn preview_material3_checkbox(
     )
 }
 
-pub(in crate::ui) fn preview_material3_switch(
-    cx: &mut UiCx<'_>,
-    selected: Model<bool>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::switch::render(cx, selected);
+pub(in crate::ui) fn preview_material3_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::switch::render(cx);
 
     render_material3_demo_page(
         cx,
@@ -80,11 +62,8 @@ pub(in crate::ui) fn preview_material3_switch(
     )
 }
 
-pub(in crate::ui) fn preview_material3_slider(
-    cx: &mut UiCx<'_>,
-    value: Model<f32>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::slider::render(cx, value);
+pub(in crate::ui) fn preview_material3_slider(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::slider::render(cx);
 
     render_material3_demo_page(
         cx,
@@ -94,11 +73,8 @@ pub(in crate::ui) fn preview_material3_slider(
     )
 }
 
-pub(in crate::ui) fn preview_material3_radio(
-    cx: &mut UiCx<'_>,
-    group_value: Model<Option<Arc<str>>>,
-) -> Vec<AnyElement> {
-    let demo = snippets::material3::radio::render(cx, group_value);
+pub(in crate::ui) fn preview_material3_radio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::material3::radio::render(cx);
 
     render_material3_demo_page(
         cx,

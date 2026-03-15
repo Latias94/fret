@@ -29,7 +29,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::primitives::trigger_a11y;
-use crate::{OverlayController, OverlayPresence, OverlayRequest};
+use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest, collect_children};
 
 /// Policy for suppressing close auto-focus based on how a dialog overlay was dismissed.
 ///
@@ -283,7 +283,7 @@ impl DialogRoot {
         self.options.clone()
     }
 
-    pub fn modal_request_with_dismiss_handler<H: UiHost, I>(
+    pub fn modal_request_with_dismiss_handler<H: UiHost, I, T>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
@@ -293,9 +293,10 @@ impl DialogRoot {
         children: I,
     ) -> OverlayRequest
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
-        let children: Vec<AnyElement> = children.into_iter().collect();
+        let children = collect_children(cx, children);
         modal_dialog_request_with_options_and_dismiss_handler(
             id,
             trigger,
@@ -328,7 +329,7 @@ impl DialogRoot {
             .unwrap_or(false)
     }
 
-    pub fn modal_request<H: UiHost, I>(
+    pub fn modal_request<H: UiHost, I, T>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
@@ -337,9 +338,10 @@ impl DialogRoot {
         children: I,
     ) -> OverlayRequest
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
-        let children: Vec<AnyElement> = children.into_iter().collect();
+        let children = collect_children(cx, children);
         modal_dialog_request_with_options(
             id,
             trigger,
@@ -440,12 +442,16 @@ pub fn modal_barrier_layout() -> LayoutStyle {
 /// pressed.
 ///
 /// The barrier is intentionally skin-agnostic: pass any background/visual elements as `children`.
-pub fn modal_barrier<H: UiHost>(
+pub fn modal_barrier<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
 
@@ -454,15 +460,19 @@ pub fn modal_barrier<H: UiHost>(
 ///
 /// When `on_dismiss_request` is provided and `dismiss_on_press` is enabled, barrier presses invoke
 /// the handler with `DismissReason::OutsidePress` and do not close `open` automatically.
-pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
+pub fn modal_barrier_with_dismiss_handler<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     let layout = modal_barrier_layout();
-    let children: Vec<AnyElement> = children.into_iter().collect();
+    let children = collect_children(cx, children);
 
     if dismiss_on_press {
         cx.pressable(
@@ -514,13 +524,17 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
 
 /// Convenience helper to assemble modal overlay children in a Radix-like order: barrier then
 /// content.
-pub fn modal_dialog_layer_elements<H: UiHost>(
+pub fn modal_dialog_layer_elements<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     options: DialogOptions,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     Elements::from([
         modal_barrier(cx, open, options.dismiss_on_overlay_press, barrier_children),
         content,
@@ -529,14 +543,18 @@ pub fn modal_dialog_layer_elements<H: UiHost>(
 
 /// Convenience helper to assemble modal overlay children in a Radix-like order (barrier then
 /// content), while routing barrier presses through an optional dismiss handler.
-pub fn modal_dialog_layer_elements_with_dismiss_handler<H: UiHost>(
+pub fn modal_dialog_layer_elements_with_dismiss_handler<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     options: DialogOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     Elements::from([
         modal_barrier_with_dismiss_handler(
             cx,
@@ -779,7 +797,7 @@ mod tests {
                     cx,
                     open.clone(),
                     DialogOptions::default(),
-                    Vec::new(),
+                    Vec::<AnyElement>::new(),
                     content,
                 )
             });
@@ -834,7 +852,12 @@ mod tests {
 
         let overlay_children =
             fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
-                vec![modal_barrier(cx, open.clone(), true, Vec::new())]
+                vec![modal_barrier(
+                    cx,
+                    open.clone(),
+                    true,
+                    Vec::<AnyElement>::new(),
+                )]
             });
 
         let req = modal_dialog_request(
@@ -933,7 +956,7 @@ mod tests {
                     open.clone(),
                     true,
                     Some(handler.clone()),
-                    Vec::new(),
+                    Vec::<AnyElement>::new(),
                 )]
             });
 
@@ -1055,7 +1078,7 @@ mod tests {
                     cx,
                     open.clone(),
                     DialogOptions::default(),
-                    Vec::new(),
+                    Vec::<AnyElement>::new(),
                     content,
                 )
             });

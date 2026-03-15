@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("guide_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
@@ -93,10 +93,7 @@ where
         .justify_end()
 }
 
-fn legacy_demo_content(
-    cx: &mut UiCx<'_>,
-    state: Model<fret_ui_headless::table::TableState>,
-) -> Vec<AnyElement> {
+fn guide_demo_content(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let assets = cx.slot_state(
         || {
             let data: Arc<[DemoProcessRow]> = Arc::from(vec![
@@ -199,6 +196,7 @@ fn legacy_demo_content(
         |st| st.clone(),
     );
 
+    let state = cx.local_model_keyed("state", TableState::default);
     let output = cx.local_model_keyed("output", TableViewOutput::default);
 
     let normalize_col_id =
@@ -504,9 +502,9 @@ fn legacy_demo_content(
     ]
 }
 
-pub fn render(cx: &mut UiCx<'_>, state: Model<TableState>) -> AnyElement {
-    let legacy_content = legacy_demo_content(cx, state);
-    ui::v_flex(|_cx| legacy_content)
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let guide_content = guide_demo_content(cx);
+    ui::v_flex(move |_cx| guide_content)
         .gap(Space::N3)
         .items_start()
         .layout(LayoutRefinement::default().w_full())

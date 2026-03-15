@@ -11,11 +11,11 @@ pub(super) fn preview_ai_sources_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Sources", demo)
+            DocSection::build(cx, "Sources", demo)
                 .test_id_prefix("ui-gallery-ai-sources-demo")
                 .code_rust_from_file_region(snippets::sources_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

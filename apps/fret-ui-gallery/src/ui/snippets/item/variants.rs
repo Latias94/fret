@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("variants.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_md = LayoutRefinement::default()
         .w_full()
         .min_w_0()

@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("multiple_selection.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let values = cx.local_model_keyed("values", Vec::<Arc<str>>::new);
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);
@@ -21,14 +21,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxTrigger::new().width_px(Px(260.0)).into(),
-                shadcn::ComboboxChipsInput::new()
-                    .placeholder("Select frameworks")
-                    .into(),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+        .input(shadcn::ComboboxChipsInput::new().placeholder("Select frameworks"))
+        .into_element(cx);
 
     ui::v_flex(move |_cx| vec![combo])
         .gap(Space::N2)

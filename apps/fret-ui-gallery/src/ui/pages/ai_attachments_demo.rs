@@ -22,23 +22,23 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
             "Docs-aligned Attachments examples covering the same grid / inline / list composition model as the official AI Elements page.",
         ),
         vec![
-            DocSection::new("Usage with AI SDK", usage)
+            DocSection::build(cx, "Usage with AI SDK", usage)
                 .description("Rust/Fret analogue of the official AI Elements usage pattern.")
                 .test_id_prefix("ui-gallery-ai-attachments-usage")
                 .code_rust_from_file_region(snippets::attachments_usage::SOURCE, "example"),
-            DocSection::new("Grid Variant", grid)
+            DocSection::build(cx, "Grid Variant", grid)
                 .description("Best for message attachments with thumbnail-style previews.")
                 .test_id_prefix("ui-gallery-ai-attachments-grid")
                 .code_rust_from_file_region(snippets::attachments_grid::SOURCE, "example"),
-            DocSection::new("Inline Variant", inline)
+            DocSection::build(cx, "Inline Variant", inline)
                 .description("Compact badges with hover previews and remove affordances.")
                 .test_id_prefix("ui-gallery-ai-attachments-inline")
                 .code_rust_from_file_region(snippets::attachments_inline::SOURCE, "example"),
-            DocSection::new("List Variant", list)
+            DocSection::build(cx, "List Variant", list)
                 .description("Row layout for filenames and metadata.")
                 .test_id_prefix("ui-gallery-ai-attachments-list")
                 .code_rust_from_file_region(snippets::attachments_list::SOURCE, "example"),
-            DocSection::new("Empty State", empty)
+            DocSection::build(cx, "Empty State", empty)
                 .description("Fallback content when there are no attachments.")
                 .test_id_prefix("ui-gallery-ai-attachments-empty")
                 .code_rust_from_file_region(snippets::attachments_empty::SOURCE, "example"),
@@ -47,5 +47,8 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-attachments-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-attachments-demo")
+            .into_element(cx),
+    ]
 }

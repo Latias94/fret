@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("diag_surface.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || None::<Arc<str>>);
     let open = cx.local_model_keyed("open", || false);
 
@@ -45,15 +46,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let select = shadcn::Select::new(value.clone(), open)
         .trigger_test_id("ui-gallery-select-trigger")
-        .into_element_parts(
-            cx,
-            |_cx| {
-                shadcn::SelectTrigger::new()
-                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-            },
-            |_cx| shadcn::SelectValue::new().placeholder("Select a fruit"),
-            |_cx| shadcn::SelectContent::new().with_entries(entries),
-        );
+        .trigger(
+            shadcn::SelectTrigger::new().refine_layout(LayoutRefinement::default().w_px(Px(180.0))),
+        )
+        .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
+        .content(shadcn::SelectContent::new())
+        .entries(entries)
+        .into_element(cx);
 
     let selected_value = value.clone();
     let selected_label = cx.scope(move |cx| {

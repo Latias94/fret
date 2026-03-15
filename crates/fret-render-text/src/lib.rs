@@ -1,18 +1,40 @@
-pub mod cache_keys;
-pub mod cache_tuning;
-pub mod decorations;
-pub mod fallback_policy;
-pub mod font_instance_key;
-pub mod font_names;
-pub mod font_stack;
-pub mod font_trace;
-pub mod geometry;
-pub mod line_layout;
-pub mod measure;
-pub mod parley_shaper;
-pub mod prepare_layout;
-pub mod spans;
-pub mod wrapper;
+mod cache_keys;
+mod cache_tuning;
+mod decorations;
+mod fallback_policy;
+mod font_instance_key;
+mod font_names;
+mod font_stack;
+mod font_trace;
+mod geometry;
+mod line_layout;
+mod measure;
+mod parley_font_db;
+mod parley_shaper;
+mod prepare_layout;
+mod spans;
+mod wrapper;
+mod wrapper_balance;
+mod wrapper_boundaries;
+mod wrapper_paragraphs;
+mod wrapper_ranges;
+mod wrapper_slices;
+
+pub use cache_keys::*;
+pub use cache_tuning::*;
+pub use decorations::*;
+pub use fallback_policy::*;
+pub use font_instance_key::*;
+pub use font_names::*;
+pub use font_stack::*;
+pub use font_trace::*;
+pub use geometry::*;
+pub use line_layout::*;
+pub use measure::*;
+pub use parley_shaper::*;
+pub use prepare_layout::*;
+pub use spans::*;
+pub use wrapper::*;
 
 #[inline]
 pub fn effective_text_scale_factor(scale_factor: f32) -> f32 {

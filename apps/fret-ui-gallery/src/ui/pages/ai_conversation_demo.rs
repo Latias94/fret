@@ -13,11 +13,11 @@ pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             "Docs-aligned AI Elements Conversation composition: root scroll container + content slot + overlay parts.",
         ),
         vec![
-            DocSection::new("Conversation", demo)
+            DocSection::build(cx, "Conversation", demo)
                 .test_id_prefix("ui-gallery-ai-conversation-demo")
                 .code_rust_from_file_region(snippets::conversation_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

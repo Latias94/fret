@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("transcription_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui::element::SemanticsProps;
@@ -11,7 +12,7 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let current_time = cx.local_model_keyed("current_time", || 0.0_f32);
     let time = cx.local_model_keyed("time", || vec![0.0_f32]);
     let duration = cx.local_model_keyed("duration", || 3.1_f32);

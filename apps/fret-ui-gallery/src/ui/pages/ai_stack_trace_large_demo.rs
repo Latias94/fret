@@ -14,11 +14,11 @@ pub(super) fn preview_ai_stack_trace_large_demo(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("StackTrace (Large)", demo)
+            DocSection::build(cx, "StackTrace (Large)", demo)
                 .test_id_prefix("ui-gallery-ai-stack-trace-large-demo")
                 .code_rust_from_file_region(snippets::stack_trace_large_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

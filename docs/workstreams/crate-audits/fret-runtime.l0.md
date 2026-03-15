@@ -37,3 +37,6 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 3. (Done) Convert platform capability vocabulary into a directory subsystem (`capabilities/mod.rs`).
    - Evidence: `crates/fret-runtime/src/capabilities/mod.rs`
 4. Add a v1 “serialization stability checklist” item for `fret-runtime` config surfaces (ties to `BU-FR-core-014`).
+5. (Done) Keep bundled/default font-family seeding policy in `font_bootstrap.rs`; runner crates
+   should choose a defaults policy, not duplicate bundled-profile seeding.
+   - Evidence: `crates/fret-runtime/src/font_bootstrap.rs`, `crates/fret-launch/src/runner/font_catalog.rs`

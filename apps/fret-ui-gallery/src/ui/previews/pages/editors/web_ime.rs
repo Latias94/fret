@@ -568,5 +568,5 @@ pub(in crate::ui) fn preview_web_ime_harness(
 
     let page = doc_layout::wrap_preview_page(cx, None, "Web IME", vec![header, inputs, region]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

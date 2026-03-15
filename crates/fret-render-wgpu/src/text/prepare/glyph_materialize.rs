@@ -1,12 +1,8 @@
 use super::super::atlas::GlyphAtlas;
 use super::super::{GlyphInstance, GlyphQuadKind, TextLine, TextSystem};
 use super::glyph_raster::{PreparedGlyphRaster, insert_prepared_glyph_raster_into_atlas};
-use fret_render_text::font_instance_key::FontFaceKey;
-use fret_render_text::{
-    parley_shaper::ParleyGlyph,
-    prepare_layout::PreparedLine,
-    spans::{ResolvedSpan, paint_span_for_text_range},
-};
+use fret_render_text::FontFaceKey;
+use fret_render_text::{ParleyGlyph, PreparedLine, ResolvedSpan, paint_span_for_text_range};
 use std::collections::HashMap;
 
 impl TextSystem {

@@ -1,7 +1,7 @@
 # Ecosystem Integration Traits v1 — TODO
 
-Status: Active planning tracker
-Last updated: 2026-03-12
+Status: Maintenance closeout tracker
+Last updated: 2026-03-15
 
 Related:
 
@@ -23,6 +23,14 @@ Status note on 2026-03-12:
 - the canonical todo/scaffold evidence set is now on the new app-facing posture,
 - keep this workstream focused on follow-up deletion/alignment while `into-element` M2 rewires the
   remaining builder and child pipelines.
+
+Closeout note on 2026-03-15:
+
+- treat this file as a narrow maintenance tracker, not an active trait-expansion backlog,
+- the remaining high-value items are the first-party closeout audit, delete-ready cleanup, and the
+  explicit `QueryAdapter` keep/defer call,
+- absent a second real consumer, the recommended v1 posture is to defer `QueryAdapter` rather than
+  spend trait budget speculatively.
 
 This file tracks the execution work needed to turn the trait budget into a clean pre-release
 surface.
@@ -51,6 +59,7 @@ surface.
     path.
 - [ ] Decide whether `QueryAdapter` is needed in v1 or should stay "design locked, implementation
   deferred" until a second real consumer appears.
+  - Recommended closeout posture on 2026-03-15: defer unless a second real consumer appears.
 - [x] Record an explicit "do not add" policy for universal `Component` / giant ecosystem `Plugin`
   traits in the relevant docs.
   - Landed on 2026-03-11:
@@ -205,6 +214,9 @@ surface.
 - [ ] Do not add a selector trait unless a concrete multi-crate need appears.
 - [ ] Keep official docs teaching grouped `cx.data().selector(...)` / `cx.data().query(...)` on the
   app path.
+- [ ] Record a final keep/defer note for `QueryAdapter` before this workstream is archived.
+  - Recommended direction: defer in v1 unless the audit above finds a second real consumer with a
+    materially shared adapter contract.
 
 ## 8. Documentation and Guardrails
 

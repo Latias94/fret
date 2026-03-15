@@ -104,4 +104,8 @@ Key upstream semantics:
 
 ## Follow-ups (non-P0)
 
+- Authoring-lane classification: keep `Command` on the direct recipe root/bridge lane.
+  `command(...)` / `CommandPalette` remain the default story; if split `CommandInput/List/Item`
+  authoring is ever promoted, it should happen behind an explicit shared context contract rather
+  than ad-hoc surface growth.
 - Composability: if split authoring (`CommandInput`/`CommandList`/`CommandItem`) becomes a goal, introduce a shared context model (query + active + selection) with an explicit contract/ADR first.

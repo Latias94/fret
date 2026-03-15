@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
-use fret::UiCx;
-use fret_core::{Color as CoreColor, ImageColorSpace, ImageId};
+use fret::{UiChild, UiCx};
+use fret_core::{Color as CoreColor, ImageColorSpace};
 use fret_ui::Theme;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
-use fret_ui_kit::declarative::{ModelWatchExt as _, style as decl_style};
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
 
@@ -66,7 +66,7 @@ fn demo_event_cover_rgba8(width: u32, height: u32) -> Vec<u8> {
     out
 }
 
-pub fn render(cx: &mut UiCx<'_>, event_cover_image: Model<Option<ImageId>>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
     let max_w_sm = LayoutRefinement::default()
         .w_full()
@@ -88,10 +88,8 @@ pub fn render(cx: &mut UiCx<'_>, event_cover_image: Model<Option<ImageId>>) -> A
                     .is_some_and(|v| !v.is_empty())
             });
 
-            let event_cover_fallback = cx.watch_model(&event_cover_image).copied().flatten();
-
             let event_cover_state = cx.use_image_source_state(demo_event_cover_source());
-            let event_cover = event_cover_state.image.or(event_cover_fallback);
+            let event_cover = event_cover_state.image;
             let event_cover_source_available = true;
             let event_cover_state = Some(event_cover_state);
 

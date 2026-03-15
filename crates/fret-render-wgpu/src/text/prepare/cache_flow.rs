@@ -1,7 +1,6 @@
 use super::super::{TextBlob, TextShape, TextSystem};
 use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextStyle};
-use fret_render_text::cache_keys::{TextBlobKey, TextShapeKey};
-use fret_render_text::spans::ResolvedSpan;
+use fret_render_text::{ResolvedSpan, TextBlobKey, TextShapeKey};
 use std::sync::Arc;
 
 impl TextSystem {
@@ -97,7 +96,7 @@ impl TextSystem {
         let decoration_metrics = self.decoration_metrics_for_shape(style, scale, shape);
         resolved_spans
             .map(|spans| {
-                fret_render_text::decorations::decorations_for_lines(
+                fret_render_text::decorations_for_lines(
                     shape.lines.as_ref(),
                     spans,
                     decoration_metrics,

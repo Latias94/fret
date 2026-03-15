@@ -3,17 +3,17 @@ pub const SOURCE: &str = include_str!("date_picker.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_ui::action::OnActivate;
-use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    month: Model<CalendarMonth>,
-    selected: Model<Option<time::Date>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let dialog = material3::DatePickerDialog::uncontrolled(cx);
+    let open = dialog.open_model();
+    let month = dialog.month_model();
+    let selected = dialog.selected_model();
+
     let open_dialog: OnActivate = {
         let open = open.clone();
         Arc::new(move |host, action_cx, _reason| {
@@ -30,7 +30,7 @@ pub fn render<H: UiHost>(
         None => Arc::<str>::from("Selected: <none>"),
     };
 
-    material3::DatePickerDialog::new(open, month.clone(), selected.clone())
+    dialog
         .test_id("ui-gallery-material3-date-picker")
         .into_element(cx, move |cx| {
             ui::v_stack(move |cx| {

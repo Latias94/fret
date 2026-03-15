@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -25,7 +26,7 @@ fn table_row<H: UiHost>(
     .border_bottom(true)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let table_all = cx.local_model_keyed("table_all", || false);
     let table_row_1 = cx.local_model_keyed("table_row_1", || true);
     let table_row_2 = cx.local_model_keyed("table_row_2", || false);

@@ -16,6 +16,7 @@ use std::sync::Arc;
 use fret_ui::element::{AnyElement, RovingFlexProps};
 use fret_ui::{ElementContext, UiHost};
 
+use crate::IntoUiElement;
 use crate::primitives::direction::LayoutDirection;
 use crate::primitives::roving_focus_group::{self, TypeaheadPolicy};
 use crate::primitives::separator::SeparatorOrientation;
@@ -57,27 +58,29 @@ pub fn toolbar_roving_flex_props(
 
 /// Render a toolbar-like roving focus group with an APG-aligned navigation policy.
 #[track_caller]
-pub fn toolbar_roving_group_apg<H: UiHost, I>(
+pub fn toolbar_roving_group_apg<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     roving_focus_group::roving_focus_group_apg(cx, props, TypeaheadPolicy::None, children)
 }
 
 /// Like `toolbar_roving_group_apg`, but respects Radix `dir` behavior for horizontal navigation.
 #[track_caller]
-pub fn toolbar_roving_group_apg_with_direction<H: UiHost, I>(
+pub fn toolbar_roving_group_apg_with_direction<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     dir: LayoutDirection,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     roving_focus_group::roving_focus_group_apg_with_direction(
         cx,

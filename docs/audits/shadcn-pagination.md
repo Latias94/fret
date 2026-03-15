@@ -65,6 +65,11 @@ these sources instead:
   default-style ownership. The root and inline layout defaults were already in the right place.
 - Result: Composable children API is already supported via the explicit parts surface, so follow-up work
   should focus on richer examples or diag gates only if a concrete parity regression appears.
+- Authoring-lane classification: treat `Pagination` as a dual-lane family.
+  First-party app authoring can keep the compact wrapper lane
+  (`pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, `pagination_link(...)`),
+  while the explicit `Pagination` / `PaginationContent` / `PaginationItem` / `PaginationLink`
+  parts surface remains the upstream-shaped lane.
 
 ## Validation
 

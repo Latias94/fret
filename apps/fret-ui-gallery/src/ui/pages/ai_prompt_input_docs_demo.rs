@@ -14,11 +14,14 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
         cx,
         Some("Docs-aligned PromptInput composition (AI Elements)."),
         vec![
-            DocSection::new("Prompt Input (Docs-aligned)", demo)
+            DocSection::build(cx, "Prompt Input (Docs-aligned)", demo)
                 .test_id_prefix("ui-gallery-ai-prompt-input-docs-demo")
                 .code_rust_from_file_region(snippets::prompt_input_docs_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-prompt-input-docs-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-prompt-input-docs-demo")
+            .into_element(cx),
+    ]
 }

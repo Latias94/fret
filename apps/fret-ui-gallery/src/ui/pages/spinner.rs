@@ -28,6 +28,47 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-spinner-api-reference")
         .description("Public surface summary and ownership notes.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Default top-of-page preview matching the upstream spinner item example.")
+        .test_id_prefix("ui-gallery-spinner-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for `Spinner`.")
+        .test_id_prefix("ui-gallery-spinner-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let customization = DocSection::build(cx, "Customization", customization)
+        .description("Swap the default loader icon while keeping the same leaf component contract.")
+        .test_id_prefix("ui-gallery-spinner-customization")
+        .code_rust_from_file_region(snippets::customization::SOURCE, "example");
+    let sizes = DocSection::build(cx, "Size", sizes)
+        .description("Use explicit layout refinements for size-3 / 4 / 6 / 8 variants.")
+        .test_id_prefix("ui-gallery-spinner-size")
+        .code_rust_from_file_region(snippets::sizes::SOURCE, "example");
+    let buttons = DocSection::build(cx, "Button", buttons)
+        .description("Disabled buttons with inline-start spinner content.")
+        .test_id_prefix("ui-gallery-spinner-button")
+        .code_rust_from_file_region(snippets::buttons::SOURCE, "example");
+    let badges = DocSection::build(cx, "Badge", badges)
+        .description("Badge compositions where the surrounding recipe owns inline icon spacing.")
+        .test_id_prefix("ui-gallery-spinner-badge")
+        .code_rust_from_file_region(snippets::badges::SOURCE, "example");
+    let input_group = DocSection::build(cx, "Input Group", input_group)
+        .description("Spinner inside trailing and block-end input-group regions.")
+        .test_id_prefix("ui-gallery-spinner-input-group")
+        .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
+    let empty = DocSection::build(cx, "Empty", empty)
+        .description("Empty-state surface with a spinner media slot.")
+        .test_id_prefix("ui-gallery-spinner-empty")
+        .code_rust_from_file_region(snippets::empty::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Spinner item layout under an RTL direction provider.")
+        .test_id_prefix("ui-gallery-spinner-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let extras = DocSection::build(cx, "Extras", extras)
+        .description("Fret-specific follow-ups such as speed control and extra icon variants.")
+        .no_shell()
+        .test_id_prefix("ui-gallery-spinner-extras")
+        .code_rust_from_file_region(snippets::extras::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -35,58 +76,19 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Spinner docs path first: Demo, Usage, Customization, Size, Button, Badge, Input Group, Empty, RTL, then keeps `Extras` and `API Reference` as focused Fret follow-ups.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description(
-                    "Default top-of-page preview matching the upstream spinner item example.",
-                )
-                .test_id_prefix("ui-gallery-spinner-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Spinner`.")
-                .test_id_prefix("ui-gallery-spinner-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Customization", customization)
-                .description(
-                    "Swap the default loader icon while keeping the same leaf component contract.",
-                )
-                .test_id_prefix("ui-gallery-spinner-customization")
-                .code_rust_from_file_region(snippets::customization::SOURCE, "example"),
-            DocSection::new("Size", sizes)
-                .description("Use explicit layout refinements for size-3 / 4 / 6 / 8 variants.")
-                .test_id_prefix("ui-gallery-spinner-size")
-                .code_rust_from_file_region(snippets::sizes::SOURCE, "example"),
-            DocSection::new("Button", buttons)
-                .description("Disabled buttons with inline-start spinner content.")
-                .test_id_prefix("ui-gallery-spinner-button")
-                .code_rust_from_file_region(snippets::buttons::SOURCE, "example"),
-            DocSection::new("Badge", badges)
-                .description(
-                    "Badge compositions where the surrounding recipe owns inline icon spacing.",
-                )
-                .test_id_prefix("ui-gallery-spinner-badge")
-                .code_rust_from_file_region(snippets::badges::SOURCE, "example"),
-            DocSection::new("Input Group", input_group)
-                .description("Spinner inside trailing and block-end input-group regions.")
-                .test_id_prefix("ui-gallery-spinner-input-group")
-                .code_rust_from_file_region(snippets::input_group::SOURCE, "example"),
-            DocSection::new("Empty", empty)
-                .description("Empty-state surface with a spinner media slot.")
-                .test_id_prefix("ui-gallery-spinner-empty")
-                .code_rust_from_file_region(snippets::empty::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Spinner item layout under an RTL direction provider.")
-                .test_id_prefix("ui-gallery-spinner-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Extras", extras)
-                .description(
-                    "Fret-specific follow-ups such as speed control and extra icon variants.",
-                )
-                .no_shell()
-                .test_id_prefix("ui-gallery-spinner-extras")
-                .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
+            demo,
+            usage,
+            customization,
+            sizes,
+            buttons,
+            badges,
+            input_group,
+            empty,
+            rtl,
+            extras,
             api_reference,
         ],
     );
 
-    vec![body.test_id("ui-gallery-spinner")]
+    vec![body.test_id("ui-gallery-spinner").into_element(cx)]
 }

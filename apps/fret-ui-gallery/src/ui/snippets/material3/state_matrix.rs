@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("state_matrix.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_core::{Edges, Px};
 use fret_icons::ids;
 use fret_ui::action::OnActivate;
@@ -12,10 +13,7 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn render_chips<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_chips(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
     let filter_selected = cx.local_model_keyed("filter_selected", || true);
     let filter_unselected = cx.local_model_keyed("filter_unselected", || false);
     let input_selected = cx.local_model_keyed("input_selected", || true);
@@ -300,10 +298,7 @@ fn render_chips<H: UiHost>(
     ]
 }
 
-fn render_cards<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_cards(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
         let _ = host.models_mut().update(&last_action, |v| {
             *v = Arc::<str>::from("material3.card.activated");
@@ -333,7 +328,7 @@ fn render_cards<H: UiHost>(
     let card_content_row1 = {
         let body_style = body_style.clone();
         let body_color = body_color;
-        move |cx: &mut ElementContext<'_, H>, label: &'static str| {
+        move |cx: &mut UiCx<'_>, label: &'static str| {
             let mut container = ContainerProps::default();
             container.layout.size.width = Length::Px(Px(280.0));
             container.layout.size.height = Length::Px(Px(72.0));
@@ -349,7 +344,7 @@ fn render_cards<H: UiHost>(
     let card_content_row2 = {
         let body_style = body_style.clone();
         let body_color = body_color;
-        move |cx: &mut ElementContext<'_, H>, label: &'static str| {
+        move |cx: &mut UiCx<'_>, label: &'static str| {
             let mut container = ContainerProps::default();
             container.layout.size.width = Length::Px(Px(280.0));
             container.layout.size.height = Length::Px(Px(72.0));
@@ -415,10 +410,7 @@ fn render_cards<H: UiHost>(
     ]
 }
 
-fn render_fab<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_fab(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
     fn on_activate(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, _acx, _reason| {
             let _ = host.models_mut().update(&last_action, |v| {
@@ -429,9 +421,7 @@ fn render_fab<H: UiHost>(
 
     let row = {
         let last_action = last_action.clone();
-        move |cx: &mut ElementContext<'_, H>,
-              variant: material3::FabVariant,
-              label: &'static str| {
+        move |cx: &mut UiCx<'_>, variant: material3::FabVariant, label: &'static str| {
             let last_action = last_action.clone();
             ui::h_row(move |cx| {
                 vec![
@@ -528,7 +518,7 @@ fn render_fab<H: UiHost>(
     ]
 }
 
-fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyElement> {
+fn render_search_view(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let selected = cx.local_model_keyed("selected", || Arc::<str>::from("alpha"));
 
     let suggestions = material3::List::new(selected)
@@ -559,11 +549,10 @@ fn render_search_view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Vec<AnyEleme
     vec![view]
 }
 
-fn render_menu<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+fn render_menu(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> Vec<AnyElement> {
+    let dropdown_root = material3::DropdownMenu::uncontrolled(cx).a11y_label("Material 3 Menu");
+    let open = dropdown_root.open_model();
+
     fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&last_action, |v| {
@@ -581,52 +570,55 @@ fn render_menu<H: UiHost>(
         })
     };
 
-    let dropdown = material3::DropdownMenu::new(open.clone())
-        .a11y_label("Material 3 Menu")
-        .into_element(
-            cx,
-            move |cx| {
-                material3::Button::new("Open menu")
-                    .variant(material3::ButtonVariant::Outlined)
-                    .on_activate(toggle_open.clone())
-                    .into_element(cx)
-            },
-            move |_cx| {
-                vec![
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Cut")
-                            .on_select(on_select("material3.menu.cut", last_action.clone())),
-                    ),
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Copy")
-                            .on_select(on_select("material3.menu.copy", last_action.clone())),
-                    ),
-                    material3::MenuEntry::Item(material3::MenuItem::new("Paste").disabled(true)),
-                    material3::MenuEntry::Separator,
-                    material3::MenuEntry::Item(
-                        material3::MenuItem::new("Settings")
-                            .on_select(on_select("material3.menu.settings", last_action)),
-                    ),
-                ]
-            },
-        );
+    let dropdown = dropdown_root.into_element(
+        cx,
+        move |cx| {
+            material3::Button::new("Open menu")
+                .variant(material3::ButtonVariant::Outlined)
+                .on_activate(toggle_open.clone())
+                .into_element(cx)
+        },
+        move |_cx| {
+            vec![
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Cut")
+                        .on_select(on_select("material3.menu.cut", last_action.clone())),
+                ),
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Copy")
+                        .on_select(on_select("material3.menu.copy", last_action.clone())),
+                ),
+                material3::MenuEntry::Item(material3::MenuItem::new("Paste").disabled(true)),
+                material3::MenuEntry::Separator,
+                material3::MenuEntry::Item(
+                    material3::MenuItem::new("Settings")
+                        .on_select(on_select("material3.menu.settings", last_action)),
+                ),
+            ]
+        },
+    );
 
     vec![dropdown]
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
-    material3_tabs_value: Model<Arc<str>>,
-    material3_navigation_bar_value: Model<Arc<str>>,
-    material3_text_field_value: Model<String>,
-    material3_text_field_disabled: Model<bool>,
-    material3_text_field_error: Model<bool>,
-    material3_menu_open: Model<bool>,
-    last_action: Model<Arc<str>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
+    let checkbox_root = material3::Checkbox::uncontrolled(cx, false);
+    let material3_checkbox = checkbox_root.checked_model();
+    let switch_root = material3::Switch::uncontrolled(cx, false);
+    let material3_switch = switch_root.selected_model();
+    let radio_group_root = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);
+    let material3_radio_value = radio_group_root.value_model();
+    let tabs_root = material3::Tabs::uncontrolled(cx, "overview");
+    let material3_tabs_value = tabs_root.value_model();
+    let navigation_bar_root = material3::NavigationBar::uncontrolled(cx, "search");
+    let material3_navigation_bar_value = navigation_bar_root.value_model();
+    let text_field_root = material3::TextField::uncontrolled(cx);
+    let material3_text_field_value = text_field_root.value_model();
+    let text_field_disabled_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_disabled = text_field_disabled_root.selected_model();
+    let text_field_error_root = material3::Switch::uncontrolled(cx, false);
+    let material3_text_field_error = text_field_error_root.selected_model();
+
     let last = cx
         .app
         .models()
@@ -678,7 +670,8 @@ pub fn render<H: UiHost>(
     .items_center()
     .into_element(cx);
 
-    let radio_group = material3::RadioGroup::new(material3_radio_value.clone())
+    let radio_group = radio_group_root
+        .clone()
         .a11y_label("Material 3 RadioGroup")
         .orientation(material3::RadioGroupOrientation::Horizontal)
         .gap(fret_core::Px(8.0))
@@ -701,11 +694,13 @@ pub fn render<H: UiHost>(
 
         let toggles = ui::h_row(move |cx| {
             vec![
-                material3::Switch::new(material3_text_field_disabled.clone())
+                text_field_disabled_root
+                    .clone()
                     .a11y_label("Text field disabled")
                     .into_element(cx),
                 cx.text(format!("disabled={disabled}")),
-                material3::Switch::new(material3_text_field_error.clone())
+                text_field_error_root
+                    .clone()
                     .a11y_label("Text field error")
                     .into_element(cx),
                 cx.text(format!("error={error}")),
@@ -767,18 +762,10 @@ pub fn render<H: UiHost>(
     out.extend(render_fab(cx, last_action.clone()));
 
     out.push(cx.text("— Checkbox —"));
-    out.push(
-        material3::Checkbox::new(material3_checkbox)
-            .a11y_label("Checkbox")
-            .into_element(cx),
-    );
+    out.push(checkbox_root.a11y_label("Checkbox").into_element(cx));
 
     out.push(cx.text("— Switch —"));
-    out.push(
-        material3::Switch::new(material3_switch)
-            .a11y_label("Switch")
-            .into_element(cx),
-    );
+    out.push(switch_root.a11y_label("Switch").into_element(cx));
 
     out.push(cx.text("— Radio —"));
     out.push(radio_group);
@@ -816,7 +803,7 @@ pub fn render<H: UiHost>(
     );
 
     out.push(cx.text("— Menu —"));
-    out.extend(render_menu(cx, material3_menu_open, last_action.clone()));
+    out.extend(render_menu(cx, last_action.clone()));
 
     out.push(cx.text(format!("last action: {last}")));
 

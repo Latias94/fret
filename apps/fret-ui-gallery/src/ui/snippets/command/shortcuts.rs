@@ -1,34 +1,13 @@
 pub const SOURCE: &str = include_str!("shortcuts.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
+use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-fn on_select_for_last_action(
-    last_action: Model<Arc<str>>,
-) -> impl Fn(Arc<str>) -> fret_ui::action::OnActivate + Clone {
-    move |tag: Arc<str>| {
-        let last_action = last_action.clone();
-        Arc::new(
-            move |host: &mut dyn fret_ui::action::UiActionHost,
-                  action_cx: fret_ui::action::ActionCx,
-                  _reason: fret_ui::action::ActivateReason| {
-                let value = tag.clone();
-                let _ = host
-                    .models_mut()
-                    .update(&last_action, |cur: &mut Arc<str>| {
-                        *cur = value.clone();
-                    });
-                host.request_redraw(action_cx.window);
-            },
-        ) as fret_ui::action::OnActivate
-    }
-}
-
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let last_action = super::last_action_model(cx);
     let query = cx.local_model_keyed("query", String::new);
     let disable_pointer_selection = cx.local_model_keyed("disable_pointer_selection", || false);
     let demo_filter_query = cx.local_model_keyed("demo_filter_query", String::new);
@@ -37,20 +16,18 @@ pub fn render<H: UiHost>(
         cx.local_model_keyed("demo_filter_value", || Some(Arc::<str>::from("Calendar")));
     let demo_group_force_query = cx.local_model_keyed("demo_group_force_query", String::new);
 
-    let on_select = on_select_for_last_action(last_action.clone());
+    let on_select = super::on_select_for_last_action(last_action.clone());
+    let disable_pointer_selection_value = cx
+        .get_model_copied(&disable_pointer_selection, Invalidation::Layout)
+        .unwrap_or(false);
+    let demo_disable_filtering_value = cx
+        .get_model_copied(&demo_disable_filtering, Invalidation::Layout)
+        .unwrap_or(false);
+    let demo_filter_value_value = cx
+        .get_model_cloned(&demo_filter_value, Invalidation::Layout)
+        .unwrap_or(None);
 
-    ui::v_flex(move |cx: &mut ElementContext<'_, H>| {
-            let disable_pointer_selection_value = cx
-                .app
-                .models()
-                .get_cloned(&disable_pointer_selection)
-                .unwrap_or(false);
-            let demo_disable_filtering_value = cx
-                .app
-                .models()
-                .get_cloned(&demo_disable_filtering)
-                .unwrap_or(false);
-
+    ui::v_flex(move |cx| {
             let toggle_row = ui::h_row(|cx| {
                     vec![
                         shadcn::Checkbox::new(disable_pointer_selection.clone())
@@ -200,20 +177,24 @@ pub fn render<H: UiHost>(
                         let last_action = last_action.clone();
                         move |host, action_cx, _reason, value| {
                             let msg = Arc::<str>::from(format!("command.group_force: {value}"));
-                            let _ = host.models_mut().update(&last_action, |cur| {
-                                *cur = msg.clone();
-                            });
-                            host.request_redraw(action_cx.window);
+                            super::write_last_action(
+                                host,
+                                action_cx,
+                                last_action.clone(),
+                                msg,
+                            );
                         }
                     }),
                     shadcn::CommandItem::new("Beta").on_select_value_action({
                         let last_action = last_action.clone();
                         move |host, action_cx, _reason, value| {
                             let msg = Arc::<str>::from(format!("command.group_force: {value}"));
-                            let _ = host.models_mut().update(&last_action, |cur| {
-                                *cur = msg.clone();
-                            });
-                            host.request_redraw(action_cx.window);
+                            super::write_last_action(
+                                host,
+                                action_cx,
+                                last_action.clone(),
+                                msg,
+                            );
                         }
                     }),
                 ])
@@ -226,10 +207,12 @@ pub fn render<H: UiHost>(
                         let last_action = last_action.clone();
                         move |host, action_cx, _reason, value| {
                             let msg = Arc::<str>::from(format!("command.group_force: {value}"));
-                            let _ = host.models_mut().update(&last_action, |cur| {
-                                *cur = msg.clone();
-                            });
-                            host.request_redraw(action_cx.window);
+                            super::write_last_action(
+                                host,
+                                action_cx,
+                                last_action.clone(),
+                                msg,
+                            );
                         }
                     })])
                 .heading("Animals")
@@ -247,28 +230,26 @@ pub fn render<H: UiHost>(
                     .into_element(cx)
                     .test_id("ui-gallery-command-group-force");
 
-            let demo_block = ui::v_flex(move |cx: &mut ElementContext<'_, H>| {
-                    let demo_filter_value_value = cx
-                        .app
-                        .models()
-                        .get_cloned(&demo_filter_value)
-                        .unwrap_or(None);
-                    vec![
-                        cx.text("Controlled selection demo (cmdk `value`)"),
-                        cx.text(format!(
-                            "active value: {}",
-                            demo_filter_value_value.as_deref().unwrap_or("<none>")
-                        )),
-                        controlled_selection_row,
-                        demo_toggle_row,
-                        demo_palette,
-                        cx.text("Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out."),
-                        group_force_palette,
-                    ]
-                })
-                    .gap(Space::N2)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx);
+            let demo_block = ui::v_flex(|cx| {
+                vec![
+                    cx.text("Controlled selection demo (cmdk `value`)"),
+                    cx.text(format!(
+                        "active value: {}",
+                        demo_filter_value_value.as_deref().unwrap_or("<none>")
+                    )),
+                    controlled_selection_row,
+                    demo_toggle_row,
+                    demo_palette,
+                    cx.text(
+                        "Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.",
+                    ),
+                    group_force_palette,
+                ]
+            })
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
 
             vec![toggle_row, palette, demo_block]
         })

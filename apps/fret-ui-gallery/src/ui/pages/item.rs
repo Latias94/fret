@@ -36,6 +36,61 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .description("Public surface summary and ownership notes.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .no_shell()
+        .description("Top-of-page item preview matching the upstream docs intent.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .no_shell()
+        .description("Copyable minimal usage for `Item` and its slot parts.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let item_vs_field = DocSection::build(cx, "Item vs Field", item_vs_field)
+        .no_shell()
+        .description("Choose `Item` for presentation rows and `Field` for input-bearing rows.");
+    let variants = DocSection::build(cx, "Variant", variants)
+        .description("Default, outline, and muted variants.")
+        .no_shell()
+        .code_rust_from_file_region(snippets::variants::SOURCE, "example");
+    let size = DocSection::build(cx, "Size", size)
+        .description("`default`, `sm`, and `xs` item sizing; the size-scoped gallery lane uses `item_sized(...)`.")
+        .no_shell()
+        .code_rust_from_file_region(snippets::size::SOURCE, "example");
+    let icon = DocSection::build(cx, "Icon", icon)
+        .no_shell()
+        .code_rust_from_file_region(snippets::icon::SOURCE, "example");
+    let avatar = DocSection::build(cx, "Avatar", avatar)
+        .no_shell()
+        .code_rust_from_file_region(snippets::avatar::SOURCE, "example");
+    let image = DocSection::build(cx, "Image", image)
+        .no_shell()
+        .code_rust_from_file_region(snippets::image::SOURCE, "example");
+    let group = DocSection::build(cx, "Group", group)
+        .description("Grouped item rows using the thin `item_group(...)` helper.")
+        .no_shell()
+        .code_rust_from_file_region(snippets::group::SOURCE, "example");
+    let header = DocSection::build(cx, "Header", header)
+        .no_shell()
+        .code_rust_from_file_region(snippets::header::SOURCE, "example");
+    let link = DocSection::build(cx, "Link", link)
+        .description("Links are modeled via `ItemRender::Link` so the root carries link semantics.")
+        .no_shell()
+        .code_rust_from_file_region(snippets::link::SOURCE, "example");
+    let dropdown = DocSection::build(cx, "Dropdown", dropdown)
+        .description("Item composed inside a dropdown menu row.")
+        .no_shell()
+        .code_rust_from_file_region(snippets::dropdown::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("RTL smoke check for the item recipe and slot ordering.")
+        .no_shell()
+        .code_rust_from_file_region(snippets::extras_rtl::SOURCE, "example");
+    let gallery = DocSection::build(cx, "Gallery", gallery)
+        .description("Extended regression coverage snapshot: columns plus mixed compositions.")
+        .no_shell()
+        .max_w(Px(1100.0));
+    let link_render = DocSection::build(cx, "Link (render)", link_render)
+        .description("A gallery-focused deterministic link row example.")
+        .no_shell()
+        .code_rust_from_file_region(snippets::link_render::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -43,70 +98,24 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Item docs path first: Demo, Usage, Item vs Field, Variant, Size, the example set through RTL, then keeps `API Reference`, `Gallery`, and `Link (render)` as Fret follow-ups.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .no_shell()
-                .description("Top-of-page item preview matching the upstream docs intent.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .no_shell()
-                .description("Copyable minimal usage for `Item` and its slot parts.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Item vs Field", item_vs_field)
-                .no_shell()
-                .description(
-                    "Choose `Item` for presentation rows and `Field` for input-bearing rows.",
-                ),
-            DocSection::new("Variant", variants)
-                .description("Default, outline, and muted variants.")
-                .no_shell()
-                .code_rust_from_file_region(snippets::variants::SOURCE, "example"),
-            DocSection::new("Size", size)
-                .description("`default`, `sm`, and `xs` item sizing; the size-scoped gallery lane uses `item_sized(...)`.")
-                .no_shell()
-                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
-            DocSection::new("Icon", icon)
-                .no_shell()
-                .code_rust_from_file_region(snippets::icon::SOURCE, "example"),
-            DocSection::new("Avatar", avatar)
-                .no_shell()
-                .code_rust_from_file_region(snippets::avatar::SOURCE, "example"),
-            DocSection::new("Image", image)
-                .no_shell()
-                .code_rust_from_file_region(snippets::image::SOURCE, "example"),
-            DocSection::new("Group", group)
-                .description("Grouped item rows using the thin `item_group(...)` helper.")
-                .no_shell()
-                .code_rust_from_file_region(snippets::group::SOURCE, "example"),
-            DocSection::new("Header", header)
-                .no_shell()
-                .code_rust_from_file_region(snippets::header::SOURCE, "example"),
-            DocSection::new("Link", link)
-                .description(
-                    "Links are modeled via `ItemRender::Link` so the root carries link semantics.",
-                )
-                .no_shell()
-                .code_rust_from_file_region(snippets::link::SOURCE, "example"),
-            DocSection::new("Dropdown", dropdown)
-                .description("Item composed inside a dropdown menu row.")
-                .no_shell()
-                .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("RTL smoke check for the item recipe and slot ordering.")
-                .no_shell()
-                .code_rust_from_file_region(snippets::extras_rtl::SOURCE, "example"),
+            demo,
+            usage,
+            item_vs_field,
+            variants,
+            size,
+            icon,
+            avatar,
+            image,
+            group,
+            header,
+            link,
+            dropdown,
+            rtl,
             api_reference,
-            DocSection::new("Gallery", gallery)
-                .description(
-                    "Extended regression coverage snapshot: columns plus mixed compositions.",
-                )
-                .no_shell()
-                .max_w(Px(1100.0)),
-            DocSection::new("Link (render)", link_render)
-                .description("A gallery-focused deterministic link row example.")
-                .no_shell()
-                .code_rust_from_file_region(snippets::link_render::SOURCE, "example"),
+            gallery,
+            link_render,
         ],
     );
 
-    vec![body.test_id("ui-gallery-item")]
+    vec![body.test_id("ui-gallery-item").into_element(cx)]
 }

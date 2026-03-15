@@ -1,8 +1,7 @@
 use super::super::atlas::{GlyphAtlasEntry, GlyphKey};
 use super::super::{GlyphQuadKind, TextSystem};
 use super::glyph_raster::prepared_glyph_lookup_key;
-use fret_render_text::font_instance_key::FontFaceKey;
-use fret_render_text::parley_shaper::ParleyGlyph;
+use fret_render_text::{FontFaceKey, ParleyGlyph};
 
 const PREPARED_GLYPH_ATLAS_LOOKUP_ORDER: [GlyphQuadKind; 3] = [
     GlyphQuadKind::Color,

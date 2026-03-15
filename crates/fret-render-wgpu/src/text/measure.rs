@@ -59,8 +59,8 @@ impl TextSystem {
             };
 
             let metrics = if let Some(max_width) = max_width_for_fast {
-                let allow_shaping_cache = text.len()
-                    >= fret_render_text::cache_tuning::measure_shaping_cache_min_text_len_bytes();
+                let allow_shaping_cache =
+                    text.len() >= fret_render_text::measure_shaping_cache_min_text_len_bytes();
 
                 let shaping_key = TextMeasureShapingKey {
                     text_hash,
@@ -98,7 +98,7 @@ impl TextSystem {
                         let line = self
                             .parley_shaper
                             .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
-                        let clusters: Arc<[parley_shaper::ShapedCluster]> =
+                        let clusters: Arc<[fret_render_text::ShapedCluster]> =
                             Arc::from(line.clusters);
 
                         let existed = self
@@ -117,8 +117,7 @@ impl TextSystem {
                             .is_some();
                         if !existed {
                             self.measure_shaping_fifo.push_back(shaping_key.clone());
-                            let limit =
-                                fret_render_text::cache_tuning::measure_shaping_cache_entries();
+                            let limit = fret_render_text::measure_shaping_cache_entries();
                             while self.measure_shaping_fifo.len() > limit {
                                 let Some(evict) = self.measure_shaping_fifo.pop_front() else {
                                     break;
@@ -139,7 +138,7 @@ impl TextSystem {
                             scale,
                         )
                     } else {
-                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        let wrapped = fret_render_text::wrap_with_constraints_measure_only(
                             &mut self.parley_shaper,
                             TextInputRef::plain(text, style),
                             normalized_constraints,
@@ -164,7 +163,7 @@ impl TextSystem {
                             scale,
                         )
                     } else {
-                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        let wrapped = fret_render_text::wrap_with_constraints_measure_only(
                             &mut self.parley_shaper,
                             TextInputRef::plain(text, style),
                             normalized_constraints,
@@ -173,7 +172,7 @@ impl TextSystem {
                     }
                 }
             } else {
-                let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                let wrapped = fret_render_text::wrap_with_constraints_measure_only(
                     &mut self.parley_shaper,
                     TextInputRef::plain(text, style),
                     normalized_constraints,
@@ -276,8 +275,8 @@ impl TextSystem {
             };
 
             let metrics = if let Some(max_width) = max_width_for_fast {
-                let allow_shaping_cache = rich.text.len()
-                    >= fret_render_text::cache_tuning::measure_shaping_cache_min_text_len_bytes();
+                let allow_shaping_cache =
+                    rich.text.len() >= fret_render_text::measure_shaping_cache_min_text_len_bytes();
 
                 let shaping_key = TextMeasureShapingKey {
                     text_hash,
@@ -322,7 +321,7 @@ impl TextSystem {
                             },
                             scale,
                         );
-                        let clusters: Arc<[parley_shaper::ShapedCluster]> =
+                        let clusters: Arc<[fret_render_text::ShapedCluster]> =
                             Arc::from(line.clusters);
 
                         let existed = self
@@ -341,8 +340,7 @@ impl TextSystem {
                             .is_some();
                         if !existed {
                             self.measure_shaping_fifo.push_back(shaping_key.clone());
-                            let limit =
-                                fret_render_text::cache_tuning::measure_shaping_cache_entries();
+                            let limit = fret_render_text::measure_shaping_cache_entries();
                             while self.measure_shaping_fifo.len() > limit {
                                 let Some(evict) = self.measure_shaping_fifo.pop_front() else {
                                     break;
@@ -363,7 +361,7 @@ impl TextSystem {
                             scale,
                         )
                     } else {
-                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        let wrapped = fret_render_text::wrap_with_constraints_measure_only(
                             &mut self.parley_shaper,
                             TextInputRef::Attributed {
                                 text,
@@ -397,7 +395,7 @@ impl TextSystem {
                             scale,
                         )
                     } else {
-                        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                        let wrapped = fret_render_text::wrap_with_constraints_measure_only(
                             &mut self.parley_shaper,
                             TextInputRef::Attributed {
                                 text,
@@ -411,7 +409,7 @@ impl TextSystem {
                 }
             } else {
                 let text = rich.text.as_ref();
-                let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                let wrapped = fret_render_text::wrap_with_constraints_measure_only(
                     &mut self.parley_shaper,
                     TextInputRef::Attributed {
                         text,

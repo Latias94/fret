@@ -40,8 +40,10 @@ fn controlled<H: UiHost>(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let controlled_values =
-        cx.local_model_keyed("ui-gallery-slider-demo-controlled-values", || vec![0.3, 0.7]);
+    let controlled_values = cx
+        .local_model_keyed("ui-gallery-slider-demo-controlled-values", || {
+            vec![0.3, 0.7]
+        });
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
 
     let single = shadcn::Slider::new_controllable(cx, None, || vec![50.0])

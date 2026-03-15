@@ -13,7 +13,7 @@ pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
             "Provides syntax highlighting, line numbers, and copy-to-clipboard ergonomics for code blocks. The Fret surface keeps rendering and scrolling in `fret-code-view`, while the AI layer owns the composable header/actions API.",
         ),
         vec![
-            DocSection::new("CodeBlock", demo)
+            DocSection::build(cx, "CodeBlock", demo)
                 .tabs_sizing(DocTabsSizing::FillRemaining)
                 .max_w(Px(680.0))
                 .descriptions([
@@ -27,5 +27,8 @@ pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-code-block-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-code-block-demo")
+            .into_element(cx),
+    ]
 }

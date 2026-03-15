@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let message_value = cx.local_model_keyed("message_value", String::new);
     let voice_enabled = cx.local_model_keyed("voice_enabled", || false);
 
@@ -46,22 +47,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let group = shadcn::InputGroup::new(message_value)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::InputGroupPart::input(
-                    shadcn::InputGroupInput::new()
-                        .a11y_label("Message")
-                        .placeholder(placeholder)
-                        .test_id("ui-gallery-button-group-input-group-control")
-                        .disabled(voice_enabled_now),
-                ),
-                shadcn::InputGroupPart::addon(
-                    shadcn::InputGroupAddon::new([voice_tooltip])
-                        .align(shadcn::InputGroupAddonAlign::InlineEnd)
-                        .has_button(true),
-                ),
-            ]
-        });
+        .a11y_label("Message")
+        .placeholder(placeholder)
+        .control_test_id("ui-gallery-button-group-input-group-control")
+        .disabled(voice_enabled_now)
+        .trailing([voice_tooltip])
+        .trailing_has_button(true)
+        .into_element(cx);
 
     let plus = shadcn::ButtonGroup::new([shadcn::Button::new("")
         .a11y_label("Add")

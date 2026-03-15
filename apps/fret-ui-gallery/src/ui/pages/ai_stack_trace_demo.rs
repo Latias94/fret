@@ -21,15 +21,15 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
             "Docs-aligned StackTrace examples using the same compound-parts composition model as the official AI Elements page.",
         ),
         vec![
-            DocSection::new("Default", demo)
+            DocSection::build(cx, "Default", demo)
                 .description("Expanded example with copy + file-open seams and compound children.")
                 .test_id_prefix("ui-gallery-ai-stack-trace-demo")
                 .code_rust_from_file_region(snippets::stack_trace_demo::SOURCE, "example"),
-            DocSection::new("Collapsed by Default", collapsed)
+            DocSection::build(cx, "Collapsed by Default", collapsed)
                 .description("Matches the official collapsed example.")
                 .test_id_prefix("ui-gallery-ai-stack-trace-collapsed")
                 .code_rust_from_file_region(snippets::stack_trace_collapsed::SOURCE, "example"),
-            DocSection::new("Hide Internal Frames", no_internal)
+            DocSection::build(cx, "Hide Internal Frames", no_internal)
                 .description("Matches the official no-internal-frames example.")
                 .test_id_prefix("ui-gallery-ai-stack-trace-no-internal")
                 .code_rust_from_file_region(snippets::stack_trace_no_internal::SOURCE, "example"),
@@ -38,5 +38,8 @@ pub(super) fn preview_ai_stack_trace_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-stack-trace-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-stack-trace-demo")
+            .into_element(cx),
+    ]
 }

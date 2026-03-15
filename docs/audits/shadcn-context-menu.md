@@ -64,7 +64,8 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
-- Pass: The default copyable root path is now `ContextMenu::uncontrolled(cx)` for the common
+- Pass: The default copyable root path is now
+  `ContextMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` for the common
   uncontrolled case, while controlled/uncontrolled open state parity remains available via
   `ContextMenu::from_open(open)` and `ContextMenu::new_controllable(cx, open, default_open)`
   (Base UI / Radix `open` + `defaultOpen`).
@@ -73,15 +74,13 @@ Key upstream behaviors/surfaces:
 - Pass: `ContextMenu::modal(bool)` is supported (default `true`).
   - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
   - `modal=false`: outside-press dismissal becomes click-through.
-- Pass: `ContextMenu::build_parts(...)` is now the default recipe-level composition bridge,
-  preserving shadcn-style `ContextMenuTrigger` / `ContextMenuContent` part authoring while keeping
-  entry collection explicit in the closure passed to `entries`.
+- Pass: `ContextMenu::compose()` is now the default recipe-level composition bridge, while
+  `build_parts(...)` / `into_element_parts(...)` remain available as lower-level closure adapters.
 - Pass: `ContextMenuTrigger::build(child)` keeps the trigger on the typed late-landing path for
   first-party snippets and copyable examples.
-- Note: Fret intentionally does not add a separate generic `compose()` builder for `ContextMenu`
-  today. The root already needs a trigger part plus an explicit `entries` closure for typed menu
-  items, groups, separators, check/radio items, and submenus. A generic builder would mostly
-  duplicate `build_parts(...)` / `into_element_parts(...)` without clarifying the entry-model contract.
+- Pass: The typed `compose()` root keeps the explicit menu-entry model while moving the final root
+  landing seam back to the true call site instead of forcing extracted helpers through
+  `build_parts(...) -> AnyElement`.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 

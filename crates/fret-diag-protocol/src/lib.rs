@@ -1922,6 +1922,18 @@ pub enum UiPredicateV1 {
     EventKindSeen {
         event_kind: String,
     },
+    /// True when the app snapshot field addressed by JSON Pointer `pointer` equals `value`.
+    ///
+    /// This predicate reads the best-effort `app_snapshot` payload published by the app into
+    /// diagnostics snapshots. The pointer uses RFC 6901 JSON Pointer syntax (for example:
+    /// `/shell/settings_open` or `/shell/last_action`).
+    ///
+    /// If the app does not publish an `app_snapshot`, or the pointer does not resolve to a value,
+    /// this predicate evaluates to false.
+    AppSnapshotFieldEquals {
+        pointer: String,
+        value: serde_json::Value,
+    },
     /// True when the diagnostics runtime has observed at least `n` windows.
     ///
     /// This is intended for multi-window scripted repros (tear-off, auxiliary windows).
@@ -3276,6 +3288,30 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::RunnerAccessibilityActivated
+        ));
+    }
+
+    #[test]
+    fn predicate_app_snapshot_field_equals_serializes_minimally() {
+        let value = serde_json::to_value(UiPredicateV1::AppSnapshotFieldEquals {
+            pointer: "/shell/settings_open".to_string(),
+            value: serde_json::json!(true),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "app_snapshot_field_equals",
+                "pointer": "/shell/settings_open",
+                "value": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::AppSnapshotFieldEquals { .. }
         ));
     }
 

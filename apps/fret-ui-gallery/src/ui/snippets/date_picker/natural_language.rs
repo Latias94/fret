@@ -1,6 +1,8 @@
 pub const SOURCE: &str = include_str!("natural_language.rs");
 
 // region: example
+use crate::ui::snippets::date_picker::fixed_today;
+use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -125,14 +127,13 @@ fn parse_natural_date_en(raw: &str, base: Date) -> Option<Date> {
     }
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    month: Model<CalendarMonth>,
-    selected: Model<Option<Date>>,
-    value: Model<String>,
-    today: Date,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let today = fixed_today();
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
+    let selected = cx.local_model_keyed("selected", || None::<Date>);
+    let value = cx.local_model_keyed("value", || String::from("In 2 days"));
+
     let current_value = cx
         .app
         .models()
@@ -173,7 +174,7 @@ pub fn render<H: UiHost>(
     let open_for_key = open.clone();
     let calendar_month = month.clone();
     let calendar_selected = selected.clone();
-    let calendar = move |cx: &mut ElementContext<'_, H>| {
+    let calendar = move |cx: &mut UiCx<'_>| {
         shadcn::Calendar::new(calendar_month.clone(), calendar_selected.clone())
             .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
             .close_on_select(open_for_calendar.clone())

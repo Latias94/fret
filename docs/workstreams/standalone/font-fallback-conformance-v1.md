@@ -51,8 +51,16 @@ The key invariant is:
 
 Expected:
 
-- The script captures two bundles (before/after settings apply).
-- The gate asserts `fallback_policy_key` differs between the two labeled captures.
+- The script opens the UI Gallery settings sheet, switches `fonts.common_fallback_injection`
+  from `platform_default` to `common_fallback`, then captures BEFORE/AFTER bundles around the
+  apply step. On Windows, the script disables the gallery's curated common-fallback override so
+  the BEFORE capture stays on the true `platform_default -> prefer_system_fallback` lane.
+- The gate asserts:
+  - `system_fonts_enabled` is `true` in both captures.
+  - `common_fallback_injection` changes from `platform_default` to `common_fallback`.
+  - `prefer_common_fallback` changes from `false` to `true`.
+  - `common_fallback_candidates` / `common_fallback_stack_suffix` change from empty to non-empty.
+  - `fallback_policy_key` differs between the two labeled captures.
 
 Run (native):
 

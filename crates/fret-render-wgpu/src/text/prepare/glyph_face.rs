@@ -1,7 +1,6 @@
 use super::super::TextSystem;
 use super::glyph_render::prepared_glyph_has_normalized_coords;
-use fret_render_text::font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
-use fret_render_text::parley_shaper::ParleyGlyph;
+use fret_render_text::{FontFaceKey, ParleyGlyph, variation_key_from_normalized_coords};
 use std::collections::HashMap;
 
 pub(super) struct PreparedGlyphContext {

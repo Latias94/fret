@@ -9,6 +9,8 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
+use crate::collect_children;
+
 #[derive(Debug, Clone)]
 pub struct DockProps {
     pub layout: LayoutStyle,
@@ -68,13 +70,14 @@ fn dock_item_scale(pointer_x: Option<Px>, item_center_x: Px, magnify: f32, radiu
 }
 
 #[track_caller]
-pub fn dock<H: UiHost, I>(
+pub fn dock<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: DockProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let pointer_local = cx.local_model(|| None::<Point>);
 
@@ -158,7 +161,8 @@ where
                         cx.pointer_region_on_pointer_up(on_up);
                         cx.pointer_region_on_pointer_cancel(on_cancel);
 
-                        let items: Vec<AnyElement> = children(cx).into_iter().collect();
+                        let item_values = children(cx);
+                        let items = collect_children(cx, item_values);
 
                         let mut row_layout = LayoutStyle::default();
                         row_layout.size.width = Length::Fill;

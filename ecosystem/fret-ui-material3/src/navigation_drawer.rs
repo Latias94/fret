@@ -21,6 +21,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::arc_str::empty_arc_str;
@@ -108,6 +109,27 @@ impl NavigationDrawer {
             loop_navigation: true,
             variant: NavigationDrawerVariant::default(),
         }
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Arc<str>>>,
+        default_value: impl Into<Arc<str>>,
+    ) -> Self {
+        let value =
+            controllable_state::use_controllable_model(cx, value, || default_value.into()).model();
+        Self::new(value)
+    }
+
+    pub fn uncontrolled<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        default_value: impl Into<Arc<str>>,
+    ) -> Self {
+        Self::new_controllable(cx, None, default_value)
+    }
+
+    pub fn value_model(&self) -> Model<Arc<str>> {
+        self.model.clone()
     }
 
     pub fn items(mut self, items: Vec<NavigationDrawerItem>) -> Self {
@@ -748,6 +770,81 @@ mod tests {
         assert_eq!(badge.layout.size.width, Length::Auto);
         assert_eq!(badge.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(badge.layout.flex.shrink, 1.0);
+    }
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(640.0)),
+        )
+    }
+
+    #[test]
+    fn navigation_drawer_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(Arc::<str>::from("settings"));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-drawer-controlled",
+            |cx| {
+                let drawer =
+                    NavigationDrawer::new_controllable(cx, Some(controlled.clone()), "search");
+                assert_eq!(drawer.value_model(), controlled);
+            },
+        );
+    }
+
+    #[test]
+    fn navigation_drawer_new_controllable_applies_default_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-drawer-default",
+            |cx| {
+                let drawer = NavigationDrawer::new_controllable(cx, None, "search");
+                let value = cx
+                    .watch_model(&drawer.value_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or_else(Arc::<str>::default);
+                assert_eq!(value.as_ref(), "search");
+            },
+        );
+    }
+
+    #[test]
+    fn navigation_drawer_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-drawer-uncontrolled",
+            |cx| {
+                let a = NavigationDrawer::uncontrolled(cx, "search");
+                let b = NavigationDrawer::uncontrolled(cx, "settings");
+                assert_ne!(a.value_model(), b.value_model());
+            },
+        );
     }
 }
 

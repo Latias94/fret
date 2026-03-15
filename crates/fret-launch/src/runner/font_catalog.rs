@@ -53,49 +53,24 @@ fn preferred_text_locale(app: &impl GlobalsHost) -> Option<String> {
 }
 
 #[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
-fn seed_missing_font_families_from_profile(
-    mut config: TextFontFamilyConfig,
-    ui_sans: &[&str],
-    ui_serif: &[&str],
-    ui_mono: &[&str],
-    common_fallback: &[&str],
-) -> TextFontFamilyConfig {
-    if config.ui_sans.is_empty() {
-        config.ui_sans = ui_sans.iter().map(|family| (*family).to_string()).collect();
+fn startup_font_defaults_policy(mode: StartupFontEnvironmentMode) -> FontFamilyDefaultsPolicy {
+    match mode {
+        StartupFontEnvironmentMode::DesktopSync | StartupFontEnvironmentMode::DesktopAsync => {
+            FontFamilyDefaultsPolicy::None
+        }
+        StartupFontEnvironmentMode::WebBundledSync => {
+            FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates
+        }
     }
-    if config.ui_serif.is_empty() {
-        config.ui_serif = ui_serif
-            .iter()
-            .map(|family| (*family).to_string())
-            .collect();
-    }
-    if config.ui_mono.is_empty() {
-        config.ui_mono = ui_mono.iter().map(|family| (*family).to_string()).collect();
-    }
-    if config.common_fallback.is_empty() {
-        config.common_fallback = common_fallback
-            .iter()
-            .map(|family| (*family).to_string())
-            .collect();
-    }
-    config
 }
 
-#[cfg(target_arch = "wasm32")]
-fn seed_web_startup_font_config(config: TextFontFamilyConfig) -> TextFontFamilyConfig {
-    let profile = fret_fonts::default_profile();
-    seed_missing_font_families_from_profile(
-        config,
-        profile.ui_sans_families,
-        profile.ui_serif_families,
-        profile.ui_mono_families,
-        profile.common_fallback_families,
-    )
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn seed_web_startup_font_config(config: TextFontFamilyConfig) -> TextFontFamilyConfig {
-    config
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[doc(hidden)]
+pub enum StartupFontEnvironmentMode {
+    DesktopSync,
+    DesktopAsync,
+    #[cfg_attr(not(any(target_arch = "wasm32", test)), allow(dead_code))]
+    WebBundledSync,
 }
 
 #[doc(hidden)]
@@ -187,28 +162,18 @@ pub fn apply_renderer_font_catalog_update(
 }
 
 #[doc(hidden)]
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-pub fn initialize_web_startup_font_environment(
+pub fn initialize_startup_font_environment(
     app: &mut impl GlobalsHost,
     renderer: &mut impl RendererFontEnvironmentHost,
     config: TextFontFamilyConfig,
+    mode: StartupFontEnvironmentMode,
 ) -> FontCatalogUpdate {
-    app.set_global::<TextFontFamilyConfig>(seed_web_startup_font_config(config));
-    apply_renderer_font_catalog_update(app, renderer, FontFamilyDefaultsPolicy::None)
-}
-
-#[doc(hidden)]
-pub fn initialize_desktop_startup_font_environment(
-    app: &mut impl GlobalsHost,
-    renderer: &mut impl RendererFontEnvironmentHost,
-    config: TextFontFamilyConfig,
-    startup_async: bool,
-) -> FontCatalogUpdate {
+    let policy = startup_font_defaults_policy(mode);
     app.set_global::<TextFontFamilyConfig>(config);
-    if startup_async {
-        publish_renderer_font_environment(app, renderer, Vec::new(), FontFamilyDefaultsPolicy::None)
+    if matches!(mode, StartupFontEnvironmentMode::DesktopAsync) {
+        publish_renderer_font_environment(app, renderer, Vec::new(), policy)
     } else {
-        apply_renderer_font_catalog_update(app, renderer, FontFamilyDefaultsPolicy::None)
+        apply_renderer_font_catalog_update(app, renderer, policy)
     }
 }
 
@@ -318,36 +283,6 @@ mod tests {
     }
 
     #[test]
-    fn seed_missing_font_families_from_profile_preserves_existing_fields() {
-        let config = TextFontFamilyConfig {
-            ui_sans: vec!["Custom Sans".to_string()],
-            ..Default::default()
-        };
-
-        let seeded = seed_missing_font_families_from_profile(
-            config,
-            &["Inter"],
-            &[],
-            &["JetBrains Mono", "Fira Mono"],
-            &["Noto Sans CJK SC", "Noto Color Emoji"],
-        );
-
-        assert_eq!(seeded.ui_sans, vec!["Custom Sans".to_string()]);
-        assert!(seeded.ui_serif.is_empty());
-        assert_eq!(
-            seeded.ui_mono,
-            vec!["JetBrains Mono".to_string(), "Fira Mono".to_string()]
-        );
-        assert_eq!(
-            seeded.common_fallback,
-            vec![
-                "Noto Sans CJK SC".to_string(),
-                "Noto Color Emoji".to_string()
-            ]
-        );
-    }
-
-    #[test]
     fn web_startup_font_environment_sets_key_after_locale_application() {
         let mut app = TestApp::default();
         let mut renderer = TestRenderer {
@@ -360,10 +295,11 @@ mod tests {
         let locale = LocaleId::parse("zh-CN").expect("locale must parse");
         app.set_global::<I18nService>(I18nService::new(vec![locale]));
 
-        let _ = initialize_web_startup_font_environment(
+        let _ = initialize_startup_font_environment(
             &mut app,
             &mut renderer,
             TextFontFamilyConfig::default(),
+            StartupFontEnvironmentMode::WebBundledSync,
         );
 
         assert_eq!(renderer.steps, vec!["entries", "families", "locale"]);
@@ -375,6 +311,28 @@ mod tests {
             42,
             "expected web startup to publish the post-locale renderer key"
         );
+    }
+
+    #[test]
+    fn web_startup_font_environment_preserves_existing_fields_while_seeding_missing_ones() {
+        let mut app = TestApp::default();
+        let mut renderer = TestRenderer::default();
+        let config = TextFontFamilyConfig {
+            ui_sans: vec!["Custom Sans".to_string()],
+            ..Default::default()
+        };
+
+        let update = initialize_startup_font_environment(
+            &mut app,
+            &mut renderer,
+            config.clone(),
+            StartupFontEnvironmentMode::WebBundledSync,
+        );
+
+        assert_eq!(update.config.ui_sans, config.ui_sans);
+        assert!(!update.config.ui_mono.is_empty());
+        assert!(!update.config.common_fallback.is_empty());
+        assert_eq!(renderer.last_config, Some(update.config));
     }
 
     #[test]
@@ -419,11 +377,11 @@ mod tests {
         let locale = LocaleId::parse("en-US").expect("locale must parse");
         app.set_global::<I18nService>(I18nService::new(vec![locale]));
 
-        let update = initialize_desktop_startup_font_environment(
+        let update = initialize_startup_font_environment(
             &mut app,
             &mut renderer,
             existing.clone(),
-            true,
+            StartupFontEnvironmentMode::DesktopAsync,
         );
 
         assert_eq!(update.config, existing);

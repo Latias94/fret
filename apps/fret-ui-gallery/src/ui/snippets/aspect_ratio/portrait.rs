@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("portrait.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -57,7 +58,10 @@ fn ratio_example<H: UiHost>(
         .into_element(cx)
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+// Kept as the copyable app-facing snippet surface; the gallery preview uses `render_preview(...)`
+// so it can swap in asset-backed media when available.
+#[allow(dead_code)]
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ratio_example(
         cx,
         9.0 / 16.0,
@@ -81,7 +85,15 @@ pub fn render_preview<H: UiHost>(
     } else if let Some(demo_image) = demo_image {
         shadcn::MediaImage::model(demo_image)
     } else {
-        return render(cx);
+        return ratio_example(
+            cx,
+            9.0 / 16.0,
+            Px(160.0),
+            "ui-gallery-aspect-ratio-portrait",
+            "ui-gallery-aspect-ratio-portrait-content",
+            None,
+        )
+        .into_element(cx);
     };
 
     let image = image

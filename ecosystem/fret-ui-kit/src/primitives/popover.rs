@@ -24,7 +24,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
-use crate::{OverlayController, OverlayPresence, OverlayRequest};
+use crate::{IntoUiElement, OverlayController, OverlayPresence, OverlayRequest, collect_children};
 
 use crate::primitives::dialog as dialog_prim;
 use crate::primitives::popper;
@@ -327,15 +327,19 @@ impl PopoverRoot {
         self.options.clone()
     }
 
-    pub fn request_with_dismiss_handler<H: UiHost>(
+    pub fn request_with_dismiss_handler<H: UiHost, I, T>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
         on_dismiss_request: Option<OnDismissRequest>,
-        children: Vec<AnyElement>,
-    ) -> OverlayRequest {
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
         popover_request_with_dismiss_handler(
             id,
             trigger,
@@ -343,7 +347,7 @@ impl PopoverRoot {
             presence,
             self.options.clone(),
             on_dismiss_request,
-            children,
+            collect_children(cx, children),
         )
     }
 
@@ -383,13 +387,14 @@ pub fn popover_use_open_model<H: UiHost>(
 }
 
 /// A minimal semantics wrapper matching Radix `PopoverContent` (`role="dialog"`).
-pub fn popover_dialog_wrapper<H: UiHost, I>(
+pub fn popover_dialog_wrapper<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     label: Option<Arc<str>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     cx.semantics_with_id(
         SemanticsProps {
@@ -397,7 +402,10 @@ where
             label,
             ..Default::default()
         },
-        move |cx, _id| f(cx),
+        move |cx, _id| {
+            let items = f(cx);
+            collect_children(cx, items)
+        },
     )
 }
 
@@ -411,7 +419,7 @@ pub fn popover_dialog_wrapper_id<H: UiHost>(
 ) -> GlobalElementId {
     let inherited = portal_inherited::PortalInherited::capture(cx);
     portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
-        let element = popover_dialog_wrapper(cx, None, |_cx| Vec::new());
+        let element = popover_dialog_wrapper(cx, None, |_cx| Vec::<AnyElement>::new());
         element.id
     })
 }
@@ -531,24 +539,32 @@ pub fn popover_modal_barrier_layout() -> LayoutStyle {
 /// This is a thin wrapper over `primitives::dialog::modal_barrier` so non-shadcn users can reuse
 /// the same "hide others + block outside pointer events" outcome without depending on dialog
 /// primitives.
-pub fn popover_modal_barrier<H: UiHost>(
+pub fn popover_modal_barrier<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     popover_modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
 
 /// Builds a full-window modal barrier for Radix-like popover overlays, routing presses through an
 /// optional dismiss handler.
-pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost>(
+pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: impl IntoIterator<Item = AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     dialog_prim::modal_barrier_with_dismiss_handler(
         cx,
         open,
@@ -563,12 +579,16 @@ pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost>(
 ///
 /// This delegates to the Dialog barrier helpers, since Radix Popover's modal variant shares the
 /// same "hide others + block outside pointer events" outcome.
-pub fn popover_modal_layer_elements<H: UiHost>(
+pub fn popover_modal_layer_elements<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     Elements::from([
         popover_modal_barrier(cx, open, true, barrier_children),
         content,
@@ -577,13 +597,17 @@ pub fn popover_modal_layer_elements<H: UiHost>(
 
 /// Convenience helper to assemble modal popover overlay children in a Radix-like order (barrier
 /// then content), while routing barrier presses through an optional dismiss handler.
-pub fn popover_modal_layer_elements_with_dismiss_handler<H: UiHost>(
+pub fn popover_modal_layer_elements_with_dismiss_handler<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: impl IntoIterator<Item = AnyElement>,
+    barrier_children: I,
     content: AnyElement,
-) -> Elements {
+) -> Elements
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
     Elements::from([
         popover_modal_barrier_with_dismiss_handler(
             cx,
@@ -803,7 +827,7 @@ mod tests {
             let inherited = portal_inherited::PortalInherited::capture(cx);
             let rendered =
                 portal_inherited::with_root_name_inheriting(cx, root_name, inherited, |cx| {
-                    popover_dialog_wrapper(cx, None, |_cx| Vec::new())
+                    popover_dialog_wrapper(cx, None, |_cx| Vec::<AnyElement>::new())
                 });
             assert_eq!(computed, rendered.id);
         });
@@ -915,7 +939,8 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
             let content: AnyElement = cx.container(Default::default(), |_cx| Vec::new());
             let children =
-                popover_modal_layer_elements::<App>(cx, open.clone(), [], content).into_vec();
+                popover_modal_layer_elements(cx, open.clone(), Vec::<AnyElement>::new(), content)
+                    .into_vec();
             assert_eq!(children.len(), 2);
         });
     }
@@ -1225,11 +1250,11 @@ mod tests {
                     },
                     |_cx, _st| Vec::new(),
                 );
-                popover_modal_layer_elements_with_dismiss_handler::<App>(
+                popover_modal_layer_elements_with_dismiss_handler(
                     cx,
                     open.clone(),
                     Some(handler.clone()),
-                    [],
+                    Vec::<AnyElement>::new(),
                     content,
                 )
                 .into_vec()

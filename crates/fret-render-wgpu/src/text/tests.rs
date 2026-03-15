@@ -3,8 +3,10 @@ use fret_core::{
     AttributedText, Color, DecorationLineStyle, FontWeight, Px, TextConstraints, TextOverflow,
     TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
-use fret_render_text::cache_keys::{TextMeasureKey, spans_shaping_fingerprint};
-use fret_render_text::spans::{ResolvedSpan, paint_span_for_text_range, sanitize_spans_for_text};
+use fret_render_text::{
+    ResolvedSpan, TextMeasureKey, paint_span_for_text_range, sanitize_spans_for_text,
+    spans_shaping_fingerprint,
+};
 use std::sync::Arc;
 
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
@@ -16,7 +18,7 @@ fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) 
 }
 
 fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -894,7 +896,11 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -962,7 +968,11 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -1048,7 +1058,11 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -1151,7 +1165,7 @@ fn font_trace_records_missing_glyphs_for_named_family_when_system_fonts_are_abse
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1215,7 +1229,7 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1229,7 +1243,11 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -1312,7 +1330,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1326,7 +1344,11 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -1745,7 +1767,7 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1856,7 +1878,7 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -1961,7 +1983,7 @@ fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fix
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2090,7 +2112,7 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2465,7 +2487,7 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2477,8 +2499,8 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     text.font_runtime.font_db_revision = 0;
     text.font_runtime.font_stack_key = 0;
 
-    let fonts: Vec<Vec<u8>> = fret_fonts::cjk_lite_fonts()
-        .iter()
+    let fonts: Vec<Vec<u8>> = fret_fonts::default_profile()
+        .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback)
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -2577,7 +2599,7 @@ fn common_fallback_stack_suffix_dedupes_and_preserves_order() {
     ];
     let defaults = &["Noto Sans CJK SC", "Noto Sans Arabic", "Noto Color Emoji"];
 
-    let suffix = fret_render_text::fallback_policy::common_fallback_stack_suffix(&config, defaults);
+    let suffix = fret_render_text::common_fallback_stack_suffix(&config, defaults);
     assert_eq!(
         suffix,
         "Noto Color Emoji, Noto Sans CJK SC, Noto Sans Arabic"
@@ -2590,7 +2612,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Make the test independent from host/system fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2678,6 +2700,159 @@ fn fallback_policy_key_changes_when_common_fallback_injection_changes() {
     assert_ne!(
         snap0.fallback_policy_key, snap1.fallback_policy_key,
         "expected fallback_policy_key to change when the fallback injection mode changes"
+    );
+}
+
+#[test]
+fn fallback_policy_key_changes_when_generic_candidate_order_changes() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    reset_bundled_only_font_runtime(&mut text);
+
+    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
+        .iter()
+        .map(|b| b.to_vec())
+        .collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled fonts to load");
+
+    let base = fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::None,
+        ui_sans: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ui_serif: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ui_mono: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..Default::default()
+    };
+    let _ = text.set_font_families(&base);
+    let key_base = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    let sans_reordered = fret_core::TextFontFamilyConfig {
+        ui_sans: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..base.clone()
+    };
+    let _ = text.set_font_families(&sans_reordered);
+    let key_sans = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    let serif_reordered = fret_core::TextFontFamilyConfig {
+        ui_serif: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..base.clone()
+    };
+    let _ = text.set_font_families(&serif_reordered);
+    let key_serif = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    let mono_reordered = fret_core::TextFontFamilyConfig {
+        ui_mono: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ..base
+    };
+    let _ = text.set_font_families(&mono_reordered);
+    let key_mono = text.font_runtime.fallback_policy.fallback_policy_key;
+
+    assert_ne!(
+        key_base, key_sans,
+        "expected fallback_policy_key to change when ui_sans candidate order changes"
+    );
+    assert_ne!(
+        key_base, key_serif,
+        "expected fallback_policy_key to change when ui_serif candidate order changes"
+    );
+    assert_ne!(
+        key_base, key_mono,
+        "expected fallback_policy_key to change when ui_mono candidate order changes"
+    );
+}
+
+#[test]
+fn ui_generic_resolution_prefers_first_available_configured_candidate() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+
+    reset_bundled_only_font_runtime(&mut text);
+
+    let fonts: Vec<Vec<u8>> = fret_fonts::default_fonts()
+        .iter()
+        .map(|b| b.to_vec())
+        .collect();
+    let added = text.add_fonts(fonts);
+    assert!(added > 0, "expected bundled fonts to load");
+
+    let constraints = TextConstraints {
+        max_width: None,
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        scale_factor: 1.0,
+    };
+
+    let faces_for_family = |text: &mut super::TextSystem, family: &str| {
+        let style = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let (blob_id, _metrics) = text.prepare("m", &style, constraints);
+        let blob = text.blob(blob_id).expect("text blob");
+        blob.shape
+            .glyphs
+            .iter()
+            .map(|g| g.key.font)
+            .collect::<std::collections::HashSet<super::FontFaceKey>>()
+    };
+
+    let inter_faces = faces_for_family(&mut text, "Inter");
+    let jetbrains_faces = faces_for_family(&mut text, "JetBrains Mono");
+    assert!(
+        !inter_faces.is_empty() && !jetbrains_faces.is_empty(),
+        "expected explicit family shaping to resolve both candidates"
+    );
+    assert_ne!(
+        inter_faces, jetbrains_faces,
+        "expected the bundled candidates to produce distinct explicit face selections"
+    );
+
+    let config_inter_first = fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::None,
+        ui_sans: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+        ..Default::default()
+    };
+    let _ = text.set_font_families(&config_inter_first);
+    let style_ui = TextStyle {
+        font: fret_core::FontId::ui(),
+        size: Px(24.0),
+        ..Default::default()
+    };
+    let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
+    let blob = text.blob(blob_id).expect("text blob");
+    let ui_inter_first = blob
+        .shape
+        .glyphs
+        .iter()
+        .map(|g| g.key.font)
+        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+    assert!(
+        ui_inter_first.iter().any(|face| inter_faces.contains(face)),
+        "expected FontId::Ui to resolve through the first configured candidate when Inter is first"
+    );
+
+    let config_serif_first = fret_core::TextFontFamilyConfig {
+        common_fallback_injection: fret_core::TextCommonFallbackInjection::None,
+        ui_sans: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
+        ..Default::default()
+    };
+    let _ = text.set_font_families(&config_serif_first);
+    let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
+    let blob = text.blob(blob_id).expect("text blob");
+    let ui_serif_first = blob
+        .shape
+        .glyphs
+        .iter()
+        .map(|g| g.key.font)
+        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+    assert!(
+        ui_serif_first
+            .iter()
+            .any(|face| jetbrains_faces.contains(face)),
+        "expected FontId::Ui to resolve through the reordered first configured candidate"
     );
 }
 
@@ -2854,7 +3029,7 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -2868,8 +3043,15 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);
@@ -3003,7 +3185,7 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
     let mut text = super::TextSystem::new(&ctx.device);
 
     // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-    text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+    text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
@@ -3017,8 +3199,15 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
 
     let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
         .iter()
-        .chain(fret_fonts::cjk_lite_fonts().iter())
-        .chain(fret_fonts::emoji_fonts().iter())
+        .copied()
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::CjkFallback),
+        )
+        .chain(
+            fret_fonts::default_profile()
+                .font_bytes_for_role(fret_fonts::BundledFontRole::EmojiFallback),
+        )
         .map(|b| b.to_vec())
         .collect();
     let added = text.add_fonts(fonts);

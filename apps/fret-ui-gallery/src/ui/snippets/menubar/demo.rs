@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::CommandId;
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[derive(Default, Clone)]
@@ -14,7 +15,7 @@ struct MenubarDemoState {
     profile: Option<Arc<str>>,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let state = cx.local_model(|| MenubarDemoState {
         view_bookmarks_bar: false,
         view_full_urls: true,

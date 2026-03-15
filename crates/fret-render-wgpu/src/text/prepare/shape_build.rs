@@ -1,7 +1,7 @@
 use super::super::{GlyphInstance, TextFontFaceUsage, TextLine, TextShape, TextSystem};
 use super::PrepareShapeBuildContext;
 use fret_core::{TextConstraints, TextInputRef, TextMetrics, TextSpan, TextStyle, geometry::Px};
-use fret_render_text::font_instance_key::FontFaceKey;
+use fret_render_text::FontFaceKey;
 use std::{collections::HashMap, sync::Arc};
 
 impl TextSystem {

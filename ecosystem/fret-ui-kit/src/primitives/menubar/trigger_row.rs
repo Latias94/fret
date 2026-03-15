@@ -29,6 +29,7 @@ pub struct MenubarActiveTrigger {
 
 #[derive(Debug, Clone)]
 pub struct MenubarTriggerRowEntry {
+    pub logical_key: Arc<str>,
     pub trigger: GlobalElementId,
     pub open: Model<bool>,
     pub enabled: bool,
@@ -665,6 +666,7 @@ pub fn ensure_group_registry_model<H: UiHost>(
 pub fn register_trigger_in_registry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     registry: Model<Vec<MenubarTriggerRowEntry>>,
+    logical_key: Arc<str>,
     trigger: GlobalElementId,
     open: Model<bool>,
     enabled: bool,
@@ -674,9 +676,10 @@ pub fn register_trigger_in_registry<H: UiHost>(
         .app
         .models()
         .read(&registry, |v| {
-            match v.iter().find(|e| e.trigger == trigger) {
+            match v.iter().find(|e| e.logical_key == logical_key) {
                 Some(existing) => {
-                    existing.open != open
+                    existing.trigger != trigger
+                        || existing.open != open
                         || existing.enabled != enabled
                         || existing.mnemonic != mnemonic
                 }
@@ -689,7 +692,8 @@ pub fn register_trigger_in_registry<H: UiHost>(
     }
 
     let _ = cx.app.models_mut().update(&registry, move |v| {
-        if let Some(existing) = v.iter_mut().find(|e| e.trigger == trigger) {
+        if let Some(existing) = v.iter_mut().find(|e| e.logical_key == logical_key) {
+            existing.trigger = trigger;
             existing.open = open;
             existing.enabled = enabled;
             existing.mnemonic = mnemonic;
@@ -697,11 +701,37 @@ pub fn register_trigger_in_registry<H: UiHost>(
         }
 
         v.push(MenubarTriggerRowEntry {
+            logical_key,
             trigger,
             open,
             enabled,
             mnemonic,
         });
+    });
+}
+
+pub fn clear_registry_if_keys_changed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    registry: Model<Vec<MenubarTriggerRowEntry>>,
+    logical_keys: &[Arc<str>],
+) {
+    let keys_changed = cx
+        .app
+        .models()
+        .read(&registry, |entries| {
+            entries.len() != logical_keys.len()
+                || entries
+                    .iter()
+                    .zip(logical_keys.iter())
+                    .any(|(entry, key)| entry.logical_key != *key)
+        })
+        .unwrap_or(true);
+    if !keys_changed {
+        return;
+    }
+
+    let _ = cx.app.models_mut().update(&registry, |entries| {
+        entries.clear();
     });
 }
 
@@ -867,15 +897,6 @@ pub fn sync_trigger_row_state<H: UiHost>(
         && is_open
     {
         let _ = cx.app.models_mut().update(&open, |v| *v = false);
-        clear_patient_click_sticky_for_ui_host(cx.app, &patient_click_sticky, &patient_click_timer);
-    }
-
-    if active_value
-        .as_ref()
-        .is_some_and(|active_value| active_value.trigger == trigger_id)
-        && !is_open
-    {
-        let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
         clear_patient_click_sticky_for_ui_host(cx.app, &patient_click_sticky, &patient_click_timer);
     }
 
@@ -1161,12 +1182,14 @@ mod tests {
         let group_active: Model<Option<MenubarActiveTrigger>> = host.models_mut().insert(None);
         let registry: Model<Vec<MenubarTriggerRowEntry>> = host.models_mut().insert(vec![
             MenubarTriggerRowEntry {
+                logical_key: Arc::from("file"),
                 trigger: trigger_file,
                 open: open_file.clone(),
                 enabled: true,
                 mnemonic: Some('f'),
             },
             MenubarTriggerRowEntry {
+                logical_key: Arc::from("edit"),
                 trigger: trigger_edit,
                 open: open_edit,
                 enabled: true,
@@ -1225,6 +1248,7 @@ mod tests {
             }));
         let registry: Model<Vec<MenubarTriggerRowEntry>> =
             host.models_mut().insert(vec![MenubarTriggerRowEntry {
+                logical_key: Arc::from("file"),
                 trigger: trigger_file,
                 open: open_file.clone(),
                 enabled: true,
@@ -1286,12 +1310,14 @@ mod tests {
             }));
         let registry: Model<Vec<MenubarTriggerRowEntry>> = host.models_mut().insert(vec![
             MenubarTriggerRowEntry {
+                logical_key: Arc::from("a"),
                 trigger: trigger_a,
                 open: open_a,
                 enabled: true,
                 mnemonic: Some('f'),
             },
             MenubarTriggerRowEntry {
+                logical_key: Arc::from("b"),
                 trigger: trigger_b,
                 open: open_b.clone(),
                 enabled: true,
@@ -1352,6 +1378,7 @@ mod tests {
             }));
         let registry: Model<Vec<MenubarTriggerRowEntry>> =
             host.models_mut().insert(vec![MenubarTriggerRowEntry {
+                logical_key: Arc::from("file"),
                 trigger: trigger_file,
                 open: open_file.clone(),
                 enabled: true,
@@ -1409,12 +1436,14 @@ mod tests {
             }));
         let registry: Model<Vec<MenubarTriggerRowEntry>> = host.models_mut().insert(vec![
             MenubarTriggerRowEntry {
+                logical_key: Arc::from("a"),
                 trigger: trigger_a,
                 open: open_a,
                 enabled: true,
                 mnemonic: Some('f'),
             },
             MenubarTriggerRowEntry {
+                logical_key: Arc::from("b"),
                 trigger: trigger_b,
                 open: open_b.clone(),
                 enabled: true,
@@ -1473,6 +1502,7 @@ mod tests {
             }));
         let registry: Model<Vec<MenubarTriggerRowEntry>> =
             host.models_mut().insert(vec![MenubarTriggerRowEntry {
+                logical_key: Arc::from("file"),
                 trigger: trigger_file,
                 open: open_file.clone(),
                 enabled: true,

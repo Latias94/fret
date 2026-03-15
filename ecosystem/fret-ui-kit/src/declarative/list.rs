@@ -8,7 +8,7 @@ use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::ui;
-use crate::{MetricRef, Size, Space};
+use crate::{IntoUiElement, MetricRef, Size, Space, collect_children};
 
 use std::sync::Arc;
 
@@ -57,7 +57,7 @@ fn resolve_row_padding_y(theme: &Theme) -> Px {
 /// This intentionally avoids a fixed row schema (`VirtualListRow { text/secondary/trailing... }`)
 /// so higher-level shadcn-like components can be built in the component layer via composition.
 #[allow(clippy::too_many_arguments)]
-pub fn list_virtualized<H: UiHost, I>(
+pub fn list_virtualized<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
@@ -71,7 +71,8 @@ pub fn list_virtualized<H: UiHost, I>(
     row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     list_virtualized_impl(
         cx,
@@ -94,7 +95,7 @@ where
 /// This is intended for non-text selection surfaces (lists, tables, node graphs) that want to share
 /// command IDs and OS/menu gating with text inputs.
 #[allow(clippy::too_many_arguments)]
-pub fn list_virtualized_copyable<H: UiHost, I>(
+pub fn list_virtualized_copyable<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     selection: Model<Option<usize>>,
     size: Size,
@@ -109,7 +110,8 @@ pub fn list_virtualized_copyable<H: UiHost, I>(
     row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     list_virtualized_impl(
         cx,
@@ -133,7 +135,7 @@ where
 /// scroll stability matters. The retained-host path allows window shifts to attach/detach rows
 /// under cache-hit reuse (without rerendering the parent cache root).
 #[allow(clippy::too_many_arguments)]
-pub fn list_virtualized_retained_v0<H: UiHost + 'static, I>(
+pub fn list_virtualized_retained_v0<H: UiHost + 'static, I, T>(
     cx: &mut ElementContext<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
@@ -147,7 +149,8 @@ pub fn list_virtualized_retained_v0<H: UiHost + 'static, I>(
     row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     list_virtualized_retained_impl(
         cx,
@@ -168,7 +171,7 @@ where
 /// Retained-host virtualized list helper that participates in cross-surface clipboard commands
 /// (`edit.copy`).
 #[allow(clippy::too_many_arguments)]
-pub fn list_virtualized_copyable_retained_v0<H: UiHost + 'static, I>(
+pub fn list_virtualized_copyable_retained_v0<H: UiHost + 'static, I, T>(
     cx: &mut ElementContext<'_, H>,
     selection: Model<Option<usize>>,
     size: Size,
@@ -183,7 +186,8 @@ pub fn list_virtualized_copyable_retained_v0<H: UiHost + 'static, I>(
     row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     list_virtualized_retained_impl(
         cx,
@@ -202,7 +206,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn list_virtualized_impl<H: UiHost, I>(
+fn list_virtualized_impl<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
@@ -217,7 +221,8 @@ fn list_virtualized_impl<H: UiHost, I>(
     mut row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let selected = match &selection {
         Some(m) => cx.watch_model(m).copied_or(None),
@@ -350,7 +355,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn list_virtualized_retained_impl<H: UiHost + 'static, I>(
+fn list_virtualized_retained_impl<H: UiHost + 'static, I, T>(
     cx: &mut ElementContext<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
@@ -365,7 +370,8 @@ fn list_virtualized_retained_impl<H: UiHost + 'static, I>(
     row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let selected = match &selection {
         Some(m) => cx.watch_model(m).copied_or(None),
@@ -478,8 +484,8 @@ where
                                 None
                             };
 
-                            let row_children: Vec<AnyElement> =
-                                row_contents(cx, i).into_iter().collect();
+                            let items = row_contents(cx, i);
+                            let row_children = collect_children(cx, items);
 
                             vec![cx.container(
                                 ContainerProps {

@@ -3286,6 +3286,14 @@ impl DropdownMenu {
         self
     }
 
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This keeps the root authoring surface on a typed builder lane while still lowering into the
+    /// existing `build_parts(...)` path at the final landing seam.
+    pub fn compose<H: UiHost>(self) -> DropdownMenuComposition<H> {
+        DropdownMenuComposition::new(self)
+    }
+
     /// Host-bound builder-first helper that late-lands the trigger at the root call site.
     #[track_caller]
     pub fn build<H: UiHost, I>(
@@ -5153,6 +5161,113 @@ impl DropdownMenu {
 
             trigger
         })
+    }
+}
+
+/// Recipe-level builder for composing a dropdown menu from shadcn-style parts.
+type DropdownMenuDeferredEntries<H> =
+    Box<dyn FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry> + 'static>;
+
+enum DropdownMenuCompositionEntries<H: UiHost> {
+    Eager(Vec<DropdownMenuEntry>),
+    Deferred(DropdownMenuDeferredEntries<H>),
+}
+
+pub struct DropdownMenuComposition<H: UiHost, TTrigger = DropdownMenuTrigger> {
+    menu: DropdownMenu,
+    trigger: Option<TTrigger>,
+    content: DropdownMenuContent,
+    entries: Option<DropdownMenuCompositionEntries<H>>,
+}
+
+impl<H: UiHost, TTrigger> std::fmt::Debug for DropdownMenuComposition<H, TTrigger> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DropdownMenuComposition")
+            .field("menu", &self.menu)
+            .field("trigger", &self.trigger.is_some())
+            .field("content", &self.content)
+            .field("entries", &self.entries.is_some())
+            .finish()
+    }
+}
+
+impl<H: UiHost> DropdownMenuComposition<H> {
+    pub fn new(menu: DropdownMenu) -> Self {
+        Self {
+            menu,
+            trigger: None,
+            content: DropdownMenuContent::new(),
+            entries: None,
+        }
+    }
+}
+
+impl<H: UiHost, TTrigger> DropdownMenuComposition<H, TTrigger> {
+    pub fn trigger<TNextTrigger>(
+        self,
+        trigger: TNextTrigger,
+    ) -> DropdownMenuComposition<H, TNextTrigger> {
+        DropdownMenuComposition {
+            menu: self.menu,
+            trigger: Some(trigger),
+            content: self.content,
+            entries: self.entries,
+        }
+    }
+
+    pub fn content(mut self, content: impl Into<DropdownMenuContent>) -> Self {
+        self.content = content.into();
+        self
+    }
+
+    pub fn entries(mut self, entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        self.entries = Some(DropdownMenuCompositionEntries::Eager(
+            entries.into_iter().collect(),
+        ));
+        self
+    }
+
+    pub fn entries_with(
+        mut self,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry> + 'static,
+    ) -> Self {
+        self.entries = Some(DropdownMenuCompositionEntries::Deferred(Box::new(entries)));
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: IntoUiElement<H>,
+    {
+        let trigger = self
+            .trigger
+            .expect("DropdownMenu::compose().trigger(...) must be provided before into_element()");
+        let entries = self
+            .entries
+            .expect("DropdownMenu::compose().entries(...) must be provided before into_element()");
+        let content = self.content;
+
+        match entries {
+            DropdownMenuCompositionEntries::Eager(entries) => {
+                self.menu
+                    .build_parts(cx, trigger, content, move |_cx| entries)
+            }
+            DropdownMenuCompositionEntries::Deferred(entries) => {
+                self.menu
+                    .build_parts(cx, trigger, content, move |cx| entries(cx))
+            }
+        }
+    }
+}
+
+impl<H: UiHost, TTrigger> IntoUiElement<H> for DropdownMenuComposition<H, TTrigger>
+where
+    TTrigger: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DropdownMenuComposition::into_element(self, cx)
     }
 }
 
