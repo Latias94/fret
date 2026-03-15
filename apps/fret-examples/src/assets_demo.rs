@@ -245,21 +245,29 @@ fn render_view(cx: &mut UiCx<'_>) -> Ui {
         .max_w(fret_core::Px(560.0))
         .into_element(cx);
 
-    let page = ui::container(|cx| {
-        [ui::v_flex(|_cx| [card])
-            .w_full()
-            .h_full()
-            .justify_center()
-            .items_center()
-            .into_element(cx)]
+    assets_page(cx, &theme, card)
+}
+
+fn assets_page<C>(cx: &mut UiCx<'_>, theme: &Theme, card: C) -> Ui
+where
+    C: IntoUiElement<KernelApp>,
+{
+    ui::container(move |cx| {
+        ui::children![
+            cx;
+            ui::v_flex(move |cx| ui::children![cx; card])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+        ]
     })
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .w_full()
     .h_full()
-    .into_element(cx);
-
-    page.into()
+    .into_element(cx)
+    .into()
 }
 
 fn render_image_panel(

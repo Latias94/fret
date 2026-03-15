@@ -744,6 +744,8 @@ mod authoring_surface_policy_tests {
             ASSETS_DEMO,
             &[
                 "fn render_view(cx: &mut UiCx<'_>) -> Ui",
+                "fn assets_page<C>(cx: &mut UiCx<'_>, theme: &Theme, card: C) -> Ui",
+                "C: IntoUiElement<KernelApp>",
                 "fn render_image_panel(",
                 "stats: fret_ui_assets::image_asset_cache::ImageAssetStats,",
                 ") -> impl IntoUiElement<KernelApp> + use<>",
@@ -753,6 +755,7 @@ mod authoring_surface_policy_tests {
             ],
             &[
                 "fn render_view(cx: &mut ElementContext<'_, KernelApp>) -> ViewElements",
+                "let page = ui::container(|cx| {",
                 "fn render_image_panel(cx: &mut UiCx<'_>, theme: &Theme, frame: u64, image: Option<fret_core::ImageId>, status: image_asset_state::ImageLoadingStatus, error: Option<Arc<str>>, stats: fret_ui_assets::image_asset_cache::ImageAssetStats) -> AnyElement",
                 "fn render_svg_panel(cx: &mut UiCx<'_>, theme: &Theme, svg: Option<fret_core::SvgId>) -> AnyElement",
                 "fn render_image_panel(cx: &mut ElementContext<'_, KernelApp>,",

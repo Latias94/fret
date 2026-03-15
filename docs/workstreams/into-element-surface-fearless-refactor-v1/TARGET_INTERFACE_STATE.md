@@ -135,6 +135,10 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs::{lens, inspector}`, and
   `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs::{label_row, lens,
   controls_panel}`.
+- `apps/fret-examples/src/assets_demo.rs::assets_page(...)` now also follows that rule:
+  the advanced asset-cache demo keeps `render_image_panel(...)` / `render_svg_panel(...)` on typed
+  helper returns and moves the final root-page landing into `assets_page(cx, ...) -> Ui` instead
+  of leaving a root-local `let page = ...; page.into()` seam inside `render_view(...)`.
 - keep `.into_element(cx)` explicit only where those demos intentionally still assemble raw stage
   child arrays, overlay child collections, or other concrete landing seams.
 - `apps/fret-cookbook/src/scaffold.rs::{centered_page, centered_page_background, centered_page_muted}`
