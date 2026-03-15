@@ -546,6 +546,15 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn hello_counter_demo_prefers_root_helper_surface() {
+        assert!(HELLO_COUNTER_DEMO.contains("hello_counter_page(cx.elements(), theme, card)"));
+        assert!(HELLO_COUNTER_DEMO.contains(
+            "fn hello_counter_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: impl UiChild) -> Ui"
+        ));
+        assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
+    }
+
+    #[test]
     fn manual_ui_tree_examples_keep_root_wrappers_on_local_typed_helpers() {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             SIMPLE_TODO_DEMO,

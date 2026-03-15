@@ -63,6 +63,9 @@ Execution note on 2026-03-14:
   keeping inline page wrappers inside `render_root(...)` closures:
   `simple_todo_demo`, `cjk_conformance_demo`, and `emoji_conformance_demo` now keep their root
   shells on local `ElementContext<'_, App>` helpers returning `IntoUiElement<App>`.
+- the first-contact `hello_counter_demo` on the default app lane now also keeps its root shell on
+  `hello_counter_page(cx, ...) -> Ui`, so that example no longer teaches inline root wrapper
+  chrome inside `render(...)`.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

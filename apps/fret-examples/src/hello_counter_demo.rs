@@ -307,19 +307,25 @@ impl View for HelloCounterView {
             .max_w(Px(480.0))
             .into_element(cx);
 
-        ui::container(|cx| {
-            [ui::v_flex(|_cx| [card])
+        hello_counter_page(cx.elements(), theme, card)
+    }
+}
+
+fn hello_counter_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: impl UiChild) -> Ui {
+    ui::container(|cx| {
+        ui::children![
+            cx;
+            ui::v_flex(|_cx| [card])
                 .items_center()
                 .justify_center()
                 .gap(Space::N6)
                 .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .p(Space::N6)
-        .size_full()
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT)
-        .into()
-    }
+        ]
+    })
+    .bg(ColorRef::Color(theme.color_token("muted")))
+    .p(Space::N6)
+    .size_full()
+    .into_element(cx)
+    .test_id(TEST_ID_ROOT)
+    .into()
 }

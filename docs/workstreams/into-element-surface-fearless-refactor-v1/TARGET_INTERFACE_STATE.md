@@ -165,6 +165,9 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   `apps/fretboard/src/scaffold/templates.rs` take `&mut UiCx<'_>` and return `Ui`, so
   `todo_demo` plus both todo templates no longer teach `todo_page(...).into_element(cx).into()`
   as the default root story.
+- `apps/fret-examples/src/hello_counter_demo.rs::hello_counter_page(...)` now also follows that
+  same default-app root posture, so the first-contact counter demo does not keep inline root
+  wrapper chrome inside `render(...)`.
 - the onboarding cookbook `hello.rs` sample now follows the same posture through
   `hello_page(cx, ...) -> Ui`, so the default first-contact example no longer keeps a root-local
   `let root = ...; root.into_element(cx).into()` seam inside `render()`.
