@@ -135,6 +135,11 @@ This workstream takes a fearless posture:
   - bundled font faces now carry stable logical keys/media types,
   - bundled profiles now expose `asset_entries()` so the framework-owned font baseline can mount
     through `StaticAssetEntry` instead of existing only as raw byte arrays.
+- startup publication now also has an explicit runtime-global slot for that baseline identity:
+  - `fret_runtime::BundledFontBaselineSnapshot` records which bundled profile/bundle/asset keys
+    the runner chose,
+  - web startup publishes the current `fret-fonts::default_profile()` contract,
+  - desktop startup currently publishes `none`, making the remaining platform mismatch explicit.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract

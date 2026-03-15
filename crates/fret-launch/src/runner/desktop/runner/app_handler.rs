@@ -656,6 +656,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     .set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
                 renderer.set_path_msaa_samples(self.config.path_msaa_samples);
 
+                let _ = super::super::super::font_catalog::publish_bundled_font_baseline_snapshot(
+                    &mut self.app,
+                    fret_runtime::BundledFontBaselineSnapshot::none(),
+                );
+
                 let startup_async = Self::system_font_rescan_async_enabled()
                     && Self::system_font_catalog_startup_async_enabled();
                 let _ = super::super::super::font_catalog::initialize_startup_font_environment(
@@ -866,6 +871,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
             renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
             renderer.set_path_msaa_samples(self.config.path_msaa_samples);
+
+            let _ = super::super::super::font_catalog::publish_bundled_font_baseline_snapshot(
+                &mut self.app,
+                fret_runtime::BundledFontBaselineSnapshot::none(),
+            );
 
             let startup_async = Self::system_font_rescan_async_enabled()
                 && Self::system_font_catalog_startup_async_enabled();

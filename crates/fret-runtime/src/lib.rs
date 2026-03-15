@@ -120,8 +120,8 @@ pub use font_bootstrap::{
     apply_font_catalog_update_with_metadata,
 };
 pub use font_catalog::{
-    FontCatalog, FontCatalogEntry, FontCatalogMetadata, FontVariableAxisInfo,
-    SystemFontRescanState, TextFontStackKey,
+    BundledFontBaselineSnapshot, BundledFontBaselineSource, FontCatalog, FontCatalogEntry,
+    FontCatalogMetadata, FontVariableAxisInfo, SystemFontRescanState, TextFontStackKey,
 };
 pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;

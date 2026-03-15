@@ -1,6 +1,7 @@
 use crate::{BundledFontFaceSpec, BundledFontRole};
 
 const FONT_TTF_MEDIA_TYPE: &str = "font/ttf";
+#[cfg(feature = "cjk-lite")]
 const FONT_OTF_MEDIA_TYPE: &str = "font/otf";
 
 #[cfg(any(feature = "bootstrap-subset", feature = "bootstrap-full"))]

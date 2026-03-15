@@ -107,6 +107,22 @@ pub fn publish_system_font_rescan_state(
 }
 
 #[doc(hidden)]
+pub fn publish_bundled_font_baseline_snapshot(
+    app: &mut impl GlobalsHost,
+    snapshot: fret_runtime::BundledFontBaselineSnapshot,
+) -> bool {
+    let old = app
+        .global::<fret_runtime::BundledFontBaselineSnapshot>()
+        .cloned();
+    if old.as_ref() != Some(&snapshot) {
+        app.set_global::<fret_runtime::BundledFontBaselineSnapshot>(snapshot);
+        true
+    } else {
+        false
+    }
+}
+
+#[doc(hidden)]
 pub fn sync_renderer_font_families_from_globals(
     app: &mut impl GlobalsHost,
     renderer: &mut impl RendererFontEnvironmentHost,
@@ -481,6 +497,45 @@ mod tests {
                 in_flight: false,
                 pending: true,
             }
+        );
+    }
+
+    #[test]
+    fn publish_bundled_font_baseline_snapshot_updates_runtime_global() {
+        let mut app = TestApp::default();
+        let snapshot = fret_runtime::BundledFontBaselineSnapshot::bundled_profile(
+            "default-subset+cjk-lite",
+            "pkg:fret-fonts",
+            vec!["fonts/Inter-roman-subset.ttf".to_string()],
+            vec!["UiSans".to_string(), "UiMonospace".to_string()],
+            vec!["Sans".to_string(), "Monospace".to_string()],
+        );
+
+        let changed = publish_bundled_font_baseline_snapshot(&mut app, snapshot.clone());
+
+        assert!(changed);
+        assert_eq!(
+            app.global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("bundled font baseline snapshot"),
+            snapshot
+        );
+    }
+
+    #[test]
+    fn publish_bundled_font_baseline_snapshot_is_noop_when_unchanged() {
+        let mut app = TestApp::default();
+        let snapshot = fret_runtime::BundledFontBaselineSnapshot::none();
+        app.set_global::<fret_runtime::BundledFontBaselineSnapshot>(snapshot.clone());
+
+        let changed = publish_bundled_font_baseline_snapshot(&mut app, snapshot.clone());
+
+        assert!(!changed);
+        assert_eq!(
+            app.global::<fret_runtime::BundledFontBaselineSnapshot>()
+                .cloned()
+                .expect("bundled font baseline snapshot"),
+            snapshot
         );
     }
 }
