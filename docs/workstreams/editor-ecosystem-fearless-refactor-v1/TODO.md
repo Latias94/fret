@@ -198,7 +198,14 @@ Interaction contract:
       surface now exposes stable committed-value / committed-line-count / outcome readouts so diag
       can prove draft-vs-committed behavior directly without conflating it with search-box
       semantics, and no-op focus/blur cycles no longer emit misleading commit/cancel outcomes. The
-      same control also exposes password-mode rendering, a commit/cancel outcome hook, and
+      promoted proof now also locks the first two explicit opt-in blur policies above that
+      baseline: inline rename uses `BlurBehavior::Cancel`, while multiline notes use
+      `BlurBehavior::PreserveDraft` until explicit `Ctrl/Cmd+Enter` commit or Escape cancel.
+      Those choices currently stay proof-local policy evidence rather than graduating into a wider
+      public helper/API before a second real consumer exists. The focused launched diag gate was
+      rerun on 2026-03-15 against `fret-demo --bin imui_editor_proof_demo`, so that proof-local
+      split now has fresh packed evidence instead of only a script update. The same control also
+      exposes password-mode rendering, a commit/cancel outcome hook, and
       assistive semantics placeholders for future completion/history surfaces while keeping that
       policy in the ecosystem layer. The first reusable assist glue above that baseline now also
       lives in `fret-ui-kit::headless::text_assist`: it preserves the existing
@@ -219,10 +226,9 @@ Interaction contract:
       `fret-ui-kit::primitives::combobox` helpers for close reasons, focus restore, and
       close-time query clearing rather than keeping a separate editor-local copy, while popup open
       now also reveals the selected row instead of restarting long lists at the top. The remaining
-      work is to promote only the next shared layer that has real multi-consumer evidence beyond
-      this reveal baseline, decide where editor surfaces should opt into `BlurBehavior::Cancel` /
-      `PreserveDraft`, and keep multiline/editor proof coverage tight before new promoted
-      components land.
+      work is to prove whether these two opt-in blur policies deserve a non-proof consumer before
+      they graduate into a wider helper/API, and to keep multiline/editor proof coverage tight
+      before new promoted components land.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 
@@ -331,8 +337,11 @@ Interaction contract:
       steps so the gate matches the real keydown-plus-text-input path. Multiline buffered
       text-session coverage now also exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-text-field-multiline-session-policy.json`,
-      which proves blur commit, explicit `Ctrl/Cmd+Enter` commit, and Escape cancel against the
-      promoted proof readouts. Composite numeric coverage now also exists via
+      which now proves inline-rename cancel-on-blur plus multiline preserve-draft, explicit
+      `Ctrl/Cmd+Enter` commit, and Escape cancel against the promoted proof readouts. That
+      launched `fretboard diag run --session-auto --pack --ai-packet --launch` path was rerun on
+      2026-03-15 against `fret-demo --bin imui_editor_proof_demo` and passed end-to-end. Composite
+      numeric coverage now also exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`, which
       proves `VecEdit` / `TransformEdit` axis-level typed commit/cancel against the promoted
       advanced proof readouts instead of inferring those sessions from raw value drift.

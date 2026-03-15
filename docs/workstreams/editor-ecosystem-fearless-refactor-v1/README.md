@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-14**
+Last updated: **2026-03-15**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -115,8 +115,10 @@ Current checkpoint:
 - buffered `TextField` now has an editor-owned session baseline on both single-line and multiline
   surfaces: typing edits a local draft first, blur commits by default, Escape restores the pre-edit
   value, single-line Enter commits explicitly, multiline `Ctrl/Cmd+Enter` commits explicitly while
-  plain Enter still inserts a newline, and proof/diag now covers those draft-vs-committed paths
-  directly,
+  plain Enter still inserts a newline, and the promoted proof now also locks the first two
+  non-default editor opt-ins on top of that baseline: inline-rename style fields can choose
+  cancel-on-blur, while multiline notes can keep a preserved draft across blur until an explicit
+  commit/cancel. Proof/diag now covers those draft-vs-committed paths directly,
 - the same `TextField` surface now also has the first editor-grade extensibility hooks layered on
   top of that buffered baseline: password-mode rendering for single-line fields, explicit outcome
   callbacks for commit/cancel, assistive semantics placeholders for future completion/history
@@ -180,8 +182,10 @@ Current checkpoint:
 - `imgui_like_dense` now has a matching screenshot proof so default-vs-dense baseline review does
   not depend on ad-hoc manual launches,
 - `imui_editor_proof_demo` now also exposes committed/outcome readouts plus focused diag coverage
-  for buffered single-line and multiline text sessions, so blur commit, explicit multiline commit,
-  and Escape cancel all have promoted evidence anchors,
+  for buffered single-line and multiline text sessions, so default blur commit, inline-rename
+  cancel-on-blur, multiline preserve-draft, explicit multiline commit, and Escape cancel all have
+  promoted evidence anchors, and the launched packed diag rerun now passes on that updated proof
+  surface as well,
 - repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
   edited values stay attached to stable stop ids instead of drifting with row order,
 - the text-assist boundary is now split the way this workstream wanted it to be:

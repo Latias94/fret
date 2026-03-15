@@ -27,10 +27,10 @@ use fret_ui_editor::controls::{
     EditorTextSelectionBehavior, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
     FieldStatusBadge, NumericFormatFn, NumericInput, NumericInputOptions, NumericParseFn,
     NumericPresentation, NumericValidateFn, NumericValueConstraints, Slider, SliderOptions,
-    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField, TextFieldMode,
-    TextFieldOptions, TextFieldOutcome, TransformEdit, TransformEditAxisOutcome,
-    TransformEditOptions, TransformEditSection, Vec3Edit, VecEditAxis, VecEditAxisOutcome,
-    VecEditOptions,
+    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField,
+    TextFieldBlurBehavior, TextFieldMode, TextFieldOptions, TextFieldOutcome, TransformEdit,
+    TransformEditAxisOutcome, TransformEditOptions, TransformEditSection, Vec3Edit, VecEditAxis,
+    VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
@@ -279,6 +279,20 @@ fn record_editor_text_assist_accept(
     });
 }
 
+fn record_text_field_outcome(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    outcome_model: &Model<String>,
+    outcome: TextFieldOutcome,
+) {
+    let next = edit_session_outcome_label(outcome);
+    let _ = host.models_mut().update(outcome_model, |text| {
+        text.clear();
+        text.push_str(next);
+    });
+    host.request_redraw(action_cx.window);
+}
+
 fn render_editor_name_assist_surface(
     cx: &mut ElementContext<'_, KernelApp>,
     query_model: Model<String>,
@@ -459,6 +473,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
     let editor_base_color_model = editor_demo_base_color_model(cx);
     let editor_name_model = editor_demo_name_model(cx);
     let editor_buffered_name_model = editor_demo_buffered_name_model(cx);
+    let editor_inline_rename_model = editor_demo_inline_rename_model(cx);
+    let editor_inline_rename_outcome_model = editor_demo_inline_rename_outcome_model(cx);
     let editor_name_assist_model = editor_demo_name_assist_model(cx);
     let editor_name_assist_dismissed_query_model =
         editor_demo_name_assist_dismissed_query_model(cx);
@@ -760,6 +776,108 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
+                                                        |cx| cx.text("Inline rename"),
+                                                        |cx| {
+                                                            let outcome_model =
+                                                                editor_inline_rename_outcome_model
+                                                                    .clone();
+                                                            TextField::new(
+                                                                editor_inline_rename_model.clone(),
+                                                            )
+                                                            .on_outcome(Some(Arc::new(
+                                                                move |host, action_cx, outcome: TextFieldOutcome| {
+                                                                    record_text_field_outcome(
+                                                                        host,
+                                                                        action_cx,
+                                                                        &outcome_model,
+                                                                        outcome,
+                                                                    );
+                                                                },
+                                                            )))
+                                                            .options(TextFieldOptions {
+                                                                id_source: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.inline-rename",
+                                                                )),
+                                                                placeholder: Some(Arc::from(
+                                                                    "Rename selection",
+                                                                )),
+                                                                clear_button: true,
+                                                                selection_behavior:
+                                                                    EditorTextSelectionBehavior::SelectAllOnFocus,
+                                                                blur_behavior:
+                                                                    TextFieldBlurBehavior::Cancel,
+                                                                test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.inline-rename",
+                                                                )),
+                                                                clear_test_id: Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.inline-rename.clear",
+                                                                )),
+                                                                ..Default::default()
+                                                            })
+                                                            .into_element(cx)
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
+                                                        |cx| cx.text("Rename committed"),
+                                                        |cx| {
+                                                            let committed = cx
+                                                                .watch_model(
+                                                                    &editor_inline_rename_model,
+                                                                )
+                                                                .paint()
+                                                                .cloned()
+                                                                .unwrap_or_default();
+                                                            proof_compact_readout(
+                                                                cx,
+                                                                committed,
+                                                                Some(Arc::from(
+                                                                    "imui-editor-proof.editor.object.inline-rename.committed",
+                                                                )),
+                                                            )
+                                                        },
+                                                        |_cx| None,
+                                                    ));
+
+                                                    let inline_rename_outcome = cx
+                                                        .watch_model(
+                                                            &editor_inline_rename_outcome_model,
+                                                        )
+                                                        .paint()
+                                                        .cloned()
+                                                        .unwrap_or_default();
+                                                    if !inline_rename_outcome.trim().is_empty() {
+                                                        rows.push(row_cx.row_with(
+                                                            cx,
+                                                            PropertyRow::new().options(
+                                                                row_cx.row_options.clone(),
+                                                            ),
+                                                            |cx| cx.text("Rename outcome"),
+                                                            move |cx| {
+                                                                let outcome =
+                                                                    inline_rename_outcome.clone();
+                                                                proof_compact_readout(
+                                                                    cx,
+                                                                    outcome,
+                                                                    Some(Arc::from(
+                                                                        "imui-editor-proof.editor.object.inline-rename.outcome",
+                                                                    )),
+                                                                )
+                                                            },
+                                                            |_cx| None,
+                                                        ));
+                                                    }
+
+                                                    rows.push(row_cx.row_with(
+                                                        cx,
+                                                        PropertyRow::new().options(
+                                                            row_cx.row_options.clone(),
+                                                        ),
                                                         |cx| cx.text("Buffered name"),
                                                         |cx| {
                                                             TextField::new(
@@ -802,15 +920,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             )
                                                             .on_outcome(Some(Arc::new(
                                                                 move |host, action_cx, outcome: TextFieldOutcome| {
-                                                                    let next = edit_session_outcome_label(outcome);
-                                                                    let _ = host.models_mut().update(
+                                                                    record_text_field_outcome(
+                                                                        host,
+                                                                        action_cx,
                                                                         &outcome_model,
-                                                                        |text| {
-                                                                            text.clear();
-                                                                            text.push_str(next);
-                                                                        },
+                                                                        outcome,
                                                                     );
-                                                                    host.request_redraw(action_cx.window);
                                                                 },
                                                             )))
                                                             .options(TextFieldOptions {
@@ -1100,15 +1215,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             )
                                                             .on_outcome(Some(Arc::new(
                                                                 move |host, action_cx, outcome: TextFieldOutcome| {
-                                                                    let next = edit_session_outcome_label(outcome);
-                                                                    let _ = host.models_mut().update(
+                                                                    record_text_field_outcome(
+                                                                        host,
+                                                                        action_cx,
                                                                         &outcome_model,
-                                                                        |text| {
-                                                                            text.clear();
-                                                                            text.push_str(next);
-                                                                        },
+                                                                        outcome,
                                                                     );
-                                                                    host.request_redraw(action_cx.window);
                                                                 },
                                                             )))
                                                             .options(TextFieldOptions {
@@ -1118,6 +1230,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 multiline: true,
                                                                 min_height: Some(Px(96.0)),
                                                                 clear_button: true,
+                                                                blur_behavior:
+                                                                    TextFieldBlurBehavior::PreserveDraft,
                                                                 test_id: Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.notes",
                                                                 )),
@@ -2788,6 +2902,12 @@ fn editor_demo_buffered_name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) ->
     })
 }
 
+fn editor_demo_inline_rename_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
+    named_demo_state(cx, "imui_editor_proof_demo.model.inline_rename", |cx| {
+        cx.app.models_mut().insert("Props_Root".to_string())
+    })
+}
+
 fn editor_demo_name_assist_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     named_demo_state(cx, "imui_editor_proof_demo.model.name_assist", |cx| {
         cx.app.models_mut().insert(String::new())
@@ -2844,6 +2964,16 @@ fn editor_demo_password_outcome_model<H: UiHost>(cx: &mut ElementContext<'_, H>)
     named_demo_state(cx, "imui_editor_proof_demo.model.password_outcome", |cx| {
         cx.app.models_mut().insert(String::new())
     })
+}
+
+fn editor_demo_inline_rename_outcome_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<String> {
+    named_demo_state(
+        cx,
+        "imui_editor_proof_demo.model.inline_rename_outcome",
+        |cx| cx.app.models_mut().insert(String::new()),
+    )
 }
 
 fn editor_demo_notes_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
