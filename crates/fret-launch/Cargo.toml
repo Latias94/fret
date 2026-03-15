@@ -29,6 +29,7 @@ webview-wry = ["dep:fret-webview", "dep:fret-webview-wry"]
 [dependencies]
 fret-app = { version = "0.1.0", path = "../fret-app" }
 fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
 fret-render = { version = "0.1.0", path = "../fret-render" }
 fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 bytemuck.workspace = true
@@ -89,7 +90,6 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = ["s
 objc2-ui-kit = { version = "0.3.2", default-features = false, features = ["std", "objc2-core-foundation", "UIApplication", "UIView", "UIWindow", "UIGeometry", "UIResponder"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
 fret-platform-web = { version = "0.1.0", path = "../fret-platform-web" }
 fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit" }
 fret-runner-web = { version = "0.1.0", path = "../fret-runner-web" }

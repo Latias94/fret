@@ -138,8 +138,10 @@ This workstream takes a fearless posture:
 - startup publication now also has an explicit runtime-global slot for that baseline identity:
   - `fret_runtime::BundledFontBaselineSnapshot` records which bundled profile/bundle/asset keys
     the runner chose,
-  - web startup publishes the current `fret-fonts::default_profile()` contract,
-  - desktop startup currently publishes `none`, making the remaining platform mismatch explicit.
+  - web and desktop startup now both publish the current `fret-fonts::default_profile()` contract
+    before startup font-environment initialization,
+  - desktop still keeps `FontFamilyDefaultsPolicy::None`, so native system-font augmentation stays
+    separate from the framework-owned baseline identity.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract
@@ -154,7 +156,7 @@ This workstream takes a fearless posture:
 - Generated directory scanning is still only a native/package-dev convenience lane today; the new
   generated Rust module is the first packaged/web/mobile-friendly lane, but it does not yet cover
   hashed web output rewriting or mobile platform-native bundle mapping.
-- Font startup still remains split across desktop/web/SVG text and is not solved by the current
+- Font startup still remains split across mobile/SVG text and is not fully solved by the current
   slice.
 
 ## Current incorrect logic (must be corrected, not preserved)
@@ -218,18 +220,20 @@ wiring or be renamed to describe its actual effect.
 
 ### 4) Font baseline semantics are inconsistent across platforms
 
-Web eagerly injects bundled default fonts as soon as the renderer is ready:
+Web and desktop now both inject the same bundled default font baseline as soon as the renderer is
+ready:
 
 - `crates/fret-launch/src/runner/web/gfx_init.rs`
-
-Desktop does not do the same thing. It starts with `FontFamilyDefaultsPolicy::None` and relies on
-desktop startup policy and optional system scanning:
-
-- `crates/fret-launch/src/runner/font_catalog.rs`
 - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
 
-That means the framework does not yet guarantee one deterministic baseline text environment before
-layering in platform-specific extras.
+The remaining inconsistency is now narrower: desktop still keeps `FontFamilyDefaultsPolicy::None`
+and layers optional system scanning on top, while mobile does not yet publish the same startup
+snapshot/install path:
+
+- `crates/fret-launch/src/runner/font_catalog.rs`
+
+So the framework now guarantees one deterministic bundled baseline on web and desktop before
+platform-specific augmentation, but it does not yet close the same contract on mobile.
 
 ### 5) SVG text does not share the text system font environment
 

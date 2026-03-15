@@ -52,6 +52,62 @@ fn preferred_text_locale(app: &impl GlobalsHost) -> Option<String> {
         .map(|locale| locale.to_string())
 }
 
+fn bundled_font_role_name(role: fret_fonts::BundledFontRole) -> &'static str {
+    match role {
+        fret_fonts::BundledFontRole::UiSans => "UiSans",
+        fret_fonts::BundledFontRole::UiSerif => "UiSerif",
+        fret_fonts::BundledFontRole::UiMonospace => "UiMonospace",
+        fret_fonts::BundledFontRole::EmojiFallback => "EmojiFallback",
+        fret_fonts::BundledFontRole::CjkFallback => "CjkFallback",
+    }
+}
+
+fn bundled_generic_family_name(family: fret_fonts::BundledGenericFamily) -> &'static str {
+    match family {
+        fret_fonts::BundledGenericFamily::Sans => "Sans",
+        fret_fonts::BundledGenericFamily::Serif => "Serif",
+        fret_fonts::BundledGenericFamily::Monospace => "Monospace",
+    }
+}
+
+#[doc(hidden)]
+pub fn default_bundled_font_baseline_snapshot() -> fret_runtime::BundledFontBaselineSnapshot {
+    let profile = fret_fonts::default_profile();
+    fret_runtime::BundledFontBaselineSnapshot::bundled_profile(
+        profile.name,
+        fret_fonts::bundled_asset_bundle().as_str(),
+        profile
+            .faces
+            .iter()
+            .map(|face| face.asset_key.to_string())
+            .collect(),
+        profile
+            .provided_roles
+            .iter()
+            .map(|role| bundled_font_role_name(*role).to_string())
+            .collect(),
+        profile
+            .guaranteed_generic_families
+            .iter()
+            .map(|family| bundled_generic_family_name(*family).to_string())
+            .collect(),
+    )
+}
+
+#[doc(hidden)]
+pub fn install_default_bundled_font_baseline(
+    app: &mut impl GlobalsHost,
+    renderer: &mut fret_render::Renderer,
+) -> usize {
+    let added = renderer.add_fonts(
+        fret_fonts::default_fonts()
+            .iter()
+            .map(|bytes| bytes.to_vec()),
+    );
+    let _ = publish_bundled_font_baseline_snapshot(app, default_bundled_font_baseline_snapshot());
+    added
+}
+
 #[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
 fn startup_font_defaults_policy(mode: StartupFontEnvironmentMode) -> FontFamilyDefaultsPolicy {
     match mode {
@@ -536,6 +592,35 @@ mod tests {
                 .cloned()
                 .expect("bundled font baseline snapshot"),
             snapshot
+        );
+    }
+
+    #[test]
+    fn default_bundled_font_baseline_snapshot_matches_default_profile() {
+        let profile = fret_fonts::default_profile();
+        let snapshot = default_bundled_font_baseline_snapshot();
+
+        assert_eq!(
+            snapshot,
+            fret_runtime::BundledFontBaselineSnapshot::bundled_profile(
+                profile.name,
+                fret_fonts::bundled_asset_bundle().as_str(),
+                profile
+                    .faces
+                    .iter()
+                    .map(|face| face.asset_key.to_string())
+                    .collect(),
+                profile
+                    .provided_roles
+                    .iter()
+                    .map(|role| bundled_font_role_name(*role).to_string())
+                    .collect(),
+                profile
+                    .guaranteed_generic_families
+                    .iter()
+                    .map(|family| bundled_generic_family_name(*family).to_string())
+                    .collect(),
+            )
         );
     }
 }

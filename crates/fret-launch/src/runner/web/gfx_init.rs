@@ -4,50 +4,6 @@ use winit::window::Window;
 
 use super::{WinitAppDriver, WinitRunner};
 
-#[cfg(target_arch = "wasm32")]
-fn bundled_font_role_name(role: fret_fonts::BundledFontRole) -> &'static str {
-    match role {
-        fret_fonts::BundledFontRole::UiSans => "UiSans",
-        fret_fonts::BundledFontRole::UiSerif => "UiSerif",
-        fret_fonts::BundledFontRole::UiMonospace => "UiMonospace",
-        fret_fonts::BundledFontRole::EmojiFallback => "EmojiFallback",
-        fret_fonts::BundledFontRole::CjkFallback => "CjkFallback",
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn bundled_generic_family_name(family: fret_fonts::BundledGenericFamily) -> &'static str {
-    match family {
-        fret_fonts::BundledGenericFamily::Sans => "Sans",
-        fret_fonts::BundledGenericFamily::Serif => "Serif",
-        fret_fonts::BundledGenericFamily::Monospace => "Monospace",
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn default_bundled_font_baseline_snapshot() -> fret_runtime::BundledFontBaselineSnapshot {
-    let profile = fret_fonts::default_profile();
-    fret_runtime::BundledFontBaselineSnapshot::bundled_profile(
-        profile.name,
-        fret_fonts::bundled_asset_bundle().as_str(),
-        profile
-            .faces
-            .iter()
-            .map(|face| face.asset_key.to_string())
-            .collect(),
-        profile
-            .provided_roles
-            .iter()
-            .map(|role| bundled_font_role_name(*role).to_string())
-            .collect(),
-        profile
-            .guaranteed_generic_families
-            .iter()
-            .map(|family| bundled_generic_family_name(*family).to_string())
-            .collect(),
-    )
-}
-
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn adopt_gfx_if_ready(&mut self) {
         if self.gfx.is_some() {
@@ -66,18 +22,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
         self.renderer_caps = Some(renderer_caps);
 
-        let _ = super::super::font_catalog::publish_bundled_font_baseline_snapshot(
+        // Web/WASM cannot access system fonts. Install the framework-owned bundled baseline as
+        // soon as the renderer becomes available, then let startup policy fill missing UI lanes.
+        let _ = super::super::font_catalog::install_default_bundled_font_baseline(
             &mut self.app,
-            default_bundled_font_baseline_snapshot(),
+            &mut gfx.renderer,
         );
-
-        // Web/WASM cannot access system fonts. Load our bundled defaults as soon as the renderer
-        // becomes available, then let the runtime font bootstrap policy fill missing UI families.
-        let default_fonts = fret_fonts::default_fonts()
-            .iter()
-            .map(|bytes| bytes.to_vec())
-            .collect::<Vec<_>>();
-        let _ = gfx.renderer.add_fonts(default_fonts);
 
         // Font catalog refresh trigger (ADR 0258): initial renderer availability (adopt gfx).
         let _update = super::super::font_catalog::initialize_startup_font_environment(
