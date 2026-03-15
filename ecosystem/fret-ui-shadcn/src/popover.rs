@@ -861,7 +861,7 @@ impl Popover {
                                         open_for_barrier.clone(),
                                         true,
                                         on_dismiss_request_for_children.clone(),
-                                        Vec::new(),
+                                        Vec::<AnyElement>::new(),
                                     ),
                                 ]
                                 .into_iter()
@@ -1149,7 +1149,7 @@ impl Popover {
                                 cx,
                                 open_for_barrier.clone(),
                                 on_dismiss_request_for_children.clone(),
-                                [],
+                                Vec::<AnyElement>::new(),
                                 overlay_content,
                             )
                         } else {
