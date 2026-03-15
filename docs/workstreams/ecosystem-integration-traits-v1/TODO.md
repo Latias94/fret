@@ -130,13 +130,13 @@ surface.
     than a new adapter contract,
     and `ecosystem/fret-authoring/src/query.rs::UiWriterQueryExt` remains an authoring-local query
     wrapper rather than a shared ecosystem integration seam.
-- [ ] Audit reusable helper signatures in first-party ecosystem crates so each public helper is
+- [x] Audit reusable helper signatures in first-party ecosystem crates so each public helper is
   classified by lane:
   - app-facing teaching helpers use `Ui` / `UiChild`,
   - reusable generic helpers move toward the unified component conversion trait tracked by
     `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
   - raw `AnyElement` stays explicit for advanced/internal seams only.
-  - First landed follow-up on 2026-03-15:
+  - Closeout on 2026-03-15:
     `fret::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu}`,
     `fret_workspace::WorkspacePaneContentFocusTarget`,
     `fret_workspace::WorkspaceFrame`,
@@ -144,6 +144,14 @@ surface.
     `fret_workspace::WorkspaceCommandScope`
     now accept typed pane content via `IntoUiElement<H>` instead of forcing workspace shell
     composition to land on `AnyElement` before the shell/focus-target/frame/command-scope seams.
+  - Intentional explicit landing seams kept on 2026-03-15:
+    `fret_workspace::WorkspaceTopBar` and `fret_workspace::WorkspaceStatusBar` still collect
+    heterogeneous `AnyElement` lists before an `ElementContext` exists, and the code now carries
+    source-policy comments plus tests documenting that exception.
+  - Router helper audit closed on 2026-03-15:
+    `fret_router_ui::router_outlet*` and `router_link*_with_props` keep typed render/child inputs
+    on the public surface and only return `AnyElement` at explicit snapshot-read, pressable,
+    semantics, or diagnostics landing seams.
 
 ## 3. `InstallIntoApp` Adoption
 

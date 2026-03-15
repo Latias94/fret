@@ -260,6 +260,10 @@ mod tests {
     }
 }
 
+/// Context-free top bar aggregator for workspace shells.
+///
+/// This intentionally remains an explicit `AnyElement` landing seam because it stores
+/// heterogeneous child lists before an `ElementContext` exists.
 #[derive(Debug)]
 pub struct WorkspaceTopBar {
     height: Px,
@@ -378,6 +382,10 @@ impl WorkspaceTopBar {
     }
 }
 
+/// Context-free status bar aggregator for workspace shells.
+///
+/// This intentionally remains an explicit `AnyElement` landing seam because it stores
+/// heterogeneous child lists before an `ElementContext` exists.
 #[derive(Debug)]
 pub struct WorkspaceStatusBar {
     height: Px,

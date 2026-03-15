@@ -614,6 +614,10 @@ impl RouterLink {
     }
 }
 
+/// Read a router snapshot model and hand a typed render closure the cloned value.
+///
+/// This keeps typed child inputs on the public surface and only lands on `AnyElement` at the
+/// snapshot-read boundary.
 pub fn router_outlet<R, T>(
     cx: &mut ElementContext<'_, App>,
     snapshot: &Model<RouterUiSnapshot<R>>,
@@ -629,6 +633,7 @@ where
     render(cx, &snap).into_element(cx)
 }
 
+/// Typed router-outlet helper with explicit diagnostics stamping at the final landing seam.
 pub fn router_outlet_with_test_id<R, T>(
     cx: &mut ElementContext<'_, App>,
     snapshot: &Model<RouterUiSnapshot<R>>,
@@ -675,6 +680,8 @@ where
     }
 
     #[track_caller]
+    /// Keep typed render inputs on the public surface and land on `AnyElement` only where the
+    /// outlet owns test-id decoration and snapshot selection.
     pub fn into_element<T>(
         self,
         cx: &mut ElementContext<'_, App>,
@@ -881,6 +888,9 @@ where
 /// The pressable:
 /// - navigates on `pressable_on_activate`
 /// - computes prefetch intents on hover and stores them in `RouterUiStore::intents_model()`
+///
+/// Child inputs stay typed; the explicit `AnyElement` return is the pressable/semantics landing
+/// seam.
 pub fn router_link_with_props<R, H, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
@@ -964,7 +974,7 @@ impl RouterLink {
 
 #[cfg(test)]
 mod tests {
-    use super::{router_link, RouterLink, RouterOutlet, RouterUiSnapshot, RouterUiStore};
+    use super::{RouterLink, RouterOutlet, RouterUiSnapshot, RouterUiStore, router_link};
     use fret_app::App;
     use fret_router::{
         MemoryHistory, RouteCodec, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
@@ -1067,8 +1077,11 @@ mod tests {
     #[test]
     fn crate_docs_keep_router_ui_positioned_as_thin_adoption_layer() {
         assert!(LIB_RS.contains("This crate intentionally provides a thin layer:"));
-        assert!(LIB_RS
-            .contains("Policy-heavy behavior remains in apps and higher-level ecosystem crates."));
+        assert!(
+            LIB_RS.contains(
+                "Policy-heavy behavior remains in apps and higher-level ecosystem crates."
+            )
+        );
     }
 
     #[test]
@@ -1087,8 +1100,11 @@ mod tests {
         assert!(public_surface.contains("pub fn router_outlet<"));
         assert!(public_surface.contains("pub fn into_element<T>("));
         assert!(public_surface.contains("pub fn into_element_by_leaf<T, N>("));
-        assert!(public_surface
-            .contains("pub fn into_element_by_leaf_with_status<Ready, Pending, Error, NotFound>("));
+        assert!(
+            public_surface.contains(
+                "pub fn into_element_by_leaf_with_status<Ready, Pending, Error, NotFound>("
+            )
+        );
 
         assert!(!public_surface.contains("pub fn install_app("));
         assert!(!public_surface.contains("pub fn install(app: &mut App)"));
@@ -1108,6 +1124,36 @@ mod tests {
         assert!(normalized.contains("pubfnrouter_link<R,H,I,T>("));
         assert!(normalized.contains("pubfnrouter_link_with_props<R,H,I,T>("));
         assert!(APP_RS.contains("pub fn install(app: &mut App)"));
+    }
+
+    #[test]
+    fn router_ui_helpers_keep_typed_inputs_and_explicit_landing_returns() {
+        let public_surface = LIB_RS
+            .split("#[cfg(test)]")
+            .next()
+            .expect("router-ui source should contain a test module split");
+        let normalized = public_surface.split_whitespace().collect::<String>();
+
+        assert!(LIB_RS.contains("This keeps typed child inputs on the public surface"));
+        assert!(LIB_RS.contains("snapshot-read boundary."));
+        assert!(LIB_RS.contains(
+            "Child inputs stay typed; the explicit `AnyElement` return is the pressable/semantics landing seam."
+        ));
+
+        assert!(normalized.contains("pubfnrouter_outlet<R,T>("));
+        assert!(
+            normalized
+                .contains("render:implFnOnce(&mutElementContext<'_,App>,&RouterUiSnapshot<R>)->T,")
+        );
+        assert!(normalized.contains("T:IntoUiElement<App>,"));
+        assert!(!normalized.contains(
+            "render:implFnOnce(&mutElementContext<'_,App>,&RouterUiSnapshot<R>)->AnyElement,"
+        ));
+
+        assert!(normalized.contains("pubfnrouter_link_with_props<R,H,I,T>("));
+        assert!(normalized.contains("I:IntoIterator<Item=T>,"));
+        assert!(normalized.contains("T:IntoUiElement<App>,"));
+        assert!(!normalized.contains("I:IntoIterator<Item=AnyElement>"));
     }
 
     #[test]
