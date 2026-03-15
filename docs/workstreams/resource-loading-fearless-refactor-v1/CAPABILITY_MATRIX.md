@@ -1,0 +1,149 @@
+# Resource Loading Fearless Refactor v1 — Capability Matrix
+
+Status: Published current-truth matrix (2026-03-15)
+
+## Scope
+
+This document records the current first-party truth for Fret resource loading across desktop,
+web/WASM, and the current in-tree mobile posture.
+
+It distinguishes three layers that are easy to conflate:
+
+1. the general asset contract (`AssetLocator`, resolver stack, bundle identity, revisions),
+2. app-facing builder/setup convenience lanes exposed by `fret`,
+3. legacy UI escape hatches that bypass the general resolver contract.
+
+## Portable default in one sentence
+
+For cross-platform apps and reusable crates, ship logical bundle/embedded assets and mount them
+through generated Rust modules or builder/setup installers; treat raw files and URLs as explicit
+escape hatches.
+
+## Current matrix
+
+| Capability | Desktop native | Web/WASM | Mobile (current in-tree posture) | First-party guidance |
+| --- | --- | --- | --- | --- |
+| Memory assets | Yes | Yes | Yes | Safe contract surface everywhere through `InMemoryAssetResolver`. |
+| Bundle assets | Yes | Yes | Yes | This is the portable default story. Use generated Rust modules, static bundle entries, or explicit resolvers. |
+| Embedded assets | Yes | Yes | Yes | Supported through static embedded entries; useful for lower-level/package-owned bytes. |
+| Raw files | Partial | No | No as a portable packaged story | On desktop, file-backed manifests/directories can mount files as logical bundle assets. Direct file-path UI helpers also exist, but they are legacy native/dev escape hatches. |
+| URLs | Custom only | Partial | No first-party story | No first-party general asset resolver currently resolves `AssetLocator::Url`. Web has a direct image URL helper, but that is not the general asset contract and does not cover SVG/fonts. |
+| File watching / hot reload | Manual only | No first-party lane | No first-party lane | Fret currently exposes manual invalidation (`UiAssetsReloadEpoch`), not an OS watcher-backed asset pipeline. |
+| System font scan | Yes | No | No documented first-party story yet | Desktop runners expose system font rescan/update flows. Web explicitly cannot access system font databases. |
+
+## Detailed notes
+
+### Memory assets
+
+- First-party truth: supported everywhere through `InMemoryAssetResolver`.
+- Practical use: transient runtime bytes, diagnostics captures, or custom resolvers that want the
+  shared revision/error vocabulary without packaging implications.
+
+### Bundle assets
+
+- First-party truth:
+  - desktop: yes through static entries and file-backed manifest/directory resolvers,
+  - web: yes through static/generated bundle entries,
+  - mobile: yes through static/generated bundle entries.
+- Recommended user story:
+  - app-owned bytes use `AssetBundleId::app(...)`,
+  - reusable package-owned bytes use `AssetBundleId::package(...)`,
+  - generated `Bundle` / `install(app)` / `mount(builder)` surfaces are the preferred publication
+    story.
+
+### Embedded assets
+
+- First-party truth: supported everywhere through static embedded entry registration.
+- Guidance:
+  - `Embedded` is a stable lower-level owner-scoped lane,
+  - but the default cross-package teaching surface should still prefer logical `BundleAsset`
+    identity when the bytes are intended to be looked up publicly by bundle/key.
+
+### Raw files
+
+- Important distinction:
+  - `FileAssetManifestResolver` does **not** resolve `AssetLocator::File`; it resolves logical
+    `AssetLocator::bundle(...)` lookups backed by native files.
+  - Direct `ImageSource::from_file_path(...)` and `SvgFileSource::from_file_path(...)` are legacy
+    UI escape hatches that bypass the general asset resolver contract.
+- First-party truth today:
+  - desktop: native/package-dev convenience lane exists,
+  - web: no file-backed lane,
+  - mobile: current in-tree code does not yet define a truthful packaged-mobile file-root story.
+- Inference:
+  - for mobile, generated Rust modules are the only trustworthy first-party packaged story today;
+    raw file roots should not be taught as a portable contract.
+
+### URLs
+
+- First-party truth today:
+  - the general asset contract has `AssetLocator::Url`, but there is no first-party resolver that
+    resolves it on any target,
+  - web/WASM exposes `ImageSource::from_url(...)` as a direct image helper,
+  - there is no matching first-party SVG/font URL lane.
+- Guidance:
+  - treat URL loading as a custom-resolver or target-specific escape hatch,
+  - do not teach it as the default framework asset story.
+
+### File watching and hot reload
+
+- First-party truth today:
+  - no first-party asset resolver reports `file_watch = true`,
+  - no OS-specific file watcher is wired into the asset contract,
+  - `UiAssetsReloadEpoch` provides manual invalidation for dev/native path-based UI helpers.
+- Guidance:
+  - any future watcher-backed lane must publish new `AssetRevision` values through the shared
+    contract instead of inventing a separate reload protocol.
+
+### System font scan
+
+- First-party truth today:
+  - desktop: yes, via runner-owned system font rescan/update flows,
+  - web/WASM: no, explicitly unavailable,
+  - mobile: no documented first-party story is locked yet.
+- Guidance:
+  - system font scan is an optional augmentation capability, not the baseline portable text story,
+  - portable apps should not depend on it for their first-frame text environment.
+
+## Authoring guidance by audience
+
+### App authors
+
+- Portable default:
+  - generate Rust asset modules with `fretboard assets rust write ...`,
+  - mount them with `generated_assets::mount(builder)` or install them with a named bundle.
+- Native/package-dev convenience:
+  - `FretApp::asset_dir(...)`,
+  - `UiAppBuilder::with_asset_dir(...)`,
+  - `fret::assets::register_file_bundle_dir(...)`,
+  - `FretApp::asset_manifest(...)`,
+  - `UiAppBuilder::with_asset_manifest(...)`,
+  - `fret::assets::register_file_manifest(...)`.
+- Escape hatches:
+  - direct file-path UI helpers are for native/dev compatibility only,
+  - URL loading is target-specific or custom-resolver territory.
+
+### Ecosystem authors
+
+- Publish package-owned bytes under `AssetBundleId::package(...)`.
+- Expose named installer/bundle surfaces instead of asking apps to replay low-level registrations.
+- If the crate also ships icons:
+  - keep icon semantics on `IconRegistry` / `IconId`,
+  - publish non-icon bytes through the general asset contract,
+  - compose both behind one installer/bundle when appropriate.
+
+## Evidence anchors
+
+- `crates/fret-assets/src/lib.rs`
+- `crates/fret-assets/src/file_manifest.rs`
+- `crates/fret-runtime/src/asset_resolver.rs`
+- `ecosystem/fret/src/lib.rs`
+- `ecosystem/fret/src/app_entry.rs`
+- `apps/fretboard/src/assets.rs`
+- `ecosystem/fret-ui-assets/src/image_source.rs`
+- `ecosystem/fret-ui-assets/src/svg_file.rs`
+- `ecosystem/fret-ui-assets/src/reload.rs`
+- `crates/fret-launch/src/runner/web/gfx_init.rs`
+- `crates/fret-launch/src/runner/web/effects.rs`
+- `crates/fret-launch/src/runner/desktop/runner/effects.rs`
+- `docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md`

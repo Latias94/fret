@@ -1,11 +1,12 @@
 # Resource Loading Fearless Refactor v1
 
-Status: In progress (audit complete; contract reset started)
+Status: In progress (audit complete; contract reset started; capability matrix published)
 
 Tracking files:
 
 - `docs/workstreams/resource-loading-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`
 
 Related inputs:
 
@@ -110,6 +111,16 @@ This workstream takes a fearless posture:
     the same ordered builder/startup surface as `asset_dir(...)` and `asset_manifest(...)`.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
+- Accepted ADR coverage now exists for both:
+  - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
+  - the general portable locator/resolver contract
+    (`docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md`).
+- A first capability matrix is now published in
+  `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`:
+  - it distinguishes the general asset contract from legacy UI escape hatches,
+  - it marks raw-file and URL lanes truthfully per platform,
+  - and it records the current mobile inference: generated embedded/bundle modules are the only
+    trustworthy first-party packaged story today.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.
 - Generated directory scanning is still only a native/package-dev convenience lane today; the new
   generated Rust module is the first packaged/web/mobile-friendly lane, but it does not yet cover

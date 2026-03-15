@@ -10,6 +10,8 @@ Deliverables:
 - The ADR/design documents for the new asset contract are ready for implementation.
 - Accepted ADR coverage now includes the icon ownership bridge (`0065`) and the general portable
   locator/resolver contract (`0317`).
+- The current capability truth is published in
+  `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`.
 
 Exit criteria:
 

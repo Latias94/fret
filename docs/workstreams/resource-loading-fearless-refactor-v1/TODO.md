@@ -50,7 +50,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `crates/fret-render-wgpu/src/renderer/render_plan_dump_summary.rs`
     - `cargo check -p fret-launch --target wasm32-unknown-unknown`
 
-- [ ] RESLOAD-cap-040 Publish a first-class asset capability matrix for desktop/web/mobile.
+- [x] RESLOAD-cap-040 Publish a first-class asset capability matrix for desktop/web/mobile.
   - Minimum capability axes:
     - bundled assets
     - embedded assets
@@ -58,6 +58,14 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - URLs
     - file watching / hot reload
     - system font scan
+  - Evidence:
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`
+    - `crates/fret-assets/src/file_manifest.rs`
+    - `ecosystem/fret-ui-assets/src/image_source.rs`
+    - `ecosystem/fret-ui-assets/src/svg_file.rs`
+    - `crates/fret-launch/src/runner/web/gfx_init.rs`
+    - `crates/fret-launch/src/runner/web/effects.rs`
+    - `crates/fret-launch/src/runner/desktop/runner/effects.rs`
 
 ## Core asset contract
 
