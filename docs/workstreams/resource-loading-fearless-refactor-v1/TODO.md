@@ -450,6 +450,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - UI Gallery `Card / Image` now resolves its cover through a gallery-owned logical package
       bundle request installed during app startup, so at least one first-party docs page teaches
       shipped asset ownership via `AssetRequest` instead of only inline RGBA demo buffers.
+    - UI Gallery `AI Attachments` preview-bearing variants (`Usage`, `Grid`, `Inline`, `List`) now
+      resolve thumbnails from gallery-owned logical package bundle requests rather than synthesizing
+      inline RGBA previews inside each snippet.
   - Evidence:
     - `apps/fret-cookbook/examples/app_owned_bundle_assets_basics.rs`
     - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
@@ -457,13 +460,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `apps/fret-ui-gallery/src/driver/demo_assets.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/card/image.rs`
     - `apps/fret-ui-gallery/src/ui/pages/card.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_usage.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_grid.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_inline.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_list.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs`
     - `apps/fretboard/src/scaffold/templates.rs`
       (`todo_template_mounts_generated_assets_when_ui_assets_are_enabled`,
       `simple_todo_template_mounts_generated_assets_when_ui_assets_are_enabled`)
   - Remaining:
     - continue migrating UI Gallery snippets/pages that still rely on inline demo image buffers
       when the intent is to teach shipped asset ownership rather than deterministic in-memory
-      rendering,
+      rendering, prioritizing AI/media/file-preview surfaces over pure image-fit/aspect-ratio demos,
     - audit shadcn ecosystem recipes that ship icons/images so package-owned installers stay the
       default app integration story,
     - document the transitive icon-pack + package-bundle composition story for ecosystem crates so

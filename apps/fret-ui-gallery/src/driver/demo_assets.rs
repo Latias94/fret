@@ -124,25 +124,68 @@ impl UiGalleryDriver {
 
 pub(crate) const UI_GALLERY_DEMO_ASSET_BUNDLE_NAME: &str = "ui-gallery-demo-assets";
 pub(crate) const UI_GALLERY_CARD_EVENT_COVER_KEY: &str = "card/event-cover.jpg";
+#[cfg(any(test, feature = "gallery-dev"))]
+pub(crate) const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY: &str = "ai/attachments/landscape.jpg";
+#[cfg(any(test, feature = "gallery-dev"))]
+pub(crate) const UI_GALLERY_AI_ATTACHMENT_PORTRAIT_KEY: &str = "ai/attachments/portrait.jpg";
 
 const UI_GALLERY_CARD_EVENT_COVER_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/test.jpg");
+#[cfg(any(test, feature = "gallery-dev"))]
+const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/aspect-ratio-landscape.jpg");
+#[cfg(any(test, feature = "gallery-dev"))]
+const UI_GALLERY_AI_ATTACHMENT_PORTRAIT_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/aspect-ratio-portrait.jpg");
+#[cfg(not(any(test, feature = "gallery-dev")))]
 const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 1] = [StaticAssetEntry::new(
     UI_GALLERY_CARD_EVENT_COVER_KEY,
     AssetRevision(1),
     UI_GALLERY_CARD_EVENT_COVER_BYTES,
 )
 .with_media_type("image/jpeg")];
+#[cfg(any(test, feature = "gallery-dev"))]
+const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 3] = [
+    StaticAssetEntry::new(
+        UI_GALLERY_CARD_EVENT_COVER_KEY,
+        AssetRevision(1),
+        UI_GALLERY_CARD_EVENT_COVER_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY,
+        AssetRevision(1),
+        UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_AI_ATTACHMENT_PORTRAIT_KEY,
+        AssetRevision(1),
+        UI_GALLERY_AI_ATTACHMENT_PORTRAIT_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+];
 
 pub(crate) fn ui_gallery_demo_asset_bundle() -> AssetBundleId {
     AssetBundleId::package(UI_GALLERY_DEMO_ASSET_BUNDLE_NAME)
 }
 
 pub(crate) fn ui_gallery_card_event_cover_request() -> AssetRequest {
-    AssetRequest::new(AssetLocator::bundle(
-        ui_gallery_demo_asset_bundle(),
-        UI_GALLERY_CARD_EVENT_COVER_KEY,
-    ))
+    ui_gallery_demo_bundle_request(UI_GALLERY_CARD_EVENT_COVER_KEY)
+}
+
+#[cfg(any(test, feature = "gallery-dev"))]
+pub(crate) fn ui_gallery_ai_attachment_landscape_request() -> AssetRequest {
+    ui_gallery_demo_bundle_request(UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY)
+}
+
+#[cfg(any(test, feature = "gallery-dev"))]
+pub(crate) fn ui_gallery_ai_attachment_portrait_request() -> AssetRequest {
+    ui_gallery_demo_bundle_request(UI_GALLERY_AI_ATTACHMENT_PORTRAIT_KEY)
+}
+
+fn ui_gallery_demo_bundle_request(key: &'static str) -> AssetRequest {
+    AssetRequest::new(AssetLocator::bundle(ui_gallery_demo_asset_bundle(), key))
 }
 
 pub(crate) fn install_gallery_demo_asset_bundle(app: &mut App) {
@@ -174,6 +217,53 @@ mod tests {
         assert_eq!(resolved.bytes.as_ref(), UI_GALLERY_CARD_EVENT_COVER_BYTES);
         assert_eq!(
             resolved
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/jpeg")
+        );
+    }
+
+    #[test]
+    fn install_gallery_demo_asset_bundle_registers_ai_attachment_preview_locators() {
+        let mut app = App::new();
+
+        install_gallery_demo_asset_bundle(&mut app);
+
+        let landscape =
+            fret_runtime::resolve_asset_bytes(&app, &ui_gallery_ai_attachment_landscape_request())
+                .expect("expected landscape attachment preview asset to resolve");
+        assert_eq!(
+            landscape.locator,
+            ui_gallery_ai_attachment_landscape_request().locator
+        );
+        assert_eq!(landscape.revision, AssetRevision(1));
+        assert_eq!(
+            landscape.bytes.as_ref(),
+            UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES
+        );
+        assert_eq!(
+            landscape
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/jpeg")
+        );
+
+        let portrait =
+            fret_runtime::resolve_asset_bytes(&app, &ui_gallery_ai_attachment_portrait_request())
+                .expect("expected portrait attachment preview asset to resolve");
+        assert_eq!(
+            portrait.locator,
+            ui_gallery_ai_attachment_portrait_request().locator
+        );
+        assert_eq!(portrait.revision, AssetRevision(1));
+        assert_eq!(
+            portrait.bytes.as_ref(),
+            UI_GALLERY_AI_ATTACHMENT_PORTRAIT_BYTES
+        );
+        assert_eq!(
+            portrait
                 .media_type
                 .as_ref()
                 .map(|media_type| media_type.as_str()),
