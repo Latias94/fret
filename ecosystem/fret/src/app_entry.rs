@@ -176,6 +176,12 @@ impl FretApp {
         self
     }
 
+    /// Enable development asset reload polling for file-backed startup mounts.
+    pub fn asset_reload_policy(mut self, policy: crate::assets::AssetReloadPolicy) -> Self {
+        self.asset_mounts.push(AssetMount::ReloadPolicy { policy });
+        self
+    }
+
     /// Enable the command palette (driver-handled command + UI) if available.
     ///
     /// This is intentionally opt-in in the `fret` facade.
@@ -427,6 +433,19 @@ mod tests {
                 assert_eq!(mode, &crate::assets::AssetStartupMode::Packaged);
             }
             other => panic!("expected startup mount, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn asset_reload_policy_mount_is_recorded_explicitly() {
+        let app = FretApp::new("demo-app")
+            .asset_dir("assets/dev")
+            .asset_reload_policy(crate::assets::AssetReloadPolicy::development_default());
+
+        assert_eq!(app.asset_mounts.len(), 2);
+        match &app.asset_mounts[1] {
+            AssetMount::ReloadPolicy { .. } => {}
+            other => panic!("expected reload policy mount second, got {other:?}"),
         }
     }
 }

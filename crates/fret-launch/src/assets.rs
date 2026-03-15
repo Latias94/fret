@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_assets::FileAssetManifestResolver;
@@ -12,7 +13,10 @@ pub use fret_assets::{
     FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
     asset_app_bundle_id, asset_package_bundle_id,
 };
-pub use fret_runtime::AssetResolverService;
+pub use fret_runtime::{
+    AssetReloadEpoch, AssetReloadSupport, AssetResolverService, asset_reload_epoch,
+    asset_reload_support, bump_asset_reload_epoch,
+};
 
 /// Install or replace the primary resolver layer for the current host.
 pub fn set_primary_resolver(
@@ -109,6 +113,33 @@ impl AssetStartupMode {
         #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
         {
             Self::Packaged
+        }
+    }
+}
+
+/// Development asset-reload policy applied on top of file-backed startup mounts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum AssetReloadPolicy {
+    /// Poll native file metadata for builder-mounted manifests/directories and bump the shared
+    /// reload epoch when their observed stamp set changes.
+    PollMetadata { interval: Duration },
+}
+
+impl AssetReloadPolicy {
+    pub const fn poll_metadata(interval: Duration) -> Self {
+        Self::PollMetadata { interval }
+    }
+
+    pub fn development_default() -> Self {
+        Self::PollMetadata {
+            interval: Duration::from_millis(250),
+        }
+    }
+
+    pub(crate) fn interval(self) -> Duration {
+        match self {
+            Self::PollMetadata { interval } => interval,
         }
     }
 }
@@ -321,6 +352,13 @@ pub(crate) enum AssetMount {
         owner: AssetBundleId,
         entries: Vec<StaticAssetEntry>,
     },
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Clone)]
+pub(crate) enum AssetReloadTarget {
+    Manifest { path: PathBuf },
+    Dir { path: PathBuf },
 }
 
 #[cfg(test)]

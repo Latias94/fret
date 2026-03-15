@@ -24,6 +24,7 @@
 
 pub mod action;
 pub mod action_payload;
+mod asset_reload;
 pub mod asset_resolver;
 pub mod capabilities;
 pub mod clipboard_diagnostics;
@@ -81,6 +82,10 @@ pub mod window_text_input_snapshot;
 // -----------------------------------------------------------------------------
 pub use action::{ActionId, ActionMeta, ActionRegistry, TypedAction};
 pub use action_payload::WindowPendingActionPayloadService;
+pub use asset_reload::{
+    AssetReloadEpoch, AssetReloadSupport, asset_reload_epoch, asset_reload_support,
+    bump_asset_reload_epoch, set_asset_reload_support,
+};
 pub use asset_resolver::{
     AssetLoadAccessKind, AssetLoadDiagnosticEvent, AssetLoadDiagnosticsSnapshot,
     AssetLoadOutcomeKind, AssetResolverService, AssetRevisionTransitionKind, asset_capabilities,

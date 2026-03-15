@@ -98,6 +98,25 @@ This workstream takes a fearless posture:
     contract, and `BootstrapBuilder::{with_asset_manifest, with_asset_dir,
     with_bundle_asset_entries, with_embedded_asset_entries, with_asset_startup}` now delegate to
     `WinitAppBuilder`, so direct bootstrap apps no longer fork ad-hoc resolver setup logic.
+  - `fret-runtime` now also exposes one generic invalidation contract for asset-consuming code:
+    - `AssetReloadEpoch`,
+    - `AssetReloadSupport`,
+    - `asset_reload_epoch(...)`,
+    - `bump_asset_reload_epoch(...)`.
+  - desktop native startup now also has a first-party development reload automation lane:
+    - `fret-launch::assets::AssetReloadPolicy`,
+    - `WinitAppBuilder::with_asset_reload_policy(...)`,
+    - `BootstrapBuilder::with_asset_reload_policy(...)`,
+    - `UiAppBuilder::with_asset_reload_policy(...)`,
+    - `FretApp::asset_reload_policy(...)`.
+  - the current first-party implementation is explicit metadata polling for builder-mounted
+    manifests/directories:
+    - it bumps the shared `AssetReloadEpoch`,
+    - publishes `AssetReloadSupport { file_watch: true }`,
+    - and requests redraws for each tracked native window.
+  - `fret-ui-assets` now consumes that shared runtime-global epoch directly; the old
+    `UiAssetsReloadEpoch` / `bump_ui_assets_reload_epoch(...)` names remain only as deprecated
+    compatibility shims and should be deleted in the final M5 cleanup after first-party migration.
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.
@@ -183,6 +202,10 @@ This workstream takes a fearless posture:
 - Generated directory scanning is still only a native/package-dev convenience lane today; the new
   generated Rust module is the first packaged/web/mobile-friendly lane, but it does not yet cover
   hashed web output rewriting or mobile platform-native bundle mapping.
+- The current first-party auto-reload lane is desktop-native only and intentionally limited:
+  - it is metadata polling, not an OS-specific watcher backend,
+  - it only tracks builder-mounted file manifests/directories,
+  - and wasm/mobile still have no first-party automatic reload story today.
 - Font startup still remains split across mobile/SVG text and is not fully solved by the current
   slice.
 

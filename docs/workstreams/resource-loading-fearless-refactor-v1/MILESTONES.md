@@ -74,6 +74,9 @@ Deliverables:
 - The first-party startup surface can name the development-vs-packaged choice explicitly
   (`AssetStartupPlan` + `AssetStartupMode`) instead of teaching ad-hoc branching at each app
   entry point.
+- Desktop-native startup can also opt into explicit development reload automation through the same
+  startup family (`AssetReloadPolicy`) instead of hiding invalidation behind UI-local helper
+  globals.
 - Generated `--surface fret` asset modules can participate on both the builder lane
   (`mount(builder)`) and the app setup lane (`Bundle` / `install(app)`).
 - Ecosystem libraries have one documented ownership rule for package resources and icon-pack
@@ -95,6 +98,7 @@ Exit criteria:
 Deliverables:
 
 - Legacy path-first helpers are deprecated or removed.
+- Deprecated UI-specific reload aliases are removed once first-party migration is complete.
 - Diagnostics and regression gates cover:
   - capability mismatches,
   - startup baseline drift,

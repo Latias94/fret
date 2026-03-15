@@ -10,6 +10,7 @@ use fret_assets::{
 };
 
 use crate::GlobalsHost;
+use crate::asset_reload::asset_reload_support;
 
 const MAX_ASSET_LOAD_RECENT_EVENTS: usize = 16;
 
@@ -563,7 +564,17 @@ pub fn asset_resolver(host: &impl GlobalsHost) -> Option<&AssetResolverService> 
 }
 
 pub fn asset_capabilities(host: &impl GlobalsHost) -> Option<AssetCapabilities> {
-    asset_resolver(host).map(AssetResolverService::capabilities)
+    let mut caps = asset_resolver(host)
+        .map(AssetResolverService::capabilities)
+        .unwrap_or_default();
+    let mut has_any = asset_resolver(host).is_some();
+
+    if let Some(reload_support) = asset_reload_support(host) {
+        caps.file_watch |= reload_support.file_watch;
+        has_any |= reload_support.file_watch;
+    }
+
+    has_any.then_some(caps)
 }
 
 pub fn resolve_asset_bytes(

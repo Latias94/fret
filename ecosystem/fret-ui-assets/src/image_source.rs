@@ -19,7 +19,7 @@ use fret_assets::{AssetLoadError, AssetLocator, ResolvedAssetBytes};
 use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_executor::{Inbox, InboxConfig, InboxDrainer};
 use fret_runtime::{
-    DispatchPriority, DispatcherHandle, EffectSink, GlobalsHost, InboxDrainHost,
+    AssetReloadEpoch, DispatchPriority, DispatcherHandle, EffectSink, GlobalsHost, InboxDrainHost,
     InboxDrainRegistry, TimeHost,
 };
 #[cfg(feature = "ui")]
@@ -27,7 +27,6 @@ use fret_runtime::{Model, ModelHost, ModelId};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast as _;
 
-use crate::UiAssetsReloadEpoch;
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache};
 
@@ -259,10 +258,7 @@ fn request_key_for_source_with_epoch(
 fn reload_epoch_for_source<H: GlobalsHost>(host: &H, source: &ImageSource) -> u64 {
     match &source.kind {
         #[cfg(not(target_arch = "wasm32"))]
-        ImageSourceKind::Path { .. } => host
-            .global::<UiAssetsReloadEpoch>()
-            .map(|v| v.0)
-            .unwrap_or(0),
+        ImageSourceKind::Path { .. } => host.global::<AssetReloadEpoch>().map(|v| v.0).unwrap_or(0),
         _ => 0,
     }
 }
@@ -1579,7 +1575,7 @@ mod tests {
             ..Default::default()
         };
         host.set_global::<DispatcherHandle>(dispatcher.clone());
-        host.set_global(crate::UiAssetsReloadEpoch(0));
+        host.set_global(AssetReloadEpoch(0));
         let window = AppWindowId::default();
 
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -1603,7 +1599,7 @@ mod tests {
         .expect("dispatcher installed");
         assert!(has0, "expected entry for reload_epoch=0");
 
-        crate::bump_ui_assets_reload_epoch(&mut host);
+        fret_runtime::bump_asset_reload_epoch(&mut host);
         let _ = use_image_source_state(&mut host, window, &src);
         let request1 = ImageSourceRequestKey {
             source: src.id,

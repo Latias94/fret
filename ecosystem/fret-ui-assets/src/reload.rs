@@ -5,19 +5,16 @@
 
 use fret_runtime::GlobalsHost;
 
-/// Global epoch that can be observed by UI code (via `ElementContext::observe_global`) to safely
-/// invalidate view-cached subtrees when assets should be reloaded.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct UiAssetsReloadEpoch(pub u64);
+pub use fret_runtime::{AssetReloadEpoch, asset_reload_epoch, asset_reload_support};
 
-impl UiAssetsReloadEpoch {
-    pub fn bump(&mut self) {
-        self.0 = self.0.wrapping_add(1);
-    }
-}
+#[deprecated(
+    note = "prefer fret_runtime::AssetReloadEpoch or app-facing asset helpers; the generic asset reload epoch is no longer UI-specific"
+)]
+pub type UiAssetsReloadEpoch = AssetReloadEpoch;
 
+#[deprecated(
+    note = "prefer fret_runtime::bump_asset_reload_epoch or app-facing asset helpers; the generic asset reload epoch is no longer UI-specific"
+)]
 pub fn bump_ui_assets_reload_epoch<H: GlobalsHost>(host: &mut H) {
-    host.with_global_mut(UiAssetsReloadEpoch::default, |epoch, _host| {
-        epoch.bump();
-    });
+    fret_runtime::bump_asset_reload_epoch(host);
 }

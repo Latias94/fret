@@ -1,7 +1,7 @@
 //! Development-oriented SVG file helpers.
 //!
 //! The goal is to make path-based SVGs usable in UI code without re-reading the file every frame,
-//! while still allowing hot-reload via `UiAssetsReloadEpoch`.
+//! while still allowing hot-reload via the shared `AssetReloadEpoch`.
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
@@ -9,11 +9,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_assets::{AssetLoadError, AssetLocator};
+use fret_runtime::AssetReloadEpoch;
 use fret_runtime::GlobalsHost;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_runtime::TimeHost;
-
-use crate::UiAssetsReloadEpoch;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone)]
@@ -88,10 +87,7 @@ pub fn read_svg_file_cached<H: GlobalsHost + TimeHost>(
     host: &mut H,
     source: &SvgFileSource,
 ) -> SvgFileState {
-    let epoch = host
-        .global::<UiAssetsReloadEpoch>()
-        .map(|v| v.0)
-        .unwrap_or(0);
+    let epoch = host.global::<AssetReloadEpoch>().map(|v| v.0).unwrap_or(0);
 
     let path = source.path.as_ref();
     host.with_global_mut_untracked(SvgFileCache::default, |cache, _host| {
@@ -216,7 +212,7 @@ mod tests {
     #[test]
     fn svg_file_cache_respects_epoch_bumps() {
         let mut host = TestHost::default();
-        host.set_global(UiAssetsReloadEpoch(0));
+        host.set_global(AssetReloadEpoch(0));
 
         let mut tmp = std::env::temp_dir();
         let unique = format!(
@@ -243,7 +239,7 @@ mod tests {
         assert_eq!(b0.as_ref(), b_same.as_ref());
 
         // Bump epoch => re-read and observe new bytes.
-        crate::bump_ui_assets_reload_epoch(&mut host);
+        fret_runtime::bump_asset_reload_epoch(&mut host);
         let s1 = read_svg_file_cached(&mut host, &src);
         let b1 = s1.bytes.expect("bytes");
         assert_ne!(b0.as_ref(), b1.as_ref());

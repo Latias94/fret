@@ -6,9 +6,9 @@
 use std::sync::Arc;
 
 use fret_assets::{AssetLoadError, AssetLocator, AssetRequest};
+use fret_runtime::AssetReloadEpoch;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-use crate::UiAssetsReloadEpoch;
 use crate::image_asset_cache::ImageAssetKey;
 use crate::image_source::{
     ImageSource, ImageSourceOptions, ImageSourceState, register_asset_key_for_source,
@@ -89,7 +89,7 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
     ) -> ImageSourceState {
         // ViewCache correctness for dev reloads: observe a global epoch that can be bumped when
         // path-based assets should be reloaded (without restarting the app).
-        self.observe_global::<UiAssetsReloadEpoch>(invalidation);
+        self.observe_global::<AssetReloadEpoch>(invalidation);
 
         // ViewCache correctness:
         //
@@ -148,7 +148,7 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
                 invalidation,
             ),
             Err(err) => {
-                self.observe_global::<UiAssetsReloadEpoch>(invalidation);
+                self.observe_global::<AssetReloadEpoch>(invalidation);
                 ImageSourceState {
                     image: None,
                     status: crate::image_asset_state::ImageLoadingStatus::Error,
@@ -246,7 +246,7 @@ impl<H: UiHost> SvgAssetElementContextExt for ElementContext<'_, H> {
         request: &AssetRequest,
         invalidation: Invalidation,
     ) -> SvgAssetSourceState {
-        self.observe_global::<UiAssetsReloadEpoch>(invalidation);
+        self.observe_global::<AssetReloadEpoch>(invalidation);
         resolve_svg_asset_source_state(self.app, request)
     }
 }
@@ -275,7 +275,7 @@ impl<H: UiHost> SvgFileElementContextExt for ElementContext<'_, H> {
         source: &SvgFileSource,
         invalidation: Invalidation,
     ) -> Option<fret_ui::SvgSource> {
-        self.observe_global::<UiAssetsReloadEpoch>(invalidation);
+        self.observe_global::<AssetReloadEpoch>(invalidation);
         svg_source_from_file_cached(self.app, source).ok()
     }
 }

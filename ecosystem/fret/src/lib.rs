@@ -170,8 +170,14 @@ pub mod assets {
         FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
         asset_app_bundle_id, asset_package_bundle_id,
     };
-    pub use fret_bootstrap::{AssetStartupMode, AssetStartupPlan, AssetStartupPlanError};
+    pub use fret_bootstrap::{
+        AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
+    };
     pub use fret_runtime::AssetResolverService;
+    pub use fret_runtime::{
+        AssetReloadEpoch, AssetReloadSupport, asset_reload_epoch, asset_reload_support,
+        bump_asset_reload_epoch,
+    };
 
     /// Install or replace the primary resolver layer for the current host.
     ///
@@ -315,6 +321,9 @@ pub(crate) enum AssetMount {
         bundle: fret_assets::AssetBundleId,
         mode: fret_bootstrap::AssetStartupMode,
         plan: fret_bootstrap::AssetStartupPlan,
+    },
+    ReloadPolicy {
+        policy: fret_bootstrap::AssetReloadPolicy,
     },
 }
 
@@ -1312,6 +1321,13 @@ impl<S: 'static> UiAppBuilder<S> {
         })
     }
 
+    /// Enable development asset reload polling for file-backed startup mounts.
+    pub fn with_asset_reload_policy(self, policy: crate::assets::AssetReloadPolicy) -> Self {
+        Self {
+            inner: self.inner.with_asset_reload_policy(policy),
+        }
+    }
+
     #[cfg(feature = "ui-assets")]
     pub fn with_ui_assets_budgets(
         self,
@@ -1367,6 +1383,7 @@ fn apply_asset_mount<S: 'static>(
         AssetMount::Startup { bundle, mode, plan } => {
             builder.with_asset_startup(bundle, mode, plan)
         }
+        AssetMount::ReloadPolicy { policy } => Ok(builder.with_asset_reload_policy(policy)),
     }
 }
 

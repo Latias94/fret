@@ -205,10 +205,26 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `preferred_startup_mode()` and route `mount(builder)?` through `with_asset_startup(...)`,
       so native debug startup automatically uses the file-backed development lane while
       packaged/web/mobile keeps the compiled bundle lane,
+    - `fret_runtime::{AssetReloadEpoch, AssetReloadSupport}` now define one runtime-global asset
+      invalidation contract shared by UI and non-UI consumers, and
+      `crates/fret-runtime/src/asset_resolver.rs` now merges that support into aggregated
+      `AssetCapabilities.file_watch`,
+    - `fret-launch::assets::AssetReloadPolicy` plus
+      `WinitAppBuilder::with_asset_reload_policy(...)` now define an explicit development reload
+      automation surface for file-backed startup mounts,
+    - the current first-party desktop implementation uses metadata polling for builder-mounted
+      manifests/directories, bumps the shared `AssetReloadEpoch`, publishes
+      `AssetReloadSupport { file_watch: true }`, and requests redraws for each tracked native
+      window,
+    - `BootstrapBuilder::with_asset_reload_policy(...)`,
+      `UiAppBuilder::with_asset_reload_policy(...)`, and `FretApp::asset_reload_policy(...)` now
+      reuse that same policy on higher authoring surfaces,
     - missing selected lanes now fail as startup configuration errors instead of silently falling
       through to ad-hoc runtime glue.
   - Remaining:
-    - watcher/hot-reload policy is still implicit in the native file-manifest resolver layer.
+    - there is still no first-party OS-specific watcher variant beyond metadata polling,
+    - wasm/mobile still have no first-party automatic reload lane,
+    - broader first-party docs/examples still need to migrate from UI-specific reload nouns.
 
 - [~] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.
   - Candidates:
@@ -417,6 +433,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       as the long-term non-UI compatibility seam
     - delete the deprecated constructors after first-party migration and non-UI bridge guidance are
       complete
+
+- [~] RESLOAD-api-540 Remove UI-specific reload naming after migration.
+  - Current landed slice:
+    - `fret_runtime::{AssetReloadEpoch, AssetReloadSupport}` are now the canonical runtime-global
+      asset reload/invalidation nouns.
+    - `ecosystem/fret-ui-assets/src/reload.rs` now keeps `UiAssetsReloadEpoch` and
+      `bump_ui_assets_reload_epoch(...)` only as deprecated compatibility shims.
+  - Remaining:
+    - finish first-party migration to the generic asset reload names,
+    - delete the deprecated UI-specific aliases in M5 cleanup, not before.
 
 ## Diagnostics and gates
 

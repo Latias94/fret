@@ -80,7 +80,9 @@ pub enum BootstrapError {
     AssetStartup(#[from] AssetStartupPlanError),
 }
 
-pub use fret_launch::assets::{AssetStartupMode, AssetStartupPlan, AssetStartupPlanError};
+pub use fret_launch::assets::{
+    AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
+};
 
 /// Explicit logical asset vocabulary and host registration helpers for `fret-bootstrap` users.
 pub mod assets {
@@ -459,6 +461,14 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
                 .map_err(map_asset_runner_error)?,
             on_gpu_ready_hooks: self.on_gpu_ready_hooks,
         })
+    }
+
+    /// Enable development asset reload polling for file-backed startup mounts.
+    pub fn with_asset_reload_policy(self, policy: fret_launch::assets::AssetReloadPolicy) -> Self {
+        Self {
+            inner: self.inner.with_asset_reload_policy(policy),
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        }
     }
 
     /// Configure budgets for UI render asset caches (`ImageAssetCache` / `SvgAssetCache`).
