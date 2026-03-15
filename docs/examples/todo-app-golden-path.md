@@ -280,6 +280,8 @@ memoizing these computations with selectors instead of:
 High-level sketch:
 
 ```rust,ignore
+use fret::selector::DepsBuilder;
+
 let derived = cx.data().selector(
     |cx| {
         let mut deps = DepsBuilder::new(cx);
@@ -302,7 +304,7 @@ For async data (network, disk, indexing), we recommend storing cached resource s
 High-level sketch:
 
 ```rust,ignore
-use fret_query::{QueryKey, QueryPolicy, QueryState};
+use fret::query::{QueryKey, QueryPolicy, QueryState};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
 let state: QueryState<T> = handle.watch(cx).layout().value_or_default();

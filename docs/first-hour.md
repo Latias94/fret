@@ -64,6 +64,9 @@ Memorize the default app surface before you start editing:
 - grouped namespaces first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
 - if you intentionally need the raw model-backed hook, make that an advanced choice via
   `use fret::advanced::AppUiRawStateExt;`
+- if you later graduate to the richer `todo` rung and need explicit selector/query nouns, add
+  `fret::selector::{DepsBuilder, DepsSignature}` or `fret::query::{QueryKey, QueryPolicy, ...}`
+  intentionally instead of expecting them from the default prelude
 
 ### Path taxonomy
 

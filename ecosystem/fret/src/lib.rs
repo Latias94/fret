@@ -53,7 +53,10 @@
 //!
 //! Optional ecosystem extensions stay explicit:
 //!
-//! - enable `state` for grouped selector/query helpers on `AppUi`
+//! - enable `state` for grouped selector/query helpers on `AppUi`; when app code needs explicit
+//!   state helper nouns, use `fret::selector::{DepsBuilder, DepsSignature}` and
+//!   `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` instead of expecting
+//!   those names from `fret::app::prelude::*`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
 //!   plus `RouterUiStore::{back_on_action, forward_on_action}` history bindings
 //! - enable `docking` for `fret::docking::{core::*, DockManager, handle_dock_op, ...}`
@@ -407,11 +410,6 @@ pub mod app {
         pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
-
-        #[cfg(feature = "state-query")]
-        pub use fret_query::{CancellationToken, QueryError, QueryHandle, QueryKey, QueryPolicy};
-        #[cfg(feature = "state-selector")]
-        pub use fret_selector::{DepsSignature, ui::DepsBuilder};
     }
 
     /// Explicit contract for custom app-facing widgets that only expose `on_activate(...)`.
@@ -460,6 +458,56 @@ pub mod component {
         pub use fret_ui::element::{AnyElement, AnyElementIterExt as _};
         pub use fret_ui::{Invalidation, Theme, UiHost};
     }
+}
+
+/// Optional selector integration surface for app code.
+///
+/// This keeps the selector story explicit:
+/// - grouped default app data stays on `cx.data().selector(...)`,
+/// - `fret-selector` remains the portable derived-state crate,
+/// - `fret::selector` gives app authors one explicit lane for dependency-signature nouns without
+///   widening `fret::app::prelude::*`.
+#[cfg(feature = "state-selector")]
+pub mod selector {
+    /// Raw selector-core exports for advanced or fully explicit use.
+    pub mod core {
+        pub use fret_selector::*;
+    }
+
+    /// Raw selector-UI adoption exports for advanced or fully explicit use.
+    pub mod ui {
+        pub use fret_selector::ui::*;
+    }
+
+    pub use fret_selector::ui::DepsBuilder;
+    pub use fret_selector::{DepsSignature, Selector};
+}
+
+/// Optional query integration surface for app code.
+///
+/// This keeps the query story explicit:
+/// - grouped default app data stays on `cx.data().query*`,
+/// - `fret-query` remains the portable async resource crate,
+/// - `fret::query` gives app authors one curated import lane for `QueryKey` / `QueryPolicy` /
+///   `QueryState`-style nouns without pulling those names into `fret::app::prelude::*`.
+#[cfg(feature = "state-query")]
+pub mod query {
+    /// Raw query-core exports for advanced or fully explicit use.
+    pub mod core {
+        pub use fret_query::*;
+    }
+
+    /// Raw query-UI adoption exports for advanced or fully explicit use.
+    pub mod ui {
+        pub use fret_query::ui::*;
+    }
+
+    pub use fret_query::{
+        CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryClient,
+        QueryClientSnapshot, QueryError, QueryErrorKind, QueryHandle, QueryKey, QueryPolicy,
+        QueryRetryOn, QueryRetryPolicy, QueryRetryState, QuerySnapshotEntry, QueryState,
+        QueryStatus, with_query_client,
+    };
 }
 
 /// Optional router integration surface for app code.
@@ -1805,10 +1853,30 @@ mod authoring_surface_policy_tests {
         let component_start = LIB_RS
             .find("/// Component-author imports for reusable, portable UI crates.")
             .expect("component module marker should exist in fret facade");
+        let selector_start = LIB_RS
+            .find("/// Optional selector integration surface for app code.")
+            .expect("selector module marker should exist in fret facade");
+        &LIB_RS[component_start..selector_start]
+    }
+
+    fn selector_surface_source() -> &'static str {
+        let selector_start = LIB_RS
+            .find("/// Optional selector integration surface for app code.")
+            .expect("selector module marker should exist in fret facade");
+        let query_start = LIB_RS
+            .find("/// Optional query integration surface for app code.")
+            .expect("query module marker should exist in fret facade");
+        &LIB_RS[selector_start..query_start]
+    }
+
+    fn query_surface_source() -> &'static str {
+        let query_start = LIB_RS
+            .find("/// Optional query integration surface for app code.")
+            .expect("query module marker should exist in fret facade");
         let router_start = LIB_RS
             .find("/// Optional router integration surface for app code.")
             .expect("router module marker should exist in fret facade");
-        &LIB_RS[component_start..router_start]
+        &LIB_RS[query_start..router_start]
     }
 
     fn advanced_prelude_source() -> &'static str {
@@ -2008,6 +2076,39 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn readme_and_rustdoc_expose_selector_and_query_as_explicit_optional_surfaces() {
+        assert!(CRATE_README.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(
+            CRATE_README
+                .contains("`fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`")
+        );
+
+        let rustdoc = crate_rustdoc();
+        let selector_surface = selector_surface_source();
+        let query_surface = query_surface_source();
+        assert!(rustdoc.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(
+            rustdoc.contains("`fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`")
+        );
+        assert!(selector_surface.contains("pub mod selector {"));
+        assert!(selector_surface.contains("pub mod core {"));
+        assert!(selector_surface.contains("pub mod ui {"));
+        assert!(selector_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
+        assert!(selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(query_surface.contains("pub mod query {"));
+        assert!(query_surface.contains("pub mod core {"));
+        assert!(query_surface.contains("pub mod ui {"));
+        assert!(query_surface.contains("pub use fret_query::{"));
+        assert!(query_surface.contains("QueryKey, QueryPolicy"));
+        assert!(query_surface.contains("QueryState,"));
+        assert!(!app_prelude_exports_symbol("DepsBuilder"));
+        assert!(!app_prelude_exports_symbol("DepsSignature"));
+        assert!(!app_prelude_exports_symbol("QueryKey"));
+        assert!(!app_prelude_exports_symbol("QueryPolicy"));
+        assert!(!app_prelude_exports_symbol("QueryHandle"));
+    }
+
+    #[test]
     fn readme_and_rustdoc_expose_docking_as_explicit_optional_surface() {
         assert!(CRATE_README.contains("- `docking`: enable the explicit advanced docking surface"));
         assert!(
@@ -2133,6 +2234,10 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::IconId`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`AssetBundleId::app(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetLocator::bundle(...)`"));
@@ -2326,7 +2431,6 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("WindowId"));
         assert!(app_prelude.contains("pub use fret_runtime::CommandId;"));
         assert!(app_prelude.contains("pub use fret_ui::ThemeSnapshot;"));
-        assert!(app_prelude.contains("pub use fret_selector::{DepsSignature, ui::DepsBuilder};"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
@@ -2555,6 +2659,25 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn public_surface_exposes_explicit_state_modules() {
+        let public_surface = crate_public_surface_source();
+
+        assert!(public_surface.contains("pub mod selector {"));
+        assert!(public_surface.contains("pub mod query {"));
+        assert!(public_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
+        assert!(public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(public_surface.contains("pub use fret_query::{"));
+        assert!(public_surface.contains("CancellationToken, FutureSpawner, FutureSpawnerHandle"));
+        assert!(
+            public_surface
+                .contains("QueryError, QueryErrorKind, QueryHandle, QueryKey, QueryPolicy")
+        );
+        assert!(public_surface.contains("QueryRetryOn, QueryRetryPolicy, QueryRetryState"));
+        assert!(public_surface.contains("QuerySnapshotEntry, QueryState,"));
+        assert!(public_surface.contains("QueryStatus, with_query_client,"));
+    }
+
+    #[test]
     fn crate_feature_surface_omits_compat_icon_aliases() {
         assert!(CARGO_TOML.contains("icons = ["));
         assert!(!CARGO_TOML.contains("icons-lucide = [\"icons\"]"));
@@ -2628,6 +2751,13 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("ResolvedAssetBytes"));
         assert!(!app_prelude_exports_symbol("StaticAssetEntry"));
         assert!(!app_prelude_exports_symbol("AssetResolverService"));
+        assert!(!app_prelude_exports_symbol("CancellationToken"));
+        assert!(!app_prelude_exports_symbol("QueryError"));
+        assert!(!app_prelude_exports_symbol("QueryHandle"));
+        assert!(!app_prelude_exports_symbol("QueryKey"));
+        assert!(!app_prelude_exports_symbol("QueryPolicy"));
+        assert!(!app_prelude_exports_symbol("DepsBuilder"));
+        assert!(!app_prelude_exports_symbol("DepsSignature"));
     }
 
     #[test]

@@ -253,9 +253,10 @@ use std::time::Duration;
 use fret::app::prelude::*;
 use fret::{
     icons::IconId,
+    query::{QueryKey, QueryPolicy, QueryState, QueryStatus},
+    selector::DepsBuilder,
     style::{ColorRef, Radius, Space, Theme},
 };
-use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus};
 
 mod act {
     fret::actions!([
@@ -1337,6 +1338,9 @@ mod tests {
         assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
         assert!(src.contains("cx.data().selector("));
         assert!(src.contains("cx.data().query("));
+        assert!(src.contains("query::{QueryKey, QueryPolicy, QueryState, QueryStatus},"));
+        assert!(src.contains("selector::DepsBuilder,"));
+        assert!(!src.contains("use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus};"));
         assert!(!src.contains("use fret_selector::ui::DepsBuilder;"));
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));

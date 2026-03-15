@@ -129,6 +129,9 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::IconId`.
+When app code needs explicit selector/query nouns, keep them off the default prelude as well and
+import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
+`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
 Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
 instead of treating breakpoint/media helpers as part of the default app vocabulary.
 Do the same for logical assets: import them intentionally from `fret::assets::{...}`, prefer
@@ -184,7 +187,7 @@ teaching the legacy split conversion trait names.
 | Goal | Suggested `fret` features | Notes |
 | --- | --- | --- |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
-| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`). |
+| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
 | Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
 | Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
@@ -471,8 +474,9 @@ consistent inbox + cancellation vocabulary.
   (`cx.data().selector(...)`) to keep view code readable.
 
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer
-`cx.data().selector(...)`; `fret::app::prelude::*` also re-exports `DepsBuilder` /
-`DepsSignature`. Enable `fret-selector/ui` only when you are working directly with
+`cx.data().selector(...)`. When app code needs to spell dependency-signature helpers explicitly,
+import them from `fret::selector::{DepsBuilder, DepsSignature}` instead of expecting them from
+`fret::app::prelude::*`. Enable `fret-selector/ui` only when you are working directly with
 `ElementContext` in component/advanced surfaces.
 
 **Use it when:** you need stable derived values (counts, filtered views, projections) without
@@ -494,10 +498,11 @@ computations.
 `cx.data().query_async_local(...)` on `AppUi`. See `docs/integrating-tokio-and-reqwest.md`.
 
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
-grouped app data helpers (`cx.data().query*`). Extracted `UiCx` helpers keep that same grouped
-surface through `fret::app::prelude::*` / `fret::advanced::prelude::*`. Enable `fret-query/ui`
-only when you are working directly with low-level `ElementContext` or generic writer extensions
-outside the app-facing `fret` preludes.
+grouped app data helpers (`cx.data().query*`). When app code needs explicit query nouns, import
+them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than expecting them from
+`fret::app::prelude::*`. Extracted `UiCx` helpers keep that same grouped surface through
+`UiCxDataExt`. Enable `fret-query/ui` only when you are working directly with low-level
+`ElementContext` or generic writer extensions outside the app-facing `fret` facades.
 
 ### `fret-router` + `fret-router-ui`
 

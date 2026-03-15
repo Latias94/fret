@@ -120,6 +120,9 @@ fn main() -> fret::Result<()> {
 If app code needs explicit style/token nouns or icon IDs beyond the default lane, import them from
 `fret::style::{...}` and `fret::icons::IconId` instead of expecting them from
 `fret::app::prelude::*`.
+If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story,
+import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
+`fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`.
 For adaptive UI helpers such as breakpoints, safe-area insets, pointer/media preferences, or
 Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
 For logical assets, use `fret::assets::{...}` and prefer `AssetBundleId::app(...)` /
@@ -141,7 +144,7 @@ same logical locator.
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
-- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface.
+- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface, plus the explicit `fret::selector::*` / `fret::query::*` secondary lanes when app code needs state helper nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
@@ -215,6 +218,9 @@ implementation accept plain function items without explicit casts, `InstallIntoA
 implementation. Treat that as an internal accommodation: keep `.setup(...)` on named installer
 functions, tuples, or named bundles, and reserve `.setup_with(...)` for one-off inline closures or
 runtime-captured values.
+The same explicit-lane rule applies to optional state helpers: keep grouped `cx.data().selector(...)`
+and `cx.data().query*` as the default app story, and import `DepsBuilder` / `QueryKey`-style nouns
+from `fret::selector::*` / `fret::query::*` only when app code actually needs to spell them.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.

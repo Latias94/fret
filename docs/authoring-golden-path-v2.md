@@ -28,8 +28,8 @@ missing default guideline).
 | Widget-local action dispatch | `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, payload)` | Use for activation-only surfaces that implement `fret::app::AppActivateSurface`. |
 | Widget-local imperative glue | `.listen(cx, |host, acx| { ... })` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks on activation-only surfaces. |
 | Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper. |
-| Derived values | `cx.data().selector(deps, compute)` | Prefer `DepsBuilder` with tracked locals/models. |
-| Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key. |
+| Derived values | `cx.data().selector(deps, compute)` | Prefer explicit `fret::selector::DepsBuilder` when tracked locals/models must build the dependency signature. |
+| Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key; import explicit query nouns from `fret::query::{...}` when needed. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
 | Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawStateExt;` + `cx.use_state::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
 
