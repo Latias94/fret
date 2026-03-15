@@ -34,6 +34,7 @@ const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
 const SLIDER_RS: &str = include_str!("slider.rs");
 const SIDEBAR_RS: &str = include_str!("sidebar.rs");
+const SONNER_RS: &str = include_str!("sonner.rs");
 const STATE_RS: &str = include_str!("state.rs");
 const TABLE_RS: &str = include_str!("table.rs");
 const TEXTAREA_RS: &str = include_str!("textarea.rs");
@@ -1553,6 +1554,25 @@ fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders
                 "pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {"
             ),
             "{label} should expose an action-first builder alias"
+        );
+    }
+}
+
+#[test]
+fn sonner_message_options_prefer_explicit_action_id_aliases_for_toast_actions() {
+    let normalized = normalize_ws(SONNER_RS);
+    let required_markers = [
+        "pub fn action_id( self, label: impl Into<Arc<str>>, action: impl Into<fret_runtime::ActionId>, ) -> Self {",
+        "pub fn action_command(self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {",
+        "pub fn cancel_id( self, label: impl Into<Arc<str>>, action: impl Into<fret_runtime::ActionId>, ) -> Self {",
+        "pub fn cancel_command(self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "sonner.rs should expose explicit action-id/command aliases for toast message actions"
         );
     }
 }

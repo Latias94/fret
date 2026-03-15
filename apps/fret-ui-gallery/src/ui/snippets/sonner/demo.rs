@@ -119,7 +119,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::ToastVariant::Default,
                     shadcn::ToastMessageOptions::new()
                         .description("Sunday, December 03, 2023 at 9:00 AM")
-                        .action("Undo", CMD_TOAST_ACTION),
+                        .action_id("Undo", CMD_TOAST_ACTION),
                 ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
@@ -320,7 +320,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 message_request(
                     "Event has been created",
                     shadcn::ToastVariant::Default,
-                    shadcn::ToastMessageOptions::new().action("Undo", CMD_TOAST_ACTION),
+                    shadcn::ToastMessageOptions::new().action_id("Undo", CMD_TOAST_ACTION),
                 ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {
@@ -345,7 +345,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 message_request(
                     "Event has been created",
                     shadcn::ToastVariant::Default,
-                    shadcn::ToastMessageOptions::new().cancel("Cancel", CMD_TOAST_ACTION),
+                    shadcn::ToastMessageOptions::new().cancel_id("Cancel", CMD_TOAST_ACTION),
                 ),
             );
             let _ = host.models_mut().update(&active_type_model, |v| {

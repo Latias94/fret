@@ -410,6 +410,22 @@ impl ToastMessageOptions {
         self
     }
 
+    /// Preferred action-first spelling for the toast primary action.
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this lowers through
+    /// the existing toast command pipeline.
+    pub fn action_id(
+        self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<fret_runtime::ActionId>,
+    ) -> Self {
+        self.action(label, action.into())
+    }
+
+    pub fn action_command(self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
+        self.action(label, command)
+    }
+
     pub fn action_with(mut self, action: ToastAction) -> Self {
         self.action = Some(action);
         self
@@ -418,6 +434,22 @@ impl ToastMessageOptions {
     pub fn cancel(mut self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
         self.cancel = Some(ToastAction::new(label, command));
         self
+    }
+
+    /// Preferred action-first spelling for the toast cancel action.
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this lowers through
+    /// the existing toast command pipeline.
+    pub fn cancel_id(
+        self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<fret_runtime::ActionId>,
+    ) -> Self {
+        self.cancel(label, action.into())
+    }
+
+    pub fn cancel_command(self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
+        self.cancel(label, command)
     }
 
     pub fn cancel_with(mut self, cancel: ToastAction) -> Self {
@@ -1430,8 +1462,8 @@ mod tests {
     fn toast_message_options_apply_description_action_cancel_and_duration() {
         let opts = ToastMessageOptions::new()
             .description("desc")
-            .action("Undo", "toast.undo")
-            .cancel("Cancel", "toast.cancel")
+            .action_id("Undo", "toast.undo")
+            .cancel_id("Cancel", "toast.cancel")
             .icon(ToastIconOverride::glyph("!"))
             .pinned()
             .dismissible(false);
