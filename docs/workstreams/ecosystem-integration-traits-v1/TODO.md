@@ -329,5 +329,13 @@ surface.
     (`GizmoPlugin`) and are explicitly not treated as the default ecosystem extension template.
 - [ ] Delete any temporary adapters that survive after official examples and templates no longer
   need them.
+  - First landed deletion on 2026-03-15:
+    deleted the temporary `fret-ui-kit` canvas compat re-export modules
+    `src/declarative/canvas_surface.rs`,
+    `src/recipes/canvas_pan_zoom.rs`,
+    and
+    `src/recipes/canvas_tool_router.rs`
+    after migrating first-party in-tree consumers (`fret-chart`) to the canonical
+    `fret_canvas::ui::*` owner seam.
 - [ ] Keep the migration matrix updated until all tracked old postures are either deleted or
   intentionally retained as explicit advanced seams.
