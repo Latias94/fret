@@ -1,6 +1,7 @@
 # Target Interface State
 
 Status: target state for the pre-release surface reset
+Last updated: 2026-03-15
 
 This document is the single place that records the **intended public interface state** for the
 authoring-surface reset.
@@ -11,6 +12,14 @@ It is intentionally concrete:
 - who should import them,
 - which layer owns them,
 - which names should disappear.
+
+Closeout note on 2026-03-15:
+
+- this file now describes a mostly-settled surface rather than an open redesign backlog,
+- the app/component/advanced split is considered landed,
+- remaining work is narrow follow-through:
+  delete-ready cleanup, stale-doc correction, and coordination with follow-on workstreams such as
+  `into-element-surface-fearless-refactor-v1` and `action-first-authoring-fearless-refactor-v1`.
 
 ## Public Surface Tiers
 
@@ -105,6 +114,15 @@ Target non-exports:
 - viewport/interop traits
 - broad component-author internals
 
+Intentional root-level exception on 2026-03-15:
+
+- `ActionId` / `TypedAction` remain intentionally absent from `fret::app::prelude::*`,
+  but they still exist on the `fret` crate root and under `fret::actions::*` for the typed-action
+  macro lane.
+- Treat that as action-surface support rather than default app-prelude vocabulary.
+- Do not re-export those names from `fret::app::prelude::*` unless the action-first workstream
+  explicitly changes the default product story.
+
 Target rule:
 
 - if a symbol is primarily useful for component authors or runner authors, it does not belong in
@@ -143,21 +161,27 @@ Target exports:
 - component-facing context alias/wrapper
 - `UiBuilder`
 - `UiPatchTarget`
-- `UiIntoElement`
+- `IntoUiElement`
+- `UiExt`
 - layout/style refinement types
 - semantics/layout utilities needed by reusable components
 - explicit overlay/focus composition helpers intended for reusable libraries
+- explicit raw escape hatches such as `AnyElement`, `UiHost`, and `Invalidation`
 
 Target non-exports:
 
 - app builder
 - app-runtime-only globals/installation seams
 - runner/manual assembly types
+- legacy split conversion names such as `UiIntoElement`, `UiHostBoundIntoElement`,
+  and `UiChildIntoElement`
 
 Target rule:
 
 - a reusable component crate should be able to stay entirely on this surface unless it is
   intentionally shipping app-specific integration helpers.
+- `IntoUiElement<H>` is the single public conversion vocabulary on this lane; the older split
+  conversion taxonomy is considered deleted from the intended public product surface.
 
 ## `fret::advanced`
 
@@ -311,15 +335,15 @@ These names/surfaces should disappear entirely if the replacement exists:
 
 | Area | Target status |
 | --- | --- |
-| app prelude is app-only | in progress |
-| component prelude is explicit | in progress |
-| advanced surface is explicit | in progress |
+| app prelude is app-only | done |
+| component prelude is explicit | done |
+| advanced surface is explicit | done |
 | canonical naming reset landed | in progress |
-| grouped `AppUi` namespaces landed | in progress |
-| first-party ecosystems migrated | in progress |
+| grouped `AppUi` namespaces landed | done |
+| first-party ecosystems migrated | done |
 | templates/docs aligned | in progress |
 | old surface deleted | in progress |
-| guards/gates added | in progress |
+| guards/gates added | done |
 
 ## Definition of Complete
 

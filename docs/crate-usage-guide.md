@@ -26,8 +26,15 @@ surface, lock these decisions before adding public API:
   `UiAppBuilder::setup_with(...)` instead of teaching `.setup(|app| ...)`
 - keep typed routes on `RouteCodec`, dockable panel contributions on `DockPanelFactory`, and host
   command catalog ownership in `fret-ui-kit::command`
+- use plain `CommandMeta` when a command only needs normal registration, keybindings, menus, and
+  command identity; reach for `CommandCatalog` only when a discovery surface needs grouped or
+  enriched catalog entries beyond flat registered metadata
 - keep selector/query integration optional for reusable kits; do not add a universal `Component`
   trait or widen `fret-app::Plugin` into the default ecosystem model
+- keep `fret-app::Plugin` app-owned; domain-local plugin traits such as `GizmoPlugin` are fine,
+  but they are not precedent for a repo-wide ecosystem extension template
+- treat `QueryAdapter` as deferred in v1 unless a second real reusable consumer appears with a
+  materially shared adapter contract
 - keep reusable docs/examples aligned with the current conversion-surface target:
   app-facing teaching helpers use `Ui` / `UiChild`, reusable generic helpers should move toward
   the unified component conversion trait tracked in

@@ -3,10 +3,9 @@ use std::sync::{Arc, Mutex};
 
 use delinea::engine::AxisPointerOutput;
 use delinea::ids::SeriesId;
+use fret_canvas::ui::{CanvasToolEntry, CanvasToolHandlers, CanvasToolId, PanZoomCanvasPaintCx};
 use fret_core::{Color, Corners, DrawOrder, Edges, Point, Px, Rect, Size};
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
-use fret_ui_kit::recipes::canvas_pan_zoom::PanZoomCanvasPaintCx;
-use fret_ui_kit::recipes::canvas_tool_router::{CanvasToolEntry, CanvasToolHandlers, CanvasToolId};
 
 use crate::retained::ChartStyle;
 use crate::tooltip_layout::split_tooltip_text_for_columns;

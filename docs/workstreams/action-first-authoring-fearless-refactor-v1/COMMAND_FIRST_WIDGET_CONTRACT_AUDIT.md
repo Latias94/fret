@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Command-First Widget Contract Audit
 
 Status: draft, post-v1 audit
-Last updated: 2026-03-09
+Last updated: 2026-03-15
 
 Related:
 
@@ -65,6 +65,7 @@ Current conclusion:
 | `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem` | `on_select(CommandId)` only | same as context menu, plus stronger OS/menu parity expectations | Default-facing blocker | Same as context menu: action-first alias on public builders, command-centric core retained |
 | `NavigationMenuLink` / `NavigationMenuItem` | `on_click(CommandId)` only | current activation path reuses command gating/dispatch | Medium blocker | Add `action(...)` alias; this surface reads like a regular app-facing widget, not a registry API |
 | `BreadcrumbItem` | `on_click(CommandId)` plus `on_activate(...)` closure | historical command pipeline reuse | Medium blocker | Add `action(...)` alias; keep `on_click(...)` as compat name |
+| `Sonner` / `ToastMessageOptions` | historical `action(label, CommandId)` / `cancel(label, CommandId)` message helpers | toast buttons still lower to command-backed overlay dispatch | Aligned (dual surface) | Prefer `action_id(...)` / `cancel_id(...)` in default-facing docs/examples; keep `action(...)` / `cancel(...)` plus explicit `*_command(...)` aliases as compat/low-level spellings |
 | Material `Snackbar` | `action(...)` plus `action_id(...)` / `action_command(...)` aliases | toast action currently lowers to command dispatch | Aligned (dual surface) | Prefer `action_id(...)` in default-facing docs/examples; keep `action(...)` / `action_command(...)` as compat/low-level spellings |
 
 ---
@@ -257,6 +258,21 @@ Progress update (as of 2026-03-09):
   `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
 - A narrow default-surface gate now protects that choice:
   `tools/gate_material3_snackbar_default_surface.py`.
+- Sonner follow-up (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/sonner.rs` now exposes
+  `ToastMessageOptions::action_id(...)` / `action_command(...)` /
+  `cancel_id(...)` / `cancel_command(...)`, the primary Sonner gallery demo now prefers
+  `action_id(...)` / `cancel_id(...)`, and
+  `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` locks that dual-surface contract.
+- Alias-extension update (as of 2026-03-15):
+  `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`,
+  `ecosystem/fret-ui-shadcn/src/input_group.rs`,
+  `ecosystem/fret-ui-shadcn/src/item.rs`,
+  `ecosystem/fret-ui-shadcn/src/pagination.rs`,
+  `ecosystem/fret-ui-shadcn/src/table.rs`, and
+  `ecosystem/fret-ui-shadcn/src/sidebar.rs`
+  now extend the same public `action(...)` alias pattern to the remaining default-facing clickable
+  builders in those families, while `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` locks
+  the alias wording as a source-policy gate.
 
 ### Phase 2 — Menu-family public alias pass
 

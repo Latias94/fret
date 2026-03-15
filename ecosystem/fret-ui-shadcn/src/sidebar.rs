@@ -1302,6 +1302,15 @@ impl SidebarTrigger {
         }
     }
 
+    /// Bind a stable action ID to this sidebar trigger (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.on_click = Some(action.into());
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.on_click = Some(command.into());
         self
@@ -1418,6 +1427,15 @@ impl SidebarRail {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Bind a stable action ID to this sidebar rail (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.on_click = Some(action.into());
+        self
     }
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
@@ -2090,6 +2108,15 @@ impl SidebarGroupAction {
         self
     }
 
+    /// Bind a stable action ID to this sidebar group action (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.on_click = Some(action.into());
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.on_click = Some(command.into());
         self
@@ -2579,6 +2606,15 @@ impl SidebarMenuAction {
 
     pub fn collapsed(mut self, collapsed: bool) -> Self {
         self.collapsed = collapsed;
+        self
+    }
+
+    /// Bind a stable action ID to this sidebar menu action (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.on_click = Some(action.into());
         self
     }
 
@@ -3218,6 +3254,15 @@ impl SidebarMenuSubButton {
         self
     }
 
+    /// Bind a stable action ID to this sidebar menu sub-button (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.on_click = Some(action.into());
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.on_click = Some(command.into());
         self
@@ -3546,6 +3591,15 @@ impl SidebarMenuButton {
 
     pub fn on_navigate(mut self, on_navigate: OnActivate) -> Self {
         self.on_navigate = Some(on_navigate);
+        self
+    }
+
+    /// Bind a stable action ID to this sidebar menu button (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.on_click = Some(action.into());
         self
     }
 

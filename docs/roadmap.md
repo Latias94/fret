@@ -47,25 +47,26 @@ Current pre-release authoring cleanup sequence:
 
 Treat these three trackers as one continuous execution chain rather than unrelated cleanup notes.
 
-Current execution stance on 2026-03-12:
+Current execution stance on 2026-03-15:
 
 - `authoring-surface-and-ecosystem-fearless-refactor-v1` = closeout lane:
   keep deleting stale aliases, tightening gates, and cleaning docs, but do not reopen broad
   surface redesign here.
-- `ecosystem-integration-traits-v1` = narrow follow-up lane:
-  most core trait decisions are landed; remaining work is query-adapter decision, root-export
-  cleanup, bundle/examples/docs cleanup, and helper-signature alignment with the new conversion
-  surface.
-- `into-element-surface-fearless-refactor-v1` = current main authoring lane:
-  it now owns the highest-leverage remaining "write UI" gap.
+- `ecosystem-integration-traits-v1` = maintenance closeout lane:
+  most core trait decisions are landed, `QueryAdapter` is now explicitly deferred in v1, and the
+  remaining work is root-export/docs cleanup plus final mixed-posture auditing.
+- `into-element-surface-fearless-refactor-v1` = closeout / maintenance lane:
+  the broad conversion-surface migration is now landed; remaining work is explicit seam inventory
+  and source-gate maintenance.
 
 Recommended order from here:
 
-1. land `into-element` M0/M1,
-2. use `simple_todo_v2_target`, `todo_demo`, and the simple-todo scaffold template as the
-   canonical evidence set for keyed/list/build-sink follow-up work,
-3. only then finish the remaining ecosystem-trait cleanup and the `QueryAdapter` keep/defer
-   decision.
+1. finish the remaining ecosystem-trait docs/export cleanup and archive the v1 defer note for
+   `QueryAdapter`,
+2. keep the conversion-surface inventories/gates aligned rather than reopening broad trait-family
+   redesign,
+3. then reopen the next active authoring-density/productization lane with the canonical compare set
+   (`simple_todo_v2_target`, `todo_demo`, scaffold simple-todo template) as evidence.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 

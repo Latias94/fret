@@ -414,6 +414,7 @@ mod source_policy_tests {
     const DECLARATIVE_GLASS_RS: &str = include_str!("declarative/glass.rs");
     const DECLARATIVE_LIST_RS: &str = include_str!("declarative/list.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
+    const DECLARATIVE_MODEL_WATCH_RS: &str = include_str!("declarative/model_watch.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
     const DECLARATIVE_SCROLL_RS: &str = include_str!("declarative/scroll.rs");
     const DECLARATIVE_SEMANTICS_RS: &str = include_str!("declarative/semantics.rs");
@@ -440,6 +441,37 @@ mod source_policy_tests {
     const RECIPES_SORTABLE_DND_RS: &str = include_str!("recipes/sortable_dnd.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
+
+    fn visit_rust_files(dir: &std::path::Path, f: &mut impl FnMut(&std::path::Path, &str)) {
+        for entry in std::fs::read_dir(dir).unwrap_or_else(|err| {
+            panic!(
+                "failed to read source-policy directory {}: {err}",
+                dir.display()
+            )
+        }) {
+            let entry = entry.unwrap_or_else(|err| {
+                panic!(
+                    "failed to read source-policy entry in {}: {err}",
+                    dir.display()
+                )
+            });
+            let path = entry.path();
+            if path.is_dir() {
+                visit_rust_files(&path, f);
+                continue;
+            }
+            if path.extension().and_then(std::ffi::OsStr::to_str) != Some("rs") {
+                continue;
+            }
+            let source = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+                panic!(
+                    "failed to read source-policy file {}: {err}",
+                    path.display()
+                )
+            });
+            f(&path, &source);
+        }
+    }
 
     #[test]
     fn root_surface_omits_host_bound_conversion_alias() {
@@ -752,5 +784,57 @@ mod source_policy_tests {
                 "{label} should still document the raw AnyElement overlay-request landing seam"
             );
         }
+    }
+
+    #[test]
+    fn primitives_and_base_recipes_stay_state_stack_agnostic() {
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let markers = [
+            "use fret_query",
+            "fret_query::",
+            "use fret_selector",
+            "fret_selector::",
+        ];
+
+        for root in [
+            manifest_dir.join("src/primitives"),
+            manifest_dir.join("src/recipes"),
+            manifest_dir.join("../fret-ui-headless/src"),
+        ] {
+            visit_rust_files(&root, &mut |path, source| {
+                let label = path.strip_prefix(manifest_dir).unwrap_or(path);
+                for marker in markers {
+                    assert!(
+                        !source.contains(marker),
+                        "{} reintroduced state-stack marker `{marker}` into a base primitive/recipe seam",
+                        label.display()
+                    );
+                }
+            });
+        }
+    }
+
+    #[test]
+    fn query_watch_helpers_stay_opt_in_and_out_of_default_declarative_prelude() {
+        assert!(
+            DECLARATIVE_MODEL_WATCH_RS.contains("#[cfg(feature = \"state-query\")]"),
+            "declarative/model_watch.rs should keep query-watch helpers behind the `state-query` feature"
+        );
+        assert!(
+            DECLARATIVE_MODEL_WATCH_RS.contains("pub trait QueryHandleWatchExt<T: 'static>"),
+            "declarative/model_watch.rs should keep the opt-in query-watch helper explicit"
+        );
+        assert!(
+            DECLARATIVE_MOD_RS.contains("pub use model_watch::QueryHandleWatchExt;"),
+            "declarative/mod.rs should keep query-watch helpers on the explicit declarative root"
+        );
+        assert!(
+            !DECLARATIVE_PRELUDE_RS.contains("QueryHandleWatchExt"),
+            "declarative/prelude.rs should not make query-watch helpers part of the default prelude"
+        );
+        assert!(
+            !DECLARATIVE_PRELUDE_RS.contains("fret_query"),
+            "declarative/prelude.rs should remain free of direct query-crate imports"
+        );
     }
 }

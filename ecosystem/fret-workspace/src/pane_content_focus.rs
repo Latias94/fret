@@ -6,6 +6,7 @@ use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct WorkspacePaneContentElementKey {
@@ -66,13 +67,13 @@ pub(crate) fn workspace_pane_content_element_registry_model<H: UiHost>(
 ///   target was recorded (e.g. the tab strip became focused via pointer interaction).
 /// - The registered element must be focusable for `request_focus` to succeed.
 #[derive(Debug)]
-pub struct WorkspacePaneContentFocusTarget {
+pub struct WorkspacePaneContentFocusTarget<T = AnyElement> {
     pane_id: Arc<str>,
-    child: AnyElement,
+    child: T,
 }
 
-impl WorkspacePaneContentFocusTarget {
-    pub fn new(pane_id: impl Into<Arc<str>>, child: AnyElement) -> Self {
+impl<T> WorkspacePaneContentFocusTarget<T> {
+    pub fn new(pane_id: impl Into<Arc<str>>, child: T) -> Self {
         Self {
             pane_id: pane_id.into(),
             child,
@@ -80,19 +81,39 @@ impl WorkspacePaneContentFocusTarget {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        T: IntoUiElement<H>,
+    {
         let registry = workspace_pane_content_element_registry_model(cx);
+        let child = self.child.into_element(cx);
         let key = WorkspacePaneContentElementKey {
             window: cx.window,
             pane_id: self.pane_id,
         };
-        let id = self.child.id;
+        let id = child.id;
 
         let _ = cx
             .app
             .models_mut()
             .update(&registry, |reg| reg.set_if_changed(key, id));
 
-        self.child
+        child
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WorkspacePaneContentFocusTarget;
+    use fret_app::App;
+    use fret_ui::ElementContext;
+    use fret_ui::element::AnyElement;
+    use fret_ui_kit::ui;
+
+    #[allow(dead_code)]
+    fn workspace_pane_content_focus_target_accepts_typed_children(
+        cx: &mut ElementContext<'_, App>,
+    ) -> AnyElement {
+        WorkspacePaneContentFocusTarget::new("pane", ui::text("content")).into_element(cx)
     }
 }

@@ -2311,7 +2311,7 @@ fn calendar_hidden_day_cell<H: UiHost>(
             ..Default::default()
         };
 
-        let children = move |_cx: &mut ElementContext<'_, H>| Vec::new();
+        let children = move |_cx: &mut ElementContext<'_, H>| Vec::<AnyElement>::new();
         (pressable, chrome_props, children)
     });
 

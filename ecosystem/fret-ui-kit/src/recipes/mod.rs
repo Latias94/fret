@@ -1,8 +1,4 @@
 pub mod bloom;
-#[cfg(feature = "recipes")]
-pub mod canvas_pan_zoom;
-#[cfg(feature = "recipes")]
-pub mod canvas_tool_router;
 pub mod catalog;
 pub mod control;
 pub mod effect_recipe;

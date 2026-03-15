@@ -728,8 +728,7 @@ fn main() -> anyhow::Result<()> {
         .with_main_window("cookbook-gizmo-basics", (1120.0, 820.0))
         .with_command_default_keybindings()
         .setup(install_commands)
-        .setup(shadcn::app::install)
-        .setup(fret_icons_lucide::app::install)
+        .setup((shadcn::app::install, fret_icons_lucide::app::install))
         .setup(fret_cookbook::install_cookbook_defaults)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
 

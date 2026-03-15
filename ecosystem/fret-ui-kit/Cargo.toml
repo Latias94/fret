@@ -20,7 +20,6 @@ fret-dnd = { version = "0.1.0", path = "../fret-dnd", optional = true }
 fret-interaction = { version = "0.1.0", path = "../fret-interaction", optional = true, features = ["runtime"] }
 fret-ui-headless = { version = "0.1.0", path = "../fret-ui-headless" }
 fret-viewport-tooling = { version = "0.1.0", path = "../fret-viewport-tooling" }
-fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true, features = ["ui"] }
 fret-icons = { version = "0.1.0", path = "../fret-icons", optional = true }
 tracing.workspace = true
 time.workspace = true
@@ -54,7 +53,7 @@ unstable-internals = []
 icons = ["dep:fret-icons"]
 
 # Opinionated declarative helpers that are closer to "recipes" than substrate.
-recipes = ["icons", "dep:fret-canvas"]
+recipes = ["icons"]
 
 [dev-dependencies]
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }

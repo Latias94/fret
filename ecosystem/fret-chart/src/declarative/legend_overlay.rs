@@ -1,17 +1,16 @@
 use std::sync::{Arc, Mutex};
 
 use delinea::{Action, ChartEngine};
+use fret_canvas::ui::{
+    CanvasToolDownResult, CanvasToolEntry, CanvasToolHandlers, CanvasToolId,
+    OnCanvasToolPointerDown, OnCanvasToolPointerMove, OnCanvasToolWheel, PanZoomCanvasPaintCx,
+};
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, FontWeight, MouseButton, Point, Px, Rect, Size,
     TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
-use fret_ui_kit::recipes::canvas_pan_zoom::PanZoomCanvasPaintCx;
-use fret_ui_kit::recipes::canvas_tool_router::{
-    CanvasToolDownResult, CanvasToolEntry, CanvasToolHandlers, CanvasToolId,
-    OnCanvasToolPointerDown, OnCanvasToolPointerMove, OnCanvasToolWheel,
-};
 
 use crate::retained::ChartStyle;
 

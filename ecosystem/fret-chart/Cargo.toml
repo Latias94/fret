@@ -17,7 +17,7 @@ echarts = ["dep:serde", "dep:serde_json"]
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-canvas = { path = "../fret-canvas" }
+fret-canvas = { path = "../fret-canvas", features = ["ui"] }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["recipes"] }
 delinea = { path = "../delinea" }
 slotmap.workspace = true

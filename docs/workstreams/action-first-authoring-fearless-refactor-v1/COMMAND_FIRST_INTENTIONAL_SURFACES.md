@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Command-First Intentional Surfaces
 
 Status: draft, post-v1 inventory
-Last updated: 2026-03-09
+Last updated: 2026-03-15
 
 Related:
 
@@ -25,6 +25,7 @@ The narrow question is:
 Current conclusion:
 
 - the default-facing widget families are now aligned enough for v1,
+- the default-facing toast/message helpers are now aligned enough for v1,
 - the remaining command-shaped usages mostly belong to advanced/catalog/test surfaces,
 - future cleanup should focus on **new default-facing leaks only**, not on broad internal churn.
 
@@ -35,6 +36,7 @@ Current conclusion:
 | Surface family | Representative evidence | Why it still looks command-shaped | Current decision | Future trigger for change |
 | --- | --- | --- | --- | --- |
 | Command palette / command catalog | `ecosystem/fret-ui-shadcn/src/command.rs:121`, `ecosystem/fret-ui-shadcn/src/command.rs:166` | These rows are built from `CommandMeta`, keymap display, and gating snapshots; command identity is the product surface | Keep command-centric by default | Only revisit if the repo later splits catalog metadata from command routing in a deeper v2 |
+| Low-level toast primitives / raw toast action builders | `ecosystem/fret-ui-kit/src/window_overlays/toast.rs:199`, `ecosystem/fret-ui-kit/src/window_overlays/toast.rs:208`, `apps/fret-ui-gallery/src/driver/runtime_driver.rs:1636` | `ToastAction::new(...)` and raw toast requests are lower-level overlay primitives, not the default message-style authoring surface; command identity is still the explicit primitive at this seam | Keep as advanced/raw seam; do not treat as a default-surface blocker | Only revisit if the repo later introduces an explicit raw `ActionId` toast primitive or decides to redesign toast request construction |
 | Business-table menu/action wiring | `ecosystem/fret-ui-shadcn/src/data_table.rs:268`, `apps/fret-ui-gallery/src/ui/snippets/data_table/basic_demo.rs:498`, `apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs:510` | `DataTable` is an advanced integration surface; row/column actions, output wiring, and state ownership are intentionally explicit | Keep as advanced/reference surface; do not fold into generic action-sugar cleanup | Only revisit if a curated higher-level business-table recipe still proves too noisy after docs/productization |
 | Compat / conformance tests for menu families | `ecosystem/fret-ui-shadcn/tests/menubar_keyboard_navigation.rs:95`, `ecosystem/fret-ui-shadcn/tests/context_menu_keyboard_navigation.rs:100`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs:4758` | Tests must cover legacy/compat spellings and low-level contracts directly; they are not teaching surfaces | Keep as-is unless a specific test becomes misleading | Update only when compat APIs are actually deprecated/removed |
 | Non-menu callback widgets that expose `on_select(...)` closures | `apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_demo.rs:123`, `apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_large.rs:80`, `ecosystem/fret-ui-material3/src/exposed_dropdown.rs:288` | These are callback/event APIs, not `CommandId`-first builder spelling; they are outside the menu alias cleanup track | Explicitly out of scope for command-first residue work | Revisit only in their own domain audits, not under menu/action alias cleanup |
@@ -70,7 +72,25 @@ They are evidence that business-table authoring is a different problem:
 That surface should stay documented as advanced/reference until a deliberate product recipe says
 otherwise.
 
-### 3. Tests are allowed to stay blunt
+### 3. Low-level toast primitives are allowed to stay blunt
+
+The repo already aligned the default message-style surfaces:
+
+- Material `Snackbar` prefers `action_id(...)`,
+- shadcn `ToastMessageOptions` now prefer `action_id(...)` / `cancel_id(...)`.
+
+That does **not** mean the raw toast primitive has to stop speaking in command terms immediately.
+
+`ToastAction::new(...)` and direct `ToastRequest` assembly are:
+
+- lower-level overlay seams,
+- still used in tests/runtime-driver coverage,
+- and not the main authoring path the repo teaches to app authors.
+
+They should therefore stay explicit until the repo deliberately chooses a deeper toast-primitive
+redesign.
+
+### 4. Tests are allowed to stay blunt
 
 The repo should not spend cleanup budget rewriting:
 
@@ -82,7 +102,7 @@ just to make them read like the default authoring path.
 
 Their job is to prove behavior and contract coverage, including old spellings where relevant.
 
-### 4. Some `on_select(...)` surfaces are simply a different API family
+### 5. Some `on_select(...)` surfaces are simply a different API family
 
 A callback-style domain widget such as AI file tree or Material autocomplete/dropdown:
 

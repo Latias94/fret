@@ -18,8 +18,9 @@ Current reading:
 
 - the core justified seams are landed (`InstallIntoApp`, the `CommandCatalog` data contract,
   `RouteCodec`, `DockPanelFactory`),
-- the remaining work is narrow: first-party docs/export cleanup, a final mixed-posture audit, and
-  the `QueryAdapter` keep/defer decision,
+- the `QueryAdapter` decision is now closed for v1: defer until a second real reusable consumer
+  appears,
+- the remaining work is narrow: first-party docs/export cleanup and a final mixed-posture audit,
 - conversion-surface redesign remains owned by
   `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
 
@@ -27,7 +28,7 @@ Recommended closeout order:
 
 1. keep ecosystem docs/examples aligned with the now-closed conversion story,
 2. finish the first-party installer/export audit and delete-ready cleanup,
-3. explicitly defer `QueryAdapter` unless a second real consumer appears.
+3. archive the lane with the v1 `QueryAdapter` defer note kept explicit in docs.
 
 Progress note on 2026-03-12:
 
@@ -93,17 +94,23 @@ Current status on 2026-03-11:
 - This workstream now explicitly hands off the remaining conversion-vocabulary cleanup to
   `docs/workstreams/into-element-surface-fearless-refactor-v1/` so trait adoption does not create
   a second, crate-local authoring language.
-- Free installer functions remain the default story; first-party bundle examples and the remaining
-  trait-budget decisions are still open.
+- The 2026-03-15 audit closes `QueryAdapter` for v1:
+  there is still no in-tree `QueryAdapter` implementation or second reusable consumer.
+  `ecosystem/fret-markdown` currently uses `fret_query::ui::QueryElementContextExt` directly for a
+  local feature seam, `ecosystem/fret-authoring/src/query.rs` provides an authoring-surface
+  wrapper, and `ecosystem/fret-router/src/query_integration.rs` only contributes query-key helpers.
+  Those signals do not yet justify freezing a shared adapter trait.
+- Free installer functions remain the default story; first-party bundle examples are still a
+  follow-up cleanup item rather than a trait-budget blocker.
 
 Milestone readout on 2026-03-11:
 
 | Milestone | State | Notes |
 | --- | --- | --- |
 | M0 | Done | budget, owners, rejected shapes, and docs index/roadmap links are all recorded |
-| M1 | In progress | `InstallIntoApp` is landed, the first app-helper crates now use explicit `crate::app::*` seams, `fret-ui-shadcn` split its advanced hooks off the default app lane, and one advanced material helper has moved to `advanced::*`, but broader first-party naming cleanup and bundle adoption are still incomplete |
+| M1 | In progress | `InstallIntoApp` is landed, the first app-helper crates now use explicit `crate::app::*` seams, `fret-ui-shadcn` split its advanced hooks off the default app lane, first-party installer naming cleanup is effectively closed, and one advanced material helper has moved to `advanced::*`; the remaining tail here is mainly broader bundle-example/docs closeout |
 | M2 | Done | the `CommandCatalog` data contract, `RouteCodec`, and `DockPanelFactory` now have the intended ownership story |
-| M3 | Not started | `QueryAdapter` still needs a real-consumer decision; selector remains intentionally trait-free |
+| M3 | Done | `QueryAdapter` is now explicitly deferred for v1 because the 2026-03-15 audit found no in-tree implementation and no second reusable consumer with a materially shared adapter contract; selector remains intentionally trait-free |
 | M4 | In progress | checklist/gate work has started, but hard deletions and full docs/template cleanup remain |
 
 ## M0 — Trait Budget Lock

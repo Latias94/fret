@@ -4,6 +4,7 @@ use fret_runtime::{CommandId, InputContext, MenuBar, Model, Platform, WindowMenu
 use fret_ui::element::{AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, StackProps};
 use fret_ui::{ElementContext, GlobalElementId, PendingShortcutOverlayState, UiHost};
 
+use fret_ui_kit::IntoUiElement;
 use fret_workspace::layout::{WorkspacePaneLayout, WorkspaceWindowLayout};
 use fret_workspace::{
     WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip, WorkspaceTopBar,
@@ -27,7 +28,7 @@ fn fill_layout() -> LayoutStyle {
 ///
 /// This enables in-place UI mutations (e.g. split drag-to-resize) without requiring apps to route
 /// those interactions through commands.
-pub fn workspace_shell_model<H: UiHost, FTitle, FPane>(
+pub fn workspace_shell_model<H: UiHost, FTitle, FPane, T>(
     cx: &mut ElementContext<'_, H>,
     menu_bar: Option<&MenuBar>,
     window: Model<WorkspaceWindowLayout>,
@@ -36,7 +37,8 @@ pub fn workspace_shell_model<H: UiHost, FTitle, FPane>(
 ) -> AnyElement
 where
     FTitle: Fn(&str) -> Arc<str> + Clone,
-    FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
+    FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> T,
+    T: IntoUiElement<H>,
 {
     cx.app
         .with_global_mut(WindowMenuBarFocusService::default, |svc, _app| {
@@ -158,7 +160,7 @@ where
 
 /// A `workspace_shell_model` convenience wrapper that renders the default editor-style menu bar
 /// provided by `fret-workspace`.
-pub fn workspace_shell_model_default_menu<H: UiHost, FTitle, FPane>(
+pub fn workspace_shell_model_default_menu<H: UiHost, FTitle, FPane, T>(
     cx: &mut ElementContext<'_, H>,
     window: Model<WorkspaceWindowLayout>,
     tab_title: FTitle,
@@ -166,7 +168,8 @@ pub fn workspace_shell_model_default_menu<H: UiHost, FTitle, FPane>(
 ) -> AnyElement
 where
     FTitle: Fn(&str) -> Arc<str> + Clone,
-    FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
+    FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> T,
+    T: IntoUiElement<H>,
 {
     let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
     if Platform::current() == Platform::Macos {
@@ -187,4 +190,30 @@ where
     let menu_bar = fret_workspace::menu::workspace_default_menu_bar(cmds);
 
     workspace_shell_model(cx, Some(&menu_bar), window, tab_title, render_pane_content)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::workspace_shell_model;
+    use fret_app::App;
+    use fret_runtime::Model;
+    use fret_ui::ElementContext;
+    use fret_ui::element::AnyElement;
+    use fret_ui_kit::ui;
+    use fret_workspace::layout::WorkspaceWindowLayout;
+    use std::sync::Arc;
+
+    #[allow(dead_code)]
+    fn workspace_shell_model_accepts_typed_pane_renderers(
+        cx: &mut ElementContext<'_, App>,
+        window: Model<WorkspaceWindowLayout>,
+    ) -> AnyElement {
+        workspace_shell_model(
+            cx,
+            None,
+            window,
+            |title| Arc::from(title),
+            |_cx, _pane, _is_active| ui::text("pane"),
+        )
+    }
 }

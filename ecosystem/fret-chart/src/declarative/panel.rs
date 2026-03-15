@@ -7,6 +7,12 @@ use delinea::engine::window::DataWindow;
 use delinea::marks::{MarkKind, MarkPayloadRef, MarkTree};
 use delinea::tooltip::TooltipOutput;
 use delinea::{Action, ChartEngine, WorkBudget};
+use fret_canvas::ui::{
+    CanvasToolDownResult, CanvasToolEntry, CanvasToolHandlers, CanvasToolId, CanvasToolRouterProps,
+    OnCanvasToolPinch, OnCanvasToolPointerDown, OnCanvasToolPointerMove, OnCanvasToolPointerUp,
+    OnCanvasToolWheel, PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps,
+    canvas_tool_router_panel,
+};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, KeyCode, MouseButton, PathCommand, PathStyle, Point, Px,
     Rect, Size, StrokeStyle,
@@ -16,12 +22,6 @@ use fret_ui::action::OnKeyDown;
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{AnyElement, CanvasProps, FocusScopeProps, Length, PointerRegionProps};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::recipes::canvas_pan_zoom::{PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps};
-use fret_ui_kit::recipes::canvas_tool_router::{
-    CanvasToolDownResult, CanvasToolEntry, CanvasToolHandlers, CanvasToolId, CanvasToolRouterProps,
-    OnCanvasToolPinch, OnCanvasToolPointerDown, OnCanvasToolPointerMove, OnCanvasToolPointerUp,
-    OnCanvasToolWheel, canvas_tool_router_panel,
-};
 
 use crate::input_map::{ChartInputMap, ModifierKey};
 use crate::retained::ChartStyle;

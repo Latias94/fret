@@ -6,6 +6,7 @@ use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::IntoUiElement;
 
 use crate::commands::{
     CMD_WORKSPACE_PANE_FOCUS_CONTENT, CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP,
@@ -62,13 +63,13 @@ fn workspace_command_scope_focus_model<H: UiHost>(
 /// In particular, it handles `workspace.pane.focus_tab_strip` by focusing the active tab in the
 /// active pane's `WorkspaceTabStrip` (best-effort, gated by unit tests).
 #[derive(Debug)]
-pub struct WorkspaceCommandScope {
+pub struct WorkspaceCommandScope<T = AnyElement> {
     window_layout: Model<WorkspaceWindowLayout>,
-    child: AnyElement,
+    child: T,
 }
 
-impl WorkspaceCommandScope {
-    pub fn new(window_layout: Model<WorkspaceWindowLayout>, child: AnyElement) -> Self {
+impl<T> WorkspaceCommandScope<T> {
+    pub fn new(window_layout: Model<WorkspaceWindowLayout>, child: T) -> Self {
         Self {
             window_layout,
             child,
@@ -76,9 +77,12 @@ impl WorkspaceCommandScope {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        T: IntoUiElement<H>,
+    {
         let window_layout = self.window_layout;
-        let child = self.child;
+        let child = self.child.into_element(cx);
         let tab_element_registry = workspace_tab_element_registry_model(cx);
         let pane_content_registry = workspace_pane_content_element_registry_model(cx);
         let focus_state = workspace_command_scope_focus_model(cx);
@@ -390,5 +394,24 @@ impl WorkspaceCommandScope {
         );
 
         root
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WorkspaceCommandScope;
+    use crate::layout::WorkspaceWindowLayout;
+    use fret_app::App;
+    use fret_runtime::Model;
+    use fret_ui::ElementContext;
+    use fret_ui::element::AnyElement;
+    use fret_ui_kit::ui;
+
+    #[allow(dead_code)]
+    fn workspace_command_scope_accepts_typed_children(
+        cx: &mut ElementContext<'_, App>,
+        window_layout: Model<WorkspaceWindowLayout>,
+    ) -> AnyElement {
+        WorkspaceCommandScope::new(window_layout, ui::text("body")).into_element(cx)
     }
 }

@@ -3,8 +3,6 @@ pub mod action_hooks;
 pub mod active_descendant;
 pub mod bloom;
 pub mod cached_subtree;
-#[cfg(feature = "recipes")]
-pub mod canvas_surface;
 pub mod chrome;
 pub mod collapsible_motion;
 pub mod collection_semantics;

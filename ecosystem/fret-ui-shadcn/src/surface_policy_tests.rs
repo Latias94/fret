@@ -33,6 +33,8 @@ const POPOVER_RS: &str = include_str!("popover.rs");
 const SEPARATOR_RS: &str = include_str!("separator.rs");
 const SHEET_RS: &str = include_str!("sheet.rs");
 const SLIDER_RS: &str = include_str!("slider.rs");
+const SIDEBAR_RS: &str = include_str!("sidebar.rs");
+const SONNER_RS: &str = include_str!("sonner.rs");
 const STATE_RS: &str = include_str!("state.rs");
 const TABLE_RS: &str = include_str!("table.rs");
 const TEXTAREA_RS: &str = include_str!("textarea.rs");
@@ -132,6 +134,37 @@ fn public_non_method_anyelement_signatures(source: &str) -> Vec<String> {
             .any(|marker| signature.contains(marker))
         })
         .collect()
+}
+
+fn visit_rust_files(dir: &std::path::Path, f: &mut impl FnMut(&std::path::Path, &str)) {
+    for entry in std::fs::read_dir(dir).unwrap_or_else(|err| {
+        panic!(
+            "failed to read source-policy directory {}: {err}",
+            dir.display()
+        )
+    }) {
+        let entry = entry.unwrap_or_else(|err| {
+            panic!(
+                "failed to read source-policy entry in {}: {err}",
+                dir.display()
+            )
+        });
+        let path = entry.path();
+        if path.is_dir() {
+            visit_rust_files(&path, f);
+            continue;
+        }
+        if path.extension().and_then(std::ffi::OsStr::to_str) != Some("rs") {
+            continue;
+        }
+        let source = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+            panic!(
+                "failed to read source-policy file {}: {err}",
+                path.display()
+            )
+        });
+        f(&path, &source);
+    }
 }
 
 #[test]
@@ -1219,6 +1252,59 @@ fn state_helpers_prefer_typed_badge_outputs_when_no_runtime_landing_seam_is_requ
 }
 
 #[test]
+fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
+    let normalized_lib = normalize_ws(LIB_RS);
+    assert!(
+        normalized_lib.contains(
+            "#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]pubmodstate;"
+        ),
+        "lib.rs should keep the state helper module behind explicit opt-in features"
+    );
+    assert!(
+        normalized_lib
+            .contains("#[cfg(feature=\"state-selector\")]pubusecrate::state::use_selector_badge;"),
+        "lib.rs should re-export selector helpers only behind the selector feature gate"
+    );
+    assert!(
+        normalized_lib.contains(
+            "#[cfg(feature=\"state-query\")]pubusecrate::state::{query_error_alert,query_status_badge};"
+        ),
+        "lib.rs should re-export query helpers only behind the query feature gate"
+    );
+    assert!(
+        STATE_RS.contains("use fret_query::{QueryState, QueryStatus};"),
+        "state.rs should remain the explicit query-aware helper seam"
+    );
+    assert!(
+        STATE_RS.contains("use fret_selector::ui::SelectorElementContextExt as _;"),
+        "state.rs should remain the explicit selector-aware helper seam"
+    );
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    visit_rust_files(&root, &mut |path, source| {
+        let rel = path.strip_prefix(&root).unwrap_or(path);
+        if rel == std::path::Path::new("state.rs")
+            || rel == std::path::Path::new("surface_policy_tests.rs")
+        {
+            return;
+        }
+
+        for marker in [
+            "use fret_query",
+            "fret_query::",
+            "use fret_selector",
+            "fret_selector::",
+        ] {
+            assert!(
+                !source.contains(marker),
+                "{} reintroduced state-stack marker `{marker}` outside the explicit `state.rs` seam",
+                rel.display()
+            );
+        }
+    });
+}
+
+#[test]
 fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
     assert!(
         KBD_RS.contains(
@@ -1403,6 +1489,92 @@ fn thin_constructor_trial_modules_keep_public_anyelement_free_functions_explicit
         )],
         "thin-constructor trial modules should not grow new public free-function `-> AnyElement` helpers without an explicit raw-seam decision"
     );
+}
+
+#[test]
+fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders() {
+    for (label, source, markers) in [
+        (
+            "breadcrumb.rs",
+            BREADCRUMB_RS,
+            &[
+                "self.link = self.link.action(action);",
+                "self.command = Some(action.into());",
+            ][..],
+        ),
+        (
+            "input_group.rs",
+            INPUT_GROUP_RS,
+            &["Bind a stable action ID to this input-group button (action-first authoring)."][..],
+        ),
+        (
+            "item.rs",
+            ITEM_RS,
+            &["Bind a stable action ID to this item (action-first authoring)."][..],
+        ),
+        (
+            "pagination.rs",
+            PAGINATION_RS,
+            &[
+                "Bind a stable action ID to this pagination link (action-first authoring).",
+                "Bind a stable action ID to this pagination previous-link (action-first authoring).",
+                "Bind a stable action ID to this pagination next-link (action-first authoring).",
+                "Bind a stable action ID to this pagination link build wrapper (action-first authoring).",
+            ][..],
+        ),
+        (
+            "table.rs",
+            TABLE_RS,
+            &[
+                "Bind a stable action ID to this table row (action-first authoring).",
+                "Bind a stable action ID to this table-row build wrapper (action-first authoring).",
+            ][..],
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            &[
+                "Bind a stable action ID to this sidebar trigger (action-first authoring).",
+                "Bind a stable action ID to this sidebar rail (action-first authoring).",
+                "Bind a stable action ID to this sidebar group action (action-first authoring).",
+                "Bind a stable action ID to this sidebar menu action (action-first authoring).",
+                "Bind a stable action ID to this sidebar menu sub-button (action-first authoring).",
+                "Bind a stable action ID to this sidebar menu button (action-first authoring).",
+            ][..],
+        ),
+    ] {
+        for marker in markers {
+            assert!(
+                source.contains(marker),
+                "{label} should keep action-first alias docs on default-facing clickable widgets"
+            );
+        }
+        assert!(
+            source.contains(
+                "pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {"
+            ),
+            "{label} should expose an action-first builder alias"
+        );
+    }
+}
+
+#[test]
+fn sonner_message_options_prefer_explicit_action_id_aliases_for_toast_actions() {
+    let normalized = normalize_ws(SONNER_RS);
+    let required_markers = [
+        "pub fn action_id( self, label: impl Into<Arc<str>>, action: impl Into<fret_runtime::ActionId>, ) -> Self {",
+        "pub fn action_command(self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {",
+        "pub fn cancel_id( self, label: impl Into<Arc<str>>, action: impl Into<fret_runtime::ActionId>, ) -> Self {",
+        "pub fn cancel_command(self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "sonner.rs should expose explicit action-id/command aliases for toast message actions"
+        );
+    }
 }
 
 #[test]

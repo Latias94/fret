@@ -792,6 +792,15 @@ pub mod primitives {
             }
         }
 
+        /// Bind a stable action ID to this breadcrumb link (action-first authoring).
+        ///
+        /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+        /// through the existing command pipeline.
+        pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+            self.link = self.link.action(action);
+            self
+        }
+
         pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
             self.link = self.link.on_click(command);
             self
@@ -878,6 +887,15 @@ pub mod primitives {
         /// Explicit raw seam for pre-landed inline children.
         pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
             self.children = children.into_iter().collect();
+            self
+        }
+
+        /// Bind a stable action ID to this breadcrumb link (action-first authoring).
+        ///
+        /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+        /// through the existing command pipeline.
+        pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+            self.command = Some(action.into());
             self
         }
 
