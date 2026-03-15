@@ -176,15 +176,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `fret_runtime::BundledFontBaselineSnapshot` now gives runners one explicit runtime global for
       the framework-owned bundled baseline contract.
-    - web and desktop startup now both install bundled default fonts and publish the current
-      `fret-fonts::default_profile()` identity (profile name, bundle id, logical asset keys,
-      declared roles, guaranteed generics) before startup font-environment initialization.
-    - desktop intentionally keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation
-      remains an additive native capability instead of redefining the baseline identity.
+    - web and the current native winit startup path now both install bundled default fonts and
+      publish the current `fret-fonts::default_profile()` identity (profile name, bundle id,
+      logical asset keys, declared roles, guaranteed generics) before startup font-environment
+      initialization.
+    - native intentionally keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation
+      remains an additive capability instead of redefining the baseline identity.
+    - local iOS target evidence now exists:
+      - `cargo check -p fret-launch --target aarch64-apple-ios`
   - Remaining:
-    - mobile startup should publish the same snapshot shape
-    - mobile should install the same framework-owned bundled baseline before any future
-      platform-specific font augmentation
+    - add stable Android target evidence once the local/CI environment provides NDK clang
+      toolchains
+    - add mobile-specific diagnostics or startup gates beyond shared native runner wiring
 
 - [~] RESLOAD-font-320 Define bundled font profiles/manifests as a real product surface.
   - Minimum guarantees:

@@ -516,15 +516,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     .global::<fret_runtime::PlatformCapabilities>()
                     .cloned()
                     .unwrap_or_default();
-                let window = match self.create_os_window(event_loop, spec, style, None, &caps) {
-                    Ok(w) => w,
-                    Err(e) => {
-                        error!(error = ?e, "failed to create main window");
-                        return;
-                    }
-                };
+                let window =
+                    match self.create_os_window(event_loop, spec, style.clone(), None, &caps) {
+                        Ok(w) => w,
+                        Err(e) => {
+                            error!(error = ?e, "failed to create main window");
+                            return;
+                        }
+                    };
 
-                let main_window = match self.insert_window(window.0, window.1, None, style) {
+                let main_window = match self.insert_window(window.0, window.1, None, style.clone())
+                {
                     Ok(id) => id,
                     Err(e) => {
                         error!(error = ?e, "failed to insert main window runtime");

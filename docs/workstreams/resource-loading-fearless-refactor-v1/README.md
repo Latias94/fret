@@ -138,10 +138,13 @@ This workstream takes a fearless posture:
 - startup publication now also has an explicit runtime-global slot for that baseline identity:
   - `fret_runtime::BundledFontBaselineSnapshot` records which bundled profile/bundle/asset keys
     the runner chose,
-  - web and desktop startup now both publish the current `fret-fonts::default_profile()` contract
-    before startup font-environment initialization,
-  - desktop still keeps `FontFamilyDefaultsPolicy::None`, so native system-font augmentation stays
-    separate from the framework-owned baseline identity.
+  - web and the current non-wasm winit startup path now both publish the current
+    `fret-fonts::default_profile()` contract before startup font-environment initialization,
+  - native startup still keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation stays
+    separate from the framework-owned baseline identity,
+  - local evidence now includes `cargo check -p fret-launch --target aarch64-apple-ios`,
+    while Android target verification is currently blocked by missing NDK clang tooling in the
+    local environment.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract
@@ -218,22 +221,27 @@ driver:
 This is too easy to misuse. A public-looking `install()` API must either perform complete runtime
 wiring or be renamed to describe its actual effect.
 
-### 4) Font baseline semantics are inconsistent across platforms
+### 4) Font baseline semantics are still under-verified across platforms
 
-Web and desktop now both inject the same bundled default font baseline as soon as the renderer is
-ready:
+Web and the current native winit startup path now inject the same bundled default font baseline as
+soon as the renderer is ready:
 
 - `crates/fret-launch/src/runner/web/gfx_init.rs`
 - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
 
-The remaining inconsistency is now narrower: desktop still keeps `FontFamilyDefaultsPolicy::None`
-and layers optional system scanning on top, while mobile does not yet publish the same startup
-snapshot/install path:
+The remaining gap is now narrower:
+
+- native still keeps `FontFamilyDefaultsPolicy::None` and layers optional system scanning on top,
+- mobile shell/toolchain verification is still incomplete even though the current non-wasm runner
+  path routes through the same startup helper,
+- and Android local verification currently depends on an external NDK clang toolchain that is not
+  present in this environment.
 
 - `crates/fret-launch/src/runner/font_catalog.rs`
 
-So the framework now guarantees one deterministic bundled baseline on web and desktop before
-platform-specific augmentation, but it does not yet close the same contract on mobile.
+So the framework now guarantees one deterministic bundled baseline on web and on the current native
+runner path before platform-specific augmentation, but mobile-specific diagnostics and Android CI
+toolchain evidence are still missing.
 
 ### 5) SVG text does not share the text system font environment
 
