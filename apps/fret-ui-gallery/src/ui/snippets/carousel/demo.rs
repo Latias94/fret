@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, SemanticsDecoration};
@@ -17,7 +17,7 @@ struct SlideVisual {
     line_height_px: Px,
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Match shadcn/ui v4 docs example widths (`max-w-xs`) deterministically in native builds.
     let max_w_xs = Px(320.0);
 
@@ -352,7 +352,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .map(|idx| shadcn::CarouselItem::new(demo_slide(cx, idx, demo_visual)))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -360,11 +360,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-demo")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

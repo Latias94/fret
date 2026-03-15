@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("checkbox.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let checkbox_a = cx.local_model_keyed("checkbox_a", || true);
     let checkbox_b = cx.local_model_keyed("checkbox_b", || false);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));

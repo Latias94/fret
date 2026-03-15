@@ -1,4 +1,5 @@
 use super::{gates, models::CodeEditorMvpHandles, prelude::*, word_boundary};
+use fret::UiChild;
 use fret::UiCx;
 
 pub(super) fn build_header(
@@ -16,7 +17,7 @@ pub(super) fn build_header(
     word_fixture_loaded: Rc<Cell<bool>>,
     word_idx: Rc<Cell<usize>>,
     word_debug: Rc<std::cell::RefCell<String>>,
-) -> AnyElement {
+) -> impl UiChild + use<> {
     let syntax_rust_switch = syntax_rust.clone();
     let boundary_identifier_switch = boundary_identifier.clone();
     let soft_wrap_switch = soft_wrap.clone();
@@ -140,7 +141,8 @@ pub(super) fn build_header(
                     word_idx.clone(),
                     word_debug.clone(),
                     boundary_identifier.clone(),
-                ),
+                )
+                .into_element(cx),
                 cx.keyed("word-boundary-debug", |cx| {
                     word_boundary::word_boundary_debug_view(
                         cx,
@@ -148,6 +150,7 @@ pub(super) fn build_header(
                         word_handle.clone(),
                         word_debug.clone(),
                     )
+                    .into_element(cx)
                 }),
             ]
         })

@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("tooltip.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let content = material3::TooltipProvider::new().with_elements(cx, |cx| {
         let outlined = material3::ButtonVariant::Outlined;
 

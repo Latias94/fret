@@ -1,17 +1,18 @@
 pub const SOURCE: &str = include_str!("attachments_usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{ImageColorSpace, ImageId, Px};
 use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::ui;
-use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space};
+use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::OnceLock;
 
-fn landscape_image_id<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
+fn landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
     static SOURCE: OnceLock<ImageSource> = OnceLock::new();
     let source = SOURCE.get_or_init(|| {
         // Keep the snippet self-contained instead of depending on repo-relative demo assets.
@@ -68,10 +69,7 @@ fn demo_preview_rgba8(width: u32, height: u32, accent: (u8, u8, u8)) -> Vec<u8> 
     out
 }
 
-fn render_grid_attachment<H: UiHost + 'static>(
-    cx: &mut ElementContext<'_, H>,
-    data: ui_ai::AttachmentData,
-) -> impl IntoUiElement<H> + use<H> {
+fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData) -> impl UiChild + use<> {
     ui_ai::Attachment::new(data)
         .variant(ui_ai::AttachmentVariant::Grid)
         .into_element_with_children(cx, move |cx, _parts| {
@@ -103,7 +101,7 @@ fn render_grid_attachment<H: UiHost + 'static>(
         })
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let mut image = ui_ai::AttachmentFileData::new("usage-image")
         .filename("mountain-landscape.jpg")
         .media_type("image/jpeg");

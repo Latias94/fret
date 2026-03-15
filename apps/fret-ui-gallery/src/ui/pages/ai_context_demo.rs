@@ -61,11 +61,11 @@ pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
             "Preview starts with the docs-style compound example, then shows Fret's default convenience API for the same surface.",
         ),
         vec![
-            DocSection::new("Compound API", compound)
+            DocSection::build(cx, "Compound API", compound)
                 .description("Docs-aligned direct composition using `Context::children([...])`, `ContextTrigger`, `ContextContent`, and the usage parts.")
                 .test_id_prefix("ui-gallery-ai-context-demo")
                 .code_rust_from_file_region(snippets::context_demo::SOURCE, "example"),
-            DocSection::new("Default API", default_api)
+            DocSection::build(cx, "Default API", default_api)
                 .description("Fret convenience API renders the default trigger/content without repeating the part tree.")
                 .test_id_prefix("ui-gallery-ai-context-default")
                 .code_rust_from_file_region(snippets::context_default::SOURCE, "example"),
@@ -81,5 +81,8 @@ pub(super) fn preview_ai_context_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-context-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-context-demo")
+            .into_element(cx),
+    ]
 }

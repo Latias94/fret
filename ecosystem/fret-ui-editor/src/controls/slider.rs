@@ -23,6 +23,7 @@ use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
 };
+use crate::primitives::numeric_value::NumericValueConstraints;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use fret_core::text::{TextOverflow, TextWrap};
@@ -80,16 +81,13 @@ fn compose_affixed_value_text(
 }
 
 fn quantize_value(min: f64, max: f64, clamp: bool, step: Option<f64>, v: f64) -> f64 {
-    let mut out = v;
-    if let Some(step) = step {
-        if step.is_finite() && step > 0.0 && (max - min).is_finite() {
-            out = ((out - min) / step).round() * step + min;
-        }
+    NumericValueConstraints {
+        min: Some(min),
+        max: Some(max),
+        clamp,
+        step,
     }
-    if clamp {
-        out = out.clamp(min, max);
-    }
-    out
+    .apply_f64(v)
 }
 
 fn t_from_value(min: f64, max: f64, clamp: bool, v: f64) -> f32 {

@@ -91,7 +91,8 @@ pub(in crate::ui) fn preview_code_editor_mvp(
         word_fixture_loaded,
         word_idx,
         word_debug,
-    );
+    )
+    .into_element(cx);
 
     let editor = code_editor::CodeEditor::new(handles.main)
         .key(0)
@@ -122,5 +123,5 @@ pub(in crate::ui) fn preview_code_editor_mvp(
 
     let page = doc_layout::wrap_preview_page(cx, None, "Code editor", vec![header, panel]);
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

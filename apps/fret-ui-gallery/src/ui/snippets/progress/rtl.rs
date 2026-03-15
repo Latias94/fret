@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(|| 66.0);
 
     let centered = |cx: &mut UiCx<'_>, body: AnyElement| {

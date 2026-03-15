@@ -18,6 +18,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
+use crate::{IntoUiElement, collect_children};
 
 /// Returns a selected-value model that behaves like Radix `useControllableState` (`value` /
 /// `defaultValue`).
@@ -165,7 +166,7 @@ pub fn tab_panel_semantics_props(
 /// - When `force_mount=false`, inactive panels are not mounted.
 /// - When `force_mount=true`, inactive panels remain mounted but are not present/interactive.
 #[track_caller]
-pub fn tab_panel_with_gate<H: UiHost, I>(
+pub fn tab_panel_with_gate<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     active: bool,
     force_mount: bool,
@@ -175,7 +176,8 @@ pub fn tab_panel_with_gate<H: UiHost, I>(
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> Option<AnyElement>
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     if !active && !force_mount {
         return None;
@@ -184,7 +186,10 @@ where
     let panel = |cx: &mut ElementContext<'_, H>| {
         cx.semantics(
             tab_panel_semantics_props(layout, label, labelled_by_element),
-            children,
+            move |cx| {
+                let items = children(cx);
+                collect_children(cx, items)
+            },
         )
     };
 
@@ -302,14 +307,15 @@ impl TabsList {
     /// - This installs APG navigation and, in automatic mode, updates `TabsRoot.model` when the
     ///   active tab changes.
     #[track_caller]
-    pub fn into_element<H: UiHost, I>(
+    pub fn into_element<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         mut props: RovingFlexProps,
         f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         let model = self.root.model.clone();
         let activation_mode = self.root.activation_mode;
@@ -335,7 +341,8 @@ impl TabsList {
                     if activation_mode == TabsActivationMode::Automatic {
                         cx.roving_select_option_arc_str(&model, values_for_roving.clone());
                     }
-                    f(cx)
+                    let items = f(cx);
+                    collect_children(cx, items)
                 })]
             },
         )
@@ -399,7 +406,7 @@ impl TabsTrigger {
     /// - Selects the tab on left mouse down (no ctrl key), matching Radix's `onMouseDown`.
     /// - Activates selection on pressable "activate" as well (Enter/Space and click-like pointer up).
     #[track_caller]
-    pub fn into_element<H: UiHost, I>(
+    pub fn into_element<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &TabsRoot,
@@ -407,7 +414,8 @@ impl TabsTrigger {
         f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         let model = root.model.clone();
         let value = self.value.clone();
@@ -457,7 +465,8 @@ impl TabsTrigger {
             props.focusable = (!disabled) && (tab_stop || st.focused);
             props.a11y = tab_a11y_with_collection(label.clone(), selected, pos_in_set, set_size);
 
-            (props, f(cx))
+            let items = f(cx);
+            (props, collect_children(cx, items))
         })
     }
 }
@@ -504,14 +513,15 @@ impl TabsContent {
 
     /// Renders a `TabsContent` (tab panel) subtree if it is active or force-mounted.
     #[track_caller]
-    pub fn into_element<H: UiHost, I>(
+    pub fn into_element<H: UiHost, I, T>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &TabsRoot,
         f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> Option<AnyElement>
     where
-        I: IntoIterator<Item = AnyElement>,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
     {
         let selected_value: Option<Arc<str>> =
             cx.watch_model(&root.model).layout().cloned().flatten();

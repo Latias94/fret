@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -13,7 +14,7 @@ where
         .justify_center()
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let content = shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
         shadcn::PopoverTitle::new("Dimensions").into_element(cx),
         shadcn::PopoverDescription::new("Set the dimensions for the layer.").into_element(cx),

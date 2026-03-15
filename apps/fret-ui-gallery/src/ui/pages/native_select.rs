@@ -41,7 +41,9 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-native-select-api-reference");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("A styled native-select-like control following the upstream top-of-page example.")
+        .description(
+            "A styled native-select-like control following the upstream top-of-page example.",
+        )
         .no_shell()
         .test_id_prefix("ui-gallery-native-select-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
@@ -90,5 +92,5 @@ pub(super) fn preview_native_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![body.test_id("ui-gallery-native-select")]
+    vec![body.test_id("ui-gallery-native-select").into_element(cx)]
 }

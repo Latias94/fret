@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("tooltip.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let chart_1 = cx.theme().color_token("chart-1");
     let chart_2 = cx.theme().color_token("chart-2");
     let chart_3 = cx.theme().color_token("chart-3");

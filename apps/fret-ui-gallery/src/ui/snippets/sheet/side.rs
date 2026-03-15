@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("side.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let demo_name = cx.local_model_keyed("demo_name", || String::from("Pedro Duarte"));
     let demo_username = cx.local_model_keyed("demo_username", || String::from("@peduarte"));
     let side_top_open = cx.local_model_keyed("side_top_open", || false);
@@ -11,7 +12,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let side_bottom_open = cx.local_model_keyed("side_bottom_open", || false);
     let side_left_open = cx.local_model_keyed("side_left_open", || false);
 
-    let side_sheet = |cx: &mut ElementContext<'_, H>,
+    let side_sheet = |cx: &mut UiCx<'_>,
                       id: &'static str,
                       label: &'static str,
                       side: shadcn::SheetSide,
@@ -91,7 +92,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     // Match upstream demo layout: a strict 2x2 grid of side triggers.
     ui::v_flex(|cx| {
         let row =
-            |cx: &mut ElementContext<'_, H>,
+            |cx: &mut UiCx<'_>,
              a: (&'static str, &'static str, shadcn::SheetSide, Model<bool>),
              b: (&'static str, &'static str, shadcn::SheetSide, Model<bool>)| {
                 let (id_a, label_a, side_a, open_a) = a;

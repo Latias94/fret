@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("long_list.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -55,7 +55,7 @@ fn state_rows(
     .layout(LayoutRefinement::default().w_full().min_w_0())
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || None::<Arc<str>>);
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);
@@ -73,14 +73,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-long-list")
         .items(items)
-        .into_element_parts(cx, |_cx| {
-            vec![
-                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(320.0))),
-                shadcn::ComboboxPart::from(
-                    shadcn::ComboboxInput::new().placeholder("Pick an item"),
-                ),
-            ]
-        });
+        .trigger(shadcn::ComboboxTrigger::new().width_px(Px(320.0)))
+        .input(shadcn::ComboboxInput::new().placeholder("Pick an item"))
+        .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![

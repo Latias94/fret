@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("responsive.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let username = cx.local_model_keyed("username", String::new);
     let responsive_message = cx.local_model_keyed("responsive_message", String::new);
     let wide = cx.local_model_keyed("wide", || false);

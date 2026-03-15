@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
@@ -12,7 +13,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let text = cx.local_model_keyed("text", String::new);
     let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
     let use_web_search = cx.local_model_keyed("use_web_search", || false);
@@ -95,18 +96,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         let _ = host.models_mut().update(&model_value, |v| *v = Some(value));
                     }
                 })
-                .into_element_parts(
-                    cx,
-                    |_cx| shadcn::SelectTrigger::new().size(shadcn::SelectTriggerSize::Sm),
-                    |_cx| shadcn::SelectValue::new().placeholder("Model"),
-                    |_cx| {
-                        shadcn::SelectContent::new().with_entries([
-                            shadcn::SelectItem::new("gpt-4o", "GPT-4o").into(),
-                            shadcn::SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus")
-                                .into(),
-                        ])
-                    },
-                );
+                .trigger(shadcn::SelectTrigger::new().size(shadcn::SelectTriggerSize::Sm))
+                .value(shadcn::SelectValue::new().placeholder("Model"))
+                .content(shadcn::SelectContent::new())
+                .entries([
+                    shadcn::SelectItem::new("gpt-4o", "GPT-4o").into(),
+                    shadcn::SelectItem::new("claude-opus-4-20250514", "Claude 4 Opus").into(),
+                ])
+                .into_element(cx);
 
             let tools = ui_ai::PromptInputTools::new([menu, search_btn, select]).into_element(cx);
             let submit = ui_ai::PromptInputSubmit::new()

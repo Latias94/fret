@@ -1,14 +1,15 @@
 pub const SOURCE: &str = include_str!("overlay_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>, dialog_open: Model<bool>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let shell_layout = LayoutRefinement::default()
         .w_full()
         .max_w(Px(760.0))
         .min_w_0();
+    let dialog_open = cx.local_model_keyed("dialog_open", || false);
 
     let open_for_trigger = dialog_open.clone();
     let open_for_close = dialog_open.clone();

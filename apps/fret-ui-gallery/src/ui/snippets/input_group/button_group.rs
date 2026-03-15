@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("button_group.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let url = cx.local_model(String::new);
 
     let group = shadcn::InputGroup::new(url)

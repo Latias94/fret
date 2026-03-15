@@ -3218,6 +3218,14 @@ impl ContextMenu {
         self
     }
 
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This keeps the root authoring surface on a typed builder lane while still lowering into the
+    /// existing `build_parts(...)` path at the final landing seam.
+    pub fn compose<H: UiHost>(self) -> ContextMenuComposition<H> {
+        ContextMenuComposition::new(self)
+    }
+
     /// Host-bound builder-first helper that late-lands the trigger at the root call site.
     #[track_caller]
     pub fn build<H: UiHost, I>(
@@ -4798,6 +4806,113 @@ impl ContextMenu {
 
             trigger
         })
+    }
+}
+
+/// Recipe-level builder for composing a context menu from shadcn-style parts.
+type ContextMenuDeferredEntries<H> =
+    Box<dyn FnOnce(&mut ElementContext<'_, H>) -> Vec<ContextMenuEntry> + 'static>;
+
+enum ContextMenuCompositionEntries<H: UiHost> {
+    Eager(Vec<ContextMenuEntry>),
+    Deferred(ContextMenuDeferredEntries<H>),
+}
+
+pub struct ContextMenuComposition<H: UiHost, TTrigger = ContextMenuTrigger> {
+    menu: ContextMenu,
+    trigger: Option<TTrigger>,
+    content: ContextMenuContent,
+    entries: Option<ContextMenuCompositionEntries<H>>,
+}
+
+impl<H: UiHost, TTrigger> std::fmt::Debug for ContextMenuComposition<H, TTrigger> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ContextMenuComposition")
+            .field("menu", &self.menu)
+            .field("trigger", &self.trigger.is_some())
+            .field("content", &self.content)
+            .field("entries", &self.entries.is_some())
+            .finish()
+    }
+}
+
+impl<H: UiHost> ContextMenuComposition<H> {
+    pub fn new(menu: ContextMenu) -> Self {
+        Self {
+            menu,
+            trigger: None,
+            content: ContextMenuContent::new(),
+            entries: None,
+        }
+    }
+}
+
+impl<H: UiHost, TTrigger> ContextMenuComposition<H, TTrigger> {
+    pub fn trigger<TNextTrigger>(
+        self,
+        trigger: TNextTrigger,
+    ) -> ContextMenuComposition<H, TNextTrigger> {
+        ContextMenuComposition {
+            menu: self.menu,
+            trigger: Some(trigger),
+            content: self.content,
+            entries: self.entries,
+        }
+    }
+
+    pub fn content(mut self, content: impl Into<ContextMenuContent>) -> Self {
+        self.content = content.into();
+        self
+    }
+
+    pub fn entries(mut self, entries: impl IntoIterator<Item = ContextMenuEntry>) -> Self {
+        self.entries = Some(ContextMenuCompositionEntries::Eager(
+            entries.into_iter().collect(),
+        ));
+        self
+    }
+
+    pub fn entries_with(
+        mut self,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ContextMenuEntry> + 'static,
+    ) -> Self {
+        self.entries = Some(ContextMenuCompositionEntries::Deferred(Box::new(entries)));
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        TTrigger: IntoUiElement<H>,
+    {
+        let trigger = self
+            .trigger
+            .expect("ContextMenu::compose().trigger(...) must be provided before into_element()");
+        let entries = self
+            .entries
+            .expect("ContextMenu::compose().entries(...) must be provided before into_element()");
+        let content = self.content;
+
+        match entries {
+            ContextMenuCompositionEntries::Eager(entries) => {
+                self.menu
+                    .build_parts(cx, trigger, content, move |_cx| entries)
+            }
+            ContextMenuCompositionEntries::Deferred(entries) => {
+                self.menu
+                    .build_parts(cx, trigger, content, move |cx| entries(cx))
+            }
+        }
+    }
+}
+
+impl<H: UiHost, TTrigger> IntoUiElement<H> for ContextMenuComposition<H, TTrigger>
+where
+    TTrigger: IntoUiElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        ContextMenuComposition::into_element(self, cx)
     }
 }
 

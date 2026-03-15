@@ -1,11 +1,12 @@
 pub const SOURCE: &str = include_str!("choice_card.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let share = cx.local_model_keyed("share", || false);
     let notifications = cx.local_model_keyed("notifications", || true);
 

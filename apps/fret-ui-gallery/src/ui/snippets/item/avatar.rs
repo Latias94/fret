@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -66,7 +66,7 @@ fn item_team(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .min_w_0()

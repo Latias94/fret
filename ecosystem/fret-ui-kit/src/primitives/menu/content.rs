@@ -13,6 +13,7 @@ use std::sync::Arc;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::IntoUiElement;
 use crate::primitives::roving_focus_group;
 
 pub use crate::primitives::roving_focus_group::{
@@ -21,21 +22,22 @@ pub use crate::primitives::roving_focus_group::{
 
 /// Render a menu "content" list with APG-aligned roving focus and an explicit typeahead policy.
 #[track_caller]
-pub fn menu_roving_group_apg<H: UiHost, I>(
+pub fn menu_roving_group_apg<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     typeahead: TypeaheadPolicy,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     roving_focus_group::roving_focus_group_apg_entry_fallback(cx, props, typeahead, f)
 }
 
 /// Convenience helper for the most common menu behavior: prefix-buffer typeahead.
 #[track_caller]
-pub fn menu_roving_group_apg_prefix_typeahead<H: UiHost, I>(
+pub fn menu_roving_group_apg_prefix_typeahead<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     labels: Arc<[Arc<str>]>,
@@ -43,7 +45,8 @@ pub fn menu_roving_group_apg_prefix_typeahead<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     menu_roving_group_apg(
         cx,

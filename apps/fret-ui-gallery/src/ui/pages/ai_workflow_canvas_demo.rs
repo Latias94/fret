@@ -14,12 +14,12 @@ pub(super) fn preview_ai_workflow_canvas_demo(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Workflow Canvas", demo)
+            DocSection::build(cx, "Workflow Canvas", demo)
                 .max_w(Px(1000.0))
                 .test_id_prefix("ui-gallery-ai-workflow-canvas-demo")
                 .code_rust_from_file_region(snippets::workflow_canvas_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

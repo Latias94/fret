@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("spacing.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -57,7 +57,7 @@ fn slide(
     ui::container(move |_cx| vec![card]).w_full().p_1()
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_sm = Px(384.0);
 
     let visual = SlideVisual {
@@ -66,11 +66,12 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
     };
     let items = (1..=5)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx)))
-        .map(|item| item.padding_start(Space::N1))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .item_basis_main_px(Px(129.328))
+        .track_start_neg_margin(Space::N1)
+        .item_padding_start(Space::N1)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -78,11 +79,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-spacing")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items).track_start_neg_margin(Space::N1),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

@@ -56,7 +56,7 @@ pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
             "Docs-aligned preview keeps the AI Elements dialog + command split while intentionally leaving model inventory, query ownership, and provider policy in app code.",
         ),
         vec![
-            DocSection::new("Compound API", demo)
+            DocSection::build(cx, "Compound API", demo)
                 .descriptions([
                     "Shows the same dialog / content / input / list decomposition as the official `model-selector` docs, expressed with the same root-level `into_element_with_children(...)` pattern used by the other selectors.",
                     "Highlights that most of the surface is still a thin alias layer over shared command parts, with only a few selector-specific presentation helpers on top.",
@@ -75,5 +75,8 @@ pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-model-selector-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-model-selector-demo")
+            .into_element(cx),
+    ]
 }

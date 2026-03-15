@@ -1,27 +1,28 @@
 pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    group_value: Model<Option<Arc<str>>>,
-) -> AnyElement {
-    let standalone_selected = cx.local_model_keyed("standalone_selected", || false);
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let group = material3::RadioGroup::uncontrolled(cx, None::<Arc<str>>);
+    let group_value = group.value_model();
+    let standalone = material3::Radio::uncontrolled(cx, false);
+    let standalone_selected = standalone.selected_model();
 
     let current = cx
         .get_model_cloned(&group_value, Invalidation::Layout)
         .flatten()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let group_value_for_row = group_value.clone();
     let row = ui::h_row(move |cx| {
         vec![
-            material3::RadioGroup::new(group_value_for_row.clone())
+            group
+                .clone()
                 .a11y_label("Material 3 RadioGroup")
                 .orientation(material3::RadioGroupOrientation::Horizontal)
                 .gap(Px(8.0))
@@ -57,12 +58,11 @@ pub fn render<H: UiHost>(
                 .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
         );
 
-    let group_value_for_group_overridden = group_value.clone();
     let override_style_for_group = override_style.clone();
     let override_style_for_standalone = override_style.clone();
     let group_overridden = ui::h_row(move |cx| {
         vec![
-            material3::RadioGroup::new(group_value_for_group_overridden.clone())
+            material3::RadioGroup::new(group_value.clone())
                 .a11y_label("Material 3 RadioGroup (override)")
                 .style(override_style_for_group.clone())
                 .orientation(material3::RadioGroupOrientation::Horizontal)
@@ -88,7 +88,8 @@ pub fn render<H: UiHost>(
 
     let standalone = ui::h_row(move |cx| {
         vec![
-            material3::Radio::new(standalone_selected.clone())
+            standalone
+                .clone()
                 .a11y_label("Material 3 Radio (standalone)")
                 .test_id("ui-gallery-material3-radio-standalone")
                 .into_element(cx),

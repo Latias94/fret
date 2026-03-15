@@ -1,0 +1,134 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: tab cycle commands via Ctrl+Tab (smoke)",
+    "tags": ["workspace", "tabstrip", "keyboard", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "target_hints": [
+      "Closes doc-a-0 so only two tabs remain (deterministic MRU).",
+      "Activates doc-a-1, focuses pane content, then uses Ctrl+Tab / Ctrl+Shift+Tab.",
+      "Asserts workspace.tab.next/prev dispatch traces and selected tab changes."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" }
+    },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" },
+      "button": "left"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.tab.close.doc-a-0",
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-0.close"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" }
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "tab", "modifiers": { "ctrl": true }, "repeat": false },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": { "command": "workspace.tab.next", "handled": true, "started_from_focus": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "press_key",
+      "key": "tab",
+      "modifiers": { "ctrl": true, "shift": true },
+      "repeat": false
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": { "command": "workspace.tab.prev", "handled": true, "started_from_focus": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-cycle-commands-smoke" }
+  ]
+}

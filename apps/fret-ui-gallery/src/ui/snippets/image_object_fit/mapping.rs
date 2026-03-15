@@ -1,24 +1,22 @@
 pub const SOURCE: &str = include_str!("mapping.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::ImageId;
-use fret_ui::Theme;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    _theme: &Theme,
-    square_image: Model<Option<ImageId>>,
-    wide_image: Model<Option<ImageId>>,
-    tall_image: Model<Option<ImageId>>,
-) -> AnyElement {
-    let image_cell = |cx: &mut ElementContext<'_, H>,
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let square_image = super::square_image(cx);
+    let wide_image = super::wide_image(cx);
+    let tall_image = super::tall_image(cx);
+
+    let image_cell = |cx: &mut UiCx<'_>,
                       label: &'static str,
-                      source: Model<Option<ImageId>>,
+                      source: Option<ImageId>,
                       fit: fret_core::ViewportFit|
      -> AnyElement {
         let label = cx.text(label);
-        let image = shadcn::MediaImage::model(source)
+        let image = shadcn::MediaImage::maybe(source)
             .fit(fit)
             .loading(true)
             .refine_style(ChromeRefinement::default().rounded(Radius::Md))
@@ -33,10 +31,7 @@ pub fn render<H: UiHost>(
             .into_element(cx)
     };
 
-    let row = |cx: &mut ElementContext<'_, H>,
-               title: &'static str,
-               image: Model<Option<ImageId>>|
-     -> AnyElement {
+    let row = |cx: &mut UiCx<'_>, title: &'static str, image: Option<ImageId>| -> AnyElement {
         let stretch = image_cell(
             cx,
             "Stretch",
@@ -67,9 +62,9 @@ pub fn render<H: UiHost>(
 
     ui::v_flex(|cx| {
         vec![
-            row(cx, "Wide source → fixed 160×96", wide_image.clone()),
-            row(cx, "Tall source → fixed 160×96", tall_image.clone()),
-            row(cx, "Square source → fixed 160×96", square_image.clone()),
+            row(cx, "Wide source -> fixed 160x96", wide_image.clone()),
+            row(cx, "Tall source -> fixed 160x96", tall_image.clone()),
+            row(cx, "Square source -> fixed 160x96", square_image.clone()),
         ]
     })
     .gap(Space::N6)

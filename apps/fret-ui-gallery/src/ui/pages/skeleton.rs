@@ -25,6 +25,38 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .test_id_prefix("ui-gallery-skeleton-api-reference")
         .description("Public surface summary and ownership notes.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Avatar row with two text lines.")
+        .test_id_prefix("ui-gallery-skeleton-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Basic skeleton block.")
+        .test_id_prefix("ui-gallery-skeleton-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let avatar = DocSection::build(cx, "Avatar", avatar)
+        .description("Avatar placeholder with supporting text lines.")
+        .test_id_prefix("ui-gallery-skeleton-avatar")
+        .code_rust_from_file_region(snippets::avatar::SOURCE, "example");
+    let card = DocSection::build(cx, "Card", card)
+        .description("Skeletons inside a card layout.")
+        .test_id_prefix("ui-gallery-skeleton-card")
+        .code_rust_from_file_region(snippets::card::SOURCE, "example");
+    let text_section = DocSection::build(cx, "Text", text_section)
+        .description("Multiple lines with varying widths.")
+        .test_id_prefix("ui-gallery-skeleton-text")
+        .code_rust_from_file_region(snippets::text::SOURCE, "example");
+    let form = DocSection::build(cx, "Form", form)
+        .description("Form-like blocks.")
+        .test_id_prefix("ui-gallery-skeleton-form")
+        .code_rust_from_file_region(snippets::form::SOURCE, "example");
+    let table = DocSection::build(cx, "Table", table)
+        .description("Row skeletons.")
+        .test_id_prefix("ui-gallery-skeleton-table")
+        .code_rust_from_file_region(snippets::table::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Direction provider should not break skeleton layout.")
+        .test_id_prefix("ui-gallery-skeleton-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -32,41 +64,17 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Skeleton docs path first: Demo, Usage, Avatar, Card, Text, Form, Table, RTL, and API Reference.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Avatar row with two text lines.")
-                .test_id_prefix("ui-gallery-skeleton-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Basic skeleton block.")
-                .test_id_prefix("ui-gallery-skeleton-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Avatar", avatar)
-                .description("Avatar placeholder with supporting text lines.")
-                .test_id_prefix("ui-gallery-skeleton-avatar")
-                .code_rust_from_file_region(snippets::avatar::SOURCE, "example"),
-            DocSection::new("Card", card)
-                .description("Skeletons inside a card layout.")
-                .test_id_prefix("ui-gallery-skeleton-card")
-                .code_rust_from_file_region(snippets::card::SOURCE, "example"),
-            DocSection::new("Text", text_section)
-                .description("Multiple lines with varying widths.")
-                .test_id_prefix("ui-gallery-skeleton-text")
-                .code_rust_from_file_region(snippets::text::SOURCE, "example"),
-            DocSection::new("Form", form)
-                .description("Form-like blocks.")
-                .test_id_prefix("ui-gallery-skeleton-form")
-                .code_rust_from_file_region(snippets::form::SOURCE, "example"),
-            DocSection::new("Table", table)
-                .description("Row skeletons.")
-                .test_id_prefix("ui-gallery-skeleton-table")
-                .code_rust_from_file_region(snippets::table::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Direction provider should not break skeleton layout.")
-                .test_id_prefix("ui-gallery-skeleton-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            avatar,
+            card,
+            text_section,
+            form,
+            table,
+            rtl,
             api_reference,
         ],
     );
 
-    vec![body.test_id("ui-gallery-skeleton")]
+    vec![body.test_id("ui-gallery-skeleton").into_element(cx)]
 }

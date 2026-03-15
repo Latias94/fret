@@ -28,20 +28,6 @@ use fret_ui_kit::IntoUiElement;
 
 pub mod app;
 
-#[doc(hidden)]
-pub trait RouterOutletIntoElement: Sized {
-    fn into_router_outlet_element(self, cx: &mut ElementContext<'_, App>) -> AnyElement;
-}
-
-impl<T> RouterOutletIntoElement for T
-where
-    T: IntoUiElement<App>,
-{
-    fn into_router_outlet_element(self, cx: &mut ElementContext<'_, App>) -> AnyElement {
-        IntoUiElement::into_element(self, cx)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct RouterUiSnapshot<R> {
     pub location: RouteLocation,
@@ -628,45 +614,22 @@ impl RouterLink {
     }
 }
 
-pub fn router_outlet<R>(
-    cx: &mut ElementContext<'_, App>,
-    snapshot: &Model<RouterUiSnapshot<R>>,
-    render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
-) -> AnyElement
-where
-    R: Clone + 'static,
-{
-    router_outlet_ui(cx, snapshot, render)
-}
-
-pub fn router_outlet_ui<R, T>(
+pub fn router_outlet<R, T>(
     cx: &mut ElementContext<'_, App>,
     snapshot: &Model<RouterUiSnapshot<R>>,
     render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> T,
 ) -> AnyElement
 where
     R: Clone + 'static,
-    T: RouterOutletIntoElement,
+    T: IntoUiElement<App>,
 {
     let snap = cx
         .get_model_cloned(snapshot, Invalidation::Layout)
         .expect("router snapshot model should be readable");
-    render(cx, &snap).into_router_outlet_element(cx)
+    render(cx, &snap).into_element(cx)
 }
 
-pub fn router_outlet_with_test_id<R>(
-    cx: &mut ElementContext<'_, App>,
-    snapshot: &Model<RouterUiSnapshot<R>>,
-    test_id: impl Into<Arc<str>>,
-    render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
-) -> AnyElement
-where
-    R: Clone + 'static,
-{
-    router_outlet_ui(cx, snapshot, render).test_id(test_id)
-}
-
-pub fn router_outlet_with_test_id_ui<R, T>(
+pub fn router_outlet_with_test_id<R, T>(
     cx: &mut ElementContext<'_, App>,
     snapshot: &Model<RouterUiSnapshot<R>>,
     test_id: impl Into<Arc<str>>,
@@ -674,9 +637,9 @@ pub fn router_outlet_with_test_id_ui<R, T>(
 ) -> AnyElement
 where
     R: Clone + 'static,
-    T: RouterOutletIntoElement,
+    T: IntoUiElement<App>,
 {
-    router_outlet_ui(cx, snapshot, render).test_id(test_id)
+    router_outlet(cx, snapshot, render).test_id(test_id)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -712,24 +675,15 @@ where
     }
 
     #[track_caller]
-    pub fn into_element(
-        self,
-        cx: &mut ElementContext<'_, App>,
-        render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
-    ) -> AnyElement {
-        self.into_element_ui(cx, render)
-    }
-
-    #[track_caller]
-    pub fn into_element_ui<T>(
+    pub fn into_element<T>(
         self,
         cx: &mut ElementContext<'_, App>,
         render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> T,
     ) -> AnyElement
     where
-        T: RouterOutletIntoElement,
+        T: IntoUiElement<App>,
     {
-        let elem = router_outlet_ui(cx, &self.snapshot, render);
+        let elem = router_outlet(cx, &self.snapshot, render);
         match self.test_id {
             Some(test_id) => elem.test_id(test_id),
             None => elem,
@@ -737,25 +691,15 @@ where
     }
 
     #[track_caller]
-    pub fn into_element_by_leaf(
-        self,
-        cx: &mut ElementContext<'_, App>,
-        render: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
-        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
-    ) -> AnyElement {
-        self.into_element_by_leaf_ui(cx, render, not_found)
-    }
-
-    #[track_caller]
-    pub fn into_element_by_leaf_ui<T, N>(
+    pub fn into_element_by_leaf<T, N>(
         self,
         cx: &mut ElementContext<'_, App>,
         render: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> T,
         not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> N,
     ) -> AnyElement
     where
-        T: RouterOutletIntoElement,
-        N: RouterOutletIntoElement,
+        T: IntoUiElement<App>,
+        N: IntoUiElement<App>,
     {
         let Self { snapshot, test_id } = self;
         let mut render = Some(render);
@@ -763,13 +707,13 @@ where
         let elem = router_outlet(cx, &snapshot, move |cx, snap| {
             if snap.is_not_found {
                 return (not_found.take().expect("not_found should be callable"))(cx, snap)
-                    .into_router_outlet_element(cx);
+                    .into_element(cx);
             }
             match snap.leaf_route() {
                 Some(route) => (render.take().expect("render should be callable"))(cx, route, snap)
-                    .into_router_outlet_element(cx),
+                    .into_element(cx),
                 None => (not_found.take().expect("not_found should be callable"))(cx, snap)
-                    .into_router_outlet_element(cx),
+                    .into_element(cx),
             }
         });
         match test_id {
@@ -779,25 +723,7 @@ where
     }
 
     #[track_caller]
-    pub fn into_element_by_leaf_with_status(
-        self,
-        cx: &mut ElementContext<'_, App>,
-        status: impl FnOnce(&App, &RouterUiSnapshot<R>, &R) -> RouterLeafStatus,
-        ready: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
-        pending: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
-        error: impl FnOnce(
-            &mut ElementContext<'_, App>,
-            &R,
-            &RouterUiSnapshot<R>,
-            Arc<str>,
-        ) -> AnyElement,
-        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
-    ) -> AnyElement {
-        self.into_element_by_leaf_with_status_ui(cx, status, ready, pending, error, not_found)
-    }
-
-    #[track_caller]
-    pub fn into_element_by_leaf_with_status_ui<Ready, Pending, Error, NotFound>(
+    pub fn into_element_by_leaf_with_status<Ready, Pending, Error, NotFound>(
         self,
         cx: &mut ElementContext<'_, App>,
         status: impl FnOnce(&App, &RouterUiSnapshot<R>, &R) -> RouterLeafStatus,
@@ -807,10 +733,10 @@ where
         not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> NotFound,
     ) -> AnyElement
     where
-        Ready: RouterOutletIntoElement,
-        Pending: RouterOutletIntoElement,
-        Error: RouterOutletIntoElement,
-        NotFound: RouterOutletIntoElement,
+        Ready: IntoUiElement<App>,
+        Pending: IntoUiElement<App>,
+        Error: IntoUiElement<App>,
+        NotFound: IntoUiElement<App>,
     {
         let Self { snapshot, test_id } = self;
         let mut status = Some(status);
@@ -821,26 +747,26 @@ where
         let elem = router_outlet(cx, &snapshot, move |cx, snap| {
             if snap.is_not_found {
                 return (not_found.take().expect("not_found should be callable"))(cx, snap)
-                    .into_router_outlet_element(cx);
+                    .into_element(cx);
             }
 
             let Some(route) = snap.leaf_route() else {
                 return (not_found.take().expect("not_found should be callable"))(cx, snap)
-                    .into_router_outlet_element(cx);
+                    .into_element(cx);
             };
 
             match (status.take().expect("status should be callable"))(&*cx.app, snap, route) {
                 RouterLeafStatus::Ready => {
                     (ready.take().expect("ready should be callable"))(cx, route, snap)
-                        .into_router_outlet_element(cx)
+                        .into_element(cx)
                 }
                 RouterLeafStatus::Pending => {
                     (pending.take().expect("pending should be callable"))(cx, route, snap)
-                        .into_router_outlet_element(cx)
+                        .into_element(cx)
                 }
                 RouterLeafStatus::Error { message } => {
                     (error.take().expect("error should be callable"))(cx, route, snap, message)
-                        .into_router_outlet_element(cx)
+                        .into_element(cx)
                 }
             }
         });
@@ -851,21 +777,23 @@ where
     }
 }
 
-pub fn router_link<R, H>(
+pub fn router_link<R, H, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     link: RouterLink,
-    children: impl IntoIterator<Item = AnyElement>,
+    children: I,
 ) -> AnyElement
 where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<App>,
 {
     router_link_with_props(cx, store, link, PressableProps::default(), children)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn router_link_to<R, H>(
+pub fn router_link_to<R, H, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     action: NavigationAction,
@@ -873,54 +801,60 @@ pub fn router_link_to<R, H>(
     params: &[PathParam],
     search: SearchMap,
     fragment: Option<String>,
-    children: impl IntoIterator<Item = AnyElement>,
+    children: I,
 ) -> Result<AnyElement, RouterBuildLocationError>
 where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<App>,
 {
     let app: &App = &*cx.app;
     let link = store.link_to(app, action, route, params, search, fragment)?;
     Ok(router_link(cx, store, link, children))
 }
 
-pub fn router_link_to_typed_route<R, H, C>(
+pub fn router_link_to_typed_route<R, H, C, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     action: NavigationAction,
     codec: &C,
     route: &C::Route,
-    children: impl IntoIterator<Item = AnyElement>,
+    children: I,
 ) -> AnyElement
 where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
     C: RouteCodec,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<App>,
 {
     let link = store.link_to_typed_route(action, codec, route);
     router_link(cx, store, link, children)
 }
 
-pub fn router_link_to_typed_route_with_test_id<R, H, C>(
+pub fn router_link_to_typed_route_with_test_id<R, H, C, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     action: NavigationAction,
     codec: &C,
     route: &C::Route,
     test_id: impl Into<Arc<str>>,
-    children: impl IntoIterator<Item = AnyElement>,
+    children: I,
 ) -> AnyElement
 where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
     C: RouteCodec,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<App>,
 {
     let link = store.link_to_typed_route(action, codec, route);
     router_link_with_test_id(cx, store, link, test_id, children)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn router_link_to_with_test_id<R, H>(
+pub fn router_link_to_with_test_id<R, H, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     action: NavigationAction,
@@ -929,11 +863,13 @@ pub fn router_link_to_with_test_id<R, H>(
     search: SearchMap,
     fragment: Option<String>,
     test_id: impl Into<Arc<str>>,
-    children: impl IntoIterator<Item = AnyElement>,
+    children: I,
 ) -> Result<AnyElement, RouterBuildLocationError>
 where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<App>,
 {
     let app: &App = &*cx.app;
     let link = store.link_to(app, action, route, params, search, fragment)?;
@@ -945,16 +881,18 @@ where
 /// The pressable:
 /// - navigates on `pressable_on_activate`
 /// - computes prefetch intents on hover and stores them in `RouterUiStore::intents_model()`
-pub fn router_link_with_props<R, H>(
+pub fn router_link_with_props<R, H, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     link: RouterLink,
     props: PressableProps,
-    children: impl IntoIterator<Item = AnyElement>,
+    children: I,
 ) -> AnyElement
 where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<App>,
 {
     let mut props = props;
     props.a11y.role.get_or_insert(SemanticsRole::Link);
@@ -963,7 +901,10 @@ where
     let href = link.href.clone();
     let on_activate = store.navigate_link_on_activate(link.clone());
     let on_hover = store.prefetch_link_on_hover_change(link);
-    let children: Vec<AnyElement> = children.into_iter().collect();
+    let children: Vec<AnyElement> = children
+        .into_iter()
+        .map(|child| child.into_element(cx))
+        .collect();
 
     cx.pressable_with_id_props(|cx, _state, _id| {
         cx.pressable_on_activate(on_activate);
@@ -976,16 +917,18 @@ where
 /// Build a router link pressable and stamp a diagnostics `test_id`.
 ///
 /// Prefer this in demos and automated `fretboard diag` scripts.
-pub fn router_link_with_test_id<R, H>(
+pub fn router_link_with_test_id<R, H, I, T>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     link: RouterLink,
     test_id: impl Into<Arc<str>>,
-    children: impl IntoIterator<Item = AnyElement>,
+    children: I,
 ) -> AnyElement
 where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<App>,
 {
     let mut props = PressableProps::default();
     props.a11y.test_id = Some(test_id.into());
@@ -1021,7 +964,7 @@ impl RouterLink {
 
 #[cfg(test)]
 mod tests {
-    use super::{RouterOutlet, RouterUiSnapshot, RouterUiStore};
+    use super::{router_link, RouterLink, RouterOutlet, RouterUiSnapshot, RouterUiStore};
     use fret_app::App;
     use fret_router::{
         MemoryHistory, RouteCodec, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent,
@@ -1091,11 +1034,11 @@ mod tests {
     }
 
     #[allow(dead_code)]
-    fn router_outlet_by_leaf_ui_accepts_builder_children(
+    fn router_outlet_by_leaf_accepts_builder_children(
         cx: &mut ElementContext<'_, App>,
         snapshot: Model<RouterUiSnapshot<CompileRoute>>,
     ) -> AnyElement {
-        RouterOutlet::new(snapshot).into_element_by_leaf_ui(
+        RouterOutlet::new(snapshot).into_element_by_leaf(
             cx,
             |_cx, _route, snap| {
                 let depth = snap.match_depth();
@@ -1107,6 +1050,15 @@ mod tests {
     }
 
     #[allow(dead_code)]
+    fn router_link_accepts_builder_children(
+        cx: &mut ElementContext<'_, App>,
+        store: &RouterUiStore<CompileRoute, MemoryHistory>,
+        link: RouterLink,
+    ) -> AnyElement {
+        router_link(cx, store, link, [ui::text("go")])
+    }
+
+    #[allow(dead_code)]
     #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
     enum CompileRoute {
         Home,
@@ -1115,11 +1067,8 @@ mod tests {
     #[test]
     fn crate_docs_keep_router_ui_positioned_as_thin_adoption_layer() {
         assert!(LIB_RS.contains("This crate intentionally provides a thin layer:"));
-        assert!(
-            LIB_RS.contains(
-                "Policy-heavy behavior remains in apps and higher-level ecosystem crates."
-            )
-        );
+        assert!(LIB_RS
+            .contains("Policy-heavy behavior remains in apps and higher-level ecosystem crates."));
     }
 
     #[test]
@@ -1128,6 +1077,7 @@ mod tests {
             .split("#[cfg(test)]")
             .next()
             .expect("router-ui source should contain a test module split");
+        let normalized = public_surface.split_whitespace().collect::<String>();
 
         assert!(public_surface.contains("pub mod app;"));
         assert!(public_surface.contains("pub fn register_router_commands("));
@@ -1135,6 +1085,10 @@ mod tests {
         assert!(public_surface.contains("pub struct RouterOutlet"));
         assert!(public_surface.contains("pub fn router_link<"));
         assert!(public_surface.contains("pub fn router_outlet<"));
+        assert!(public_surface.contains("pub fn into_element<T>("));
+        assert!(public_surface.contains("pub fn into_element_by_leaf<T, N>("));
+        assert!(public_surface
+            .contains("pub fn into_element_by_leaf_with_status<Ready, Pending, Error, NotFound>("));
 
         assert!(!public_surface.contains("pub fn install_app("));
         assert!(!public_surface.contains("pub fn install(app: &mut App)"));
@@ -1144,6 +1098,15 @@ mod tests {
         assert!(!public_surface.contains("AppUi<"));
         assert!(!public_surface.contains("ViewCx<"));
         assert!(!public_surface.contains("Plugin"));
+        assert!(!public_surface.contains("RouterOutletIntoElement"));
+        assert!(!public_surface.contains("pub fn router_outlet_ui("));
+        assert!(!public_surface.contains("pub fn router_outlet_with_test_id_ui("));
+        assert!(!public_surface.contains("pub fn into_element_ui("));
+        assert!(!public_surface.contains("pub fn into_element_by_leaf_ui("));
+        assert!(!public_surface.contains("pub fn into_element_by_leaf_with_status_ui("));
+        assert!(!normalized.contains("IntoIterator<Item=AnyElement>"));
+        assert!(normalized.contains("pubfnrouter_link<R,H,I,T>("));
+        assert!(normalized.contains("pubfnrouter_link_with_props<R,H,I,T>("));
         assert!(APP_RS.contains("pub fn install(app: &mut App)"));
     }
 

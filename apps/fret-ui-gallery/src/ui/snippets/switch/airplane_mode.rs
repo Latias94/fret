@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("airplane_mode.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let model = cx.local_model(|| false);
 
     ui::h_flex(|cx| {

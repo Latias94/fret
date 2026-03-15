@@ -19,7 +19,7 @@ pub(super) fn preview_ai_inline_citation_demo(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Demo", demo)
+            DocSection::build(cx, "Demo", demo)
                 .test_id_prefix("ui-gallery-ai-inline-citation-demo")
                 .description(
                     "Docs-style inline citation example with multi-source hover-card paging.",
@@ -32,5 +32,5 @@ pub(super) fn preview_ai_inline_citation_demo(
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

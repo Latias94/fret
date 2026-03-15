@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("plugin_autoplay_stop_on_last_snap.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, TextProps};
@@ -51,7 +51,7 @@ fn slide_card(
     shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);
@@ -94,7 +94,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx, visual).into_element(cx)))
         .collect::<Vec<_>>();
 
-    let carousel = shadcn::Carousel::default()
+    let carousel = shadcn::Carousel::new(items)
         .plugins([shadcn::CarouselPlugin::Autoplay(
             shadcn::CarouselAutoplayConfig::new(Duration::from_millis(200))
                 .pause_on_hover(false)
@@ -105,12 +105,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .autoplay_api_handle_model(autoplay_api.clone())
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-plugin-stop-on-last-snap")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        );
+        .into_element(cx);
 
     let slide_counter = {
         let text = format!(

@@ -1,5 +1,6 @@
 use super::super::super::super::super::*;
 use crate::ui::doc_layout;
+use fret::UiChild;
 use fret::UiCx;
 
 pub(in crate::ui) fn preview_text_feature_toggles(
@@ -35,14 +36,20 @@ pub(in crate::ui) fn preview_text_feature_toggles(
     }
 
     let header = ui::v_flex(|cx| {
-            vec![
-                cx.text("Goal: validate OpenType feature overrides (`TextShapingStyle.features`) end-to-end."),
-                cx.text("This is best-effort: visible differences depend on the chosen font. Inter typically shows `liga` (fi/fl/ffi/ffl)."),
-                cx.text("Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native."),
-            ]
-        })
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2).into_element(cx);
+        vec![
+            cx.text(
+                "Goal: validate OpenType feature overrides (`TextShapingStyle.features`) end-to-end.",
+            ),
+            cx.text(
+                "This is best-effort: visible differences depend on the chosen font. Inter typically shows `liga` (fi/fl/ffi/ffl).",
+            ),
+            cx.text(
+                "Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native.",
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2);
 
     fn toggle_button(
         cx: &mut UiCx<'_>,
@@ -50,13 +57,12 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         value: bool,
         test_id: &'static str,
         on_activate: fret_ui::action::OnActivate,
-    ) -> AnyElement {
+    ) -> impl UiChild + use<> {
         let txt = format!("{label}: {}", if value { "on" } else { "off" });
         shadcn::Button::new(txt)
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
             .on_activate(on_activate)
-            .into_element(cx)
             .test_id(test_id)
     }
 
@@ -105,11 +111,10 @@ pub(in crate::ui) fn preview_text_feature_toggles(
             on_ss01,
         );
 
-        ui::h_flex(|_cx| vec![liga_btn, calt_btn, ss01_btn])
+        ui::h_flex(|cx| ui::children![cx; liga_btn, calt_btn, ss01_btn])
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2)
             .items_center()
-            .into_element(cx)
     };
 
     fn sample_text(
@@ -119,7 +124,7 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         text: &'static str,
         features: Option<fret_core::TextShapingStyle>,
         test_id: &'static str,
-    ) -> AnyElement {
+    ) -> impl UiChild + use<> {
         let label = shadcn::FieldLabel::new(label).into_element(cx);
 
         let span = if let Some(shaping) = features {
@@ -159,7 +164,6 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         ui::v_flex(|_cx| vec![label, text])
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N1)
-            .into_element(cx)
     }
 
     let panel = cx.container(
@@ -182,7 +186,8 @@ pub(in crate::ui) fn preview_text_feature_toggles(
                 sample,
                 None,
                 "ui-gallery-text-feature-toggles-baseline",
-            );
+            )
+            .into_element(cx);
 
             let st = state.borrow();
             let shaping = fret_core::TextShapingStyle::default()
@@ -197,10 +202,11 @@ pub(in crate::ui) fn preview_text_feature_toggles(
                 sample,
                 Some(shaping),
                 "ui-gallery-text-feature-toggles-overrides",
-            );
+            )
+            .into_element(cx);
 
             vec![
-                ui::v_flex(|_cx| vec![toolbar, baseline, overridden])
+                ui::v_flex(|cx| ui::children![cx; toolbar, baseline, overridden])
                     .layout(LayoutRefinement::default().w_full())
                     .gap(Space::N4)
                     .into_element(cx),
@@ -208,7 +214,12 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         },
     );
 
-    let page = doc_layout::wrap_preview_page(cx, None, "Text feature toggles", vec![header, panel]);
+    let page = doc_layout::wrap_preview_page(
+        cx,
+        None,
+        "Text feature toggles",
+        vec![header.into_element(cx), panel],
+    );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

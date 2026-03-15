@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let rtl_area = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let content = ui::container(|cx| {
             vec![
@@ -45,7 +46,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .w_full()
         .into_element(cx);
 
-        shadcn::ScrollArea::new([content])
+        shadcn::scroll_area(cx, |_cx| [content])
             .axis(fret_ui::element::ScrollAxis::Y)
             .viewport_test_id("ui-gallery-scroll-area-rtl-viewport")
             .refine_layout(LayoutRefinement::default().w_full().h_full())

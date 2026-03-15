@@ -25,6 +25,35 @@ pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .description("Public surface summary and ownership notes.");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Docs-aligned badge preview with the four primary variants.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for `Badge`.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let variants = DocSection::build(cx, "Variants", variants)
+        .description("Use the `variant` prop to change the badge variant.")
+        .code_rust_from_file_region(snippets::variants::SOURCE, "example");
+    let with_icon = DocSection::build(cx, "With Icon", with_icon)
+        .description("Render an icon inside the badge with inline-start / inline-end placement.")
+        .code_rust_from_file_region(snippets::icon::SOURCE, "example");
+    let with_spinner = DocSection::build(cx, "With Spinner", with_spinner)
+        .description("Render a spinner inside the badge for loading states.")
+        .code_rust_from_file_region(snippets::spinner::SOURCE, "example");
+    let link = DocSection::build(cx, "Link", link)
+        .description(
+            "Badges can be composed with link semantics through the badge-owned render surface.",
+        )
+        .code_rust_from_file_region(snippets::link::SOURCE, "example");
+    let colors = DocSection::build(cx, "Custom Colors", colors)
+        .description("Customize badge colors with explicit background and text overrides.")
+        .code_rust_from_file_region(snippets::colors::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Render the badge under an RTL direction provider.")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let counts = DocSection::build(cx, "Counts (Fret)", counts)
+        .description("Compact numeric badges kept as a focused Fret follow-up for diag coverage.")
+        .code_rust_from_file_region(snippets::counts::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -32,36 +61,18 @@ pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Preview mirrors the shadcn Badge docs path first: Demo, Usage, Variants, With Icon, With Spinner, Link, Custom Colors, RTL, and API Reference. `Counts (Fret)` stays as an explicit follow-up.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Docs-aligned badge preview with the four primary variants.")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Copyable minimal usage for `Badge`.")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Variants", variants)
-                .description("Use the `variant` prop to change the badge variant.")
-                .code_rust_from_file_region(snippets::variants::SOURCE, "example"),
-            DocSection::new("With Icon", with_icon)
-                .description("Render an icon inside the badge with inline-start / inline-end placement.")
-                .code_rust_from_file_region(snippets::icon::SOURCE, "example"),
-            DocSection::new("With Spinner", with_spinner)
-                .description("Render a spinner inside the badge for loading states.")
-                .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
-            DocSection::new("Link", link)
-                .description("Badges can be composed with link semantics through the badge-owned render surface.")
-                .code_rust_from_file_region(snippets::link::SOURCE, "example"),
-            DocSection::new("Custom Colors", colors)
-                .description("Customize badge colors with explicit background and text overrides.")
-                .code_rust_from_file_region(snippets::colors::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Render the badge under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            variants,
+            with_icon,
+            with_spinner,
+            link,
+            colors,
+            rtl,
             api_reference,
-            DocSection::new("Counts (Fret)", counts)
-                .description("Compact numeric badges kept as a focused Fret follow-up for diag coverage.")
-                .code_rust_from_file_region(snippets::counts::SOURCE, "example"),
+            counts,
         ],
     );
 
-    vec![body.test_id("ui-gallery-badge")]
+    vec![body.test_id("ui-gallery-badge").into_element(cx)]
 }

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("artifact_code_display.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
@@ -19,7 +20,7 @@ fn status_action(status: Model<Arc<str>>, message: &'static str) -> OnActivate {
     })
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let status = cx.local_model_keyed("status", || {
         Arc::<str>::from("Ready to run, copy, regenerate, download, or share.")
     });

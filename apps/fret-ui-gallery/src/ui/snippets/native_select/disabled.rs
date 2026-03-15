@@ -6,8 +6,10 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let value =
-        cx.local_model_keyed("ui-gallery-native-select-disabled-value", || None::<Arc<str>>);
+    let value = cx.local_model_keyed(
+        "ui-gallery-native-select-disabled-value",
+        || None::<Arc<str>>,
+    );
     let open = cx.local_model_keyed("ui-gallery-native-select-disabled-open", || false);
     let select_layout = LayoutRefinement::default().max_w(Px(320.0)).min_w_0();
 

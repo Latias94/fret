@@ -197,6 +197,7 @@ impl UiGalleryDriver {
         let motion_preset_open = app.models_mut().insert(false);
         #[cfg(feature = "gallery-dev")]
         let popover_open = app.models_mut().insert(false);
+        #[cfg(feature = "gallery-dev")]
         let dialog_open = app.models_mut().insert(false);
         #[cfg(feature = "gallery-dev")]
         let dialog_glass_open = app.models_mut().insert(false);
@@ -247,16 +248,7 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(fret_ui_headless::calendar::CalendarMonth::from_date(today));
         let date_picker_selected = app.models_mut().insert(None::<Date>);
-        #[cfg(feature = "gallery-material3")]
-        let time_picker_open = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let time_picker_selected = app
-            .models_mut()
-            .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
 
-        let mut data_table_state_value = fret_ui_headless::table::TableState::default();
-        data_table_state_value.pagination.page_size = 25;
-        let data_table_state = app.models_mut().insert(data_table_state_value);
         #[cfg(feature = "gallery-dev")]
         let data_grid_selected_row = app.models_mut().insert(None::<u64>);
         let tabs_value = app
@@ -290,16 +282,6 @@ impl UiGalleryDriver {
             (255, 160, 120),
         );
 
-        let image_fit_demo_streaming_image = app.models_mut().insert(None::<ImageId>);
-        let image_fit_demo_streaming_token = app.next_image_upload_token();
-        Self::enqueue_image_fit_demo_image_register(
-            app,
-            window,
-            image_fit_demo_streaming_token,
-            Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
-            (140, 230, 170),
-        );
-
         let progress = app.models_mut().insert(35.0f32);
         #[cfg(feature = "gallery-dev")]
         let checkbox = app.models_mut().insert(false);
@@ -318,39 +300,7 @@ impl UiGalleryDriver {
         #[cfg(feature = "gallery-dev")]
         let markdown_link_gate_last_activation = app.models_mut().insert(None::<Arc<str>>);
         #[cfg(feature = "gallery-material3")]
-        let material3_checkbox = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_switch = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_slider_value = app.models_mut().insert(0.3f32);
-        #[cfg(feature = "gallery-material3")]
-        let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
-        #[cfg(feature = "gallery-material3")]
-        let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_list_value = app.models_mut().insert(Arc::<str>::from("alpha"));
-        #[cfg(feature = "gallery-material3")]
         let material3_expressive = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
-        #[cfg(feature = "gallery-material3")]
-        let material3_modal_navigation_drawer_open = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_text_field_value = app.models_mut().insert(String::new());
-        #[cfg(feature = "gallery-material3")]
-        let material3_text_field_disabled = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_text_field_error = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_autocomplete_disabled = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_autocomplete_error = app.models_mut().insert(false);
-        #[cfg(feature = "gallery-material3")]
-        let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
         let input_file_value = app.models_mut().insert(String::new());
@@ -464,6 +414,7 @@ impl UiGalleryDriver {
             inspector_last_pointer,
             #[cfg(feature = "gallery-dev")]
             popover_open,
+            #[cfg(feature = "gallery-dev")]
             dialog_open,
             #[cfg(feature = "gallery-dev")]
             dialog_glass_open,
@@ -490,11 +441,6 @@ impl UiGalleryDriver {
             date_picker_open,
             date_picker_month,
             date_picker_selected,
-            #[cfg(feature = "gallery-material3")]
-            time_picker_open,
-            #[cfg(feature = "gallery-material3")]
-            time_picker_selected,
-            data_table_state,
             #[cfg(feature = "gallery-dev")]
             data_grid_selected_row,
             tabs_value,
@@ -506,10 +452,6 @@ impl UiGalleryDriver {
             image_fit_demo_wide_token: Some(image_fit_demo_wide_token),
             image_fit_demo_tall_image,
             image_fit_demo_tall_token: Some(image_fit_demo_tall_token),
-            image_fit_demo_streaming_image,
-            image_fit_demo_streaming_token: Some(image_fit_demo_streaming_token),
-            image_fit_demo_streaming_frame: 0,
-            image_fit_demo_streaming_size: Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
             progress,
             #[cfg(feature = "gallery-dev")]
             checkbox,
@@ -528,39 +470,7 @@ impl UiGalleryDriver {
             #[cfg(feature = "gallery-dev")]
             markdown_link_gate_last_activation,
             #[cfg(feature = "gallery-material3")]
-            material3_checkbox,
-            #[cfg(feature = "gallery-material3")]
-            material3_switch,
-            #[cfg(feature = "gallery-material3")]
-            material3_slider_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_radio_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_tabs_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_list_value,
-            #[cfg(feature = "gallery-material3")]
             material3_expressive,
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_bar_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_rail_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_navigation_drawer_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_modal_navigation_drawer_open,
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_value,
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_disabled,
-            #[cfg(feature = "gallery-material3")]
-            material3_text_field_error,
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_disabled,
-            #[cfg(feature = "gallery-material3")]
-            material3_autocomplete_error,
-            #[cfg(feature = "gallery-material3")]
-            material3_menu_open,
             text_input,
             text_area,
             input_file_value,

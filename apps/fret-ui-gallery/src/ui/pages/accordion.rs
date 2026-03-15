@@ -73,5 +73,5 @@ pub(super) fn preview_accordion(
         ],
     );
 
-    vec![body.test_id("ui-gallery-accordion")]
+    vec![body.test_id("ui-gallery-accordion").into_element(cx)]
 }

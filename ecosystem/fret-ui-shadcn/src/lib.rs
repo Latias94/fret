@@ -213,7 +213,7 @@ pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
 pub use combobox::{
-    Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
+    Combobox, ComboboxChip, ComboboxChipsInput, ComboboxClear, ComboboxCollection, ComboboxContent,
     ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel,
     ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger, ComboboxTriggerVariant,
     ComboboxValue,
@@ -464,10 +464,10 @@ pub mod facade {
         Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
     };
     pub use crate::combobox::{
-        Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
-        ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem,
-        ComboboxLabel, ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger,
-        ComboboxTriggerVariant, ComboboxValue,
+        Combobox, ComboboxChip, ComboboxChipsInput, ComboboxClear, ComboboxCollection,
+        ComboboxContent, ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput,
+        ComboboxItem, ComboboxLabel, ComboboxList, ComboboxPart, ComboboxSeparator,
+        ComboboxTrigger, ComboboxTriggerVariant, ComboboxValue,
     };
     pub use crate::combobox_chips::{ComboboxChips, ComboboxChipsPart};
     pub use crate::command::{

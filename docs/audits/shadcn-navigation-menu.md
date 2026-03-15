@@ -177,5 +177,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Follow-ups (recommended)
 
+- Authoring-lane classification: treat `NavigationMenu` as a dual-lane family.
+  `navigation_menu(cx, model, |cx| ..)` is the compact typed lane for first-party app authoring,
+  while the explicit `NavigationMenuRoot/List/Item/Trigger/Content/Link/Viewport/Indicator`
+  surface remains the upstream-shaped lane; neither should be mislabeled as an advanced-only seam.
 - Consider exposing an opt-in custom indicator renderer if parity-sensitive recipes need it (today
   the indicator visuals are not user-supplied, only toggled on/off).

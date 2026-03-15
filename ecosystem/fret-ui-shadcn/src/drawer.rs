@@ -1475,6 +1475,16 @@ impl<H: UiHost, TTrigger> DrawerComposition<H, TTrigger> {
     }
 }
 
+impl<H: UiHost, TTrigger> IntoUiElement<H> for DrawerComposition<H, TTrigger>
+where
+    TTrigger: DrawerCompositionTriggerArg<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerComposition::into_element(self, cx)
+    }
+}
+
 const DRAWER_DRAG_HANDLE_HIT_HEIGHT: f32 = 32.0;
 const DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH: f32 = 80.0;
 const DRAWER_DRAG_DISMISS_MIN_PX: f32 = 30.0;

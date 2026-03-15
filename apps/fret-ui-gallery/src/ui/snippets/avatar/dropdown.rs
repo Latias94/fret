@@ -1,7 +1,9 @@
 pub const SOURCE: &str = include_str!("dropdown.rs");
 
 // region: example
-use fret_core::{Corners, ImageId, Px};
+use crate::ui::snippets::avatar::demo_image;
+use fret::{UiChild, UiCx};
+use fret_core::{Corners, Px};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -16,15 +18,14 @@ where
         .items_center()
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<ImageId>>,
-    open: Model<bool>,
-) -> AnyElement {
-    wrap_row(|cx| {
-        let avatar_image_for_trigger = avatar_image.clone();
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let avatar_image = demo_image(cx);
+    let open = cx.local_model_keyed("open", || false);
 
-        let entries = |_cx: &mut ElementContext<'_, H>| {
+    wrap_row(|cx| {
+        let avatar_image_for_trigger = avatar_image;
+
+        let entries = |_cx: &mut UiCx<'_>| {
             vec![
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Profile")
@@ -49,9 +50,9 @@ pub fn render<H: UiHost>(
             ]
         };
 
-        let image = shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
+        let image = shadcn::AvatarImage::maybe(avatar_image_for_trigger).into_element(cx);
         let fallback = shadcn::AvatarFallback::new("CN")
-            .when_image_missing_model(avatar_image_for_trigger.clone())
+            .when_image_missing(avatar_image_for_trigger)
             .delay_ms(120)
             .into_element(cx);
 
@@ -69,17 +70,19 @@ pub fn render<H: UiHost>(
             .into_element(cx);
 
         vec![
-            shadcn::DropdownMenu::from_open(open).build_parts(
-                cx,
+            shadcn::DropdownMenu::from_open(open)
+                .compose()
                 // shadcn/Radix parity: the authored child button is the actual trigger surface.
                 // The nested Avatar is presentational content inside that pressable child.
-                shadcn::DropdownMenuTrigger::new(trigger),
-                shadcn::DropdownMenuContent::new()
-                    .align(shadcn::DropdownMenuAlign::End)
-                    .side_offset(Px(4.0))
-                    .min_width(Px(224.0)),
-                entries,
-            ),
+                .trigger(shadcn::DropdownMenuTrigger::new(trigger))
+                .content(
+                    shadcn::DropdownMenuContent::new()
+                        .align(shadcn::DropdownMenuAlign::End)
+                        .side_offset(Px(4.0))
+                        .min_width(Px(224.0)),
+                )
+                .entries(entries(cx))
+                .into_element(cx),
         ]
     })
     .into_element(cx)

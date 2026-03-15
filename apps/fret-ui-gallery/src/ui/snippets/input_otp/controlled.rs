@@ -1,12 +1,13 @@
 pub const SOURCE: &str = include_str!("controlled.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(String::new);
     let current = cx.watch_model(&value).cloned().unwrap_or_default();
     let theme = Theme::global(&*cx.app).snapshot();
@@ -17,16 +18,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .length(6)
             .test_id_prefix("ui-gallery-input-otp-controlled")
             .refine_layout(max_w_xs.clone())
-            .into_element_parts(cx, |_cx| {
-                vec![shadcn::InputOtpPart::group(shadcn::InputOTPGroup::new([
-                    shadcn::InputOTPSlot::new(0),
-                    shadcn::InputOTPSlot::new(1),
-                    shadcn::InputOTPSlot::new(2),
-                    shadcn::InputOTPSlot::new(3),
-                    shadcn::InputOTPSlot::new(4),
-                    shadcn::InputOTPSlot::new(5),
-                ]))]
-            });
+            .into_element(cx);
 
         let message: Arc<str> = if current.is_empty() {
             Arc::from("Enter your one-time password.")

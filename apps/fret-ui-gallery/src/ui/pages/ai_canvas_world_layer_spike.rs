@@ -14,12 +14,12 @@ pub(super) fn preview_ai_canvas_world_layer_spike(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Canvas World Layer (Spike)", demo)
+            DocSection::build(cx, "Canvas World Layer (Spike)", demo)
                 .max_w(Px(1000.0))
                 .test_id_prefix("ui-gallery-ai-canvas-world-layer-spike")
                 .code_rust_from_file_region(snippets::canvas_world_layer_spike::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

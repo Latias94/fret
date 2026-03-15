@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("colors.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Color;
 use fret_core::window::ColorScheme;
 use fret_ui::Invalidation;
@@ -37,7 +38,7 @@ fn bg_fg_for_scheme(
     }
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Upstream: `apps/v4/examples/radix/badge-colors.tsx`.
     let scheme = cx.environment_color_scheme(Invalidation::Paint);
     let scheme = scheme.unwrap_or(ColorScheme::Light);

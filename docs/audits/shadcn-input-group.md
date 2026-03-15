@@ -29,6 +29,9 @@ and example implementations in `repo-ref/ui`.
 - Pass: the part-based API matches the upstream docs: `InputGroup`, `InputGroupAddon`, `InputGroupButton`, `InputGroupInput`, `InputGroupTextarea`, and `InputGroupText`.
 - Pass: Fret also keeps the compact `InputGroup::new(model)` shorthand with `leading`, `trailing`, `block_start`, and `block_end` slots for ergonomic app-side authoring.
 - Pass: `InputGroupAddon::align(...)` covers the documented addon placement surface without widening the mechanism layer.
+- Pass: first-party gallery snippets now keep the compact shorthand as the default ergonomic lane
+  (including the dropdown example), while the explicit addon/control parts remain the docs-parity
+  lane rather than an advanced-only escape hatch.
 
 ### Layout & default-style ownership
 

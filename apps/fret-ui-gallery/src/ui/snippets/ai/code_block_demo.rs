@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("code_block_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
@@ -9,7 +10,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).clone();
     let muted_fg = theme.color_token("muted-foreground");
 
@@ -58,37 +59,34 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 host.notify(action_cx);
             }
         })
-        .into_element_parts(
-            cx,
-            |_cx| {
-                shadcn::SelectTrigger::new()
-                    .size(shadcn::SelectTriggerSize::Sm)
-                    .refine_style(
-                        ChromeRefinement::default()
-                            .border_width(Px(0.0))
-                            .bg(ColorRef::Color(fret_core::Color::TRANSPARENT))
-                            .px(Space::N2)
-                            .py(Space::N0p5),
-                    )
-            },
-            |_cx| shadcn::SelectValue::new().placeholder("Language"),
-            |_cx| {
-                shadcn::SelectContent::new().with_entries([
-                    shadcn::SelectItem::new("typescript", "TypeScript")
-                        .test_id("ui-ai-code-block-language-item-typescript")
-                        .into(),
-                    shadcn::SelectItem::new("python", "Python")
-                        .test_id("ui-ai-code-block-language-item-python")
-                        .into(),
-                    shadcn::SelectItem::new("rust", "Rust")
-                        .test_id("ui-ai-code-block-language-item-rust")
-                        .into(),
-                    shadcn::SelectItem::new("go", "Go")
-                        .test_id("ui-ai-code-block-language-item-go")
-                        .into(),
-                ])
-            },
-        );
+        .trigger(
+            shadcn::SelectTrigger::new()
+                .size(shadcn::SelectTriggerSize::Sm)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .border_width(Px(0.0))
+                        .bg(ColorRef::Color(fret_core::Color::TRANSPARENT))
+                        .px(Space::N2)
+                        .py(Space::N0p5),
+                ),
+        )
+        .value(shadcn::SelectValue::new().placeholder("Language"))
+        .content(shadcn::SelectContent::new())
+        .entries([
+            shadcn::SelectItem::new("typescript", "TypeScript")
+                .test_id("ui-ai-code-block-language-item-typescript")
+                .into(),
+            shadcn::SelectItem::new("python", "Python")
+                .test_id("ui-ai-code-block-language-item-python")
+                .into(),
+            shadcn::SelectItem::new("rust", "Rust")
+                .test_id("ui-ai-code-block-language-item-rust")
+                .into(),
+            shadcn::SelectItem::new("go", "Go")
+                .test_id("ui-ai-code-block-language-item-go")
+                .into(),
+        ])
+        .into_element(cx);
 
     let code_block = ui_ai::CodeBlock::new(code.clone())
         .language(language_value.clone())

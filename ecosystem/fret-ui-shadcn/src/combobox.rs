@@ -752,6 +752,62 @@ pub struct Combobox {
 }
 
 impl Combobox {
+    fn apply_parts_patch(mut self, patch: ComboboxPartsPatch) -> Self {
+        if let Some(variant) = patch.trigger_variant {
+            self.trigger_variant = variant;
+        }
+        if let Some(width) = patch.width {
+            self.width = Some(width);
+        }
+        if let Some(placeholder) = patch.placeholder {
+            self.placeholder = placeholder;
+        }
+        if let Some(placeholder) = patch.search_placeholder {
+            self.search_placeholder = placeholder;
+        }
+        if let Some(disabled) = patch.disabled {
+            self.disabled = disabled;
+        }
+        if let Some(aria_invalid) = patch.aria_invalid {
+            self.aria_invalid = aria_invalid;
+        }
+        if let Some(show_trigger) = patch.show_trigger {
+            self.show_trigger = show_trigger;
+        }
+        if let Some(show_clear) = patch.show_clear {
+            self.show_clear = show_clear;
+        }
+        if let Some(side) = patch.content_side {
+            self.content_side = side;
+        }
+        if let Some(align) = patch.content_align {
+            self.content_align = align;
+        }
+        if let Some(offset) = patch.content_side_offset {
+            self.content_side_offset = offset;
+        }
+        if let Some(offset) = patch.content_align_offset {
+            self.content_align_offset = offset;
+        }
+        if let Some(anchor_element_id) = patch.anchor_element_id {
+            self.anchor_element_id = Some(anchor_element_id);
+        }
+        if let Some(empty_text) = patch.empty_text {
+            self.empty_text = empty_text;
+        }
+        if let Some(items) = patch.list_items {
+            self.items = items;
+        }
+        if let Some(groups) = patch.list_groups {
+            self.groups = groups;
+        }
+        if let Some(group_separators) = patch.group_separators {
+            self.group_separators = group_separators;
+        }
+
+        self
+    }
+
     pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {
         Self {
             model,
@@ -809,59 +865,7 @@ impl Combobox {
         cx: &mut ElementContext<'_, H>,
         parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ComboboxPart>,
     ) -> AnyElement {
-        let patch = combobox_parts_patch(parts(cx));
-        if let Some(variant) = patch.trigger_variant {
-            self.trigger_variant = variant;
-        }
-        if let Some(width) = patch.width {
-            self.width = Some(width);
-        }
-        if let Some(placeholder) = patch.placeholder {
-            self.placeholder = placeholder;
-        }
-        if let Some(placeholder) = patch.search_placeholder {
-            self.search_placeholder = placeholder;
-        }
-        if let Some(disabled) = patch.disabled {
-            self.disabled = disabled;
-        }
-        if let Some(aria_invalid) = patch.aria_invalid {
-            self.aria_invalid = aria_invalid;
-        }
-        if let Some(show_trigger) = patch.show_trigger {
-            self.show_trigger = show_trigger;
-        }
-        if let Some(show_clear) = patch.show_clear {
-            self.show_clear = show_clear;
-        }
-        if let Some(side) = patch.content_side {
-            self.content_side = side;
-        }
-        if let Some(align) = patch.content_align {
-            self.content_align = align;
-        }
-        if let Some(offset) = patch.content_side_offset {
-            self.content_side_offset = offset;
-        }
-        if let Some(offset) = patch.content_align_offset {
-            self.content_align_offset = offset;
-        }
-        if let Some(anchor_element_id) = patch.anchor_element_id {
-            self.anchor_element_id = Some(anchor_element_id);
-        }
-        if let Some(empty_text) = patch.empty_text {
-            self.empty_text = empty_text;
-        }
-        if let Some(items) = patch.list_items {
-            self.items = items;
-        }
-        if let Some(groups) = patch.list_groups {
-            self.groups = groups;
-        }
-        if let Some(group_separators) = patch.group_separators {
-            self.group_separators = group_separators;
-        }
-
+        self = self.apply_parts_patch(combobox_parts_patch(parts(cx)));
         self.into_element(cx)
     }
 
@@ -884,6 +888,27 @@ impl Combobox {
             .open_model(cx);
         let value = controllable_state::use_controllable_model(cx, value, || default_value).model();
         Self::new(value, open)
+    }
+
+    /// Applies a shadcn/ui `ComboboxTrigger` configuration without forcing the call site through
+    /// the closure-based parts adapter.
+    pub fn trigger(self, trigger: ComboboxTrigger) -> Self {
+        self.apply_parts_patch(combobox_parts_patch(vec![ComboboxPart::Trigger(trigger)]))
+    }
+
+    /// Applies a shadcn/ui `ComboboxInput` configuration on the direct recipe root lane.
+    pub fn input(self, input: ComboboxInput) -> Self {
+        self.apply_parts_patch(combobox_parts_patch(vec![ComboboxPart::Input(input)]))
+    }
+
+    /// Enables the clear affordance through the direct recipe root lane.
+    pub fn clear(self, clear: ComboboxClear) -> Self {
+        self.apply_parts_patch(combobox_parts_patch(vec![ComboboxPart::Clear(clear)]))
+    }
+
+    /// Applies popup/content configuration on the direct recipe root lane.
+    pub fn content(self, content: ComboboxContent) -> Self {
+        self.apply_parts_patch(combobox_parts_patch(vec![ComboboxPart::Content(content)]))
     }
 
     /// When enabled, follows the upstream shadcn "responsive combobox" recipe: it uses a Drawer on
@@ -3341,6 +3366,65 @@ mod tests {
         assert_eq!(group_items[0].detail.as_deref(), Some("React"));
         assert_eq!(group_items[0].label.as_ref(), "Beta");
         assert_eq!(group_items[0].keywords.len(), 0);
+    }
+
+    #[test]
+    fn combobox_builder_steps_apply_the_same_patch_surface() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let combobox = Combobox::new(model, open)
+            .trigger(
+                ComboboxTrigger::new()
+                    .variant(ComboboxTriggerVariant::Button)
+                    .width_px(Px(256.0)),
+            )
+            .input(
+                ComboboxInput::new()
+                    .placeholder("Pick one")
+                    .disabled(true)
+                    .show_trigger(false)
+                    .show_clear(true),
+            )
+            .content(
+                ComboboxContent::new([
+                    ComboboxContentPart::input(
+                        ComboboxInput::new().placeholder("Search frameworks..."),
+                    ),
+                    ComboboxContentPart::empty(ComboboxEmpty::new("Nothing found.")),
+                    ComboboxContentPart::list(
+                        ComboboxList::new()
+                            .items([ComboboxItem::new("a", "Alpha")])
+                            .groups([ComboboxGroup::new()
+                                .label(ComboboxLabel::new("Group 1"))
+                                .items([ComboboxItem::new("b", "Beta")])
+                                .separator(true)]),
+                    ),
+                ])
+                .side(popper::Side::Top)
+                .align(popper::Align::Start)
+                .side_offset_px(Px(6.0))
+                .align_offset_px(Px(7.0))
+                .anchor_element_id(GlobalElementId(42)),
+            );
+
+        assert_eq!(combobox.trigger_variant, ComboboxTriggerVariant::Button);
+        assert_eq!(combobox.width, Some(Px(256.0)));
+        assert_eq!(combobox.placeholder.as_ref(), "Pick one");
+        assert_eq!(combobox.search_placeholder.as_ref(), "Search frameworks...");
+        assert!(combobox.disabled);
+        assert!(!combobox.show_trigger);
+        assert!(combobox.show_clear);
+        assert_eq!(combobox.content_side, popper::Side::Top);
+        assert_eq!(combobox.content_align, popper::Align::Start);
+        assert_eq!(combobox.content_side_offset, Px(6.0));
+        assert_eq!(combobox.content_align_offset, Px(7.0));
+        assert_eq!(combobox.anchor_element_id, Some(GlobalElementId(42)));
+        assert_eq!(combobox.empty_text.as_ref(), "Nothing found.");
+        assert!(combobox.group_separators);
+        assert_eq!(combobox.items.len(), 1);
+        assert_eq!(combobox.groups.len(), 1);
     }
 
     #[test]

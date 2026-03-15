@@ -1,17 +1,18 @@
 pub const SOURCE: &str = include_str!("presets.rs");
 
 // region: example
+use crate::ui::snippets::date_picker::fixed_today;
+use fret::{UiChild, UiCx};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
-    month: Model<CalendarMonth>,
-    selected: Model<Option<Date>>,
-    today: Date,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let today = fixed_today();
+    let open = cx.local_model_keyed("open", || false);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
+    let selected = cx.local_model_keyed("selected", || None::<Date>);
+
     shadcn::DatePickerWithPresets::new(open, month, selected)
         .today(today)
         .placeholder("Pick a date")

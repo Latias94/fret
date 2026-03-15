@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::headless::form_state::FormState;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let form_state = cx.local_model_keyed("form_state", FormState::default);
     let username = cx.local_model_keyed("username", String::new);
 

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -16,7 +17,7 @@ fn round<H: UiHost>(size: f32) -> impl IntoUiElement<H> + use<H> {
         )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let text_lines = ui::v_stack(|cx| {
             vec![

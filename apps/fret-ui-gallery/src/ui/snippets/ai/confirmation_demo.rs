@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("confirmation_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
@@ -11,7 +12,7 @@ use fret_ui_kit::{Items, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let state = cx.local_model_keyed("state", || ui_ai::ToolUiPartState::InputAvailable);
     let approval = cx.local_model_keyed("approval", || None::<ui_ai::ToolUiPartApproval>);
 

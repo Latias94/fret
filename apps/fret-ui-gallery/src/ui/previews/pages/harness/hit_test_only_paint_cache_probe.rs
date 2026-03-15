@@ -115,17 +115,19 @@ pub(in crate::ui) fn preview_hit_test_only_paint_cache_probe(
         )
         .test_id("ui-gallery-hit-test-only-probe-region");
 
+    let probe_region = DocSection::build(cx, "Probe region", panel)
+        .descriptions([
+            "Pointer moves over the probe region call `host.invalidate(Invalidation::HitTestOnly)` while layout and painted content remain stable.",
+            "Use this page to validate `paint_cache_hit_test_only_replay_*` counters.",
+        ])
+        .no_shell()
+        .max_w(Px(980.0));
+
     let page = doc_layout::render_doc_page(
         cx,
         Some("Deterministically trigger `Invalidation::HitTestOnly` on a cache-eligible subtree."),
-        vec![DocSection::new("Probe region", panel)
-            .descriptions([
-                "Pointer moves over the probe region call `host.invalidate(Invalidation::HitTestOnly)` while layout and painted content remain stable.",
-                "Use this page to validate `paint_cache_hit_test_only_replay_*` counters.",
-            ])
-            .no_shell()
-            .max_w(Px(980.0))],
+        vec![probe_region],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

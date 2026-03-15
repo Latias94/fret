@@ -123,6 +123,11 @@ Fret now exposes `DialogClose::from_scope()` as recipe-layer sugar.
 style than the raw closure root.
 
 - Scope: ergonomics only; it lowers into `Dialog::into_element_parts(...)`.
+- Default teaching path: first-party examples now prefer
+  `Dialog::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`.
+- Focused follow-up lane: explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership
+  stays documented through a dedicated `Parts` example rather than replacing the default copyable
+  path.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
 - Limitation: this is still not a full React-style nested children API; Fret stores already-built
   elements and assembles them at the final call site.

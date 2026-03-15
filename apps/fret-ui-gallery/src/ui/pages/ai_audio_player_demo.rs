@@ -11,11 +11,11 @@ pub(super) fn preview_ai_audio_player_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Audio Player", demo)
+            DocSection::build(cx, "Audio Player", demo)
                 .test_id_prefix("ui-gallery-ai-audio-player-demo")
                 .code_rust_from_file_region(snippets::audio_player_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

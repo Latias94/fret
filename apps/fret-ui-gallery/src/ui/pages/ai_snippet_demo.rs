@@ -12,7 +12,7 @@ pub(super) fn preview_ai_snippet_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         cx,
         Some("Lightweight inline code display for terminal commands and short code references."),
         vec![
-            DocSection::new("Snippet", demo)
+            DocSection::build(cx, "Snippet", demo)
                 .descriptions([
                     "Composable add-on structure aligned with AI Elements.",
                     "Optional prefix text for terminal-style commands.",
@@ -21,11 +21,11 @@ pub(super) fn preview_ai_snippet_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
                 ])
                 .test_id_prefix("ui-gallery-ai-snippet-demo")
                 .code_rust_from_file_region(snippets::snippet_demo::SOURCE, "example"),
-            DocSection::new("Without Prefix", plain)
+            DocSection::build(cx, "Without Prefix", plain)
                 .test_id_prefix("ui-gallery-ai-snippet-plain")
                 .code_rust_from_file_region(snippets::snippet_plain::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

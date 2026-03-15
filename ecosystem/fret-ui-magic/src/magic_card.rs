@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
 use fret_core::geometry::{Corners, Edges, Point, Size};
-use fret_core::scene::{ColorSpace, GradientStop, MAX_STOPS, Paint, RadialGradient, TileMode};
+use fret_core::scene::{ColorSpace, GradientStop, Paint, RadialGradient, TileMode, MAX_STOPS};
 use fret_core::{Color, Px};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, PointerRegionProps};
 use fret_ui::{ElementContext, Invalidation, UiHost};
+
+use crate::collect_children;
 
 #[derive(Debug, Clone)]
 pub struct MagicCardProps {
@@ -65,13 +67,14 @@ fn radial(center: Point, radius: Px, inner: Color, outer: Color) -> Paint {
 }
 
 #[track_caller]
-pub fn magic_card<H: UiHost, I>(
+pub fn magic_card<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: MagicCardProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let pointer_local = cx.local_model(|| None::<Point>);
 
@@ -158,7 +161,10 @@ where
                     corner_radii: props.corner_radii,
                     snap_to_device_pixels: false,
                 },
-                children,
+                move |cx| {
+                    let items = children(cx);
+                    collect_children(cx, items)
+                },
             );
 
             vec![body]

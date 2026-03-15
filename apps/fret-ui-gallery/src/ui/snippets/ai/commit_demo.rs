@@ -1,12 +1,13 @@
 pub const SOURCE: &str = include_str!("commit_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let hash: Arc<str> = Arc::from("a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0");
     let short_hash: Arc<str> = Arc::from(hash.chars().take(7).collect::<String>());
     let timestamp = SystemTime::now()

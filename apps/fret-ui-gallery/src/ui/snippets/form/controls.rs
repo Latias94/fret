@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("controls.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let checkbox = cx.local_model_keyed("checkbox", || false);
     let switch = cx.local_model_keyed("switch", || false);
 

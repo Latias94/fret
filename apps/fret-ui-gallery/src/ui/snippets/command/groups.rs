@@ -1,35 +1,14 @@
 pub const SOURCE: &str = include_str!("groups.rs");
 
 // region: example
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret::{UiChild, UiCx};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let last_action = super::last_action_model(cx);
     let query = cx.local_model(String::new);
-
-    let last_action_model = last_action.clone();
-    let on_select = {
-        let last_action = last_action_model.clone();
-        move |tag: Arc<str>| {
-            let last_action = last_action.clone();
-            Arc::new(
-                move |host: &mut dyn fret_ui::action::UiActionHost,
-                      action_cx: fret_ui::action::ActionCx,
-                      _reason: fret_ui::action::ActivateReason| {
-                    let value = tag.clone();
-                    let _ = host
-                        .models_mut()
-                        .update(&last_action, |cur: &mut Arc<str>| {
-                            *cur = value.clone();
-                        });
-                    host.request_redraw(action_cx.window);
-                },
-            ) as fret_ui::action::OnActivate
-        }
-    };
+    let on_select = super::on_select_for_last_action(last_action.clone());
 
     let entries: Vec<shadcn::CommandEntry> = vec![
         shadcn::CommandGroup::new([

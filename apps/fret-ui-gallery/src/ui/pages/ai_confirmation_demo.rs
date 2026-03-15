@@ -22,20 +22,20 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             "Preview keeps the live approval workflow while mirroring the official AI Elements preview scripts, including title-wrapped confirmation slots and state-specific actions.",
         ),
         vec![
-            DocSection::new("Workflow Demo", workflow)
+            DocSection::build(cx, "Workflow Demo", workflow)
                 .test_id_prefix("ui-gallery-ai-confirmation-demo")
                 .code_rust_from_file_region(snippets::confirmation_demo::SOURCE, "example"),
-            DocSection::new("Approval Request State", request)
+            DocSection::build(cx, "Approval Request State", request)
                 .description("Preview-script-aligned approval-requested state with action buttons.")
                 .test_id_prefix("ui-gallery-ai-confirmation-request")
                 .code_rust_from_file_region(snippets::confirmation_request::SOURCE, "example"),
-            DocSection::new("Approved State", accepted)
+            DocSection::build(cx, "Approved State", accepted)
                 .description(
                     "Preview-script-aligned approval-responded state with accepted feedback.",
                 )
                 .test_id_prefix("ui-gallery-ai-confirmation-accepted")
                 .code_rust_from_file_region(snippets::confirmation_accepted::SOURCE, "example"),
-            DocSection::new("Rejected State", rejected)
+            DocSection::build(cx, "Rejected State", rejected)
                 .description("Preview-script-aligned output-denied state with rejected feedback.")
                 .test_id_prefix("ui-gallery-ai-confirmation-rejected")
                 .code_rust_from_file_region(snippets::confirmation_rejected::SOURCE, "example"),
@@ -44,5 +44,8 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-confirmation-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-confirmation-demo")
+            .into_element(cx),
+    ]
 }

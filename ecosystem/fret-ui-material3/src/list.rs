@@ -20,6 +20,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::context::{
@@ -104,6 +105,27 @@ impl List {
             disabled: false,
             loop_navigation: true,
         }
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Arc<str>>>,
+        default_value: impl Into<Arc<str>>,
+    ) -> Self {
+        let value =
+            controllable_state::use_controllable_model(cx, value, || default_value.into()).model();
+        Self::new(value)
+    }
+
+    pub fn uncontrolled<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        default_value: impl Into<Arc<str>>,
+    ) -> Self {
+        Self::new_controllable(cx, None, default_value)
+    }
+
+    pub fn value_model(&self) -> Model<Arc<str>> {
+        self.model.clone()
     }
 
     pub fn items(mut self, items: Vec<ListItem>) -> Self {
@@ -661,5 +683,61 @@ mod tests {
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        )
+    }
+
+    #[test]
+    fn list_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(Arc::<str>::from("beta"));
+
+        with_element_cx(&mut app, window, bounds(), "m3-list-controlled", |cx| {
+            let list = List::new_controllable(cx, Some(controlled.clone()), "alpha");
+            assert_eq!(list.value_model(), controlled);
+        });
+    }
+
+    #[test]
+    fn list_new_controllable_applies_default_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-list-default", |cx| {
+            let list = List::new_controllable(cx, None, "alpha");
+            let value = cx
+                .watch_model(&list.value_model())
+                .layout()
+                .cloned()
+                .unwrap_or_else(Arc::<str>::default);
+            assert_eq!(value.as_ref(), "alpha");
+        });
+    }
+
+    #[test]
+    fn list_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-list-uncontrolled", |cx| {
+            let a = List::uncontrolled(cx, "alpha");
+            let b = List::uncontrolled(cx, "beta");
+            assert_ne!(a.value_model(), b.value_model());
+        });
     }
 }

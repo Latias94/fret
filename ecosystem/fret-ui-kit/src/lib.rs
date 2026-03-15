@@ -29,6 +29,23 @@ macro_rules! children {
     }};
 }
 
+/// Land typed child values at the last possible moment inside wrapper-style helpers.
+pub(crate) fn collect_children<H, I>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    children: I,
+) -> Vec<fret_ui::element::AnyElement>
+where
+    H: fret_ui::UiHost,
+    I: IntoIterator,
+    I::Item: crate::ui_builder::IntoUiElement<H>,
+{
+    let mut out = Vec::new();
+    for child in children {
+        out.push(crate::ui_builder::IntoUiElement::into_element(child, cx));
+    }
+    out
+}
+
 /// Implement the `UiBuilder` patch + render glue for a component that supports both chrome and
 /// layout refinements.
 ///
@@ -389,10 +406,38 @@ mod default_semantics_tests {
 #[cfg(test)]
 mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
+    const DECLARATIVE_BLOOM_RS: &str = include_str!("declarative/bloom.rs");
+    const DECLARATIVE_CACHED_SUBTREE_RS: &str = include_str!("declarative/cached_subtree.rs");
+    const DECLARATIVE_CHROME_RS: &str = include_str!("declarative/chrome.rs");
+    const DECLARATIVE_CONTAINER_QUERIES_RS: &str = include_str!("declarative/container_queries.rs");
+    const DECLARATIVE_DISMISSIBLE_RS: &str = include_str!("declarative/dismissible.rs");
+    const DECLARATIVE_GLASS_RS: &str = include_str!("declarative/glass.rs");
+    const DECLARATIVE_LIST_RS: &str = include_str!("declarative/list.rs");
     const DECLARATIVE_MOD_RS: &str = include_str!("declarative/mod.rs");
     const DECLARATIVE_PRELUDE_RS: &str = include_str!("declarative/prelude.rs");
+    const DECLARATIVE_SCROLL_RS: &str = include_str!("declarative/scroll.rs");
     const DECLARATIVE_SEMANTICS_RS: &str = include_str!("declarative/semantics.rs");
+    const DECLARATIVE_TABLE_RS: &str = include_str!("declarative/table.rs");
+    const DECLARATIVE_VISUALLY_HIDDEN_RS: &str = include_str!("declarative/visually_hidden.rs");
+    const DECLARATIVE_PIXELATE_RS: &str = include_str!("declarative/pixelate.rs");
     const IMUI_RS: &str = include_str!("imui.rs");
+    const PRIMITIVES_DISMISSABLE_LAYER_RS: &str = include_str!("primitives/dismissable_layer.rs");
+    const PRIMITIVES_ALERT_DIALOG_RS: &str = include_str!("primitives/alert_dialog.rs");
+    const PRIMITIVES_DIALOG_RS: &str = include_str!("primitives/dialog.rs");
+    const PRIMITIVES_FOCUS_SCOPE_RS: &str = include_str!("primitives/focus_scope.rs");
+    const PRIMITIVES_ACCORDION_RS: &str = include_str!("primitives/accordion.rs");
+    const PRIMITIVES_MENU_CONTENT_PANEL_RS: &str = include_str!("primitives/menu/content_panel.rs");
+    const PRIMITIVES_MENU_CONTENT_RS: &str = include_str!("primitives/menu/content.rs");
+    const PRIMITIVES_MENU_SUB_CONTENT_RS: &str = include_str!("primitives/menu/sub_content.rs");
+    const PRIMITIVES_POPPER_CONTENT_RS: &str = include_str!("primitives/popper_content.rs");
+    const PRIMITIVES_POPOVER_RS: &str = include_str!("primitives/popover.rs");
+    const PRIMITIVES_ROVING_FOCUS_GROUP_RS: &str = include_str!("primitives/roving_focus_group.rs");
+    const PRIMITIVES_SELECT_RS: &str = include_str!("primitives/select.rs");
+    const PRIMITIVES_TABS_RS: &str = include_str!("primitives/tabs.rs");
+    const PRIMITIVES_TOGGLE_RS: &str = include_str!("primitives/toggle.rs");
+    const PRIMITIVES_TOOLBAR_RS: &str = include_str!("primitives/toolbar.rs");
+    const PRIMITIVES_TOOLTIP_RS: &str = include_str!("primitives/tooltip.rs");
+    const RECIPES_SORTABLE_DND_RS: &str = include_str!("recipes/sortable_dnd.rs");
     const UI_RS: &str = include_str!("ui.rs");
     const UI_BUILDER_RS: &str = include_str!("ui_builder.rs");
 
@@ -515,5 +560,197 @@ mod source_policy_tests {
         assert!(public_surface.contains("pub trait UiElementTestIdExt: Sized"));
         assert!(public_surface.contains("pub trait UiElementA11yExt: Sized"));
         assert!(public_surface.contains("pub trait UiElementKeyContextExt: Sized"));
+    }
+
+    #[test]
+    fn wrapper_helpers_prefer_typed_child_inputs() {
+        for (label, source, landing_snippet) in [
+            (
+                "declarative/bloom.rs",
+                DECLARATIVE_BLOOM_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/cached_subtree.rs",
+                DECLARATIVE_CACHED_SUBTREE_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/chrome.rs",
+                DECLARATIVE_CHROME_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/container_queries.rs",
+                DECLARATIVE_CONTAINER_QUERIES_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/dismissible.rs",
+                DECLARATIVE_DISMISSIBLE_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/glass.rs",
+                DECLARATIVE_GLASS_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/list.rs",
+                DECLARATIVE_LIST_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/pixelate.rs",
+                DECLARATIVE_PIXELATE_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/scroll.rs",
+                DECLARATIVE_SCROLL_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "declarative/table.rs",
+                DECLARATIVE_TABLE_RS,
+                "collect_children(",
+            ),
+            (
+                "declarative/visually_hidden.rs",
+                DECLARATIVE_VISUALLY_HIDDEN_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/accordion.rs",
+                PRIMITIVES_ACCORDION_RS,
+                "collect_children(cx, items)",
+            ),
+            (
+                "primitives/dismissable_layer.rs",
+                PRIMITIVES_DISMISSABLE_LAYER_RS,
+                "render_dismissible_root_with_hooks(",
+            ),
+            (
+                "primitives/focus_scope.rs",
+                PRIMITIVES_FOCUS_SCOPE_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/menu/content.rs",
+                PRIMITIVES_MENU_CONTENT_RS,
+                "roving_focus_group::roving_focus_group_apg_entry_fallback(",
+            ),
+            (
+                "primitives/menu/content_panel.rs",
+                PRIMITIVES_MENU_CONTENT_PANEL_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/menu/sub_content.rs",
+                PRIMITIVES_MENU_SUB_CONTENT_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/popper_content.rs",
+                PRIMITIVES_POPPER_CONTENT_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/roving_focus_group.rs",
+                PRIMITIVES_ROVING_FOCUS_GROUP_RS,
+                "collect_children(cx,",
+            ),
+            (
+                "primitives/tabs.rs",
+                PRIMITIVES_TABS_RS,
+                "collect_children(cx, items)",
+            ),
+            (
+                "primitives/toggle.rs",
+                PRIMITIVES_TOGGLE_RS,
+                "collect_children(cx, items)",
+            ),
+            (
+                "primitives/toolbar.rs",
+                PRIMITIVES_TOOLBAR_RS,
+                "roving_focus_group::roving_focus_group_apg(",
+            ),
+            (
+                "recipes/sortable_dnd.rs",
+                RECIPES_SORTABLE_DND_RS,
+                "collect_children(cx, items)",
+            ),
+        ] {
+            assert!(
+                source.contains("IntoUiElement<"),
+                "{label} should accept typed child values on the public wrapper surface"
+            );
+            assert!(
+                !source.contains("IntoIterator<Item = AnyElement>"),
+                "{label} reintroduced raw AnyElement child items on the public surface"
+            );
+            assert!(
+                source.contains(landing_snippet),
+                "{label} should only land typed child values behind a typed wrapper seam"
+            );
+        }
+    }
+
+    #[test]
+    fn overlay_wrapper_helpers_land_typed_children_before_request_seams() {
+        for (label, source, typed_signature, landing_snippet, raw_request_snippet) in [
+            (
+                "primitives/alert_dialog.rs",
+                PRIMITIVES_ALERT_DIALOG_RS,
+                "pub fn alert_dialog_modal_barrier<H: UiHost, I, T>(",
+                "collect_children(cx, children)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/dialog.rs",
+                PRIMITIVES_DIALOG_RS,
+                "pub fn modal_barrier<H: UiHost, I, T>(",
+                "let children = collect_children(cx, children);",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/popover.rs",
+                PRIMITIVES_POPOVER_RS,
+                "pub fn popover_dialog_wrapper<H: UiHost, I, T>(",
+                "collect_children(cx, items)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/select.rs",
+                PRIMITIVES_SELECT_RS,
+                "pub fn select_modal_barrier<H: UiHost, I, T>(",
+                "collect_children(cx, barrier_children)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+            (
+                "primitives/tooltip.rs",
+                PRIMITIVES_TOOLTIP_RS,
+                "pub fn request<H: UiHost, I, T>(",
+                "collect_children(cx, children)",
+                "children: impl IntoIterator<Item = AnyElement>",
+            ),
+        ] {
+            assert!(
+                source.contains(typed_signature),
+                "{label} should expose typed child wrappers where an ElementContext is available"
+            );
+            assert!(
+                source.contains("IntoUiElement<H>"),
+                "{label} should accept typed child values on wrapper helpers"
+            );
+            assert!(
+                source.contains(landing_snippet),
+                "{label} should land typed child values behind collect_children(...)"
+            );
+            assert!(
+                source.contains(raw_request_snippet),
+                "{label} should still document the raw AnyElement overlay-request landing seam"
+            );
+        }
     }
 }

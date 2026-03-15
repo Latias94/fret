@@ -14,7 +14,7 @@ pub(super) fn preview_ai_environment_variables_demo(
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Environment Variables", demo)
+            DocSection::build(cx, "Environment Variables", demo)
                 .descriptions([
                     "Value masking by default",
                     "Toggle visibility switch",
@@ -30,5 +30,5 @@ pub(super) fn preview_ai_environment_variables_demo(
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

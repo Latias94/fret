@@ -5,12 +5,12 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::ChromeRefinement;
 use crate::recipes::pixelate::{
     PixelateEffectRefinement, PixelateEffectTokenKeys, PixelateTokenKeys, pixelate_effect_chain,
     resolve_pixelate_chrome, resolve_pixelate_effect,
 };
 use crate::recipes::resolve::ResolvedWithFallback;
+use crate::{ChromeRefinement, IntoUiElement, collect_children};
 
 #[derive(Debug, Clone)]
 pub struct PixelatePanelProps {
@@ -40,13 +40,14 @@ impl Default for PixelatePanelProps {
     }
 }
 
-pub fn pixelate_panel<H: UiHost, I>(
+pub fn pixelate_panel<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: PixelatePanelProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let theme = Theme::global(&*cx.app);
     let chrome = resolve_pixelate_chrome(theme, &props.chrome, props.chrome_keys);
@@ -74,7 +75,7 @@ where
                 chain: chain.value,
                 quality: props.quality,
             },
-            |cx| {
+            move |cx| {
                 let mut inner_layout = LayoutStyle::default();
                 inner_layout.size.width = Length::Fill;
                 inner_layout.size.height = Length::Fill;
@@ -88,7 +89,10 @@ where
                     ..Default::default()
                 };
 
-                vec![cx.container(inner, children)]
+                let items = children(cx);
+                let inner_children = collect_children(cx, items);
+
+                vec![cx.container(inner, move |_cx| inner_children)]
             },
         );
 

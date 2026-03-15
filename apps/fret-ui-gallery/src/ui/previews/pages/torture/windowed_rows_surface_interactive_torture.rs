@@ -180,18 +180,20 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
             vec![root]
         });
 
+    let surface = DocSection::build(cx, "Surface", surface)
+        .description(
+            "Pattern: stable tree (Scroll + PointerRegion + Canvas), row hit-testing in pointer hooks, paint-only visuals in Canvas.",
+        )
+        .no_shell()
+        .max_w(Px(980.0));
+
     let page = doc_layout::render_doc_page(
         cx,
         Some(
             "Goal: demonstrate paint-only hover/selection chrome on a prepaint-windowed row surface (ADR 0175 + ADR 0166).",
         ),
-        vec![DocSection::new("Surface", surface)
-            .description(
-                "Pattern: stable tree (Scroll + PointerRegion + Canvas), row hit-testing in pointer hooks, paint-only visuals in Canvas.",
-            )
-            .no_shell()
-            .max_w(Px(980.0))],
+        vec![surface],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

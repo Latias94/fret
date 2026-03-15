@@ -1,9 +1,9 @@
-use fret_core::Color;
 use fret_core::geometry::{Corners, Edges, Point, Px, Size};
 use fret_core::scene::{
-    BlendMode, ColorSpace, EffectChain, EffectMode, EffectStep, GradientStop, MAX_STOPS, Paint,
-    RadialGradient, TileMode,
+    BlendMode, ColorSpace, EffectChain, EffectMode, EffectStep, GradientStop, Paint,
+    RadialGradient, TileMode, MAX_STOPS,
 };
+use fret_core::Color;
 use fret_ui::element::{
     AnyElement, ContainerProps, FocusTraversalGateProps, HitTestGateProps, InsetStyle, LayoutStyle,
     Length, Overflow, PositionStyle, SizeStyle,
@@ -11,6 +11,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::reduced_motion_queries;
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
+
+use crate::collect_children;
 
 #[derive(Debug, Clone)]
 pub struct BorderBeamProps {
@@ -94,13 +96,14 @@ fn perimeter_point_clockwise(bounds: fret_core::Rect, t01: f32) -> Point {
     Point::new(Px(x), Px(y))
 }
 
-pub fn border_beam<H: UiHost, I>(
+pub fn border_beam<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: BorderBeamProps,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: fret_ui_kit::IntoUiElement<H>,
 {
     let prefers_reduced_motion =
         reduced_motion_queries::prefers_reduced_motion(cx, Invalidation::Paint, false);
@@ -238,7 +241,8 @@ where
             },
         );
 
-        let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
+        let items = children(cx);
+        let mut out = collect_children(cx, items);
         out.push(overlay);
         out
     })

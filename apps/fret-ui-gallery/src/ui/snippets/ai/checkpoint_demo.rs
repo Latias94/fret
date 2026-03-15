@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("checkpoint_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
@@ -46,7 +47,7 @@ const INITIAL_CHECKPOINTS: &[DemoCheckpoint] = &[DemoCheckpoint {
     tooltip: "Restores workspace and chat to this point",
 }];
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let visible_message_count_model =
         cx.local_model_keyed("visible_message_count", || INITIAL_MESSAGES.len());
     let visible_message_count = cx
@@ -191,9 +192,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
 // region: custom_icon
 #[allow(dead_code)]
-fn custom_checkpoint_icon<H: fret_ui::UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-) -> fret_ui::element::AnyElement {
+fn custom_checkpoint_icon(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     fret_ui_ai::CheckpointIcon::default()
         .into_element_with_children(cx, |cx| vec![cx.text("⟲"), cx.text("•")])
 }

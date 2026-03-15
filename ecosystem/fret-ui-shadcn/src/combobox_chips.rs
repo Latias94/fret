@@ -113,6 +113,11 @@ pub struct ComboboxChips {
 }
 
 impl ComboboxChips {
+    fn apply_parts_patch(mut self, parts: Vec<ComboboxChipsPart>) -> Self {
+        apply_parts_patch_to_chips(&mut self, parts);
+        self
+    }
+
     pub fn new(values: Model<Vec<Arc<str>>>, open: Model<bool>) -> Self {
         Self {
             values,
@@ -249,9 +254,29 @@ impl ComboboxChips {
         cx: &mut ElementContext<'_, H>,
         parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ComboboxChipsPart>,
     ) -> AnyElement {
-        apply_parts_patch_to_chips(&mut self, parts(cx));
-
+        self = self.apply_parts_patch(parts(cx));
         self.into_element(cx)
+    }
+
+    /// Applies selected-chip value rendering configuration on the direct recipe root lane.
+    pub fn value(self, value: ComboboxValue) -> Self {
+        self.apply_parts_patch(vec![ComboboxChipsPart::Value(value)])
+    }
+
+    /// Applies the chips-input placeholder configuration on the direct recipe root lane.
+    pub fn input(self, input: ComboboxChipsInput) -> Self {
+        self.apply_parts_patch(vec![ComboboxChipsPart::ChipsInput(input)])
+    }
+
+    /// Applies trigger rendering configuration without forcing the caller through the
+    /// closure-based parts adapter.
+    pub fn trigger(self, trigger: ComboboxTrigger) -> Self {
+        self.apply_parts_patch(vec![ComboboxChipsPart::Trigger(trigger)])
+    }
+
+    /// Applies popup/content configuration on the direct recipe root lane.
+    pub fn content(self, content: ComboboxContent) -> Self {
+        self.apply_parts_patch(vec![ComboboxChipsPart::Content(content)])
     }
 
     #[track_caller]
@@ -414,6 +439,53 @@ mod tests {
         );
 
         assert_eq!(chips.width, Some(Px(320.0)));
+    }
+
+    #[test]
+    fn combobox_chips_builder_steps_apply_the_same_patch_surface() {
+        let mut app = App::new();
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+
+        let chips = ComboboxChips::new(values, open)
+            .value(ComboboxValue::new([
+                crate::ComboboxChip::new("a").show_remove(false)
+            ]))
+            .input(ComboboxChipsInput::new().placeholder("Select frameworks"))
+            .trigger(ComboboxTrigger::new().width_px(Px(260.0)))
+            .content(ComboboxContent::new([
+                ComboboxContentPart::empty(crate::combobox::ComboboxEmpty::new("Nothing found."))
+                    .into(),
+                ComboboxContentPart::list(
+                    crate::combobox::ComboboxList::new()
+                        .items([crate::combobox::ComboboxItem::new("a", "Alpha")])
+                        .groups([crate::combobox::ComboboxGroup::new()
+                            .label(crate::combobox::ComboboxLabel::new("Group 1"))
+                            .items([crate::combobox::ComboboxItem::new("b", "Beta")])]),
+                )
+                .into(),
+            ]));
+
+        assert_eq!(chips.width, Some(Px(260.0)));
+        assert_eq!(chips.placeholder.as_ref(), "Select frameworks");
+        assert_eq!(chips.search_placeholder.as_ref(), "Select frameworks");
+        assert_eq!(chips.empty_text.as_ref(), "Nothing found.");
+        assert!(!chips.chip_show_remove);
+        assert_eq!(chips.items.len(), 1);
+        assert_eq!(chips.items[0].value.as_ref(), "a");
+        assert_eq!(chips.items[0].label.as_ref(), "Alpha");
+        assert_eq!(chips.groups.len(), 1);
+        assert_eq!(
+            chips.groups[0]
+                .label
+                .as_ref()
+                .expect("group label")
+                .text
+                .as_ref(),
+            "Group 1"
+        );
+        assert_eq!(chips.groups[0].items.len(), 1);
+        assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
     }
 }
 

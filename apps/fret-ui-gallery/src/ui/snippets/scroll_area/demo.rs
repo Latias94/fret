@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-fn tag_row<H: UiHost>(tag: Arc<str>) -> impl IntoUiElement<H> + use<H> {
+fn tag_row(tag: Arc<str>) -> impl IntoUiElement<fret_app::App> + use<> {
     ui::v_flex(move |cx| {
         vec![
             ui::text(tag.clone())
@@ -25,7 +25,7 @@ fn tag_row<H: UiHost>(tag: Arc<str>) -> impl IntoUiElement<H> + use<H> {
     .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let tags: Vec<Arc<str>> = (1..=50)
         .map(|idx| Arc::<str>::from(format!("v1.2.0-beta.{}", 51 - idx)))
         .collect();
@@ -41,7 +41,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let tags_list = ui::v_flex(move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len());
             for tag in tags {
-                out.push(tag_row::<H>(tag).into_element(cx));
+                out.push(tag_row(tag).into_element(cx));
             }
             out
         })
@@ -58,18 +58,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .p_4()
     .into_element(cx);
 
-    let area = shadcn::ScrollArea::build(|cx, out| {
-        out.push_ui(cx, content);
-    })
-    .axis(fret_ui::element::ScrollAxis::Y)
-    .viewport_test_id("ui-gallery-scroll-area-demo-viewport")
-    .refine_layout(LayoutRefinement::default().w_full().h_full())
-    .into_element(cx)
-    .attach_semantics(
-        SemanticsDecoration::default()
-            .role(fret_core::SemanticsRole::Group)
-            .test_id("ui-gallery-scroll-area-demo"),
-    );
+    let area = shadcn::scroll_area(cx, |_cx| [content])
+        .axis(fret_ui::element::ScrollAxis::Y)
+        .viewport_test_id("ui-gallery-scroll-area-demo-viewport")
+        .refine_layout(LayoutRefinement::default().w_full().h_full())
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-scroll-area-demo"),
+        );
 
     let props = decl_style::container_props(
         cx.theme(),

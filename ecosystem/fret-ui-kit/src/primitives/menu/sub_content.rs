@@ -20,6 +20,7 @@ use crate::primitives::menu::content_panel;
 use crate::primitives::menu::sub;
 use crate::primitives::menu::{content, content::RovingFlexProps, content::TypeaheadPolicy};
 use crate::primitives::portal_inherited;
+use crate::{IntoUiElement, collect_children};
 
 fn with_submenu_value_scope<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
@@ -48,7 +49,7 @@ fn submenu_content_semantics_id_in_scope<H: UiHost>(
                 layout,
                 ..Default::default()
             },
-            |_cx| Vec::new(),
+            |_cx| Vec::<AnyElement>::new(),
         )
         .id
     })
@@ -79,7 +80,7 @@ pub fn submenu_content_semantics_id<H: UiHost>(
 /// This keeps wrappers from duplicating the "role=menu + absolute positioned panel container"
 /// skeleton while still allowing each wrapper (DropdownMenu, Menubar, etc) to provide its own
 /// styling and inner content structure.
-pub fn submenu_panel_at<H: UiHost, I>(
+pub fn submenu_panel_at<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     labelled_by_element: Option<GlobalElementId>,
@@ -87,7 +88,8 @@ pub fn submenu_panel_at<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     content_panel::menu_panel_at_with_labelled_by_element(
         cx,
@@ -102,7 +104,7 @@ where
 ///
 /// This ensures the submenu content element id is stable and can be referenced by the trigger via
 /// `submenu_content_semantics_id`.
-pub fn submenu_panel_for_value_at<H: UiHost, I>(
+pub fn submenu_panel_for_value_at<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open_value: Arc<str>,
     placed: Rect,
@@ -111,19 +113,21 @@ pub fn submenu_panel_for_value_at<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     with_submenu_value_scope(cx, &open_value, |cx| {
         submenu_panel_at(cx, placed, labelled_by_element, build_container, f)
     })
 }
 
-fn submenu_scroll_y_fill<H: UiHost, I>(
+fn submenu_scroll_y_fill<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let scroll_layout = LayoutStyle {
         size: SizeStyle {
@@ -140,7 +144,10 @@ where
             axis: ScrollAxis::Y,
             ..Default::default()
         },
-        f,
+        move |cx| {
+            let items = f(cx);
+            collect_children(cx, items)
+        },
     )
 }
 
@@ -148,7 +155,7 @@ where
 ///
 /// This matches the Radix Menu pattern of sizing the panel viewport to the available height and
 /// scrolling the internal list when content exceeds that viewport.
-pub fn submenu_panel_scroll_y_for_value_at<H: UiHost, I>(
+pub fn submenu_panel_scroll_y_for_value_at<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     open_value: Arc<str>,
     placed: Rect,
@@ -157,7 +164,8 @@ pub fn submenu_panel_scroll_y_for_value_at<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     submenu_panel_for_value_at(
         cx,
@@ -170,7 +178,7 @@ where
 }
 
 /// Render a submenu roving group with APG-aligned keyboard navigation and prefix typeahead.
-pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost, I>(
+pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     labels: Arc<[Arc<str>]>,
@@ -179,7 +187,8 @@ pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost, I>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> AnyElement
 where
-    I: IntoIterator<Item = AnyElement>,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
 {
     let dir = direction_prim::use_direction_in_scope(cx, None);
     content::menu_roving_group_apg(

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("extras_rtl.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -42,7 +42,7 @@ fn item_basic(
         .test_id(test_id)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let action = outline_button_sm(cx, "فتح").into_element(cx);
         item_basic(

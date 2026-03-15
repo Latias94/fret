@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{Point, Transform2D};
 use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
@@ -42,7 +43,7 @@ fn rotated_lucide<H: UiHost>(
     )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let basic_collapsible = shadcn::Collapsible::uncontrolled(false)
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element_with_open_model(

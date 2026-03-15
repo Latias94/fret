@@ -1,21 +1,21 @@
 pub const SOURCE: &str = include_str!("buttons.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let button = |cx: &mut ElementContext<'_, H>,
-                  label: &'static str,
-                  variant: Option<shadcn::ButtonVariant>| {
-        let mut btn = shadcn::Button::new(label)
-            .disabled(true)
-            .size(shadcn::ButtonSize::Sm);
-        if let Some(variant) = variant {
-            btn = btn.variant(variant);
-        }
-        btn.leading_children([shadcn::Spinner::new().into_element(cx)])
-            .into_element(cx)
-    };
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let button =
+        |cx: &mut UiCx<'_>, label: &'static str, variant: Option<shadcn::ButtonVariant>| {
+            let mut btn = shadcn::Button::new(label)
+                .disabled(true)
+                .size(shadcn::ButtonSize::Sm);
+            if let Some(variant) = variant {
+                btn = btn.variant(variant);
+            }
+            btn.leading_children([shadcn::Spinner::new().into_element(cx)])
+                .into_element(cx)
+        };
 
     ui::v_flex(|cx| {
         vec![

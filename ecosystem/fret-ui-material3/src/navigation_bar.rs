@@ -23,6 +23,7 @@ use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_headless::motion::spring::SpringDescription;
 use fret_ui_headless::motion::tolerance::Tolerance;
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::motion_value::{
     MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
@@ -122,6 +123,27 @@ impl NavigationBar {
             disabled: false,
             loop_navigation: true,
         }
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Arc<str>>>,
+        default_value: impl Into<Arc<str>>,
+    ) -> Self {
+        let value =
+            controllable_state::use_controllable_model(cx, value, || default_value.into()).model();
+        Self::new(value)
+    }
+
+    pub fn uncontrolled<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        default_value: impl Into<Arc<str>>,
+    ) -> Self {
+        Self::new_controllable(cx, None, default_value)
+    }
+
+    pub fn value_model(&self) -> Model<Arc<str>> {
+        self.model.clone()
     }
 
     pub fn items(mut self, items: Vec<NavigationBarItem>) -> Self {
@@ -873,6 +895,80 @@ mod tests {
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn navigation_bar_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(Arc::<str>::from("settings"));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-bar-controlled",
+            |cx| {
+                let bar = NavigationBar::new_controllable(cx, Some(controlled.clone()), "search");
+                assert_eq!(bar.value_model(), controlled);
+            },
+        );
+    }
+
+    #[test]
+    fn navigation_bar_new_controllable_applies_default_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-bar-default",
+            |cx| {
+                let bar = NavigationBar::new_controllable(cx, None, "search");
+                let value = cx
+                    .watch_model(&bar.value_model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or_else(Arc::<str>::default);
+                assert_eq!(value.as_ref(), "search");
+            },
+        );
+    }
+
+    #[test]
+    fn navigation_bar_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-bar-uncontrolled",
+            |cx| {
+                let a = NavigationBar::uncontrolled(cx, "search");
+                let b = NavigationBar::uncontrolled(cx, "settings");
+                assert_ne!(a.value_model(), b.value_model());
+            },
+        );
     }
 }
 

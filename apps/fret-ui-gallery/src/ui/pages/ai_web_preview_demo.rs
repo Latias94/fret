@@ -11,11 +11,11 @@ pub(super) fn preview_ai_web_preview_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Web Preview", demo)
+            DocSection::build(cx, "Web Preview", demo)
                 .test_id_prefix("ui-gallery-ai-web-preview-demo")
                 .code_rust_from_file_region(snippets::web_preview_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

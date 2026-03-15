@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("size.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -26,7 +27,7 @@ fn group<H: UiHost>(
         ])
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sm = group(cx, shadcn::ToggleSize::Sm).into_element(cx);
     let default = group(cx, shadcn::ToggleSize::Default).into_element(cx);
     let lg = group(cx, shadcn::ToggleSize::Lg).into_element(cx);

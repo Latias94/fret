@@ -1,6 +1,8 @@
 pub const SOURCE: &str = include_str!("with_badge.rs");
 
 // region: example
+use crate::ui::snippets::avatar::demo_image;
+use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::{ColorRef, IntoUiElement};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -18,14 +20,14 @@ where
 
 fn avatar_with_badge<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<fret_core::ImageId>>,
+    avatar_image: Option<fret_core::ImageId>,
     size: shadcn::AvatarSize,
     badge: shadcn::AvatarBadge,
     test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+    let image = shadcn::AvatarImage::maybe(avatar_image).into_element(cx);
     let fallback = shadcn::AvatarFallback::new("CN")
-        .when_image_missing_model(avatar_image)
+        .when_image_missing(avatar_image)
         .delay_ms(120)
         .into_element(cx);
     let badge = badge.into_element(cx);
@@ -36,10 +38,8 @@ fn avatar_with_badge<H: UiHost>(
         .test_id(test_id)
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    avatar_image: Model<Option<fret_core::ImageId>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let avatar_image = demo_image(cx);
     let destructive = Theme::global(&*cx.app).color_token("destructive");
 
     wrap_row(|cx| {
@@ -49,7 +49,7 @@ pub fn render<H: UiHost>(
         vec![
             avatar_with_badge(
                 cx,
-                avatar_image.clone(),
+                avatar_image,
                 shadcn::AvatarSize::Sm,
                 shadcn::AvatarBadge::new(),
                 "ui-gallery-avatar-badge-sm",
@@ -57,7 +57,7 @@ pub fn render<H: UiHost>(
             .into_element(cx),
             avatar_with_badge(
                 cx,
-                avatar_image.clone(),
+                avatar_image,
                 shadcn::AvatarSize::Default,
                 custom_badge,
                 "ui-gallery-avatar-badge-default",
@@ -65,7 +65,7 @@ pub fn render<H: UiHost>(
             .into_element(cx),
             avatar_with_badge(
                 cx,
-                avatar_image.clone(),
+                avatar_image,
                 shadcn::AvatarSize::Lg,
                 shadcn::AvatarBadge::new(),
                 "ui-gallery-avatar-badge-lg",

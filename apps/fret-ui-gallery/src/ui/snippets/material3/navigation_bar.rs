@@ -3,16 +3,19 @@ pub const SOURCE: &str = include_str!("navigation_bar.rs");
 // region: example
 use std::sync::Arc;
 
+use fret::{UiChild, UiCx};
 use fret_icons::ids;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let bar = material3::NavigationBar::uncontrolled(cx, "search");
+    let value = bar.value_model();
     let current = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let bar = material3::NavigationBar::new(value)
+    let bar = bar
         .a11y_label("Material 3 Navigation Bar")
         .test_id("ui-gallery-material3-navigation-bar")
         .items(vec![

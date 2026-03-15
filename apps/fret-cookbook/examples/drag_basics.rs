@@ -200,7 +200,7 @@ impl View for DragBasicsView {
         .w_full()
         .max_w(Px(720.0));
 
-        fret_cookbook::scaffold::centered_page_muted_ui(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }
 }
 

@@ -106,6 +106,11 @@ recipe-layer sugar.
 style than the raw closure root.
 
 - Scope: ergonomics only; it lowers into `AlertDialog::into_element_parts(...)`.
+- Default teaching path: first-party examples now prefer
+  `AlertDialog::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`.
+- Focused follow-up lanes: explicit root-part ownership stays documented through `Parts`, while
+  `Detached Trigger` and `Rich Content` remain additional Fret-specific follow-ups instead of
+  replacing the default copyable path.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
 - Limitation: this is still not a full React-style nested children API; Fret stores already-built
   elements and assembles them at the final call site.

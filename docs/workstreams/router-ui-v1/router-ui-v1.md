@@ -122,6 +122,8 @@ Then `fret-router-ui` can wire this into a convenience helper:
 
 - `RouterUiStore::prefetch_link_on_hover_change(link)` -> `OnHoverChange` (updates the intents model)
 - `router_link(cx, &store, link, children)` -> `AnyElement` (pressable wrapper; no shadcn dependency)
+  - `children` stays on the typed lane: iterable items can be any `IntoUiElement<App>` value; the
+    helper only materializes a concrete `Vec<AnyElement>` at the final pressable boundary
   - diagnostics sugar: `router_link_with_test_id(...)`
   - route-based sugar: `router_link_to(...)` / `router_link_to_with_test_id(...)`
   - typed-route sugar: `RouterUiStore::link_to_typed_route(...)`,

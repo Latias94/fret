@@ -22,6 +22,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, TextAreaStyle, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
@@ -320,6 +321,24 @@ impl TextField {
             multiline_min_height: None,
             token_namespace: TextFieldTokenNamespace::TextField,
         }
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<String>>,
+        default_value: impl Into<String>,
+    ) -> Self {
+        let value =
+            controllable_state::use_controllable_model(cx, value, || default_value.into()).model();
+        Self::new(value)
+    }
+
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::new_controllable(cx, None, String::new())
+    }
+
+    pub fn value_model(&self) -> Model<String> {
+        self.model.clone()
     }
 
     pub fn variant(mut self, variant: TextFieldVariant) -> Self {
@@ -1622,5 +1641,73 @@ fn apply_text_field_input_overrides(
         .and_then(|slot| slot.resolve(states).as_ref())
     {
         chrome.caret_color = caret_color.resolve(theme);
+    }
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn text_field_new_controllable_uses_controlled_value_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(String::from("alpha"));
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-text-field-controlled",
+            |cx| {
+                let field = TextField::new_controllable(cx, Some(controlled.clone()), "default");
+                assert_eq!(field.value_model(), controlled);
+            },
+        );
+    }
+
+    #[test]
+    fn text_field_new_controllable_applies_default_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-text-field-default", |cx| {
+            let field = TextField::new_controllable(cx, None, "hello");
+            let value = cx
+                .watch_model(&field.value_model())
+                .layout()
+                .cloned()
+                .unwrap_or_default();
+            assert_eq!(value, "hello");
+        });
+    }
+
+    #[test]
+    fn text_field_uncontrolled_multiple_instances_do_not_share_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-text-field-uncontrolled",
+            |cx| {
+                let a = TextField::uncontrolled(cx);
+                let b = TextField::uncontrolled(cx);
+                assert_ne!(a.value_model(), b.value_model());
+            },
+        );
     }
 }

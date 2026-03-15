@@ -63,6 +63,9 @@ Upstream exports a thin wrapper around `vaul`:
   which is the Fret-side approximation of upstream `DrawerClose asChild`.
 - Pass: `Drawer::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
+- Pass: The default first-party copyable root path is
+  `Drawer::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`, while
+  managed-open ownership remains explicit on `Drawer::new(open)` / `new_controllable(...)`.
 - Pass: `DrawerContent` / `DrawerHeader` / `DrawerFooter` provide Drawer-specific layout while
   reusing shared dialog substrate building blocks (`Title` / `Description`).
 - Note: Public-surface drift remains at the root authoring surface: Fret still uses a closure/
@@ -77,6 +80,9 @@ Upstream exports a thin wrapper around `vaul`:
   at 384px).
 - Pass: Bottom drawers include the small handle affordance region above the content.
 - Pass: Vaul-style snap points are modeled for bottom drawers via `Drawer::snap_points(...)`.
+- Pass: The first-party `Snap Points` recipe now stays on that same typed `compose()` root lane
+  rather than falling back to the older closure-root `into_element(...)` path just to demonstrate
+  the Vaul/Fret policy extension.
 
 ### Dismissal behavior
 
@@ -113,6 +119,10 @@ Upstream exports a thin wrapper around `vaul`:
 style than the raw closure root.
 
 - Scope: ergonomics only; it lowers into `Drawer::into_element_parts(...)`.
+- Default teaching path: first-party examples now prefer
+  `Drawer::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`.
+- Follow-up policy lane: Vaul-oriented `snap_points(...)` / `default_snap_point(...)` remain
+  explicit recipe policy on that same root surface rather than a separate authoring seam.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
 - Limitation: this is still not a full React-style nested children API; Fret stores already-built
   elements and assembles them at the final call site.

@@ -560,7 +560,7 @@ pub(in crate::ui) fn preview_magic_patterns_torture(cx: &mut UiCx<'_>) -> Vec<An
                         seed,
                         ..Default::default()
                     },
-                    |_cx| Vec::new(),
+                    |_cx| Vec::<AnyElement>::new(),
                 ),
                 1 => magic::grid_pattern(
                     cx,
@@ -571,7 +571,7 @@ pub(in crate::ui) fn preview_magic_patterns_torture(cx: &mut UiCx<'_>) -> Vec<An
                         seed,
                         ..Default::default()
                     },
-                    |_cx| Vec::new(),
+                    |_cx| Vec::<AnyElement>::new(),
                 ),
                 _ => magic::stripe_pattern(
                     cx,
@@ -586,7 +586,7 @@ pub(in crate::ui) fn preview_magic_patterns_torture(cx: &mut UiCx<'_>) -> Vec<An
                         seed,
                         ..Default::default()
                     },
-                    |_cx| Vec::new(),
+                    |_cx| Vec::<AnyElement>::new(),
                 ),
             };
             panels.push(panel);
@@ -676,38 +676,39 @@ pub(in crate::ui) fn preview_magic_sparkles_text(cx: &mut UiCx<'_>) -> Vec<AnyEl
     inner_layout.size.width = Length::Fill;
     inner_layout.size.height = Length::Fill;
 
-    let sparkles =
-        magic::sparkles_text(
-            cx,
-            magic::SparklesTextProps {
-                layout: inner_layout,
-                padding: Edges::all(Px(20.0)),
-                corner_radii: Corners::all(Px(14.0)),
-                base: fret_core::Color::TRANSPARENT,
-                sparkles: sparkles_color,
-                seed: 42,
-                ..Default::default()
-            },
-            |cx| {
-                vec![
-                    ui::v_flex(|cx| {
-                        vec![
-                        shadcn::raw::typography::h3( "SparklesText").into_element(cx)
+    let sparkles = magic::sparkles_text(
+        cx,
+        magic::SparklesTextProps {
+            layout: inner_layout,
+            padding: Edges::all(Px(20.0)),
+            corner_radii: Corners::all(Px(14.0)),
+            base: fret_core::Color::TRANSPARENT,
+            sparkles: sparkles_color,
+            seed: 42,
+            ..Default::default()
+        },
+        |cx| {
+            vec![
+                ui::v_flex(|cx| {
+                    vec![
+                        shadcn::raw::typography::h3("SparklesText")
+                            .into_element(cx)
                             .test_id("ui-gallery-magic-sparkles-text-title"),
                         shadcn::raw::typography::p(
                             "Phase 0: a deterministic sparkle field composited over text content. \
                                  Future: clip to glyph alpha when alpha masks mature.",
-                        ).into_element(cx),
+                        )
+                        .into_element(cx),
                     ]
-                    })
-                    .gap(Space::N3)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_start()
-                    .into_element(cx),
-                ]
-            },
-        )
-        .test_id("ui-gallery-magic-sparkles-text");
+                })
+                .gap(Space::N3)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start()
+                .into_element(cx),
+            ]
+        },
+    )
+    .test_id("ui-gallery-magic-sparkles-text");
 
     vec![ui::v_flex(|cx| {
             vec![

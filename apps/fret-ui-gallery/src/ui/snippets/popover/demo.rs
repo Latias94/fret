@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -30,7 +31,7 @@ fn row<H: UiHost>(label: &'static str, model: Model<String>) -> impl IntoUiEleme
         .items_center()
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let width = cx.local_model_keyed("width", || String::from("100%"));
     let max_width = cx.local_model_keyed("max_width", || String::from("300px"));
     let height = cx.local_model_keyed("height", || String::from("25px"));

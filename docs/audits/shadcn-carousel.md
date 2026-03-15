@@ -30,6 +30,15 @@ Embla-inspired authoring outcomes.
 
 - Pass: `Carousel::new(items)` / `Carousel::items(...)` already cover the compact builder path.
 - Pass: `Carousel::into_element_parts(...)` plus `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` expose the upstream-shaped parts surface for copyable examples.
+- Pass: first-party gallery now teaches that split explicitly: the `Usage` snippet stays on the
+  compact builder lane, while the dedicated `Parts` snippet keeps the upstream-shaped copyable
+  lane.
+- Pass: docs-first gallery examples (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`,
+  `Loop`) now also stay on the compact builder lane instead of re-teaching parts composition where
+  the root builder already covers the same outcome.
+- Pass: ordinary diagnostics examples (`Demo`, `API`, `Focus`, `Duration`, autoplay/wheel demos,
+  loop downgrade, expandable) now stay on that same compact builder lane too when they do not need
+  named controls.
 - Pass: `opts(...)`, `orientation(...)`, spacing helpers, responsive item breakpoints, and plugin hooks cover the important shadcn + Embla recipe outcomes.
 - Pass: because Fret already exposes both the compact builder and the parts authoring surface, it does not need an additional generic `compose()` builder here.
 
@@ -38,6 +47,9 @@ Embla-inspired authoring outcomes.
 - Pass: responsive item sizing is representable via `CarouselItem::viewport_layout_breakpoint(...)`, covering shadcn `md:basis-*` / `lg:basis-*` outcomes.
 - Pass: spacing parity is modeled through `track_start_neg_margin` + `item_padding_start`, matching the upstream `-ml-*` + `pl-*` recipe.
 - Pass: orientation, loop, options, events, API snapshot/handle, and autoplay/wheel plugins are already covered by the existing gallery surface.
+- Pass: parts authoring now remains focused on the cases that actually need explicit control parts
+  or diagnostics-specific test IDs (`Parts`, `Events`, `RTL`), rather than acting as the default
+  docs lane.
 
 ### Gallery / docs parity
 

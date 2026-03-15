@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("docs_demo.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -97,7 +97,7 @@ fn icon_row(
         .into_element(cx)
 }
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
     let demo_value = cx.local_model(|| None::<Arc<str>>);
 

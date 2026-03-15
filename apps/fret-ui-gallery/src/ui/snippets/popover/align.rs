@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("align.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::h_flex(|cx| {
         let start_content = shadcn::PopoverContent::new([cx.text("Aligned to start")])
             .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))

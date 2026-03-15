@@ -11,6 +11,7 @@ use std::sync::Arc;
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Axis, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
     SpacingLength, TextProps,
@@ -18,8 +19,11 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
-use crate::controls::{Checkbox, CheckboxOptions, Vec3Edit, VecEditOptions};
-use crate::controls::{NumericFormatFn, NumericParseFn, NumericValidateFn};
+use crate::controls::{
+    AxisDragValueOutcome, Checkbox, CheckboxOptions, NumericFormatFn, NumericParseFn,
+    NumericValidateFn, OnVecEditAxisOutcome, Vec3Edit, VecEditAxis, VecEditAxisOutcome,
+    VecEditOptions,
+};
 use crate::primitives::EditorDensity;
 use crate::primitives::input_group::derived_test_id;
 
@@ -38,6 +42,23 @@ impl Default for TransformEditLayoutVariant {
         Self::Column
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransformEditSection {
+    Position,
+    Rotation,
+    Scale,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TransformEditAxisOutcome {
+    pub section: TransformEditSection,
+    pub axis: VecEditAxis,
+    pub outcome: AxisDragValueOutcome,
+}
+
+pub type OnTransformEditAxisOutcome =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, TransformEditAxisOutcome) + 'static>;
 
 #[derive(Debug, Clone)]
 pub struct TransformEditOptions {
@@ -107,6 +128,7 @@ pub struct TransformEdit {
     pub format: NumericFormatFn<f64>,
     pub parse: NumericParseFn<f64>,
     pub validate: Option<NumericValidateFn<f64>>,
+    pub on_axis_outcome: Option<OnTransformEditAxisOutcome>,
     pub options: TransformEditOptions,
 }
 
@@ -131,6 +153,7 @@ impl TransformEdit {
             format,
             parse,
             validate: None,
+            on_axis_outcome: None,
             options: TransformEditOptions::default(),
         }
     }
@@ -142,6 +165,11 @@ impl TransformEdit {
 
     pub fn options(mut self, options: TransformEditOptions) -> Self {
         self.options = options;
+        self
+    }
+
+    pub fn on_axis_outcome(mut self, on_axis_outcome: Option<OnTransformEditAxisOutcome>) -> Self {
+        self.on_axis_outcome = on_axis_outcome;
         self
     }
 
@@ -215,6 +243,7 @@ impl TransformEdit {
         let fmt = self.format.clone();
         let parse = self.parse.clone();
         let validate = self.validate.clone();
+        let on_axis_outcome = self.on_axis_outcome.clone();
         let position_id_source = derived_id_source(self.options.id_source.as_ref(), "position");
         let rotation_id_source = derived_id_source(self.options.id_source.as_ref(), "rotation");
         let scale_id_source = derived_id_source(self.options.id_source.as_ref(), "scale");
@@ -237,6 +266,25 @@ impl TransformEdit {
             test_id: position_test_id,
             ..Default::default()
         };
+        let pos_outcome: Option<OnVecEditAxisOutcome> =
+            on_axis_outcome.clone().map(|on_axis_outcome| {
+                let handler: OnVecEditAxisOutcome = Arc::new(
+                    move |host: &mut dyn UiActionHost,
+                          action_cx: ActionCx,
+                          outcome: VecEditAxisOutcome| {
+                        on_axis_outcome(
+                            host,
+                            action_cx,
+                            TransformEditAxisOutcome {
+                                section: TransformEditSection::Position,
+                                axis: outcome.axis,
+                                outcome: outcome.outcome,
+                            },
+                        );
+                    },
+                );
+                handler
+            });
         let fmt_rot = fmt.clone();
         let parse_rot = parse.clone();
         let validate_rot = validate.clone();
@@ -247,6 +295,25 @@ impl TransformEdit {
             test_id: rotation_test_id,
             ..Default::default()
         };
+        let rot_outcome: Option<OnVecEditAxisOutcome> =
+            on_axis_outcome.clone().map(|on_axis_outcome| {
+                let handler: OnVecEditAxisOutcome = Arc::new(
+                    move |host: &mut dyn UiActionHost,
+                          action_cx: ActionCx,
+                          outcome: VecEditAxisOutcome| {
+                        on_axis_outcome(
+                            host,
+                            action_cx,
+                            TransformEditAxisOutcome {
+                                section: TransformEditSection::Rotation,
+                                axis: outcome.axis,
+                                outcome: outcome.outcome,
+                            },
+                        );
+                    },
+                );
+                handler
+            });
         let fmt_scl = fmt.clone();
         let parse_scl = parse.clone();
         let validate_scl = validate.clone();
@@ -257,6 +324,24 @@ impl TransformEdit {
             test_id: scale_test_id,
             ..Default::default()
         };
+        let scl_outcome: Option<OnVecEditAxisOutcome> = on_axis_outcome.map(|on_axis_outcome| {
+            let handler: OnVecEditAxisOutcome = Arc::new(
+                move |host: &mut dyn UiActionHost,
+                      action_cx: ActionCx,
+                      outcome: VecEditAxisOutcome| {
+                    on_axis_outcome(
+                        host,
+                        action_cx,
+                        TransformEditAxisOutcome {
+                            section: TransformEditSection::Scale,
+                            axis: outcome.axis,
+                            outcome: outcome.outcome,
+                        },
+                    );
+                },
+            );
+            handler
+        });
 
         let mut el = match self.options.variant {
             TransformEditLayoutVariant::Column => cx.flex(
@@ -280,6 +365,7 @@ impl TransformEdit {
                                 parse_pos.clone(),
                             )
                             .validate(validate_pos.clone())
+                            .on_axis_outcome(pos_outcome.clone())
                             .options(pos_options.clone())
                             .into_element(cx)
                         }),
@@ -292,6 +378,7 @@ impl TransformEdit {
                                 parse_rot.clone(),
                             )
                             .validate(validate_rot.clone())
+                            .on_axis_outcome(rot_outcome.clone())
                             .options(rot_options.clone())
                             .into_element(cx)
                         }),
@@ -311,6 +398,7 @@ impl TransformEdit {
                                     parse_scl.clone(),
                                 )
                                 .validate(validate_scl.clone())
+                                .on_axis_outcome(scl_outcome.clone())
                                 .options(scl_options.clone())
                                 .into_element(cx)
                             },
@@ -339,6 +427,7 @@ impl TransformEdit {
                                 parse_pos.clone(),
                             )
                             .validate(validate_pos.clone())
+                            .on_axis_outcome(pos_outcome.clone())
                             .options(pos_options.clone())
                             .into_element(cx)
                         }),
@@ -351,6 +440,7 @@ impl TransformEdit {
                                 parse_rot.clone(),
                             )
                             .validate(validate_rot.clone())
+                            .on_axis_outcome(rot_outcome.clone())
                             .options(rot_options.clone())
                             .into_element(cx)
                         }),
@@ -369,6 +459,7 @@ impl TransformEdit {
                                     parse_scl.clone(),
                                 )
                                 .validate(validate_scl.clone())
+                                .on_axis_outcome(scl_outcome.clone())
                                 .options(scl_options.clone())
                                 .into_element(cx)
                             },

@@ -1,14 +1,15 @@
 pub const SOURCE: &str = include_str!("group.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let group_security = cx.local_model_keyed("group_security", || true);
     let group_updates = cx.local_model_keyed("group_updates", || false);
     let group_marketing = cx.local_model_keyed("group_marketing", || false);
 
-    let group_item = |cx: &mut ElementContext<'_, H>,
+    let group_item = |cx: &mut UiCx<'_>,
                       label: &'static str,
                       desc: &'static str,
                       value: Model<bool>,

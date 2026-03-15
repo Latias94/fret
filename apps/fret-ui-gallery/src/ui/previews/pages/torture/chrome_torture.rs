@@ -136,17 +136,16 @@ pub(in crate::ui) fn preview_chrome_torture(
             .test_id("ui-gallery-chrome-torture-root"),
     );
 
-    let page =
-        doc_layout::render_doc_page(
-            cx,
-            Some("Goal: exercise hover/focus/pressed chrome under view-cache + shell."),
-            vec![DocSection::new("Harness", content)
-            .description(
-                "This page intentionally mixes many focusable widgets and overlay triggers.",
-            )
-            .no_shell()
-            .max_w(Px(980.0))],
-        );
+    let harness = DocSection::build(cx, "Harness", content)
+        .description("This page intentionally mixes many focusable widgets and overlay triggers.")
+        .no_shell()
+        .max_w(Px(980.0));
 
-    vec![page]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("Goal: exercise hover/focus/pressed chrome under view-cache + shell."),
+        vec![harness],
+    );
+
+    vec![page.into_element(cx)]
 }

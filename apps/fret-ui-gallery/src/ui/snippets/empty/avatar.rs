@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let avatar_media = shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)])
         .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
         .into_element(cx);

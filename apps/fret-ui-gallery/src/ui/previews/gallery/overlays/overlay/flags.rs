@@ -1,9 +1,15 @@
 use super::super::super::super::super::*;
+use fret::UiChild;
 use fret::UiCx;
 
 use super::OverlayModels;
 
-pub(super) fn last_action_status(cx: &mut UiCx<'_>, models: &OverlayModels) -> AnyElement {
+// Typed status helper: the label still reads preview-local models and attaches test ids, but the
+// landing stays explicit at the preview result-vector seam.
+pub(super) fn last_action_status(
+    cx: &mut UiCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
     let last = cx
         .app
         .models()
@@ -13,6 +19,8 @@ pub(super) fn last_action_status(cx: &mut UiCx<'_>, models: &OverlayModels) -> A
     cx.text(text).test_id("ui-gallery-overlay-last-action")
 }
 
+// Intentional raw boundary: these flags are appended directly onto the overlay preview's concrete
+// result vector after model reads and conditional visibility have completed.
 pub(super) fn status_flags(cx: &mut UiCx<'_>, models: &OverlayModels) -> Vec<AnyElement> {
     let popover_dismissed_flag = {
         let last = cx

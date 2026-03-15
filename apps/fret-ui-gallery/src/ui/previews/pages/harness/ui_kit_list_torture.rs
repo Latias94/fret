@@ -99,18 +99,16 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
             .test_id("ui-gallery-ui-kit-list-torture-root"),
     );
 
+    let harness = DocSection::build(cx, "Harness", root)
+        .description("Expect: scroll boundary shifts reconcile without scroll-window dirty views.")
+        .no_shell()
+        .max_w(Px(980.0));
+
     let page = doc_layout::render_doc_page(
         cx,
         Some("Validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0177)."),
-        vec![
-            DocSection::new("Harness", root)
-                .description(
-                    "Expect: scroll boundary shifts reconcile without scroll-window dirty views.",
-                )
-                .no_shell()
-                .max_w(Px(980.0)),
-        ],
+        vec![harness],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

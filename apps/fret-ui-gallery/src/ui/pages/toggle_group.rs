@@ -33,75 +33,91 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-toggle-group-api-reference")
         .description("Public surface summary and ownership notes.");
 
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Compact icon-only preview for quick visual scanning.")
+        .test_id_prefix("ui-gallery-toggle-group-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Minimal typed usage matching the upstream docs example.")
+        .test_id_prefix("ui-gallery-toggle-group-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let outline = DocSection::build(cx, "Outline", outline)
+        .description("Outline variant matching the shadcn example.")
+        .test_id_prefix("ui-gallery-toggle-group-outline")
+        .code_rust_from_file_region(snippets::outline::SOURCE, "example");
+    let size = DocSection::build(cx, "Size", size)
+        .description("Size presets for compact and roomier toggle groups.")
+        .test_id_prefix("ui-gallery-toggle-group-size")
+        .code_rust_from_file_region(snippets::size::SOURCE, "example");
+    let spacing = DocSection::build(cx, "Spacing", spacing)
+        .description("Spacing between items with per-item selected accents.")
+        .test_id_prefix("ui-gallery-toggle-group-spacing")
+        .code_rust_from_file_region(snippets::spacing::SOURCE, "example");
+    let vertical = DocSection::build(cx, "Vertical", vertical)
+        .description("Vertical orientation for side panels and inspectors.")
+        .test_id_prefix("ui-gallery-toggle-group-vertical")
+        .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
+    let disabled = DocSection::build(cx, "Disabled", disabled)
+        .description("Disabled groups keep layout but block interaction.")
+        .test_id_prefix("ui-gallery-toggle-group-disabled")
+        .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
+    let custom = DocSection::build(cx, "Custom", custom)
+        .description("Custom item-root sizing and rounding for a font-weight selector.")
+        .test_id_prefix("ui-gallery-toggle-group-custom")
+        .code_rust_from_file_region(snippets::custom::SOURCE, "example");
+    let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Item ordering and pressed visuals under RTL.")
+        .test_id_prefix("ui-gallery-toggle-group-rtl")
+        .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let single = DocSection::build(cx, "Single (Fret)", single)
+        .description("Focused single-selection regression example.")
+        .test_id_prefix("ui-gallery-toggle-group-single")
+        .code_rust_from_file_region(snippets::single::SOURCE, "example");
+    let small = DocSection::build(cx, "Small (Fret)", small)
+        .description("Small icon-only regression slice retained after the docs path.")
+        .test_id_prefix("ui-gallery-toggle-group-small")
+        .code_rust_from_file_region(snippets::small::SOURCE, "example");
+    let large = DocSection::build(cx, "Large (Fret)", large)
+        .description("Large icon-only regression slice retained after the docs path.")
+        .test_id_prefix("ui-gallery-toggle-group-large")
+        .code_rust_from_file_region(snippets::large::SOURCE, "example");
+    let label = DocSection::build(cx, "Label Association (Fret)", label)
+        .description("Use `FieldLabel::for_control`, `ToggleGroup::control_id`, and `test_id_prefix` to keep label-focus behavior and automation anchors aligned.")
+        .test_id_prefix("ui-gallery-toggle-group-label")
+        .code_rust_from_file_region(snippets::label::SOURCE, "example");
+    let full_width_items = DocSection::build(cx, "Full Width Items (Fret)", full_width_items)
+        .description("Stretched items to gate full-row fill behavior.")
+        .test_id_prefix("ui-gallery-toggle-group-full-width-items")
+        .code_rust_from_file_region(snippets::full_width_items::SOURCE, "example");
+    let stretch = DocSection::build(cx, "Flex-1 Items (Fret)", stretch)
+        .description("Regression gate for hit and visual alignment under `flex-1` sizing.")
+        .test_id_prefix("ui-gallery-toggle-group-stretch")
+        .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example");
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
             "Preview mirrors the shadcn Toggle Group docs path first: Demo, Usage, Outline, Size, Spacing, Vertical, Disabled, Custom, RTL, and API Reference. Focused Fret follow-ups stay afterward.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Compact icon-only preview for quick visual scanning.")
-                .test_id_prefix("ui-gallery-toggle-group-demo")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .description("Minimal typed usage matching the upstream docs example.")
-                .test_id_prefix("ui-gallery-toggle-group-usage")
-                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
-            DocSection::new("Outline", outline)
-                .description("Outline variant matching the shadcn example.")
-                .test_id_prefix("ui-gallery-toggle-group-outline")
-                .code_rust_from_file_region(snippets::outline::SOURCE, "example"),
-            DocSection::new("Size", size)
-                .description("Size presets for compact and roomier toggle groups.")
-                .test_id_prefix("ui-gallery-toggle-group-size")
-                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
-            DocSection::new("Spacing", spacing)
-                .description("Spacing between items with per-item selected accents.")
-                .test_id_prefix("ui-gallery-toggle-group-spacing")
-                .code_rust_from_file_region(snippets::spacing::SOURCE, "example"),
-            DocSection::new("Vertical", vertical)
-                .description("Vertical orientation for side panels and inspectors.")
-                .test_id_prefix("ui-gallery-toggle-group-vertical")
-                .code_rust_from_file_region(snippets::vertical::SOURCE, "example"),
-            DocSection::new("Disabled", disabled)
-                .description("Disabled groups keep layout but block interaction.")
-                .test_id_prefix("ui-gallery-toggle-group-disabled")
-                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
-            DocSection::new("Custom", custom)
-                .description("Custom item-root sizing and rounding for a font-weight selector.")
-                .test_id_prefix("ui-gallery-toggle-group-custom")
-                .code_rust_from_file_region(snippets::custom::SOURCE, "example"),
-            DocSection::new("RTL", rtl)
-                .description("Item ordering and pressed visuals under RTL.")
-                .test_id_prefix("ui-gallery-toggle-group-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            demo,
+            usage,
+            outline,
+            size,
+            spacing,
+            vertical,
+            disabled,
+            custom,
+            rtl,
             api_reference,
-            DocSection::new("Single (Fret)", single)
-                .description("Focused single-selection regression example.")
-                .test_id_prefix("ui-gallery-toggle-group-single")
-                .code_rust_from_file_region(snippets::single::SOURCE, "example"),
-            DocSection::new("Small (Fret)", small)
-                .description("Small icon-only regression slice retained after the docs path.")
-                .test_id_prefix("ui-gallery-toggle-group-small")
-                .code_rust_from_file_region(snippets::small::SOURCE, "example"),
-            DocSection::new("Large (Fret)", large)
-                .description("Large icon-only regression slice retained after the docs path.")
-                .test_id_prefix("ui-gallery-toggle-group-large")
-                .code_rust_from_file_region(snippets::large::SOURCE, "example"),
-            DocSection::new("Label Association (Fret)", label)
-                .description("Use `FieldLabel::for_control`, `ToggleGroup::control_id`, and `test_id_prefix` to keep label-focus behavior and automation anchors aligned.")
-                .test_id_prefix("ui-gallery-toggle-group-label")
-                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
-            DocSection::new("Full Width Items (Fret)", full_width_items)
-                .description("Stretched items to gate full-row fill behavior.")
-                .test_id_prefix("ui-gallery-toggle-group-full-width-items")
-                .code_rust_from_file_region(snippets::full_width_items::SOURCE, "example"),
-            DocSection::new("Flex-1 Items (Fret)", stretch)
-                .description("Regression gate for hit and visual alignment under `flex-1` sizing.")
-                .test_id_prefix("ui-gallery-toggle-group-stretch")
-                .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
+            single,
+            small,
+            large,
+            label,
+            full_width_items,
+            stretch,
         ],
     );
 
-    vec![body.test_id("ui-gallery-toggle-group")]
+    vec![body.test_id("ui-gallery-toggle-group").into_element(cx)]
 }

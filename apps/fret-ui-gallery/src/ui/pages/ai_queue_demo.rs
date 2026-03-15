@@ -11,11 +11,11 @@ pub(super) fn preview_ai_queue_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
         cx,
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
-            DocSection::new("Queue", demo)
+            DocSection::build(cx, "Queue", demo)
                 .test_id_prefix("ui-gallery-ai-queue-demo")
                 .code_rust_from_file_region(snippets::queue_demo::SOURCE, "example"),
         ],
     );
 
-    vec![body]
+    vec![body.into_element(cx)]
 }

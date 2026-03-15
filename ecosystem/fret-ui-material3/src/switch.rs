@@ -19,6 +19,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -161,6 +162,24 @@ impl Switch {
             on_activate: None,
             style: SwitchStyle::default(),
         }
+    }
+
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        selected: Option<Model<bool>>,
+        default_selected: bool,
+    ) -> Self {
+        let selected =
+            controllable_state::use_controllable_model(cx, selected, || default_selected).model();
+        Self::new(selected)
+    }
+
+    pub fn uncontrolled<H: UiHost>(cx: &mut ElementContext<'_, H>, default_selected: bool) -> Self {
+        Self::new_controllable(cx, None, default_selected)
+    }
+
+    pub fn selected_model(&self) -> Model<bool> {
+        self.selected.clone()
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -1104,4 +1123,60 @@ fn material_switch_icon_layer<H: UiHost>(
             move |_cx| vec![icon],
         )]
     })
+}
+
+#[cfg(test)]
+mod controllable_state_tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+    use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn switch_new_controllable_uses_controlled_selected_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(true);
+
+        with_element_cx(&mut app, window, bounds(), "m3-switch-controlled", |cx| {
+            let switch = Switch::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(switch.selected_model(), controlled);
+        });
+    }
+
+    #[test]
+    fn switch_new_controllable_applies_default_selected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-switch-default", |cx| {
+            let switch = Switch::new_controllable(cx, None, true);
+            let selected = cx
+                .watch_model(&switch.selected_model())
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            assert!(selected);
+        });
+    }
+
+    #[test]
+    fn switch_uncontrolled_multiple_instances_do_not_share_selected_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-switch-uncontrolled", |cx| {
+            let a = Switch::uncontrolled(cx, false);
+            let b = Switch::uncontrolled(cx, true);
+            assert_ne!(a.selected_model(), b.selected_model());
+        });
+    }
 }

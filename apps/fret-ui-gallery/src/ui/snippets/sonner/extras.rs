@@ -1,6 +1,8 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
+use crate::ui::snippets::sonner::{last_action_model, request};
+use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -17,18 +19,15 @@ fn wrap_controls_row<H: UiHost>(
         .layout(LayoutRefinement::default().w_full())
 }
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    last_action: Model<Arc<str>>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
-    let last_action_model = last_action.clone();
+    let last_action_model = last_action_model(cx);
 
     let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
         sonner.toast(
             host,
             action_cx.window,
-            shadcn::ToastRequest::new("Swipe to dismiss")
+            request("Swipe to dismiss")
                 .description("Drag up to dismiss (pinned)")
                 .duration(None)
                 .dismissible(true)
@@ -46,7 +45,7 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-sonner-demo-show-swipe")
         .into_element(cx);
 
-    wrap_controls_row::<H>(Space::N2, vec![swipe])
+    wrap_controls_row::<fret_app::App>(Space::N2, vec![swipe])
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()

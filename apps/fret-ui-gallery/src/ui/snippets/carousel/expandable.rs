@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("expandable.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
@@ -11,7 +11,7 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let expandable_selected = cx.local_model_keyed("expandable_selected", || None::<usize>);
@@ -113,7 +113,7 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
         .map(shadcn::CarouselItem::new)
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -121,11 +121,6 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-expandable")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element(cx)
 }
 // endregion: example

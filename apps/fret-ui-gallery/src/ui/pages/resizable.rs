@@ -38,16 +38,11 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Resizable docs flow: Demo -> Usage, with handle, vertical, and RTL examples kept as gallery coverage."),
-        vec![
-            demo,
-            usage,
-            handle,
-            vertical,
-            rtl,
-            notes,
-        ],
+        Some(
+            "Preview follows shadcn Resizable docs flow: Demo -> Usage, with handle, vertical, and RTL examples kept as gallery coverage.",
+        ),
+        vec![demo, usage, handle, vertical, rtl, notes],
     );
 
-    vec![body.test_id("ui-gallery-resizable")]
+    vec![body.test_id("ui-gallery-resizable").into_element(cx)]
 }

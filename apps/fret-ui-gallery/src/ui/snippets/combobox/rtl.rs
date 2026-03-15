@@ -1,11 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::UiCx;
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || None::<Arc<str>>);
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);
@@ -21,17 +21,9 @@ pub fn render(cx: &mut UiCx<'_>) -> AnyElement {
                     shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
                     shadcn::ComboboxItem::new("svelte", "SvelteKit"),
                 ])
-                .into_element_parts(cx, |_cx| {
-                    vec![
-                        shadcn::ComboboxPart::from(
-                            shadcn::ComboboxTrigger::new().width_px(Px(260.0)),
-                        ),
-                        shadcn::ComboboxPart::from(
-                            shadcn::ComboboxInput::new()
-                                .placeholder("丕亘丨孬 毓賳 廿胤丕乇 毓賲賱"),
-                        ),
-                    ]
-                })
+                .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
+                .input(shadcn::ComboboxInput::new().placeholder("丕亘丨孬 毓賳 廿胤丕乇 毓賲賱"))
+                .into_element(cx)
         })]
     })
     .gap(Space::N2)

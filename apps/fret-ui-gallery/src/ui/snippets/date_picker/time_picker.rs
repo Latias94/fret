@@ -1,17 +1,18 @@
 pub const SOURCE: &str = include_str!("time_picker.rs");
 
 // region: example
-use fret_ui_headless::calendar::CalendarMonth;
+use crate::ui::snippets::date_picker::{default_month, fixed_today};
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use time::Date;
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    date_open: Model<bool>,
-    date_month: Model<CalendarMonth>,
-    date: Model<Option<Date>>,
-    time_value: Model<String>,
-) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let today = fixed_today();
+    let date_open = cx.local_model_keyed("date_open", || false);
+    let date_month = cx.local_model_keyed("date_month", || default_month(today));
+    let date = cx.local_model_keyed("date", || None::<Date>);
+    let time_value = cx.local_model_keyed("time_value", || String::from("10:30:00"));
+
     let date = shadcn::DatePicker::new(date_open, date_month, date)
         .placeholder("Select date")
         .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))

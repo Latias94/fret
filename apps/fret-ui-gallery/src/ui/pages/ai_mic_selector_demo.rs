@@ -64,7 +64,7 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
             "Docs-aligned preview keeps the AI Elements compound shape while intentionally leaving device enumeration and microphone permissions in app code.",
         ),
         vec![
-            DocSection::new("Compound API", demo)
+            DocSection::build(cx, "Compound API", demo)
                 .descriptions([
                     "Uses the same trigger / value / content / input / list decomposition as the official AI Elements docs, now with explicit empty/item parts at the selector surface.",
                     "Rust expresses the compound example with `into_element_with_children(...)` on both the root and list surfaces, giving a close equivalent to JSX nesting plus `children(data)` render props.",
@@ -83,5 +83,8 @@ pub(super) fn preview_ai_mic_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-mic-selector-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-mic-selector-demo")
+            .into_element(cx),
+    ]
 }

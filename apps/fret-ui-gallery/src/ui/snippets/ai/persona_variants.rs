@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("persona_variants.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -9,7 +10,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let items = ui::h_flex(move |cx| {
         vec![
             ui_ai::Persona::new(ui_ai::PersonaState::Idle)

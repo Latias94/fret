@@ -32,6 +32,9 @@ pub(in crate::ui) fn preview_overlay(
     context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    // Intentional raw boundary: this internal preview still assembles cached overlay roots plus
+    // status indicators as a concrete result vector after typed helpers land at the cache/vector
+    // seam.
     let models = OverlayModels {
         popover_open,
         dialog_open,
@@ -45,14 +48,11 @@ pub(in crate::ui) fn preview_overlay(
         last_action,
     };
 
-    let last_action_status = flags::last_action_status(cx, &models);
+    let last_action_status = flags::last_action_status(cx, &models).into_element(cx);
 
     let overlays = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), {
         let models = models.clone();
-        move |cx| {
-            let widgets = widgets::build(cx, &models);
-            vec![layout::compose_body(cx, widgets)]
-        }
+        move |cx| vec![layout::compose_body(cx, models.clone()).into_element(cx)]
     });
 
     let mut out: Vec<AnyElement> = vec![overlays, last_action_status];

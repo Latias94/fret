@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::collapsible_primitives as shadcn_col;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Mirrors upstream shadcn/ui v4 `collapsible-demo.tsx` composition: free structure with
     // `Trigger(asChild)` in the header and `Content` later in the tree.
     cx.scope(|cx| {
@@ -43,7 +44,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     cx.container(props, move |_cx| vec![row])
                 };
 
-                let item = |cx: &mut ElementContext<'_, H>, text: &'static str| {
+                let item = |cx: &mut UiCx<'_>, text: &'static str| {
                     let theme = Theme::global(&*cx.app).snapshot();
                     let props = fret_ui_shadcn::decl_style::container_props(
                         &theme,

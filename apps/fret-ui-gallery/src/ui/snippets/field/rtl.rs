@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let rtl_name = cx.local_model_keyed("rtl_name", String::new);
     let rtl_number = cx.local_model_keyed("rtl_number", String::new);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));

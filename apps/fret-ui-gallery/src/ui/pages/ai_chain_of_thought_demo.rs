@@ -28,11 +28,11 @@ pub(super) fn preview_ai_chain_of_thought_demo(
             "Preview mirrors the official AI Elements Chain of Thought example, then documents the Fret-specific composition model used to keep compound parts safe in a move-only declarative tree.",
         ),
         vec![
-            DocSection::new("Usage", usage)
+            DocSection::build(cx, "Usage", usage)
                 .description("Official-example-aligned usage with the same search-result and image steps.")
                 .test_id_prefix("ui-gallery-ai-chain-of-thought-demo")
                 .code_rust_from_file_region(snippets::chain_of_thought_demo::SOURCE, "example"),
-            DocSection::new("Composable Slots", composable)
+            DocSection::build(cx, "Composable Slots", composable)
                 .description("Demonstrates custom header content plus rich step label / description children.")
                 .test_id_prefix("ui-gallery-ai-chain-of-thought-composable")
                 .code_rust_from_file_region(
@@ -46,7 +46,10 @@ pub(super) fn preview_ai_chain_of_thought_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-chain-of-thought-demo")]
+    vec![
+        body.test_id("ui-gallery-page-ai-chain-of-thought-demo")
+            .into_element(cx),
+    ]
 }
 
 fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {

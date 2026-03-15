@@ -286,14 +286,18 @@ pub(in crate::ui) fn preview_view_cache(
             .test_id("ui-gallery-view-cache-root"),
     );
 
+    let harness = DocSection::build(cx, "Harness", root)
+        .no_shell()
+        .max_w(Px(980.0))
+        .description(
+            "Tip: keep 'Cache shell' off while iterating so the status bar updates every frame.",
+        );
+
     let page = doc_layout::render_doc_page(
         cx,
         Some("Compare cached vs uncached subtree execution and state retention."),
-        vec![DocSection::new("Harness", root)
-            .no_shell()
-            .max_w(Px(980.0))
-            .description("Tip: keep 'Cache shell' off while iterating so the status bar updates every frame.")],
+        vec![harness],
     );
 
-    vec![page]
+    vec![page.into_element(cx)]
 }

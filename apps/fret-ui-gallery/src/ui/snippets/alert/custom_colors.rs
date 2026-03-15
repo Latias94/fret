@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("custom_colors.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let warn_bg = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xFF_FA_EB));
     let warn_border = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xFA_D9_73));
 

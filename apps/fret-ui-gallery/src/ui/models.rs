@@ -23,6 +23,7 @@ pub(crate) struct UiGalleryModels {
 
     #[cfg(feature = "gallery-dev")]
     pub(crate) popover_open: Model<bool>,
+    #[cfg(feature = "gallery-dev")]
     pub(crate) dialog_open: Model<bool>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) dialog_glass_open: Model<bool>,
@@ -41,12 +42,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     pub(crate) date_picker_selected: Model<Option<Date>>,
 
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) time_picker_open: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) time_picker_selected: Model<time::Time>,
-
-    pub(crate) data_table_state: Model<fret_ui_headless::table::TableState>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) data_grid_selected_row: Model<Option<u64>>,
 
@@ -56,8 +51,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) avatar_demo_image: Model<Option<ImageId>>,
     pub(crate) image_fit_demo_wide_image: Model<Option<ImageId>>,
     pub(crate) image_fit_demo_tall_image: Model<Option<ImageId>>,
-    pub(crate) image_fit_demo_streaming_image: Model<Option<ImageId>>,
-
     pub(crate) progress: Model<f32>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) checkbox: Model<bool>,
@@ -65,39 +58,7 @@ pub(crate) struct UiGalleryModels {
     pub(crate) switch: Model<bool>,
 
     #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_checkbox: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_switch: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_slider_value: Model<f32>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_radio_value: Model<Option<Arc<str>>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_tabs_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_list_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
     pub(crate) material3_expressive: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_navigation_bar_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_navigation_rail_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_navigation_drawer_value: Model<Arc<str>>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_modal_navigation_drawer_open: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_text_field_value: Model<String>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_text_field_disabled: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_text_field_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_autocomplete_disabled: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_autocomplete_error: Model<bool>,
-    #[cfg(feature = "gallery-material3")]
-    pub(crate) material3_menu_open: Model<bool>,
 
     pub(crate) text_input: Model<String>,
     pub(crate) text_area: Model<String>,

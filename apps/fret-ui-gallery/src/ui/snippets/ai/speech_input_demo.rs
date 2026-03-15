@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("speech_input_demo.rs");
 
 // region: example
+use fret::{UiChild, UiCx};
 use fret_core::{
     AttributedText, Color, DecorationLineStyle, FontWeight, Px, SemanticsRole, TextAlign,
     TextOverflow, TextPaintStyle, TextSpan, TextStyle, TextWrap, TimerToken, UnderlineStyle,
@@ -10,12 +11,12 @@ use fret_ui::element::{
     LayoutStyle, Length, PressableA11y, PressableProps, SemanticsDecoration, SemanticsProps,
     StyledTextProps, TextInkOverflow, TextProps,
 };
-use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui::{Invalidation, Theme};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, IntoUiElement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
@@ -26,8 +27,8 @@ const TRANSCRIPT_SAMPLES: &[&str] = &[
     "Draft a short status update for the release channel.",
 ];
 
-fn speech_models<H: UiHost + 'static>(
-    cx: &mut ElementContext<'_, H>,
+fn speech_models(
+    cx: &mut UiCx<'_>,
 ) -> (
     Model<bool>,
     Model<bool>,
@@ -72,13 +73,13 @@ fn fill_text_layout() -> LayoutStyle {
     layout
 }
 
-fn body_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn body_text(
+    cx: &mut UiCx<'_>,
     text: impl Into<Arc<str>>,
     style: TextStyle,
     color: Color,
     align: TextAlign,
-) -> impl IntoUiElement<H> + use<H> {
+) -> impl UiChild + use<> {
     cx.text_props(TextProps {
         layout: fill_text_layout(),
         text: text.into(),
@@ -106,10 +107,7 @@ fn underlined_text(text: Arc<str>) -> AttributedText {
     AttributedText::new(text, spans)
 }
 
-fn clear_action<H: UiHost + 'static>(
-    cx: &mut ElementContext<'_, H>,
-    transcript: Model<String>,
-) -> impl IntoUiElement<H> + use<H> {
+fn clear_action(cx: &mut UiCx<'_>, transcript: Model<String>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app);
     let muted = muted_fg(theme);
     let foreground = theme.color_token("foreground");
@@ -159,7 +157,7 @@ fn clear_action<H: UiHost + 'static>(
     )
 }
 
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let (listening, processing, transcript, next_sample, timer_token) = speech_models(cx);
 
     cx.keyed("ui-gallery.ai.speech-input.demo", move |cx| {

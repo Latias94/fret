@@ -444,7 +444,7 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .max_w(Px(900.0));
 
-        fret_cookbook::scaffold::centered_page_background_ui(cx, TEST_ID_ROOT, card).into()
+        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }
 }
 
