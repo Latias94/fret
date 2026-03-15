@@ -430,7 +430,29 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
 
 ## Migration and cleanup
 
-- [ ] RESLOAD-mig-700 Migrate first-party users onto the new bundle-based asset story.
+- [~] RESLOAD-mig-700 Migrate first-party users onto the new bundle-based asset story.
+  - Current landed slice:
+    - `fretboard -- new {simple-todo,todo} --ui-assets` already starts on generated
+      `src/generated_assets.rs` modules and `generated_assets::mount(builder)` instead of teaching
+      `.asset_dir("assets")` as the default first-contact story.
+    - cookbook examples now cover all three first-party lanes explicitly:
+      - app-owned compile-time bundle assets,
+      - package-owned reusable bundle assets,
+      - native/package-dev reload via bundle-dir mounting.
+  - Evidence:
+    - `apps/fret-cookbook/examples/app_owned_bundle_assets_basics.rs`
+    - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+    - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+    - `apps/fretboard/src/scaffold/templates.rs`
+      (`todo_template_mounts_generated_assets_when_ui_assets_are_enabled`,
+      `simple_todo_template_mounts_generated_assets_when_ui_assets_are_enabled`)
+  - Remaining:
+    - migrate UI Gallery snippets/pages that still rely on inline demo image buffers when the
+      intent is to teach shipped asset ownership rather than deterministic in-memory rendering,
+    - audit shadcn ecosystem recipes that ship icons/images so package-owned installers stay the
+      default app integration story,
+    - document the transitive icon-pack + package-bundle composition story for ecosystem crates so
+      apps compose one installer instead of replaying low-level registrations manually.
   - Minimum surfaces:
     - cookbook examples,
     - UI Gallery,
