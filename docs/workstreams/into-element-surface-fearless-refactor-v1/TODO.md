@@ -35,6 +35,10 @@ Execution note on 2026-03-14:
   top-level snippets return typed `UiChild` surfaces, the page uses `DocSection::build(cx, ...)`,
   `preset_selector` remains the explicit global motion-preset seam, and the remaining demos now
   keep their dialog/theme access inside the snippet.
+- the cookbook shared page scaffold is now also on the default app-facing root lane:
+  `apps/fret-cookbook/src/scaffold.rs` takes `UiCx` plus `UiChild` and returns `Ui`, and the
+  canonical compare set (`hello_counter`, `simple_todo`, `simple_todo_v2_target`) no longer keeps
+  a redundant `.into()` after that scaffold call.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

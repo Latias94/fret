@@ -137,6 +137,10 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   controls_panel}`.
 - keep `.into_element(cx)` explicit only where those demos intentionally still assemble raw stage
   child arrays, overlay child collections, or other concrete landing seams.
+- `apps/fret-cookbook/src/scaffold.rs::{centered_page, centered_page_background, centered_page_muted}`
+  now also follows the app-facing root rule: shared cookbook page shells take `&mut UiCx<'_>` plus
+  `impl UiChild` and return `Ui`, so the canonical compare set (`hello_counter`, `simple_todo`,
+  `simple_todo_v2_target`) no longer teaches a redundant `.into()` after the scaffold call.
 - first-party page/snippet teaching rule:
   once a wrapper/helper family is promoted onto the default authoring path, Gallery pages and
   snippets should teach that wrapper family by default and should not silently fall back to eager

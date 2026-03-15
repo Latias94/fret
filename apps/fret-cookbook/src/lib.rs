@@ -328,16 +328,17 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn shared_scaffold_uses_component_surface_instead_of_legacy_prelude() {
-        assert!(SCAFFOLD.contains("use fret::component::prelude::*;"));
-        assert!(SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
-        assert!(SCAFFOLD.contains("B: IntoUiElement<H>"));
-        assert!(!SCAFFOLD.contains("&mut ElementContext<'_, H>"));
+    fn shared_scaffold_prefers_app_surface_for_cookbook_page_shells() {
+        assert!(SCAFFOLD.contains("use fret::app::prelude::*;"));
+        assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space, Theme};"));
+        assert!(SCAFFOLD.contains("&mut UiCx<'_>"));
+        assert!(SCAFFOLD.contains("B: UiChild"));
+        assert!(!SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
+        assert!(!SCAFFOLD.contains("B: IntoUiElement<H>"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
         assert!(!SCAFFOLD.contains("surface: AnyElement"));
-        assert!(!SCAFFOLD.contains("centered_page_ui<"));
-        assert!(!SCAFFOLD.contains("centered_page_background_ui("));
-        assert!(!SCAFFOLD.contains("centered_page_muted_ui("));
+        assert!(!SCAFFOLD.contains("surface.into_element(cx);"));
+        assert!(!SCAFFOLD.contains("use fret::component::prelude::*;"));
     }
 
     #[test]
@@ -379,6 +380,18 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn canonical_compare_set_uses_ui_returning_cookbook_scaffold() {
+        for src in [
+            HELLO_COUNTER_EXAMPLE,
+            SIMPLE_TODO_EXAMPLE,
+            SIMPLE_TODO_V2_TARGET_EXAMPLE,
+        ] {
+            assert!(src.contains("centered_page_muted(cx, TEST_ID_ROOT, card)"));
+            assert!(!src.contains("centered_page_muted(cx, TEST_ID_ROOT, card).into()"));
+        }
+    }
+
+    #[test]
     fn advanced_examples_use_the_explicit_advanced_surface() {
         assert_uses_advanced_surface(DRAG_EXAMPLE);
         assert_uses_advanced_surface(EFFECTS_LAYER_EXAMPLE);
@@ -406,12 +419,6 @@ mod authoring_surface_policy_tests {
         assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().watch(&enabled_state)"));
 
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("icon::IconSvgPreloadDiagnostics"));
-        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("Effect::RequestAnimationFrame"));
-        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("cx.state().local::<u64>()"));
-        assert!(
-            ICONS_AND_ASSETS_EXAMPLE
-                .contains("cx.actions()\n            .local_update::<act::BumpReload, u64>")
-        );
 
         assert!(
             ASSETS_RELOAD_EPOCH_EXAMPLE
@@ -419,6 +426,12 @@ mod authoring_surface_policy_tests {
         );
         assert!(
             ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::bump_ui_assets_reload_epoch")
+        );
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
+        assert!(
+            ASSETS_RELOAD_EPOCH_EXAMPLE
+                .contains("cx.actions()\n            .local_update::<act::BumpReload, u64>")
         );
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
