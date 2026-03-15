@@ -76,9 +76,13 @@ Target exports:
 - `UiChild`
 - `ui`
 - `shadcn` (feature-gated)
-- `DepsBuilder` / `DepsSignature` (feature-gated with `state-selector`)
 - `ThemeSnapshot`
 - typed action/payload action macros plus `CommandId`
+
+Explicit secondary app lanes:
+
+- `fret::selector::{DepsBuilder, DepsSignature}` for selector dependency signatures
+- `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` for explicit query nouns
 
 Target non-exports:
 
@@ -96,6 +100,11 @@ Target non-exports:
 - `ModelStore`
 - `ActionId`
 - `TypedAction`
+- `DepsBuilder`
+- `DepsSignature`
+- `QueryKey`
+- `QueryPolicy`
+- `QueryState`
 - `UiBuilder`
 - `UiPatchTarget`
 - `StyledExt` as a named app-prelude export
@@ -285,10 +294,11 @@ Target rule:
 Target operations:
 
 - `selector(...)`
-- selector dependency building through `DepsBuilder` from `fret::app::prelude::*`
+- selector dependency building through `fret::selector::DepsBuilder`
 - `query(...)`
 - `query_async(...)`
 - `query_async_local(...)`
+- explicit query nouns through `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`
 - future router/state-library integration hooks
 
 Target rule:

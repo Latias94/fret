@@ -28,6 +28,8 @@ Closeout note on 2026-03-15:
 
 - the app/component/advanced split is now effectively the settled first-party posture,
 - the highest-value first-party docs/examples/gates are already aligned to that posture,
+- selector/query helper nouns now live on explicit `fret::selector::*` / `fret::query::*` lanes
+  instead of widening `fret::app::prelude::*`,
 - but the closeout is **not** complete while:
   - `fret::app::prelude::*` still overlaps too heavily with `fret::component::prelude::*` on some
     named high-frequency types even after the first cleanup batch hid overlap-heavy extension
@@ -48,11 +50,14 @@ reopening this one.
 
 1. Treat the remaining anonymous semantics/a11y/test-id helpers as the intentional app-lane
    keeper set; they are no longer active app-prelude narrowing debt.
-2. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
+2. Audit the remaining high-frequency app/component prelude overlap (`Px`, `SemanticsRole`,
+   `CommandId`, and any still-duplicated icon helpers) now that selector/query nouns have moved to
+   explicit lanes.
+3. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
    maintenance/gates when new first-party code tries to reintroduce crate-root drift.
-3. Finish the conversion-surface reset under
+4. Finish the conversion-surface reset under
    `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
-4. Continue thin small-app authoring sugar after the lane above is stable, starting with
+5. Continue thin small-app authoring sugar after the lane above is stable, starting with
    action-first widget aliases where command-shaped builder names still leak into the default path.
 
 ## Milestone 0 — Lock the target product surface

@@ -241,11 +241,18 @@ Priority correction on 2026-03-15:
   - [x] Move app-facing `fret-examples` docking demos (`docking_demo`, `container_queries_docking_demo`) to the `fret::docking::*` seam.
   - [x] Audit remaining advanced/component call sites and keep direct `fret-docking` imports explicit.
 - [x] Migrate `fret-selector` to the grouped app data surface.
-  - [x] Re-export `DepsBuilder` / `DepsSignature` from `fret::app::prelude::*`.
+  - [x] Initial migration on 2026-03-15: keep `cx.data().selector(...)` as the grouped default
+    app story.
+  - [x] Closeout on 2026-03-15: move `DepsBuilder` / `DepsSignature` back off
+    `fret::app::prelude::*` into the explicit `fret::selector::*` lane so default first-contact
+    imports stay smaller.
   - [x] Move default docs/templates/examples to `cx.data().selector(...)`.
   - [x] Audit remaining advanced/component call sites and keep them explicit.
 - [x] Migrate `fret-query` to the grouped app data surface.
   - [x] Move default docs/examples to `cx.data().query(...)` / `cx.data().query_async(...)`.
+  - [x] Closeout on 2026-03-15: move explicit `QueryKey` / `QueryPolicy` / `QueryState`-style
+    nouns onto `fret::query::*` so grouped app data remains the default story without widening
+    `fret::app::prelude::*`.
   - [x] Add the grouped `data()` namespace to extracted `UiCx` helpers so helper-heavy examples no
     longer fall back to raw `use_query*`.
   - [x] Add source/doc gates that forbid default teaching text from drifting back to flat query hooks.
