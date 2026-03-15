@@ -8,6 +8,7 @@ use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
+use fret_assets::{AssetLoadError, AssetLocator};
 use fret_runtime::GlobalsHost;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_runtime::TimeHost;
@@ -24,6 +25,15 @@ pub struct SvgFileSource {
 impl SvgFileSource {
     pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
         Self { path: path.into() }
+    }
+
+    pub fn from_asset_locator(locator: &AssetLocator) -> Result<Self, AssetLoadError> {
+        match locator {
+            AssetLocator::File(file) => Ok(Self::from_file_path(file.path.clone())),
+            _ => Err(AssetLoadError::UnsupportedLocatorKind {
+                kind: locator.kind(),
+            }),
+        }
     }
 
     #[deprecated(note = "use from_file_path; raw file paths are a native/dev-only asset source")]
@@ -228,5 +238,15 @@ mod tests {
         let s1 = read_svg_file_cached(&mut host, &src);
         let b1 = s1.bytes.expect("bytes");
         assert_ne!(b0.as_ref(), b1.as_ref());
+    }
+
+    #[test]
+    fn svg_file_source_can_bridge_from_file_asset_locator() {
+        let locator = AssetLocator::file("assets/demo/icon-search.svg");
+        let source =
+            SvgFileSource::from_asset_locator(&locator).expect("file locator should bridge");
+        let expected =
+            SvgFileSource::from_file_path(std::path::PathBuf::from("assets/demo/icon-search.svg"));
+        assert_eq!(source.path.as_ref(), expected.path.as_ref());
     }
 }

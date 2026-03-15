@@ -1765,6 +1765,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-assets"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "smol_str 0.2.2",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "fret-authoring"
 version = "0.1.0"
 dependencies = [
@@ -2777,6 +2786,7 @@ name = "fret-ui-assets"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-assets",
  "fret-canvas",
  "fret-core",
  "fret-executor",

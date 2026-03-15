@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use fret_assets::{AssetLoadError, AssetLocator, ResolvedAssetBytes};
 use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_executor::{Inbox, InboxConfig, InboxDrainer};
 use fret_runtime::{
@@ -98,6 +99,32 @@ impl ImageSource {
         Self {
             id,
             kind: ImageSourceKind::Bytes { bytes },
+        }
+    }
+
+    pub fn from_resolved_asset_bytes(resolved: &ResolvedAssetBytes) -> Self {
+        let id = ImageSourceId(stable_hash(&(
+            b"asset-bytes.v1",
+            &resolved.locator,
+            resolved.revision,
+        )));
+        Self {
+            id,
+            kind: ImageSourceKind::Bytes {
+                bytes: resolved.bytes.clone(),
+            },
+        }
+    }
+
+    pub fn from_asset_locator(locator: &AssetLocator) -> Result<Self, AssetLoadError> {
+        match locator {
+            #[cfg(target_arch = "wasm32")]
+            AssetLocator::Url(url) => Ok(Self::from_url(url.as_str())),
+            #[cfg(not(target_arch = "wasm32"))]
+            AssetLocator::File(file) => Ok(Self::from_file_path(file.path.clone())),
+            _ => Err(AssetLoadError::UnsupportedLocatorKind {
+                kind: locator.kind(),
+            }),
         }
     }
 
@@ -1634,5 +1661,32 @@ mod tests {
             weak.upgrade().is_none(),
             "expected bytes to be released after dropping queued background tasks"
         );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn image_source_can_bridge_from_file_asset_locator() {
+        let locator = AssetLocator::file("assets/textures/test.jpg");
+        let source = ImageSource::from_asset_locator(&locator).expect("file locator should bridge");
+        let expected =
+            ImageSource::from_file_path(std::path::PathBuf::from("assets/textures/test.jpg"));
+        assert_eq!(source.id(), expected.id());
+    }
+
+    #[test]
+    fn resolved_asset_bytes_image_source_id_tracks_locator_and_revision() {
+        let locator = AssetLocator::bundle("app", "images/logo.png");
+        let rev1 =
+            ResolvedAssetBytes::new(locator.clone(), fret_assets::AssetRevision(1), [1u8, 2, 3]);
+        let rev1_again =
+            ResolvedAssetBytes::new(locator.clone(), fret_assets::AssetRevision(1), [9u8, 9, 9]);
+        let rev2 = ResolvedAssetBytes::new(locator, fret_assets::AssetRevision(2), [1u8, 2, 3]);
+
+        let src1 = ImageSource::from_resolved_asset_bytes(&rev1);
+        let src1_again = ImageSource::from_resolved_asset_bytes(&rev1_again);
+        let src2 = ImageSource::from_resolved_asset_bytes(&rev2);
+
+        assert_eq!(src1.id(), src1_again.id());
+        assert_ne!(src1.id(), src2.id());
     }
 }

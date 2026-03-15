@@ -1,0 +1,16 @@
+[package]
+name = "fret-assets"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Portable asset identity, capability, revision, and request vocabulary for the Fret framework."
+
+[dependencies]
+serde.workspace = true
+smol_str.workspace = true
+thiserror.workspace = true

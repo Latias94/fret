@@ -22,6 +22,7 @@ image-decode = ["dep:image"]
 image-metadata = ["dep:fret-ui-kit"]
 
 [dependencies]
+fret-assets = { version = "0.1.0", path = "../../crates/fret-assets" }
 fret-executor = { version = "0.1.0", path = "../fret-executor" }
 fret-canvas = { version = "0.1.0", path = "../fret-canvas" }
 fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
