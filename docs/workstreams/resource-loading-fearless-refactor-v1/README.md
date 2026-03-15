@@ -311,6 +311,26 @@ Examples of what this enables:
 - web packaging can rewrite the actual emitted file name or hash without changing UI code,
 - mobile packaging can map the same logical key into APK/iOS bundle resources.
 
+Recommended ecosystem ownership rules:
+
+- app-owned resources live under `AssetBundleId::app(...)`,
+- ecosystem/package-owned images, SVGs, fonts, and similar shipped bytes live under
+  `AssetBundleId::package(...)`,
+- reusable component crates should not require app authors to understand the final packaging
+  layout in order to consume those resources,
+- app authors should compose installer/setup surfaces instead of manually reproducing each
+  ecosystem crate's internal asset mounting steps.
+
+Important current gap:
+
+- generic resources now have a package-bundle story, but icon packs still primarily install through
+  the global `IconRegistry` surface,
+- that is workable today, but the long-term story still needs one documented ownership rule for:
+  - semantic icon ids (`ui.*`),
+  - vendor icon ids (`lucide.*`, `radix.*`, ...),
+  - package-owned shipped bytes,
+  - and conflict/override behavior when multiple ecosystem crates participate.
+
 This is the pattern used by mature cross-platform systems:
 
 - Flutter packages assets into an `AssetBundle` and encourages `DefaultAssetBundle` indirection
@@ -355,6 +375,20 @@ Recommended result model:
   - decode failure
 
 This is also the right place to centralize hot reload, file watching, and dev-only refresh logic.
+
+### 3.5) Define icon-pack participation explicitly
+
+Icons should remain ergonomic for component authors, but their ownership model must be documented
+instead of inferred from install order.
+
+Recommended direction:
+
+- components depend on `IconId` or semantic `ui.*` ids, not raw file paths,
+- ecosystem libraries that need non-semantic vendor ids should keep those requirements explicit,
+- icon packs should provide explicit installers/bundles so app authors compose one install surface
+  per ecosystem dependency instead of hand-registering loose resources,
+- the project should decide whether icon pack bytes eventually remain on `IconRegistry`, move onto
+  the general asset contract, or keep a hybrid model with a documented bridge.
 
 ### 4) Keep `fret-ui` handle-based
 

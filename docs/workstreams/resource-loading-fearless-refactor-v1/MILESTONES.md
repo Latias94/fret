@@ -65,6 +65,8 @@ Deliverables:
 - The golden-path authoring API is bundle/key based.
 - Development manifests/directories and compile-time embedded assets can all mount through the
   same builder/startup surface with one ordering model.
+- Ecosystem libraries have one documented ownership rule for package resources and icon-pack
+  participation.
 - Cookbook, gallery, and bootstrap examples teach the portable path.
 - Misleading install/setup APIs are renamed, removed, or completed.
 
@@ -73,6 +75,8 @@ Exit criteria:
 - New users are no longer taught repo-relative asset paths as the default Fret story.
 - Packaged/web/mobile-friendly embedded assets do not require dropping to ad-hoc setup hooks when
   the app is otherwise using the `fret` builder surface.
+- App authors can compose ecosystem installers without having to know whether a dependency's
+  shipped bytes are mounted through icon registries, package bundles, or both.
 - Ecosystem authors can ship namespaced assets without runtime packaging knowledge.
 
 ## M5 — Cleanup, deprecation, and hardening

@@ -91,6 +91,20 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - final deprecation/removal posture for opaque legacy bundle strings
     - packaged/web/mobile tooling defaults that pick app vs package ownership automatically
 
+- [ ] RESLOAD-core-125 Define ecosystem ownership rules for package resources and icon packs.
+  - Required outcomes:
+    - package-owned images/SVGs/fonts default to `AssetBundleId::package(...)`,
+    - apps compose ecosystem installer surfaces instead of redoing internal resource mounts,
+    - one documented relationship between package asset bundles and the current `IconRegistry`
+      model,
+    - documented conflict policy for semantic icon ids (`ui.*`) vs vendor ids (`lucide.*`,
+      `radix.*`, ...).
+  - Minimum evidence:
+    - `ecosystem/fret-icons/src/lib.rs`
+    - `ecosystem/fret-icons-lucide/src/app.rs`
+    - `crates/fret-assets/src/lib.rs`
+    - `crates/fret-runtime/src/asset_resolver.rs`
+
 ## Packaging and startup
 
 - [ ] RESLOAD-pack-200 Define development vs packaged asset-bundle behavior.
@@ -198,6 +212,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - broader first-party packaged/web/mobile manifest tooling story
     - packaged/web/mobile manifest layering guidance beyond generated Rust embedding
       (hashed web outputs, mobile bundle/resource mapping, hybrid packaged + remote lanes)
+    - final documented story for ecosystem package resources vs icon-pack installers
     - ecosystem-oriented bundle identity guidance
     - final migration of remaining first-party gallery/bootstrap surfaces
 
@@ -240,7 +255,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - cookbook examples,
     - UI Gallery,
     - bootstrap templates,
-    - shadcn ecosystem recipes that ship icons/images.
+    - shadcn ecosystem recipes that ship icons/images,
+    - ecosystem icon-pack install stories that currently rely on implicit global registry behavior.
 
 - [ ] RESLOAD-mig-710 Remove or archive superseded one-off resource helpers once the unified path is
       verified.
