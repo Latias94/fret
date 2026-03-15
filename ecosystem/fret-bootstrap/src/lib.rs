@@ -48,7 +48,6 @@
 //! # }
 //! ```
 
-use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -81,334 +80,11 @@ pub enum BootstrapError {
     AssetStartup(#[from] AssetStartupPlanError),
 }
 
+pub use fret_launch::assets::{AssetStartupMode, AssetStartupPlan, AssetStartupPlanError};
+
 /// Explicit logical asset vocabulary and host registration helpers for `fret-bootstrap` users.
 pub mod assets {
-    use std::sync::Arc;
-
-    pub use crate::{AssetStartupMode, AssetStartupPlan, AssetStartupPlanError};
-    #[cfg(not(target_arch = "wasm32"))]
-    pub use fret_assets::FileAssetManifestResolver;
-    pub use fret_assets::{
-        AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetExternalReference, AssetKey,
-        AssetKindHint, AssetLoadError, AssetLocator, AssetLocatorKind, AssetManifestLoadError,
-        AssetMediaType, AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision,
-        FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1, FileAssetManifestEntryV1,
-        FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
-        asset_app_bundle_id, asset_package_bundle_id,
-    };
-    pub use fret_runtime::AssetResolverService;
-
-    /// Install or replace the primary resolver layer for the current host.
-    pub fn set_primary_resolver(
-        host: &mut impl fret_runtime::GlobalsHost,
-        resolver: Arc<dyn AssetResolver>,
-    ) {
-        fret_runtime::set_asset_resolver(host, resolver);
-    }
-
-    /// Add an additional resolver layer without replacing earlier registrations.
-    pub fn register_resolver(
-        host: &mut impl fret_runtime::GlobalsHost,
-        resolver: Arc<dyn AssetResolver>,
-    ) {
-        fret_runtime::register_asset_resolver(host, resolver);
-    }
-
-    /// Load a native/package-dev file manifest and register it as a layered resolver.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn register_file_manifest(
-        host: &mut impl fret_runtime::GlobalsHost,
-        manifest_path: impl AsRef<std::path::Path>,
-    ) -> Result<(), AssetManifestLoadError> {
-        let resolver = FileAssetManifestResolver::from_manifest_path(manifest_path)?;
-        register_resolver(host, Arc::new(resolver));
-        Ok(())
-    }
-
-    /// Scan a native/package-dev directory and register it as a logical bundle resolver layer.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn register_file_bundle_dir(
-        host: &mut impl fret_runtime::GlobalsHost,
-        bundle: impl Into<AssetBundleId>,
-        dir: impl AsRef<std::path::Path>,
-    ) -> Result<(), AssetManifestLoadError> {
-        let resolver = FileAssetManifestResolver::from_bundle_dir(bundle, dir)?;
-        register_resolver(host, Arc::new(resolver));
-        Ok(())
-    }
-
-    /// Register static bundle-scoped entries on the current host.
-    pub fn register_bundle_entries(
-        host: &mut impl fret_runtime::GlobalsHost,
-        bundle: impl Into<AssetBundleId>,
-        entries: impl IntoIterator<Item = StaticAssetEntry>,
-    ) {
-        fret_runtime::register_bundle_asset_entries(host, bundle, entries);
-    }
-
-    /// Register static embedded entries owned by a specific bundle or crate.
-    pub fn register_embedded_entries(
-        host: &mut impl fret_runtime::GlobalsHost,
-        owner: impl Into<AssetBundleId>,
-        entries: impl IntoIterator<Item = StaticAssetEntry>,
-    ) {
-        fret_runtime::register_embedded_asset_entries(host, owner, entries);
-    }
-
-    /// Inspect the composed asset resolver service installed on the current host.
-    pub fn resolver(
-        host: &impl fret_runtime::GlobalsHost,
-    ) -> Option<&fret_runtime::AssetResolverService> {
-        fret_runtime::asset_resolver(host)
-    }
-
-    /// Report the current host's aggregated asset capabilities.
-    pub fn capabilities(
-        host: &impl fret_runtime::GlobalsHost,
-    ) -> Option<fret_assets::AssetCapabilities> {
-        fret_runtime::asset_capabilities(host)
-    }
-}
-
-/// Selects which asset-publication lane a startup plan should apply.
-///
-/// `Development` keeps real-file manifest or bundle-directory mounts on the builder path.
-/// `Packaged` keeps compile-time/static bundle or embedded entries on the builder path.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssetStartupMode {
-    Development,
-    Packaged,
-}
-
-impl AssetStartupMode {
-    /// First-party default startup selection for bootstrap-facing app startup.
-    ///
-    /// Native debug builds stay on the file-backed development lane for quick iteration, while
-    /// packaged targets (including web/mobile and native release builds) stay on compiled bundle
-    /// or embedded bytes.
-    pub const fn preferred() -> Self {
-        #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
-        {
-            Self::Development
-        }
-        #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
-        {
-            Self::Packaged
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum AssetStartupBundleTarget {
-    App,
-    Explicit(fret_assets::AssetBundleId),
-}
-
-impl AssetStartupBundleTarget {
-    #[cfg(not(target_arch = "wasm32"))]
-    fn resolve(self, app_bundle: fret_assets::AssetBundleId) -> fret_assets::AssetBundleId {
-        match self {
-            Self::App => app_bundle,
-            Self::Explicit(bundle) => bundle,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum AssetStartupMountSpec {
-    Manifest {
-        path: PathBuf,
-    },
-    Dir {
-        bundle: AssetStartupBundleTarget,
-        dir: PathBuf,
-    },
-    BundleEntries {
-        bundle: AssetStartupBundleTarget,
-        entries: Vec<fret_assets::StaticAssetEntry>,
-    },
-    EmbeddedEntries {
-        owner: fret_assets::AssetBundleId,
-        entries: Vec<fret_assets::StaticAssetEntry>,
-    },
-}
-
-/// Explicit startup plan that separates development asset mounts from packaged asset mounts.
-#[derive(Debug, Clone, Default)]
-pub struct AssetStartupPlan {
-    development: Vec<AssetStartupMountSpec>,
-    packaged: Vec<AssetStartupMountSpec>,
-}
-
-impl AssetStartupPlan {
-    /// Create an empty startup plan.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Add a native/package-dev manifest artifact to the development lane.
-    pub fn development_manifest(mut self, manifest_path: impl Into<PathBuf>) -> Self {
-        self.development.push(AssetStartupMountSpec::Manifest {
-            path: manifest_path.into(),
-        });
-        self
-    }
-
-    /// Add a native/package-dev directory scan under the default app bundle id.
-    pub fn development_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.development.push(AssetStartupMountSpec::Dir {
-            bundle: AssetStartupBundleTarget::App,
-            dir: dir.into(),
-        });
-        self
-    }
-
-    /// Add a native/package-dev directory scan under an explicit bundle id.
-    pub fn development_bundle_dir(
-        mut self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        dir: impl Into<PathBuf>,
-    ) -> Self {
-        self.development.push(AssetStartupMountSpec::Dir {
-            bundle: AssetStartupBundleTarget::Explicit(bundle.into()),
-            dir: dir.into(),
-        });
-        self
-    }
-
-    /// Add a development bundle-directory lane on native targets and no-op on wasm.
-    pub fn development_bundle_dir_if_native(
-        self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        dir: impl Into<PathBuf>,
-    ) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            return self.development_bundle_dir(bundle, dir);
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            let _ = bundle.into();
-            let _ = dir.into();
-            self
-        }
-    }
-
-    /// Add compile-time/static entries under the default app bundle id to the packaged lane.
-    pub fn packaged_entries(
-        mut self,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        self.packaged.push(AssetStartupMountSpec::BundleEntries {
-            bundle: AssetStartupBundleTarget::App,
-            entries: entries.into_iter().collect(),
-        });
-        self
-    }
-
-    /// Add compile-time/static entries under an explicit bundle id to the packaged lane.
-    pub fn packaged_bundle_entries(
-        mut self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        self.packaged.push(AssetStartupMountSpec::BundleEntries {
-            bundle: AssetStartupBundleTarget::Explicit(bundle.into()),
-            entries: entries.into_iter().collect(),
-        });
-        self
-    }
-
-    /// Add owner-scoped embedded bytes to the packaged lane.
-    pub fn packaged_embedded_entries(
-        mut self,
-        owner: impl Into<fret_assets::AssetBundleId>,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        self.packaged.push(AssetStartupMountSpec::EmbeddedEntries {
-            owner: owner.into(),
-            entries: entries.into_iter().collect(),
-        });
-        self
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn into_mounts(
-        self,
-        app_bundle: fret_assets::AssetBundleId,
-        mode: AssetStartupMode,
-    ) -> std::result::Result<Vec<AssetMount>, AssetStartupPlanError> {
-        let mounts = match mode {
-            AssetStartupMode::Development => self.development,
-            AssetStartupMode::Packaged => self.packaged,
-        };
-
-        if mounts.is_empty() {
-            return Err(match mode {
-                AssetStartupMode::Development => AssetStartupPlanError::MissingDevelopmentLane,
-                AssetStartupMode::Packaged => AssetStartupPlanError::MissingPackagedLane,
-            });
-        }
-
-        Ok(mounts
-            .into_iter()
-            .map(|mount| mount.into_mount(app_bundle.clone()))
-            .collect())
-    }
-}
-
-impl AssetStartupMountSpec {
-    #[cfg(not(target_arch = "wasm32"))]
-    fn into_mount(self, app_bundle: fret_assets::AssetBundleId) -> AssetMount {
-        match self {
-            Self::Manifest { path } => AssetMount::Manifest { path },
-            Self::Dir { bundle, dir } => AssetMount::Dir {
-                bundle: bundle.resolve(app_bundle),
-                dir,
-            },
-            Self::BundleEntries { bundle, entries } => AssetMount::BundleEntries {
-                bundle: bundle.resolve(app_bundle),
-                entries,
-            },
-            Self::EmbeddedEntries { owner, entries } => {
-                AssetMount::EmbeddedEntries { owner, entries }
-            }
-        }
-    }
-}
-
-/// Reported when a startup plan selects a lane that was never configured.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-pub enum AssetStartupPlanError {
-    #[error(
-        "asset startup plan selected development mode but no development manifest/directory lane was configured"
-    )]
-    MissingDevelopmentLane,
-    #[error(
-        "asset startup plan selected packaged mode but no packaged bundle/embedded entries were configured"
-    )]
-    MissingPackagedLane,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-#[derive(Debug, Clone)]
-enum AssetMount {
-    Dir {
-        bundle: fret_assets::AssetBundleId,
-        dir: PathBuf,
-    },
-    Manifest {
-        path: PathBuf,
-    },
-    BundleEntries {
-        bundle: fret_assets::AssetBundleId,
-        entries: Vec<fret_assets::StaticAssetEntry>,
-    },
-    EmbeddedEntries {
-        owner: fret_assets::AssetBundleId,
-        entries: Vec<fret_assets::StaticAssetEntry>,
-    },
+    pub use fret_launch::assets::*;
 }
 
 /// Apply `SettingsFileV1` to an `App` and runner config.
@@ -717,14 +393,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self,
         manifest_path: impl AsRef<Path>,
     ) -> Result<Self, BootstrapError> {
-        let resolver = Arc::new(
-            fret_assets::FileAssetManifestResolver::from_manifest_path(manifest_path)
-                .map_err(BootstrapError::from)?,
-        );
         Ok(Self {
-            inner: self.inner.init_app(move |app| {
-                assets::register_resolver(app, resolver);
-            }),
+            inner: self
+                .inner
+                .with_asset_manifest(manifest_path)
+                .map_err(map_asset_runner_error)?,
             on_gpu_ready_hooks: self.on_gpu_ready_hooks,
         })
     }
@@ -739,14 +412,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         bundle: impl Into<fret_assets::AssetBundleId>,
         dir: impl AsRef<Path>,
     ) -> Result<Self, BootstrapError> {
-        let resolver = Arc::new(
-            fret_assets::FileAssetManifestResolver::from_bundle_dir(bundle, dir)
-                .map_err(BootstrapError::from)?,
-        );
         Ok(Self {
-            inner: self.inner.init_app(move |app| {
-                assets::register_resolver(app, resolver);
-            }),
+            inner: self
+                .inner
+                .with_asset_dir(bundle, dir)
+                .map_err(map_asset_runner_error)?,
             on_gpu_ready_hooks: self.on_gpu_ready_hooks,
         })
     }
@@ -757,12 +427,8 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         bundle: impl Into<fret_assets::AssetBundleId>,
         entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
     ) -> Self {
-        let bundle = bundle.into();
-        let entries = entries.into_iter().collect::<Vec<_>>();
         Self {
-            inner: self.inner.init_app(move |app| {
-                assets::register_bundle_entries(app, bundle, entries);
-            }),
+            inner: self.inner.with_bundle_asset_entries(bundle, entries),
             on_gpu_ready_hooks: self.on_gpu_ready_hooks,
         }
     }
@@ -773,12 +439,8 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         owner: impl Into<fret_assets::AssetBundleId>,
         entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
     ) -> Self {
-        let owner = owner.into();
-        let entries = entries.into_iter().collect::<Vec<_>>();
         Self {
-            inner: self.inner.init_app(move |app| {
-                assets::register_embedded_entries(app, owner, entries);
-            }),
+            inner: self.inner.with_embedded_asset_entries(owner, entries),
             on_gpu_ready_hooks: self.on_gpu_ready_hooks,
         }
     }
@@ -790,7 +452,13 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         mode: AssetStartupMode,
         plan: AssetStartupPlan,
     ) -> Result<Self, BootstrapError> {
-        apply_asset_mounts(self, plan.into_mounts(app_bundle.into(), mode)?)
+        Ok(Self {
+            inner: self
+                .inner
+                .with_asset_startup(app_bundle, mode, plan)
+                .map_err(map_asset_runner_error)?,
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        })
     }
 
     /// Configure budgets for UI render asset caches (`ImageAssetCache` / `SvgAssetCache`).
@@ -1108,28 +776,14 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn apply_asset_mount<D: fret_launch::WinitAppDriver + 'static>(
-    builder: BootstrapBuilder<D>,
-    mount: AssetMount,
-) -> Result<BootstrapBuilder<D>, BootstrapError> {
-    match mount {
-        AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir),
-        AssetMount::Manifest { path } => builder.with_asset_manifest(path),
-        AssetMount::BundleEntries { bundle, entries } => {
-            Ok(builder.with_bundle_asset_entries(bundle, entries))
-        }
-        AssetMount::EmbeddedEntries { owner, entries } => {
-            Ok(builder.with_embedded_asset_entries(owner, entries))
-        }
+fn map_asset_runner_error(err: fret_launch::RunnerError) -> BootstrapError {
+    match err {
+        fret_launch::RunnerError::AssetManifest(source) => BootstrapError::AssetManifest(source),
+        fret_launch::RunnerError::AssetStartup(source) => BootstrapError::AssetStartup(source),
+        other => unreachable!(
+            "unexpected non-asset runner error while configuring bootstrap assets: {other}"
+        ),
     }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn apply_asset_mounts<D: fret_launch::WinitAppDriver + 'static>(
-    builder: BootstrapBuilder<D>,
-    mounts: Vec<AssetMount>,
-) -> Result<BootstrapBuilder<D>, BootstrapError> {
-    mounts.into_iter().try_fold(builder, apply_asset_mount)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -1343,7 +997,7 @@ mod fn_driver_builder_tests {
     }
 
     #[test]
-    fn asset_startup_plan_development_bundle_dir_if_native_populates_development_lane() {
+    fn bootstrap_builder_asset_startup_accepts_development_bundle_dir_if_native() {
         let asset_dir =
             write_asset_dir_fixture("asset-startup-plan-development-bundle-dir-if-native");
         let app_bundle = AssetBundleId::app("asset-startup-plan-development-bundle-dir-if-native");
@@ -1355,15 +1009,15 @@ mod fn_driver_builder_tests {
             )])
             .development_bundle_dir_if_native(app_bundle.clone(), &asset_dir);
 
-        let mounts = plan
-            .into_mounts(app_bundle.clone(), AssetStartupMode::Development)
-            .expect("native helper should populate the development lane");
-
-        assert!(matches!(
-            mounts.as_slice(),
-            [super::AssetMount::Dir { bundle, dir }]
-                if bundle == &app_bundle && dir == &asset_dir
-        ));
+        let _builder = BootstrapBuilder::new_fn(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+        )
+        .with_asset_startup(app_bundle, AssetStartupMode::Development, plan)
+        .expect("native helper should populate the development lane on bootstrap builder path");
     }
 }
 

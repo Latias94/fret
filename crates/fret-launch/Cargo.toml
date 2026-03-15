@@ -28,6 +28,7 @@ webview-wry = ["dep:fret-webview", "dep:fret-webview-wry"]
 
 [dependencies]
 fret-app = { version = "0.1.0", path = "../fret-app" }
+fret-assets = { version = "0.1.0", path = "../fret-assets" }
 fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
 fret-render = { version = "0.1.0", path = "../fret-render" }

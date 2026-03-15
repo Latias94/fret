@@ -180,11 +180,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Packaged:
     - emitted/embedded/mobile-bundled asset lookup by logical key.
   - Current landed slice:
+    - `fret-launch::assets::{AssetStartupPlan, AssetStartupMode}` plus
+      `WinitAppBuilder::{with_asset_manifest, with_asset_dir, with_bundle_asset_entries,
+      with_embedded_asset_entries, with_asset_startup}` now define the lowest-level native startup
+      contract directly on the runner-facing builder surface,
     - `fret::assets::{AssetStartupPlan, AssetStartupMode}` now gives the `fret` facade one named
       startup policy object for selecting development vs packaged publication on the builder path,
-    - `fret-bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now gives direct bootstrap
-      users the same named policy object and keeps `BootstrapBuilder::with_asset_startup(...)` on
-      the non-`fret` builder path,
+    - `fret-bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-exports the same
+      launch-owned contract and keeps `BootstrapBuilder::{with_asset_manifest, with_asset_dir,
+      with_bundle_asset_entries, with_embedded_asset_entries, with_asset_startup}` as direct
+      delegation over `WinitAppBuilder`,
     - `FretApp::asset_startup(...)` lowers that policy onto the default app-facing startup
       surface while preserving fail-early builder semantics,
     - `UiAppBuilder::with_asset_startup(...)` keeps the same policy available on the explicit
@@ -203,9 +208,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - missing selected lanes now fail as startup configuration errors instead of silently falling
       through to ad-hoc runtime glue.
   - Remaining:
-    - watcher/hot-reload policy is still implicit in the native file-manifest resolver layer,
-    - `fret-launch` still does not publish an equivalent shared build-profile contract for the
-      lowest-level non-bootstrap startup surface.
+    - watcher/hot-reload policy is still implicit in the native file-manifest resolver layer.
 
 - [~] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.
   - Candidates:
@@ -213,6 +216,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `fret-bootstrap`
     - future `fretboard` asset manifest tooling
   - Current landed slice:
+    - `fret-launch::assets` is now the canonical owner for the host/startup asset contract, so
+      advanced integrations no longer need `bootstrap` to access the shared development-vs-packaged
+      builder surface,
     - the first app-facing integration point is now explicit in `ecosystem/fret`:
       `AssetStartupPlan` + `AssetStartupMode` on the builder surface,
     - `ecosystem/fret` now also publishes shared preferred-mode helpers
@@ -229,8 +235,6 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       directly, so the first-party scaffold owns the preferred mode choice without bespoke app
       code.
   - Remaining:
-    - decide whether `fret-launch` should adopt the same preferred-mode policy for the lowest-level
-      non-bootstrap startup surfaces,
     - wire the same story through any future `fret-bootstrap` / `fret-launch` packaging helpers.
 
 ## Font baseline unification

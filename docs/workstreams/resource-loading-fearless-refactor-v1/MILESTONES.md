@@ -69,6 +69,8 @@ Deliverables:
 - The golden-path authoring API is bundle/key based.
 - Development manifests/directories and compile-time embedded assets can all mount through the
   same builder/startup surface with one ordering model.
+- `fret-launch` owns the lowest-level asset startup contract, and higher facades reuse it instead
+  of forking separate startup-policy types.
 - The first-party startup surface can name the development-vs-packaged choice explicitly
   (`AssetStartupPlan` + `AssetStartupMode`) instead of teaching ad-hoc branching at each app
   entry point.
