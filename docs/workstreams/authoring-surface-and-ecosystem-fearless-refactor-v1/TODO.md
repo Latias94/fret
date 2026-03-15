@@ -169,6 +169,9 @@ Priority correction on 2026-03-15:
     `.a11y_role(...)` helper methods on the default app lane.
   - [x] Eighth batch on 2026-03-15: audit `Px` and keep it intentionally on both app and
     component preludes as the shared low-friction unit type for everyday Fret authoring.
+  - [x] Ninth batch on 2026-03-15: remove `actions` / `workspace_menu` module re-exports from
+    `fret::app::prelude::*`; app code now reaches those heavier module surfaces through explicit
+    `fret::actions::*` / `fret::workspace_menu::*` lanes instead of first-contact wildcard imports.
   - Minimum audit set:
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,

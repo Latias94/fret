@@ -117,9 +117,11 @@ fn main() -> fret::Result<()> {
 }
 ```
 
-If app code needs explicit style/token nouns or icon IDs beyond the default lane, import them from
-`fret::style::{...}` and `fret::icons::IconId` instead of expecting them from
+If app code needs explicit style/token nouns or icon helpers/IDs beyond the default lane, import
+them from `fret::style::{...}` and `fret::icons::{icon, IconId}` instead of expecting them from
 `fret::app::prelude::*`.
+If app code needs explicit semantic-role nouns, import them from
+`fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story,
 import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
 `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`.

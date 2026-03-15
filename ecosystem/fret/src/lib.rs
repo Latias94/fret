@@ -89,9 +89,16 @@ pub use fret_ui_shadcn::facade as shadcn;
 /// Re-export portable action/command identity types for app code and macros.
 pub use fret_runtime::{ActionId, CommandId, TypedAction};
 
-/// Explicit icon identifiers for app and component code that opt into icon-specific authoring.
+/// Explicit icon helpers and identifiers for app and component code that opt into icon-specific
+/// authoring.
 pub mod icons {
     pub use fret_icons::IconId;
+    pub use fret_ui_kit::declarative::icon;
+}
+
+/// Explicit accessibility/semantics nouns for app code that needs semantic-role overrides.
+pub mod semantics {
+    pub use fret_core::SemanticsRole;
 }
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
@@ -399,8 +406,7 @@ pub mod app {
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, View};
         pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
-        pub use crate::{actions, workspace_menu};
-        pub use fret_core::{Px, SemanticsRole};
+        pub use fret_core::Px;
         pub use fret_runtime::CommandId;
         pub use fret_ui::ThemeSnapshot;
         pub use fret_ui_kit::IntoUiElement as _;
@@ -409,7 +415,6 @@ pub mod app {
         pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;
         pub use fret_ui_kit::declarative::UiElementA11yExt as _;
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
-        pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
     }
@@ -456,7 +461,7 @@ pub mod component {
         pub use fret_ui_kit::declarative::icon;
 
         pub use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
-        pub use fret_runtime::{CommandId, Model};
+        pub use fret_runtime::Model;
         pub use fret_ui::element::{AnyElement, AnyElementIterExt as _};
         pub use fret_ui::{Invalidation, Theme, UiHost};
     }
@@ -1676,12 +1681,10 @@ mod builder_surface_tests {
             .expect("view should build")
             .with_embedded_asset_entries(
                 AssetBundleId::package("demo-kit"),
-                [StaticAssetEntry::new(
-                    "icons/search.svg",
-                    AssetRevision(1),
-                    br#"<svg></svg>"#,
-                )
-                .with_media_type("image/svg+xml")],
+                [
+                    StaticAssetEntry::new("icons/search.svg", AssetRevision(1), br#"<svg></svg>"#)
+                        .with_media_type("image/svg+xml"),
+                ],
             );
     }
 
@@ -2102,7 +2105,8 @@ mod authoring_surface_policy_tests {
         ));
         assert!(CRATE_README.contains("`state`: enable selector/query helpers on `AppUi`"));
         assert!(CRATE_README.contains("`fret::style::{...}`"));
-        assert!(CRATE_README.contains("`fret::icons::IconId`"));
+        assert!(CRATE_README.contains("`fret::icons::{icon, IconId}`"));
+        assert!(CRATE_README.contains("`fret::semantics::SemanticsRole`"));
         assert!(CRATE_README.contains("`fret::env::{...}`"));
         assert!(CRATE_README.contains("`fret::assets::{...}`"));
         assert!(CRATE_README.contains("`AssetBundleId::app(...)`"));
@@ -2375,6 +2379,9 @@ mod authoring_surface_policy_tests {
         assert!(DOCS_README.contains("`use fret::app::prelude::*;`"));
         assert!(DOCS_README.contains("`FretApp::new(...).window(...).view::<MyView>()?.run()`"));
         assert!(DOCS_README.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch::<"));
+        assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch_payload::<"));
+        assert!(!DOCS_README.contains(".on_activate(cx.actions().listener("));
         assert!(!DOCS_README.contains("run_view::<"));
         assert!(!DOCS_README.contains("ViewCx::"));
 
@@ -2396,7 +2403,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::IconId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::{icon, IconId}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::semantics::SemanticsRole`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
@@ -2489,6 +2497,9 @@ mod authoring_surface_policy_tests {
     #[test]
     fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
         assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch::<"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch_payload::<"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().listener("));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".register_icon_pack("));
         assert!(!TODO_APP_GOLDEN_PATH.contains("IconRegistry"));
     }
@@ -2514,6 +2525,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::component::prelude::*;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`ComponentCx`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("without pulling in `FretApp`, `AppUi`, or runner-facing seams")
@@ -2584,6 +2596,9 @@ mod authoring_surface_policy_tests {
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().models::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch::<"));
+        assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch_payload::<"));
+        assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().listener("));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_locals`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_models`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_transient`"));
@@ -2601,9 +2616,12 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("KernelApp"));
         assert!(app_prelude.contains("UiChild"));
         assert!(app_prelude.contains("WindowId"));
+        assert!(app_prelude_exports_symbol("Px"));
+        assert!(!app_prelude_exports_symbol("actions"));
+        assert!(!app_prelude_exports_symbol("workspace_menu"));
         assert!(app_prelude.contains("pub use fret_runtime::CommandId;"));
         assert!(app_prelude.contains("pub use fret_ui::ThemeSnapshot;"));
-        assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
         assert!(
@@ -2637,6 +2655,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(!app_prelude_exports_symbol("StyledExt"));
         assert!(!app_prelude_exports_symbol("UiExt"));
+        assert!(!app_prelude_exports_symbol("icon"));
         assert!(!app_prelude_exports_symbol("IconId"));
         assert!(!app_prelude_exports_symbol("Theme"));
         assert!(!app_prelude_exports_symbol("ChromeRefinement"));
@@ -2733,7 +2752,7 @@ mod authoring_surface_policy_tests {
         assert!(!root_header.contains("ActionRegistry"));
         assert!(root_header.contains("pub use fret_runtime::{ActionId, CommandId, TypedAction};"));
         assert!(ACTIONS_RS.contains(
-            "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, TypedAction};"
+            "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};"
         ));
         assert!(!app_prelude_exports_symbol("ActionMeta"));
         assert!(!app_prelude_exports_symbol("ActionRegistry"));
@@ -2775,8 +2794,11 @@ mod authoring_surface_policy_tests {
         let root_header = root_surface_header_source();
 
         assert!(root_header.contains("pub mod icons {"));
+        assert!(root_header.contains("pub mod semantics {"));
         assert!(root_header.contains("pub mod style {"));
         assert!(root_header.contains("pub use fret_icons::IconId;"));
+        assert!(root_header.contains("pub use fret_ui_kit::declarative::icon;"));
+        assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_core::{TextOverflow, TextWrap};"));
         assert!(root_header.contains("pub use fret_ui::Theme;"));
         assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
@@ -2889,6 +2911,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("ImageMetadataStore"));
         assert!(!app_prelude_exports_symbol("ImageSamplingExt"));
         assert!(!app_prelude_exports_symbol("MarginEdge"));
+        assert!(!app_prelude_exports_symbol("SemanticsRole"));
         assert!(!app_prelude_exports_symbol("OverrideSlot"));
         assert!(!app_prelude_exports_symbol("WidgetState"));
         assert!(!app_prelude_exports_symbol("WidgetStateProperty"));
@@ -2947,7 +2970,6 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude_exports_symbol("Invalidation"));
         assert!(component_prelude_exports_symbol("Theme"));
         assert!(component_prelude_exports_symbol("Model"));
-        assert!(component_prelude_exports_symbol("CommandId"));
         assert!(component_prelude_exports_symbol("OverlayController"));
         assert!(component_prelude_exports_symbol("OverlayRequest"));
         assert!(component_prelude_exports_symbol("SemanticsRole"));
@@ -2973,6 +2995,7 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol("Event"));
         assert!(!component_prelude_exports_symbol("UiTree"));
         assert!(!component_prelude_exports_symbol("ActionId"));
+        assert!(!component_prelude_exports_symbol("CommandId"));
         assert!(!component_prelude_exports_symbol("TypedAction"));
         assert!(!component_prelude_exports_symbol("shadcn"));
     }

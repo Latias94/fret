@@ -139,7 +139,9 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 **Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For activation-only surfaces, prefer `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and `widget.listen(cx, |host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
-them intentionally from `fret::style::{...}` and `fret::icons::IconId`.
+them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
+When app code needs explicit semantics nouns, import them intentionally from
+`fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 When app code needs explicit selector/query nouns, keep them off the default prelude as well and
 import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
 `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
@@ -181,7 +183,9 @@ and semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-f
 conversion surface is intentionally being collapsed to one public component conversion trait; new
 docs/examples should follow
 `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
-teaching the legacy split conversion trait names.
+teaching the legacy split conversion trait names. When reusable component code needs explicit
+command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead
+of expecting `CommandId` from `fret::component::prelude::*`.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 

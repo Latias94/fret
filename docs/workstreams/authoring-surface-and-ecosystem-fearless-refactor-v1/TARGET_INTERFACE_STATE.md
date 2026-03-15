@@ -75,12 +75,17 @@ Target exports:
 - `Ui`
 - `UiChild`
 - `ui`
+- `Px`
 - `shadcn` (feature-gated)
 - `ThemeSnapshot`
 - typed action/payload action macros plus `CommandId`
 
 Explicit secondary app lanes:
 
+- `fret::actions::*` for explicit command metadata, payload-action contracts, and action-registry
+  helper nouns beyond bare `CommandId`
+- `fret::workspace_menu::*` for opt-in in-window menubar/menu-model integration helpers
+- `fret::semantics::SemanticsRole` for explicit semantic-role nouns
 - `fret::selector::{DepsBuilder, DepsSignature}` for selector dependency signatures
 - `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` for explicit query nouns
 
@@ -99,7 +104,10 @@ Target non-exports:
 - `ElementContextThemeExt` as a named app-prelude export
 - `ModelStore`
 - `ActionId`
+- `SemanticsRole`
 - `TypedAction`
+- `actions` as a default app-prelude module export
+- `workspace_menu` as a default app-prelude module export
 - `DepsBuilder`
 - `DepsSignature`
 - `QueryKey`
@@ -160,9 +168,14 @@ Target rule:
   `fret::app::prelude`.
 - `fret::app::prelude` must use curated exports; it does not blanket re-export
   `fret_ui_kit::declarative::prelude::*`.
-- app code that needs explicit icon/style nouns should import them from `fret::icons::IconId` and
-  `fret::style::{Theme, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius,
+- app code that needs explicit icon/style nouns should import them from `fret::icons::{icon,
+  IconId}` and `fret::style::{Theme, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius,
   ShadowPreset, Size, Space}` rather than expecting them from the default prelude.
+- app code that needs explicit semantic-role nouns should import them from
+  `fret::semantics::SemanticsRole` rather than expecting them from the default prelude.
+- `Px` remains an intentional shared primitive on both app and component lanes because raw pixel
+  units are part of the basic Fret authoring vocabulary rather than a component-only mechanism
+  noun.
 - app code that needs adaptive declarative helpers should import them from `fret::env::{...}`
   rather than expecting breakpoint/media/preference helpers from the default prelude.
 - overlap-heavy extension traits may still arrive through anonymous `as _` imports so method calls
@@ -214,6 +227,7 @@ Target non-exports:
 
 - app builder
 - app-runtime-only globals/installation seams
+- `CommandId` as a default component-prelude noun
 - runner/manual assembly types
 - legacy split conversion names such as `UiIntoElement`, `UiHostBoundIntoElement`,
   and `UiChildIntoElement`
@@ -222,6 +236,9 @@ Target rule:
 
 - a reusable component crate should be able to stay entirely on this surface unless it is
   intentionally shipping app-specific integration helpers.
+- reusable component code that needs explicit command identity values should import
+  `fret::actions::CommandId` (or `fret-runtime`) explicitly instead of relying on the component
+  prelude.
 - `IntoUiElement<H>` is the single public conversion vocabulary on this lane; the older split
   conversion taxonomy is considered deleted from the intended public product surface.
 
