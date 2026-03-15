@@ -363,6 +363,105 @@ impl dyn AssetResolver + '_ {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct InMemoryAssetResolver {
+    capabilities: AssetCapabilities,
+    entries: std::collections::HashMap<AssetLocator, ResolvedAssetBytes>,
+}
+
+impl InMemoryAssetResolver {
+    pub fn new() -> Self {
+        Self {
+            capabilities: AssetCapabilities {
+                memory: true,
+                embedded: true,
+                bundle_asset: true,
+                file: false,
+                url: false,
+                file_watch: false,
+                system_font_scan: false,
+            },
+            entries: std::collections::HashMap::new(),
+        }
+    }
+
+    pub fn with_capabilities(mut self, capabilities: AssetCapabilities) -> Self {
+        self.capabilities = capabilities;
+        self
+    }
+
+    pub fn insert(&mut self, resolved: ResolvedAssetBytes) -> Option<ResolvedAssetBytes> {
+        self.entries.insert(resolved.locator.clone(), resolved)
+    }
+
+    pub fn insert_memory(
+        &mut self,
+        key: impl Into<AssetMemoryKey>,
+        revision: AssetRevision,
+        bytes: impl Into<Arc<[u8]>>,
+    ) -> Option<ResolvedAssetBytes> {
+        self.insert(ResolvedAssetBytes::new(
+            AssetLocator::memory(key),
+            revision,
+            bytes,
+        ))
+    }
+
+    pub fn insert_embedded(
+        &mut self,
+        owner: impl Into<AssetBundleId>,
+        key: impl Into<AssetKey>,
+        revision: AssetRevision,
+        bytes: impl Into<Arc<[u8]>>,
+    ) -> Option<ResolvedAssetBytes> {
+        self.insert(ResolvedAssetBytes::new(
+            AssetLocator::embedded(owner, key),
+            revision,
+            bytes,
+        ))
+    }
+
+    pub fn insert_bundle(
+        &mut self,
+        bundle: impl Into<AssetBundleId>,
+        key: impl Into<AssetKey>,
+        revision: AssetRevision,
+        bytes: impl Into<Arc<[u8]>>,
+    ) -> Option<ResolvedAssetBytes> {
+        self.insert(ResolvedAssetBytes::new(
+            AssetLocator::bundle(bundle, key),
+            revision,
+            bytes,
+        ))
+    }
+
+    pub fn resolve_locator_bytes(
+        &self,
+        locator: AssetLocator,
+    ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+        self.resolve_bytes(&AssetRequest::new(locator))
+    }
+}
+
+impl AssetResolver for InMemoryAssetResolver {
+    fn capabilities(&self) -> AssetCapabilities {
+        self.capabilities
+    }
+
+    fn resolve_bytes(&self, request: &AssetRequest) -> Result<ResolvedAssetBytes, AssetLoadError> {
+        if !self.capabilities.supports(&request.locator) {
+            return Err(AssetLoadError::UnsupportedLocatorKind {
+                kind: request.locator.kind(),
+            });
+        }
+
+        self.entries
+            .get(&request.locator)
+            .cloned()
+            .ok_or(AssetLoadError::NotFound)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, Serialize, Deserialize)]
 pub enum AssetLoadError {
     #[error("asset locator kind {kind:?} is not supported on this host")]
@@ -477,5 +576,29 @@ mod tests {
             .expect("bundle asset should resolve");
         assert_eq!(resolved.revision, AssetRevision(1));
         assert_eq!(resolved.bytes.as_ref(), &[9, 8, 7]);
+    }
+
+    #[test]
+    fn in_memory_asset_resolver_resolves_bundle_and_embedded_assets() {
+        let mut resolver = InMemoryAssetResolver::new();
+        resolver.insert_bundle("app", "images/logo.png", AssetRevision(5), [1u8, 2, 3]);
+        resolver.insert_embedded(
+            "fret-ui-shadcn",
+            "icons/search.svg",
+            AssetRevision(9),
+            [4u8, 5, 6],
+        );
+
+        let bundle = resolver
+            .resolve_locator_bytes(AssetLocator::bundle("app", "images/logo.png"))
+            .expect("bundle asset should resolve");
+        let embedded = resolver
+            .resolve_locator_bytes(AssetLocator::embedded("fret-ui-shadcn", "icons/search.svg"))
+            .expect("embedded asset should resolve");
+
+        assert_eq!(bundle.revision, AssetRevision(5));
+        assert_eq!(bundle.bytes.as_ref(), &[1, 2, 3]);
+        assert_eq!(embedded.revision, AssetRevision(9));
+        assert_eq!(embedded.bytes.as_ref(), &[4, 5, 6]);
     }
 }
