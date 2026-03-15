@@ -40,6 +40,17 @@ surface, lock these decisions before adding public API:
   the unified component conversion trait tracked in
   `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and raw
   `AnyElement` stays explicit
+- keep shipped resource ownership explicit:
+  - app-owned resources live under `AssetBundleId::app(...)`
+  - ecosystem/package-owned images, SVGs, fonts, and similar bytes live under
+    `AssetBundleId::package(...)`
+  - reusable crates should publish installer/setup surfaces instead of making apps reproduce
+    internal asset mounts by hand
+- keep icon requirements explicit:
+  - reusable component crates should prefer semantic `IconId` / `ui.*` ids over hard-wiring one
+    vendor pack into their public contract
+  - icon packs currently install through explicit `crate::app::install` seams backed by the
+    global `IconRegistry`, so apps compose installers instead of wiring loose icon bytes manually
 - for the full trait budget, target state, and migration posture, see
   `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`,
   `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and
@@ -138,6 +149,10 @@ Do the same for logical assets: import them intentionally from `fret::assets::{.
 `AssetBundleId::app(...)` / `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` and
 `register_bundle_entries(...)` as the portable default story, and keep
 `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape hatches.
+For app-owned compile-time assets on the `fret` builder path, prefer generated modules that expose
+`generated_assets::mount(builder)` or call `UiAppBuilder::with_bundle_asset_entries(...)` /
+`UiAppBuilder::with_embedded_asset_entries(...)` directly; keep `FretApp::asset_dir(...)` /
+`UiAppBuilder::with_asset_dir(...)` as the native/package-dev convenience lane.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
 without teaching raw repo-relative paths in app/widget code.
@@ -151,6 +166,9 @@ If you are already on the `fret` builder path, prefer `FretApp::asset_dir(...)` 
 manifest file, so validation fails early during startup configuration instead of being buried in
 app-local setup glue. On the builder path, asset registrations preserve call order, so later
 registrations can intentionally override earlier ones for the same logical locator.
+For package-owned or generated compile-time bytes, the same ordered builder surface now includes
+`FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
+`UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
 On the host path, `set_primary_resolver(...)`, `register_resolver(...)`,
 `register_bundle_entries(...)`, and `register_embedded_entries(...)` now participate in the same
 ordered resolver stack, so later registrations override earlier ones for the same logical
@@ -403,6 +421,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   explicit pack through `FretApp::setup(fret_icons_lucide::app::install)` /
   `FretApp::setup(fret_icons_radix::app::install)`. For custom packs, publish the same shape on
   your own crate and call `FretApp::setup(my_icons::app::install)`.
+  Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic
+  `ui.*` ids as the reusable default for component crates. Today semantic alias registration is
+  install-order-sensitive (`first installed pack wins`), so reusable crates should not assume more
+  than one semantic provider unless they document that requirement.
 - **Apps using `fret-bootstrap` directly:** use `BootstrapBuilder::with_lucide_icons()` /
   `BootstrapBuilder::with_radix_icons()`. For custom packs, call
   `BootstrapBuilder::register_icon_pack(...)`.
@@ -420,10 +442,15 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 - **Apps using `fret`:** keep logical asset identity on `fret::assets::{AssetLocator, AssetRequest, StaticAssetEntry, register_bundle_entries, register_embedded_entries, ...}` and enable
   `fret`'s `ui-assets` feature when you want the default image/SVG caches driven from the event pipeline.
+  App-owned resources should normally live under `AssetBundleId::app(...)`; ecosystem/package-owned
+  shipped resources should normally live under `AssetBundleId::package(...)`.
   On native/package-dev lanes, prefer `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)`
   for the convenience lane or `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)`
   for explicit manifest artifacts before dropping to `fret::assets::register_file_bundle_dir(...)`
   or `fret::assets::register_file_manifest(...)`.
+  For compile-time owned bytes, prefer generated modules that expose `mount(builder)` or the
+  builder-path helpers `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)`
+  before falling back to app-local setup glue.
   When you want to emit an explicit manifest artifact from a bundle directory, prefer
   `fretboard assets manifest write ...` over hand-authoring JSON.
   Direct host registrations preserve order across `set_primary_resolver(...)`,
@@ -437,6 +464,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   as explicit advanced/bootstrap-only escape hatches.
 - **Component crates:** prefer receiving handles/IDs from the app; only depend on caches directly if you truly need cache APIs,
   and gate it behind an explicit feature (e.g. `app-integration`).
+  If the crate ships its own bytes, keep them package-owned and expose one installer/mount helper
+  instead of asking apps to know your internal asset bundle layout.
 
 ### `fret-bootstrap`
 

@@ -128,6 +128,10 @@ Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
 For logical assets, use `fret::assets::{...}` and prefer `AssetBundleId::app(...)` /
 `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` / `register_bundle_entries(...)`;
 keep `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches.
+For app-owned compile-time assets on the builder path, prefer generated modules that expose
+`generated_assets::mount(builder)` or call `UiAppBuilder::with_bundle_asset_entries(...)` /
+`UiAppBuilder::with_embedded_asset_entries(...)` directly; keep `FretApp::asset_dir(...)` /
+`UiAppBuilder::with_asset_dir(...)` as the native/package-dev convenience lane.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the convenience
 lane that scans one directory into one logical bundle without pushing repo-relative paths into
 widget code. `fret::assets::register_file_manifest(...)` is the explicit manifest-artifact lane
@@ -139,6 +143,9 @@ explicit manifest file. On the host path, `set_primary_resolver(...)`,
 `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`
 participate in one ordered resolver stack, so later registrations override earlier ones for the
 same logical locator.
+The same ordered builder surface now also includes compile-time/static entries through
+`FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
+`UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
 
 ## Features
 
@@ -188,7 +195,8 @@ following seams first-class:
 - `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
 - `FretApp::asset_dir(...)` for native/package-dev generated bundle manifests
 - `FretApp::asset_manifest(...)` for native/package-dev logical bundle manifests
-- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_dir(...), with_asset_manifest(...)}`
+- `FretApp::{asset_entries(...), bundle_asset_entries(...), embedded_asset_entries(...)}`
+- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_dir(...), with_asset_manifest(...), with_bundle_asset_entries(...), with_embedded_asset_entries(...)}`
 - `fret::advanced::FretAppAdvancedExt::install(...)`
 - `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
@@ -219,6 +227,13 @@ implementation accept plain function items without explicit casts, `InstallIntoA
 implementation. Treat that as an internal accommodation: keep `.setup(...)` on named installer
 functions, tuples, or named bundles, and reserve `.setup_with(...)` for one-off inline closures or
 runtime-captured values.
+The same rule should apply to shipped resources: app-owned bytes normally live under
+`AssetBundleId::app(...)`, ecosystem/package-owned shipped bytes normally live under
+`AssetBundleId::package(...)`, and reusable crates should publish installer or mount helpers rather
+than asking apps to mirror internal bundle registrations. Icon packs are still installed through
+explicit `crate::app::install` seams backed by the global `IconRegistry`; reusable components
+should prefer semantic `IconId` / `ui.*` ids instead of baking one vendor pack into their public
+contract unless that dependency is intentionally explicit.
 The same explicit-lane rule applies to optional state helpers: keep grouped `cx.data().selector(...)`
 and `cx.data().query*` as the default app story, and import `DepsBuilder` / `QueryKey`-style nouns
 from `fret::selector::*` / `fret::query::*` only when app code actually needs to spell them.
