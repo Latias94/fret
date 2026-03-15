@@ -3,6 +3,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, Overflow,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::IntoUiElement;
 
 use crate::theme_tokens::{
     workspace_frame_background, workspace_status_bar_background, workspace_status_bar_border,
@@ -48,45 +49,112 @@ fn no_shrink_layout() -> LayoutStyle {
 }
 
 #[derive(Debug)]
-pub struct WorkspaceFrame {
-    top: Option<AnyElement>,
-    left: Option<AnyElement>,
-    center: AnyElement,
-    right: Option<AnyElement>,
-    bottom: Option<AnyElement>,
+pub struct WorkspaceFrame<
+    Center = AnyElement,
+    Top = AnyElement,
+    Left = AnyElement,
+    Right = AnyElement,
+    Bottom = AnyElement,
+> {
+    top: Option<Top>,
+    left: Option<Left>,
+    center: Center,
+    right: Option<Right>,
+    bottom: Option<Bottom>,
     background: Option<Color>,
 }
 
-impl WorkspaceFrame {
-    pub fn new(center: AnyElement) -> Self {
+impl<Center> WorkspaceFrame<Center> {
+    pub fn new(center: Center) -> Self {
         Self {
-            top: None.into(),
-            left: None.into(),
+            top: None,
+            left: None,
             center,
-            right: None.into(),
-            bottom: None.into(),
+            right: None,
+            bottom: None,
             background: None,
         }
     }
+}
 
-    pub fn top(mut self, top: AnyElement) -> Self {
-        self.top = Some(top).into();
-        self
+impl<Center, Top, Left, Right, Bottom> WorkspaceFrame<Center, Top, Left, Right, Bottom> {
+    pub fn top<Top2>(self, top: Top2) -> WorkspaceFrame<Center, Top2, Left, Right, Bottom> {
+        let Self {
+            left,
+            center,
+            right,
+            bottom,
+            background,
+            ..
+        } = self;
+        WorkspaceFrame {
+            top: Some(top),
+            left,
+            center,
+            right,
+            bottom,
+            background,
+        }
     }
 
-    pub fn left(mut self, left: AnyElement) -> Self {
-        self.left = Some(left).into();
-        self
+    pub fn left<Left2>(self, left: Left2) -> WorkspaceFrame<Center, Top, Left2, Right, Bottom> {
+        let Self {
+            top,
+            center,
+            right,
+            bottom,
+            background,
+            ..
+        } = self;
+        WorkspaceFrame {
+            top,
+            left: Some(left),
+            center,
+            right,
+            bottom,
+            background,
+        }
     }
 
-    pub fn right(mut self, right: AnyElement) -> Self {
-        self.right = Some(right).into();
-        self
+    pub fn right<Right2>(self, right: Right2) -> WorkspaceFrame<Center, Top, Left, Right2, Bottom> {
+        let Self {
+            top,
+            left,
+            center,
+            bottom,
+            background,
+            ..
+        } = self;
+        WorkspaceFrame {
+            top,
+            left,
+            center,
+            right: Some(right),
+            bottom,
+            background,
+        }
     }
 
-    pub fn bottom(mut self, bottom: AnyElement) -> Self {
-        self.bottom = Some(bottom).into();
-        self
+    pub fn bottom<Bottom2>(
+        self,
+        bottom: Bottom2,
+    ) -> WorkspaceFrame<Center, Top, Left, Right, Bottom2> {
+        let Self {
+            top,
+            left,
+            center,
+            right,
+            background,
+            ..
+        } = self;
+        WorkspaceFrame {
+            top,
+            left,
+            center,
+            right,
+            bottom: Some(bottom),
+            background,
+        }
     }
 
     pub fn background(mut self, background: Option<Color>) -> Self {
@@ -95,17 +163,24 @@ impl WorkspaceFrame {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
+    where
+        Center: IntoUiElement<H>,
+        Top: IntoUiElement<H>,
+        Left: IntoUiElement<H>,
+        Right: IntoUiElement<H>,
+        Bottom: IntoUiElement<H>,
+    {
         let theme = Theme::global(cx.app);
         let background = self
             .background
             .or_else(|| workspace_frame_background(theme));
 
-        let top = self.top;
-        let left = self.left;
-        let center = self.center;
-        let right = self.right;
-        let bottom = self.bottom;
+        let top = self.top.map(|top| top.into_element(cx));
+        let left = self.left.map(|left| left.into_element(cx));
+        let center = self.center.into_element(cx);
+        let right = self.right.map(|right| right.into_element(cx));
+        let bottom = self.bottom.map(|bottom| bottom.into_element(cx));
 
         cx.container(
             ContainerProps {
@@ -163,6 +238,25 @@ impl WorkspaceFrame {
                 )]
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WorkspaceFrame;
+    use fret_app::App;
+    use fret_ui::ElementContext;
+    use fret_ui::element::AnyElement;
+    use fret_ui_kit::ui;
+
+    #[allow(dead_code)]
+    fn workspace_frame_accepts_typed_slot_inputs(cx: &mut ElementContext<'_, App>) -> AnyElement {
+        WorkspaceFrame::new(ui::text("center"))
+            .top(ui::text("top"))
+            .left(ui::text("left"))
+            .right(ui::text("right"))
+            .bottom(ui::text("bottom"))
+            .into_element(cx)
     }
 }
 
