@@ -2345,6 +2345,7 @@ dependencies = [
  "block2 0.6.2",
  "bytemuck",
  "fret-app",
+ "fret-assets",
  "fret-core",
  "fret-diag-protocol",
  "fret-fonts",
