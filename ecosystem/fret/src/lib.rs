@@ -259,6 +259,7 @@ pub mod app {
         pub use crate::app::App;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
+        pub use crate::view::AppActivateExt as _;
         pub use crate::view::TrackedStateExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, View};
@@ -282,6 +283,9 @@ pub mod app {
         #[cfg(feature = "state-selector")]
         pub use fret_selector::{DepsSignature, ui::DepsBuilder};
     }
+
+    /// Explicit contract for custom app-facing widgets that only expose `on_activate(...)`.
+    pub use crate::view::AppActivateSurface;
 }
 
 /// Component-author imports for reusable, portable UI crates.
@@ -1744,8 +1748,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::IconId`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().dispatch::<A>())`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`.on_activate(cx.actions().listener(...))`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>(cx)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(cx, payload)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(cx, |host, acx| { ... })`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
@@ -1756,11 +1761,9 @@ mod authoring_surface_policy_tests {
     fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.on_activate(cx.actions().dispatch::<A>())`"));
-        assert!(
-            AUTHORING_GOLDEN_PATH_V2
-                .contains("`.on_activate(cx.actions().listener(|host, acx| { ... }))`")
-        );
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>(cx)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(cx, payload)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(cx, |host, acx| { ... })`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
     }
@@ -1913,6 +1916,7 @@ mod authoring_surface_policy_tests {
     fn app_prelude_stays_explicit_instead_of_reexporting_legacy_surface() {
         let app_prelude = app_prelude_source();
         assert!(!app_prelude.contains("pub use crate::prelude::*;"));
+        assert!(LIB_RS.contains("pub use crate::view::AppActivateSurface;"));
         assert!(app_prelude.contains("pub use crate::{"));
         assert!(app_prelude.contains("pub use crate::app::App;"));
         assert!(app_prelude_exports_symbol("App"));
@@ -1924,6 +1928,7 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use fret_ui::ThemeSnapshot;"));
         assert!(app_prelude.contains("pub use fret_selector::{DepsSignature, ui::DepsBuilder};"));
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
+        assert!(app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
         assert!(
             app_prelude.contains("pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;")
@@ -1937,6 +1942,8 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiHostBoundIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiChildIntoElement;"));
+        assert!(!app_prelude_exports_symbol("AppActivateExt"));
+        assert!(app_prelude.contains("pub use crate::view::AppActivateSurface;"));
         assert!(!app_prelude_exports_symbol("TrackedStateExt"));
         assert!(!app_prelude_exports_symbol("AnyElementSemanticsExt"));
         assert!(!app_prelude_exports_symbol("ElementContextThemeExt"));

@@ -53,20 +53,22 @@ The default app-facing event story should collapse to four concepts:
 1. **Bind stable action identity on widgets**
    - `.action(act::Save)`
    - `.action_payload(todo.id)`
-2. **Dispatch that action from widget-local activation glue**
+2. **Dispatch that action from widget-local activation sugar**
    - if a widget already has `.action(...)` / `.action_payload(...)`, prefer those direct action
      slots first,
-   - use `.on_activate(cx.actions().dispatch::<act::Save>())` only for activation-only surfaces
-     that do not already expose a stable action slot,
-   - use `.on_activate(cx.actions().dispatch_payload::<act::ToggleTodo>(todo.id))` only when the
-     widget-local surface is activation-only but the action still needs payload dispatch.
+   - use `widget.dispatch::<act::Save>(cx)` only for activation-only surfaces that do not already
+     expose a stable action slot,
+   - use `widget.dispatch_payload::<act::ToggleTodo>(cx, todo.id)` only when the widget-local
+     surface is activation-only but the action still needs payload dispatch,
+   - treat raw `.on_activate(cx.actions().dispatch* / listener(...))` as the lower-level building
+     block behind that sugar, not as the default teaching lane.
 3. **Handle actions at the view/root layer**
    - `cx.actions().locals::<A>(...)`
    - `cx.actions().models::<A>(...)`
    - `cx.actions().payload::<A>().locals(...)`
    - `cx.actions().transient::<A>(...)`
 4. **Use an explicit listener escape hatch for local imperative glue**
-   - `.on_activate(cx.actions().listener(|host, acx| { ... }))`
+   - `widget.listen(cx, |host, acx| { ... })`
 
 Everything else should read as advanced or retained seam.
 
@@ -87,16 +89,16 @@ shadcn::Checkbox::from_checked(todo.done)
     .action_payload(todo.id);
 
 widget_that_only_exposes_on_activate()
-    .on_activate(cx.actions().dispatch::<act::Save>());
+    .dispatch::<act::Save>(cx);
 
 widget_that_only_exposes_on_activate()
-    .on_activate(cx.actions().dispatch_payload::<act::RemoveTodo>(todo.id));
+    .dispatch_payload::<act::RemoveTodo>(cx, todo.id);
 
 shadcn::Button::new("Close")
-    .on_activate(cx.actions().listener(|host, acx| {
+    .listen(cx, |host, acx| {
         host.request_redraw(acx.window);
         host.notify(acx);
-    }));
+    });
 ```
 
 Preferred root/view handling:
@@ -140,19 +142,21 @@ Move default docs toward:
 
 - widget binding via `.action(...)` / `.action_payload(...)` whenever the widget already exposes a
   stable action slot,
-- widget-local activation via `cx.actions().dispatch/listener` only for activation-only surfaces,
+- widget-local activation via `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` /
+  `.listen(cx, ...)` only for activation-only surfaces,
 - root/view handling via `cx.actions().locals/models/payload/transient`
 
 Demote:
 
-- raw `on_activate*` helper names to advanced/reference material.
+- raw `on_activate*` helper names and direct `.on_activate(cx.actions()....)` glue to
+  advanced/reference material.
 
-### Phase 2.5 — Add only thin app-facing sugar where the activation-only seam still feels too hard
+### Phase 2.5 — Land thin app-facing sugar for activation-only seams
 
-If first-party examples still show repeated activation-only boilerplate after the docs/template
-rewrite, add a thin app-facing extension trait rather than another helper family.
+Status (as of 2026-03-15): landed in `ecosystem/fret` as `fret::app::AppActivateSurface` plus the
+blanket `AppActivateExt` methods imported by `fret::app::prelude::*`.
 
-Recommended shape:
+Default shape:
 
 ```rust,ignore
 shadcn::DrawerTrigger::build(...)
@@ -165,12 +169,14 @@ custom_canvas_hotspot(...)
     });
 ```
 
-Recommended trait boundary:
+Trait boundary:
 
 - app-facing extension trait in `ecosystem/fret`,
 - implemented only for widgets/types that already expose `on_activate(...)`,
 - powered internally by `cx.actions().dispatch(...)` / `dispatch_payload(...)` / `listener(...)`,
 - kept off `crates/fret-ui` and off component-policy crates.
+- custom widgets join this lane by implementing `fret::app::AppActivateSurface` and forwarding
+  their `on_activate(...)` slot.
 
 Non-goals for this thin sugar lane:
 
