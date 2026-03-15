@@ -246,6 +246,10 @@ Interaction contract:
       `editor_notes_demo`'s app-local preserve-draft notes surface should remain app-owned until a
       second declarative consumer appears, and keep multiline/editor proof coverage tight before
       new promoted components land.
+      The app-local `editor_notes_demo` surface now also pins its review baseline through the raw
+      shadcn theme lane (`apply_shadcn_new_york(...)` with `FretApp` shadcn defaults disabled)
+      rather than the app-integration lane, so editor screenshot coverage stops drifting with OS
+      theme changes.
 - [ ] `EER-BASE-118` Do not promote new reusable editor components until `EER-BASE-110` through
       `EER-BASE-117` are in materially better shape.
 

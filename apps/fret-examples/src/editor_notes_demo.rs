@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret::{FretApp, shadcn};
+use fret::{Defaults, FretApp, shadcn};
 use fret_app::Model;
 use fret_core::Px;
 use fret_ui::Theme;
@@ -18,6 +18,9 @@ use fret_ui_kit::declarative::{ElementContextThemeExt as _, ModelWatchExt as _};
 use fret_ui_kit::{ColorRef, Space};
 
 const ENV_EDITOR_PRESET: &str = "FRET_EDITOR_NOTES_DEMO_PRESET";
+const HOST_BASE_COLOR: shadcn::themes::ShadcnBaseColor = shadcn::themes::ShadcnBaseColor::Slate;
+const HOST_DEFAULT_SCHEME: shadcn::themes::ShadcnColorScheme =
+    shadcn::themes::ShadcnColorScheme::Dark;
 const TEST_ID_ROOT: &str = "editor-notes-demo.root";
 const TEST_ID_SELECTION: &str = "editor-notes-demo.selection";
 const TEST_ID_SELECT_MATERIAL: &str = "editor-notes-demo.selection.material";
@@ -63,11 +66,7 @@ struct EditorNotesDemoView {
 }
 
 fn install_editor_notes_demo_theme(app: &mut App) {
-    shadcn::themes::apply_shadcn_new_york(
-        app,
-        shadcn::themes::ShadcnBaseColor::Slate,
-        shadcn::themes::ShadcnColorScheme::Dark,
-    );
+    shadcn::themes::apply_shadcn_new_york(app, HOST_BASE_COLOR, HOST_DEFAULT_SCHEME);
     fret_ui_editor::theme::install_editor_theme_preset_v1(
         app,
         crate::editor_theme_preset_from_env(ENV_EDITOR_PRESET)
@@ -78,7 +77,10 @@ fn install_editor_notes_demo_theme(app: &mut App) {
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("editor-notes-demo")
         .window("editor_notes_demo", (1080.0, 720.0))
-        .config_files(false)
+        .defaults(Defaults {
+            shadcn: false,
+            ..Defaults::desktop_app()
+        })
         .setup((
             install_editor_notes_demo_theme,
             fret_icons_lucide::app::install,

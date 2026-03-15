@@ -205,11 +205,12 @@ to appear in `fret::app::prelude::*`. Docking similarly lives under `fret::docki
 apps can opt into panel registries, dock ops, and retained-host wiring without turning docking into
 part of the default app prelude. The default design-system surface is similarly curated under
 `fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
-`shadcn::app::install(...)` for app wiring, `shadcn::themes::apply_shadcn_new_york(...)` for
-explicit presets, and `shadcn::raw::*` only when you intentionally need the full underlying crate
-surface. Environment / `UiServices`-boundary hooks stay off the curated lane: if you only depend
-on `fret`, reach them through `fret::shadcn::raw::advanced::*`; if you depend on the recipe crate
-directly, use `fret_ui_shadcn::advanced::*`. Reusable ecosystem bundles can share the same
+`shadcn::app::install(...)` for app wiring plus environment-aware host-theme syncing,
+`shadcn::themes::apply_shadcn_new_york(...)` for explicit one-shot/fixed presets, and
+`shadcn::raw::*` only when you intentionally need the full underlying crate surface. Environment /
+`UiServices`-boundary hooks stay off the curated lane: if you only depend on `fret`, reach them
+through `fret::shadcn::raw::advanced::*`; if you depend on the recipe crate directly, use
+`fret_ui_shadcn::advanced::*`. Reusable ecosystem bundles can share the same
 `.setup(...)` seam by implementing
 `fret::integration::InstallIntoApp`; ordinary app docs/examples should still teach plain installer
 functions first. For small app-local composition, it is also acceptable to write

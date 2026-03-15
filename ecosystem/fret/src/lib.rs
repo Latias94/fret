@@ -1321,10 +1321,9 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
     if !changed.contains(&std::any::TypeId::of::<fret_core::WindowMetricsService>()) {
         return;
     }
-    let config = app
-        .global::<fret_ui_shadcn::app::InstallConfig>()
-        .copied()
-        .unwrap_or_default();
+    let Some(config) = app.global::<fret_ui_shadcn::app::InstallConfig>().copied() else {
+        return;
+    };
     #[cfg(feature = "editor")]
     {
         let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
@@ -1824,6 +1823,9 @@ mod tests {
     use crate::advanced::KernelApp;
     use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
     use fret_ui::{Theme, UiTree};
+    use fret_ui_shadcn::shadcn_themes::{
+        ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
+    };
 
     #[test]
     fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
@@ -1874,14 +1876,53 @@ mod tests {
         assert_eq!(Theme::global(&app).revision(), rev_after);
     }
 
+    #[test]
+    fn shadcn_auto_theme_middleware_requires_app_install_config() {
+        let mut app = KernelApp::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
+        #[cfg(feature = "editor")]
+        fret_ui_editor::theme::install_editor_theme_preset_v1(
+            &mut app,
+            fret_ui_editor::theme::EditorThemePresetV1::Default,
+        );
+
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(ColorScheme::Light));
+        });
+
+        let mut ui = UiTree::<KernelApp>::default();
+        let mut state = ();
+        let before_bg = Theme::global(&app).colors.surface_background;
+        let before_rev = Theme::global(&app).revision();
+        #[cfg(feature = "editor")]
+        let editor_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_eq!(Theme::global(&app).revision(), before_rev);
+        assert_eq!(Theme::global(&app).colors.surface_background, before_bg);
+        #[cfg(feature = "editor")]
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            editor_field_bg
+        );
+    }
+
     #[cfg(feature = "editor")]
     #[test]
     fn shadcn_auto_theme_middleware_reapplies_installed_editor_preset_once() {
         let mut app = KernelApp::new();
         fret_ui_shadcn::app::install_with_theme(
             &mut app,
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            ShadcnBaseColor::Slate,
+            ShadcnColorScheme::Dark,
         );
         fret_ui_editor::theme::install_editor_theme_preset_v1(
             &mut app,

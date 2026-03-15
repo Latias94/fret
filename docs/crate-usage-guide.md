@@ -369,19 +369,21 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **Theme integration:**
 
 - Direct crate usage: prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, then call
-  `shadcn::themes::apply_shadcn_new_york(...)` for an explicit preset, or enable
-  `fret-ui-shadcn/app-integration` and call `shadcn::app::install(...)` for the golden-path
-  default. For environment / `UiServices`-boundary hooks, stay explicit with
+  `shadcn::themes::apply_shadcn_new_york(...)` for an explicit one-shot preset when the app wants
+  to own a fixed theme baseline directly, or enable `fret-ui-shadcn/app-integration` and call
+  `shadcn::app::install(...)` for the golden-path app wiring that also opts the app into
+  environment-aware host-theme syncing. For environment / `UiServices`-boundary hooks, stay explicit with
   `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
   For first-party prose/demo helpers, `shadcn::raw::typography::*` remains an explicit escape
   hatch. Only drop to `shadcn::raw::*` beyond these documented cases when you intentionally need
   the full uncurated module surface; the flat crate root is now treated as a hidden compatibility
   layer rather than a teaching lane.
-- Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)`,
-  `fret::shadcn::app::install(...)`, and only drop to `fret::shadcn::raw::*` when you need the
-  full uncurated `fret_ui_shadcn` surface. That same raw escape hatch also carries advanced
-  service hooks at `fret::shadcn::raw::advanced::*`; first-party prose/demo helpers may also use
-  `fret::shadcn::raw::typography::*`.
+- Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)` for explicit
+  app-owned/fixed presets, use `fret::shadcn::app::install(...)` when you want the curated app
+  integration plus environment-aware host-theme syncing, and only drop to `fret::shadcn::raw::*`
+  when you need the full uncurated `fret_ui_shadcn` surface. That same raw escape hatch also
+  carries advanced service hooks at `fret::shadcn::raw::advanced::*`; first-party prose/demo
+  helpers may also use `fret::shadcn::raw::typography::*`.
 
 **Tables vs grids (naming and intent):**
 

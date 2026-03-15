@@ -202,7 +202,9 @@ Current checkpoint:
   diagnostics script now exists at
   `tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-preserve-draft.json`. The
   launched packed rerun also passes on 2026-03-15 against the direct
-  `target/debug/editor_notes_demo.exe` path,
+  `target/debug/editor_notes_demo.exe` path. That app-local notes surface now also deliberately
+  opts out of `FretApp`'s shadcn app-integration lane and pins a raw dark shadcn host preset, so
+  screenshot review keeps a fixed editor baseline instead of following OS light/dark changes,
 - repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
   edited values stay attached to stable stop ids instead of drifting with row order,
 - the text-assist boundary is now split the way this workstream wanted it to be:
