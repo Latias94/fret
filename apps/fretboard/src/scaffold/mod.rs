@@ -13,9 +13,10 @@ use fs::{
 };
 use templates::{
     empty_template_cargo_toml, empty_template_main_rs, empty_template_readme_md,
-    hello_template_cargo_toml, hello_template_main_rs, hello_template_readme_md,
-    simple_todo_template_cargo_toml, simple_todo_template_main_rs, simple_todo_template_readme_md,
-    template_gitignore, todo_template_cargo_toml, todo_template_main_rs, todo_template_readme_md,
+    generated_assets_stub_rs, hello_template_cargo_toml, hello_template_main_rs,
+    hello_template_readme_md, simple_todo_template_cargo_toml, simple_todo_template_main_rs,
+    simple_todo_template_readme_md, template_gitignore, todo_template_cargo_toml,
+    todo_template_main_rs, todo_template_readme_md,
 };
 
 pub(crate) fn init_cmd(args: Vec<String>) -> Result<(), String> {
@@ -264,7 +265,7 @@ fn init_simple_todo_at(
         &out_dir.join("README.md"),
         &simple_todo_template_readme_md(package_name, opts),
     )?;
-    maybe_init_asset_dir(out_dir, opts)?;
+    maybe_init_asset_scaffold(out_dir, package_name, opts)?;
 
     maybe_cargo_check(out_dir, run_check)?;
 
@@ -302,7 +303,7 @@ fn init_todo_at(
         &out_dir.join("README.md"),
         &todo_template_readme_md(package_name, opts),
     )?;
-    maybe_init_asset_dir(out_dir, opts)?;
+    maybe_init_asset_scaffold(out_dir, package_name, opts)?;
 
     maybe_cargo_check(out_dir, run_check)?;
 
@@ -451,7 +452,11 @@ fn maybe_cargo_check(out_dir: &Path, run_check: bool) -> Result<(), String> {
     }
 }
 
-fn maybe_init_asset_dir(out_dir: &Path, opts: ScaffoldOptions) -> Result<(), String> {
+fn maybe_init_asset_scaffold(
+    out_dir: &Path,
+    package_name: &str,
+    opts: ScaffoldOptions,
+) -> Result<(), String> {
     if !opts.ui_assets {
         return Ok(());
     }
@@ -461,7 +466,12 @@ fn maybe_init_asset_dir(out_dir: &Path, opts: ScaffoldOptions) -> Result<(), Str
             "failed to create default asset directory `{}`: {e}",
             out_dir.join("assets").display()
         )
-    })
+    })?;
+
+    write_new_file(
+        &out_dir.join("src/generated_assets.rs"),
+        &generated_assets_stub_rs(package_name),
+    )
 }
 
 #[cfg(test)]
@@ -488,7 +498,7 @@ mod tests {
     }
 
     #[test]
-    fn todo_scaffold_with_ui_assets_creates_default_assets_dir() {
+    fn todo_scaffold_with_ui_assets_creates_generated_assets_stub() {
         let workspace_root = make_temp_dir("fretboard-scaffold-todo-assets");
         let out_dir = workspace_root.join("local").join("todo-app");
 
@@ -504,11 +514,22 @@ mod tests {
         assert!(out_dir.join("assets").is_dir());
         let main_rs = std::fs::read_to_string(out_dir.join("src/main.rs"))
             .expect("generated main.rs should exist");
-        assert!(main_rs.contains(".asset_dir(\"assets\")"));
+        assert!(main_rs.contains("mod generated_assets;"));
+        assert!(main_rs.contains("generated_assets::mount(builder)"));
+
+        let generated_assets = std::fs::read_to_string(out_dir.join("src/generated_assets.rs"))
+            .expect("generated assets stub should exist");
+        assert!(generated_assets.contains("AssetBundleId::app(\"todo-app\")"));
+        assert!(
+            generated_assets.contains("pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>)")
+        );
 
         let readme = std::fs::read_to_string(out_dir.join("README.md"))
             .expect("generated README.md should exist");
-        assert!(readme.contains("`FretApp::asset_dir(\"assets\")`"));
+        assert!(readme.contains("`generated_assets::mount(builder)`"));
+        assert!(readme.contains(
+            "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force`"
+        ));
         assert!(readme.contains("`AssetBundleId::app(\"todo-app\")`"));
     }
 

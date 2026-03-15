@@ -84,9 +84,11 @@ This workstream takes a fearless posture:
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.
-  - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold an
-    `assets/` directory and mount it via `FretApp::asset_dir("assets")` so first-contact app
-    templates do not bounce users back to path-first loading.
+  - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold:
+    - an `assets/` directory for app-owned files,
+    - a checked-in `src/generated_assets.rs` stub for the portable compile-time lane,
+    - `generated_assets::mount(builder)` on the default `fret` builder path,
+    - and an explicit regeneration command for `fretboard assets rust write ...`.
 - A first compile-time embedded artifact lane now exists for packaged/web/mobile-friendly builds:
   - `fretboard assets rust write --dir ... --out ... --app-bundle ...` emits a generated Rust
     module with:

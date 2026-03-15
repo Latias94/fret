@@ -186,16 +186,18 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - static bundle/embedded registrations no longer bypass later resolver layers
     - replacing the primary resolver now keeps its existing stack slot, so it does not silently
       jump ahead of newer registrations
-    - `fretboard` todo/simple-todo scaffolds now mount `assets/` through
-      `FretApp::asset_dir("assets")` when `--ui-assets` is enabled
+    - `fretboard` todo/simple-todo scaffolds now create `assets/` plus a checked-in
+      `src/generated_assets.rs` stub and mount it through `generated_assets::mount(builder)` when
+      `--ui-assets` is enabled
+    - scaffold READMEs now teach the regeneration command
+      `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle ...`
+      instead of teaching `FretApp::asset_dir("assets")` as the default first-contact story
     - cookbook asset basics now teaches the facade lane instead of direct
       `fret-assets` / `fret-runtime` imports
   - Remaining:
     - broader first-party packaged/web/mobile manifest tooling story
     - packaged/web/mobile manifest layering guidance beyond generated Rust embedding
       (hashed web outputs, mobile bundle/resource mapping, hybrid packaged + remote lanes)
-    - first-party scaffold/docs guidance for preferring generated `mount(builder)` when assets are
-      compile-time owned
     - ecosystem-oriented bundle identity guidance
     - final migration of remaining first-party gallery/bootstrap surfaces
 

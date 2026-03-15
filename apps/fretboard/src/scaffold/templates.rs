@@ -8,9 +8,25 @@ fn join_workspace_path(workspace_prefix: &str, subpath: &str) -> String {
     }
 }
 
-fn asset_dir_builder_step(opts: ScaffoldOptions) -> &'static str {
+fn generated_assets_module_decl(opts: ScaffoldOptions) -> &'static str {
     if opts.ui_assets {
-        "        // Mount the app-owned logical asset bundle on the builder path when enabled.\n        .asset_dir(\"assets\")\n"
+        "mod generated_assets;\n\n"
+    } else {
+        ""
+    }
+}
+
+fn generated_assets_builder_prefix(opts: ScaffoldOptions) -> &'static str {
+    if opts.ui_assets {
+        "    let builder = "
+    } else {
+        ""
+    }
+}
+
+fn generated_assets_builder_suffix(opts: ScaffoldOptions) -> &'static str {
+    if opts.ui_assets {
+        ";\n    generated_assets::mount(builder)\n"
     } else {
         ""
     }
@@ -245,19 +261,22 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
         }
         IconPack::Lucide | IconPack::None => "",
     };
-    let asset_dir_builder = asset_dir_builder_step(opts);
+    let generated_assets_module = generated_assets_module_decl(opts);
+    let builder_prefix = generated_assets_builder_prefix(opts);
+    let builder_suffix = generated_assets_builder_suffix(opts);
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 use std::time::Duration;
 
 use fret::app::prelude::*;
 use fret::{
-    icons::IconId,
+    icons::{icon, IconId},
     query::{QueryKey, QueryPolicy, QueryState, QueryStatus},
     selector::DepsBuilder,
     style::{ColorRef, Radius, Space, Theme},
 };
 
+__GENERATED_ASSET_MODULE__
 mod act {
     fret::actions!([
         Add = "__PACKAGE_NAME__.todo.add.v1",
@@ -691,21 +710,22 @@ __INSTALL_ICONS__
 }
 
 fn main() -> anyhow::Result<()> {
-    FretApp::new("__PACKAGE_NAME__")
+__BUILDER_PREFIX__FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
         .setup(install_app)
-__ASSET_DIR_BUILDER__
         .view::<TodoView>()?
-        .run()
+__BUILDER_SUFFIX__        .run()
         .map_err(anyhow::Error::from)
 }
 "#;
 
     TEMPLATE
         .replace("__ADD_BTN_DEF__", add_btn_def)
+        .replace("__GENERATED_ASSET_MODULE__", generated_assets_module)
+        .replace("__BUILDER_PREFIX__", builder_prefix)
+        .replace("__BUILDER_SUFFIX__", builder_suffix)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
-        .replace("__ASSET_DIR_BUILDER__", asset_dir_builder)
         .replace("__PACKAGE_NAME__", package_name)
 }
 
@@ -825,16 +845,19 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
         }
         IconPack::Lucide | IconPack::None => "",
     };
-    let asset_dir_builder = asset_dir_builder_step(opts);
+    let generated_assets_module = generated_assets_module_decl(opts);
+    let builder_prefix = generated_assets_builder_prefix(opts);
+    let builder_suffix = generated_assets_builder_suffix(opts);
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::{
-    icons::IconId,
+    icons::{icon, IconId},
     style::{ColorRef, Radius, Space, Theme},
 };
 
+__GENERATED_ASSET_MODULE__
 mod act {
     fret::actions!([
         Add = "__PACKAGE_NAME__.simple_todo.add.v1",
@@ -1060,21 +1083,22 @@ __INSTALL_ICONS__
 }
 
 fn main() -> anyhow::Result<()> {
-    FretApp::new("__PACKAGE_NAME__")
+__BUILDER_PREFIX__FretApp::new("__PACKAGE_NAME__")
         .window("__PACKAGE_NAME__", (560.0, 520.0))
         .setup(install_app)
-__ASSET_DIR_BUILDER__
         .view::<TodoView>()?
-        .run()
+__BUILDER_SUFFIX__        .run()
         .map_err(anyhow::Error::from)
 }
 "#;
 
     TEMPLATE
         .replace("__ADD_BTN_DEF__", add_btn_def)
+        .replace("__GENERATED_ASSET_MODULE__", generated_assets_module)
+        .replace("__BUILDER_PREFIX__", builder_prefix)
+        .replace("__BUILDER_SUFFIX__", builder_suffix)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
-        .replace("__ASSET_DIR_BUILDER__", asset_dir_builder)
         .replace("__PACKAGE_NAME__", package_name)
 }
 
@@ -1086,10 +1110,41 @@ pub(super) fn empty_template_main_rs() -> &'static str {
 "#
 }
 
+pub(super) fn generated_assets_stub_rs(package_name: &str) -> String {
+    format!(
+        r#"#![allow(dead_code)]
+
+// Scaffolded by `fretboard new --ui-assets`.
+// Regenerate this file after editing `assets/`:
+//   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force
+
+use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, StaticAssetEntry}};
+
+pub fn bundle_id() -> AssetBundleId {{
+    AssetBundleId::app("{package_name}")
+}}
+
+pub fn locator(key: impl Into<AssetKey>) -> AssetLocator {{
+    AssetLocator::bundle(bundle_id(), key)
+}}
+
+pub const ENTRIES: &[StaticAssetEntry] = &[];
+
+pub fn register(app: &mut fret::app::App) {{
+    assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());
+}}
+
+pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {{
+    builder.with_bundle_asset_entries(bundle_id(), ENTRIES.iter().copied())
+}}
+"#
+    )
+}
+
 pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `FretApp::asset_dir(\"assets\")`)\n- Asset bundle lane: place app-owned files under `assets/` and resolve them via `AssetBundleId::app(\"{package_name}\")` + logical keys\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Native/package-dev escape hatch: `FretApp::asset_dir(\"assets\")` still exists, but the scaffold intentionally starts on the compile-time portable lane\n"
         )
     } else {
         "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
@@ -1172,7 +1227,7 @@ cargo run --release
 pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `FretApp::asset_dir(\"assets\")`)\n- Asset bundle lane: place app-owned files under `assets/` and resolve them via `AssetBundleId::app(\"{package_name}\")` + logical keys\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Native/package-dev escape hatch: `FretApp::asset_dir(\"assets\")` still exists, but the scaffold intentionally starts on the compile-time portable lane\n"
         )
     } else {
         "- UI assets: disabled (use `fretboard new simple-todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
@@ -1298,7 +1353,7 @@ mod tests {
     fn todo_template_uses_default_authoring_dialect() {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
-        assert!(src.contains("icons::IconId,"));
+        assert!(src.contains("icons::{icon, IconId},"));
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
@@ -1370,9 +1425,12 @@ mod tests {
     }
 
     #[test]
-    fn todo_template_mounts_asset_dir_when_ui_assets_are_enabled() {
+    fn todo_template_mounts_generated_assets_when_ui_assets_are_enabled() {
         let src = todo_template_main_rs("todo-app", opts_with_ui_assets());
-        assert!(src.contains(".asset_dir(\"assets\")"));
+        assert!(src.contains("mod generated_assets;"));
+        assert!(src.contains("let builder = FretApp::new(\"todo-app\")"));
+        assert!(src.contains("generated_assets::mount(builder)"));
+        assert!(!src.contains(".asset_dir(\"assets\")"));
     }
 
     #[test]
@@ -1400,7 +1458,7 @@ mod tests {
     fn simple_todo_template_has_low_adapter_noise_and_no_query_selector() {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
-        assert!(src.contains("icons::IconId,"));
+        assert!(src.contains("icons::{icon, IconId},"));
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
@@ -1459,9 +1517,12 @@ mod tests {
     }
 
     #[test]
-    fn simple_todo_template_mounts_asset_dir_when_ui_assets_are_enabled() {
+    fn simple_todo_template_mounts_generated_assets_when_ui_assets_are_enabled() {
         let src = simple_todo_template_main_rs("simple-todo-app", opts_with_ui_assets());
-        assert!(src.contains(".asset_dir(\"assets\")"));
+        assert!(src.contains("mod generated_assets;"));
+        assert!(src.contains("let builder = FretApp::new(\"simple-todo-app\")"));
+        assert!(src.contains("generated_assets::mount(builder)"));
+        assert!(!src.contains(".asset_dir(\"assets\")"));
     }
 
     #[test]
@@ -1504,7 +1565,10 @@ mod tests {
 
         let simple_with_assets =
             simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets());
-        assert!(simple_with_assets.contains("`FretApp::asset_dir(\"assets\")`"));
+        assert!(simple_with_assets.contains("`generated_assets::mount(builder)`"));
+        assert!(simple_with_assets.contains(
+            "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle simple-todo-app --force`"
+        ));
         assert!(simple_with_assets.contains("`AssetBundleId::app(\"simple-todo-app\")`"));
 
         let todo = todo_template_readme_md("todo-app", opts());
@@ -1518,7 +1582,22 @@ mod tests {
         assert!(!todo.contains("on_action_notify_transient"));
 
         let todo_with_assets = todo_template_readme_md("todo-app", opts_with_ui_assets());
-        assert!(todo_with_assets.contains("`FretApp::asset_dir(\"assets\")`"));
+        assert!(todo_with_assets.contains("`generated_assets::mount(builder)`"));
+        assert!(todo_with_assets.contains(
+            "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force`"
+        ));
         assert!(todo_with_assets.contains("`AssetBundleId::app(\"todo-app\")`"));
+    }
+
+    #[test]
+    fn generated_assets_stub_guides_regeneration_and_mounting() {
+        let src = generated_assets_stub_rs("todo-app");
+        assert!(src.contains("AssetBundleId::app(\"todo-app\")"));
+        assert!(src.contains("pub fn locator(key: impl Into<AssetKey>) -> AssetLocator"));
+        assert!(src.contains("pub fn register(app: &mut fret::app::App)"));
+        assert!(src.contains("pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>)"));
+        assert!(src.contains(
+            "fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force"
+        ));
     }
 }
