@@ -4,6 +4,7 @@ Status: In progress (audit complete; contract reset started; capability matrix p
 
 Tracking files:
 
+- `docs/workstreams/resource-loading-fearless-refactor-v1/AUDIT.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`

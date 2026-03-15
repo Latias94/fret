@@ -39,6 +39,8 @@ mod surface_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
+    const IMAGE_SOURCE_RS: &str = include_str!("image_source.rs");
+    const SVG_FILE_RS: &str = include_str!("svg_file.rs");
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -60,5 +62,50 @@ mod surface_policy_tests {
         assert!(!APP_RS.contains("configure_caches_with_ui_services"));
         assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services("));
         assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services_and_budgets("));
+    }
+
+    #[test]
+    fn legacy_path_helpers_stay_deprecated_until_locator_first_migration_finishes() {
+        for source in [IMAGE_SOURCE_RS, SVG_FILE_RS] {
+            assert!(source.contains("pub fn from_file_path("));
+            assert!(source.contains("pub fn from_path("));
+            assert!(source.contains("#[deprecated("));
+            assert!(
+                source.contains(
+                    "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
+                )
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_install_aliases_stay_deprecated_and_point_to_explicit_cache_setup() {
+        assert!(APP_RS.contains("pub fn configure_caches(app: &mut fret_app::App)"));
+        assert!(APP_RS.contains("pub fn configure_caches_with_budgets("));
+        assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
+        assert!(APP_RS.contains("pub fn install_with_budgets("));
+        assert!(APP_RS.contains(
+            "use configure_caches; this only configures caches and does not wire event handling"
+        ));
+        assert!(
+            APP_RS.contains(
+                "use configure_caches_with_budgets; this only configures caches and does not wire event handling"
+            )
+        );
+
+        assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services("));
+        assert!(ADVANCED_RS.contains("pub fn configure_caches_with_ui_services_and_budgets("));
+        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+        assert!(ADVANCED_RS.contains("pub fn install_with_ui_services_and_budgets("));
+        assert!(
+            ADVANCED_RS.contains(
+                "use configure_caches_with_ui_services; this only configures caches and does not wire event handling"
+            )
+        );
+        assert!(
+            ADVANCED_RS.contains(
+                "use configure_caches_with_ui_services_and_budgets; this only configures caches and does not wire event handling"
+            )
+        );
     }
 }

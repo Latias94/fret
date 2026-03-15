@@ -34,13 +34,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - runtime-vs-startup diagnostics boundaries,
       - builder-lane vs installer-lane startup surfaces.
 
-- [ ] RESLOAD-audit-020 Record the current incorrect logic explicitly in the relevant audits and
+- [x] RESLOAD-audit-020 Record the current incorrect logic explicitly in the relevant audits and
       workstreams so the migration does not drift back toward path-first design.
-  - Minimum evidence:
-    - `ImageSource::from_file_path(...)`
-    - `SvgFileSource::from_file_path(...)`
-    - half-wired `install()` semantics
-    - divergent font baseline behavior
+  - Evidence:
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/AUDIT.md`
+    - `ecosystem/fret-ui-assets/src/image_source.rs`
+    - `ecosystem/fret-ui-assets/src/svg_file.rs`
+    - `ecosystem/fret-ui-assets/src/app.rs`
+    - `ecosystem/fret-ui-assets/src/advanced.rs`
+    - `crates/fret-launch/src/runner/font_catalog.rs`
 
 ## Closure and truthfulness
 
