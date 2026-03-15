@@ -83,6 +83,7 @@ pub mod icons {
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
+    pub use fret_core::{TextOverflow, TextWrap};
     pub use fret_ui::Theme;
     pub use fret_ui_kit::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size,
@@ -264,17 +265,14 @@ pub mod app {
         pub use crate::view::{LocalState, View};
         pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
         pub use crate::{actions, workspace_menu};
-        pub use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
+        pub use fret_core::{Px, SemanticsRole};
         pub use fret_runtime::CommandId;
         pub use fret_ui::ThemeSnapshot;
         pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::StyledExt as _;
         pub use fret_ui_kit::UiExt as _;
-        pub use fret_ui_kit::command::ElementCommandGatingExt as _;
         pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;
-        pub use fret_ui_kit::declarative::ElementContextThemeExt as _;
         pub use fret_ui_kit::declarative::UiElementA11yExt as _;
-        pub use fret_ui_kit::declarative::UiElementKeyContextExt as _;
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
         pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::ui;
@@ -1927,13 +1925,7 @@ mod authoring_surface_policy_tests {
         assert!(
             app_prelude.contains("pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;")
         );
-        assert!(
-            app_prelude.contains("pub use fret_ui_kit::declarative::ElementContextThemeExt as _;")
-        );
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::UiElementA11yExt as _;"));
-        assert!(
-            app_prelude.contains("pub use fret_ui_kit::declarative::UiElementKeyContextExt as _;")
-        );
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::UiElementTestIdExt as _;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::StyledExt as _;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::UiExt as _;"));
@@ -1948,6 +1940,13 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("UiElementA11yExt"));
         assert!(!app_prelude_exports_symbol("UiElementKeyContextExt"));
         assert!(!app_prelude_exports_symbol("UiElementTestIdExt"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::command::ElementCommandGatingExt as _;"));
+        assert!(
+            !app_prelude.contains("pub use fret_ui_kit::declarative::ElementContextThemeExt as _;")
+        );
+        assert!(
+            !app_prelude.contains("pub use fret_ui_kit::declarative::UiElementKeyContextExt as _;")
+        );
         assert!(!app_prelude_exports_symbol("StyledExt"));
         assert!(!app_prelude_exports_symbol("UiExt"));
         assert!(!app_prelude_exports_symbol("IconId"));
@@ -1960,6 +1959,8 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("ShadowPreset"));
         assert!(!app_prelude_exports_symbol("Size"));
         assert!(!app_prelude_exports_symbol("Space"));
+        assert!(!app_prelude_exports_symbol("TextOverflow"));
+        assert!(!app_prelude_exports_symbol("TextWrap"));
         assert!(!app_prelude_exports_symbol("accent_color"));
         assert!(!app_prelude_exports_symbol("tailwind"));
         assert!(!app_prelude_exports_symbol("container_breakpoints"));
@@ -2088,6 +2089,7 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub mod icons {"));
         assert!(root_header.contains("pub mod style {"));
         assert!(root_header.contains("pub use fret_icons::IconId;"));
+        assert!(root_header.contains("pub use fret_core::{TextOverflow, TextWrap};"));
         assert!(root_header.contains("pub use fret_ui::Theme;"));
         assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
         assert!(root_header.contains("Radius, ShadowPreset, Size,"));

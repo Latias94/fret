@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret::app::prelude::*;
 use fret::{
     icons::IconId,
-    style::{ChromeRefinement, ColorRef, Radius, Space, Theme},
+    style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme},
 };
 use fret_core::{Corners, FontWeight, TextAlign};
 use fret_ui::element::TextProps;

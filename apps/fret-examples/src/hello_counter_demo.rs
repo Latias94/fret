@@ -5,7 +5,7 @@ use fret::{
     FretApp,
     icons::IconId,
     shadcn,
-    style::{ChromeRefinement, ColorRef, Radius, Space, Theme},
+    style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme},
 };
 use fret_core::Corners;
 use fret_ui::element::TextProps;
@@ -163,8 +163,8 @@ impl View for HelloCounterView {
                 }),
                 color: Some(count_color),
                 align: fret_core::TextAlign::Center,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
                 ink_overflow: Default::default(),
             })
             .test_id(TEST_ID_COUNT);
@@ -182,8 +182,8 @@ impl View for HelloCounterView {
             style: None,
             color: Some(theme.color_token("muted-foreground")),
             align: fret_core::TextAlign::Center,
-            wrap: fret_core::TextWrap::None,
-            overflow: fret_core::TextOverflow::Clip,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
             ink_overflow: Default::default(),
         });
 
@@ -204,8 +204,8 @@ impl View for HelloCounterView {
             style: None,
             color: Some(theme.color_token("muted-foreground")),
             align: fret_core::TextAlign::Center,
-            wrap: fret_core::TextWrap::Word,
-            overflow: fret_core::TextOverflow::Clip,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
             ink_overflow: Default::default(),
         });
 

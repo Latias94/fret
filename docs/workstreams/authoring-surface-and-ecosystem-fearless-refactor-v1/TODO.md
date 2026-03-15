@@ -151,9 +151,14 @@ Priority correction on 2026-03-15:
   - [x] Third batch on 2026-03-15: move adaptive declarative helpers (`tailwind`,
     container/viewport breakpoint helpers, safe-area/pointer/media preference helpers, related
     inset probes) off `fret::app::prelude::*` into an explicit `fret::env::{...}` lane.
+  - [x] Fourth batch on 2026-03-15: remove zero-usage anonymous overlap traits
+    (`ElementCommandGatingExt`, `ElementContextThemeExt`, `UiElementKeyContextExt`) from
+    `fret::app::prelude::*`; those capabilities now stay on component/advanced or explicit direct
+    imports instead of the default app lane.
   - Minimum audit set:
-    - any remaining broad declarative helper families in the app prelude that may still blur app
-      vs component authoring after the explicit `fret::env` split,
+    - whether the remaining anonymous overlap traits in the app prelude
+      (`AnyElementSemanticsExt`, `UiElementA11yExt`, `UiElementTestIdExt`) are truly app-justified
+      or should move behind another explicit lane,
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
     - raw `on_activate*` helper exports that now compete with the grouped app-facing
