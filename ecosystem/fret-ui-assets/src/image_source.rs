@@ -116,12 +116,25 @@ impl ImageSource {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn from_native_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
+        let path: Arc<PathBuf> = path.into();
+        let id = ImageSourceId(stable_hash(&(
+            b"path.v1",
+            path.as_os_str().as_encoded_bytes(),
+        )));
+        Self {
+            id,
+            kind: ImageSourceKind::Path { path },
+        }
+    }
+
     pub fn from_asset_locator(locator: &AssetLocator) -> Result<Self, AssetLoadError> {
         match locator {
             #[cfg(target_arch = "wasm32")]
             AssetLocator::Url(url) => Ok(Self::from_url(url.as_str())),
             #[cfg(not(target_arch = "wasm32"))]
-            AssetLocator::File(file) => Ok(Self::from_file_path(file.path.clone())),
+            AssetLocator::File(file) => Ok(Self::from_native_file_path(file.path.clone())),
             _ => Err(AssetLoadError::UnsupportedLocatorKind {
                 kind: locator.kind(),
             }),
@@ -187,22 +200,19 @@ impl ImageSource {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    #[deprecated(
+        note = "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
+    )]
     pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        let path: Arc<PathBuf> = path.into();
-        let id = ImageSourceId(stable_hash(&(
-            b"path.v1",
-            path.as_os_str().as_encoded_bytes(),
-        )));
-        Self {
-            id,
-            kind: ImageSourceKind::Path { path },
-        }
+        Self::from_native_file_path(path)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    #[deprecated(note = "use from_file_path; raw file paths are a native/dev-only asset source")]
+    #[deprecated(
+        note = "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
+    )]
     pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        Self::from_file_path(path)
+        Self::from_native_file_path(path)
     }
 }
 
@@ -1514,7 +1524,7 @@ mod tests {
 
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../assets/textures/test.jpg");
-        let src = ImageSource::from_file_path(path);
+        let src = ImageSource::from_native_file_path(path);
 
         let _ = use_image_source_state(&mut host, window, &src);
         let request0 = ImageSourceRequestKey {
@@ -1668,8 +1678,9 @@ mod tests {
     fn image_source_can_bridge_from_file_asset_locator() {
         let locator = AssetLocator::file("assets/textures/test.jpg");
         let source = ImageSource::from_asset_locator(&locator).expect("file locator should bridge");
-        let expected =
-            ImageSource::from_file_path(std::path::PathBuf::from("assets/textures/test.jpg"));
+        let expected = ImageSource::from_native_file_path(std::path::PathBuf::from(
+            "assets/textures/test.jpg",
+        ));
         assert_eq!(source.id(), expected.id());
     }
 

@@ -11,7 +11,9 @@ use crate::SvgFileSource;
 fn image_source_from_reference(resolved: &ResolvedAssetReference) -> Option<ImageSource> {
     match &resolved.reference {
         #[cfg(not(target_arch = "wasm32"))]
-        AssetExternalReference::FilePath(path) => Some(ImageSource::from_file_path(path.clone())),
+        AssetExternalReference::FilePath(path) => {
+            Some(ImageSource::from_native_file_path(path.clone()))
+        }
         #[cfg(target_arch = "wasm32")]
         AssetExternalReference::Url(url) => Some(ImageSource::from_url(url.as_str())),
         _ => None,
@@ -69,7 +71,9 @@ pub fn resolve_image_source_from_host_locator(
 #[cfg(not(target_arch = "wasm32"))]
 fn svg_file_source_from_reference(resolved: &ResolvedAssetReference) -> Option<SvgFileSource> {
     match &resolved.reference {
-        AssetExternalReference::FilePath(path) => Some(SvgFileSource::from_file_path(path.clone())),
+        AssetExternalReference::FilePath(path) => {
+            Some(SvgFileSource::from_native_file_path(path.clone()))
+        }
         AssetExternalReference::Url(_) => None,
     }
 }
@@ -353,7 +357,7 @@ mod tests {
         )
         .expect("file-backed bundle asset should bridge to a native path");
 
-        let expected = ImageSource::from_file_path(root.path().join("images/logo.png"));
+        let expected = ImageSource::from_native_file_path(root.path().join("images/logo.png"));
         assert_eq!(source.id(), expected.id());
     }
 
@@ -450,7 +454,7 @@ mod tests {
         );
         assert_ne!(
             source.id(),
-            ImageSource::from_file_path(PathBuf::from("assets/earlier.png")).id()
+            ImageSource::from_native_file_path(PathBuf::from("assets/earlier.png")).id()
         );
     }
 }

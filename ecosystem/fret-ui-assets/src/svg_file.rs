@@ -23,22 +23,31 @@ pub struct SvgFileSource {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl SvgFileSource {
-    pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
+    pub(crate) fn from_native_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
         Self { path: path.into() }
     }
 
     pub fn from_asset_locator(locator: &AssetLocator) -> Result<Self, AssetLoadError> {
         match locator {
-            AssetLocator::File(file) => Ok(Self::from_file_path(file.path.clone())),
+            AssetLocator::File(file) => Ok(Self::from_native_file_path(file.path.clone())),
             _ => Err(AssetLoadError::UnsupportedLocatorKind {
                 kind: locator.kind(),
             }),
         }
     }
 
-    #[deprecated(note = "use from_file_path; raw file paths are a native/dev-only asset source")]
+    #[deprecated(
+        note = "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
+    )]
+    pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
+        Self::from_native_file_path(path)
+    }
+
+    #[deprecated(
+        note = "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
+    )]
     pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        Self::from_file_path(path)
+        Self::from_native_file_path(path)
     }
 }
 
@@ -221,7 +230,7 @@ mod tests {
         tmp.push(unique);
 
         std::fs::write(&tmp, br#"<svg viewBox="0 0 1 1"></svg>"#).expect("write temp svg");
-        let src = SvgFileSource::from_file_path(Arc::new(tmp.clone()));
+        let src = SvgFileSource::from_native_file_path(Arc::new(tmp.clone()));
 
         let s0 = read_svg_file_cached(&mut host, &src);
         assert!(s0.error.is_none());
@@ -245,8 +254,9 @@ mod tests {
         let locator = AssetLocator::file("assets/demo/icon-search.svg");
         let source =
             SvgFileSource::from_asset_locator(&locator).expect("file locator should bridge");
-        let expected =
-            SvgFileSource::from_file_path(std::path::PathBuf::from("assets/demo/icon-search.svg"));
+        let expected = SvgFileSource::from_native_file_path(std::path::PathBuf::from(
+            "assets/demo/icon-search.svg",
+        ));
         assert_eq!(source.path.as_ref(), expected.path.as_ref());
     }
 }
