@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret::{
     FretApp,
     advanced::prelude::*,
@@ -8,7 +10,7 @@ use fret::{
 use fret_core::{ImageColorSpace, ImageId};
 use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, LayoutStyle, SvgIconProps};
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
+use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _};
 
 const TEST_ID_ROOT: &str = "cookbook.icons_and_assets_basics.root";
 const TEST_ID_PANEL_ICONS: &str = "cookbook.icons_and_assets_basics.panel.icons";
@@ -98,18 +100,17 @@ fn render_image_preview(
 }
 
 struct IconsAndAssetsBasicsView {
-    bundle_image: fret_ui_assets::ImageSource,
+    bundle_image_request: AssetRequest,
     memory_image: fret_ui_assets::ImageSource,
     svg_request: AssetRequest,
 }
 
 impl View for IconsAndAssetsBasicsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        let bundle_image = fret_ui_assets::resolve_image_source_from_host_locator(
-            app,
-            AssetLocator::bundle(demo_package_bundle(), PACKAGE_IMAGE_KEY),
-        )
-        .expect("package bundle image should resolve");
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        let bundle_image_request = AssetRequest::new(AssetLocator::bundle(
+            demo_package_bundle(),
+            PACKAGE_IMAGE_KEY,
+        ));
         let memory_image = fret_ui_assets::ImageSource::rgba8(
             128,
             128,
@@ -120,7 +121,7 @@ impl View for IconsAndAssetsBasicsView {
             AssetRequest::new(AssetLocator::bundle(demo_package_bundle(), PACKAGE_SVG_KEY));
 
         Self {
-            bundle_image,
+            bundle_image_request,
             memory_image,
             svg_request,
         }
@@ -257,7 +258,8 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_ICONS);
 
-        let bundle_image_state = cx.use_image_source_state(&self.bundle_image);
+        let bundle_image_state =
+            cx.use_image_source_state_from_asset_request(&self.bundle_image_request);
         let memory_image_state = cx.use_image_source_state(&self.memory_image);
 
         let image_status = match bundle_image_state.status {
@@ -275,7 +277,7 @@ impl View for IconsAndAssetsBasicsView {
                         cx;
                         shadcn::card_title("Images"),
                         shadcn::card_description(
-                            "Bundle-based decode is async; in-memory RGBA8 is immediate and useful for deterministic demos.",
+                            "Bundle-based decode is async; the UI helper keeps the app/widget story on logical requests while in-memory RGBA8 remains the immediate deterministic escape hatch.",
                         ),
                     ]
                 }),
@@ -326,13 +328,17 @@ impl View for IconsAndAssetsBasicsView {
         .w_full()
         .test_id(TEST_ID_PANEL_IMAGE);
 
-        let svg_source = fret_ui_assets::resolve_svg_source_from_host(&*cx.app, &self.svg_request);
-        let svg_status = if svg_source.is_ok() { "ready" } else { "error" };
+        let svg_state = cx.svg_source_state_from_asset_request(&self.svg_request);
+        let svg_status = if svg_state.source.is_some() {
+            "ready"
+        } else {
+            "error"
+        };
         let svg_foreground = theme.color_token("foreground");
         let svg_error_color = ColorRef::Color(theme.color_token("destructive"));
 
-        let svg_box = ui::container(move |cx| match svg_source.clone() {
-            Ok(source) => {
+        let svg_box = ui::container(move |cx| match svg_state.source.clone() {
+            Some(source) => {
                 let mut props = SvgIconProps::new(source);
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(160.0));
@@ -342,9 +348,13 @@ impl View for IconsAndAssetsBasicsView {
                 props.color = svg_foreground;
                 ui::children![cx; cx.svg_icon_props(props)]
             }
-            Err(err) => {
+            None => {
+                let error = svg_state
+                    .error
+                    .clone()
+                    .unwrap_or_else(|| Arc::<str>::from("unknown SVG asset error"));
                 ui::children![cx;
-                    ui::text(format!("Failed to resolve SVG asset: {err}"))
+                    ui::text(format!("Failed to resolve SVG asset: {error}"))
                         .text_color(svg_error_color)
                 ]
             }
@@ -362,7 +372,7 @@ impl View for IconsAndAssetsBasicsView {
                         cx;
                         shadcn::card_title("SVG icon from bundle locator"),
                         shadcn::card_description(
-                            "Resolves an SVG byte asset through the package bundle registration instead of reading from a raw filesystem path.",
+                            "Resolves an SVG asset through the package bundle registration and lets the shared UI helper pick the right native/web handoff instead of reading a raw filesystem path.",
                         ),
                     ]
                 }),

@@ -291,7 +291,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       surfaces.
   - Current landed slice:
     - `apps/fret-cookbook/examples/icons_and_assets_basics.rs` now teaches
-      `bundle locator + composable host resolver + static asset entries`
+      `bundle locator + UI helper + static asset entries` for package-owned ecosystem resources
     - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` is explicitly labeled as the
       native/dev file-path escape hatch instead of the portable default story
   - Remaining:
