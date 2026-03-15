@@ -11,7 +11,7 @@ use std::{cell::RefCell, rc::Rc};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, KeyCode, Point, Px, Rect, SceneOp, SemanticsRole, Size,
 };
-use fret_runtime::Model;
+use fret_runtime::{ActionId, Model};
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, CanvasProps, ContainerProps, Length, Overflow, PointerRegionProps, PressableA11y,
@@ -20,6 +20,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::pixel_snap;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
@@ -562,6 +563,7 @@ pub struct Radio {
     focus_policy: RadioFocusPolicy,
     a11y_pos_in_set: Option<u32>,
     a11y_set_size: Option<u32>,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     style: RadioStyle,
 }
@@ -578,6 +580,7 @@ impl std::fmt::Debug for Radio {
             .field("disabled", &self.disabled)
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("style", &self.style)
             .finish()
@@ -597,6 +600,7 @@ impl Radio {
             focus_policy: RadioFocusPolicy::Default,
             a11y_pos_in_set: None,
             a11y_set_size: None,
+            action: None,
             on_activate: None,
             style: RadioStyle::default(),
         }
@@ -638,6 +642,7 @@ impl Radio {
             focus_policy: RadioFocusPolicy::Default,
             a11y_pos_in_set: None,
             a11y_set_size: None,
+            action: None,
             on_activate: None,
             style: RadioStyle::default(),
         }
@@ -691,6 +696,12 @@ impl Radio {
         self
     }
 
+    /// Bind a stable action ID to this radio (action-first authoring).
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
     /// Called after the radio updates its selection model.
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
@@ -723,8 +734,13 @@ impl Radio {
 
                 let selection_for_activate = self.selection.clone();
                 let enabled_for_toggle = enabled;
+                let action = self.action.clone();
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
                 let user_activate = self.on_activate.clone();
-                cx.pressable_on_activate(Arc::new(move |host, action_cx, reason| {
+                cx.pressable_add_on_activate(Arc::new(move |host, action_cx, reason| {
                     if enabled_for_toggle {
                         match &selection_for_activate {
                             RadioSelectionModel::Bool(m) => {
@@ -754,6 +770,13 @@ impl Radio {
                             }
                         }
                         host.request_redraw(action_cx.window);
+                    }
+                    if enabled_for_toggle && action_enabled {
+                        if let Some(action) = action.as_ref() {
+                            crate::foundation::action::dispatch_action(
+                                host, action_cx, reason, action,
+                            );
+                        }
                     }
                     if let Some(h) = user_activate.as_ref() {
                         h(host, action_cx, reason);

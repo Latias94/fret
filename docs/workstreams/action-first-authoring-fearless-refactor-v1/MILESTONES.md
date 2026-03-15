@@ -305,6 +305,16 @@ Post-v1 direction (recommended):
   - Command-first alias update (as of 2026-03-09): `BreadcrumbItem::action(...)`, `NavigationMenuLink::action(...)`, and `NavigationMenuItem::action(...)` now exist in `ecosystem/fret-ui-shadcn`, and the navigation-menu gallery snippets now prefer the action-first spelling while command-centric internals remain unchanged.
   - Material snackbar alias update (as of 2026-03-09): `ecosystem/fret-ui-material3/src/snackbar.rs` now exposes `Snackbar::action_id(...)` / `action_command(...)`, and `apps/fret-ui-gallery/src/ui/snippets/material3/snackbar.rs` now uses `action_id(...)` as the default public spelling while toast dispatch internals remain unchanged.
   - Material snackbar gate update (as of 2026-03-09): `tools/gate_material3_snackbar_default_surface.py` now locks that gallery snippet to `action_id(...)`, and the canonical cross-platform runner `tools/pre_release.py` runs the gate so the default snippet does not drift back to compat spellings.
+  - Material3 pressable follow-up (as of 2026-03-15): `ecosystem/fret-ui-material3` now exposes
+    `action(...)` on the main default-facing pressable families: `Button`, `Fab`, `IconButton`,
+    `IconToggleButton`, `Checkbox`, `Switch`, `Radio`, `AssistChip`, `SuggestionChip`,
+    `FilterChip`, and `InputChip`. Button-like families fold command availability into enabled
+    state when the stable action slot is used, while model-writing families now update internal
+    state before dispatching the bound action and before calling any explicit `on_activate(...)`
+    callback.
+  - Material3 source-policy update (as of 2026-03-15): `ecosystem/fret-ui-material3/src/lib.rs`
+    now includes a focused source-policy test so those default-facing families do not silently
+    regress back to activation-hook-only builders.
   - Menu-family alias update (as of 2026-03-09): `ContextMenu*` and `Menubar*` item/checkbox/radio builders now also expose `action(...)` aliases, and the broader gallery menu surface now prefers that spelling across the main context-menu / menubar snippets (including `demo`, `checkboxes`/`checkbox`, `radio`, `submenu`, `rtl`, and icon/group variants), so the remaining command-first blocker is narrower and mostly about future docs/default-surface adoption rather than missing builder APIs.
   - Menu-helper follow-up (as of 2026-03-09): `text_edit_context_menu.rs`, workspace tab-strip context menus, and the focused menubar/context-menu keyboard-dismiss tests now also prefer `action(...)`, reducing the remaining command-shaped residue to narrower advanced/internal surfaces plus future gating work.
   - Dropdown-menu follow-up (as of 2026-03-09): `DropdownMenu*` now also exposes action-first aliases in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, the primary dropdown-menu snippets (`basic`, `demo`) plus overlay preview menu surfaces now prefer `action(...)`, and the remaining command-shaped dropdown residue is narrower and mostly internal/advanced.

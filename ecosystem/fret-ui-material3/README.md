@@ -29,6 +29,10 @@ Experimental learning project (not production-ready).
   deeper compatibility/interop boundary.
 - For example, snackbar-style actions should prefer the explicit action-first naming path in
   default-facing examples/docs.
+- Default-facing clickable families such as `Button`, `Fab`, `IconButton`, `Checkbox`, `Switch`,
+  `Radio`, `AssistChip`, `SuggestionChip`, `FilterChip`, and `InputChip` now expose
+  `action(...)` directly; prefer that over wiring `.on_activate(cx.actions().dispatch::<A>())`
+  when you only need a stable unit action on the app-facing lane.
 
 ## Upstream references (non-normative)
 

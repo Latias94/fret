@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Edges, Px, SemanticsRole, SvgFit, TextOverflow, TextWrap};
 use fret_icons::IconId;
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -15,6 +16,8 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
@@ -103,6 +106,7 @@ pub struct SuggestionChip {
     label: Arc<str>,
     leading_icon: Option<IconId>,
     variant: SuggestionChipVariant,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     style: SuggestionChipStyle,
     disabled: bool,
@@ -117,6 +121,7 @@ impl std::fmt::Debug for SuggestionChip {
             .field("label", &self.label)
             .field("leading_icon", &self.leading_icon)
             .field("variant", &self.variant)
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("style", &self.style)
             .field("disabled", &self.disabled)
@@ -133,6 +138,7 @@ impl SuggestionChip {
             label: label.into(),
             leading_icon: None,
             variant: SuggestionChipVariant::default(),
+            action: None,
             on_activate: None,
             style: SuggestionChipStyle::default(),
             disabled: false,
@@ -149,6 +155,12 @@ impl SuggestionChip {
 
     pub fn variant(mut self, variant: SuggestionChipVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    /// Bind a stable action ID to this suggestion chip (action-first authoring).
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.action = Some(action.into());
         self
     }
 
@@ -194,14 +206,21 @@ impl SuggestionChip {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             cx.pressable_with_id_props(|cx, st, pressable_id| {
-                let enabled = !self.disabled;
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
+                let enabled = !self.disabled && action_enabled;
                 let focusable = match self.roving_tab_stop {
                     None => enabled,
                     Some(tab_stop) => enabled && (tab_stop || st.focused),
                 };
 
+                if let Some(action) = self.action.clone() {
+                    cx.pressable_dispatch_action_if_enabled(action);
+                }
                 if let Some(handler) = self.on_activate.clone() {
-                    cx.pressable_on_activate(handler);
+                    cx.pressable_add_on_activate(handler);
                 }
 
                 let now_frame = cx.frame_id.0;

@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, SvgFit};
 use fret_icons::IconId;
-use fret_runtime::Model;
+use fret_runtime::{ActionId, Model};
 use fret_ui::action::OnActivate;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
@@ -17,6 +17,8 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -109,6 +111,7 @@ pub struct IconButton {
     size: IconButtonSize,
     toggle: bool,
     selected: bool,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     style: IconButtonStyle,
     disabled: bool,
@@ -123,6 +126,7 @@ impl std::fmt::Debug for IconButton {
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("selected", &self.selected)
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("style", &self.style)
             .field("disabled", &self.disabled)
@@ -139,6 +143,7 @@ impl IconButton {
             size: IconButtonSize::default(),
             toggle: false,
             selected: false,
+            action: None,
             on_activate: None,
             style: IconButtonStyle::default(),
             disabled: false,
@@ -172,6 +177,12 @@ impl IconButton {
         self
     }
 
+    /// Bind a stable action ID to this icon button (action-first authoring).
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self
@@ -196,10 +207,17 @@ impl IconButton {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             cx.pressable_with_id_props(|cx, st, pressable_id| {
-                let enabled = !self.disabled;
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
+                let enabled = !self.disabled && action_enabled;
 
+                if let Some(action) = self.action.clone() {
+                    cx.pressable_dispatch_action_if_enabled(action);
+                }
                 if let Some(handler) = self.on_activate.clone() {
-                    cx.pressable_on_activate(handler);
+                    cx.pressable_add_on_activate(handler);
                 }
 
                 let now_frame = cx.frame_id.0;
@@ -406,6 +424,7 @@ pub struct IconToggleButton {
     variant: IconButtonVariant,
     size: IconButtonSize,
     shapes: Option<IconToggleButtonShapes>,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     style: IconButtonStyle,
     disabled: bool,
@@ -433,6 +452,7 @@ impl IconToggleButton {
             variant: IconButtonVariant::default(),
             size: IconButtonSize::default(),
             shapes: None,
+            action: None,
             on_activate: None,
             style: IconButtonStyle::default(),
             disabled: false,
@@ -458,6 +478,12 @@ impl IconToggleButton {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Bind a stable action ID to this icon toggle button (action-first authoring).
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.action = Some(action.into());
         self
     }
 
@@ -487,13 +513,25 @@ impl IconToggleButton {
         cx.scope(|cx| {
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
+                let action = self.action.clone();
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
 
                 let checked_model_for_toggle = self.checked.clone();
                 let user_activate = self.on_activate.clone();
-                cx.pressable_on_activate(Arc::new(move |host, action_cx, reason| {
+                cx.pressable_add_on_activate(Arc::new(move |host, action_cx, reason| {
                     if enabled {
                         let _ = host.update_model(&checked_model_for_toggle, |v| *v = !*v);
                         host.request_redraw(action_cx.window);
+                    }
+                    if enabled && action_enabled {
+                        if let Some(action) = action.as_ref() {
+                            crate::foundation::action::dispatch_action(
+                                host, action_cx, reason, action,
+                            );
+                        }
                     }
                     if let Some(h) = user_activate.as_ref() {
                         h(host, action_cx, reason);

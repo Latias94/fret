@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, SvgFit};
 use fret_icons::IconId;
-use fret_runtime::Model;
+use fret_runtime::{ActionId, Model};
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -16,6 +16,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::primitives::checkbox::{
     CheckedState, checked_state_from_optional_bool, toggle_optional_bool,
@@ -91,6 +92,7 @@ pub struct Checkbox {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     style: CheckboxStyle,
 }
@@ -107,6 +109,7 @@ impl std::fmt::Debug for Checkbox {
             .field("disabled", &self.disabled)
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("style", &self.style)
             .finish()
@@ -120,6 +123,7 @@ impl Checkbox {
             disabled: false,
             a11y_label: None,
             test_id: None,
+            action: None,
             on_activate: None,
             style: CheckboxStyle::default(),
         }
@@ -158,6 +162,7 @@ impl Checkbox {
             disabled: false,
             a11y_label: None,
             test_id: None,
+            action: None,
             on_activate: None,
             style: CheckboxStyle::default(),
         }
@@ -206,6 +211,12 @@ impl Checkbox {
         self
     }
 
+    /// Bind a stable action ID to this checkbox (action-first authoring).
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
     /// Called after the checkbox toggles its `Model<bool>`.
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
@@ -232,8 +243,13 @@ impl Checkbox {
 
                 let model_for_toggle = self.model.clone();
                 let enabled_for_toggle = enabled;
+                let action = self.action.clone();
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
                 let user_activate = self.on_activate.clone();
-                cx.pressable_on_activate(Arc::new(move |host, action_cx, reason| {
+                cx.pressable_add_on_activate(Arc::new(move |host, action_cx, reason| {
                     if enabled_for_toggle {
                         match &model_for_toggle {
                             CheckboxModel::Bool(model) => {
@@ -244,6 +260,13 @@ impl Checkbox {
                             }
                         }
                         host.request_redraw(action_cx.window);
+                    }
+                    if enabled_for_toggle && action_enabled {
+                        if let Some(action) = action.as_ref() {
+                            crate::foundation::action::dispatch_action(
+                                host, action_cx, reason, action,
+                            );
+                        }
                     }
                     if let Some(h) = user_activate.as_ref() {
                         h(host, action_cx, reason);

@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, SvgFit, TextOverflow, TextWrap};
 use fret_icons::IconId;
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -18,6 +19,8 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
@@ -112,6 +115,7 @@ pub struct Button {
     size: ButtonSize,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     style: ButtonStyle,
     disabled: bool,
@@ -132,6 +136,7 @@ impl std::fmt::Debug for Button {
                 "trailing_icon",
                 &self.trailing_icon.as_ref().map(|i| i.as_str()),
             )
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("style", &self.style)
             .field("disabled", &self.disabled)
@@ -148,6 +153,7 @@ impl Button {
             size: ButtonSize::default(),
             leading_icon: None,
             trailing_icon: None,
+            action: None,
             on_activate: None,
             style: ButtonStyle::default(),
             disabled: false,
@@ -175,6 +181,12 @@ impl Button {
         self
     }
 
+    /// Bind a stable action ID to this button (action-first authoring).
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self
@@ -199,10 +211,17 @@ impl Button {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             control_chrome_pressable_with_id_props(cx, |cx, st, pressable_id| {
-                let enabled = !self.disabled;
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
+                let enabled = !self.disabled && action_enabled;
 
+                if let Some(action) = self.action.clone() {
+                    cx.pressable_dispatch_action_if_enabled(action);
+                }
                 if let Some(handler) = self.on_activate.clone() {
-                    cx.pressable_on_activate(handler);
+                    cx.pressable_add_on_activate(handler);
                 }
 
                 let now_frame = cx.frame_id.0;

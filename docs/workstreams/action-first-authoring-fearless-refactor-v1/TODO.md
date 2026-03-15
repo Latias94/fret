@@ -797,6 +797,12 @@ Current sequencing note (as of 2026-03-09):
     `ecosystem/fret-ui-shadcn/src/sidebar.rs` (`SidebarInput`) all keep the same underlying
     command pipeline while letting Enter/Escape bindings match the repo's action-first mental
     model.
+  - Material3 follow-up (as of 2026-03-15): the broader default-facing Material3 pressable family
+    now also exposes `action(...)` on `Button`, `Fab`, `IconButton`, `IconToggleButton`,
+    `Checkbox`, `Switch`, `Radio`, `AssistChip`, `SuggestionChip`, `FilterChip`, and
+    `InputChip`; `ecosystem/fret-ui-material3/src/lib.rs` now locks that surface with a focused
+    source-policy test, and the remaining Material3 alias debt is narrowed to secondary slots such
+    as trailing-icon actions.
   - Source-policy update (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now locks those default-facing clickable surfaces on the action-first alias wording so future cleanup does not silently regress them back to command-shaped-only naming.
   - Toast follow-up (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/sonner.rs` now exposes `ToastMessageOptions::action_id(...)` / `action_command(...)` / `cancel_id(...)` / `cancel_command(...)`, and the primary Sonner gallery demo now prefers `action_id(...)` / `cancel_id(...)` while keeping the same toast dispatch internals.
 

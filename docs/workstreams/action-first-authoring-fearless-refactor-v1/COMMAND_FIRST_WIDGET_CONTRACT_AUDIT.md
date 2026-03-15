@@ -201,6 +201,36 @@ Recommendation:
 - Keep `action_command(...)` and the historical `action(...)` spelling as additive compatibility
   surfaces until the repo decides whether this family should deprecate command-shaped naming.
 
+### 5.5) Material 3 default-facing pressables should not remain activation-hook-only
+
+Representative evidence:
+
+- `ecosystem/fret-ui-material3/src/button.rs`
+- `ecosystem/fret-ui-material3/src/fab.rs`
+- `ecosystem/fret-ui-material3/src/icon_button.rs`
+- `ecosystem/fret-ui-material3/src/checkbox.rs`
+- `ecosystem/fret-ui-material3/src/switch.rs`
+- `ecosystem/fret-ui-material3/src/radio.rs`
+- `ecosystem/fret-ui-material3/src/chip.rs`
+- `ecosystem/fret-ui-material3/src/suggestion_chip.rs`
+- `ecosystem/fret-ui-material3/src/filter_chip.rs`
+- `ecosystem/fret-ui-material3/src/input_chip.rs`
+
+Status update (as of 2026-03-15):
+
+- These families now expose `action(...)` directly on their default public builders.
+- Button-like families (`Button`, `Fab`, `IconButton`, `AssistChip`, `SuggestionChip`) treat
+  command availability as part of enabled-state evaluation when the stable action slot is used.
+- Model-writing families (`Checkbox`, `Switch`, `Radio`, `FilterChip`, `InputChip`,
+  `IconToggleButton`) now update their internal model first, then dispatch the bound unit action,
+  then run any explicit `on_activate(...)` callback so app-level listeners observe updated state.
+
+Remaining follow-up:
+
+- secondary/auxiliary action slots such as `FilterChip::on_trailing_icon_activate(...)` and
+  `InputChip::on_trailing_icon_activate(...)` still need a dedicated action-first alias pass if we
+  want those secondary slots to match the primary authoring story.
+
 ### 6) Component author docs now need to stay aligned with the action-first surface
 
 Representative evidence:

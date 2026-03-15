@@ -15,7 +15,7 @@ use fret_core::{
     TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::IconId;
-use fret_runtime::Model;
+use fret_runtime::{ActionId, Model};
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -24,6 +24,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
@@ -116,6 +117,7 @@ pub struct InputChip {
     selected: Model<bool>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     on_trailing_icon_activate: Option<OnActivate>,
     trailing_icon_a11y_label: Option<Arc<str>>,
@@ -133,6 +135,7 @@ impl std::fmt::Debug for InputChip {
             .field("selected", &"<model>")
             .field("leading_icon", &self.leading_icon)
             .field("trailing_icon", &self.trailing_icon)
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field(
                 "on_trailing_icon_activate",
@@ -155,6 +158,7 @@ impl InputChip {
             selected,
             leading_icon: None,
             trailing_icon: None,
+            action: None,
             on_activate: None,
             on_trailing_icon_activate: None,
             trailing_icon_a11y_label: None,
@@ -173,6 +177,12 @@ impl InputChip {
 
     pub fn trailing_icon(mut self, icon: IconId) -> Self {
         self.trailing_icon = Some(icon);
+        self
+    }
+
+    /// Bind a stable action ID to this input chip (action-first authoring).
+    pub fn action(mut self, action: impl Into<ActionId>) -> Self {
+        self.action = Some(action.into());
         self
     }
 
@@ -236,11 +246,23 @@ impl InputChip {
 
                 let selected_model_for_toggle = self.selected.clone();
                 let enabled_for_toggle = enabled;
+                let action = self.action.clone();
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
                 let user_activate = self.on_activate.clone();
-                cx.pressable_on_activate(Arc::new(move |host, action_cx, reason| {
+                cx.pressable_add_on_activate(Arc::new(move |host, action_cx, reason| {
                     if enabled_for_toggle {
                         let _ = host.update_model(&selected_model_for_toggle, |v| *v = !*v);
                         host.request_redraw(action_cx.window);
+                    }
+                    if enabled_for_toggle && action_enabled {
+                        if let Some(action) = action.as_ref() {
+                            crate::foundation::action::dispatch_action(
+                                host, action_cx, reason, action,
+                            );
+                        }
                     }
                     if let Some(h) = user_activate.as_ref() {
                         h(host, action_cx, reason);
