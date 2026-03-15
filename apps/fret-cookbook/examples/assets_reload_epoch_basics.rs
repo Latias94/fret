@@ -1,6 +1,6 @@
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_ui::element::{ImageProps, LayoutStyle, Length, SizeStyle, SvgIconProps};
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
+use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgAssetElementContextExt as _};
 use std::path::PathBuf;
 
 mod act {
@@ -35,7 +35,7 @@ struct AssetsReloadEpochBasicsView {
     window: AppWindowId,
     applied_bumps: u64,
     image_source: fret_ui_assets::ImageSource,
-    svg_source: fret_ui_assets::SvgFileSource,
+    svg_request: fret::assets::AssetRequest,
 }
 
 impl View for AssetsReloadEpochBasicsView {
@@ -48,17 +48,16 @@ impl View for AssetsReloadEpochBasicsView {
             fret::assets::AssetLocator::bundle(demo_app_bundle(), IMAGE_KEY),
         )
         .expect("builder-mounted image bundle asset should resolve");
-        let svg_source = fret_ui_assets::resolve_svg_file_source_from_host_locator(
-            app,
-            fret::assets::AssetLocator::bundle(demo_app_bundle(), SVG_KEY),
-        )
-        .expect("builder-mounted svg bundle asset should resolve to a native file source");
+        let svg_request = fret::assets::AssetRequest::new(fret::assets::AssetLocator::bundle(
+            demo_app_bundle(),
+            SVG_KEY,
+        ));
 
         Self {
             window,
             applied_bumps: 0,
             image_source,
-            svg_source,
+            svg_request,
         }
     }
 
@@ -108,9 +107,7 @@ impl View for AssetsReloadEpochBasicsView {
         let file_image_state = cx.use_image_source_state(&self.image_source);
         let image_panel = render_image_panel(cx, &theme, file_image_state);
 
-        // SVG file loading is synchronous (cached) so we can surface useful error strings directly.
-        cx.observe_global::<fret_ui_assets::UiAssetsReloadEpoch>(Invalidation::Paint);
-        let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &self.svg_source);
+        let svg_file_state = cx.svg_source_state_from_asset_request(&self.svg_request);
         let svg_panel = render_svg_panel(cx, &theme, svg_file_state);
 
         let images = fret_ui_assets::UiAssets::image_stats(&mut *cx.app);
@@ -242,11 +239,11 @@ fn render_image_panel(
 fn render_svg_panel(
     _cx: &mut UiCx<'_>,
     theme: &ThemeSnapshot,
-    st: fret_ui_assets::SvgFileState,
+    st: fret_ui_assets::ui::SvgAssetSourceState,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let status = if st.error.is_some() {
         "error"
-    } else if st.bytes.is_some() {
+    } else if st.source.is_some() {
         "ready"
     } else {
         "missing"
@@ -260,8 +257,8 @@ fn render_svg_panel(
             ui::children![cx;
                 ui::text(format!("Failed to read SVG: {err}"))
                     .text_color(destructive)]
-        } else if let Some(bytes) = st.bytes.clone() {
-            let mut props = SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes));
+        } else if let Some(source) = st.source.clone() {
+            let mut props = SvgIconProps::new(source);
             props.layout = LayoutStyle {
                 size: SizeStyle {
                     width: Length::Fill,
@@ -308,7 +305,7 @@ fn render_svg_panel(
                 ui::children![cx;
                     shadcn::card_title("SVG icon from logical bundle locator"),
                     shadcn::card_description(
-                        "Loads `demo/icon-search.svg` from the default app bundle mounted by `FretApp::asset_dir(...)`; on native/package-dev lanes the resolver bridges that logical locator into `SvgFileSource` for cached reloadable file reads.",
+                        "Loads `demo/icon-search.svg` from the default app bundle mounted by `FretApp::asset_dir(...)`; the UI helper resolves the logical locator through the shared asset contract and keeps native/package-dev reload ergonomics without app code constructing `SvgFileSource` directly.",
                     ),
                 ]
             }),

@@ -192,6 +192,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `ecosystem/fret-ui-assets/src/asset_resolver.rs` now bridge logical bundle locators into
       `SvgFileSource` through the shared external-reference contract instead of teaching raw
       widget-level file paths.
+    - `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+      now lets ordinary UI code stay on logical bundle locators while the native/dev file-backed
+      compatibility shim remains hidden behind the UI helper.
   - Remaining:
     - `SvgFileSource` still exists as a native/dev compatibility shim because `fret_ui::SvgSource`
       is currently bytes-only.

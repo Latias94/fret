@@ -3,6 +3,9 @@
 //! This module is intentionally optional (feature-flagged) to keep `fret-ui-assets` usable in
 //! non-`fret-ui` contexts while still providing ViewCache-safe ergonomics for UI authors.
 
+use std::sync::Arc;
+
+use fret_assets::{AssetLoadError, AssetLocator, AssetRequest};
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use crate::UiAssetsReloadEpoch;
@@ -86,6 +89,97 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SvgAssetSourceState {
+    pub source: Option<fret_ui::SvgSource>,
+    pub error: Option<Arc<str>>,
+}
+
+impl SvgAssetSourceState {
+    fn ready(source: fret_ui::SvgSource) -> Self {
+        Self {
+            source: Some(source),
+            error: None,
+        }
+    }
+
+    fn error(message: impl Into<Arc<str>>) -> Self {
+        Self {
+            source: None,
+            error: Some(message.into()),
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn resolve_svg_asset_source_state<H: fret_runtime::GlobalsHost + fret_runtime::TimeHost>(
+    host: &mut H,
+    request: &AssetRequest,
+) -> SvgAssetSourceState {
+    match crate::resolve_svg_file_source_from_host(host, request) {
+        Ok(source) => match svg_source_from_file_cached(host, &source) {
+            Ok(source) => SvgAssetSourceState::ready(source),
+            Err(err) => SvgAssetSourceState::error(err),
+        },
+        Err(AssetLoadError::ExternalReferenceUnavailable { .. }) => {
+            match crate::resolve_svg_source_from_host(&*host, request) {
+                Ok(source) => SvgAssetSourceState::ready(source),
+                Err(err) => SvgAssetSourceState::error(err.to_string()),
+            }
+        }
+        Err(err) => SvgAssetSourceState::error(err.to_string()),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn resolve_svg_asset_source_state<H: fret_runtime::GlobalsHost + fret_runtime::TimeHost>(
+    host: &mut H,
+    request: &AssetRequest,
+) -> SvgAssetSourceState {
+    match crate::resolve_svg_source_from_host(&*host, request) {
+        Ok(source) => SvgAssetSourceState::ready(source),
+        Err(err) => SvgAssetSourceState::error(err.to_string()),
+    }
+}
+
+pub trait SvgAssetElementContextExt {
+    fn svg_source_state_from_asset_request(
+        &mut self,
+        request: &AssetRequest,
+    ) -> SvgAssetSourceState;
+
+    fn svg_source_state_from_asset_request_with_invalidation(
+        &mut self,
+        request: &AssetRequest,
+        invalidation: Invalidation,
+    ) -> SvgAssetSourceState;
+
+    fn svg_source_state_from_asset_locator(
+        &mut self,
+        locator: AssetLocator,
+    ) -> SvgAssetSourceState {
+        self.svg_source_state_from_asset_request(&AssetRequest::new(locator))
+    }
+}
+
+impl<H: UiHost> SvgAssetElementContextExt for ElementContext<'_, H> {
+    fn svg_source_state_from_asset_request(
+        &mut self,
+        request: &AssetRequest,
+    ) -> SvgAssetSourceState {
+        self.svg_source_state_from_asset_request_with_invalidation(request, Invalidation::Paint)
+    }
+
+    fn svg_source_state_from_asset_request_with_invalidation(
+        &mut self,
+        request: &AssetRequest,
+        invalidation: Invalidation,
+    ) -> SvgAssetSourceState {
+        self.observe_global::<UiAssetsReloadEpoch>(invalidation);
+        resolve_svg_asset_source_state(self.app, request)
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub trait SvgFileElementContextExt {
     fn svg_source_from_file(&mut self, source: &SvgFileSource) -> Option<fret_ui::SvgSource>;
@@ -112,5 +206,185 @@ impl<H: UiHost> SvgFileElementContextExt for ElementContext<'_, H> {
     ) -> Option<fret_ui::SvgSource> {
         self.observe_global::<UiAssetsReloadEpoch>(invalidation);
         svg_source_from_file_cached(self.app, source).ok()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::any::{Any, TypeId};
+    use std::collections::HashMap;
+    #[cfg(not(target_arch = "wasm32"))]
+    use std::path::{Path, PathBuf};
+    use std::sync::Arc;
+
+    use fret_assets::{AssetLocator, AssetRevision, StaticAssetEntry};
+    use fret_core::{ClipboardToken, FrameId, ImageUploadToken, ShareSheetToken, TimerToken};
+    use fret_runtime::{GlobalsHost, TickId, TimeHost};
+
+    use super::*;
+
+    #[derive(Default)]
+    struct TestHost {
+        globals: HashMap<TypeId, Box<dyn Any>>,
+        tick_id: TickId,
+        frame_id: FrameId,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_share_sheet_token: u64,
+        next_image_upload_token: u64,
+    }
+
+    impl GlobalsHost for TestHost {
+        fn set_global<T: Any>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn global<T: Any>(&self) -> Option<&T> {
+            self.globals.get(&TypeId::of::<T>())?.downcast_ref::<T>()
+        }
+
+        fn with_global_mut<T: Any, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            let type_id = TypeId::of::<T>();
+            let mut value = match self.globals.remove(&type_id) {
+                None => init(),
+                Some(value) => *value.downcast::<T>().expect("global type id must match"),
+            };
+            let out = f(&mut value, self);
+            self.globals.insert(type_id, Box::new(value));
+            out
+        }
+    }
+
+    impl TimeHost for TestHost {
+        fn tick_id(&self) -> TickId {
+            self.tick_id
+        }
+
+        fn frame_id(&self) -> FrameId {
+            self.frame_id
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            let token = TimerToken(self.next_timer_token);
+            self.next_timer_token += 1;
+            token
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            let token = ClipboardToken(self.next_clipboard_token);
+            self.next_clipboard_token += 1;
+            token
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            let token = ShareSheetToken(self.next_share_sheet_token);
+            self.next_share_sheet_token += 1;
+            token
+        }
+
+        fn next_image_upload_token(&mut self) -> ImageUploadToken {
+            let token = ImageUploadToken(self.next_image_upload_token);
+            self.next_image_upload_token += 1;
+            token
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    struct TempAssetDir {
+        path: PathBuf,
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    impl TempAssetDir {
+        fn new(test_name: &str, entries: &[(&str, &[u8])]) -> Self {
+            let unique = format!(
+                "fret_ui_assets_ui_{test_name}_{}_{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos()
+            );
+            let path = std::env::temp_dir().join(unique);
+            std::fs::create_dir_all(&path).expect("temp asset root should be created");
+            for (entry, bytes) in entries {
+                let entry_path = path.join(entry);
+                if let Some(parent) = entry_path.parent() {
+                    std::fs::create_dir_all(parent)
+                        .expect("temp asset parent dirs should be created");
+                }
+                std::fs::write(&entry_path, bytes).expect("temp asset file should be written");
+            }
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    impl Drop for TempAssetDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn svg_asset_source_state_bridges_file_backed_bundle_locator() {
+        let root = TempAssetDir::new(
+            "svg_bridge",
+            &[("icons/search.svg", br#"<svg viewBox="0 0 1 1"></svg>"#)],
+        );
+        let resolver = fret_assets::FileAssetManifestResolver::from_bundle_dir("app", root.path())
+            .expect("bundle dir should scan");
+
+        let mut host = TestHost::default();
+        fret_runtime::set_asset_resolver(&mut host, Arc::new(resolver));
+
+        let state = resolve_svg_asset_source_state(
+            &mut host,
+            &AssetRequest::new(AssetLocator::bundle("app", "icons/search.svg")),
+        );
+
+        assert!(state.error.is_none());
+        match state.source {
+            Some(fret_ui::SvgSource::Bytes(bytes)) => {
+                assert_eq!(bytes.as_ref(), br#"<svg viewBox="0 0 1 1"></svg>"#);
+            }
+            other => panic!("expected bytes-backed svg source, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn svg_asset_source_state_falls_back_to_bytes_when_reference_handoff_is_unavailable() {
+        let mut host = TestHost::default();
+        fret_runtime::register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "icons/search.svg",
+                AssetRevision(3),
+                br#"<svg viewBox="0 0 1 1"></svg>"#,
+            )],
+        );
+
+        let state = resolve_svg_asset_source_state(
+            &mut host,
+            &AssetRequest::new(AssetLocator::bundle("app", "icons/search.svg")),
+        );
+
+        assert!(state.error.is_none());
+        match state.source {
+            Some(fret_ui::SvgSource::Bytes(bytes)) => {
+                assert_eq!(bytes.as_ref(), br#"<svg viewBox="0 0 1 1"></svg>"#);
+            }
+            other => panic!("expected bytes-backed svg source, got {other:?}"),
+        }
     }
 }

@@ -119,7 +119,8 @@ This workstream takes a fearless posture:
     external reference,
   - native SVG helpers can now bridge logical bundle locators into `SvgFileSource` for reloadable
     file-backed development ergonomics without teaching raw app paths as the primary authoring
-    story,
+    story, and `fret-ui-assets::ui::SvgAssetElementContextExt` now keeps the UI-facing app/widget
+    story locator-first instead of exposing `SvgFileSource` directly in ordinary render code,
   - byte-based SVG loading and the existing async image invalidation ergonomics remain intact.
 - The general asset contract now also models explicit external-reference handoff:
   - `ResolvedAssetReference` / `AssetExternalReference` in `crates/fret-assets`,

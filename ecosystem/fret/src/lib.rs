@@ -70,8 +70,10 @@
 //!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches;
 //!   when native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
 //!   logical bundle locators and let `fret-ui-assets::resolve_image_source_from_host_locator(...)`
-//!   or native `fret-ui-assets::resolve_svg_file_source_from_host_locator(...)` consume the
-//!   resolver's external-reference handoff instead of constructing raw file-path sources directly
+//!   or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+//!   consume the resolver's bundle/reference bridge instead of constructing raw file-path sources
+//!   directly; keep `resolve_svg_file_source_from_host_locator(...)` as the lower-level
+//!   compatibility seam when a non-UI integration truly needs the native file handoff object
 //! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
 //!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
@@ -2346,8 +2348,9 @@ mod authoring_surface_policy_tests {
             CRATE_README.contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`")
         );
         assert!(
-            CRATE_README
-                .contains("`fret-ui-assets::resolve_svg_file_source_from_host_locator(...)`")
+            CRATE_README.contains(
+                "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
+            )
         );
 
         let rustdoc = crate_rustdoc();
@@ -2367,7 +2370,9 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("`AssetLocator::url(...)`"));
         assert!(rustdoc.contains("`fret-ui-assets::resolve_image_source_from_host_locator(...)`"));
         assert!(
-            rustdoc.contains("`fret-ui-assets::resolve_svg_file_source_from_host_locator(...)`")
+            rustdoc.contains(
+                "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
+            )
         );
         assert!(public_surface.contains("pub mod assets {"));
         assert!(!public_surface.contains("pub use fret_runtime::register_bundle_asset_entries;"));
@@ -2482,7 +2487,9 @@ mod authoring_surface_policy_tests {
         );
         assert!(
             CRATE_USAGE_GUIDE
-                .contains("`fret-ui-assets::resolve_svg_file_source_from_host_locator(...)`")
+                .contains(
+                    "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
+                )
         );
         assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>(cx)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(cx, payload)`"));
