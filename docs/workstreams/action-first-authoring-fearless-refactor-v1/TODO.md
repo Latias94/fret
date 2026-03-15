@@ -801,8 +801,10 @@ Current sequencing note (as of 2026-03-09):
     now also exposes `action(...)` on `Button`, `Fab`, `IconButton`, `IconToggleButton`,
     `Checkbox`, `Switch`, `Radio`, `AssistChip`, `SuggestionChip`, `FilterChip`, and
     `InputChip`; `ecosystem/fret-ui-material3/src/lib.rs` now locks that surface with a focused
-    source-policy test, and the remaining Material3 alias debt is narrowed to secondary slots such
-    as trailing-icon actions.
+    source-policy test.
+  - Material3 secondary-slot follow-up (as of 2026-03-15): `FilterChip` and `InputChip` now also
+    expose `trailing_action(...)` for their trailing icon pressables, so the remaining Material3
+    alias debt is no longer concentrated on those secondary stable slots.
   - Source-policy update (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now locks those default-facing clickable surfaces on the action-first alias wording so future cleanup does not silently regress them back to command-shaped-only naming.
   - Toast follow-up (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/sonner.rs` now exposes `ToastMessageOptions::action_id(...)` / `action_command(...)` / `cancel_id(...)` / `cancel_command(...)`, and the primary Sonner gallery demo now prefers `action_id(...)` / `cancel_id(...)` while keeping the same toast dispatch internals.
 

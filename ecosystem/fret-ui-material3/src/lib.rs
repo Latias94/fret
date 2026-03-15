@@ -272,6 +272,21 @@ mod tests {
     }
 
     #[test]
+    fn material3_chip_trailing_pressables_expose_action_first_aliases() {
+        let trailing_action_sources = [
+            include_str!("filter_chip.rs"),
+            include_str!("input_chip.rs"),
+        ];
+
+        for src in trailing_action_sources {
+            assert!(
+                src.contains("pub fn trailing_action("),
+                "expected trailing chip pressable to expose `trailing_action(...)`"
+            );
+        }
+    }
+
+    #[test]
     fn material3_control_typography_tokens_use_stable_line_boxes() {
         let cfg =
             theme_config_with_colors(TypographyOptions::default(), ColorSchemeOptions::default());

@@ -225,11 +225,11 @@ Status update (as of 2026-03-15):
   `IconToggleButton`) now update their internal model first, then dispatch the bound unit action,
   then run any explicit `on_activate(...)` callback so app-level listeners observe updated state.
 
-Remaining follow-up:
+Secondary-slot follow-up (also landed on 2026-03-15):
 
-- secondary/auxiliary action slots such as `FilterChip::on_trailing_icon_activate(...)` and
-  `InputChip::on_trailing_icon_activate(...)` still need a dedicated action-first alias pass if we
-  want those secondary slots to match the primary authoring story.
+- `FilterChip` and `InputChip` now also expose `trailing_action(...)` for their trailing icon
+  pressables, so both their primary and secondary stable action slots match the action-first
+  builder story.
 
 ### 6) Component author docs now need to stay aligned with the action-first surface
 

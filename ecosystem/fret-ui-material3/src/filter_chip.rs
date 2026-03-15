@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
@@ -124,6 +125,7 @@ pub struct FilterChip {
     trailing_icon: Option<IconId>,
     variant: FilterChipVariant,
     action: Option<ActionId>,
+    trailing_action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     on_trailing_icon_activate: Option<OnActivate>,
     trailing_icon_a11y_label: Option<Arc<str>>,
@@ -143,6 +145,7 @@ impl std::fmt::Debug for FilterChip {
             .field("trailing_icon", &self.trailing_icon)
             .field("variant", &self.variant)
             .field("action", &self.action)
+            .field("trailing_action", &self.trailing_action)
             .field("on_activate", &self.on_activate.is_some())
             .field(
                 "on_trailing_icon_activate",
@@ -167,6 +170,7 @@ impl FilterChip {
             trailing_icon: None,
             variant: FilterChipVariant::default(),
             action: None,
+            trailing_action: None,
             on_activate: None,
             on_trailing_icon_activate: None,
             trailing_icon_a11y_label: None,
@@ -196,6 +200,12 @@ impl FilterChip {
     /// Bind a stable action ID to this filter chip (action-first authoring).
     pub fn action(mut self, action: impl Into<ActionId>) -> Self {
         self.action = Some(action.into());
+        self
+    }
+
+    /// Bind a stable action ID to the trailing icon pressable (action-first authoring).
+    pub fn trailing_action(mut self, action: impl Into<ActionId>) -> Self {
+        self.trailing_action = Some(action.into());
         self
     }
 
@@ -559,6 +569,7 @@ impl FilterChip {
                             enabled,
                             selected,
                             self.test_id.clone(),
+                            self.trailing_action.clone(),
                             self.on_trailing_icon_activate.clone(),
                             self.trailing_icon_a11y_label.clone(),
                             self.style.state_layer_color.clone(),
@@ -608,6 +619,7 @@ fn chip_content<H: UiHost>(
     enabled: bool,
     selected: bool,
     chip_test_id: Option<Arc<str>>,
+    trailing_action: Option<ActionId>,
     on_trailing_icon_activate: Option<OnActivate>,
     trailing_icon_a11y_label: Option<Arc<str>>,
     style_state_layer_color: OverrideSlot<ColorRef>,
@@ -667,7 +679,7 @@ fn chip_content<H: UiHost>(
         if let (Some(icon), Some(size)) = (trailing_icon, trailing_icon_size) {
             out.push(fixed_space(cx, ICON_LABEL_SPACE));
             out.push(material_icon(cx, &icon, size, trailing_icon_color));
-            if let Some(handler) = on_trailing_icon_activate.clone() {
+            if trailing_action.is_some() || on_trailing_icon_activate.is_some() {
                 out.push(trailing_icon_touch_target_overlay(
                     cx,
                     enabled,
@@ -676,7 +688,8 @@ fn chip_content<H: UiHost>(
                     label.clone(),
                     trailing_icon_a11y_label.clone(),
                     size,
-                    handler,
+                    trailing_action.clone(),
+                    on_trailing_icon_activate.clone(),
                     style_state_layer_color.clone(),
                     primary_pressable_id,
                     layout_direction,
@@ -704,7 +717,8 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
     chip_label: Arc<str>,
     trailing_icon_a11y_label: Option<Arc<str>>,
     size: Px,
-    on_activate: OnActivate,
+    trailing_action: Option<ActionId>,
+    on_activate: Option<OnActivate>,
     style_state_layer_color: OverrideSlot<ColorRef>,
     primary_pressable_id: fret_ui::elements::GlobalElementId,
     layout_direction: LayoutDirection,
@@ -712,7 +726,12 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
 ) -> AnyElement {
     cx.named("trailing_icon_touch_target_overlay", move |cx| {
         cx.pressable_with_id_props(|cx, st, pressable_id| {
-            cx.pressable_on_activate(on_activate.clone());
+            if let Some(action) = trailing_action.clone() {
+                cx.pressable_dispatch_action_if_enabled(action);
+            }
+            if let Some(on_activate) = on_activate.clone() {
+                cx.pressable_add_on_activate(on_activate);
+            }
 
             let forward_key = match layout_direction {
                 LayoutDirection::Ltr => fret_core::KeyCode::ArrowRight,
