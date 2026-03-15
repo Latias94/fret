@@ -56,6 +56,9 @@ Execution note on 2026-03-14:
 - the advanced `genui_demo` example now also follows that root-owned wrapper rule:
   `genui_page(cx, ...) -> Ui` owns the final split-pane landing, so the view body no longer keeps
   a separate root-local `let page = ...` wrapper just to apply background/padding chrome.
+- the advanced `query_demo` and `query_async_tokio_demo` examples now follow the same rule:
+  `query_page(cx, ...) -> Ui` owns the centered card-shell landing, so the render path no longer
+  teaches inline root wrapper chrome for that query authoring pair.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

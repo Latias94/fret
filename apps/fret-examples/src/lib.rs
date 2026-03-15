@@ -790,6 +790,26 @@ mod authoring_surface_policy_tests {
         );
 
         assert_advanced_helpers_prefer_uicx(
+            QUERY_DEMO,
+            &[
+                "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
+                "C: IntoUiElement<KernelApp>,",
+                "query_page(cx.elements(), theme, card)",
+            ],
+            &[],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
+            QUERY_ASYNC_TOKIO_DEMO,
+            &[
+                "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
+                "C: IntoUiElement<KernelApp>,",
+                "query_page(cx.elements(), theme, card)",
+            ],
+            &[],
+        );
+
+        assert_advanced_helpers_prefer_uicx(
             HELLO_WORLD_COMPARE_DEMO,
             &["let swatch = |_cx: &mut UiCx<'_>, fill_rgb: u32, border_rgb: u32|"],
             &[

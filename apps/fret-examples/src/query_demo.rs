@@ -205,16 +205,23 @@ impl View for QueryDemoView {
         .w_full()
         .max_w(Px(520.0));
 
-        ui::v_flex(|cx| ui::children![cx; card])
-            .bg(ColorRef::Color(theme.color_token("background")))
-            .p(Space::N6)
-            .w_full()
-            .h_full()
-            .justify_center()
-            .items_center()
-            .into_element(cx)
-            .into()
+        query_page(cx.elements(), theme, card)
     }
+}
+
+fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui
+where
+    C: IntoUiElement<KernelApp>,
+{
+    ui::v_flex(|cx| ui::children![cx; card])
+        .bg(ColorRef::Color(theme.color_token("background")))
+        .p(Space::N6)
+        .w_full()
+        .h_full()
+        .justify_center()
+        .items_center()
+        .into_element(cx)
+        .into()
 }
 
 pub fn run() -> anyhow::Result<()> {
