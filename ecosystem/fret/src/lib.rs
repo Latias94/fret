@@ -138,11 +138,12 @@ pub mod assets {
     #[cfg(not(target_arch = "wasm32"))]
     pub use fret_assets::FileAssetManifestResolver;
     pub use fret_assets::{
-        AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetKey, AssetKindHint,
-        AssetLoadError, AssetLocator, AssetLocatorKind, AssetManifestLoadError, AssetMediaType,
-        AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision, FILE_ASSET_MANIFEST_KIND_V1,
-        FileAssetManifestBundleV1, FileAssetManifestEntryV1, FileAssetManifestV1,
-        ResolvedAssetBytes, StaticAssetEntry, asset_app_bundle_id, asset_package_bundle_id,
+        AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetExternalReference, AssetKey,
+        AssetKindHint, AssetLoadError, AssetLocator, AssetLocatorKind, AssetManifestLoadError,
+        AssetMediaType, AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision,
+        FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1, FileAssetManifestEntryV1,
+        FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
+        asset_app_bundle_id, asset_package_bundle_id,
     };
     pub use fret_runtime::AssetResolverService;
 
@@ -245,6 +246,24 @@ pub mod assets {
         locator: AssetLocator,
     ) -> Result<ResolvedAssetBytes, AssetLoadError> {
         fret_runtime::resolve_asset_locator_bytes(host, locator)
+    }
+
+    /// Resolve an external file/URL reference for a logical asset request through the
+    /// host-installed resolver chain.
+    pub fn resolve_reference(
+        host: &impl fret_runtime::GlobalsHost,
+        request: &AssetRequest,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        fret_runtime::resolve_asset_reference(host, request)
+    }
+
+    /// Resolve an external file/URL reference for a single locator through the host-installed
+    /// resolver chain.
+    pub fn resolve_locator_reference(
+        host: &impl fret_runtime::GlobalsHost,
+        locator: AssetLocator,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        fret_runtime::resolve_asset_locator_reference(host, locator)
     }
 }
 
@@ -1624,6 +1643,27 @@ mod builder_surface_tests {
     }
 
     #[test]
+    fn register_file_bundle_dir_exposes_external_file_reference_on_host_path() {
+        let asset_dir = write_asset_dir_fixture("fret-register-file-bundle-dir-reference");
+        let bundle = AssetBundleId::app("builder-register-file-bundle-dir-reference");
+        let mut app = App::new();
+
+        crate::assets::register_file_bundle_dir(&mut app, bundle.clone(), &asset_dir)
+            .expect("bundle dir should register");
+
+        let resolved = crate::assets::resolve_locator_reference(
+            &app,
+            crate::assets::AssetLocator::bundle(bundle, "images/logo.png"),
+        )
+        .expect("registered bundle dir asset should expose an external reference");
+
+        assert_eq!(
+            resolved.reference.as_file_path(),
+            Some(asset_dir.join("images/logo.png").as_path())
+        );
+    }
+
+    #[test]
     fn fret_app_asset_dir_installs_on_builder_path() {
         let asset_dir = write_asset_dir_fixture("fret-builder-asset-dir");
 
@@ -2812,17 +2852,27 @@ mod authoring_surface_policy_tests {
 
         assert!(root_header.contains("pub mod assets {"));
         assert!(root_header.contains("pub use fret_assets::{"));
-        assert!(root_header.contains(
-            "AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetKey, AssetKindHint"
-        ));
-        assert!(root_header.contains("AssetLoadError, AssetLocator,"));
-        assert!(root_header.contains("AssetManifestLoadError, AssetMediaType,"));
-        assert!(root_header.contains("AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision"));
+        assert!(root_header.contains("AssetBundleId,"));
+        assert!(root_header.contains("AssetBundleNamespace,"));
+        assert!(root_header.contains("AssetCapabilities,"));
+        assert!(root_header.contains("AssetKey,"));
+        assert!(root_header.contains("AssetKindHint,"));
+        assert!(root_header.contains("AssetExternalReference,"));
+        assert!(root_header.contains("AssetLoadError,"));
+        assert!(root_header.contains("AssetLocator,"));
+        assert!(root_header.contains("AssetManifestLoadError,"));
+        assert!(root_header.contains("AssetMediaType,"));
+        assert!(root_header.contains("AssetMemoryKey,"));
         assert!(root_header.contains("AssetRequest,"));
-        assert!(root_header.contains("AssetResolver, AssetRevision, FILE_ASSET_MANIFEST_KIND_V1"));
+        assert!(root_header.contains("AssetResolver,"));
+        assert!(root_header.contains("AssetRevision,"));
+        assert!(root_header.contains("FILE_ASSET_MANIFEST_KIND_V1"));
         assert!(root_header.contains("FileAssetManifestBundleV1,"));
-        assert!(root_header.contains("FileAssetManifestEntryV1, FileAssetManifestV1"));
-        assert!(root_header.contains("ResolvedAssetBytes, StaticAssetEntry, asset_app_bundle_id,"));
+        assert!(root_header.contains("FileAssetManifestEntryV1,"));
+        assert!(root_header.contains("FileAssetManifestV1,"));
+        assert!(root_header.contains("ResolvedAssetBytes,"));
+        assert!(root_header.contains("ResolvedAssetReference,"));
+        assert!(root_header.contains("StaticAssetEntry,"));
         assert!(root_header.contains("asset_package_bundle_id,"));
         assert!(root_header.contains("pub use fret_runtime::AssetResolverService;"));
         assert!(root_header.contains("pub use fret_assets::FileAssetManifestResolver;"));
@@ -2835,6 +2885,8 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub fn capabilities("));
         assert!(root_header.contains("pub fn resolve_bytes("));
         assert!(root_header.contains("pub fn resolve_locator("));
+        assert!(root_header.contains("pub fn resolve_reference("));
+        assert!(root_header.contains("pub fn resolve_locator_reference("));
     }
 
     #[test]

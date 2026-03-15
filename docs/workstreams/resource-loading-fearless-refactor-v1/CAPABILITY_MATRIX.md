@@ -64,6 +64,9 @@ escape hatches.
 - Important distinction:
   - `FileAssetManifestResolver` does **not** resolve `AssetLocator::File`; it resolves logical
     `AssetLocator::bundle(...)` lookups backed by native files.
+  - those same bundle locators can now expose an explicit native file-reference handoff through
+    `resolve_reference(...)` / `resolve_locator_reference(...)` without dropping back to raw
+    path-first widget code.
   - Direct `ImageSource::from_file_path(...)` and `SvgFileSource::from_file_path(...)` are legacy
     UI escape hatches that bypass the general asset resolver contract.
 - First-party truth today:

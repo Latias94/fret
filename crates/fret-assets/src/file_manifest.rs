@@ -12,8 +12,8 @@ use smol_str::SmolStr;
 use crate::{AssetBundleId, AssetKey, AssetMediaType};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    AssetCapabilities, AssetLoadError, AssetLocator, AssetRequest, AssetResolver, AssetRevision,
-    ResolvedAssetBytes,
+    AssetCapabilities, AssetExternalReference, AssetLoadError, AssetLocator, AssetRequest,
+    AssetResolver, AssetRevision, ResolvedAssetBytes, ResolvedAssetReference,
 };
 
 pub const FILE_ASSET_MANIFEST_KIND_V1: &str = "fret_file_asset_manifest";
@@ -371,11 +371,32 @@ impl AssetResolver for FileAssetManifestResolver {
             });
         };
 
-        let bytes = std::fs::read(&entry.path).map_err(map_fs_read_error)?;
-        let mut resolved = ResolvedAssetBytes::new(
+        let (bytes, revision) = read_file_bytes_with_revision(&entry.path)?;
+        let mut resolved = ResolvedAssetBytes::new(request.locator.clone(), revision, bytes);
+        if let Some(media_type) = &entry.media_type {
+            resolved = resolved.with_media_type(media_type.clone());
+        }
+        Ok(resolved)
+    }
+
+    fn resolve_reference(
+        &self,
+        request: &AssetRequest,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        let Some(entry) = self.entries.get(&request.locator) else {
+            return Err(match request.locator {
+                AssetLocator::BundleAsset(_) => AssetLoadError::NotFound,
+                _ => AssetLoadError::UnsupportedLocatorKind {
+                    kind: request.locator.kind(),
+                },
+            });
+        };
+
+        let revision = read_file_revision(&entry.path)?;
+        let mut resolved = ResolvedAssetReference::new(
             request.locator.clone(),
-            AssetRevision(hash_bytes(&bytes)),
-            bytes,
+            revision,
+            AssetExternalReference::file_path(entry.path.clone()),
         );
         if let Some(media_type) = &entry.media_type {
             resolved = resolved.with_media_type(media_type.clone());
@@ -441,6 +462,19 @@ fn map_fs_read_error(source: std::io::Error) -> AssetLoadError {
             message: source.to_string().into(),
         },
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn read_file_bytes_with_revision(path: &Path) -> Result<(Vec<u8>, AssetRevision), AssetLoadError> {
+    let bytes = std::fs::read(path).map_err(map_fs_read_error)?;
+    let revision = AssetRevision(hash_bytes(&bytes));
+    Ok((bytes, revision))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn read_file_revision(path: &Path) -> Result<AssetRevision, AssetLoadError> {
+    let (_, revision) = read_file_bytes_with_revision(path)?;
+    Ok(revision)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -527,6 +561,47 @@ mod tests {
         assert_eq!(resolver.entry_count(), 1);
         assert_eq!(resolver.manifest_path(), manifest_path.as_path());
         assert_eq!(resolved.bytes.as_ref(), b"hello-manifest");
+        assert_eq!(
+            resolved.media_type.as_ref().map(AssetMediaType::as_str),
+            Some("text/plain")
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn file_manifest_resolver_resolves_external_file_reference_for_bundle_assets() {
+        let root = make_temp_dir("fret-assets-file-manifest-reference");
+        let assets_dir = root.join("assets").join("images");
+        std::fs::create_dir_all(&assets_dir).expect("create assets dir");
+        let logo_path = assets_dir.join("logo.txt");
+        std::fs::write(&logo_path, b"hello-manifest").expect("write asset file");
+
+        let manifest = FileAssetManifestV1::new([FileAssetManifestBundleV1::new(
+            app_bundle(),
+            [FileAssetManifestEntryV1::new("images/logo.png")
+                .with_path("images/logo.txt")
+                .with_media_type("text/plain")],
+        )
+        .with_root("assets")]);
+        let resolver = FileAssetManifestResolver::from_manifest_with_base_dir(
+            manifest,
+            &root,
+            root.join("inline.manifest.json"),
+        )
+        .expect("manifest resolver should build");
+
+        let resolved = resolver
+            .resolve_reference(&AssetRequest::new(AssetLocator::bundle(
+                app_bundle(),
+                "images/logo.png",
+            )))
+            .expect("bundle asset should expose an external reference");
+
+        assert_eq!(
+            resolved.revision,
+            AssetRevision(hash_bytes(b"hello-manifest"))
+        );
+        assert_eq!(resolved.reference.as_file_path(), Some(logo_path.as_path()));
         assert_eq!(
             resolved.media_type.as_ref().map(AssetMediaType::as_str),
             Some("text/plain")

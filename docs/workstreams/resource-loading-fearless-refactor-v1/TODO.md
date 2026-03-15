@@ -89,15 +89,19 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - revision tracking.
   - Current landed slice:
     - `AssetResolver` / `ResolvedAssetBytes` in `crates/fret-assets`
+    - `ResolvedAssetReference` / `AssetExternalReference` in `crates/fret-assets`
     - `StaticAssetEntry` plus bulk `InMemoryAssetResolver::insert_*_entries(...)`
     - native/package-dev file-backed manifest resolver in
       `crates/fret-assets/src/file_manifest.rs`
+    - explicit bundle-locator -> native file-reference handoff in
+      `crates/fret-assets/src/file_manifest.rs`
     - composable runtime host mounting via `crates/fret-runtime/src/asset_resolver.rs`
       (`register_asset_resolver`, `register_bundle_asset_entries`,
-      `register_embedded_asset_entries`)
+      `register_embedded_asset_entries`, `resolve_asset_reference`)
     - UI bridge helpers via `ecosystem/fret-ui-assets/src/asset_resolver.rs`
+    - app-facing facade reference helpers via `ecosystem/fret/src/lib.rs`
+      (`resolve_reference`, `resolve_locator_reference`)
   - Remaining:
-    - explicit external URI/path handoff contract
     - structured diagnostics surface
     - non-UI first-party resolver implementations
 

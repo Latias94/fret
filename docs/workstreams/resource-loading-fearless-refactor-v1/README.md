@@ -76,6 +76,9 @@ This workstream takes a fearless posture:
     the app-facing facade,
   - `fret::assets::register_file_manifest(...)` mounts that resolver on the app-facing facade
     without teaching repo-relative paths in widget code.
+  - file-backed bundle locators can now also expose an explicit native file-reference handoff via
+    `resolve_reference(...)` / `resolve_locator_reference(...)` on the shared resolver contract,
+    so platform APIs can ask for a real file path without bypassing bundle identity.
   - `fretboard assets manifest write --dir ... --out ... --app-bundle ...` now emits an explicit
     file-backed manifest artifact from a scanned bundle directory,
   - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep that generated-manifest
@@ -111,6 +114,11 @@ This workstream takes a fearless posture:
     the same ordered builder/startup surface as `asset_dir(...)` and `asset_manifest(...)`.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
+- The general asset contract now also models explicit external-reference handoff:
+  - `ResolvedAssetReference` / `AssetExternalReference` in `crates/fret-assets`,
+  - host-level resolution via `crates/fret-runtime/src/asset_resolver.rs`,
+  - app-facing facade helpers via `fret::assets::resolve_reference(...)` and
+    `fret::assets::resolve_locator_reference(...)`.
 - Accepted ADR coverage now exists for both:
   - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
   - the general portable locator/resolver contract
