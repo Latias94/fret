@@ -351,11 +351,21 @@ fn render_rust_asset_module(
                 "use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, AssetRevision, StaticAssetEntry}};\n"
             )
             .expect("write to string");
+            writeln!(
+                out,
+                "// `--surface fret` modules expose both `register(app)` and `mount(builder)`.\n"
+            )
+            .expect("write to string");
         }
         RustSurface::Framework => {
             writeln!(
                 out,
                 "use fret_assets::{{AssetBundleId, AssetKey, AssetLocator, AssetRevision, StaticAssetEntry}};\nuse fret_runtime::GlobalsHost;\n"
+            )
+            .expect("write to string");
+            writeln!(
+                out,
+                "// `--surface framework` modules expose `register(host)` for direct runtime mounting.\n"
             )
             .expect("write to string");
         }
@@ -660,6 +670,9 @@ mod tests {
 
         let generated = std::fs::read_to_string(&out).expect("read generated module");
         assert!(generated.contains("use fret::assets::{self, AssetBundleId, AssetKey, AssetLocator, AssetRevision, StaticAssetEntry};"));
+        assert!(generated.contains(
+            "// `--surface fret` modules expose both `register(app)` and `mount(builder)`."
+        ));
         assert!(generated.contains("AssetBundleId::app(\"demo-app\")"));
         assert!(generated.contains("include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/\", \"assets/icons/search.svg\"))"));
         assert!(generated.contains(".with_media_type(\"image/svg+xml\")"));
@@ -702,6 +715,9 @@ mod tests {
         let generated = std::fs::read_to_string(&out).expect("read generated module");
         assert!(generated.contains("use fret_assets::{AssetBundleId, AssetKey, AssetLocator, AssetRevision, StaticAssetEntry};"));
         assert!(generated.contains("use fret_runtime::GlobalsHost;"));
+        assert!(generated.contains(
+            "// `--surface framework` modules expose `register(host)` for direct runtime mounting."
+        ));
         assert!(generated.contains("AssetBundleId::package(\"demo-kit\")"));
         assert!(generated.contains(".with_media_type(\"font/ttf\")"));
         assert!(generated.contains("pub fn register(host: &mut impl GlobalsHost)"));

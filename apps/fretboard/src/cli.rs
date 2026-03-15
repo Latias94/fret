@@ -135,6 +135,9 @@ Usage:
 Examples:
   fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-todo
   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-todo
+    # `--surface fret` modules expose both `register(app)` and `mount(builder)`
+  fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle my-todo --surface framework
+    # `--surface framework` modules expose `register(host)` for direct runtime mounting
   fretboard new todo --name my-todo
   fretboard new simple-todo --name my-simple-todo
   fretboard new hello --name hello-world
