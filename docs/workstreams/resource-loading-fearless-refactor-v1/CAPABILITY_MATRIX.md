@@ -123,7 +123,9 @@ escape hatches.
   - mount them with `generated_assets::mount(builder)?` or install them with a named bundle.
   - first-party generated modules now also publish `preferred_startup_plan()` /
     `preferred_startup_mode()` so native debug can stay file-backed while packaged targets stay on
-    compiled bundle bytes.
+    compiled bundle bytes, and those helpers now lower onto shared `fret` facade defaults
+    (`AssetStartupPlan::development_bundle_dir_if_native(...)` /
+    `AssetStartupMode::preferred()`).
 - Native/package-dev convenience:
   - `FretApp::asset_dir(...)`,
   - `UiAppBuilder::with_asset_dir(...)`,

@@ -337,6 +337,24 @@ pub enum AssetStartupMode {
     Packaged,
 }
 
+impl AssetStartupMode {
+    /// First-party default startup selection for the `fret` app-authoring surface.
+    ///
+    /// Native debug builds stay on the file-backed development lane for quick iteration, while
+    /// packaged targets (including web/mobile and native release builds) stay on compiled bundle
+    /// or embedded bytes.
+    pub const fn preferred() -> Self {
+        #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
+        {
+            Self::Development
+        }
+        #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
+        {
+            Self::Packaged
+        }
+    }
+}
+
 /// Explicit startup plan that separates development asset mounts from packaged asset mounts.
 ///
 /// This gives app/bootstrap code one named surface for:
@@ -386,6 +404,28 @@ impl AssetStartupPlan {
             dir: dir.into(),
         });
         self
+    }
+
+    /// Add a development bundle-directory lane on native targets and no-op on wasm.
+    ///
+    /// This keeps first-party app/tooling code on one portable startup-plan expression without
+    /// repeating `cfg` branches at every call site.
+    pub fn development_bundle_dir_if_native(
+        self,
+        bundle: impl Into<fret_assets::AssetBundleId>,
+        dir: impl Into<PathBuf>,
+    ) -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            return self.development_bundle_dir(bundle, dir);
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = bundle.into();
+            let _ = dir.into();
+            self
+        }
     }
 
     /// Add compile-time/static entries under the default app bundle id to the packaged lane.
@@ -2059,6 +2099,49 @@ mod builder_surface_tests {
                     ),
             )
             .expect("packaged asset startup plan should load on ui app builder path");
+    }
+
+    #[test]
+    fn asset_startup_mode_preferred_matches_current_target_defaults() {
+        #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
+        assert_eq!(
+            crate::assets::AssetStartupMode::preferred(),
+            crate::assets::AssetStartupMode::Development
+        );
+
+        #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
+        assert_eq!(
+            crate::assets::AssetStartupMode::preferred(),
+            crate::assets::AssetStartupMode::Packaged
+        );
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    #[test]
+    fn asset_startup_plan_development_bundle_dir_if_native_populates_development_lane() {
+        let asset_dir =
+            write_asset_dir_fixture("asset-startup-plan-development-bundle-dir-if-native");
+        let app_bundle = AssetBundleId::app("asset-startup-plan-development-bundle-dir-if-native");
+        let plan = crate::assets::AssetStartupPlan::new()
+            .packaged_entries([StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"builder-bytes",
+            )])
+            .development_bundle_dir_if_native(app_bundle.clone(), &asset_dir);
+
+        let mounts = plan
+            .into_mounts(
+                app_bundle.clone(),
+                crate::assets::AssetStartupMode::Development,
+            )
+            .expect("native helper should populate the development lane");
+
+        assert!(matches!(
+            mounts.as_slice(),
+            [crate::AssetMount::Dir { bundle, dir }]
+                if bundle == &app_bundle && dir == &asset_dir
+        ));
     }
 
     #[test]

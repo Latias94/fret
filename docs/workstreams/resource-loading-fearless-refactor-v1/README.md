@@ -98,7 +98,9 @@ This workstream takes a fearless posture:
     - a checked-in `src/generated_assets.rs` stub for the portable compile-time lane,
     - `generated_assets::mount(builder)?` on the default `fret` builder path,
     - generated startup helpers (`preferred_startup_plan()` / `preferred_startup_mode()`) that
-      select native debug development mounts vs packaged bundle mounts,
+      now lower onto shared `fret` facade defaults
+      (`AssetStartupPlan::development_bundle_dir_if_native(...)` and
+      `AssetStartupMode::preferred()`) for native debug vs packaged bundle selection,
     - and an explicit regeneration command for `fretboard assets rust write ...`.
 - A first compile-time embedded artifact lane now exists for packaged/web/mobile-friendly builds:
   - `fretboard assets rust write --dir ... --out ... --app-bundle ...` emits a generated Rust
@@ -114,8 +116,8 @@ This workstream takes a fearless posture:
   - The `--surface fret` module now exposes both:
     - `register(app)` for direct host/app registration,
     - `mount(builder)?` for `UiAppBuilder` startup-path mounting via `with_asset_startup(...)`,
-    - and startup-plan helpers so tooling can own the preferred development vs packaged switch
-      without inventing a second contract.
+    - and startup-plan helpers that now delegate to shared `fret` facade defaults instead of
+      duplicating per-generated-module `cfg` logic.
   - `FretApp::asset_entries(...)`, `FretApp::bundle_asset_entries(...)`,
     `FretApp::embedded_asset_entries(...)`, `UiAppBuilder::with_bundle_asset_entries(...)`, and
     `UiAppBuilder::with_embedded_asset_entries(...)` now keep compile-time/static registrations on

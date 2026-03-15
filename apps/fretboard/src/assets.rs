@@ -437,12 +437,12 @@ fn render_rust_asset_module(
             .expect("write to string");
             writeln!(
                 out,
-                "pub fn preferred_startup_plan() -> AssetStartupPlan {{\n    let plan = packaged_startup_plan();\n    #[cfg(not(target_arch = \"wasm32\"))]\n    let plan = plan.development_bundle_dir(bundle_id(), DEVELOPMENT_SOURCE_DIR);\n    plan\n}}\n"
+                "pub fn preferred_startup_plan() -> AssetStartupPlan {{\n    packaged_startup_plan().development_bundle_dir_if_native(bundle_id(), DEVELOPMENT_SOURCE_DIR)\n}}\n"
             )
             .expect("write to string");
             writeln!(
                 out,
-                "pub const fn preferred_startup_mode() -> AssetStartupMode {{\n    #[cfg(all(not(target_arch = \"wasm32\"), debug_assertions))]\n    {{\n        AssetStartupMode::Development\n    }}\n    #[cfg(not(all(not(target_arch = \"wasm32\"), debug_assertions)))]\n    {{\n        AssetStartupMode::Packaged\n    }}\n}}\n"
+                "pub const fn preferred_startup_mode() -> AssetStartupMode {{\n    AssetStartupMode::preferred()\n}}\n"
             )
             .expect("write to string");
             writeln!(
@@ -737,11 +737,10 @@ mod tests {
         ));
         assert!(generated.contains("pub fn preferred_startup_plan() -> AssetStartupPlan"));
         assert!(generated.contains(
-            "let plan = plan.development_bundle_dir(bundle_id(), DEVELOPMENT_SOURCE_DIR);"
+            "packaged_startup_plan().development_bundle_dir_if_native(bundle_id(), DEVELOPMENT_SOURCE_DIR)"
         ));
         assert!(generated.contains("pub const fn preferred_startup_mode() -> AssetStartupMode"));
-        assert!(generated.contains("AssetStartupMode::Development"));
-        assert!(generated.contains("AssetStartupMode::Packaged"));
+        assert!(generated.contains("AssetStartupMode::preferred()"));
         assert!(generated.contains("pub fn register(app: &mut fret::app::App)"));
         assert!(generated.contains("pub fn install(app: &mut fret::app::App)"));
         assert!(generated.contains("pub struct Bundle;"));

@@ -1136,21 +1136,11 @@ pub fn packaged_startup_plan() -> AssetStartupPlan {{
 }}
 
 pub fn preferred_startup_plan() -> AssetStartupPlan {{
-    let plan = packaged_startup_plan();
-    #[cfg(not(target_arch = "wasm32"))]
-    let plan = plan.development_bundle_dir(bundle_id(), DEVELOPMENT_SOURCE_DIR);
-    plan
+    packaged_startup_plan().development_bundle_dir_if_native(bundle_id(), DEVELOPMENT_SOURCE_DIR)
 }}
 
 pub const fn preferred_startup_mode() -> AssetStartupMode {{
-    #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
-    {{
-        AssetStartupMode::Development
-    }}
-    #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
-    {{
-        AssetStartupMode::Packaged
-    }}
+    AssetStartupMode::preferred()
 }}
 
 pub fn register(app: &mut fret::app::App) {{
@@ -1644,6 +1634,10 @@ mod tests {
         assert!(src.contains("pub fn packaged_startup_plan() -> AssetStartupPlan"));
         assert!(src.contains("pub fn preferred_startup_plan() -> AssetStartupPlan"));
         assert!(src.contains("pub const fn preferred_startup_mode() -> AssetStartupMode"));
+        assert!(src.contains(
+            "packaged_startup_plan().development_bundle_dir_if_native(bundle_id(), DEVELOPMENT_SOURCE_DIR)"
+        ));
+        assert!(src.contains("AssetStartupMode::preferred()"));
         assert!(src.contains("pub fn register(app: &mut fret::app::App)"));
         assert!(src.contains("pub fn install(app: &mut fret::app::App)"));
         assert!(src.contains("pub struct Bundle;"));

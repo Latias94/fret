@@ -189,6 +189,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - the plan intentionally lowers to the existing ordered builder registrations:
       `asset_dir(...)`, `asset_manifest(...)`, `with_bundle_asset_entries(...)`, and
       `with_embedded_asset_entries(...)`,
+    - `AssetStartupMode::preferred()` now provides one shared app-facing heuristic for
+      `native+debug => Development` vs packaged/web/mobile/release => `Packaged`,
+    - `AssetStartupPlan::development_bundle_dir_if_native(...)` now lets app/tooling code keep one
+      portable startup-plan expression instead of repeating per-call-site `cfg` branches,
     - generated `--surface fret` modules now publish `preferred_startup_plan()` /
       `preferred_startup_mode()` and route `mount(builder)?` through `with_asset_startup(...)`,
       so native debug startup automatically uses the file-backed development lane while
@@ -197,8 +201,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       through to ad-hoc runtime glue.
   - Remaining:
     - watcher/hot-reload policy is still implicit in the native file-manifest resolver layer,
-    - the preferred mode heuristic is only first-party tooling policy today and is not yet a
-      shared runner/build profile contract.
+    - `fret-launch` / `fret-bootstrap` still do not publish an equivalent shared build-profile
+      contract for non-`fret` startup surfaces.
 
 - [~] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.
   - Candidates:
@@ -208,6 +212,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - the first app-facing integration point is now explicit in `ecosystem/fret`:
       `AssetStartupPlan` + `AssetStartupMode` on the builder surface,
+    - `ecosystem/fret` now also publishes shared preferred-mode helpers
+      (`AssetStartupMode::preferred()` and
+      `AssetStartupPlan::development_bundle_dir_if_native(...)`) so non-scaffolded `fret` apps
+      can reuse the same native-debug vs packaged defaults as generated modules,
     - generated `--surface fret` modules now expose startup-policy helpers
       (`preferred_startup_plan()`, `preferred_startup_mode()`, `mount(builder)?`) in addition to
       the packaged-lane ingredients (`ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`),
