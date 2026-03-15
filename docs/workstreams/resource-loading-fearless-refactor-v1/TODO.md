@@ -66,6 +66,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - revision tracking.
   - Current landed slice:
     - `AssetResolver` / `ResolvedAssetBytes` in `crates/fret-assets`
+    - `StaticAssetEntry` plus bulk `InMemoryAssetResolver::insert_*_entries(...)`
     - runtime host mounting via `crates/fret-runtime/src/asset_resolver.rs`
     - UI bridge helpers via `ecosystem/fret-ui-assets/src/asset_resolver.rs`
   - Remaining:

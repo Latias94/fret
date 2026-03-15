@@ -345,6 +345,38 @@ impl ResolvedAssetBytes {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StaticAssetEntry {
+    pub key: &'static str,
+    pub revision: AssetRevision,
+    pub media_type: Option<&'static str>,
+    pub bytes: &'static [u8],
+}
+
+impl StaticAssetEntry {
+    pub const fn new(key: &'static str, revision: AssetRevision, bytes: &'static [u8]) -> Self {
+        Self {
+            key,
+            revision,
+            media_type: None,
+            bytes,
+        }
+    }
+
+    pub const fn with_media_type(mut self, media_type: &'static str) -> Self {
+        self.media_type = Some(media_type);
+        self
+    }
+
+    fn into_resolved(self, locator: AssetLocator) -> ResolvedAssetBytes {
+        let resolved = ResolvedAssetBytes::new(locator, self.revision, self.bytes);
+        match self.media_type {
+            Some(media_type) => resolved.with_media_type(media_type),
+            None => resolved,
+        }
+    }
+}
+
 pub trait AssetResolver: 'static + Send + Sync {
     fn capabilities(&self) -> AssetCapabilities;
     fn resolve_bytes(&self, request: &AssetRequest) -> Result<ResolvedAssetBytes, AssetLoadError>;
@@ -421,6 +453,26 @@ impl InMemoryAssetResolver {
         ))
     }
 
+    pub fn insert_embedded_entry(
+        &mut self,
+        owner: impl Into<AssetBundleId>,
+        entry: StaticAssetEntry,
+    ) -> Option<ResolvedAssetBytes> {
+        let owner = owner.into();
+        self.insert(entry.into_resolved(AssetLocator::embedded(owner, entry.key)))
+    }
+
+    pub fn insert_embedded_entries(
+        &mut self,
+        owner: impl Into<AssetBundleId>,
+        entries: impl IntoIterator<Item = StaticAssetEntry>,
+    ) {
+        let owner = owner.into();
+        for entry in entries {
+            let _ = self.insert_embedded_entry(owner.clone(), entry);
+        }
+    }
+
     pub fn insert_bundle(
         &mut self,
         bundle: impl Into<AssetBundleId>,
@@ -433,6 +485,26 @@ impl InMemoryAssetResolver {
             revision,
             bytes,
         ))
+    }
+
+    pub fn insert_bundle_entry(
+        &mut self,
+        bundle: impl Into<AssetBundleId>,
+        entry: StaticAssetEntry,
+    ) -> Option<ResolvedAssetBytes> {
+        let bundle = bundle.into();
+        self.insert(entry.into_resolved(AssetLocator::bundle(bundle, entry.key)))
+    }
+
+    pub fn insert_bundle_entries(
+        &mut self,
+        bundle: impl Into<AssetBundleId>,
+        entries: impl IntoIterator<Item = StaticAssetEntry>,
+    ) {
+        let bundle = bundle.into();
+        for entry in entries {
+            let _ = self.insert_bundle_entry(bundle.clone(), entry);
+        }
     }
 
     pub fn resolve_locator_bytes(
@@ -602,5 +674,57 @@ mod tests {
         assert_eq!(bundle.bytes.as_ref(), &[1, 2, 3]);
         assert_eq!(embedded.revision, AssetRevision(9));
         assert_eq!(embedded.bytes.as_ref(), &[4, 5, 6]);
+    }
+
+    #[test]
+    fn static_asset_entries_support_media_type_and_bulk_registration() {
+        let mut resolver = InMemoryAssetResolver::new();
+        resolver.insert_bundle_entries(
+            "app",
+            [
+                StaticAssetEntry::new("images/logo.png", AssetRevision(3), b"png-bytes")
+                    .with_media_type("image/png"),
+                StaticAssetEntry::new(
+                    "icons/search.svg",
+                    AssetRevision(4),
+                    br#"<svg viewBox="0 0 1 1"></svg>"#,
+                )
+                .with_media_type("image/svg+xml"),
+            ],
+        );
+        resolver.insert_embedded_entries(
+            "fret-ui-shadcn",
+            [
+                StaticAssetEntry::new("fonts/ui-sans.ttf", AssetRevision(8), b"font-bytes")
+                    .with_media_type("font/ttf"),
+            ],
+        );
+
+        let bundle = resolver
+            .resolve_locator_bytes(AssetLocator::bundle("app", "images/logo.png"))
+            .expect("bundle asset should resolve");
+        let svg = resolver
+            .resolve_locator_bytes(AssetLocator::bundle("app", "icons/search.svg"))
+            .expect("svg asset should resolve");
+        let embedded = resolver
+            .resolve_locator_bytes(AssetLocator::embedded(
+                "fret-ui-shadcn",
+                "fonts/ui-sans.ttf",
+            ))
+            .expect("embedded asset should resolve");
+
+        assert_eq!(
+            bundle.media_type.as_ref().map(AssetMediaType::as_str),
+            Some("image/png")
+        );
+        assert_eq!(
+            svg.media_type.as_ref().map(AssetMediaType::as_str),
+            Some("image/svg+xml")
+        );
+        assert_eq!(
+            embedded.media_type.as_ref().map(AssetMediaType::as_str),
+            Some("font/ttf")
+        );
+        assert_eq!(embedded.revision, AssetRevision(8));
     }
 }
