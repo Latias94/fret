@@ -123,7 +123,7 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - final deprecation/removal posture for opaque legacy bundle strings
     - packaged/web/mobile tooling defaults that pick app vs package ownership automatically
 
-- [~] RESLOAD-core-125 Define ecosystem ownership rules for package resources and icon packs.
+- [x] RESLOAD-core-125 Define ecosystem ownership rules for package resources and icon packs.
   - Required outcomes:
     - package-owned images/SVGs/fonts default to `AssetBundleId::package(...)`,
     - apps compose ecosystem installer surfaces instead of redoing internal resource mounts,
@@ -159,11 +159,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       `ecosystem/fret-ui-kit/README.md`, `ecosystem/fret-ui-shadcn/README.md`,
       `ecosystem/fret-ui-material3/README.md`, `ecosystem/fret-icons-lucide/README.md`, and
       `ecosystem/fret-icons-radix/README.md`
-  - Remaining:
-    - first-party docs should show when bundle ownership belongs in the generated asset module vs a
-      hand-written higher-level recipe bundle that also composes icon packs
-    - first-party docs still need a cleaner “when to publish `Embedded` vs when to publish
-      `BundleAsset`” authoring note for reusable crates
+    - first-party docs now distinguish:
+      - when the generated `--surface fret` asset module is sufficient,
+      - when a hand-written higher-level installer/bundle surface should wrap it,
+      - and when reusable crates should publish `BundleAsset` vs keep bytes on the lower-level
+        `Embedded` lane
+    - cookbook teaching surfaces now model both sides:
+      - generated-module/public-bundle lane in
+        `apps/fret-cookbook/examples/app_owned_bundle_assets_basics.rs`
+      - hand-written higher-level installer composition lane in
+        `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 
 ## Packaging and startup
 

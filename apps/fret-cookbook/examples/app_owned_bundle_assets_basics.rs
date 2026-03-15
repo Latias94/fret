@@ -52,7 +52,11 @@ impl View for AppOwnedBundleAssetsBasicsView {
                     .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new("Scaffold equivalent: `generated_assets::mount(builder)`")
                     .variant(shadcn::BadgeVariant::Secondary),
+                shadcn::Badge::new("Generated module is enough when the crate only publishes shipped bytes")
+                    .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new("Lower-level builder seam: `FretApp::asset_entries(...)`")
+                    .variant(shadcn::BadgeVariant::Secondary),
+                shadcn::Badge::new("`BundleAsset` is the public lookup lane; `Embedded` stays lower-level")
                     .variant(shadcn::BadgeVariant::Secondary),
             ]
         })
@@ -72,7 +76,7 @@ impl View for AppOwnedBundleAssetsBasicsView {
                         cx;
                         shadcn::card_title("App-owned bundle assets basics"),
                         shadcn::card_description(
-                            "Demonstrates the compile-time portable app asset lane: register static `StaticAssetEntry` values on the builder path, then resolve image/SVG UI state through logical app bundle locators.",
+                            "Demonstrates the compile-time portable app asset lane: register static `StaticAssetEntry` values on the builder path, then resolve image/SVG UI state through logical app bundle locators. This is the generated-module lane to teach when a crate only publishes shipped bytes.",
                         ),
                     ]
                 }),
