@@ -2,6 +2,7 @@ use fret::{
     FretApp,
     advanced::prelude::*,
     assets::{self, AssetBundleId, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry},
+    integration::InstallIntoApp,
     shadcn,
 };
 use fret_core::{ImageColorSpace, ImageId};
@@ -16,13 +17,32 @@ const TEST_ID_PANEL_IMAGE: &str = "cookbook.icons_and_assets_basics.panel.image"
 const TEST_ID_IMAGE_STATUS: &str = "cookbook.icons_and_assets_basics.image.status";
 const TEST_ID_SVG_STATUS: &str = "cookbook.icons_and_assets_basics.svg.status";
 
-const COOKBOOK_IMAGE_KEY: &str = "images/test.jpg";
-const COOKBOOK_SVG_KEY: &str = "icons/search.svg";
-const COOKBOOK_IMAGE_BYTES: &[u8] = include_bytes!("../../../assets/textures/test.jpg");
-const COOKBOOK_SVG_BYTES: &[u8] = include_bytes!("../../../assets/demo/icon-search.svg");
+const PACKAGE_ASSET_BUNDLE_NAME: &str = "cookbook-icons-demo";
+const PACKAGE_IMAGE_KEY: &str = "images/test.jpg";
+const PACKAGE_SVG_KEY: &str = "icons/search.svg";
+const PACKAGE_IMAGE_BYTES: &[u8] = include_bytes!("../../../assets/textures/test.jpg");
+const PACKAGE_SVG_BYTES: &[u8] = include_bytes!("../../../assets/demo/icon-search.svg");
+const PACKAGE_ASSET_ENTRIES: [StaticAssetEntry; 2] = [
+    StaticAssetEntry::new(PACKAGE_IMAGE_KEY, AssetRevision(1), PACKAGE_IMAGE_BYTES)
+        .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(PACKAGE_SVG_KEY, AssetRevision(1), PACKAGE_SVG_BYTES)
+        .with_media_type("image/svg+xml"),
+];
 
-fn cookbook_asset_bundle() -> AssetBundleId {
-    AssetBundleId::app("fret-cookbook")
+fn demo_package_bundle() -> AssetBundleId {
+    // Model a reusable ecosystem crate by using a package-scoped bundle id rather than the host
+    // app bundle id.
+    AssetBundleId::package(PACKAGE_ASSET_BUNDLE_NAME)
+}
+
+struct IconsAndAssetsBundle;
+
+impl InstallIntoApp for IconsAndAssetsBundle {
+    fn install_into_app(self, app: &mut fret::app::App) {
+        shadcn::app::install(app);
+        fret_icons_lucide::app::install(app);
+        assets::register_bundle_entries(app, demo_package_bundle(), PACKAGE_ASSET_ENTRIES);
+    }
 }
 
 fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
@@ -77,19 +97,6 @@ fn render_image_preview(
         .w_full()
 }
 
-fn install_demo_asset_resolver(app: &mut KernelApp) {
-    assets::register_bundle_entries(
-        app,
-        cookbook_asset_bundle(),
-        [
-            StaticAssetEntry::new(COOKBOOK_IMAGE_KEY, AssetRevision(1), COOKBOOK_IMAGE_BYTES)
-                .with_media_type("image/jpeg"),
-            StaticAssetEntry::new(COOKBOOK_SVG_KEY, AssetRevision(1), COOKBOOK_SVG_BYTES)
-                .with_media_type("image/svg+xml"),
-        ],
-    );
-}
-
 struct IconsAndAssetsBasicsView {
     bundle_image: fret_ui_assets::ImageSource,
     memory_image: fret_ui_assets::ImageSource,
@@ -98,34 +105,19 @@ struct IconsAndAssetsBasicsView {
 
 impl View for IconsAndAssetsBasicsView {
     fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        // Ensure the UI assets caches exist and set budgets explicitly (optional).
-        fret_ui_assets::UiAssets::configure(
-            app,
-            fret_ui_assets::UiAssetsBudgets {
-                image_budget_bytes: 32 * 1024 * 1024,
-                image_max_ready_entries: 1024,
-                svg_budget_bytes: 8 * 1024 * 1024,
-                svg_max_ready_entries: 2048,
-            },
-        );
-
-        install_demo_asset_resolver(app);
-
         let bundle_image = fret_ui_assets::resolve_image_source_from_host_locator(
             app,
-            AssetLocator::bundle(cookbook_asset_bundle(), COOKBOOK_IMAGE_KEY),
+            AssetLocator::bundle(demo_package_bundle(), PACKAGE_IMAGE_KEY),
         )
-        .expect("cookbook bundle image should resolve");
+        .expect("package bundle image should resolve");
         let memory_image = fret_ui_assets::ImageSource::rgba8(
             128,
             128,
             checkerboard_rgba8(128, 128, 16),
             ImageColorSpace::Srgb,
         );
-        let svg_request = AssetRequest::new(AssetLocator::bundle(
-            cookbook_asset_bundle(),
-            COOKBOOK_SVG_KEY,
-        ));
+        let svg_request =
+            AssetRequest::new(AssetLocator::bundle(demo_package_bundle(), PACKAGE_SVG_KEY));
 
         Self {
             bundle_image,
@@ -142,14 +134,16 @@ impl View for IconsAndAssetsBasicsView {
                 cx;
                 shadcn::card_title("Icons + assets basics"),
                 shadcn::card_description(
-                    "Icon packs (lucide), semantic ui.* aliases, and logical bundle assets resolved through the `fret::assets` facade.",
+                    "A reusable bundle installs lucide icons plus package-owned logical assets behind one `.setup(...)` value.",
                 ),
             ]
         });
 
         let callouts = ui::h_flex(|cx| {
             ui::children![cx;
-                shadcn::Badge::new("Bundle locator: no repo-relative filesystem assumption")
+                shadcn::Badge::new("Package bundle locator: reusable crate-owned asset namespace")
+                    .variant(shadcn::BadgeVariant::Secondary),
+                shadcn::Badge::new("App setup bundle: installs transitive icon + asset globals")
                     .variant(shadcn::BadgeVariant::Secondary),
                 shadcn::Badge::new("RGBA8 source: deterministic in-memory escape hatch")
                     .variant(shadcn::BadgeVariant::Secondary)
@@ -302,17 +296,17 @@ impl View for IconsAndAssetsBasicsView {
                                 })
                                 .gap(Space::N2)
                                 .items_center(),
-                                ui::h_flex(|cx| {
-                                    ui::children![
-                                        cx;
-                                        render_image_preview(
-                                            cx,
-                                            "From bundle locator: `cookbook.demo_assets/images/test.jpg`",
-                                            bundle_image_state.image,
-                                        ),
-                                        render_image_preview(
-                                            cx,
-                                            "From RGBA8 buffer",
+                        ui::h_flex(|cx| {
+                            ui::children![
+                                cx;
+                                render_image_preview(
+                                    cx,
+                                    "From package bundle locator: `pkg:cookbook-icons-demo/images/test.jpg`",
+                                    bundle_image_state.image,
+                                ),
+                                render_image_preview(
+                                    cx,
+                                    "From RGBA8 buffer",
                                             memory_image_state.image,
                                         ),
                                     ]
@@ -368,7 +362,7 @@ impl View for IconsAndAssetsBasicsView {
                         cx;
                         shadcn::card_title("SVG icon from bundle locator"),
                         shadcn::card_description(
-                            "Resolves an SVG byte asset through the host asset resolver instead of reading from a raw filesystem path.",
+                            "Resolves an SVG byte asset through the package bundle registration instead of reading from a raw filesystem path.",
                         ),
                     ]
                 }),
@@ -428,10 +422,11 @@ impl View for IconsAndAssetsBasicsView {
 
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-icons-and-assets-basics")
+        .ui_assets_budgets(32 * 1024 * 1024, 1024, 8 * 1024 * 1024, 2048)
         .window("cookbook-icons-and-assets-basics", (960.0, 860.0))
         .setup((
+            IconsAndAssetsBundle,
             fret_cookbook::install_cookbook_defaults,
-            fret_icons_lucide::app::install,
         ))
         .view::<IconsAndAssetsBasicsView>()?
         .run()

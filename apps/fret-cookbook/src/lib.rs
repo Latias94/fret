@@ -423,6 +423,33 @@ mod authoring_surface_policy_tests {
         assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().watch(&enabled_state)"));
 
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("icon::IconSvgPreloadDiagnostics"));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("integration::InstallIntoApp"));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("impl InstallIntoApp for IconsAndAssetsBundle"));
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("PACKAGE_ASSET_BUNDLE_NAME: &str = \"cookbook-icons-demo\"")
+        );
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE.contains("AssetBundleId::package(PACKAGE_ASSET_BUNDLE_NAME)")
+        );
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("assets::register_bundle_entries"));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains(".ui_assets_budgets("));
+        assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("UiAssets::configure("));
+        assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("AssetBundleId::app(\"fret-cookbook\")"));
+        let icons_and_assets_normalized = ICONS_AND_ASSETS_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+        assert!(
+            icons_and_assets_normalized
+                .contains(".setup((IconsAndAssetsBundle,fret_cookbook::install_cookbook_defaults")
+        );
+        assert!(!icons_and_assets_normalized.contains(
+            ".setup((fret_cookbook::install_cookbook_defaults,fret_icons_lucide::app::install))"
+        ));
+        assert!(
+            !icons_and_assets_normalized
+                .contains(".setup((shadcn::app::install,fret_icons_lucide::app::install))")
+        );
 
         assert!(
             ASSETS_RELOAD_EPOCH_EXAMPLE
