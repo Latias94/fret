@@ -67,6 +67,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `AssetResolver` / `ResolvedAssetBytes` in `crates/fret-assets`
     - `StaticAssetEntry` plus bulk `InMemoryAssetResolver::insert_*_entries(...)`
+    - native/package-dev file-backed manifest resolver in
+      `crates/fret-assets/src/file_manifest.rs`
     - composable runtime host mounting via `crates/fret-runtime/src/asset_resolver.rs`
       (`register_asset_resolver`, `register_bundle_asset_entries`,
       `register_embedded_asset_entries`)
@@ -147,10 +149,12 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `ecosystem/fret/src/lib.rs` now exposes `fret::assets`
     - app-facing registration helpers exist on the facade
       (`register_bundle_entries`, `register_embedded_entries`, `register_resolver`)
+    - `register_file_manifest(...)` now exposes the first native/package-dev manifest lane on the
+      app-facing facade
     - cookbook asset basics now teaches the facade lane instead of direct
       `fret-assets` / `fret-runtime` imports
   - Remaining:
-    - first-party packaged/dev manifest resolver
+    - broader first-party packaged/web/mobile manifest tooling story
     - ecosystem-oriented bundle identity guidance
     - final migration of first-party templates/gallery surfaces
 

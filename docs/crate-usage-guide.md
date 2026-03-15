@@ -135,6 +135,9 @@ Do the same for logical assets: import them intentionally from `fret::assets::{.
 `AssetLocator::bundle(...)` plus `register_bundle_entries(...)` as the portable default story, and
 keep `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape
 hatches.
+On native/package-dev lanes, `fret::assets::register_file_manifest(...)` is the first-party
+file-backed manifest path when you need logical bundle keys to map to packaged or dev-time files
+without teaching raw repo-relative paths in app/widget code.
 
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now

@@ -21,6 +21,15 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
+mod file_manifest;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use file_manifest::FileAssetManifestResolver;
+pub use file_manifest::{
+    AssetManifestLoadError, FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1,
+    FileAssetManifestEntryV1, FileAssetManifestV1,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AssetLocatorKind {
     Memory,

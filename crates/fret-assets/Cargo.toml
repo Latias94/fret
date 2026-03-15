@@ -12,5 +12,6 @@ description = "Portable asset identity, capability, revision, and request vocabu
 
 [dependencies]
 serde.workspace = true
+serde_json.workspace = true
 smol_str.workspace = true
 thiserror.workspace = true

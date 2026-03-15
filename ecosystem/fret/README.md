@@ -125,6 +125,8 @@ Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
 For logical assets, use `fret::assets::{...}` and prefer `AssetLocator::bundle(...)` /
 `register_bundle_entries(...)`; keep `AssetLocator::file(...)` and `AssetLocator::url(...)` as
 capability-gated escape hatches.
+On native/package-dev lanes, `fret::assets::register_file_manifest(...)` can mount a
+file-backed bundle manifest without pushing repo-relative paths into widget code.
 
 ## Features
 

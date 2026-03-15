@@ -55,6 +55,11 @@ This workstream takes a fearless posture:
     directly,
   - bundle/embedded registration now has an app-facing authoring lane
     (`register_bundle_entries(...)`, `register_embedded_entries(...)`).
+- A first native/package-dev manifest resolver now exists:
+  - `crates/fret-assets/src/file_manifest.rs` defines a file-backed bundle manifest format and
+    resolver,
+  - `fret::assets::register_file_manifest(...)` mounts that resolver on the app-facing facade
+    without teaching repo-relative paths in widget code.
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.
