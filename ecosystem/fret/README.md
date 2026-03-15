@@ -122,6 +122,9 @@ If app code needs explicit style/token nouns or icon IDs beyond the default lane
 `fret::app::prelude::*`.
 For adaptive UI helpers such as breakpoints, safe-area insets, pointer/media preferences, or
 Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
+For logical assets, use `fret::assets::{...}` and prefer `AssetLocator::bundle(...)` /
+`register_bundle_entries(...)`; keep `AssetLocator::file(...)` and `AssetLocator::url(...)` as
+capability-gated escape hatches.
 
 ## Features
 

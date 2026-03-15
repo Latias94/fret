@@ -92,6 +92,7 @@ thiserror.workspace = true
 fret-framework = { version = "0.1.0", path = "../../crates/fret-framework", package = "fret-framework", optional = true, default-features = false }
 
 # Golden-path wiring and optional ecosystem integrations.
+fret-assets = { version = "0.1.0", path = "../../crates/fret-assets" }
 fret-bootstrap = { version = "0.1.0", path = "../fret-bootstrap", default-features = false }
 fret-docking = { version = "0.1.0", path = "../fret-docking", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }

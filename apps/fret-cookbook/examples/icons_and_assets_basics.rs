@@ -1,5 +1,9 @@
-use fret::{FretApp, advanced::prelude::*, shadcn};
-use fret_assets::{AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry};
+use fret::{
+    FretApp,
+    advanced::prelude::*,
+    assets::{self, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry},
+    shadcn,
+};
 use fret_core::{ImageColorSpace, ImageId};
 use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, LayoutStyle, SvgIconProps};
@@ -71,7 +75,7 @@ fn render_image_preview(
 }
 
 fn install_demo_asset_resolver(app: &mut KernelApp) {
-    fret_runtime::register_bundle_asset_entries(
+    assets::register_bundle_entries(
         app,
         COOKBOOK_ASSET_BUNDLE,
         [
@@ -135,7 +139,7 @@ impl View for IconsAndAssetsBasicsView {
                 cx;
                 shadcn::card_title("Icons + assets basics"),
                 shadcn::card_description(
-                    "Icon packs (lucide), semantic ui.* aliases, and logical bundle assets resolved through a host-installed asset resolver.",
+                    "Icon packs (lucide), semantic ui.* aliases, and logical bundle assets resolved through the `fret::assets` facade.",
                 ),
             ]
         });

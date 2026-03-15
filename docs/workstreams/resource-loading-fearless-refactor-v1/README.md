@@ -50,6 +50,11 @@ This workstream takes a fearless posture:
   - The host service is composable instead of replace-only:
     - multiple resolver layers can be registered,
     - static bundle/embedded entries can be registered incrementally by app or ecosystem code.
+- The app-facing `fret` facade now exposes `fret::assets`:
+  - logical asset vocabulary is reachable without importing `fret-assets` / `fret-runtime`
+    directly,
+  - bundle/embedded registration now has an app-facing authoring lane
+    (`register_bundle_entries(...)`, `register_embedded_entries(...)`).
 - `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
   image and SVG bytes, while keeping the existing async image invalidation ergonomics.
 - Legacy file-path helpers still exist only as migration/dev/native compatibility shims.

@@ -138,11 +138,21 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `ecosystem/fret-ui-assets/src/app.rs`
     - `ecosystem/fret-ui-assets/src/advanced.rs`
 
-- [ ] RESLOAD-api-510 Design the golden-path authoring API for app and ecosystem authors.
+- [~] RESLOAD-api-510 Design the golden-path authoring API for app and ecosystem authors.
   - Target qualities:
     - logical-key first,
     - no filesystem assumptions,
     - easy escape hatches for file/url when explicitly needed.
+  - Current landed slice:
+    - `ecosystem/fret/src/lib.rs` now exposes `fret::assets`
+    - app-facing registration helpers exist on the facade
+      (`register_bundle_entries`, `register_embedded_entries`, `register_resolver`)
+    - cookbook asset basics now teaches the facade lane instead of direct
+      `fret-assets` / `fret-runtime` imports
+  - Remaining:
+    - first-party packaged/dev manifest resolver
+    - ecosystem-oriented bundle identity guidance
+    - final migration of first-party templates/gallery surfaces
 
 - [~] RESLOAD-api-520 Remove path-first asset loading from cookbook/gallery/bootstrap teaching
       surfaces.

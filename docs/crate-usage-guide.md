@@ -131,6 +131,10 @@ When app code needs explicit styling or icon nouns, keep them off the default pr
 them intentionally from `fret::style::{...}` and `fret::icons::IconId`.
 Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
 instead of treating breakpoint/media helpers as part of the default app vocabulary.
+Do the same for logical assets: import them intentionally from `fret::assets::{...}`, prefer
+`AssetLocator::bundle(...)` plus `register_bundle_entries(...)` as the portable default story, and
+keep `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape
+hatches.
 
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
@@ -390,7 +394,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Recommended integration:**
 
-- **Apps:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
+- **Apps using `fret`:** keep logical asset identity on `fret::assets::{AssetLocator, AssetRequest, StaticAssetEntry, register_bundle_entries, register_embedded_entries, ...}` and enable
+  `fret`'s `ui-assets` feature when you want the default image/SVG caches driven from the event pipeline.
+- **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or
   `fret_ui_assets::app::configure_caches_with_budgets(...)`; keep
