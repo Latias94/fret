@@ -447,16 +447,23 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - app-owned compile-time bundle assets,
       - package-owned reusable bundle assets,
       - native/package-dev reload via bundle-dir mounting.
+    - UI Gallery `Card / Image` now resolves its cover through a gallery-owned logical package
+      bundle request installed during app startup, so at least one first-party docs page teaches
+      shipped asset ownership via `AssetRequest` instead of only inline RGBA demo buffers.
   - Evidence:
     - `apps/fret-cookbook/examples/app_owned_bundle_assets_basics.rs`
     - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
     - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+    - `apps/fret-ui-gallery/src/driver/demo_assets.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/card/image.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/card.rs`
     - `apps/fretboard/src/scaffold/templates.rs`
       (`todo_template_mounts_generated_assets_when_ui_assets_are_enabled`,
       `simple_todo_template_mounts_generated_assets_when_ui_assets_are_enabled`)
   - Remaining:
-    - migrate UI Gallery snippets/pages that still rely on inline demo image buffers when the
-      intent is to teach shipped asset ownership rather than deterministic in-memory rendering,
+    - continue migrating UI Gallery snippets/pages that still rely on inline demo image buffers
+      when the intent is to teach shipped asset ownership rather than deterministic in-memory
+      rendering,
     - audit shadcn ecosystem recipes that ship icons/images so package-owned installers stay the
       default app integration story,
     - document the transitive icon-pack + package-bundle composition story for ecosystem crates so

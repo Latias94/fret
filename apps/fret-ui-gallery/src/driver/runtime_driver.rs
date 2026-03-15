@@ -46,7 +46,7 @@ mod app_bootstrap;
 mod chrome;
 mod debug_hud;
 mod debug_stats;
-mod demo_assets;
+pub(crate) mod demo_assets;
 mod diag_snapshot;
 mod inspector;
 mod menu_runtime;
@@ -896,6 +896,8 @@ pub fn build_app() -> App {
         app.set_global(frozen);
     });
 
+    demo_assets::install_gallery_demo_asset_bundle(&mut app);
+
     let project_root = ui_gallery_project_root();
     let config_paths = LayeredConfigPaths::for_project_root(&project_root);
     if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
@@ -1422,10 +1424,9 @@ impl WinitAppDriver for UiGalleryDriver {
 
                 let os = Self::menu_bar_mode_from_key(os.as_deref());
                 let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
-                let common_fallback_injection =
-                    Self::text_common_fallback_injection_from_key(
-                        common_fallback_injection.as_deref(),
-                    );
+                let common_fallback_injection = Self::text_common_fallback_injection_from_key(
+                    common_fallback_injection.as_deref(),
+                );
                 Self::apply_settings_sheet_values(app, os, in_window, common_fallback_injection);
                 Self::sync_menu_bar_after_state_change(app, window);
                 Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
@@ -1472,10 +1473,9 @@ impl WinitAppDriver for UiGalleryDriver {
 
                     let os = Self::menu_bar_mode_from_key(os.as_deref());
                     let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
-                    let common_fallback_injection =
-                        Self::text_common_fallback_injection_from_key(
-                            common_fallback_injection.as_deref(),
-                        );
+                    let common_fallback_injection = Self::text_common_fallback_injection_from_key(
+                        common_fallback_injection.as_deref(),
+                    );
 
                     let result = Self::write_project_settings_snapshot(
                         os,

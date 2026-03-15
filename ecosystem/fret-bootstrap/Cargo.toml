@@ -47,6 +47,7 @@ slotmap.workspace = true
 blake3.workspace = true
 
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+fret-assets = { version = "0.1.0", path = "../../crates/fret-assets" }
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 fret-i18n = { version = "0.1.0", path = "../../crates/fret-i18n" }
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }

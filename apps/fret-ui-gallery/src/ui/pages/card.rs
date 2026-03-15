@@ -224,7 +224,7 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id_prefix("ui-gallery-card-section-image")
             .no_shell()
             .max_w(Px(980.0))
-            .description("Media-first card with a featured badge and footer action.");
+            .description("Media-first card with a featured badge and footer action, backed by a logical package bundle asset.");
         sections.push(with_card_code(section, snippets::image::SOURCE));
     }
     if (bisect & BISECT_DISABLE_CARD_SECTION_RTL) == 0 {
@@ -273,7 +273,7 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Grid/flex demo pages should put `w_full`, `min_w_0`, and `max_w(...)` on the page cell rather than baking them into the Card recipe.",
             "`CardFooter` now owns a fill-width + `min-w-0` inner row/column budget so footer-only text wraps against the card width instead of collapsing into one word per line.",
             "Default first-party teaching should prefer `card(...)` plus the slot helper family; `Card::build(...)` remains a lower-level builder option when call sites need explicit late child collection.",
-            "MediaImage demos use `ImageSourceElementContextExt` to resolve local/URL image sources into `ImageId`.",
+            "The Image section now resolves its cover image from a gallery-owned logical package bundle, so the teaching surface reflects shipped asset ownership rather than inline demo RGBA buffers.",
         ]);
         sections.push(
             DocSection::build(cx, "Notes", notes)

@@ -1,4 +1,5 @@
 use super::*;
+use fret::assets::{AssetBundleId, AssetLocator, AssetRequest, AssetRevision, StaticAssetEntry};
 
 impl UiGalleryDriver {
     pub(crate) const AVATAR_DEMO_IMAGE_WIDTH: u32 = 96;
@@ -118,5 +119,65 @@ impl UiGalleryDriver {
         }
 
         out
+    }
+}
+
+pub(crate) const UI_GALLERY_DEMO_ASSET_BUNDLE_NAME: &str = "ui-gallery-demo-assets";
+pub(crate) const UI_GALLERY_CARD_EVENT_COVER_KEY: &str = "card/event-cover.jpg";
+
+const UI_GALLERY_CARD_EVENT_COVER_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/test.jpg");
+const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 1] = [StaticAssetEntry::new(
+    UI_GALLERY_CARD_EVENT_COVER_KEY,
+    AssetRevision(1),
+    UI_GALLERY_CARD_EVENT_COVER_BYTES,
+)
+.with_media_type("image/jpeg")];
+
+pub(crate) fn ui_gallery_demo_asset_bundle() -> AssetBundleId {
+    AssetBundleId::package(UI_GALLERY_DEMO_ASSET_BUNDLE_NAME)
+}
+
+pub(crate) fn ui_gallery_card_event_cover_request() -> AssetRequest {
+    AssetRequest::new(AssetLocator::bundle(
+        ui_gallery_demo_asset_bundle(),
+        UI_GALLERY_CARD_EVENT_COVER_KEY,
+    ))
+}
+
+pub(crate) fn install_gallery_demo_asset_bundle(app: &mut App) {
+    fret::assets::register_bundle_entries(
+        app,
+        ui_gallery_demo_asset_bundle(),
+        UI_GALLERY_DEMO_ASSET_ENTRIES,
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn install_gallery_demo_asset_bundle_registers_card_cover_locator() {
+        let mut app = App::new();
+
+        install_gallery_demo_asset_bundle(&mut app);
+
+        let resolved =
+            fret_runtime::resolve_asset_bytes(&app, &ui_gallery_card_event_cover_request())
+                .expect("expected UI Gallery demo asset bundle to resolve");
+        assert_eq!(
+            resolved.locator,
+            ui_gallery_card_event_cover_request().locator
+        );
+        assert_eq!(resolved.revision, AssetRevision(1));
+        assert_eq!(resolved.bytes.as_ref(), UI_GALLERY_CARD_EVENT_COVER_BYTES);
+        assert_eq!(
+            resolved
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/jpeg")
+        );
     }
 }

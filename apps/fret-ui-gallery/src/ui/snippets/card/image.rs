@@ -2,69 +2,12 @@ pub const SOURCE: &str = include_str!("image.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::{Color as CoreColor, ImageColorSpace};
+use fret_core::Color as CoreColor;
 use fret_ui::Theme;
-use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
-
-fn demo_event_cover_source() -> &'static ImageSource {
-    static SOURCE: OnceLock<ImageSource> = OnceLock::new();
-    SOURCE.get_or_init(|| {
-        // Keep the snippet self-contained instead of depending on repo-relative demo assets.
-        ImageSource::rgba8(
-            320,
-            180,
-            demo_event_cover_rgba8(320, 180),
-            ImageColorSpace::Srgb,
-        )
-    })
-}
-
-fn demo_event_cover_rgba8(width: u32, height: u32) -> Vec<u8> {
-    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
-    let width_f = (width.saturating_sub(1)).max(1) as f32;
-    let height_f = (height.saturating_sub(1)).max(1) as f32;
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
-            let fx = x as f32 / width_f;
-            let fy = y as f32 / height_f;
-
-            let mut r = (18.0 + 72.0 * fx) as u8;
-            let mut g = (24.0 + 124.0 * (1.0 - fy)) as u8;
-            let mut b = (44.0 + 156.0 * fy) as u8;
-
-            let border = x < 3 || y < 3 || x + 3 >= width || y + 3 >= height;
-            let banner = y > height / 5 && y < (height * 2) / 5;
-            let focus =
-                x > width / 6 && x < (width * 3) / 5 && y > height / 4 && y < (height * 4) / 5;
-
-            if border {
-                r = 245;
-                g = 245;
-                b = 245;
-            } else if banner {
-                r = r.saturating_add(14);
-                g = g.saturating_add(14);
-                b = b.saturating_add(10);
-            } else if focus {
-                r = r.saturating_add(24);
-                g = g.saturating_add(24);
-                b = b.saturating_add(24);
-            }
-
-            out[idx] = r;
-            out[idx + 1] = g;
-            out[idx + 2] = b;
-            out[idx + 3] = 255;
-        }
-    }
-
-    out
-}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -88,7 +31,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .is_some_and(|v| !v.is_empty())
             });
 
-            let event_cover_state = cx.use_image_source_state(demo_event_cover_source());
+            let event_cover_request = crate::driver::demo_assets::ui_gallery_card_event_cover_request();
+            let event_cover_state =
+                cx.use_image_source_state_from_asset_request(&event_cover_request);
             let event_cover = event_cover_state.image;
             let event_cover_source_available = true;
             let event_cover_state = Some(event_cover_state);
@@ -137,7 +82,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .unwrap_or("-");
 
                 let text: Arc<str> = Arc::from(format!(
-                    "event_cover: status={status} image={has_image} intrinsic={intrinsic} source_available={event_cover_source_available} err={error}"
+                    "event_cover: status={status} image={has_image} intrinsic={intrinsic} source_available={event_cover_source_available} locator={:?} err={error}",
+                    event_cover_request.locator
                 ));
                 Some(
                     shadcn::Badge::new(text)
@@ -184,7 +130,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_action(|cx| ui::children![cx; featured]),
                     shadcn::card_title("Design systems meetup"),
                     shadcn::card_description(
-                        "A practical talk on component APIs, accessibility, and shipping faster.",
+                        "A practical talk on component APIs, accessibility, and shipping faster. The cover image resolves through a logical package bundle request instead of an inline demo buffer.",
                     ),
                 ]
             }),
