@@ -120,8 +120,16 @@ surface.
   - Extended on 2026-03-11:
     `fret-ui-shadcn` now keeps environment sync and `UiServices` helpers on
     `fret_ui_shadcn::advanced::*`, leaving `fret_ui_shadcn::app::*` for default theme setup only.
-- [ ] Audit first-party crates for ad-hoc panel/route/query integration helpers that should move to
+- [x] Audit first-party crates for ad-hoc panel/route/query integration helpers that should move to
   one of the target seams.
+  - Audit result on 2026-03-15:
+    first-party panel surfaces now route through `DockPanelFactory` /
+    `DockPanelRegistryBuilder`,
+    typed route integration stays on `RouteCodec`,
+    `ecosystem/fret-router/src/query_integration.rs` remains a route-key helper surface rather
+    than a new adapter contract,
+    and `ecosystem/fret-authoring/src/query.rs::UiWriterQueryExt` remains an authoring-local query
+    wrapper rather than a shared ecosystem integration seam.
 - [ ] Audit reusable helper signatures in first-party ecosystem crates so each public helper is
   classified by lane:
   - app-facing teaching helpers use `Ui` / `UiChild`,
@@ -148,8 +156,13 @@ surface.
 - [ ] Migrate first-party "app integration pack" examples to use one consistent bundle story.
   - First landed example on 2026-03-11: `apps/fret-cookbook/examples/docking_basics.rs` now uses
     `DockingBasicsBundle` via `.setup(DockingBasicsBundle)`.
-- [ ] Keep advanced builder-only install paths explicit; do not let them leak onto the default app
+- [x] Keep advanced builder-only install paths explicit; do not let them leak onto the default app
   path.
+  - Evidence on 2026-03-15:
+    `ecosystem/fret/src/lib.rs` and `docs/crate-usage-guide.md` explicitly reserve
+    `UiAppBuilder::setup_with(...)` for one-off inline closures or captured runtime values,
+    while `apps/fret-cookbook/src/lib.rs` source gates reject `.setup_with(...)` on the default
+    app-author teaching surface.
 
 ## 4. `CommandCatalog` Adoption
 
@@ -165,9 +178,12 @@ surface.
   registered `CommandId`s.
   - Current shape stores `CommandId` on data-only catalog items and lets recipe crates decide how
     to surface activation UI.
-- [ ] Document when a plain `CommandMeta` is sufficient and when a catalog source is warranted.
-  - Follow-up: this should be written once command palette, menu, and any future non-shadcn
-    command surfaces share the same guidance.
+- [x] Document when a plain `CommandMeta` is sufficient and when a catalog source is warranted.
+  - Landed on 2026-03-15 in `TARGET_INTERFACE_STATE.md` and `docs/crate-usage-guide.md`.
+  - Current rule:
+    plain `CommandMeta` is enough for normal registration, keybindings, menus, and shared command
+    identity; `CommandCatalog` is for grouped or enriched discovery surfaces that need more than a
+    flat registry listing.
 
 ## 5. `RouteCodec` Adoption
 
@@ -263,8 +279,15 @@ surface.
   - `TARGET_INTERFACE_STATE.md` and `MIGRATION_MATRIX.md` now record the concrete first-party
     evidence set for `InstallIntoApp`, `CommandCatalog`, `RouteCodec`, and `DockPanelFactory`,
     plus the v1 defer evidence for `QueryAdapter`.
-- [ ] Keep first-party ecosystem docs/examples aligned with the follow-on conversion-surface
+- [x] Keep first-party ecosystem docs/examples aligned with the follow-on conversion-surface
   tracker so trait adoption does not re-teach the legacy split conversion traits.
+  - Evidence on 2026-03-15:
+    `docs/crate-usage-guide.md`,
+    `docs/roadmap.md`,
+    and `docs/shadcn-declarative-progress.md`
+    all point first-party ecosystem guidance at the unified `IntoUiElement<H>` conversion story
+    and the `into-element-surface-fearless-refactor-v1` target state instead of re-teaching the
+    legacy split conversion vocabulary.
 
 ## 9. Hard Deletion Work
 
@@ -273,7 +296,11 @@ surface.
     root-level ecosystem `install_app(...)` exports are gone on the targeted first-party crates;
     remaining `install_app` spellings are local app helper functions or the app-owned bootstrap
     builder method, so they are no longer part of the mixed ecosystem naming story.
-- [ ] Delete legacy docs that imply every ecosystem crate should expose the same plugin shape.
+- [x] Delete legacy docs that imply every ecosystem crate should expose the same plugin shape.
+  - Audit result on 2026-03-15:
+    no targeted first-party guidance now implies a universal ecosystem plugin model.
+    Remaining `Plugin` references are app-owned (`fret-app::Plugin`) or domain-local
+    (`GizmoPlugin`) and are explicitly not treated as the default ecosystem extension template.
 - [ ] Delete any temporary adapters that survive after official examples and templates no longer
   need them.
 - [ ] Keep the migration matrix updated until all tracked old postures are either deleted or

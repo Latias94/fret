@@ -218,6 +218,14 @@ Reason:
 - an actual `CommandCatalog` trait should only be added once a second non-shadcn consumer needs a
   shared source interface.
 
+`CommandMeta` vs `CommandCatalog` rule:
+
+- plain `CommandMeta` is sufficient when a command only needs normal registration, keybindings,
+  menu identity, and command-palette discoverability via the shared host registry,
+- use `CommandCatalog` data when a surface needs richer grouped or transformed discovery entries
+  beyond a flat registry listing, for example grouped sections, extra aliases, or recipe-specific
+  catalog shaping before rendering.
+
 ### 4.2 `fret-app::Plugin` target posture
 
 Current role:
@@ -229,6 +237,13 @@ Target posture:
 - keep it app-owned and minimal,
 - do not expand it into the universal ecosystem extension model,
 - let it coexist with smaller domain traits where the ownership problem is different.
+
+Clarification:
+
+- domain-local plugin traits such as `GizmoPlugin` are acceptable when they solve a local subsystem
+  problem,
+- they should not be treated as precedent for a repo-wide "every ecosystem crate exposes a plugin"
+  model.
 
 ## 5. Rejected Interface State
 
