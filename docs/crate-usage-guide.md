@@ -183,6 +183,11 @@ remain the packaged lane because they already expose `ENTRIES`, `bundle_id()`, `
 `install(app)`, and `mount(builder)`. Keep `FretApp::asset_dir(...)` /
 `UiAppBuilder::with_asset_dir(...)` as the lower-level native/package-dev convenience lane when
 you only need one lane or intentionally custom layering.
+When you are on `fret-bootstrap` directly instead of `fret`, use the same startup contract from
+`fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
+`BootstrapBuilder::with_asset_startup(...)`; the bootstrap crate also exposes the matching
+lower-level builder helpers `with_asset_dir(...)`, `with_asset_manifest(...)`,
+`with_bundle_asset_entries(...)`, and `with_embedded_asset_entries(...)`.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
 without teaching raw repo-relative paths in app/widget code.
@@ -514,7 +519,13 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`,
   so later registrations intentionally override earlier ones for the same logical locator.
 - **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
-  budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
+  budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`. Keep logical asset identity on
+  `fret_bootstrap::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`.
+  For startup that needs one explicit development-vs-packaged switch, prefer
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
+  `BootstrapBuilder::with_asset_startup(...)`. Keep `with_asset_dir(...)` /
+  `with_asset_manifest(...)` for native/package-dev file-backed inputs and
+  `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` for packaged bytes.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or
   `fret_ui_assets::app::configure_caches_with_budgets(...)`; keep
   `fret_ui_assets::advanced::{configure_caches_with_ui_services(...), configure_caches_with_ui_services_and_budgets(...)}`
@@ -538,6 +549,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **Use it when:** you want:
 
 - layered settings/keymap loading,
+- the same named asset startup contract as `fret`, via
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` and
+  `BootstrapBuilder::with_asset_startup(...)`,
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
 - optional command palette integration,

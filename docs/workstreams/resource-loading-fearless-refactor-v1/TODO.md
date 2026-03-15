@@ -182,6 +182,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `fret::assets::{AssetStartupPlan, AssetStartupMode}` now gives the `fret` facade one named
       startup policy object for selecting development vs packaged publication on the builder path,
+    - `fret-bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now gives direct bootstrap
+      users the same named policy object and keeps `BootstrapBuilder::with_asset_startup(...)` on
+      the non-`fret` builder path,
     - `FretApp::asset_startup(...)` lowers that policy onto the default app-facing startup
       surface while preserving fail-early builder semantics,
     - `UiAppBuilder::with_asset_startup(...)` keeps the same policy available on the explicit
@@ -201,8 +204,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       through to ad-hoc runtime glue.
   - Remaining:
     - watcher/hot-reload policy is still implicit in the native file-manifest resolver layer,
-    - `fret-launch` / `fret-bootstrap` still do not publish an equivalent shared build-profile
-      contract for non-`fret` startup surfaces.
+    - `fret-launch` still does not publish an equivalent shared build-profile contract for the
+      lowest-level non-bootstrap startup surface.
 
 - [~] RESLOAD-pack-210 Define the bootstrap/build-tool integration point.
   - Candidates:
@@ -216,6 +219,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       (`AssetStartupMode::preferred()` and
       `AssetStartupPlan::development_bundle_dir_if_native(...)`) so non-scaffolded `fret` apps
       can reuse the same native-debug vs packaged defaults as generated modules,
+    - `ecosystem/fret-bootstrap` now exposes the same startup contract for direct bootstrap users
+      through `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` and
+      `BootstrapBuilder::with_asset_startup(...)`,
     - generated `--surface fret` modules now expose startup-policy helpers
       (`preferred_startup_plan()`, `preferred_startup_mode()`, `mount(builder)?`) in addition to
       the packaged-lane ingredients (`ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`),
@@ -223,8 +229,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       directly, so the first-party scaffold owns the preferred mode choice without bespoke app
       code.
   - Remaining:
-    - decide whether `fret-bootstrap` / `fret-launch` should adopt the same preferred-mode policy
-      for non-scaffolded apps,
+    - decide whether `fret-launch` should adopt the same preferred-mode policy for the lowest-level
+      non-bootstrap startup surfaces,
     - wire the same story through any future `fret-bootstrap` / `fret-launch` packaging helpers.
 
 ## Font baseline unification

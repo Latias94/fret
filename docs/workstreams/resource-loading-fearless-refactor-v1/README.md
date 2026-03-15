@@ -90,6 +90,9 @@ This workstream takes a fearless posture:
     `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` now provide one named
     first-party startup contract for choosing the development lane without re-teaching
     path-first branching in app code.
+  - `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
+    `BootstrapBuilder::with_asset_startup(...)` now provide the same contract for non-`fret`
+    startup surfaces, so direct bootstrap apps no longer need ad-hoc resolver setup closures.
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.

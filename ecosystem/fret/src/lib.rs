@@ -160,7 +160,6 @@ pub mod activate {
 pub mod assets {
     use std::sync::Arc;
 
-    pub use crate::{AssetStartupMode, AssetStartupPlan, AssetStartupPlanError};
     #[cfg(not(target_arch = "wasm32"))]
     pub use fret_assets::FileAssetManifestResolver;
     pub use fret_assets::{
@@ -171,6 +170,7 @@ pub mod assets {
         FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
         asset_app_bundle_id, asset_package_bundle_id,
     };
+    pub use fret_bootstrap::{AssetStartupMode, AssetStartupPlan, AssetStartupPlanError};
     pub use fret_runtime::AssetResolverService;
 
     /// Install or replace the primary resolver layer for the current host.
@@ -293,237 +293,6 @@ pub mod assets {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum AssetStartupBundleTarget {
-    App,
-    Explicit(fret_assets::AssetBundleId),
-}
-
-impl AssetStartupBundleTarget {
-    fn resolve(self, app_bundle: fret_assets::AssetBundleId) -> fret_assets::AssetBundleId {
-        match self {
-            Self::App => app_bundle,
-            Self::Explicit(bundle) => bundle,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum AssetStartupMountSpec {
-    Manifest {
-        path: PathBuf,
-    },
-    Dir {
-        bundle: AssetStartupBundleTarget,
-        dir: PathBuf,
-    },
-    BundleEntries {
-        bundle: AssetStartupBundleTarget,
-        entries: Vec<fret_assets::StaticAssetEntry>,
-    },
-    EmbeddedEntries {
-        owner: fret_assets::AssetBundleId,
-        entries: Vec<fret_assets::StaticAssetEntry>,
-    },
-}
-
-/// Selects which asset-publication lane a startup plan should apply.
-///
-/// `Development` keeps real-file manifest or bundle-directory mounts on the builder path.
-/// `Packaged` keeps compile-time/static bundle or embedded entries on the builder path.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssetStartupMode {
-    Development,
-    Packaged,
-}
-
-impl AssetStartupMode {
-    /// First-party default startup selection for the `fret` app-authoring surface.
-    ///
-    /// Native debug builds stay on the file-backed development lane for quick iteration, while
-    /// packaged targets (including web/mobile and native release builds) stay on compiled bundle
-    /// or embedded bytes.
-    pub const fn preferred() -> Self {
-        #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
-        {
-            Self::Development
-        }
-        #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
-        {
-            Self::Packaged
-        }
-    }
-}
-
-/// Explicit startup plan that separates development asset mounts from packaged asset mounts.
-///
-/// This gives app/bootstrap code one named surface for:
-/// - native/package-dev file-backed bundle manifests or directory scans,
-/// - packaged/web/mobile-friendly generated `StaticAssetEntry` publication,
-/// - and a stable place to decide which lane the current startup should use.
-///
-/// The lower-level builder methods (`asset_dir`, `asset_manifest`, `asset_entries`, and friends)
-/// remain available when startup needs custom ordered layering beyond this higher-level split.
-#[derive(Debug, Clone, Default)]
-pub struct AssetStartupPlan {
-    development: Vec<AssetStartupMountSpec>,
-    packaged: Vec<AssetStartupMountSpec>,
-}
-
-impl AssetStartupPlan {
-    /// Create an empty startup plan.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Add a native/package-dev manifest artifact to the development lane.
-    pub fn development_manifest(mut self, manifest_path: impl Into<PathBuf>) -> Self {
-        self.development.push(AssetStartupMountSpec::Manifest {
-            path: manifest_path.into(),
-        });
-        self
-    }
-
-    /// Add a native/package-dev directory scan under the default app bundle id.
-    pub fn development_dir(mut self, dir: impl Into<PathBuf>) -> Self {
-        self.development.push(AssetStartupMountSpec::Dir {
-            bundle: AssetStartupBundleTarget::App,
-            dir: dir.into(),
-        });
-        self
-    }
-
-    /// Add a native/package-dev directory scan under an explicit bundle id.
-    pub fn development_bundle_dir(
-        mut self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        dir: impl Into<PathBuf>,
-    ) -> Self {
-        self.development.push(AssetStartupMountSpec::Dir {
-            bundle: AssetStartupBundleTarget::Explicit(bundle.into()),
-            dir: dir.into(),
-        });
-        self
-    }
-
-    /// Add a development bundle-directory lane on native targets and no-op on wasm.
-    ///
-    /// This keeps first-party app/tooling code on one portable startup-plan expression without
-    /// repeating `cfg` branches at every call site.
-    pub fn development_bundle_dir_if_native(
-        self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        dir: impl Into<PathBuf>,
-    ) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            return self.development_bundle_dir(bundle, dir);
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            let _ = bundle.into();
-            let _ = dir.into();
-            self
-        }
-    }
-
-    /// Add compile-time/static entries under the default app bundle id to the packaged lane.
-    pub fn packaged_entries(
-        mut self,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        self.packaged.push(AssetStartupMountSpec::BundleEntries {
-            bundle: AssetStartupBundleTarget::App,
-            entries: entries.into_iter().collect(),
-        });
-        self
-    }
-
-    /// Add compile-time/static entries under an explicit bundle id to the packaged lane.
-    pub fn packaged_bundle_entries(
-        mut self,
-        bundle: impl Into<fret_assets::AssetBundleId>,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        self.packaged.push(AssetStartupMountSpec::BundleEntries {
-            bundle: AssetStartupBundleTarget::Explicit(bundle.into()),
-            entries: entries.into_iter().collect(),
-        });
-        self
-    }
-
-    /// Add owner-scoped embedded bytes to the packaged lane.
-    pub fn packaged_embedded_entries(
-        mut self,
-        owner: impl Into<fret_assets::AssetBundleId>,
-        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
-    ) -> Self {
-        self.packaged.push(AssetStartupMountSpec::EmbeddedEntries {
-            owner: owner.into(),
-            entries: entries.into_iter().collect(),
-        });
-        self
-    }
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub(crate) fn into_mounts(
-        self,
-        app_bundle: fret_assets::AssetBundleId,
-        mode: AssetStartupMode,
-    ) -> std::result::Result<Vec<AssetMount>, AssetStartupPlanError> {
-        let mounts = match mode {
-            AssetStartupMode::Development => self.development,
-            AssetStartupMode::Packaged => self.packaged,
-        };
-
-        if mounts.is_empty() {
-            return Err(match mode {
-                AssetStartupMode::Development => AssetStartupPlanError::MissingDevelopmentLane,
-                AssetStartupMode::Packaged => AssetStartupPlanError::MissingPackagedLane,
-            });
-        }
-
-        Ok(mounts
-            .into_iter()
-            .map(|mount| mount.into_mount(app_bundle.clone()))
-            .collect())
-    }
-}
-
-impl AssetStartupMountSpec {
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    fn into_mount(self, app_bundle: fret_assets::AssetBundleId) -> AssetMount {
-        match self {
-            Self::Manifest { path } => AssetMount::Manifest { path },
-            Self::Dir { bundle, dir } => AssetMount::Dir {
-                bundle: bundle.resolve(app_bundle),
-                dir,
-            },
-            Self::BundleEntries { bundle, entries } => AssetMount::BundleEntries {
-                bundle: bundle.resolve(app_bundle),
-                entries,
-            },
-            Self::EmbeddedEntries { owner, entries } => {
-                AssetMount::EmbeddedEntries { owner, entries }
-            }
-        }
-    }
-}
-
-/// Reported when a higher-level startup plan selects a lane that was never configured.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-pub enum AssetStartupPlanError {
-    #[error(
-        "asset startup plan selected development mode but no development manifest/directory lane was configured"
-    )]
-    MissingDevelopmentLane,
-    #[error(
-        "asset startup plan selected packaged mode but no packaged bundle/embedded entries were configured"
-    )]
-    MissingPackagedLane,
-}
-
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, Clone)]
 pub(crate) enum AssetMount {
@@ -542,7 +311,11 @@ pub(crate) enum AssetMount {
         owner: fret_assets::AssetBundleId,
         entries: Vec<fret_assets::StaticAssetEntry>,
     },
-    StartupPlanError(AssetStartupPlanError),
+    Startup {
+        bundle: fret_assets::AssetBundleId,
+        mode: fret_bootstrap::AssetStartupMode,
+        plan: fret_bootstrap::AssetStartupPlan,
+    },
 }
 
 pub mod actions;
@@ -1155,7 +928,7 @@ pub enum Error {
     #[error(transparent)]
     AssetManifest(#[from] AssetManifestError),
     #[error(transparent)]
-    AssetStartup(#[from] AssetStartupPlanError),
+    AssetStartup(#[from] fret_bootstrap::AssetStartupPlanError),
     #[error(transparent)]
     Runner(#[from] RunnerError),
 }
@@ -1174,6 +947,17 @@ pub struct AssetManifestError(#[from] fret_assets::AssetManifestLoadError);
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
 pub struct RunnerError(#[from] fret_launch::RunnerError);
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+fn map_bootstrap_asset_builder_error(err: fret_bootstrap::BootstrapError) -> Error {
+    match err {
+        fret_bootstrap::BootstrapError::AssetManifest(err) => {
+            Error::AssetManifest(AssetManifestError::from(err))
+        }
+        fret_bootstrap::BootstrapError::AssetStartup(err) => Error::AssetStartup(err),
+        other => Error::Bootstrap(BootstrapError::from(other)),
+    }
+}
 
 /// A `UiAppDriver` wrapper used by `fret` to avoid exposing `fret-bootstrap` types in signatures.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -1520,7 +1304,12 @@ impl<S: 'static> UiAppBuilder<S> {
         mode: crate::assets::AssetStartupMode,
         plan: crate::assets::AssetStartupPlan,
     ) -> Result<Self> {
-        apply_asset_mounts(self, plan.into_mounts(app_bundle.into(), mode)?)
+        Ok(Self {
+            inner: self
+                .inner
+                .with_asset_startup(app_bundle.into(), mode, plan)
+                .map_err(map_bootstrap_asset_builder_error)?,
+        })
     }
 
     #[cfg(feature = "ui-assets")]
@@ -1575,7 +1364,9 @@ fn apply_asset_mount<S: 'static>(
         AssetMount::EmbeddedEntries { owner, entries } => {
             Ok(builder.with_embedded_asset_entries(owner, entries))
         }
-        AssetMount::StartupPlanError(err) => Err(Error::AssetStartup(err)),
+        AssetMount::Startup { bundle, mode, plan } => {
+            builder.with_asset_startup(bundle, mode, plan)
+        }
     }
 }
 
@@ -2118,30 +1909,25 @@ mod builder_surface_tests {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     #[test]
-    fn asset_startup_plan_development_bundle_dir_if_native_populates_development_lane() {
+    fn asset_startup_plan_development_bundle_dir_if_native_is_available_on_fret_reexport() {
         let asset_dir =
             write_asset_dir_fixture("asset-startup-plan-development-bundle-dir-if-native");
         let app_bundle = AssetBundleId::app("asset-startup-plan-development-bundle-dir-if-native");
-        let plan = crate::assets::AssetStartupPlan::new()
-            .packaged_entries([StaticAssetEntry::new(
-                "images/logo.png",
-                AssetRevision(1),
-                b"builder-bytes",
-            )])
-            .development_bundle_dir_if_native(app_bundle.clone(), &asset_dir);
-
-        let mounts = plan
-            .into_mounts(
+        let _builder = FretApp::new("asset-startup-plan-development-bundle-dir-if-native")
+            .view::<SmokeView>()
+            .expect("view should build")
+            .with_asset_startup(
                 app_bundle.clone(),
                 crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new()
+                    .packaged_entries([StaticAssetEntry::new(
+                        "images/logo.png",
+                        AssetRevision(1),
+                        b"builder-bytes",
+                    )])
+                    .development_bundle_dir_if_native(app_bundle, &asset_dir),
             )
-            .expect("native helper should populate the development lane");
-
-        assert!(matches!(
-            mounts.as_slice(),
-            [crate::AssetMount::Dir { bundle, dir }]
-                if bundle == &app_bundle && dir == &asset_dir
-        ));
+            .expect("native helper should remain available through fret::assets");
     }
 
     #[test]

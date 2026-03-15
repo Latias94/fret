@@ -168,10 +168,11 @@ impl FretApp {
         mode: crate::assets::AssetStartupMode,
         plan: crate::assets::AssetStartupPlan,
     ) -> Self {
-        match plan.into_mounts(AssetBundleId::app(self.root_name), mode) {
-            Ok(mounts) => self.asset_mounts.extend(mounts),
-            Err(err) => self.asset_mounts.push(AssetMount::StartupPlanError(err)),
-        }
+        self.asset_mounts.push(AssetMount::Startup {
+            bundle: AssetBundleId::app(self.root_name),
+            mode,
+            plan,
+        });
         self
     }
 
@@ -388,19 +389,13 @@ mod tests {
                 )]),
         );
 
-        assert_eq!(app.asset_mounts.len(), 2);
+        assert_eq!(app.asset_mounts.len(), 1);
         match &app.asset_mounts[0] {
-            AssetMount::Dir { bundle, dir } => {
+            AssetMount::Startup { bundle, mode, .. } => {
                 assert_eq!(bundle, &AssetBundleId::app("demo-app"));
-                assert_eq!(dir, &PathBuf::from("assets/dev"));
+                assert_eq!(mode, &crate::assets::AssetStartupMode::Development);
             }
-            other => panic!("expected development dir mount first, got {other:?}"),
-        }
-        match &app.asset_mounts[1] {
-            AssetMount::Manifest { path } => {
-                assert_eq!(path, &PathBuf::from("assets.manifest.json"));
-            }
-            other => panic!("expected development manifest second, got {other:?}"),
+            other => panic!("expected startup mount, got {other:?}"),
         }
     }
 
@@ -425,22 +420,13 @@ mod tests {
                 ),
         );
 
-        assert_eq!(app.asset_mounts.len(), 2);
+        assert_eq!(app.asset_mounts.len(), 1);
         match &app.asset_mounts[0] {
-            AssetMount::BundleEntries { bundle, entries } => {
+            AssetMount::Startup { bundle, mode, .. } => {
                 assert_eq!(bundle, &AssetBundleId::app("demo-app"));
-                assert_eq!(entries.len(), 1);
-                assert_eq!(entries[0].key, "icons/search.svg");
+                assert_eq!(mode, &crate::assets::AssetStartupMode::Packaged);
             }
-            other => panic!("expected app packaged entries first, got {other:?}"),
-        }
-        match &app.asset_mounts[1] {
-            AssetMount::BundleEntries { bundle, entries } => {
-                assert_eq!(bundle, &AssetBundleId::package("demo-kit"));
-                assert_eq!(entries.len(), 1);
-                assert_eq!(entries[0].key, "images/logo.png");
-            }
-            other => panic!("expected package packaged entries second, got {other:?}"),
+            other => panic!("expected startup mount, got {other:?}"),
         }
     }
 }

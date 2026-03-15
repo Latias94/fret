@@ -126,6 +126,9 @@ escape hatches.
     compiled bundle bytes, and those helpers now lower onto shared `fret` facade defaults
     (`AssetStartupPlan::development_bundle_dir_if_native(...)` /
     `AssetStartupMode::preferred()`).
+  - direct bootstrap apps can use the same named startup contract through
+    `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
+    `BootstrapBuilder::with_asset_startup(...)`.
 - Native/package-dev convenience:
   - `FretApp::asset_dir(...)`,
   - `UiAppBuilder::with_asset_dir(...)`,
