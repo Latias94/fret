@@ -141,6 +141,11 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   now also follows the app-facing root rule: shared cookbook page shells take `&mut UiCx<'_>` plus
   `impl UiChild` and return `Ui`, so the canonical compare set (`hello_counter`, `simple_todo`,
   `simple_todo_v2_target`) no longer teaches a redundant `.into()` after the scaffold call.
+- the remaining canonical compare-set roots now follow the same rule too:
+  `apps/fret-examples/src/todo_demo.rs::todo_page(...)` and the generated helpers in
+  `apps/fretboard/src/scaffold/templates.rs` take `&mut UiCx<'_>` and return `Ui`, so
+  `todo_demo` plus both todo templates no longer teach `todo_page(...).into_element(cx).into()`
+  as the default root story.
 - first-party page/snippet teaching rule:
   once a wrapper/helper family is promoted onto the default authoring path, Gallery pages and
   snippets should teach that wrapper family by default and should not silently fall back to eager

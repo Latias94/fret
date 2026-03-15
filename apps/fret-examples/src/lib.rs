@@ -315,9 +315,12 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("KernelApp"));
         assert!(!src.contains("AppWindowId"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
-        assert!(src.contains("todo_page(theme, card).into_element(cx).into()"));
+        assert!(src.contains("todo_page(cx, theme, card)"));
+        assert!(src.contains(
+            "fn todo_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, content: impl UiChild) -> Ui"
+        ));
         assert!(!src.contains("let card = card.into_element(cx);"));
-        assert!(!src.contains("todo_page(cx, theme, card).into()"));
+        assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
     }
 
     fn assert_avoids_legacy_conversion_names(src: &str) {

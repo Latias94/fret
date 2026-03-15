@@ -39,6 +39,10 @@ Execution note on 2026-03-14:
   `apps/fret-cookbook/src/scaffold.rs` takes `UiCx` plus `UiChild` and returns `Ui`, and the
   canonical compare set (`hello_counter`, `simple_todo`, `simple_todo_v2_target`) no longer keeps
   a redundant `.into()` after that scaffold call.
+- `apps/fret-examples/src/todo_demo.rs` and the generated todo/simple-todo helpers in
+  `apps/fretboard/src/scaffold/templates.rs` now also keep their `todo_page(...)` helpers on that
+  same root-owned lane (`UiCx` -> `Ui`), so the canonical compare set no longer teaches
+  `todo_page(...).into_element(cx).into()` as the default root wrapper pattern either.
 - the specialized `typography` teaching lane is now also aligned with that posture:
   UI Gallery typography snippets now expose `UiCx -> impl UiChild`, the page uses
   `DocSection::build(cx, ...)`, and the stale non-dev `dialog_open` relay is now gated back to

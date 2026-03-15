@@ -228,11 +228,11 @@ impl View for TodoDemoView {
                 rows.len() != before
             });
 
-        todo_page(theme, card).into_element(cx).into()
+        todo_page(cx, theme, card)
     }
 }
 
-fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
+fn todo_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, content: impl UiChild) -> Ui {
     ui::container(move |cx| {
         ui::children![
             cx;
@@ -248,6 +248,8 @@ fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
     .w_full()
     .h_full()
     .test_id(TEST_ID_ROOT)
+    .into_element(cx)
+    .into()
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {

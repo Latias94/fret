@@ -609,14 +609,15 @@ __PALETTE_BUTTON__
         .max_w(Px(520.0))
         ;
 
-        todo_page(theme, card).into_element(cx).into()
+        todo_page(cx, theme, card)
     }
 }
 
 fn todo_page(
+    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> impl UiChild {
+) -> Ui {
     ui::container(move |cx| ui::children![cx;
         ui::v_flex(|cx| ui::children![cx; content])
             .w_full()
@@ -629,6 +630,8 @@ fn todo_page(
     .p(Space::N6)
     .w_full()
     .h_full()
+    .into_element(cx)
+    .into()
 }
 
 fn filter_chip(
@@ -999,19 +1002,22 @@ __PALETTE_BUTTON__
         .justify_center()
         .items_center();
 
-        todo_page(theme, content).into_element(cx).into()
+        todo_page(cx, theme, content)
     }
 }
 
 fn todo_page(
+    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> impl UiChild {
+) -> Ui {
     ui::container(|cx| ui::children![cx; content])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
+        .into_element(cx)
+        .into()
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
@@ -1310,11 +1316,12 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("todo_page(theme, card).into_element(cx).into()"));
+        assert!(src.contains("todo_page(cx, theme, card)"));
         assert!(!src.contains("let card = card.into_element(cx);"));
-        assert!(!src.contains("todo_page(cx, theme, card).into()"));
+        assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains(") -> impl UiChild {"));
+        assert!(src.contains("cx: &mut UiCx<'_>,"));
+        assert!(src.contains(") -> Ui {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains(".models_mut().insert("));
@@ -1390,11 +1397,12 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("todo_page(theme, content).into_element(cx).into()"));
+        assert!(src.contains("todo_page(cx, theme, content)"));
         assert!(!src.contains("let content = content.into_element(cx);"));
-        assert!(!src.contains("todo_page(cx, theme, content).into()"));
+        assert!(!src.contains("todo_page(theme, content).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains(") -> impl UiChild {"));
+        assert!(src.contains("cx: &mut UiCx<'_>,"));
+        assert!(src.contains(") -> Ui {"));
         assert!(src.contains("shadcn::Input::new(&draft_state)"));
         assert!(src.contains("shadcn::Checkbox::from_checked(row.done)"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
