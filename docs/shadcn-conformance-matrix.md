@@ -82,7 +82,7 @@ Legend:
 | Aspect Ratio | `aspect_ratio` | TODO | TODO | TODO | TODO | |
 | Avatar | `avatar` | TODO | TODO | TODO | TODO | |
 | Badge | `badge` | TODO | TODO | TODO | TODO | |
-| Breadcrumb | `breadcrumb` | `tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json` | TODO | Layout (custom separator stays single-line) | In progress | Add RTL dropdown gate + ellipsis-dropdown parity. |
+| Breadcrumb | `breadcrumb` | `tools/diag-scripts/ui-gallery-breadcrumb-custom-separator-single-line.json` | TODO | Layout (custom separator stays single-line) | In progress | Add RTL dropdown gate + ellipsis-dropdown parity. |
 | Button | `button` | `tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json` | TODO | Fonts/layout (icon vs label non-overlap) | In progress | Extend: min hit-size + disabled/pressed routing. |
 | Button Group | `button_group` | TODO | TODO | TODO | TODO | |
 | Calendar | `calendar` | `tools/diag-scripts/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json`, `tools/diag-scripts/ui-gallery-calendar-selected-day-style.json`, `tools/diag-scripts/ui-gallery-calendar-may-2026-centering.json` | `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs` | Layout (responsive multi-month semantics; centering) | In progress | Add keyboard navigation + range selection routing gates if needed. |

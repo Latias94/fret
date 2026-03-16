@@ -17,7 +17,7 @@
     "tools/diag-scripts/ui-gallery-avatar-dropdown-escape-focus-restore.json",
     "tools/diag-scripts/ui-gallery-badge-link-render.json",
     "tools/diag-scripts/ui-gallery-breadcrumb-demo-ellipsis-dropdown.json",
-    "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
+    "tools/diag-scripts/ui-gallery-breadcrumb-custom-separator-single-line.json",
     "tools/diag-scripts/ui-gallery-breadcrumb-links-semantic-link.json",
     "tools/diag-scripts/ui-gallery-breadcrumb-responsive-toggle.json",
     "tools/diag-scripts/ui-gallery-button-link-render.json",

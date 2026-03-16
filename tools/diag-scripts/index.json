@@ -2799,6 +2799,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-breadcrumb-custom-separator-single-line",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-breadcrumb-demo-ellipsis-dropdown",
       "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-dropdown.json",
       "required_capabilities": [
@@ -2813,16 +2823,6 @@
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-breadcrumb-dot-separator-single-line",
-      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-dot-separator-single-line.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
       "target_hints": []
     },
     {
