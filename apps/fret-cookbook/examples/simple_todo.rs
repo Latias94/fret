@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
@@ -56,6 +57,8 @@ impl View for SimpleTodoView {
                 },
             ]
         });
+
+        bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);
 
         let todos = todos_state.layout(cx).value_or_default();
         let draft_value = draft_state.layout(cx).value_or_default();
@@ -139,58 +142,65 @@ impl View for SimpleTodoView {
         .w_full()
         .max_w(Px(560.0));
 
-        cx.actions().locals::<act::Add>({
-            let draft_state = draft_state.clone();
-            let next_id_state = next_id_state.clone();
-            let todos_state = todos_state.clone();
-            move |tx| {
-                let text = tx
-                    .value_or_else(&draft_state, String::new)
-                    .trim()
-                    .to_string();
-                if text.is_empty() {
-                    return false;
-                }
-
-                let id = tx.value_or(&next_id_state, 0);
-                let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
-
-                if !tx.update(&todos_state, |rows| {
-                    rows.push(TodoRow {
-                        id,
-                        done: false,
-                        text: Arc::from(text),
-                    });
-                }) {
-                    return false;
-                }
-                tx.set(&draft_state, String::new())
-            }
-        });
-
-        cx.actions().locals::<act::ClearDone>({
-            let todos_state = todos_state.clone();
-            move |tx| {
-                tx.update_if(&todos_state, |rows| {
-                    let before = rows.len();
-                    rows.retain(|row| !row.done);
-                    rows.len() != before
-                })
-            }
-        });
-
-        cx.actions()
-            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
-                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
-                    row.done = !row.done;
-                    true
-                } else {
-                    false
-                }
-            });
-
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card)
     }
+}
+
+fn bind_todo_actions(
+    cx: &mut AppUi<'_, '_>,
+    draft_state: &LocalState<String>,
+    next_id_state: &LocalState<u64>,
+    todos_state: &LocalState<Vec<TodoRow>>,
+) {
+    cx.actions().locals::<act::Add>({
+        let draft_state = LocalState::clone(draft_state);
+        let next_id_state = LocalState::clone(next_id_state);
+        let todos_state = LocalState::clone(todos_state);
+        move |tx| {
+            let text = tx
+                .value_or_else(&draft_state, String::new)
+                .trim()
+                .to_string();
+            if text.is_empty() {
+                return false;
+            }
+
+            let id = tx.value_or(&next_id_state, 0);
+            let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
+
+            if !tx.update(&todos_state, |rows| {
+                rows.push(TodoRow {
+                    id,
+                    done: false,
+                    text: Arc::from(text),
+                });
+            }) {
+                return false;
+            }
+            tx.set(&draft_state, String::new())
+        }
+    });
+
+    cx.actions().locals::<act::ClearDone>({
+        let todos_state = LocalState::clone(todos_state);
+        move |tx| {
+            tx.update_if(&todos_state, |rows| {
+                let before = rows.len();
+                rows.retain(|row| !row.done);
+                rows.len() != before
+            })
+        }
+    });
+
+    cx.actions()
+        .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {
+            if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                row.done = !row.done;
+                true
+            } else {
+                false
+            }
+        });
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {

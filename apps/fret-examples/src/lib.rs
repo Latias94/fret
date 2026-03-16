@@ -603,6 +603,11 @@ mod authoring_surface_policy_tests {
     fn todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(TODO_DEMO);
         assert_avoids_legacy_conversion_names(TODO_DEMO);
+        assert!(
+            TODO_DEMO
+                .contains("bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);")
+        );
+        assert!(TODO_DEMO.contains("fn bind_todo_actions("));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
     }
@@ -718,7 +723,10 @@ mod authoring_surface_policy_tests {
                 "ui::children![cx; cjk_conformance_page(cx, theme, card)]",
                 "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
-            &["let page = ui::container(|cx| {", "ui::v_flex(move |_cx| [card])"],
+            &[
+                "let page = ui::container(|cx| {",
+                "ui::v_flex(move |_cx| [card])",
+            ],
         );
 
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
@@ -733,7 +741,10 @@ mod authoring_surface_policy_tests {
                 "ui::children![cx; emoji_conformance_page(cx, theme, card)]",
                 "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
-            &["let page = ui::container(|cx| {", "ui::v_flex(move |_cx| [card])"],
+            &[
+                "let page = ui::container(|cx| {",
+                "ui::v_flex(move |_cx| [card])",
+            ],
         );
     }
 
