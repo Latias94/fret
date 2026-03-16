@@ -52,6 +52,20 @@ cargo run -p fretboard -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
+Keep the default authoring model intentionally small:
+
+- use `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state,
+- use `cx.actions().locals::<A>(...)` for most LocalState-first typed UI actions,
+- for view-owned keyed rows, bind payloads with `.action_payload(...)`, prefer
+  `payload_local_update_if::<A>(...)` as the default row-write path, and reserve
+  `payload_locals::<A>(...)` for the rarer case where one payload action coordinates multiple
+  locals,
+- use `cx.actions().transient::<A>(...)` when the real effect must happen with `&mut App` in
+  `render()`,
+- drop to `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs,
+- keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only
+  surfaces that do not already expose a narrower widget-owned app-facing helper.
+
 ## Quick start (Cargo)
 
 With defaults (desktop + app):
