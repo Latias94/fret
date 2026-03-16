@@ -19,9 +19,12 @@ Related:
 - **M0**: Met once this directory and the main docs indices land.
 - **M1**: Closeout mode (shared tracked-read surface settled; remaining work is breadth cleanup and
   wording/gate retirement).
-- **M2**: Next active design question (selector/query happy-path density reduction).
-- **M3**: Planned (re-evaluate keyed/list/default child-collection pressure after read-side work).
-- **M4**: Planned (hard-delete displaced wording and lock the shorter path with docs/gates).
+- **M2**: Met (query default-read cleanup is now landed on the default teaching surfaces, and the
+  first LocalState-aware selector dependency bridge landed at the `fret` layer without prelude
+  widening or `fret-selector` ownership creep).
+- **M3**: Next active design question (re-evaluate keyed/list/default child-collection pressure
+  after the read-side reductions).
+- **M4**: In progress (delete displaced wording and lock the shorter path with docs/gates).
 
 Overall reading:
 
@@ -60,6 +63,14 @@ Tracked-read note on 2026-03-16:
   - selector dependency choreography remains the first likely new shared-surface question,
   - and any LocalState-aware selector helper must land at the `fret` facade/runtime layer instead
     of teaching `fret-selector` about `LocalState<T>`.
+- that first M2 batch is now implemented:
+  - query examples/templates/docs teach `handle.layout(...).value_or_default()` instead of the
+    older `value_or_else(QueryState::<T>::default)` spelling,
+  - `fret::selector::{DepsBuilder, LocalDepsBuilderExt as _}` plus
+    `LocalState::{watch_in, paint_in, layout_in, hit_test_in}` now provide the narrow
+    LocalState-first selector path on helper-heavy `ElementContext` surfaces,
+  - and the `fret` surface-policy tests now explicitly keep this lane out of
+    `fret::app::prelude::*`.
 
 ## Milestone 0 — Freeze the lane
 

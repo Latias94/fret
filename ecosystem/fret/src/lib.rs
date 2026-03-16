@@ -573,6 +573,7 @@ pub mod selector {
         pub use fret_selector::ui::*;
     }
 
+    pub use crate::view::LocalDepsBuilderExt;
     pub use fret_selector::ui::DepsBuilder;
     pub use fret_selector::{DepsSignature, Selector};
 }
@@ -943,9 +944,9 @@ pub mod advanced {
         pub use fret_runtime::{ActionId, TypedAction};
         pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps, TextProps};
         pub use fret_ui::{ElementContext, ThemeSnapshot, UiTree};
+        pub use fret_ui_kit::declarative::TrackedModelExt as _;
         #[cfg(feature = "icons")]
         pub use fret_ui_kit::declarative::icon;
-        pub use fret_ui_kit::declarative::TrackedModelExt as _;
     }
 }
 
@@ -2617,6 +2618,7 @@ mod authoring_surface_policy_tests {
         assert!(selector_surface.contains("pub mod selector {"));
         assert!(selector_surface.contains("pub mod core {"));
         assert!(selector_surface.contains("pub mod ui {"));
+        assert!(selector_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(selector_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
         assert!(query_surface.contains("pub mod query {"));
@@ -2627,6 +2629,7 @@ mod authoring_surface_policy_tests {
         assert!(query_surface.contains("QueryState,"));
         assert!(!app_prelude_exports_symbol("DepsBuilder"));
         assert!(!app_prelude_exports_symbol("DepsSignature"));
+        assert!(!app_prelude_exports_symbol("LocalDepsBuilderExt"));
         assert!(!app_prelude_exports_symbol("QueryKey"));
         assert!(!app_prelude_exports_symbol("QueryPolicy"));
         assert!(!app_prelude_exports_symbol("QueryHandle"));
@@ -3364,7 +3367,9 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("UiTree"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
-        assert!(advanced_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;"));
+        assert!(
+            advanced_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
+        );
         assert!(advanced_prelude_exports_symbol("UiServices"));
         assert!(advanced_prelude_exports_symbol("TextProps"));
         assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));
@@ -3645,6 +3650,7 @@ mod authoring_surface_policy_tests {
 
         assert!(public_surface.contains("pub mod selector {"));
         assert!(public_surface.contains("pub mod query {"));
+        assert!(public_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(public_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
         assert!(public_surface.contains("pub use fret_query::{"));
@@ -3741,6 +3747,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("QueryPolicy"));
         assert!(!app_prelude_exports_symbol("DepsBuilder"));
         assert!(!app_prelude_exports_symbol("DepsSignature"));
+        assert!(!app_prelude_exports_symbol("LocalDepsBuilderExt"));
     }
 
     #[test]
@@ -3762,8 +3769,7 @@ mod authoring_surface_policy_tests {
                 .contains("pub use fret_ui_kit::declarative::UiElementTestIdExt as _;")
         );
         assert!(
-            component_prelude
-                .contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
+            component_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
         );
         assert!(component_prelude_exports_symbol("UiBuilder"));
         assert!(component_prelude_exports_symbol("UiPatchTarget"));

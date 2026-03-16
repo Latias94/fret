@@ -6,7 +6,7 @@ use std::time::Duration;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryError, QueryKey, QueryPolicy,
-    QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
+    QueryRetryPolicy, QueryStatus, with_query_client,
 };
 
 mod act {
@@ -119,9 +119,7 @@ impl View for QueryAsyncTokioDemoView {
             },
         );
 
-        let query_state = query_handle
-            .layout(cx)
-            .value_or_else(QueryState::<DemoData>::default);
+        let query_state = query_handle.layout(cx).value_or_default();
 
         let status_label = match query_state.status {
             QueryStatus::Idle => "Idle",

@@ -115,24 +115,24 @@ Companion docs:
 
 ## M2 — Selector/query density
 
-- [ ] Inventory selector LocalState-first boilerplate that still reads like raw model plumbing.
-- [ ] Freeze the layering rule for selector work.
+- [x] Inventory selector LocalState-first boilerplate that still reads like raw model plumbing.
+- [x] Freeze the layering rule for selector work.
   - Any LocalState-aware dependency helper belongs in `ecosystem/fret`, not `fret-selector`.
-- [ ] Inventory query observe/read boilerplate that still reads like low-level handle plumbing.
+- [x] Inventory query observe/read boilerplate that still reads like low-level handle plumbing.
   - 2026-03-16 starting evidence:
     - `genui_demo` remains a medium non-Todo proof surface for selector/query follow-up after the
       final low-risk tracked-read cleanup landed,
     - `imui_editor_proof_demo` already shows repeated assist-state derived-read choreography that is
       better classified as M2 pressure than as M1 tracked-read debt.
-- [ ] Normalize query docs/templates/examples to the already-shipped shorter default reads before
+- [x] Normalize query docs/templates/examples to the already-shipped shorter default reads before
   adding any new shared query helper.
-- [ ] Design the smallest LocalState-aware selector dependency bridge that keeps invalidation
+- [x] Design the smallest LocalState-aware selector dependency bridge that keeps invalidation
   explicit without teaching `clone_model()` on the default app path.
-- [ ] Decide which parts are:
+- [x] Decide which parts are:
   - intentional ownership/runtime complexity,
   - versus removable authoring noise.
-- [ ] Land the smallest justified shared reduction.
-- [ ] Prove the result on the third-rung `todo` path plus at least one non-todo surface.
+- [x] Land the smallest justified shared reduction.
+- [x] Prove the result on the third-rung `todo` path plus at least one non-todo surface.
 
 ## M3 — Keyed/list/default child-collection follow-up
 

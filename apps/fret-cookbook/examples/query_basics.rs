@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use fret::app::prelude::*;
 use fret::style::Space;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
 use fret_ui::CommandAvailability;
 
 mod act {
@@ -97,9 +97,7 @@ impl View for QueryBasicsView {
             })
         });
 
-        let state = handle
-            .layout(cx)
-            .value_or_else(QueryState::<DemoData>::default);
+        let state = handle.layout(cx).value_or_default();
 
         let status_label = match state.status {
             QueryStatus::Idle => "Idle",

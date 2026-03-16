@@ -872,9 +872,7 @@ fn query_panel_for_mode(
         }
     };
 
-    let state = handle
-        .layout_query(cx)
-        .value_or_else(QueryState::<Arc<str>>::default);
+    let state = handle.layout_query(cx).value_or_default();
 
     let snap = snapshot_entry_for_key(cx, key);
     observe_query_diag(st, id, &state, snap.as_ref());

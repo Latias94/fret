@@ -12,7 +12,7 @@ use anyhow::Context as _;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
 use fret_runtime::Model;
 use fret_ui::element::{
     ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
@@ -487,9 +487,7 @@ $$
                     download_remote_image(src_for_fetch.as_ref())
                 });
 
-                let state = handle
-                    .layout_query(cx)
-                    .value_or_else(QueryState::<RemoteImageData>::default);
+                let state = handle.layout_query(cx).value_or_default();
 
                 match state.status {
                     QueryStatus::Idle | QueryStatus::Loading => return spinner_box(cx),

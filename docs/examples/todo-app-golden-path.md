@@ -294,23 +294,18 @@ memoizing these computations with selectors instead of:
 High-level sketch (matching the current third-rung scaffold):
 
 ```rust,ignore
-use fret::selector::DepsBuilder;
-
-let todos_model = todos_state.clone_model();
-let filter_model = filter_state.clone_model();
-let deps_todos_model = todos_model.clone();
-let deps_filter_model = filter_model.clone();
+use fret::selector::{DepsBuilder, LocalDepsBuilderExt as _};
 
 let derived = cx.data().selector(
-    move |cx| {
+    |cx| {
         let mut deps = DepsBuilder::new(cx);
-        deps.model_rev(&deps_todos_model);
-        deps.model_rev(&deps_filter_model);
+        deps.local_layout_rev(&todos_state);
+        deps.local_layout_rev(&filter_state);
         deps.finish()
     },
-    move |cx| {
-        let todos = cx.watch_model(&todos_model).layout().value_or_default();
-        let filter = cx.watch_model(&filter_model).layout().value_or(TodoFilter::All);
+    |cx| {
+        let todos = todos_state.layout_in(cx).value_or_default();
+        let filter = filter_state.layout_in(cx).value_or(TodoFilter::All);
 
         compute(cx, &todos, filter)
     },
@@ -326,13 +321,10 @@ but app code should stay handle-first.
 High-level sketch:
 
 ```rust,ignore
-use fret::query::{QueryKey, QueryPolicy, QueryState};
+use fret::query::{QueryKey, QueryPolicy};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = handle
-    .watch(cx)
-    .layout()
-    .value_or_else(QueryState::<T>::default);
+let state = handle.layout(cx).value_or_default();
 ```
 
 To invalidate/refetch from app logic:

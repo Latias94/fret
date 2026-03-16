@@ -148,7 +148,7 @@ Migration steps:
      `local.read_in(models, ...)` / `local.revision_in(models)` over leaking `local.model()` back into
      the default path.
    - For query resources, prefer reading the returned handle from the handle side as well:
-     `query_handle.layout(cx).value_or_else(QueryState::<T>::default)` instead of
+     `query_handle.layout(cx).value_or_default()` instead of
      `cx.watch_model(query_handle.model())...` at the teaching surface.
    - `cx.use_state::<T>()` remains available when you intentionally want the raw `Model<T>` handle,
      but it is no longer the first teaching-surface recommendation.

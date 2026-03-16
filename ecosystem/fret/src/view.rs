@@ -202,6 +202,48 @@ impl<T> LocalState<T> {
     {
         cx.watch_local(self)
     }
+
+    /// Observe/read this local from helper-heavy `ElementContext` surfaces without dropping down to
+    /// `local.model()`.
+    pub fn watch_in<'cx, 'm, 'a, H: UiHost>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    where
+        T: Any,
+    {
+        WatchedState::new(cx, &self.model)
+    }
+
+    pub fn paint_in<'cx, 'm, 'a, H: UiHost>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    where
+        T: Any,
+    {
+        self.watch_in(cx).paint()
+    }
+
+    pub fn layout_in<'cx, 'm, 'a, H: UiHost>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    where
+        T: Any,
+    {
+        self.watch_in(cx).layout()
+    }
+
+    pub fn hit_test_in<'cx, 'm, 'a, H: UiHost>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    where
+        T: Any,
+    {
+        self.watch_in(cx).hit_test()
+    }
 }
 
 /// A narrow, LocalState-focused transaction wrapper used to keep the default authoring surface
@@ -440,6 +482,48 @@ impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::Quer
         cx: &'watch mut AppUi<'view_cx, 'a, H>,
     ) -> WatchedState<'watch, 'watch, 'a, H, fret_query::QueryState<T>> {
         WatchedState::new(cx.cx, self.model())
+    }
+}
+
+/// LocalState-aware selector dependency helpers for the explicit `fret::selector` lane.
+///
+/// This keeps `fret-selector` portable while still letting LocalState-first app code build
+/// dependency signatures without bouncing through `clone_model()` or `local.model()`.
+#[cfg(feature = "state-selector")]
+pub trait LocalDepsBuilderExt {
+    fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self;
+
+    fn local_rev_invalidation<T: Any>(
+        &mut self,
+        local: &LocalState<T>,
+        invalidation: Invalidation,
+    ) -> &mut Self;
+
+    fn local_paint_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
+        self.local_rev_invalidation(local, Invalidation::Paint)
+    }
+
+    fn local_layout_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
+        self.local_rev_invalidation(local, Invalidation::Layout)
+    }
+
+    fn local_hit_test_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
+        self.local_rev_invalidation(local, Invalidation::HitTest)
+    }
+}
+
+#[cfg(feature = "state-selector")]
+impl<'cx, 'a, H: UiHost> LocalDepsBuilderExt for fret_selector::ui::DepsBuilder<'cx, 'a, H> {
+    fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
+        self.local_rev_invalidation(local, Invalidation::Paint)
+    }
+
+    fn local_rev_invalidation<T: Any>(
+        &mut self,
+        local: &LocalState<T>,
+        invalidation: Invalidation,
+    ) -> &mut Self {
+        self.model_rev_invalidation(local.model(), invalidation)
     }
 }
 
