@@ -1,13 +1,15 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Post-v1 Endgame Summary
 
 Status: draft, post-v1 summary
-Last updated: 2026-03-12
+Last updated: 2026-03-16
 
 Related:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
@@ -170,6 +172,13 @@ Correct refactor rule:
   surface beyond the Todo compare set and still reads as default-path friction rather than as an
   advanced/runtime-owned boundary.
 
+Operational note:
+
+- `SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md` is now the evidence basis for deciding whether a
+  remaining ceremony item can even enter shared public-surface discussion,
+- `POST_V1_EXECUTION_CHECKLIST.md` is now the execution-order note for what should happen before
+  any such reopen decision.
+
 ---
 
 ## What remains on the hard-delete track
@@ -222,6 +231,8 @@ last grep-and-delete pass.
 ---
 
 ## Recommended next order
+
+The operational version of this order now lives in `POST_V1_EXECUTION_CHECKLIST.md`.
 
 1. keep the `into-element` conversion-surface cleanup moving as the highest-leverage remaining UI-authoring refactor,
 2. use `simple_todo_v2_target`, `todo_demo`, and the scaffold template as the canonical compare set for keyed/list/build-sink density,

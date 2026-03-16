@@ -8,6 +8,8 @@ Related:
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- Post-v1 execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
+- Shared-surface evidence matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
@@ -80,6 +82,9 @@ This workstream is no longer the owner of crate-discovery curation.
   1. reduce first-hour/default-path ceremony,
   2. continue shrinking bridge-only activation residue,
   3. only then reconsider whether any additional sugar still earns its weight
+- any such reconsideration must use the shared-evidence rule captured in
+  `SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`: Todo evidence can open investigation, but it
+  cannot by itself justify widening shared public surface
 
 ## A. Decision + Contract Locking
 

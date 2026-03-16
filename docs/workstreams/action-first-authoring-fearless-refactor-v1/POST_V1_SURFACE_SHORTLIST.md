@@ -1,11 +1,12 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Post-v1 Surface Shortlist
 
 Status: draft recommendation
-Last updated: 2026-03-12
+Last updated: 2026-03-16
 
 Related:
 
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
+- Shared-surface evidence matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 - V2 golden path: `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
@@ -82,6 +83,8 @@ This triage answers a narrower question than the priority matrix:
 > local helper/recipe adoption, or a possible shared public-surface change?
 
 Use the buckets below to avoid turning every Todo-shaped complaint into framework API expansion.
+For the current evidence basis behind the "consider shared public surface only with more evidence"
+bucket, see `SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`.
 
 | Bucket | Candidate | Current evidence | Recommended handling |
 | --- | --- | --- | --- |
