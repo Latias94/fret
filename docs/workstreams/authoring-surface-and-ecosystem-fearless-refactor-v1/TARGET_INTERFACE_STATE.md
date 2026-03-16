@@ -76,6 +76,17 @@ Coordination rule on 2026-03-16:
      surface an ordinary app author has to hold in their head in the first hour
    - Priority targets: tracked-value reads, common local/payload write paths, and list/keyed-row
      defaults
+   - Refactor rule on 2026-03-16:
+     - treat the canonical compare set (`simple_todo`, `simple_todo_v2_target`, `todo_demo`),
+       generated templates, and default-path docs as the **detection surface** for default-path
+       friction,
+     - do **not** treat Todo-only friction as automatic justification for widening the shared
+       public helper/API surface,
+     - first prefer doc tightening, source-policy cleanup, local helper adoption, or recipe-level
+       narrowing when the pain is still confined to that compare set,
+     - only widen a public helper surface when the same pressure is clearly repeated beyond one
+       Todo-shaped lane and still reads as default-path friction rather than as an advanced/runtime
+       boundary
    - Status on 2026-03-16:
      - first batch already landed on the canonical trio (`simple_todo`,
        `simple_todo_v2_target`, `todo_demo`), the generated todo/simple-todo templates, and the

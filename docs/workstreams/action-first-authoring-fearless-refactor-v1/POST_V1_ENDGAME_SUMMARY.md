@@ -158,6 +158,18 @@ It is a narrow productization track:
 - reduce visible keyed/list/build-sink friction where it repeats,
 - and avoid widening the helper surface beyond what those concrete examples justify.
 
+Correct refactor rule:
+
+- treat the canonical trio as the primary **evidence set for finding** default-path friction,
+  because that is where users most clearly feel day-to-day authoring density,
+- but do **not** treat canonical-trio pain by itself as sufficient reason to mint or widen a
+  shared public helper/API surface,
+- if the problem can be solved by existing helpers, tighter docs, source-policy cleanup, or
+  recipe/local helper adoption, do that first,
+- only promote a new shared surface when the same pressure repeats on at least one additional real
+  surface beyond the Todo compare set and still reads as default-path friction rather than as an
+  advanced/runtime-owned boundary.
+
 ---
 
 ## What remains on the hard-delete track
