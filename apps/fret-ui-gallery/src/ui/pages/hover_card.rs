@@ -4,11 +4,8 @@ use fret::UiCx;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::hover_card as snippets;
 
-pub(super) fn preview_hover_card(
-    cx: &mut UiCx<'_>,
-    avatar_image: Model<Option<ImageId>>,
-) -> Vec<AnyElement> {
-    let demo = snippets::demo::render(cx, avatar_image);
+pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let trigger_delays = snippets::trigger_delays::render(cx);
     let positioning = snippets::positioning::render(cx);

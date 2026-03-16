@@ -7,8 +7,8 @@ use fret_app::{
     Platform, SettingsFileV1, WindowRequest, WindowRole, WindowStyleRequest, load_layered_settings,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, TimerToken, UiServices,
+    AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions, TimerToken,
+    UiServices,
 };
 use fret_icons::IconRegistry;
 use fret_launch::{
@@ -261,13 +261,6 @@ struct UiGalleryWindowState {
     data_grid_selected_row: Model<Option<u64>>,
     tabs_value: Model<Option<Arc<str>>>,
     accordion_value: Model<Option<Arc<str>>>,
-    avatar_demo_image: Model<Option<ImageId>>,
-    avatar_demo_image_token: Option<ImageUploadToken>,
-    avatar_demo_image_retry_count: u8,
-    image_fit_demo_wide_image: Model<Option<ImageId>>,
-    image_fit_demo_wide_token: Option<ImageUploadToken>,
-    image_fit_demo_tall_image: Model<Option<ImageId>>,
-    image_fit_demo_tall_token: Option<ImageUploadToken>,
     progress: Model<f32>,
     #[cfg(feature = "gallery-dev")]
     checkbox: Model<bool>,
@@ -348,9 +341,6 @@ impl UiGalleryWindowState {
             data_grid_selected_row: self.data_grid_selected_row.clone(),
             tabs_value: self.tabs_value.clone(),
             accordion_value: self.accordion_value.clone(),
-            avatar_demo_image: self.avatar_demo_image.clone(),
-            image_fit_demo_wide_image: self.image_fit_demo_wide_image.clone(),
-            image_fit_demo_tall_image: self.image_fit_demo_tall_image.clone(),
             progress: self.progress.clone(),
             #[cfg(feature = "gallery-dev")]
             checkbox: self.checkbox.clone(),
@@ -1834,75 +1824,7 @@ impl WinitAppDriver for UiGalleryDriver {
                 });
                 host.request_redraw(window);
             }
-            Event::ImageRegistered { token, image, .. } => {
-                if state.avatar_demo_image_token == Some(*token) {
-                    state.avatar_demo_image_token = None;
-                    state.avatar_demo_image_retry_count = 0;
-                    let _ = app
-                        .models_mut()
-                        .update(&state.avatar_demo_image, |v| *v = Some(*image));
-                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
-                        store.set_intrinsic_size_px(
-                            *image,
-                            (
-                                Self::AVATAR_DEMO_IMAGE_WIDTH,
-                                Self::AVATAR_DEMO_IMAGE_HEIGHT,
-                            ),
-                        );
-                    });
-                    app.request_redraw(window);
-                }
-
-                if state.image_fit_demo_wide_token == Some(*token) {
-                    state.image_fit_demo_wide_token = None;
-                    let _ = app
-                        .models_mut()
-                        .update(&state.image_fit_demo_wide_image, |v| *v = Some(*image));
-                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
-                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_WIDE_SIZE);
-                    });
-                    app.request_redraw(window);
-                }
-
-                if state.image_fit_demo_tall_token == Some(*token) {
-                    state.image_fit_demo_tall_token = None;
-                    let _ = app
-                        .models_mut()
-                        .update(&state.image_fit_demo_tall_image, |v| *v = Some(*image));
-                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
-                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_TALL_SIZE);
-                    });
-                    app.request_redraw(window);
-                }
-            }
-            Event::ImageRegisterFailed { token, message } => {
-                if state.avatar_demo_image_token == Some(*token) {
-                    let transient_not_ready = message.contains("not initialized");
-                    if transient_not_ready
-                        && state.avatar_demo_image_retry_count < Self::AVATAR_DEMO_IMAGE_RETRY_MAX
-                    {
-                        state.avatar_demo_image_retry_count =
-                            state.avatar_demo_image_retry_count.saturating_add(1);
-                        Self::enqueue_avatar_demo_image_register(app, window, *token);
-                        app.request_redraw(window);
-                    } else {
-                        state.avatar_demo_image_token = None;
-                        tracing::error!(message, "ui-gallery avatar demo image register failed");
-                        app.request_redraw(window);
-                    }
-                }
-
-                if state.image_fit_demo_wide_token == Some(*token) {
-                    state.image_fit_demo_wide_token = None;
-                    tracing::error!(message, "ui-gallery image fit wide image register failed");
-                    app.request_redraw(window);
-                }
-                if state.image_fit_demo_tall_token == Some(*token) {
-                    state.image_fit_demo_tall_token = None;
-                    tracing::error!(message, "ui-gallery image fit tall image register failed");
-                    app.request_redraw(window);
-                }
-            }
+            Event::ImageRegistered { .. } | Event::ImageRegisterFailed { .. } => {}
             Event::Timer { token } if *token == DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER => {
                 let (target_window, keep_running) =
                     app.with_global_mut(UiGalleryDebugWindowService::default, |svc, _app| {

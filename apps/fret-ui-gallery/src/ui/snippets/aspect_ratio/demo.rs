@@ -46,24 +46,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 }
 // endregion: example
 
-pub fn render_preview<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
-) -> impl IntoUiElement<H> + use<H> {
-    let image = if let Some(image_id) = super::images::landscape_image_id(cx) {
-        shadcn::MediaImage::maybe(Some(image_id))
-    } else if let Some(demo_image) = demo_image {
-        shadcn::MediaImage::model(demo_image)
-    } else {
-        let image = shadcn::MediaImage::maybe(None)
-            .loading(true)
-            .fit(fret_core::ViewportFit::Cover)
-            .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
-            .refine_layout(LayoutRefinement::default().w_full().h_full())
-            .into_element(cx)
-            .test_id("ui-gallery-aspect-ratio-demo-content");
-        return render_frame(image).into_element(cx);
-    };
+pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
+    let image = super::images::landscape_image_id(cx)
+        .map(|image_id| shadcn::MediaImage::maybe(Some(image_id)))
+        .unwrap_or_else(|| shadcn::MediaImage::maybe(None));
 
     let image = image
         .loading(true)

@@ -8,16 +8,9 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn portrait_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let image = if let Some(image) = demo_image {
-        shadcn::MediaImage::model(image)
-    } else {
-        shadcn::MediaImage::maybe(None)
-    };
-
-    image
+    shadcn::MediaImage::maybe(super::images::portrait_image_id(cx))
         .loading(true)
         .fit(fret_core::ViewportFit::Cover)
         .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
@@ -32,12 +25,11 @@ fn ratio_example<H: UiHost>(
     max_w: Px,
     test_id: &'static str,
     content_test_id: &'static str,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
     let border = theme.color_token("border");
-    let content = portrait_image(cx, demo_image, content_test_id).into_element(cx);
+    let content = portrait_image(cx, content_test_id).into_element(cx);
 
     let frame = shadcn::AspectRatio::with_child(content)
         .ratio(ratio)
@@ -68,61 +60,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         Px(160.0),
         "ui-gallery-aspect-ratio-portrait",
         "ui-gallery-aspect-ratio-portrait-content",
-        None,
     )
     .into_element(cx)
 }
 // endregion: example
 
-pub fn render_preview<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    demo_image: Option<Model<Option<fret_core::ImageId>>>,
-) -> impl IntoUiElement<H> + use<H> {
-    let asset_image = super::images::portrait_image_id(cx);
-
-    let image = if let Some(image_id) = asset_image {
-        shadcn::MediaImage::maybe(Some(image_id))
-    } else if let Some(demo_image) = demo_image {
-        shadcn::MediaImage::model(demo_image)
-    } else {
-        return ratio_example(
-            cx,
-            9.0 / 16.0,
-            Px(160.0),
-            "ui-gallery-aspect-ratio-portrait",
-            "ui-gallery-aspect-ratio-portrait-content",
-            None,
-        )
-        .into_element(cx);
-    };
-
-    let image = image
-        .loading(true)
-        .fit(fret_core::ViewportFit::Cover)
-        .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
-        .refine_layout(LayoutRefinement::default().w_full().h_full())
-        .into_element(cx)
-        .test_id("ui-gallery-aspect-ratio-portrait-content");
-
-    let theme = Theme::global(&*cx.app);
-    let muted_bg = theme.color_token("muted");
-    let border = theme.color_token("border");
-
-    let frame = shadcn::AspectRatio::with_child(image)
-        .ratio(9.0 / 16.0)
-        .refine_style(
-            ChromeRefinement::default()
-                .rounded(Radius::Lg)
-                .border_1()
-                .bg(ColorRef::Color(muted_bg))
-                .border_color(ColorRef::Color(border)),
-        )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(160.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-aspect-ratio-portrait");
-
-    ui::h_flex(move |_cx| vec![frame])
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .justify_center()
-        .into_element(cx)
+pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
+    ratio_example(
+        cx,
+        9.0 / 16.0,
+        Px(160.0),
+        "ui-gallery-aspect-ratio-portrait",
+        "ui-gallery-aspect-ratio-portrait-content",
+    )
+    .into_element(cx)
 }

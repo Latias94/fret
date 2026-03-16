@@ -671,13 +671,8 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     alert_dialog::preview_alert_dialog(cx)
 }
 
-pub(super) fn preview_aspect_ratio(
-    cx: &mut UiCx<'_>,
-    wide_image: Option<Model<Option<ImageId>>>,
-    tall_image: Option<Model<Option<ImageId>>>,
-    square_image: Option<Model<Option<ImageId>>>,
-) -> Vec<AnyElement> {
-    aspect_ratio::preview_aspect_ratio(cx, wide_image, tall_image, square_image)
+pub(super) fn preview_aspect_ratio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    aspect_ratio::preview_aspect_ratio(cx)
 }
 
 pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
@@ -770,11 +765,8 @@ pub(super) fn preview_forms(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     form::preview_forms(cx)
 }
 
-pub(super) fn preview_hover_card(
-    cx: &mut UiCx<'_>,
-    avatar_image: Model<Option<ImageId>>,
-) -> Vec<AnyElement> {
-    hover_card::preview_hover_card(cx, avatar_image)
+pub(super) fn preview_hover_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    hover_card::preview_hover_card(cx)
 }
 
 pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {

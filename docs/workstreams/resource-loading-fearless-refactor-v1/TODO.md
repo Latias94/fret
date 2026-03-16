@@ -557,6 +557,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - UI Gallery `AI Image`, `AI Queue`, and `AI Chain of Thought` now resolve their preview media
       from the shared gallery demo asset bundle instead of synthesizing inline RGBA sources inside
       each snippet.
+    - UI Gallery `Aspect Ratio` and `Hover Card` no longer depend on per-window
+      `Model<Option<ImageId>>` demo-image bootstrapping; the old startup-time
+      `Effect::ImageRegisterRgba8` fallback chain was removed from the gallery driver.
     - Public guidance now links the transitive icon-pack + package-bundle composition story back to
       one ecosystem-owned installer surface instead of teaching apps to replay low-level icon or
       asset registration manually.
