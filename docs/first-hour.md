@@ -53,7 +53,7 @@ The template is intentionally small:
 
 - `TodoView` keeps view-owned draft text and keyed list state in `LocalState<T>` / `LocalState<Vec<_>>`.
 - `act::*` are typed actions: unit actions for top-level intents and payload actions for per-row list interactions.
-- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals(...)`, `cx.actions().transient(...)`, plus widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge; the explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals(...)`, keyed-row payload binding via `.action_payload(...)` plus `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)`, `cx.actions().transient(...)` for App-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge; the explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
 Memorize the default app surface before you start editing:
@@ -116,6 +116,7 @@ In the onboarding path, stay on one small surface:
 - `LocalState` for view-owned state
 - typed actions for intent
 - `cx.actions().locals(...)` for coordinated LocalState writes
+- `.action_payload(...)` plus `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)` for view-owned keyed-row interactions
 - `cx.actions().transient(...)` only for App-bound effects
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs activation glue, with an explicit `use fret::app::AppActivateExt as _;`
 
