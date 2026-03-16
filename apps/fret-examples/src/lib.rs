@@ -716,8 +716,9 @@ mod authoring_surface_policy_tests {
                 ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
                 "C: fret_ui_kit::IntoUiElement<App>,",
                 "ui::children![cx; cjk_conformance_page(cx, theme, card)]",
+                "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
-            &["let page = ui::container(|cx| {"],
+            &["let page = ui::container(|cx| {", "ui::v_flex(move |_cx| [card])"],
         );
 
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
@@ -730,8 +731,9 @@ mod authoring_surface_policy_tests {
                 ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
                 "C: fret_ui_kit::IntoUiElement<App>,",
                 "ui::children![cx; emoji_conformance_page(cx, theme, card)]",
+                "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
-            &["let page = ui::container(|cx| {"],
+            &["let page = ui::container(|cx| {", "ui::v_flex(move |_cx| [card])"],
         );
     }
 
