@@ -117,9 +117,9 @@ use selector::{
 };
 
 mod trace_helpers;
-use debug_snapshot_predicates::{
-    eval_debug_snapshot_predicate, eval_debug_snapshot_predicate_from_recent_snapshot,
-};
+#[cfg(test)]
+use debug_snapshot_predicates::eval_debug_snapshot_predicate;
+use debug_snapshot_predicates::eval_debug_snapshot_predicate_from_recent_snapshot;
 use trace_helpers::{
     MAX_CLICK_STABLE_TRACE_ENTRIES, MAX_FOCUS_TRACE_ENTRIES, MAX_IME_EVENT_TRACE_ENTRIES,
     MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES, MAX_SELECTOR_TRACE_CANDIDATES,
@@ -1143,6 +1143,7 @@ mod tests {
             text_input_snapshot,
             render_text,
             render_text_font_trace,
+            None,
             known_windows,
             known_windows.len().min(u32::MAX as usize) as u32,
             None,
@@ -2870,10 +2871,44 @@ mod tests {
             .and_then(|resource_loading| resource_loading.asset_reload.as_ref())
             .expect("asset reload diagnostics should be present in the resource loading snapshot");
         assert_eq!(asset_reload.epoch, Some(4));
-        assert_eq!(asset_reload.active_backend.as_deref(), Some("poll_metadata"));
+        assert_eq!(
+            asset_reload.active_backend.as_deref(),
+            Some("poll_metadata")
+        );
         assert_eq!(
             asset_reload.fallback_reason.as_deref(),
             Some("watcher_install_failed")
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(&debug, &UiPredicateV1::AssetReloadEpochGe { min: 4 },),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetReloadConfiguredBackendIs {
+                    backend: "native_watcher".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetReloadActiveBackendIs {
+                    backend: "poll_metadata".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetReloadFallbackReasonIs {
+                    reason: "watcher_install_failed".to_string(),
+                },
+            ),
+            Some(true)
         );
 
         assert_eq!(

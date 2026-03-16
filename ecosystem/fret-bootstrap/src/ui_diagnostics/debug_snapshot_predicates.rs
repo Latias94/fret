@@ -128,6 +128,33 @@ fn eval_resource_loading_predicate_from_debug_snapshot(
                 .bundled_baseline_source
                 == *source,
         ),
+        UiPredicateV1::AssetReloadEpochGe { min } => {
+            Some(resource_loading.asset_reload.as_ref()?.epoch.unwrap_or(0) >= *min)
+        }
+        UiPredicateV1::AssetReloadConfiguredBackendIs { backend } => Some(
+            resource_loading
+                .asset_reload
+                .as_ref()?
+                .configured_backend
+                .as_deref()
+                == Some(backend.as_str()),
+        ),
+        UiPredicateV1::AssetReloadActiveBackendIs { backend } => Some(
+            resource_loading
+                .asset_reload
+                .as_ref()?
+                .active_backend
+                .as_deref()
+                == Some(backend.as_str()),
+        ),
+        UiPredicateV1::AssetReloadFallbackReasonIs { reason } => Some(
+            resource_loading
+                .asset_reload
+                .as_ref()?
+                .fallback_reason
+                .as_deref()
+                == Some(reason.as_str()),
+        ),
         UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { min } => Some(
             resource_loading
                 .asset_load

@@ -406,6 +406,10 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::AssetLoadRecentOutcomeSeen { .. }
                 | UiPredicateV1::AssetLoadRecentRevisionTransitionSeen { .. }
                 | UiPredicateV1::BundledFontBaselineSourceIs { .. }
+                | UiPredicateV1::AssetReloadEpochGe { .. }
+                | UiPredicateV1::AssetReloadConfiguredBackendIs { .. }
+                | UiPredicateV1::AssetReloadActiveBackendIs { .. }
+                | UiPredicateV1::AssetReloadFallbackReasonIs { .. }
         )
     }
 

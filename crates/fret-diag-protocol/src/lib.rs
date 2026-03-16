@@ -1891,6 +1891,37 @@ pub enum UiPredicateV1 {
     BundledFontBaselineSourceIs {
         source: String,
     },
+    /// True when `debug.resource_loading.asset_reload.epoch >= min`.
+    ///
+    /// This is intended for hot-reload / invalidation flows that want to observe the shared
+    /// runtime-global reload epoch directly instead of inferring it indirectly from asset-load
+    /// revision transitions.
+    AssetReloadEpochGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.asset_reload.configured_backend == backend`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `poll_metadata`
+    /// - `native_watcher`
+    AssetReloadConfiguredBackendIs {
+        backend: String,
+    },
+    /// True when `debug.resource_loading.asset_reload.active_backend == backend`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `poll_metadata`
+    /// - `native_watcher`
+    AssetReloadActiveBackendIs {
+        backend: String,
+    },
+    /// True when `debug.resource_loading.asset_reload.fallback_reason == reason`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `watcher_install_failed`
+    AssetReloadFallbackReasonIs {
+        reason: String,
+    },
     /// True when the runner has observed an OS accessibility activation request for the current
     /// window.
     ///

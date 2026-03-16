@@ -440,7 +440,7 @@ impl UiFontEnvironmentDiagnosticsSnapshotV1 {
 }
 
 #[cfg(test)]
-mod tests {
+mod debug_snapshot_types_tests {
     use super::UiAssetReloadDiagnosticsSnapshotV1;
 
     #[test]
