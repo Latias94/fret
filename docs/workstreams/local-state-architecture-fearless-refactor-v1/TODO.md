@@ -8,6 +8,7 @@ Companion docs:
 - `DESIGN.md`
 - `MILESTONES.md`
 - `INVARIANT_MATRIX.md`
+- `OPTION_MATRIX_2026-03-16.md`
 - `SURFACE_CLASSIFICATION_2026-03-16.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
@@ -42,10 +43,17 @@ Companion docs:
   - architecture question,
   - docs/adoption problem,
   - intentional hybrid/runtime-owned boundary.
-- [ ] Compare the option set without coding first.
+- [x] Compare the option set without coding first.
   - Keep `O0/O1/O2/O3` in scope until the matrix rejects them.
-- [ ] Decide whether this lane should stop at “keep current contract” or open a prototype.
-- [ ] Keep this lane from turning into generic authoring sugar growth.
+- [x] Decide whether this lane should stop at “keep current contract” or open a prototype.
+  - 2026-03-16 decision:
+    - `OPTION_MATRIX_2026-03-16.md` recommends `O1`,
+    - the current model-backed `LocalState<T>` contract stands,
+    - no storage-model prototype opens from this lane right now.
+- [x] Keep this lane from turning into generic authoring sugar growth.
+  - 2026-03-16 rule:
+    - no new default-path sugar or macro growth should be justified from this lane,
+    - only explicit boundary clarification and future reopen conditions are in scope.
   - No new prelude/root growth.
   - No Todo-only helper invention.
   - No macro growth.
@@ -79,20 +87,26 @@ Companion docs:
 
 ## M2 — Compare architecture options
 
-- [ ] Write the option matrix for `O0` / `O1` / `O2` / `O3`.
-- [ ] Score each option against:
+- [x] Write the option matrix for `O0` / `O1` / `O2` / `O3`.
+- [x] Score each option against:
   - runtime determinism,
   - diagnostics,
   - selector/query layering,
   - widget bridge cost,
   - hybrid/advanced ownership honesty,
   - migration cost.
-- [ ] Reject any option that requires hidden reactivity or two co-equal default stories.
-- [ ] Choose one of:
+- [x] Reject any option that requires hidden reactivity or two co-equal default stories.
+- [x] Choose one of:
   - keep current model-backed contract,
   - harden the facade only,
   - open a split-story prototype,
   - or open a self-owned prototype.
+  - 2026-03-16 result:
+    - `OPTION_MATRIX_2026-03-16.md` now recommends `O1`,
+    - `O0` is rejected as under-specified,
+    - `O2`/`O3` are rejected for now because they do not earn their complexity against current
+      evidence,
+    - and this lane does not open M3 prototype work under the current decision.
 
 ## M3 — Prototype only if justified
 
@@ -101,6 +115,7 @@ Companion docs:
     - one default-path proof,
     - one hybrid proof,
     - one explicit advanced/runtime-owned non-goal boundary.
+  - Current reading (2026-03-16): not opened, because M2 chose `O1` rather than a prototype path.
 - [ ] Add the narrowest possible tests / diagnostics gates for the chosen direction.
 - [ ] Delete displaced default-path wording if the chosen direction changes the taught contract.
 

@@ -7,6 +7,7 @@ Related:
 - Design: `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`
 - Invariant matrix: `docs/workstreams/local-state-architecture-fearless-refactor-v1/INVARIANT_MATRIX.md`
+- Option matrix: `docs/workstreams/local-state-architecture-fearless-refactor-v1/OPTION_MATRIX_2026-03-16.md`
 - Surface classification: `docs/workstreams/local-state-architecture-fearless-refactor-v1/SURFACE_CLASSIFICATION_2026-03-16.md`
 - Action-first closeout: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Action-first endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
@@ -22,8 +23,10 @@ This lane exists because the broad authoring-reset work is already closed.
 - **M0**: Met (the workstream is opened, indexed, and scoped as a separate architecture lane).
 - **M1**: Met (invariant matrix + surface classification now freeze what is genuinely
   architectural versus what is already closed or intentionally explicit).
-- **M2**: Planned (compare architecture options without coding first).
-- **M3**: Planned only if justified (smallest proof surface + gates).
+- **M2**: Met (option matrix now recommends `O1`: keep model-backed storage, but harden the
+  facade boundary; no storage-model prototype is justified right now).
+- **M3**: Deferred / not opened under the current decision (only needed if future evidence reopens
+  a prototype path).
 - **M4**: Planned (close the lane or spin out a narrower implementation lane).
 
 Execution rule:
@@ -77,6 +80,13 @@ Exit target:
   - harden the facade only,
   - or open a narrower alternative-storage prototype.
 
+Current result (2026-03-16):
+
+- `OPTION_MATRIX_2026-03-16.md` now recommends `O1`,
+- the current model-backed `LocalState<T>` contract stands,
+- `use_state` remains the intentional explicit raw-model seam,
+- and the lane does not open a code prototype under current evidence.
+
 Decision rule:
 
 - no option passes unless it preserves explicit invalidation, diagnostics, selector/query layering,
@@ -88,6 +98,12 @@ Exit target:
 
 - only if M2 chooses a code path,
 - one smallest proof batch exists with tests/gates and clear non-goals.
+
+Current reading:
+
+- not opened under the current `O1` decision,
+- reopen only if future cross-surface evidence says the storage model itself, not merely the
+  facade boundary, has become the bottleneck.
 
 Scope rule:
 

@@ -9,6 +9,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/INVARIANT_MATRIX.md`
+- `docs/workstreams/local-state-architecture-fearless-refactor-v1/OPTION_MATRIX_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/SURFACE_CLASSIFICATION_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`
@@ -278,3 +279,8 @@ Until this lane says otherwise:
 - keep `use_state` as the explicit raw-model seam,
 - keep shared `Model<T>` graphs explicit,
 - and do not widen state sugar just to simulate a decision that the repo has not actually made yet.
+
+Decision update on 2026-03-16:
+
+- `OPTION_MATRIX_2026-03-16.md` now recommends **O1**:
+  keep model-backed storage, but harden the facade boundary.
