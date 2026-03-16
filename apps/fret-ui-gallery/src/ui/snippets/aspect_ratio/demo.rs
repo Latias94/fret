@@ -1,9 +1,11 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::component::prelude::Model;
 use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn render_frame<H: UiHost, E>(image: E) -> impl IntoUiElement<H> + use<H, E>
@@ -46,10 +48,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 }
 // endregion: example
 
-pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
-    let image = super::images::landscape_image_id(cx)
-        .map(|image_id| shadcn::MediaImage::maybe(Some(image_id)))
-        .unwrap_or_else(|| shadcn::MediaImage::maybe(None));
+pub fn render_preview<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+) -> impl IntoUiElement<H> + use<H> {
+    let image_id = demo_image
+        .as_ref()
+        .and_then(|model| cx.watch_model(model).layout().cloned().flatten())
+        .or_else(|| super::images::landscape_image_id(cx));
+    let image = shadcn::MediaImage::maybe(image_id);
 
     let image = image
         .loading(true)

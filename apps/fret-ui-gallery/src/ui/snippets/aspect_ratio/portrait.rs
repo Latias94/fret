@@ -1,16 +1,24 @@
 pub const SOURCE: &str = include_str!("portrait.rs");
 
 // region: example
+use fret::component::prelude::Model;
 use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn portrait_image<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    demo_image: Option<Model<Option<fret_core::ImageId>>>,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    shadcn::MediaImage::maybe(super::images::portrait_image_id(cx))
+    let image_id = demo_image
+        .as_ref()
+        .and_then(|model| cx.watch_model(model).layout().cloned().flatten())
+        .or_else(|| super::images::portrait_image_id(cx));
+
+    shadcn::MediaImage::maybe(image_id)
         .loading(true)
         .fit(fret_core::ViewportFit::Cover)
         .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
@@ -25,11 +33,12 @@ fn ratio_example<H: UiHost>(
     max_w: Px,
     test_id: &'static str,
     content_test_id: &'static str,
+    demo_image: Option<Model<Option<fret_core::ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
     let border = theme.color_token("border");
-    let content = portrait_image(cx, content_test_id).into_element(cx);
+    let content = portrait_image(cx, demo_image, content_test_id).into_element(cx);
 
     let frame = shadcn::AspectRatio::with_child(content)
         .ratio(ratio)
@@ -60,18 +69,23 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         Px(160.0),
         "ui-gallery-aspect-ratio-portrait",
         "ui-gallery-aspect-ratio-portrait-content",
+        None,
     )
     .into_element(cx)
 }
 // endregion: example
 
-pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
+pub fn render_preview<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+) -> impl IntoUiElement<H> + use<H> {
     ratio_example(
         cx,
         9.0 / 16.0,
         Px(160.0),
         "ui-gallery-aspect-ratio-portrait",
         "ui-gallery-aspect-ratio-portrait-content",
+        demo_image,
     )
     .into_element(cx)
 }

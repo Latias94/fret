@@ -5,11 +5,15 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::aspect_ratio as snippets;
 
 pub(super) fn preview_aspect_ratio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
-    let demo = snippets::demo::render_preview(cx);
+    let wide_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
+    let square_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
+    let tall_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
+
+    let demo = snippets::demo::render_preview(cx, wide_image.clone());
     let usage = snippets::usage::render(cx);
-    let square = snippets::square::render_preview(cx);
-    let portrait = snippets::portrait::render_preview(cx);
-    let rtl = snippets::rtl::render_preview(cx);
+    let square = snippets::square::render_preview(cx, square_image);
+    let portrait = snippets::portrait::render_preview(cx, tall_image);
+    let rtl = snippets::rtl::render_preview(cx, wide_image);
 
     let notes = doc_layout::notes_block([
         "Preview follows the shadcn docs flow more closely: demo first, then a minimal usage example.",
