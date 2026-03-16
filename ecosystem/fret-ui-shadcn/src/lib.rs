@@ -227,6 +227,7 @@ pub mod raw {
     raw_module!(popover);
     raw_module!(progress);
     raw_module!(radio_group);
+    raw_module!(recharts_geometry);
     raw_module!(resizable);
     raw_module!(scroll_area);
     raw_module!(select);

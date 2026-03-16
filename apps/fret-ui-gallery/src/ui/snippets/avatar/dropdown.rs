@@ -77,7 +77,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::DropdownMenuContent::new()
                         .align(shadcn::DropdownMenuAlign::End)
                         .side_offset(Px(4.0))
-                        .min_width(Px(224.0)),
+                        .min_width(Px(128.0)),
                 )
                 .entries(entries(cx))
                 .into_element(cx),

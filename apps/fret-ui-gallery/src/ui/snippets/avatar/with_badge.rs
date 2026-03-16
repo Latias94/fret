@@ -3,7 +3,8 @@ pub const SOURCE: &str = include_str!("with_badge.rs");
 // region: example
 use crate::ui::snippets::avatar::demo_image;
 use fret::{UiChild, UiCx};
-use fret_ui::Theme;
+use fret_core::window::ColorScheme;
+use fret_ui::Invalidation;
 use fret_ui_kit::{ColorRef, IntoUiElement};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -40,35 +41,21 @@ fn avatar_with_badge<H: UiHost>(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
-    let destructive = Theme::global(&*cx.app).color_token("destructive");
+    let scheme = cx.environment_color_scheme(Invalidation::Paint);
+    let badge_bg = match scheme.unwrap_or(ColorScheme::Light) {
+        ColorScheme::Dark => fret_ui_kit::colors::linear_from_hex_rgb(0x16_65_34),
+        ColorScheme::Light => fret_ui_kit::colors::linear_from_hex_rgb(0x16_A3_4A),
+    };
 
     wrap_row(|cx| {
-        let custom_badge = shadcn::AvatarBadge::new()
-            .refine_style(ChromeRefinement::default().bg(ColorRef::Color(destructive)));
-
         vec![
             avatar_with_badge(
                 cx,
                 avatar_image,
-                shadcn::AvatarSize::Sm,
-                shadcn::AvatarBadge::new(),
-                "ui-gallery-avatar-badge-sm",
-            )
-            .into_element(cx),
-            avatar_with_badge(
-                cx,
-                avatar_image,
                 shadcn::AvatarSize::Default,
-                custom_badge,
+                shadcn::AvatarBadge::new()
+                    .refine_style(ChromeRefinement::default().bg(ColorRef::Color(badge_bg))),
                 "ui-gallery-avatar-badge-default",
-            )
-            .into_element(cx),
-            avatar_with_badge(
-                cx,
-                avatar_image,
-                shadcn::AvatarSize::Lg,
-                shadcn::AvatarBadge::new(),
-                "ui-gallery-avatar-badge-lg",
             )
             .into_element(cx),
         ]

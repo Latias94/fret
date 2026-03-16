@@ -141,7 +141,7 @@ fn fret_layout_kbd_icon_only_height_matches_control_height() {
 
     let snap = run_fret_root(bounds, |cx| {
         vec![
-            shadcn::Kbd::from_children([fret_ui_shadcn::kbd::kbd_icon(
+            shadcn::Kbd::from_children([fret_ui_shadcn::raw::kbd::kbd_icon(
                 cx,
                 IconId::new_static("lucide.command"),
             )])
