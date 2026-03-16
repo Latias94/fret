@@ -27,6 +27,62 @@ Closeout note on 2026-03-16:
   with follow-on workstreams such as
   `into-element-surface-fearless-refactor-v1` and `action-first-authoring-fearless-refactor-v1`.
 
+## Current Release-Blocking Closeout Items (2026-03-16)
+
+The lane split itself is no longer the blocker. The remaining pre-release blockers are the
+authoring surfaces that still feel too wide or too indirect even though the underlying ownership
+model is already correct.
+
+Fresh-audit reading rule on 2026-03-16:
+
+- if a new audit says "the default path still feels too wide", treat that as a closeout signal on
+  discovery, root budgeting, or ceremony,
+- do **not** treat it as evidence that the app/component/advanced tier model is still undecided,
+- post-closeout follow-ons such as ecosystem integration traits, macros, or other sugar should
+  read from the stabilized lane story below rather than running ahead of it.
+
+1. `fret-ui-shadcn` discovery-lane closure
+   - Default teaching lane: `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
+   - Explicit escape hatch: `shadcn::raw::*` / `fret_ui_shadcn::raw::*`
+   - Explicit setup lanes: `shadcn::app::*` and `shadcn::themes::*` for app installation/theme
+     work only, not as peer component-family discovery lanes
+   - Non-goal: do not normalize the hidden flat crate root, `advanced::*`, and `raw::*` as equal
+     first-contact choices for ordinary component authoring
+   - Audit snapshot on 2026-03-16: `fret-ui-shadcn` still exposes `83 pub mod` / `174 pub use`,
+     so discovery pressure is still materially higher than the target product story
+2. `fret` root lane budget freeze
+   - `fret::app`, `fret::component`, and `fret::advanced` are the product tiers
+   - root-level secondary lanes such as `assets`, `env`, `router`, and `docking` remain allowed,
+     but only as explicit opt-in lanes, not as vocabulary that should compete with
+     `fret::app::prelude::*`
+   - Non-goal: do not collapse the root into another "default import" lane or re-widen the app
+     surface just because optional ecosystems exist
+   - New root lanes should require an explicit justification for why the surface cannot live under
+     an existing lane or remain crate-local
+   - Audit snapshot on 2026-03-16: `fret` still exposes `35 pub mod` / `96 pub use`, so lane
+     budgeting remains a real release concern even though the app prelude itself is much smaller
+3. Happy-path ceremony reduction
+   - The next density problem is no longer "mechanism vs policy"; it is reducing the amount of
+     surface an ordinary app author has to hold in their head in the first hour
+   - Priority targets: tracked-value reads, common local/payload write paths, and list/keyed-row
+     defaults
+   - Ownership split: this workstream sets the target product surface, while
+     `action-first-authoring-fearless-refactor-v1` and
+     `into-element-surface-fearless-refactor-v1` land the concrete API reductions
+4. `AppActivateExt` bridge retirement path
+   - `AppActivateExt` is now intentionally off `fret::app::prelude::*`, but it still exists as a
+     facade-level bridge table
+   - The bridge remains acceptable only for truly activation-only legacy/default-path surfaces
+   - New first-party widgets should not add fresh `AppActivateSurface` impls when they can expose
+     native `.action(...)` / `.action_payload(...)` slots directly
+   - The target end-state is "shrinking bridge residue", not "permanent growing integration list"
+
+Post-closeout follow-on:
+
+- ecosystem integration-trait budgeting is not a release blocker ahead of items 1-4
+- resume it only after the public lane story above is stable enough that router/query/docking/
+  catalog integration seams can be audited against final, not transitional, imports
+
 ## Public Surface Tiers
 
 | Tier | Intended audience | Canonical import | Allowed concepts |
@@ -80,8 +136,8 @@ Explicit secondary app lanes:
   action-registry helper nouns; add `ElementCommandGatingExt as _` when code needs explicit
   `cx.action_is_enabled(...)` reads
 - `fret::app::{AppActivateSurface, AppActivateExt}` for helper signatures that intentionally name
-  the narrow activation-widget contract instead of relying on the anonymous app-prelude method
-  import
+  the narrow activation-widget contract, plus explicit `use fret::app::AppActivateExt as _;`
+  imports at activation-only call sites
 - `fret::app::LocalState` for helper signatures or validators that intentionally name local
   state-handle types
 - `fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw,
@@ -191,9 +247,14 @@ Target rule:
 - overlap-heavy extension traits may still arrive through anonymous `as _` imports so method calls
   remain ergonomic, but those trait names are not part of the default app-lane vocabulary and
   should not be taught as first-contact imports.
-- `AppActivateExt` follows the same rule: app code may call `.dispatch::<A>()`,
-  `.dispatch_payload::<A>(...)`, or `.listen(...)` without importing the trait name, but
-  helper code that intentionally names the contract should import it from `fret::app`.
+- `AppActivateExt` follows the explicit-bridge rule: it is not part of
+  `fret::app::prelude::*`. App code adds `use fret::app::AppActivateExt as _;` only when an
+  activation-only widget still needs `.action(act::Save)`, `.action_payload(act::Remove, payload)`,
+  `.listen(...)`, or the explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` aliases.
+  Helper code that intentionally names the contract imports it from `fret::app`.
+- first-party ecosystem widgets with stable activation semantics should keep graduating to native
+  `.action(...)` / `.action_payload(...)` slots so `AppActivateExt` increasingly reads as a bridge
+  for activation-only legacy surfaces rather than the default way to wire ordinary buttons/wrappers.
 - the remaining anonymous semantics/a11y/test-id helpers are intentionally retained on the app
   lane: `.role(...)`, `.a11y_role(...)`, and `.test_id(...)` are treated as app-justified
   diagnostics/accessibility affordances even though the underlying trait names stay hidden.

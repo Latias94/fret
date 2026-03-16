@@ -27,9 +27,11 @@ If the common path is unclear, prefer the following defaults:
   only for straightforward local writes, and stay on the generic models path when command/keymap
   gating or broader coordination is involved
 - widget wiring: prefer `.action(...)` / `.action_payload(...)` whenever the widget already exposes
-  a stable action slot; for activation-only surfaces prefer `.dispatch::<A>()`,
-  `.dispatch_payload::<A>(...)`, and `.listen(...)` before reopening raw `Arc<dyn Fn...>`
-  seams
+  a stable action slot; for activation-only surfaces prefer the same action-first wording via
+  `.action(act::Save)` / `.action_payload(act::Remove, payload)` / `.listen(...)` after an
+  explicit `use fret::app::AppActivateExt as _;`, with `.dispatch::<A>()` /
+  `.dispatch_payload::<A>(...)` kept as the explicit aliases before reopening raw
+  `Arc<dyn Fn...>` seams
 - invalidation: tracked state writes should usually rerender implicitly; keep explicit `notify()` for
   imperative/cache-oriented escape hatches
 - composition: stay on builder-first paths until the final runtime boundary

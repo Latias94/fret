@@ -61,6 +61,15 @@ An old surface is eligible for deletion only when all of the following are true:
 | Selector/query hooks | `use_selector`, `use_query*` on flat context | `ui.data()` | namespace wrapper + extension traits, then delete flat `AppUi` data helpers once first-party app surfaces are migrated | first-party state libs use grouped data surface, including extracted `UiCx` helpers on app-facing examples | Deleted | `ecosystem/fret/src/view.rs`, `apps/fret-examples/src/async_playground_demo.rs`, `apps/fret-examples/src/markdown_demo.rs`, `ecosystem/fret/tests/uicx_data_surface.rs`, `docs/authoring-golden-path-v2.md` |
 | Effect helpers | app-bound side effects via ad-hoc patterns | `ui.effects()` | introduce grouped entry while forwarding to current mechanisms, then delete the old flat render-time transient helper | default path has one documented effect story | Deleted | `ecosystem/fret/src/view.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/markdown_demo.rs` |
 
+## Release-Blocking Closeout Rows (2026-03-16)
+
+| Closeout area | Current posture | Target posture | Exit condition | Status | Evidence anchors |
+| --- | --- | --- | --- | --- | --- |
+| `fret-ui-shadcn` discovery lanes | facade, raw, hidden root, and setup/debug lanes still create too many apparent first-contact paths | one taught component-family lane: `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, with `raw::*` as the only explicit escape hatch | first-party docs/gallery/examples teach only the curated facade lane for component families, `app::*` / `themes::*` read as setup lanes, `advanced::*` stays non-default, and the hidden root is treated purely as shrinking compatibility residue | In progress | `docs/shadcn-declarative-progress.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`, `ecosystem/fret-ui-shadcn/src/lib.rs` |
+| `fret` root lane budget | the root still reads like an omnibus bus even though the app prelude is much smaller | root-level secondary lanes stay explicit opt-ins and stop competing with `fret::app::prelude::*` for first-contact vocabulary | new root exports require explicit justification, default app docs stay on app/component/advanced tiers, and root growth no longer increases ordinary app-author autocomplete pressure | In progress | `ecosystem/fret/src/lib.rs`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` |
+| Happy-path ceremony | first-hour/default todo authoring still requires too much ceremony around reads, writes, and list composition | shorter default-path reads/writes/composition without reopening mechanism/policy confusion | tracked first-hour/default todo surfaces get materially shorter on tracked reads, common local/payload writes, and keyed/list authoring after lane curation stabilizes | In progress | `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/first-hour.md`, `docs/examples/todo-app-golden-path.md` |
+| `AppActivateExt` bridge | explicit bridge exists, but still risks becoming a standing integration list | shrinking bridge-only residue used only for activation-only legacy/default-path surfaces that lack native action slots | no new first-party bridge impls are added where native `.action(...)` / `.action_payload(...)` fits, docs keep the import explicit, and the remaining bridge list is documented as intentional residue | In progress | `ecosystem/fret/src/lib.rs`, `ecosystem/fret/src/view.rs`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`, `docs/shadcn-declarative-progress.md` |
+
 ## Ecosystem Crates
 
 | Crate / area | Current posture | Target posture | Migration notes | Old surface delete trigger | Status | Evidence anchors |
@@ -116,17 +125,16 @@ These are the concrete "remove this" lanes.
 | root-level `fret::workspace_shell_model*` shortcuts | `fret::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu}` | root facade no longer forwards editor/workspace-shell helpers and source gates keep them module-scoped | Deleted |
 | stale docs that teach superseded names | rewritten docs | new docs merged and linked | In progress |
 
-## Recommended Execution Order
+## Current Closeout Execution Order
 
 | Order | Track | Why |
 | --- | --- | --- |
-| 1 | canonical naming reset | every other migration table entry depends on the names stabilizing first |
-| 2 | prelude split | encodes the product tiers in imports early |
-| 3 | grouped `AppUi` namespaces | lets templates/docs migrate without waiting for deep runtime rewrites |
-| 4 | docs/templates/cookbook migration | proves the new surface is actually teachable |
-| 5 | first-party ecosystem migrations | aligns `shadcn`, `docking`, `query`, `selector`, `router` on one public story |
-| 6 | hard-delete old surface | remove aliases/helpers once no official path relies on them |
-| 7 | add and tighten guardrails | lock the cleaned surface against drift |
+| 1 | shadcn discovery-lane closure | `fret-ui-shadcn` still creates the biggest first-contact path ambiguity, so this is the highest-value closeout item |
+| 2 | `fret` root lane budget freeze | the root still risks reading like a second prelude even after the app/component split has landed |
+| 3 | happy-path ceremony reduction | density/sugar work should read from the stabilized lane story rather than racing ahead of it |
+| 4 | `AppActivateExt` bridge retirement | explicit bridge residue should keep shrinking while native widget action slots expand |
+| 5 | ecosystem integration-trait budgeting | trait seams should be audited only after the public lane/discovery story is stable |
+| 6 | final delete-ready cleanup + gates | remove residual compatibility exposure and keep the closed surface locked with docs/source-policy tests |
 
 ## Completion Rule
 

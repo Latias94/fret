@@ -64,7 +64,11 @@ impl View for ActionFirstViewRuntimeDemo {
                 shadcn::Button::new("Ping")
                     .action(act::Ping)
                     .into_element(cx)
-                    .test_id("ui-gallery-command-action-first-view-runtime.ping"),
+                    .test_id("ui-gallery-command-action-first-view-runtime.button-ping"),
+                shadcn::Badge::new("Ping via activate sugar")
+                    .action(act::Ping)
+                    .test_id("ui-gallery-command-action-first-view-runtime.ping")
+                    .into_element(cx),
             ]
         })
         .gap(Space::N2)

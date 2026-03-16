@@ -80,6 +80,79 @@ Closeout note on 2026-03-16:
   - keeping this tracker honest while the conversion-surface follow-on workstream keeps deleting
     old vocabulary families.
 
+Release-blocking closeout order on 2026-03-16:
+
+1. close `fret-ui-shadcn` discovery-lane duplication
+2. freeze the `fret` root lane budget
+3. reduce happy-path ceremony on the default app lane
+4. keep `AppActivateExt` on a shrinking bridge-only path
+
+Ownership split on 2026-03-16:
+
+- this workstream owns items 1 and 2 directly,
+- item 3 is shared with
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/` and
+  `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
+- item 4 is shared with
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/`.
+
+Audit reconciliation note on 2026-03-16:
+
+- fresh external audits are directionally correct that the remaining pre-release risk is no longer
+  kernel/runtime design but public authoring-surface curation,
+- specifically, the open pressure is now:
+  - shadcn discovery-lane duplication,
+  - `fret` root lane budgeting,
+  - first-hour/default-path ceremony,
+  - and `AppActivateExt` bridge growth pressure,
+- the same audits should **not** be read as evidence that the app/component/advanced split itself
+  needs another broad redesign pass here:
+  - default app-prelude overlap is already down to intentional ergonomics budget plus the shared
+    `ui` / `Px` vocabulary,
+  - advanced/manual-assembly code that still needs reusable component authoring helpers now imports
+    `fret::component::prelude::*` explicitly,
+- ecosystem integration-trait follow-on work remains important, but it should resume only after the
+  remaining lane-curation blockers below are stable so third-party extension seams align with the
+  final public lane story rather than an interim discovery posture.
+
+## Current release-blocking closeout checklist
+
+- [ ] Lock `fret-ui-shadcn` to one taught component-family discovery lane:
+  `facade as shadcn`, with `raw::*` as the only explicit escape hatch and the hidden flat root
+  treated as compatibility residue rather than another valid default path.
+  - Exit pressure to remove:
+    - stale first-party teaching copy that still makes the crate root feel like a peer path,
+    - hidden-root compatibility exposure that still leaks into autocomplete or review load,
+    - uncertainty over whether `app::*`, `themes::*`, or `advanced::*` are peer discovery lanes.
+- [ ] Freeze the `fret` root lane budget so new optional ecosystems only land as explicit
+  secondary lanes and do not reopen default-lane autocomplete pressure for ordinary app authors.
+  - Exit pressure to remove:
+    - root-level exports that read like a second prelude,
+    - new lane additions without an explicit "why not under an existing lane?" justification,
+    - source/docs drift where app authors must rediscover optional ecosystems from the root.
+- [ ] Coordinate the next happy-path ceremony pass across `fret`, `fret-ui-kit`, and first-party
+  docs/examples so the first-hour/default todo path gets materially shorter without reopening the
+  kernel/mechanism split.
+  - Priority targets once lane curation is stable:
+    - tracked-value reads,
+    - common local/payload write paths,
+    - keyed/list/default child-collection ergonomics.
+- [ ] Keep `AppActivateExt` on a shrinking bridge-only path: no new first-party bridge impls for
+  widgets that can instead ship native `.action(...)` / `.action_payload(...)` slots.
+  - Exit pressure to remove:
+    - facade-level bridge growth for widgets that already have a stable action meaning,
+    - new first-party docs/snippets that normalize `AppActivateExt` as a default app-lane import,
+    - any ambiguity about whether `.dispatch::<A>()` is the preferred path over native widget
+      action slots.
+
+Post-closeout handoff order on 2026-03-16:
+
+1. finish shadcn discovery-lane closure
+2. freeze the `fret` root lane budget
+3. run the next happy-path ceremony pass across action-first and conversion follow-ons
+4. continue shrinking the remaining `AppActivateExt` bridge table
+5. resume ecosystem integration-trait budgeting only after the four items above are stable
+
 ## M0 — Freeze the target product surface
 
 - [x] Finalize `TARGET_INTERFACE_STATE.md` as the single source of truth for the desired public surface.
@@ -169,7 +242,8 @@ Closeout note on 2026-03-16:
   - [x] First batch on 2026-03-15: remove raw `on_activate`, `on_activate_notify`,
     `on_activate_request_redraw`, and `on_activate_request_redraw_notify` free-function exports
     from `fret::app::prelude::*`; the default app lane now teaches widget-local
-    `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` instead.
+    `.action(...)` / `.action_payload(...)` / `.listen(...)` instead, with
+    `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` retained as explicit aliases.
   - [x] Second batch on 2026-03-15: move high-frequency icon/style nouns off
     `fret::app::prelude::*` into explicit `fret::icons::{icon, IconId}` and `fret::style::{Theme,
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space}`
@@ -221,6 +295,11 @@ Closeout note on 2026-03-16:
     `vec![body.into_element(cx)]` landing line, and
     `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
     now passes again after the default app surface tightening.
+  - [x] Sixteenth batch on 2026-03-16: move `AppActivateExt` fully off
+    `fret::app::prelude::*`. Activation-only bridge call sites now import
+    `use fret::app::AppActivateExt as _;` explicitly, while ordinary action-capable snippets such
+    as `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` stay on native widget
+    `.action(...)` slots without the bridge import.
   - [x] Fifteenth batch on 2026-03-15: narrow the component prelude's overlay vocabulary. The
     default component lane now keeps only `OverlayController`, `OverlayRequest`, and
     `OverlayPresence`; overlay anchoring helpers and stack/introspection nouns moved to explicit

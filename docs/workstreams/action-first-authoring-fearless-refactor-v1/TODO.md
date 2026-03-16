@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 Related:
 
@@ -52,6 +52,24 @@ ID format:
 - `AFA-{area}-{nnn}`
 
 ---
+
+## Current post-v1 ownership correction (2026-03-16)
+
+This workstream is no longer the owner of crate-discovery curation.
+
+- `fret-ui-shadcn` discovery-lane closure and `fret` root lane budgeting belong first to
+  `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/`
+- this workstream owns the next density pass only after those lane-curation blockers are stable
+- the two active post-v1 product tasks here are:
+  - reducing happy-path ceremony on the default app path,
+  - keeping `AppActivateExt` on a shrinking bridge-only path rather than letting the bridge table
+    become a permanent growth surface
+- do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
+  this workstream until the shadcn discovery-lane and `fret` root-budget closeout items are green
+- after those lane-curation items are stable, the execution order here is:
+  1. reduce first-hour/default-path ceremony,
+  2. continue shrinking bridge-only activation residue,
+  3. only then reconsider whether any additional sugar still earns its weight
 
 ## A. Decision + Contract Locking
 
@@ -146,6 +164,36 @@ ID format:
 
 - [x] AFA-actions-016 Add action-first binding convenience for shadcn `Button`.
   - Evidence: `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
+- [x] AFA-actions-016a Expand native action-first slots on default-lane shadcn activation widgets.
+  - Goal: app-facing shadcn widgets should prefer widget-native `.action(...)` over
+    `AppActivateExt` whenever the action slot is stable and semantically narrow.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/badge.rs` (`Badge::action`, `Badge::action_payload`)
+    - `ecosystem/fret-ui-shadcn/src/extras/banner.rs`
+      (`BannerAction::action`, `BannerClose::action`, close-first action dispatch helper)
+    - `ecosystem/fret-ui-shadcn/src/extras/ticker.rs` (`Ticker::action`, `Ticker::action_payload`)
+    - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
+- [x] AFA-actions-016b Expand native action-first slots on first-party AI wrapper buttons.
+  - Goal: `fret-ui-ai` wrappers that are structurally just button/tooltip/layout composition
+    should not require `AppActivateExt` for ordinary action dispatch.
+  - Evidence:
+    - `ecosystem/fret-ui-ai/src/elements/workflow/controls.rs`
+    - `ecosystem/fret-ui-ai/src/elements/message_actions.rs`
+    - `ecosystem/fret-ui-ai/src/elements/artifact.rs`
+    - `ecosystem/fret-ui-ai/src/elements/confirmation.rs`
+    - `ecosystem/fret-ui-ai/src/elements/prompt_input.rs`
+    - `ecosystem/fret-ui-ai/src/elements/checkpoint.rs`
+    - `ecosystem/fret-ui-ai/src/elements/conversation_download.rs`
+    - `ecosystem/fret-ui-ai/src/elements/web_preview.rs`
+    - `ecosystem/fret-ui-ai/src/surface_policy_tests.rs`
+- [x] AFA-actions-016c Expand native action-first slots on remaining default-lane Material3 wrappers.
+  - Goal: Material3 wrappers that are still app-facing click targets should offer the same native
+    `.action(...)` contract as the crate's primary buttons/icon-buttons.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/card.rs`
+    - `ecosystem/fret-ui-material3/src/dialog.rs`
+    - `ecosystem/fret-ui-material3/src/top_app_bar.rs`
+    - `ecosystem/fret-ui-material3/src/lib.rs`
 - [x] AFA-actions-017 Add action-first naming parity helpers in `fret-ui-kit`.
   - Evidence:
     - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
@@ -1041,35 +1089,41 @@ Current sequencing note (as of 2026-03-09):
     - close v1 as successful on architecture + migration + default teaching surface,
     - track density/ergonomics work in a separate post-v1 phase,
     - do not add more tiny helpers until another round of template/demo evidence shows repeated pressure.
-- Helper visibility policy snapshot (as of 2026-03-15):
-  - Default teaching surface: `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.dispatch::<A>()`, `.dispatch_payload::<A>(payload)`, and `.listen(|host, acx| ...)` for activation-only surfaces.
+- Helper visibility policy snapshot (as of 2026-03-16):
+  - Default teaching surface: `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.action(act::Save)`, `.action_payload(act::Remove, payload)`, and `.listen(|host, acx| ...)` for activation-only surfaces. The explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` aliases remain available, but they are no longer the shortest recommended wording.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
   - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
   - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme` and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, `embedded_viewport_demo` now uses `use_local_with(...)` + `on_action_notify_local_set(...)` for its view-local size preset while keeping viewport interop/render-time effects explicit, and `hello_counter_demo` plus both query demos remain the intentional `use_local` prototypes that still keep the default `on_action_notify_models` action surface for coordinated writes.
 - [x] AFA-postv1-022 Start event-surface unification under `cx.actions()`.
   - Goal: move default widget-side activation glue onto the same grouped action namespace as root/view action registration, without rewriting runtime dispatch.
-  - Evidence target: a design note, grouped `dispatch` / `dispatch_payload` / `listener` helpers on `AppUiActions`, and at least one docs/source-policy update that treats them as the preferred widget-local glue surface.
+  - Evidence target: a design note, grouped `action` / `action_payload` / `dispatch` / `dispatch_payload` / `listen` helpers on `AppUiActions`, and at least one docs/source-policy update that treats them as the preferred widget-local glue surface.
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVENT_SURFACE_UNIFICATION_DESIGN.md`
-    - `ecosystem/fret/src/view.rs` (`AppUiActions::{dispatch, dispatch_payload, listener}`)
+    - `ecosystem/fret/src/view.rs` (`AppUiActions::{action, action_payload, dispatch, dispatch_payload, listen, listener}`)
     - `docs/crate-usage-guide.md`
     - `docs/authoring-golden-path-v2.md`
 - [x] AFA-postv1-024 Add only thin activatable-widget sugar after the docs/template rewrite proves it is still needed.
   - Goal: if activation-only surfaces still feel materially noisier than `.action(...)`-capable widgets, add a single app-facing extension trait in `ecosystem/fret` rather than another helper family.
-  - Landed target: `widget.dispatch::<A>()`, `widget.dispatch_payload::<A>(payload)`, and `widget.listen(|host, acx| ...)` for types that already expose `on_activate(...)`.
+  - Landed target: `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| ...)` for types that already expose `on_activate(...)`, with `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` kept as explicit aliases.
   - Guardrails: do not replace `.action(...)` / `.action_payload(...)` as the default for widgets that already have stable action slots; do not add `click` / `submit` / `listener_notify` style helper taxonomies.
   - Evidence:
     - `ecosystem/fret/src/view.rs` (`AppActivateSurface`, `AppActivateExt`)
-    - `ecosystem/fret/src/lib.rs` (`fret::app::prelude::*` imports `AppActivateExt as _`; `fret::app::AppActivateSurface`)
+    - `ecosystem/fret/src/lib.rs` (`fret::app::{AppActivateSurface, AppActivateExt}` explicit bridge lane; `fret::app::prelude::*` intentionally omits `AppActivateExt as _`)
     - `docs/first-hour.md`
   - Follow-up evidence (as of 2026-03-15):
     - `ecosystem/fret/src/lib.rs` now explicitly exports `fret::app::AppActivateExt` alongside
       `fret::app::AppActivateSurface`, and the facade self-tests lock that shape
     - `ecosystem/fret/src/view.rs` dropped the no-op `cx` marker parameter from
-      `AppActivateExt::{dispatch, dispatch_payload, listen}`, so the default activation sugar is
-      now `widget.dispatch::<A>()`, `widget.dispatch_payload::<A>(payload)`, and
-      `widget.listen(|host, acx| ...)` instead of carrying an unused context argument
+      `AppActivateExt::{action, action_payload, dispatch, dispatch_payload, listen}`, so the
+      default activation sugar is now `widget.action(act::Save)`,
+      `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| ...)`, with
+      `dispatch` aliases kept as the explicit wording instead of carrying an unused context argument
+    - follow-up tightening on 2026-03-16 moved `AppActivateExt` fully off
+      `fret::app::prelude::*`; activation-only call sites now import
+      `use fret::app::AppActivateExt as _;` explicitly, while ordinary action-capable snippets
+      such as `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` stay on native
+      widget `.action(...)` slots without the bridge import
     - `ecosystem/fret/src/view.rs` now extends the same thin sugar lane to
       `fret_ui_shadcn::facade::Button`, `fret_ui_shadcn::facade::SidebarMenuButton`, and optional
       `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`

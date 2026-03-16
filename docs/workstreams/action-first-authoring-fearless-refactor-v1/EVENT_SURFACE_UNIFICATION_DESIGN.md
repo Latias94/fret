@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Event Surface Unification
 
 Status: in progress, post-v1 productization lane
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 Related:
 
@@ -56,11 +56,11 @@ The default app-facing event story should collapse to four concepts:
 2. **Dispatch that action from widget-local activation sugar**
    - if a widget already has `.action(...)` / `.action_payload(...)`, prefer those direct action
      slots first,
-   - use `widget.dispatch::<act::Save>()` only for activation-only surfaces that do not already
-     expose a stable action slot,
-   - use `widget.dispatch_payload::<act::ToggleTodo>(todo.id)` only when the widget-local
-     surface is activation-only but the action still needs payload dispatch,
-   - treat raw `.on_activate(...)` wired with `cx.actions().dispatch* / listener(...)` as the
+   - activation-only surfaces should still prefer the same action-first wording when possible:
+     `widget.action(act::Save)` and `widget.action_payload(act::ToggleTodo, todo.id)`,
+   - keep `widget.dispatch::<act::Save>()` / `widget.dispatch_payload::<act::ToggleTodo>(todo.id)`
+     as explicit aliases when the turbofish wording is clearer at the call site,
+   - treat raw `.on_activate(...)` wired with `cx.actions().action* / dispatch* / listen(...)` as the
      lower-level building block behind that sugar, not as the default teaching lane.
 3. **Handle actions at the view/root layer**
    - `cx.actions().locals::<A>(...)`
@@ -89,10 +89,10 @@ shadcn::Checkbox::from_checked(todo.done)
     .action_payload(todo.id);
 
 widget_that_only_exposes_on_activate()
-    .dispatch::<act::Save>();
+    .action(act::Save);
 
 widget_that_only_exposes_on_activate()
-    .dispatch_payload::<act::RemoveTodo>(todo.id);
+    .action_payload(act::RemoveTodo, todo.id);
 
 shadcn::Button::new("Close")
     .listen(|host, acx| {
@@ -128,6 +128,9 @@ The following remain valid, but should not be the first-contact story:
 
 Land:
 
+- `cx.actions().action(act::Save)`
+- `cx.actions().action_payload(act::RemoveTodo, payload)`
+- `cx.actions().listen(...)`
 - `cx.actions().dispatch::<A>()`
 - `cx.actions().dispatch_payload::<A>(payload)`
 - `cx.actions().listener(...)`
@@ -142,8 +145,9 @@ Move default docs toward:
 
 - widget binding via `.action(...)` / `.action_payload(...)` whenever the widget already exposes a
   stable action slot,
-- widget-local activation via `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` /
-  `.listen(...)` only for activation-only surfaces,
+- widget-local activation via `.action(...)` / `.action_payload(...)` / `.listen(...)` for
+  activation-only surfaces, with `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` as explicit
+  aliases,
 - root/view handling via `cx.actions().locals/models/payload/transient`
 
 Demote:
@@ -153,15 +157,16 @@ Demote:
 
 ### Phase 2.5 — Land thin app-facing sugar for activation-only seams
 
-Status (as of 2026-03-15): landed in `ecosystem/fret` as `fret::app::AppActivateSurface` plus the
-blanket `AppActivateExt` methods imported by `fret::app::prelude::*`, with an explicit app-lane
-import path available as `use fret::app::AppActivateExt as _;`.
+Status (as of 2026-03-16): landed in `ecosystem/fret` as `fret::app::AppActivateSurface` plus the
+blanket `AppActivateExt` methods available behind an explicit app-lane import path,
+`use fret::app::AppActivateExt as _;`. The trait intentionally stays off
+`fret::app::prelude::*` so bridge-only helpers do not widen default app autocomplete.
 
 Default shape:
 
 ```rust,ignore
 activation_only_widget()
-    .dispatch::<act::OpenPalette>();
+    .action(act::OpenPalette);
 
 activation_only_widget()
     .listen(|host, acx| {
@@ -173,6 +178,8 @@ activation_only_widget()
 Trait boundary:
 
 - app-facing extension trait in `ecosystem/fret`,
+- not part of `fret::app::prelude::*`; call sites import `use fret::app::AppActivateExt as _;`
+  only when they intentionally use the activation-only bridge,
 - implemented only for widgets/types that already expose `on_activate(...)`,
 - the authoring surface intentionally does **not** carry an unused `cx` marker argument anymore;
   widget-local activation sugar is now pure widget syntax (`dispatch`, `dispatch_payload`,
@@ -181,7 +188,8 @@ Trait boundary:
   `shadcn::Button`, `shadcn::SidebarMenuButton`, `shadcn::extras::{BannerAction, BannerClose, Ticker}`,
   optional `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`,
   plus Material 3 `Card`, `DialogAction`, and `TopAppBarAction`,
-- powered internally by `cx.actions().dispatch(...)` / `dispatch_payload(...)` / `listener(...)`,
+- powered internally by `cx.actions().action(...)` / `action_payload(...)` / `listen(...)`,
+  with `dispatch` / `dispatch_payload` / `listener` kept as equivalent explicit aliases,
 - kept off `crates/fret-ui` and off component-policy crates.
 - custom widgets join this lane by implementing `fret::app::AppActivateSurface` and forwarding
   their `on_activate(...)` slot.
@@ -191,10 +199,13 @@ Trait boundary:
   helper actions. Those remain component-owned typed callbacks rather than joining a second generic
   app-facing trait family.
 
-Current first-party teaching evidence (as of 2026-03-15):
+Current first-party teaching evidence (as of 2026-03-16):
 
 - selected UI Gallery activation-only snippets now import `fret::app::AppActivateExt as _;`,
 - those snippets prefer `.listen(|host, acx| { ... })` over reopening raw `.on_activate(...)`,
+- the UI Gallery `command/action_first_view` snippet now stays on native widget `.action(...)`
+  slots without importing `AppActivateExt`, which keeps ordinary action-capable authoring off the
+  bridge lane,
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locks that default teaching
   surface with `selected_activation_snippets_prefer_app_activate_listen`, including the primary
   `sonner/demo` snippet, the data-table pagination demos, `scroll_area/nested_scroll_routing`, and

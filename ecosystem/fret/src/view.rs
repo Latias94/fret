@@ -548,10 +548,29 @@ pub trait AppActivateSurface: Sized {
 /// Thin app-facing sugar for activation-only widget surfaces.
 ///
 /// Prefer widget-native `.action(...)` / `.action_payload(...)` whenever a stable action slot
-/// already exists. Use this only for activation-only surfaces that would otherwise force
-/// `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` / `.listen(...)` boilerplate to reopen
-/// the raw `OnActivate` closure shape.
+/// already exists. Activation-only surfaces can still stay on the same action-first vocabulary via
+/// `.action(act::Save)` / `.action_payload(act::Remove, payload)`, with
+/// `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` kept as the more explicit aliases and
+/// `.listen(...)` as the imperative escape hatch.
 pub trait AppActivateExt: AppActivateSurface {
+    fn action<A>(self, _action: A) -> Self
+    where
+        A: crate::TypedAction,
+    {
+        <Self as AppActivateSurface>::on_activate(self, dispatch_action_listener::<A>())
+    }
+
+    fn action_payload<A>(self, _action: A, payload: A::Payload) -> Self
+    where
+        A: crate::actions::TypedPayloadAction,
+        A::Payload: Clone,
+    {
+        <Self as AppActivateSurface>::on_activate(
+            self,
+            dispatch_payload_action_listener::<A>(payload),
+        )
+    }
+
     fn dispatch<A>(self) -> Self
     where
         A: crate::TypedAction,
@@ -599,23 +618,23 @@ impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton {
 }
 
 #[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::extras::BannerAction {
+impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerAction {
     fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::extras::BannerAction::on_activate(self, on_activate)
+        fret_ui_shadcn::raw::extras::BannerAction::on_activate(self, on_activate)
     }
 }
 
 #[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::extras::BannerClose {
+impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerClose {
     fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::extras::BannerClose::on_activate(self, on_activate)
+        fret_ui_shadcn::raw::extras::BannerClose::on_activate(self, on_activate)
     }
 }
 
 #[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::extras::Ticker {
+impl AppActivateSurface for fret_ui_shadcn::raw::extras::Ticker {
     fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::extras::Ticker::on_activate(self, on_activate)
+        fret_ui_shadcn::raw::extras::Ticker::on_activate(self, on_activate)
     }
 }
 
@@ -732,6 +751,25 @@ fn action_listener(f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnA
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
+    /// Build a widget-local activation handler using the same action-first vocabulary as widgets
+    /// that already expose `.action(...)`.
+    pub fn action<A>(self, _action: A) -> OnActivate
+    where
+        A: crate::TypedAction,
+    {
+        dispatch_action_listener::<A>()
+    }
+
+    /// Build a widget-local activation handler that dispatches a typed payload action while
+    /// keeping the action marker on the call site.
+    pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate
+    where
+        A: crate::actions::TypedPayloadAction,
+        A::Payload: Clone,
+    {
+        dispatch_payload_action_listener::<A>(payload)
+    }
+
     /// Build a widget-local activation handler that dispatches the typed action through the
     /// existing command/action pipeline.
     pub fn dispatch<A>(self) -> OnActivate
@@ -751,8 +789,13 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     }
 
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
-    pub fn listener(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
+    pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
+    }
+
+    /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
+    pub fn listener(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
+        self.listen(f)
     }
 
     pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
@@ -1458,8 +1501,8 @@ pub fn view_record_engine_frame<V: View>(
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateSurface, LocalState, OnActivate, action_listener, dispatch_action_listener,
-        dispatch_payload_action_listener,
+        AppActivateExt, AppActivateSurface, LocalState, OnActivate, action_listener,
+        dispatch_action_listener, dispatch_payload_action_listener,
     };
     use std::any::Any;
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
@@ -1757,6 +1800,52 @@ mod tests {
         assert!(widget.on_activate.is_some());
     }
 
+    #[test]
+    fn app_activate_ext_action_alias_dispatches_without_turbofish() {
+        let widget = DummyActivateSurface::default().action(DispatchAction);
+        let dispatch = widget
+            .on_activate
+            .expect("action alias should store an activation handler");
+        let mut host = FakeHost::default();
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(77),
+        };
+
+        dispatch(&mut host, action_cx, ActivateReason::Pointer);
+
+        assert_eq!(
+            host.effects,
+            vec![Effect::Command {
+                window: Some(action_cx.window),
+                command: <DispatchAction as fret_runtime::TypedAction>::action_id(),
+            }]
+        );
+    }
+
+    #[test]
+    fn app_activate_ext_action_payload_alias_records_payload_without_turbofish() {
+        let widget = DummyActivateSurface::default().action_payload(DispatchPayloadAction, 9);
+        let dispatch = widget
+            .on_activate
+            .expect("action_payload alias should store an activation handler");
+        let mut host = FakeHost::default();
+        let action_cx = ActionCx {
+            window: AppWindowId::default(),
+            target: fret_ui::GlobalElementId(88),
+        };
+
+        dispatch(&mut host, action_cx, ActivateReason::Keyboard);
+
+        assert_eq!(host.payloads.len(), 1);
+        assert_eq!(host.payloads[0].0, action_cx);
+        assert_eq!(
+            host.payloads[0].1,
+            <DispatchPayloadAction as fret_runtime::TypedAction>::action_id()
+        );
+        assert_eq!(host.payloads[0].2.downcast_ref::<u64>().copied(), Some(9));
+    }
+
     #[cfg(feature = "shadcn")]
     #[test]
     fn local_state_supports_text_value_widgets() {
@@ -1802,16 +1891,26 @@ mod tests {
         assert!(!api_source.contains("pub trait AppActivateCxMarker"));
         assert!(!api_source.contains("AppActivateCxMarker for AppUi"));
         assert!(!api_source.contains("AppActivateCxMarker for ElementContext"));
+        assert!(api_source.contains("fn action<A>(self, _action: A) -> Self"));
+        assert!(
+            api_source
+                .contains("fn action_payload<A>(self, _action: A, payload: A::Payload) -> Self")
+        );
         assert!(api_source.contains("fn dispatch<A>(self) -> Self"));
         assert!(api_source.contains("fn dispatch_payload<A>(self, payload: A::Payload) -> Self"));
         assert!(api_source.contains(
             "fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> Self"
+        ));
+        assert!(api_source.contains("pub fn action<A>(self, _action: A) -> OnActivate"));
+        assert!(api_source.contains(
+            "pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate"
         ));
         assert!(api_source.contains("pub fn dispatch<A>(self) -> OnActivate"));
         assert!(
             api_source
                 .contains("pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate")
         );
+        assert!(api_source.contains("pub fn listen("));
         assert!(api_source.contains("pub fn listener("));
         #[cfg(feature = "shadcn")]
         {
@@ -1828,14 +1927,14 @@ mod tests {
             );
             assert!(
                 api_source
-                    .contains("impl AppActivateSurface for fret_ui_shadcn::extras::BannerAction")
+                    .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerAction")
             );
             assert!(
                 api_source
-                    .contains("impl AppActivateSurface for fret_ui_shadcn::extras::BannerClose")
+                    .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerClose")
             );
             assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_shadcn::extras::Ticker")
+                api_source.contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::Ticker")
             );
         }
         #[cfg(feature = "material3")]

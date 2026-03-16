@@ -137,7 +137,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For activation-only surfaces, prefer `widget.dispatch::<A>()`, `widget.dispatch_payload::<A>(payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For activation-only surfaces, add `use fret::app::AppActivateExt as _;` explicitly and keep the same action-first vocabulary via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`; the explicit `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, prefer `cx.actions().action(act::Save)`, `cx.actions().action_payload(act::Remove, payload)`, and `cx.actions().listen(...)`.
 
 `fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they only cover
 activation-only widgets that expose the standard `OnActivate` slot. Typed payload/context
@@ -145,7 +145,9 @@ callbacks remain component-owned surfaces even when they eventually dispatch app
 controls such as `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`,
 `ConversationDownload`, `PromptInputButton`, and `WebPreviewNavigationButton` as good fits for
 this lane; keep controls such as `Attachment`, `QueueItemAction`, `Test`, `FileTreeAction`,
-`Suggestion`, and `MessageBranch` on their explicit typed callback contracts.
+`Suggestion`, and `MessageBranch` on their explicit typed callback contracts. This bridge stays off
+`fret::app::prelude::*`; ordinary button-like widgets should graduate to native `.action(...)`
+slots instead of depending on the activation bridge for first-contact authoring.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.

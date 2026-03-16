@@ -308,6 +308,23 @@ fn selected_activation_snippets_prefer_app_activate_listen() {
 }
 
 #[test]
+fn action_first_view_snippet_prefers_action_alias_for_activation_only_widgets() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/command/action_first_view.rs",
+        &["shadcn::Badge::new(\"Ping via activate sugar\").action(act::Ping)"],
+    );
+
+    assert!(
+        !normalized.contains("usefret::app::AppActivateExtas_;"),
+        "action-first view snippet should stay on native widget action slots instead of importing activation bridge sugar"
+    );
+    assert!(
+        !normalized.contains(".dispatch::<act::Ping>()"),
+        "action-first view snippet should prefer the value-based activation alias over turbofish dispatch"
+    );
+}
+
+#[test]
 fn progress_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

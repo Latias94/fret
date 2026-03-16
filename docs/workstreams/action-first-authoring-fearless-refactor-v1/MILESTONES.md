@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 Related:
 
@@ -56,6 +56,14 @@ teaching surfaces, and gates line up.
 - **Overall assessment**: v1 is successful as an architectural reset and teaching-surface convergence
   pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
   ergonomics work rather than unfinished migration closure.
+- **Ownership correction (2026-03-16)**: shadcn discovery-lane closure and `fret` root lane
+  budgeting are now explicitly treated as authoring-surface closeout work, not as this
+  workstream's main next milestone. The remaining action-first responsibility is default-path
+  density reduction plus bridge retirement pressure (`AppActivateExt` should keep shrinking, not
+  expanding).
+- **Execution gate (2026-03-16)**: do not widen the default app lane with new sugar, macro
+  promotion, or bridge growth until the authoring-surface closeout has first stabilized
+  `fret-ui-shadcn` discovery and the `fret` root lane budget.
 
 Adoption note (as of 2026-03-07):
 
@@ -350,11 +358,17 @@ Post-v1 direction (recommended):
     `ai/{artifact_code_display,artifact_demo,chat_demo,checkpoint_demo,confirmation_demo,conversation_demo,message_usage,message_demo,persona_demo,prompt_input_docs_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture,web_preview_demo,workflow_controls_demo,workflow_node_graph_demo}`, with
     `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locking that teaching lane.
   - Activation-sugar closure note (as of 2026-03-15): `AppActivateExt::{dispatch, dispatch_payload, listen}`
-    no longer carries a no-op `cx` marker argument, the default widget-local story is now the
-    shorter `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` /
-    `widget.listen(|host, acx| ...)`, and the full
+    no longer carries a no-op `cx` marker argument, the default widget-local story is now
+    `widget.action(act::Save)` / `widget.action_payload(act::Remove, payload)` /
+    `widget.listen(|host, acx| ...)` with `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)`
+    retained as explicit aliases, and the full
     `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
     suite is green after the remaining copyable-root/page-landing fallout was cleaned up.
+  - Prelude-tightening follow-up (as of 2026-03-16): `AppActivateExt` is no longer imported by
+    `fret::app::prelude::*`. Activation-only bridge call sites now add
+    `use fret::app::AppActivateExt as _;` explicitly, while native action-capable teaching
+    surfaces such as `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` stay off
+    the bridge import entirely.
   - Activation-sugar boundary follow-up (as of 2026-03-15): custom callback signatures still stay
     out of the default app lane. `ecosystem/fret/src/view.rs` now source-locks the absence of a
     parallel `AppActionCxSurface` family and explicitly keeps typed payload/context surfaces such as

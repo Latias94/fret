@@ -78,6 +78,17 @@ Closeout note on 2026-03-16:
   `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app` both pass with
   explicit dual imports on the advanced examples/gallery surfaces that still need ordinary
   component authoring vocabulary.
+- the remaining release-blocking work is therefore not a new lane redesign; it is the final
+  product-surface closeout:
+  - reduce `fret-ui-shadcn` discovery pressure to one taught lane,
+  - keep the `fret` root from reading like a second prelude,
+  - hand the remaining density/ceremony reductions to the action-first and conversion follow-ons,
+  - and keep `AppActivateExt` on a shrinking bridge-only trajectory.
+- fresh audits that still call out app/component overlap should therefore be treated as a request
+  to finish lane budgeting and discovery curation, not as a reason to reopen the
+  app/component/advanced taxonomy itself.
+- ecosystem integration-trait budgeting remains a real follow-on, but it should read from the
+  final lane story after this closeout rather than compete with the closeout itself.
 
 If a proposed change is mainly about "too many `into_element` concepts" or "helper/component code
 still falls back to raw conversion vocabulary", it belongs in the follow-on workstream rather than
@@ -85,18 +96,24 @@ reopening this one.
 
 ## Current next-step order (2026-03-16)
 
-1. Keep `fret::app::prelude::*` in maintenance mode rather than reopening another narrowing pass:
-   the named overlap is already down to `ui`/`Px`, and remaining app-lane helper traits are the
-   intentional hidden-method ergonomics budget rather than active redesign debt.
-2. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
-   maintenance/gates when new first-party code tries to reintroduce crate-root drift.
-   Current progress: curated `prelude` and crate-internal recipe/helper glue no longer depend on
-   hidden flat root exports, and the first-contact teaching lane is already `facade as shadcn`;
-   remaining work is maintenance/gate follow-through rather than another export-structure reset.
-3. Finish the conversion-surface reset under
-   `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
-4. Continue thin small-app authoring sugar after the lane above is stable, starting with
-   action-first widget aliases where command-shaped builder names still leak into the default path.
+1. Close `fret-ui-shadcn` discovery-lane duplication.
+   Exit criteria: first-party docs/gallery teach only `facade as shadcn` for component families,
+   `raw::*` is the only explicit escape hatch, and the hidden flat root is treated purely as
+   compatibility residue.
+2. Freeze the `fret` root lane budget.
+   Exit criteria: the root still offers explicit opt-in lanes (`assets`, `env`, `router`,
+   `docking`, etc.), but default app authors can stay on `fret::app::prelude::*` without new root
+   vocabulary growth or new lane drift.
+3. Resume happy-path ceremony reduction only after the two lane-curation items above are stable.
+   Exit criteria: the default todo/first-hour path gets materially shorter on tracked reads,
+   local/payload writes, and keyed/list composition without reopening mechanism/policy confusion.
+4. Treat `AppActivateExt` as shrinking bridge residue, not as a growth surface.
+   Exit criteria: no new first-party bridge impls are added for widgets that can expose native
+   action slots; the remaining bridge list is intentional activation-only residue and is tracked as
+   such in docs/gates.
+5. Resume ecosystem integration-trait budgeting only after items 1-4 are stable.
+   Exit criteria: install/router/query/docking/catalog trait seams are reviewed against the final
+   `fret` / `fret-ui-shadcn` lane story instead of an interim pre-closeout discovery posture.
 
 ## Milestone 0 — Lock the target product surface
 
