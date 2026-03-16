@@ -1,12 +1,13 @@
 # Local-State Architecture (Fearless Refactor v1) — TODO
 
-Status: active decision lane
+Status: closed / maintenance lane (O1 decided; no prototype opened)
 Last updated: 2026-03-16
 
 Companion docs:
 
 - `DESIGN.md`
 - `MILESTONES.md`
+- `CLOSEOUT_AUDIT_2026-03-16.md`
 - `INVARIANT_MATRIX.md`
 - `OPTION_MATRIX_2026-03-16.md`
 - `SURFACE_CLASSIFICATION_2026-03-16.md`
@@ -57,6 +58,11 @@ Companion docs:
   - No new prelude/root growth.
   - No Todo-only helper invention.
   - No macro growth.
+- [x] Record the closeout and stop treating this as an active architecture queue.
+  - 2026-03-16 result:
+    - `CLOSEOUT_AUDIT_2026-03-16.md` closes the lane on `O1`,
+    - no M3 prototype opens,
+    - and any future storage-model work must reopen through a new narrower lane.
 
 ## M0 — Open the lane correctly
 
@@ -121,12 +127,26 @@ Companion docs:
 
 ## M4 — Close or spin out
 
-- [ ] If the chosen direction is “keep current contract”, record the closeout audit and stop.
-- [ ] If the chosen direction requires broader runtime contract change, update/add ADRs before
-  broad rollout.
-- [ ] Record which explicit raw/model seams remain intentional after the decision.
-- [ ] Move any larger follow-on work into a new narrower lane instead of letting this TODO expand
+- [x] If the chosen direction is “keep current contract”, record the closeout audit and stop.
+  - 2026-03-16 result:
+    - `CLOSEOUT_AUDIT_2026-03-16.md` records the O1 closeout,
+    - the current model-backed `LocalState<T>` contract stands,
+    - and this lane is now read as maintenance/historical evidence.
+- [x] Check whether the chosen direction requires broader runtime contract change before any broad
+  rollout.
+  - 2026-03-16 result:
+    - no broader runtime contract change was chosen,
+    - so no new ADR lane opens from this workstream.
+- [x] Record which explicit raw/model seams remain intentional after the decision.
+  - 2026-03-16 result:
+    - `use_state` remains the intentional explicit raw-model seam,
+    - shared `Model<T>` graphs remain first-class for hybrid/runtime-owned ownership,
+    - and default-path docs stay on `use_local*` / `LocalState<T>`.
+- [x] Move any larger follow-on work into a new narrower lane instead of letting this TODO expand
   indefinitely.
+  - 2026-03-16 rule:
+    - reopen only if future cross-surface evidence shows that the storage model itself has become
+      the bottleneck.
 
 ## Standing rules
 

@@ -39,7 +39,7 @@ Active tracker highlights:
 - Ecosystem integration traits budget (install/catalog/router/docking/query seams): `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`, `docs/workstreams/ecosystem-integration-traits-v1/TODO.md`, `docs/workstreams/ecosystem-integration-traits-v1/MILESTONES.md`, `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`.
 - Into-element surface cleanup (follow-on to the authoring reset; conversion vocabulary collapse): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
 - Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
-- Local-state architecture follow-on (next state-boundary decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`.
+- Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 
 Current pre-release authoring cleanup sequence:
 
@@ -48,9 +48,9 @@ Current pre-release authoring cleanup sequence:
 3. `into-element-surface-fearless-refactor-v1` finishes the remaining conversion-surface cleanup so curated first-party examples, including shadcn/UI Gallery surfaces, converge on one authoring vocabulary.
 4. `authoring-density-reduction-fearless-refactor-v1` closes the shorter default-path teaching
    surface and locks it with docs/gates.
-5. `local-state-architecture-fearless-refactor-v1` is a separate follow-on decision lane:
-   investigate the long-term storage/ownership contract behind `LocalState<T>` only after the
-   broader authoring-surface cleanup chain is already closed.
+5. `local-state-architecture-fearless-refactor-v1` documented the separate follow-on decision
+   around the long-term storage/ownership contract behind `LocalState<T>` after the broader
+   authoring-surface cleanup chain was already closed.
 
 Treat the first four trackers as one closed execution chain rather than unrelated cleanup notes.
 Treat item 5 as a separate architecture lane, not as a continuation of default-path sugar growth.
@@ -69,9 +69,10 @@ Current execution stance on 2026-03-16:
 - `authoring-density-reduction-fearless-refactor-v1` = closeout / maintenance lane:
   the shorter default-path teaching surface is landed; remaining work is wording/gate maintenance
   rather than another helper-growth pass.
-- `local-state-architecture-fearless-refactor-v1` = next active decision lane:
-  freeze the long-term `LocalState<T>` invariants and option set before adding any further state
-  sugar or reopening runtime-level state refactors.
+- `local-state-architecture-fearless-refactor-v1` = closed / maintenance lane:
+  the lane now closes on `O1` (keep model-backed storage, harden the facade boundary, keep
+  `use_state` as the explicit raw-model seam); reopen only if fresh cross-surface evidence shows
+  that the storage model itself has become the bottleneck.
 
 Recommended order from here:
 
@@ -79,10 +80,10 @@ Recommended order from here:
    inventories/gates aligned as maintenance rather than reopening broad redesign,
 2. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
    wording drift,
-3. run `local-state-architecture-fearless-refactor-v1` as a contract-first decision lane before
-   minting any new state-surface sugar,
-4. only reopen code-level local-state refactors after that lane chooses a direction and names the
-   proof surfaces + gates.
+3. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
+   treating it as another open-ended state-surface lane,
+4. only reopen code-level local-state refactors through a new narrower lane if fresh evidence can
+   name both the bottleneck and the proof surfaces + gates in advance.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 

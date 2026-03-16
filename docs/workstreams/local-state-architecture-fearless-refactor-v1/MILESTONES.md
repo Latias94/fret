@@ -6,6 +6,7 @@ Related:
 
 - Design: `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`
+- Closeout audit: `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Invariant matrix: `docs/workstreams/local-state-architecture-fearless-refactor-v1/INVARIANT_MATRIX.md`
 - Option matrix: `docs/workstreams/local-state-architecture-fearless-refactor-v1/OPTION_MATRIX_2026-03-16.md`
 - Surface classification: `docs/workstreams/local-state-architecture-fearless-refactor-v1/SURFACE_CLASSIFICATION_2026-03-16.md`
@@ -18,7 +19,7 @@ Related:
 
 ## Current status snapshot (as of 2026-03-16)
 
-This lane exists because the broad authoring-reset work is already closed.
+This lane was opened because the broad authoring-reset work was already closed.
 
 - **M0**: Met (the workstream is opened, indexed, and scoped as a separate architecture lane).
 - **M1**: Met (invariant matrix + surface classification now freeze what is genuinely
@@ -27,12 +28,15 @@ This lane exists because the broad authoring-reset work is already closed.
   facade boundary; no storage-model prototype is justified right now).
 - **M3**: Deferred / not opened under the current decision (only needed if future evidence reopens
   a prototype path).
-- **M4**: Planned (close the lane or spin out a narrower implementation lane).
+- **M4**: Met (the lane is now explicitly closed on the O1 decision; future reopen requires a new
+  narrower lane).
 
 Execution rule:
 
 - do not treat this as another helper-growth lane,
-- and do not start code refactors before M1/M2 have actually frozen the contract question.
+- do not start code refactors before M1/M2 have actually frozen the contract question,
+- and now read this file as the historical decision record for the O1 closeout rather than as an
+  active implementation queue.
 
 ---
 
@@ -123,3 +127,11 @@ Definition of done:
 
 - no ambiguous “maybe later” wording remains inside already-closed authoring workstreams,
 - and this lane itself no longer mixes decision-making with unrelated sugar growth.
+
+Current result (2026-03-16):
+
+- `CLOSEOUT_AUDIT_2026-03-16.md` now records the final read,
+- the lane closes on `O1`,
+- `LocalState<T>` remains model-backed,
+- `use_state` remains the explicit raw-model seam,
+- and future storage-model work must reopen through a separate narrower lane.

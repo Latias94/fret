@@ -41,7 +41,7 @@ Unless a document says otherwise:
 - Action-first authoring + view runtime refactor (closed lane): `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
-- Local-state architecture follow-on (current state-boundary decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`
+- Local-state architecture follow-on (closed decision lane; reopen only with fresh cross-surface evidence): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
@@ -134,11 +134,12 @@ now taught as `LocalState` + view runtime + typed actions.
   - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
   - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
-- Local-state architecture (future-facing follow-on, decision-first):
+- Local-state architecture (closed contract-decision lane):
   - Workstream: `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
-  - Purpose: decide whether the long-term `LocalState<T>` contract stays model-backed or moves
-    toward a stronger self-owned/plain-Rust story without weakening diagnostics, explicit
-    invalidation, or shared-model interop.
+  - Closeout: `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+  - Purpose: record why the long-term `LocalState<T>` contract stays model-backed in v1, keep
+    `use_state` as the explicit raw-model seam, and name the evidence required before reopening a
+    narrower storage-model lane.
 - Recommended building blocks:
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
@@ -182,7 +183,7 @@ now taught as `LocalState` + view runtime + typed actions.
 11. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
 12. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
 13. `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md` — one-page status view for what is done, what is maintenance mode, what is still architectural, and what remains on the hard-delete track.
-14. `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md` — use this when the question is no longer default-path sugar, but the long-term storage/ownership contract behind `LocalState<T>`.
+14. `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md` and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md` — use these when the question is no longer default-path sugar, but the long-term storage/ownership contract behind `LocalState<T>` and why v1 closes on the current model-backed contract.
 15. `docs/known-issues.md` — common diagnostics and current platform limitations.
 16. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
 17. ADR deep dives (pick by subsystem):

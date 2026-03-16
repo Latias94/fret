@@ -1,6 +1,6 @@
 # Local-State Architecture (Fearless Refactor v1) — Design
 
-Status: active decision lane (contract-first; no code-level direction chosen yet)
+Status: closed / maintenance lane (O1 decided; no code-level refactor opened)
 Last updated: 2026-03-16
 
 Related:
@@ -8,6 +8,7 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+- `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/INVARIANT_MATRIX.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/OPTION_MATRIX_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/SURFACE_CLASSIFICATION_2026-03-16.md`
@@ -20,7 +21,7 @@ Related:
 
 ---
 
-## 0) Why this lane exists
+## 0) Why this lane existed
 
 The broad authoring-reset lanes are now closed:
 
@@ -36,7 +37,14 @@ What remains is narrower and deeper:
 > story?
 
 This is not another “Todo ergonomics” pass.
-It is a runtime/ownership/diagnostics question that now deserves its own lane.
+It was a runtime/ownership/diagnostics question that deserved its own lane.
+
+Closeout update on 2026-03-16:
+
+- `OPTION_MATRIX_2026-03-16.md` chose **O1**,
+- `CLOSEOUT_AUDIT_2026-03-16.md` closes this lane on that decision,
+- the current model-backed `LocalState<T>` contract stands,
+- and no code-level prototype lane opens from this workstream under current evidence.
 
 ---
 
@@ -284,3 +292,6 @@ Decision update on 2026-03-16:
 
 - `OPTION_MATRIX_2026-03-16.md` now recommends **O1**:
   keep model-backed storage, but harden the facade boundary.
+- `CLOSEOUT_AUDIT_2026-03-16.md` now records the M4 decision:
+  treat this lane as closed / maintenance unless future cross-surface evidence reopens a narrower
+  lane.
