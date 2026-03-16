@@ -7,6 +7,7 @@ Tracking files:
 - `docs/workstreams/resource-loading-fearless-refactor-v1/AUDIT.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`
 
 Related inputs:
@@ -128,6 +129,9 @@ This workstream takes a fearless posture:
     `UiAssetsReloadEpoch` / `bump_ui_assets_reload_epoch(...)` names remain only as deprecated
     compatibility shims, are now unused by first-party code, and should be deleted in the final
     M5 cleanup.
+  - the M5 delete/rename scope is now tracked explicitly in
+    `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`, including
+    the remaining shim symbols plus the legacy dev-reload env/file naming.
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.

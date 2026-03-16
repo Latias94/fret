@@ -85,6 +85,23 @@ fn resolve_path(root: &Path, env_var: &str, default_rel: &str) -> PathBuf {
     root.join(default_rel)
 }
 
+// Prefer the generic asset-reload knob while the legacy UI-assets env var remains in the overlap
+// window before M5 cleanup removes it.
+fn resolve_path_with_legacy_env(
+    root: &Path,
+    env_var: &str,
+    legacy_env_var: &str,
+    default_rel: &str,
+) -> PathBuf {
+    if std::env::var_os(env_var).is_some() {
+        return resolve_path(root, env_var, default_rel);
+    }
+    if std::env::var_os(legacy_env_var).is_some() {
+        return resolve_path(root, legacy_env_var, default_rel);
+    }
+    root.join(default_rel)
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct DevReloadTick {
     pub(crate) reloaded_theme: bool,
@@ -103,11 +120,11 @@ pub(crate) struct DevReloadWatcher {
     root: PathBuf,
     theme_path: PathBuf,
     literals_path: PathBuf,
-    ui_assets_trigger_path: PathBuf,
+    asset_reload_trigger_path: PathBuf,
     fonts_manifest_path: PathBuf,
     theme_stamp: Option<FileStamp>,
     literals_stamp: Option<FileStamp>,
-    ui_assets_trigger_stamp: Option<FileStamp>,
+    asset_reload_trigger_stamp: Option<FileStamp>,
     fonts_manifest_stamp: Option<FileStamp>,
 }
 
@@ -139,8 +156,9 @@ impl DevReloadWatcher {
             "FRET_DEV_RELOAD_LITERALS_PATH",
             ".fret/literals.json",
         );
-        let ui_assets_trigger_path = resolve_path(
+        let asset_reload_trigger_path = resolve_path_with_legacy_env(
             &root,
+            "FRET_DEV_RELOAD_ASSET_RELOAD_TRIGGER_PATH",
             "FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH",
             ".fret/ui_assets.touch",
         );
@@ -154,7 +172,7 @@ impl DevReloadWatcher {
                 w.root.clone(),
                 w.theme_path.clone(),
                 w.literals_path.clone(),
-                w.ui_assets_trigger_path.clone(),
+                w.asset_reload_trigger_path.clone(),
                 w.fonts_manifest_path.clone(),
             )
         });
@@ -171,7 +189,7 @@ impl DevReloadWatcher {
             && prev_root == &root
             && prev_theme == &theme_path
             && prev_lits == &literals_path
-            && prev_assets == &ui_assets_trigger_path
+            && prev_assets == &asset_reload_trigger_path
             && prev_fonts == &fonts_manifest_path
         {
             return;
@@ -195,11 +213,11 @@ impl DevReloadWatcher {
             root,
             theme_path,
             literals_path,
-            ui_assets_trigger_path,
+            asset_reload_trigger_path,
             fonts_manifest_path,
             theme_stamp: None,
             literals_stamp: None,
-            ui_assets_trigger_stamp: None,
+            asset_reload_trigger_stamp: None,
             fonts_manifest_stamp: None,
         });
     }
@@ -247,15 +265,15 @@ impl DevReloadWatcher {
             }
         }
 
-        let next_assets_stamp = file_stamp(&self.ui_assets_trigger_path);
-        let assets_changed = next_assets_stamp != self.ui_assets_trigger_stamp;
-        self.ui_assets_trigger_stamp = next_assets_stamp;
+        let next_assets_stamp = file_stamp(&self.asset_reload_trigger_path);
+        let assets_changed = next_assets_stamp != self.asset_reload_trigger_stamp;
+        self.asset_reload_trigger_stamp = next_assets_stamp;
 
         let next_fonts_manifest_stamp = file_stamp(&self.fonts_manifest_path);
         let fonts_manifest_changed = next_fonts_manifest_stamp != self.fonts_manifest_stamp;
         self.fonts_manifest_stamp = next_fonts_manifest_stamp;
 
-        if assets_changed && self.ui_assets_trigger_stamp.is_some() {
+        if assets_changed && self.asset_reload_trigger_stamp.is_some() {
             #[cfg(feature = "ui-assets")]
             {
                 fret_runtime::bump_asset_reload_epoch(app);

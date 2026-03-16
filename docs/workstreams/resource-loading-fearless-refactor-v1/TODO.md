@@ -449,6 +449,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - `ecosystem/fret-bootstrap/src/dev_reload.rs`
   - Remaining:
     - delete the deprecated UI-specific aliases in M5 cleanup, not before.
+    - complete the external-shell-facing cleanup tracked in
+      `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`:
+      - legacy env alias `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH`
+      - legacy trigger file name `.fret/ui_assets.touch`
 
 ## Diagnostics and gates
 

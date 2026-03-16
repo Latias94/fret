@@ -49,6 +49,7 @@ These channels must work even when Rust hotpatch is not active (reload-boundary-
 - Theme: `.fret/theme.json` → `Theme::apply_config`
 - Hot literals: `.fret/literals.json` → global `HotLiterals`
 - Assets: `.fret/ui_assets.touch` bumps the shared `AssetReloadEpoch` to invalidate path-based asset caches
+  - Legacy file name only; M5 should rename the preferred path to `.fret/asset_reload.touch`
   - file-path images: `ImageSource::from_file_path` cache key includes the epoch
   - SVG files: `SvgFileSource` file bytes cache respects the epoch
 - Fonts: `.fret/fonts.json` (TTF/OTF/TTC list) applied via `Effect::TextAddFonts`
