@@ -282,6 +282,8 @@ priority than baseline correction.
   [docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_COMPONENT_SYSTEM.md](./EDITOR_COMPONENT_SYSTEM.md)
 - Editor interaction, identity, and diagnostics contract:
   [docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_INTERACTION_CONTRACT.md](./EDITOR_INTERACTION_CONTRACT.md)
+- Workspace shell starter-set baseline:
+  [docs/workstreams/editor-ecosystem-fearless-refactor-v1/WORKSPACE_SHELL_STARTER_SET.md](./WORKSPACE_SHELL_STARTER_SET.md)
 - Forward-looking milestones:
   [docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.md](./MILESTONES.md)
 - Active TODO tracker:

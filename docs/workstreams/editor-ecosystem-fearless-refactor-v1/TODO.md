@@ -349,8 +349,17 @@ Interaction contract:
 
 ## Phase D - Shell, adapters, and extraction
 
-- [ ] `EER-SHELL-120` Freeze the reusable `fret-workspace` shell starter set:
+- [x] `EER-SHELL-120` Freeze the reusable `fret-workspace` shell starter set:
       frame, top bar, status bar, pane chrome, shell tabstrip, command scope, focus coordination.
+      `WORKSPACE_SHELL_STARTER_SET.md` now freezes the v1 shell baseline around
+      `WorkspaceFrame`, `WorkspaceTopBar`, `WorkspaceStatusBar`,
+      `workspace_pane_tree_element_with_resize`, `WorkspaceTabStrip`,
+      `WorkspaceCommandScope`, and `WorkspacePaneContentFocusTarget`, while keeping app-local
+      menu/status/content protocols and adapter-side design-system seeding out of the owner crate.
+      The recurring UI Gallery shell suite
+      (`tools/diag-scripts/suites/ui-gallery-workspace-shell/suite.json`) is the promoted
+      shell-level proof surface for this freeze, while the older
+      `workspace-tabstrip-*` workstreams remain the lower-level tab semantics reference.
 - [ ] `EER-SHELL-121` Keep shell tabstrip and docking tab/drop chrome aligned through adapter
       seeding/aliasing rather than crate coupling.
 - [ ] `EER-THEME-122` Audit the editor proof preset so it stops mutating shared component/palette

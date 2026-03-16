@@ -195,7 +195,7 @@ Exit gates:
 
 ## Phase D - Shell, adapters, and extraction closure
 
-Status: Planned
+Status: In progress
 
 Goal:
 
@@ -205,15 +205,20 @@ Goal:
 
 Deliverables:
 
-- a documented workspace-shell starter set,
+- a documented workspace-shell starter set
+  (`WORKSPACE_SHELL_STARTER_SET.md`) that freezes the v1 shell baseline around frame/top
+  bar/status bar/pane chrome/tabstrip/command-scope/focus-coordination seams,
 - explicit adapter rules for shell/docking/editor preset alignment,
 - a decision on future inspector/property protocol extraction,
 - a cleanup/migration note for promoting app-local surfaces into ecosystem crates.
 
 Exit gates:
 
+- `WORKSPACE_SHELL_STARTER_SET.md` points to one stable shell-level baseline and keeps app-local
+  menu/status/content protocols out of `fret-workspace`,
 - `fret-workspace` and `fret-docking` no longer have ambiguous tabstrip/chrome ownership,
-- shell proof surfaces remain promoted and gated,
+- shell proof surfaces remain promoted and gated, with the recurring UI Gallery workspace-shell
+  suite as the default shell-level review target,
 - adapter-side seeding remains the default recommendation for skins,
 - either a future protocol crate is scheduled or extraction is explicitly deferred with reasons.
 
