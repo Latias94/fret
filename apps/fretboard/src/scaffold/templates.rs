@@ -643,7 +643,7 @@ fn todo_page(
 ) -> impl UiChild {
     ui::container(move |cx| ui::single(
         cx,
-        ui::v_flex(|cx| ui::children![cx; content])
+        ui::v_flex(|cx| ui::single(cx, content))
             .w_full()
             .h_full()
             .justify_center()
@@ -1428,6 +1428,8 @@ mod tests {
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
         assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
+        assert!(src.contains("ui::v_flex(|cx| ui::single(cx, content))"));
+        assert!(!src.contains("ui::v_flex(|cx| ui::children![cx; content])"));
         assert!(!src.contains("let card = card.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));

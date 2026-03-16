@@ -306,13 +306,13 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
     // backdrop material is enabled, switch to a transparent root so the OS material can show
     // through where not covered by UI (most content lives inside the centered Card).
     ui::container(|cx| {
-        ui::children![
-            cx;
-            ui::v_flex(|cx| ui::children![cx; surface])
+        ui::single(
+            cx,
+            ui::v_flex(|cx| ui::single(cx, surface))
                 .items_center()
                 .justify_center()
                 .size_full(),
-        ]
+        )
     })
     .bg(ColorRef::Color(root_background))
     .p(Space::N6)

@@ -342,12 +342,20 @@ mod authoring_surface_policy_tests {
         assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space, Theme};"));
         assert!(SCAFFOLD.contains("&mut UiCx<'_>"));
         assert!(SCAFFOLD.contains("B: UiChild"));
+        assert!(SCAFFOLD.contains("ui::single(cx, surface)"));
+        assert!(!SCAFFOLD.contains("ui::children![cx; surface]"));
         assert!(!SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
         assert!(!SCAFFOLD.contains("B: IntoUiElement<H>"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
         assert!(!SCAFFOLD.contains("surface: AnyElement"));
         assert!(!SCAFFOLD.contains("surface.into_element(cx);"));
         assert!(!SCAFFOLD.contains("use fret::component::prelude::*;"));
+    }
+
+    #[test]
+    fn utility_window_example_uses_ui_single_for_single_surface_shells() {
+        assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui::single(cx, surface)"));
+        assert!(!UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui::children![cx; surface]"));
     }
 
     #[test]
