@@ -1,4 +1,3 @@
-use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
@@ -6,13 +5,12 @@ use fret_runtime::ModelStore;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::prelude::*;
-use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};
-use fret_ui_shadcn::{
-    Alert, AlertAction, AlertDescription, AlertDialog, AlertDialogAction, AlertDialogCancel,
-    AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
-    AlertDialogTitle, AlertTitle, AvatarImage, Badge, Breadcrumb, Button, Card, CardContent,
-    CardDescription, CardFooter, CardHeader, CardTitle, Collapsible, Combobox, Command,
-    CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList, CommandPalette,
+use fret_ui_shadcn::facade::{
+    self as shadcn, Alert, AlertAction, AlertDescription, AlertDialog, AlertDialogAction,
+    AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+    AlertDialogHeader, AlertDialogTitle, AlertTitle, AvatarImage, Badge, Breadcrumb, Button, Card,
+    CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Collapsible, Combobox,
+    Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList, CommandPalette,
     CommandShortcut, ContextMenu, ContextMenuEntry, DataGridCanvas, DataGridCanvasAxis, DataTable,
     DataTableGlobalFilterInput, DataTableViewOptionItem, DataTableViewOptions, Dialog,
     DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Drawer,
@@ -22,6 +20,11 @@ use fret_ui_shadcn::{
     SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Slider, Switch,
     TableBody, TableCaption, TableFooter, TableHead, TableHeader, TableRow, TabsRoot, Toaster,
     TooltipContent,
+};
+use fret_ui_shadcn::raw::{
+    accordion::composable,
+    breadcrumb::primitives,
+    experimental::{DataGridElement, DataGridRowState},
 };
 use time::{Date, OffsetDateTime};
 
@@ -171,8 +174,6 @@ fn ui_builder_nested_surfaces_compile<H: UiHost>(
 ) {
     // Composable accordion surface (`accordion::composable`).
     {
-        use fret_ui_shadcn::accordion::composable;
-
         let trigger = composable::AccordionTrigger::new(vec![cx.text("Trigger")])
             .ui()
             .p_2()
@@ -199,8 +200,6 @@ fn ui_builder_nested_surfaces_compile<H: UiHost>(
 
     // Breadcrumb primitives (`breadcrumb::primitives`).
     {
-        use fret_ui_shadcn::breadcrumb::primitives;
-
         let _ = fret_ui_shadcn::BreadcrumbPrimitivesUiBuilderExt::into_element(
             primitives::Breadcrumb::new().ui().p_2(),
             cx,

@@ -21,7 +21,7 @@ fn build_dropdown_menu_dialog_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
         DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
     };

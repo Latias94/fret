@@ -24,7 +24,7 @@ these sources instead:
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
-- Upstream-shaped primitives surface: `fret_ui_shadcn::breadcrumb::primitives::*`
+- Upstream-shaped primitives surface: `fret_ui_shadcn::raw::breadcrumb::primitives::*`
 
 ## Audit checklist
 

@@ -17,10 +17,10 @@ impl WebThemeName {
         }
     }
 
-    fn scheme(&self) -> fret_ui_shadcn::shadcn_themes::ShadcnColorScheme {
+    fn scheme(&self) -> fret_ui_shadcn::facade::themes::ShadcnColorScheme {
         match self {
-            WebThemeName::Light => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            WebThemeName::Dark => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            WebThemeName::Light => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+            WebThemeName::Dark => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
         }
     }
 }
@@ -54,7 +54,7 @@ fn build_dropdown_menu_demo_minimal(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
         DropdownMenuLabel, DropdownMenuShortcut,
     };

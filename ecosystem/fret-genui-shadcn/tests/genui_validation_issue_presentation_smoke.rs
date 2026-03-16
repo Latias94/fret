@@ -8,6 +8,7 @@ use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ElementKind, InteractivityGateProps, TextProps};
+use fret_ui_shadcn::facade::themes as shadcn_themes;
 use serde_json::{Value, json};
 
 fn collect_visible_text_nodes(el: &AnyElement, out: &mut Vec<Arc<str>>) {
@@ -70,10 +71,10 @@ fn render_root(
 fn genui_validation_issue_presentation_smoke_repeat_and_visible_filtering() {
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn_themes::ShadcnBaseColor::Slate,
+        shadcn_themes::ShadcnColorScheme::Light,
     );
 
     let spec: fret_genui_core::spec::SpecV1 = serde_json::from_value(json!({

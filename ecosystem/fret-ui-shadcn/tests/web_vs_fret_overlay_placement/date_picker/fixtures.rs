@@ -63,7 +63,7 @@ fn build_date_picker_with_presets_select_listbox_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_kit::{ChromeRefinement, LengthRefinement, MetricRef};
-    use fret_ui_shadcn::select::SelectPosition;
+    use fret_ui_shadcn::raw::select::SelectPosition;
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
 

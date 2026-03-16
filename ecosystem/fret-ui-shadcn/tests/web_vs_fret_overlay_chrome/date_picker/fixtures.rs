@@ -17,10 +17,10 @@ impl WebThemeName {
         }
     }
 
-    fn scheme(&self) -> fret_ui_shadcn::shadcn_themes::ShadcnColorScheme {
+    fn scheme(&self) -> fret_ui_shadcn::facade::themes::ShadcnColorScheme {
         match self {
-            WebThemeName::Light => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            WebThemeName::Dark => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            WebThemeName::Light => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+            WebThemeName::Dark => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
         }
     }
 }
@@ -45,7 +45,7 @@ fn build_date_picker_with_presets_select_open(
 ) -> AnyElement {
     use fret_ui_kit::ui;
     use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Space};
-    use fret_ui_shadcn::select::SelectPosition;
+    use fret_ui_shadcn::raw::select::SelectPosition;
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let open = open.clone();

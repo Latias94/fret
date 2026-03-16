@@ -10,9 +10,7 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};
-use fret_ui_shadcn::facade as shadcn;
-use fret_ui_shadcn::shadcn_themes;
+use fret_ui_shadcn::facade::{self as shadcn, Combobox, ComboboxItem, themes as shadcn_themes};
 use std::sync::Arc;
 
 struct FakeServices;

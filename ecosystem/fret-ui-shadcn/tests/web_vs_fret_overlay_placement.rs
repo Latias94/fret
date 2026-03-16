@@ -967,7 +967,7 @@ fn build_context_menu_demo<H: UiHost>(
     checked_full_urls: Model<bool>,
     radio_person: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry,
         ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec,
         ContextMenuShortcut,
@@ -1016,7 +1016,7 @@ fn build_context_menu_demo<H: UiHost>(
                                 ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
                                 ContextMenuEntry::Separator,
                                 ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
-                                    fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                    fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
                                 )),
                             ]),
                     ),
@@ -1047,7 +1047,7 @@ fn build_menubar_demo<H: UiHost>(
     view_full_urls: Model<bool>,
     profile_value: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarRadioGroup,
         MenubarRadioItemSpec, MenubarShortcut,
     };
@@ -2376,10 +2376,10 @@ impl fret_core::MaterialService for StyleAwareServices {
 }
 
 fn setup_app_with_shadcn_theme(app: &mut App) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn::themes::apply_shadcn_new_york(
         app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnBaseColor::Neutral,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 }
 
@@ -3212,7 +3212,7 @@ fn build_dropdown_menu_dialog_open_snapshot(
     let render = |cx: &mut ElementContext<'_, App>| {
         use fret_ui_kit::declarative::icon as decl_icon;
         use fret_ui_kit::{LayoutRefinement, MetricRef};
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
             DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
         };
@@ -3316,7 +3316,7 @@ fn build_item_dropdown_open_snapshot(
         use fret_core::Corners;
         use fret_ui::element::LayoutStyle;
         use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, DropdownMenu,
             DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, Item, ItemContent,
             ItemDescription, ItemMedia, ItemSize, ItemTitle,
@@ -3449,7 +3449,7 @@ fn build_dropdown_menu_checkboxes_demo(
     checked_activity_bar: Model<bool>,
     checked_panel: Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry,
         DropdownMenuLabel,
     };
@@ -3490,7 +3490,7 @@ fn build_dropdown_menu_radio_group_demo(
     open: &Model<bool>,
     position: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuLabel,
         DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
     };
@@ -3524,7 +3524,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonGroup, ButtonGroupOrientation, ButtonSize, ButtonVariant, DropdownMenu,
         DropdownMenuAlign, DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem,
         DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
@@ -3617,7 +3617,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
                             DropdownMenuItem::new("Trash")
                                 .leading(icon_stub(cx))
                                 .variant(
-                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                             ),
                         ),
                     ])),
@@ -3692,7 +3692,7 @@ fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str)
     let label_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("personal")));
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
             DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
         };
@@ -3765,7 +3765,7 @@ fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str)
                                 DropdownMenuItem::new("Trash")
                                     .leading(icon_stub(cx))
                                     .variant(
-                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                        fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                     ),
                             ),
                         ])),
@@ -3831,7 +3831,7 @@ fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str
     let label_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("personal")));
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
             DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
         };
@@ -3903,7 +3903,7 @@ fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str
                                 DropdownMenuItem::new("Trash")
                                     .leading(icon_stub(cx))
                                     .variant(
-                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                        fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                     ),
                             ),
                         ])),
@@ -3978,7 +3978,7 @@ fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
             DropdownMenuItem,
         };
@@ -4075,7 +4075,7 @@ fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
             DropdownMenuItem,
         };
@@ -4184,7 +4184,7 @@ fn assert_combobox_dropdown_menu_overlay_placement_matches(web_name: &str) {
         Some("menu"),
         move |cx, open| {
             use fret_ui_kit::declarative::icon as decl_icon;
-            use fret_ui_shadcn::{
+            use fret_ui_shadcn::facade::{
                 Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
                 DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
                 DropdownMenuShortcut,
@@ -4227,7 +4227,7 @@ fn assert_combobox_dropdown_menu_overlay_placement_matches(web_name: &str) {
                                 DropdownMenuEntry::Item(
                                     DropdownMenuItem::new("Delete")
                                         .variant(
-                                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                            fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                         )
                                         .trailing(
                                             DropdownMenuShortcut::new("⌘⌫").into_element(cx),
@@ -4284,7 +4284,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
 
     let render = |cx: &mut ElementContext<'_, App>| {
         use fret_ui_kit::declarative::icon as decl_icon;
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
             DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -4324,7 +4324,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
                             DropdownMenuEntry::Item(
                                 DropdownMenuItem::new("Delete")
                                     .variant(
-                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                        fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                     )
                                     .trailing(DropdownMenuShortcut::new("⌘⌫").into_element(cx)),
                             ),
@@ -4407,7 +4407,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
 
     let render = |cx: &mut ElementContext<'_, App>| {
         use fret_ui_kit::declarative::icon as decl_icon;
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
             DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -4447,7 +4447,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
                             DropdownMenuEntry::Item(
                                 DropdownMenuItem::new("Delete")
                                     .variant(
-                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                        fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                     )
                                     .trailing(DropdownMenuShortcut::new("⌘⌫").into_element(cx)),
                             ),
@@ -4514,8 +4514,8 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::breadcrumb::primitives as bc;
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
+        use fret_ui_shadcn::facade::{
             DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
         };
 
@@ -4677,7 +4677,7 @@ fn assert_dropdown_menu_demo_constrained_overlay_placement_matches(web_name: &st
         web_name,
         Some("menu"),
         |cx, open| {
-            use fret_ui_shadcn::{
+            use fret_ui_shadcn::facade::{
                 Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
                 DropdownMenuLabel, DropdownMenuShortcut,
             };
@@ -4774,7 +4774,7 @@ fn assert_dropdown_menu_demo_constrained_menu_item_height_matches(web_name: &str
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
             DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -4942,7 +4942,7 @@ fn assert_dropdown_menu_demo_profile_item_padding_and_shortcut_match_impl(web_na
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
             DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -5369,7 +5369,7 @@ fn assert_dropdown_menu_demo_constrained_menu_content_insets_match(web_name: &st
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
             DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -5521,7 +5521,7 @@ fn assert_dropdown_menu_demo_constrained_scroll_state_matches(web_name: &str) {
     ];
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
             DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -5665,7 +5665,7 @@ fn assert_dropdown_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, w
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
             DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -6078,7 +6078,7 @@ fn assert_button_group_demo_submenu_overlay_placement_matches(web_name: &str) {
 }
 
 fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsSnapshot) {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
         DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
     };
@@ -6182,7 +6182,7 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
                                 DropdownMenuItem::new("Trash")
                                     .leading(icon_stub(cx))
                                     .variant(
-                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                        fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                                     ),
                             ),
                         ])),
@@ -6509,7 +6509,7 @@ fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Sema
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
             DropdownMenuLabel, DropdownMenuShortcut,
         };
@@ -8647,7 +8647,7 @@ fn assert_context_menu_demo_constrained_overlay_placement_matches(web_name: &str
                                         shadcn::ContextMenuEntry::Separator,
                                         shadcn::ContextMenuEntry::Item(
                                             shadcn::ContextMenuItem::new("Delete").variant(
-                                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                                fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
                                             ),
                                         ),
                                     ]),
@@ -9367,7 +9367,7 @@ fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
     let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuItem,
             ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
         };
@@ -9418,7 +9418,7 @@ fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
                                 ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
                                 ContextMenuEntry::Separator,
                                 ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
-                                    fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                    fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
                                 )),
                             ],
                         )),
@@ -9557,7 +9557,7 @@ fn assert_context_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, wh
     let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuItem,
             ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
         };
@@ -9608,7 +9608,7 @@ fn assert_context_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, wh
                                 ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
                                 ContextMenuEntry::Separator,
                                 ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
-                                    fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                    fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
                                 )),
                             ],
                         )),

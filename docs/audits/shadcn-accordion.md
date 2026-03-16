@@ -30,8 +30,8 @@ examples in `repo-ref/ui`.
 ### Composition surface
 
 - Pass: A Radix-shaped, shadcn-skinned component family exists in
-  `fret_ui_shadcn::accordion::composable` (`AccordionRoot` / `AccordionItem` / `AccordionTrigger` /
-  `AccordionContent`).
+  `fret_ui_shadcn::raw::accordion::composable` (`AccordionRoot` / `AccordionItem` /
+  `AccordionTrigger` / `AccordionContent`).
 - Pass: Gallery `Usage` can now use the composable Radix-shaped shadcn surface for closer docs parity, while the legacy builder-style API remains available for compact internal recipes.
 - Pass: Supports both single and multiple open models (`Model<Option<Arc<str>>>` and
   `Model<Vec<Arc<str>>>`), including `collapsible(true)` in the single-open mode.
@@ -70,6 +70,6 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 
 ## Follow-ups (recommended)
 
-- Keep the composable `fret_ui_shadcn::accordion::composable` surface and the legacy builder API
-  aligned so gallery examples and recipes can choose the authoring shape that best matches upstream
-  docs without drifting in behavior.
+- Keep the composable `fret_ui_shadcn::raw::accordion::composable` surface and the legacy builder
+  API aligned so gallery examples and recipes can choose the authoring shape that best matches
+  upstream docs without drifting in behavior.

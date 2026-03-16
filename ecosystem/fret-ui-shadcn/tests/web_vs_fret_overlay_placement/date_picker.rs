@@ -35,7 +35,7 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
         move |cx: &mut ElementContext<'_, App>| {
             use fret_ui_kit::ui;
             use fret_ui_kit::{ChromeRefinement, LengthRefinement, MetricRef, Space};
-            use fret_ui_shadcn::select::SelectPosition;
+            use fret_ui_shadcn::raw::select::SelectPosition;
 
             let popover_open = popover_open.clone();
             let select_open = select_open.clone();

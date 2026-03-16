@@ -29,7 +29,8 @@ base examples, and the current gallery/docs surface.
 ### Composition surface
 
 - Pass: Provides `Collapsible`, `CollapsibleTrigger`, and `CollapsibleContent` wrappers.
-- Pass: A source-aligned children surface is available via `fret_ui_shadcn::collapsible::primitives`.
+- Pass: A source-aligned children surface is available via
+  `fret_ui_shadcn::raw::collapsible::primitives`.
 - Pass: The legacy flat module path `fret_ui_shadcn::collapsible_primitives` remains available for compatibility.
 - Pass: No extra generic `compose()` API is needed here because the primitives surface already covers the free-form shadcn/Base UI composition model, while the top-level wrapper stays a compact Fret-first builder.
 - Pass: Supports a controlled open state (`Model<bool>`).

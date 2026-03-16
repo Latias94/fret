@@ -201,7 +201,7 @@ fn build_drawer_dialog_mobile_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle,
     };
 

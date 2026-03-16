@@ -38,7 +38,19 @@ fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &st
         let allowed = trimmed.contains("shadcn::raw::typography::")
             || trimmed.contains("shadcn::raw::extras::")
             || trimmed.contains("shadcn::raw::breadcrumb::")
-            || trimmed.contains("shadcn::raw::icon::");
+            || trimmed.contains("shadcn::raw::collapsible::")
+            || trimmed.contains("shadcn::raw::experimental::")
+            || trimmed.contains("shadcn::raw::icon::")
+            || trimmed.contains("shadcn::raw::button::")
+            || trimmed.contains("shadcn::raw::calendar::")
+            || trimmed.contains("shadcn::raw::context_menu::")
+            || trimmed.contains("shadcn::raw::dropdown_menu::")
+            || trimmed.contains("shadcn::raw::kbd::")
+            || trimmed.contains("shadcn::raw::menubar::")
+            || trimmed.contains("shadcn::raw::select::")
+            || trimmed.contains("shadcn::raw::switch::")
+            || trimmed.contains("shadcn::raw::tabs::")
+            || trimmed.contains("shadcn::raw::toggle_group::");
         assert!(
             allowed,
             "{}:{} used an undocumented shadcn raw escape hatch: {}",
@@ -264,6 +276,25 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
             path.display()
         );
     }
+}
+
+#[test]
+fn gallery_collapsible_usage_snippet_uses_explicit_raw_escape_hatch() {
+    let relative_path = "src/ui/snippets/collapsible/usage.rs";
+    assert_curated_facade_only(&[relative_path]);
+
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    assert!(
+        source.contains("use shadcn::raw::collapsible::primitives::{"),
+        "{} should use the explicit raw collapsible primitives lane",
+        path.display()
+    );
+    assert!(
+        !source.contains("fret_ui_shadcn::collapsible::primitives::"),
+        "{} should not teach the doc-hidden flat root collapsible primitives lane",
+        path.display()
+    );
 }
 
 #[test]

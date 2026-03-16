@@ -59,6 +59,17 @@ const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/comm
 const UI_BUILDER_EXT_DATA_RS: &str = include_str!("ui_builder_ext/data.rs");
 const UI_BUILDER_EXT_MENUS_RS: &str = include_str!("ui_builder_ext/menus.rs");
 const UI_BUILDER_EXT_OVERLAY_ROOTS_RS: &str = include_str!("ui_builder_ext/overlay_roots.rs");
+const TEST_UI_BUILDER_SMOKE_RS: &str = include_str!("../tests/ui_builder_smoke.rs");
+const TEST_COMBOBOX_RESPONSIVE_BREAKPOINT_RS: &str =
+    include_str!("../tests/combobox_responsive_breakpoint.rs");
+const TEST_COMBOBOX_V4_PARTS_SEMANTICS_RS: &str =
+    include_str!("../tests/combobox_v4_parts_semantics.rs");
+const TEST_DATA_GRID_LAYOUT_RS: &str = include_str!("../tests/data_grid_layout.rs");
+const TEST_WEB_VS_FRET_SIDEBAR_RS: &str = include_str!("../tests/web_vs_fret_sidebar.rs");
+const TEST_WEB_VS_FRET_OVERLAY_PLACEMENT_RS: &str =
+    include_str!("../tests/web_vs_fret_overlay_placement.rs");
+const TEST_WEB_VS_FRET_OVERLAY_CHROME_CONTEXT_MENU_RS: &str =
+    include_str!("../tests/web_vs_fret_overlay_chrome/context_menu.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -195,10 +206,13 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     );
     assert!(!README.contains("recipes/components stay under `fret_ui_shadcn::*`"));
     assert!(README.contains("`fret_ui_shadcn::raw::*` access stays the escape hatch"));
-    assert!(README.contains("Hidden flat crate-root component exports have been removed"));
+    assert!(README.contains(
+        "flat crate-root component modules are now `#[doc(hidden)]` compatibility residue"
+    ));
 
     assert!(LIB_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
-    assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` plus explicit"));
+    assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` as the raw"));
+    assert!(LIB_RS.contains("doc-hidden flat crate-root compatibility modules"));
     assert!(LIB_RS.contains("pub mod facade {"));
     assert!(LIB_RS.contains("pub mod themes {"));
     assert!(LIB_RS.contains("pub mod raw {"));
@@ -217,6 +231,33 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("#[doc(hidden)]\npub use ::fret_ui_kit::declarative::icon;"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+}
+
+#[test]
+fn flat_root_component_modules_stay_doc_hidden() {
+    let allowed_visible = ["app", "advanced"];
+    let mut previous_non_empty = "";
+
+    for line in LIB_RS.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if let Some(module) = trimmed
+            .strip_prefix("pub mod ")
+            .and_then(|tail| tail.strip_suffix(';'))
+        {
+            if !allowed_visible.contains(&module) {
+                assert_eq!(
+                    previous_non_empty, "#[doc(hidden)]",
+                    "flat root shadcn module `{module}` should stay doc-hidden"
+                );
+            }
+        }
+
+        previous_non_empty = trimmed;
+    }
 }
 
 #[test]
@@ -485,6 +526,122 @@ fn ui_builder_ext_keep_into_element_as_explicit_landing_seam() {
             assert!(
                 normalized.contains(&marker),
                 "{label} should keep `into_element(...) -> AnyElement` as the explicit landing seam"
+            );
+        }
+    }
+}
+
+#[test]
+fn representative_first_party_tests_prefer_facade_and_raw_lanes() {
+    for (label, source, required_markers, forbidden_markers) in [
+        (
+            "tests/ui_builder_smoke.rs",
+            TEST_UI_BUILDER_SMOKE_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "use fret_ui_shadcn::raw::{",
+                "accordion::composable",
+                "breadcrumb::primitives",
+                "experimental::{DataGridElement, DataGridRowState}",
+            ][..],
+            &[
+                "use fret_ui_shadcn::{",
+                "use fret_ui_shadcn::accordion::composable;",
+                "use fret_ui_shadcn::breadcrumb::primitives;",
+                "use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};",
+            ][..],
+        ),
+        (
+            "tests/combobox_responsive_breakpoint.rs",
+            TEST_COMBOBOX_RESPONSIVE_BREAKPOINT_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "Combobox,",
+                "ComboboxItem,",
+                "themes as shadcn_themes",
+            ][..],
+            &[
+                "use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};",
+                "use fret_ui_shadcn::shadcn_themes;",
+            ][..],
+        ),
+        (
+            "tests/combobox_v4_parts_semantics.rs",
+            TEST_COMBOBOX_V4_PARTS_SEMANTICS_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "Combobox,",
+                "ComboboxChips,",
+                "themes as shadcn_themes",
+            ][..],
+            &[
+                "use fret_ui_shadcn::shadcn_themes;",
+                "use fret_ui_shadcn::{",
+            ][..],
+        ),
+        (
+            "tests/data_grid_layout.rs",
+            TEST_DATA_GRID_LAYOUT_RS,
+            &[
+                "use fret_ui_shadcn::facade as shadcn;",
+                "use fret_ui_shadcn::raw::experimental::{DataGridElement, DataGridRowState};",
+            ][..],
+            &["use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};"][..],
+        ),
+        (
+            "tests/web_vs_fret_sidebar.rs",
+            TEST_WEB_VS_FRET_SIDEBAR_RS,
+            &[
+                "use fret_ui_shadcn::facade::{self as shadcn, themes as shadcn_themes};",
+                "use fret_ui_shadcn::raw::sidebar::SidebarMenuButtonSize;",
+            ][..],
+            &[
+                "use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;",
+                "fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(",
+            ][..],
+        ),
+        (
+            "tests/web_vs_fret_overlay_placement.rs",
+            TEST_WEB_VS_FRET_OVERLAY_PLACEMENT_RS,
+            &[
+                "use fret_ui_shadcn::facade as shadcn;",
+                "use fret_ui_shadcn::facade::{",
+                "fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive",
+                "fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive",
+                "shadcn::themes::apply_shadcn_new_york(",
+            ][..],
+            &[
+                "use fret_ui_shadcn::{",
+                "fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive",
+                "fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive",
+                "fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(",
+            ][..],
+        ),
+        (
+            "tests/web_vs_fret_overlay_chrome/context_menu.rs",
+            TEST_WEB_VS_FRET_OVERLAY_CHROME_CONTEXT_MENU_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive",
+                "fret_ui_shadcn::facade::themes::ShadcnColorScheme",
+            ][..],
+            &[
+                "use fret_ui_shadcn::{",
+                "fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive",
+                "fret_ui_shadcn::shadcn_themes::ShadcnColorScheme",
+            ][..],
+        ),
+    ] {
+        for marker in required_markers {
+            assert!(
+                source.contains(marker),
+                "{label} should contain `{marker}` after the authoring-surface migration"
+            );
+        }
+        for marker in forbidden_markers {
+            assert!(
+                !source.contains(marker),
+                "{label} should not fall back to `{marker}`"
             );
         }
     }
@@ -1369,7 +1526,7 @@ fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
     let normalized_lib = normalize_ws(LIB_RS);
     assert!(
         normalized_lib.contains(
-            "#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]pubmodstate;"
+            "#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]#[doc(hidden)]pubmodstate;"
         ),
         "lib.rs should keep the state helper module behind explicit opt-in features"
     );

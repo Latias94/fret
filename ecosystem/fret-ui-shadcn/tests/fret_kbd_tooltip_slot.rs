@@ -6,8 +6,8 @@ use fret_core::{
 use fret_ui::Theme;
 use fret_ui::tree::UiTree;
 use fret_ui_shadcn::facade as shadcn;
+use fret_ui_shadcn::facade::themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 use fret_ui_shadcn::prelude::UiElementTestIdExt;
-use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
 fn assert_color_close(label: &str, actual: Color, expected: Color, tol: f32) {
     let dr = (actual.r - expected.r).abs();

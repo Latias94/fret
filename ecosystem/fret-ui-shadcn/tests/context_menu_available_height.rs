@@ -10,9 +10,9 @@ use fret_ui::Theme;
 use fret_ui::element::{LayoutStyle, Length, PressableA11y, PressableProps};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
-use fret_ui_shadcn::dropdown_menu::DropdownMenuSide;
-use fret_ui_shadcn::shadcn_themes;
+use fret_ui_shadcn::facade::{
+    ContextMenu, ContextMenuEntry, ContextMenuItem, DropdownMenuSide, themes as shadcn_themes,
+};
 use std::sync::Arc;
 
 struct FakeServices;

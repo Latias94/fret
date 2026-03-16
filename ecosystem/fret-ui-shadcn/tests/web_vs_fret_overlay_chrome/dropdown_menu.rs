@@ -7,7 +7,7 @@ fn build_shadcn_dropdown_menu_demo(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
         DropdownMenuLabel, DropdownMenuShortcut,
     };
@@ -95,7 +95,7 @@ fn render_dropdown_menu_demo_settled(
 fn assert_dropdown_menu_highlighted_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
@@ -191,7 +191,7 @@ fn assert_dropdown_menu_highlighted_item_chrome_matches_web(
 fn assert_dropdown_menu_focused_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);

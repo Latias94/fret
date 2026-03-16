@@ -15,7 +15,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`Collapsible::new(Model<bool>)` and `Collapsible::uncontrolled(default_open)` cover the documented controlled and uncontrolled authoring paths.",
-        "`fret_ui_shadcn::collapsible::primitives::{Collapsible, CollapsibleTrigger, CollapsibleContent}` is the source-aligned children surface for free-form composition.",
+        "`fret_ui_shadcn::raw::collapsible::primitives::{Collapsible, CollapsibleTrigger, CollapsibleContent}` is the source-aligned children surface for free-form composition.",
         "The top-level `shadcn::Collapsible` wrapper stays a compact Fret-first builder for dense editor UIs, so no extra generic `compose()` API is needed here.",
         "Disclosure state, trigger semantics, and measured open/close motion remain recipe/primitive-owned; surrounding width, gap, and card/layout constraints remain caller-owned.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
@@ -30,7 +30,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable composable usage for `Collapsible` via the primitives path.")
+        .description("Copyable composable usage for `Collapsible` via the explicit raw primitives path.")
         .test_id_prefix("ui-gallery-collapsible-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let controlled_state = DocSection::build(cx, "Controlled State", controlled_state)
@@ -71,8 +71,6 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-collapsible-component")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-collapsible-component");
+    vec![body.into_element(cx)]
 }

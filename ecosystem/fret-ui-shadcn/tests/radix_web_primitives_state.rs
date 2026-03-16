@@ -2561,7 +2561,7 @@ fn radix_web_context_menu_submenu_hover_select_matches_fret() {
             cx,
             |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
-                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant;
                 use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
@@ -2774,7 +2774,7 @@ fn radix_web_context_menu_submenu_unsafe_leave_matches_fret() {
             cx,
             |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
-                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant;
                 use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
@@ -4011,7 +4011,7 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
             cx,
             |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
-                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant;
                 use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
@@ -4771,7 +4771,7 @@ fn radix_web_context_menu_submenu_grace_corridor_matches_fret() {
             cx,
             |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
-                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant;
                 use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
@@ -6444,7 +6444,7 @@ fn radix_web_context_menu_submenu_arrowleft_escape_close_matches_fret() {
             cx,
             |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
-                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant;
                 use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
@@ -7080,7 +7080,7 @@ fn radix_web_context_menu_outside_click_close_matches_fret() {
             cx,
             |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
-                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant;
                 use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![
@@ -7247,7 +7247,7 @@ fn radix_web_context_menu_submenu_outside_click_close_matches_fret() {
             cx,
             |cx| shadcn::Button::new("Right click here").into_element(cx),
             |_cx| {
-                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant;
                 use shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
 
                 vec![

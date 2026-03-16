@@ -11,7 +11,7 @@ fn build_shadcn_hover_card_demo_page(
     use fret_ui::Theme;
     use fret_ui_kit::ui;
     use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Avatar, AvatarFallback, AvatarImage, Button, ButtonVariant, HoverCard, HoverCardContent,
     };
 

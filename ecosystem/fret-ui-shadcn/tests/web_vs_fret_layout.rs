@@ -20,11 +20,11 @@ pub(crate) use fret_ui_kit::primitives::radio_group as radio_group_prim;
 pub(crate) use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui,
 };
-pub(crate) use fret_ui_shadcn::button_group::ButtonGroupText;
-pub(crate) use fret_ui_shadcn::empty::{
-    EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
+pub(crate) use fret_ui_shadcn::facade::{
+    ButtonGroupText, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant,
+    EmptyTitle,
 };
-pub(crate) use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
+pub(crate) use fret_ui_shadcn::raw::sidebar::SidebarMenuButtonSize;
 pub(crate) use serde::Deserialize;
 pub(crate) use std::cell::Cell;
 pub(crate) use std::rc::Rc;

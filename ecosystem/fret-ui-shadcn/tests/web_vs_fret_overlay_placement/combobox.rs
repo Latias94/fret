@@ -25,7 +25,7 @@ fn fret_combobox_popover_tracks_trigger_when_underlay_scrolls() {
     let scroll_handle = ScrollHandle::default();
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};
+        use fret_ui_shadcn::facade::{Combobox, ComboboxItem};
 
         let value = value.clone();
         let open = open.clone();
@@ -278,7 +278,7 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
     let scroll_handle = ScrollHandle::default();
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};
+        use fret_ui_shadcn::facade::{Combobox, ComboboxItem};
 
         let value = value.clone();
         let open = open.clone();

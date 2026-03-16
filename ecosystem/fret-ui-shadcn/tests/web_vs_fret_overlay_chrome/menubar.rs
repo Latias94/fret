@@ -23,7 +23,7 @@ fn web_vs_fret_menubar_root_shadow_matches_web() {
     let mut app = App::new();
     setup_app_with_shadcn_theme_scheme(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -82,7 +82,7 @@ fn web_vs_fret_menubar_root_shadow_matches_web_dark() {
     let mut app = App::new();
     setup_app_with_shadcn_theme_scheme(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        shadcn::themes::ShadcnColorScheme::Dark,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -124,7 +124,7 @@ fn web_vs_fret_menubar_root_shadow_matches_web_dark() {
 
 #[track_caller]
 fn build_shadcn_menubar_demo(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarRadioGroup,
         MenubarRadioItemSpec, MenubarShortcut,
     };
@@ -249,7 +249,7 @@ fn render_shadcn_menubar_demo_settled(
 fn assert_menubar_focused_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
@@ -423,7 +423,7 @@ fn render_shadcn_menubar_file_menu_settled(
 
 fn assert_menubar_file_menu_destructive_item_idle_fg_matches_web(
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open("menubar-demo.destructive-idle");
     let theme = web_theme_named(&web, web_theme_name);
@@ -539,7 +539,7 @@ fn assert_menubar_file_menu_destructive_item_idle_fg_matches_web(
 
 fn assert_menubar_file_menu_destructive_focused_item_chrome_matches_web(
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open("menubar-demo.destructive-focus-first");
     let theme = web_theme_named(&web, web_theme_name);
@@ -665,7 +665,7 @@ fn assert_menubar_file_menu_destructive_focused_item_chrome_matches_web(
 fn assert_menubar_highlighted_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
@@ -764,7 +764,7 @@ fn assert_menubar_highlighted_item_chrome_matches_web(
 fn assert_menubar_submenu_highlighted_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);

@@ -25,7 +25,7 @@ fn build_combobox_popover_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide,
     };
 

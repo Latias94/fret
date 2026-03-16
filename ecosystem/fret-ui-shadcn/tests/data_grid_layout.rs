@@ -9,8 +9,8 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use std::sync::Arc;
 
-use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};
 use fret_ui_shadcn::facade as shadcn;
+use fret_ui_shadcn::raw::experimental::{DataGridElement, DataGridRowState};
 
 struct FakeServices;
 

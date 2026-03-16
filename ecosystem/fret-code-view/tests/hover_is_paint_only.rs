@@ -13,7 +13,9 @@ use fret_runtime::{
     PlatformCapabilities, TickId, TimeHost,
 };
 use fret_ui::UiTree;
-use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+use fret_ui_shadcn::facade::themes::{
+    ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
+};
 
 #[derive(Default)]
 struct TestHost {

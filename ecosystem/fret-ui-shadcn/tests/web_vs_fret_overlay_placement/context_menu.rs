@@ -25,7 +25,7 @@ fn fret_context_menu_does_not_move_when_underlay_scrolls() {
     let trigger_test_id = "scroll-underlay-context-menu-trigger";
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        use fret_ui_shadcn::context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+        use fret_ui_shadcn::facade::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 
         let open = open.clone();
         let scroll_handle = scroll_handle.clone();

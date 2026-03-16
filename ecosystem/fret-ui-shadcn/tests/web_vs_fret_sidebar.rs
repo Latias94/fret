@@ -2,8 +2,8 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize, TextWrap};
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
-use fret_ui_shadcn::facade as shadcn;
-use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
+use fret_ui_shadcn::facade::{self as shadcn, themes as shadcn_themes};
+use fret_ui_shadcn::raw::sidebar::SidebarMenuButtonSize;
 
 #[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
@@ -113,10 +113,10 @@ fn run_fret_root(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn_themes::ShadcnBaseColor::Neutral,
+        shadcn_themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();

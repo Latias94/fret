@@ -1360,7 +1360,7 @@ fn command_demo_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot
 
     let mut services = StyleAwareServices::default();
     run_fret_root_with_services(bounds, &mut services, |cx| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator,
         };
 

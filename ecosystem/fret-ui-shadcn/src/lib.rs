@@ -16,8 +16,8 @@
 //! ```
 //!
 //! Use `fret_ui_shadcn::app::*` for default app setup, `fret_ui_shadcn::advanced::*` for
-//! environment or `UiServices`-boundary hooks, and treat `fret_ui_shadcn::raw::*` plus explicit
-//! module paths as the raw escape hatch rather than the flat crate root.
+//! environment or `UiServices`-boundary hooks, and treat `fret_ui_shadcn::raw::*` as the raw
+//! escape hatch rather than the doc-hidden flat crate-root compatibility modules.
 //!
 //! Most thin public helper constructors now stay on the typed `IntoUiElement<H>` lane (for
 //! example `badge`, `checkbox`, `input`, `textarea`, `slider`, `progress`, `switch`, `toggle`,
@@ -49,94 +49,169 @@
 //! - `state-selector`, `state-query`: opt-in state helpers used by some recipes/demos.
 
 mod a11y_modal;
+#[doc(hidden)]
 pub mod accordion;
+#[doc(hidden)]
 pub mod alert;
+#[doc(hidden)]
 pub mod alert_dialog;
+#[doc(hidden)]
 pub mod aspect_ratio;
+#[doc(hidden)]
 pub mod avatar;
+#[doc(hidden)]
 pub mod badge;
+#[doc(hidden)]
 pub mod breadcrumb;
+#[doc(hidden)]
 pub mod button;
+#[doc(hidden)]
 pub mod button_group;
+#[doc(hidden)]
 pub mod calendar;
+#[doc(hidden)]
 pub mod calendar_hijri;
+#[doc(hidden)]
 pub mod calendar_multiple;
+#[doc(hidden)]
 pub mod calendar_range;
+#[doc(hidden)]
 pub mod card;
+#[doc(hidden)]
 pub mod carousel;
+#[doc(hidden)]
 pub mod chart;
+#[doc(hidden)]
 pub mod checkbox;
+#[doc(hidden)]
 pub mod collapsible;
+#[doc(hidden)]
 pub mod collapsible_primitives;
+#[doc(hidden)]
 pub mod combobox;
+#[doc(hidden)]
 pub mod combobox_chips;
+#[doc(hidden)]
 pub mod command;
 mod command_gating;
+#[doc(hidden)]
 pub mod context_menu;
 mod data_grid;
+#[doc(hidden)]
 pub mod data_grid_canvas;
+#[doc(hidden)]
 pub mod data_table;
 mod data_table_controls;
 mod data_table_recipes;
+#[doc(hidden)]
 pub mod date_picker;
+#[doc(hidden)]
 pub mod date_picker_with_presets;
+#[doc(hidden)]
 pub mod date_range_picker;
+#[doc(hidden)]
 pub mod dialog;
+#[doc(hidden)]
 pub mod direction;
+#[doc(hidden)]
 pub mod drawer;
+#[doc(hidden)]
 pub mod dropdown_menu;
+#[doc(hidden)]
 pub mod empty;
+#[doc(hidden)]
 pub mod experimental;
+#[doc(hidden)]
 pub mod extras;
+#[doc(hidden)]
 pub mod field;
+#[doc(hidden)]
 pub mod form;
+#[doc(hidden)]
 pub mod hover_card;
+#[doc(hidden)]
 pub mod input;
+#[doc(hidden)]
 pub mod input_group;
+#[doc(hidden)]
 pub mod input_otp;
+#[doc(hidden)]
 pub mod item;
+#[doc(hidden)]
 pub mod kbd;
+#[doc(hidden)]
 pub mod label;
 mod layout;
+#[doc(hidden)]
 pub mod media_image;
 mod menu_authoring;
+#[doc(hidden)]
 pub mod menubar;
+#[doc(hidden)]
 pub mod native_select;
+#[doc(hidden)]
 pub mod navigation_menu;
 mod overlay_motion;
+#[doc(hidden)]
 pub mod pagination;
+#[doc(hidden)]
 pub mod popover;
 mod popper_arrow;
+#[doc(hidden)]
 pub mod progress;
+#[doc(hidden)]
 pub mod radio_group;
 #[doc(hidden)]
 pub mod recharts_geometry;
+#[doc(hidden)]
 pub mod resizable;
 mod rtl;
+#[doc(hidden)]
 pub mod scroll_area;
+#[doc(hidden)]
 pub mod select;
+#[doc(hidden)]
 pub mod separator;
+#[doc(hidden)]
 pub mod shadcn_themes;
+#[doc(hidden)]
 pub mod sheet;
 mod shortcut_display;
+#[doc(hidden)]
 pub mod shortcut_hint;
+#[doc(hidden)]
 pub mod sidebar;
+#[doc(hidden)]
 pub mod skeleton;
+#[doc(hidden)]
 pub mod slider;
+#[doc(hidden)]
 pub mod sonner;
+#[doc(hidden)]
 pub mod spinner;
 #[cfg(any(feature = "state-selector", feature = "state-query"))]
+#[doc(hidden)]
 pub mod state;
+#[doc(hidden)]
 pub mod switch;
+#[doc(hidden)]
 pub mod table;
+#[doc(hidden)]
 pub mod tabs;
 mod text_edit_context_menu;
+#[doc(hidden)]
 pub mod text_value_model;
+#[doc(hidden)]
 pub mod textarea;
+#[doc(hidden)]
 pub mod toast;
+#[doc(hidden)]
 pub mod toggle;
+#[doc(hidden)]
 pub mod toggle_group;
+#[doc(hidden)]
 pub mod tooltip;
+#[doc(hidden)]
 pub mod typography;
 
 #[cfg(feature = "app-integration")]
@@ -161,7 +236,8 @@ mod surface_policy_tests;
 /// surface.
 ///
 /// This keeps the default discovery lane on `facade + prelude` while preserving explicit module
-/// escape hatches for advanced or source-alignment work.
+/// escape hatches for advanced or source-alignment work. Direct root component modules remain
+/// doc-hidden compatibility residue rather than the preferred discovery lane.
 pub mod raw {
     pub use crate::accordion;
     #[cfg(feature = "app-integration")]

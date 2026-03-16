@@ -19,7 +19,7 @@ fn web_vs_fret_date_picker_with_presets_select_open_vp375x160_listbox_paints_abo
     let mut app = App::new();
     setup_app_with_shadcn_theme_scheme(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -43,7 +43,7 @@ fn web_vs_fret_date_picker_with_presets_select_open_vp375x160_listbox_paints_abo
             use fret_ui_kit::{
                 ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Space,
             };
-            use fret_ui_shadcn::select::SelectPosition;
+            use fret_ui_shadcn::raw::select::SelectPosition;
 
             shadcn::Popover::from_open(popover_open)
                 .align(shadcn::PopoverAlign::Start)

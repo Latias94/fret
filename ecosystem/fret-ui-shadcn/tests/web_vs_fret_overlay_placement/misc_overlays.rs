@@ -272,7 +272,7 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
     let trigger_test_id = "scroll-underlay-popover-trigger";
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        use fret_ui_shadcn::popover::{Popover, PopoverContent};
+        use fret_ui_shadcn::facade::{Popover, PopoverContent};
 
         let open = open.clone();
         let scroll_handle = scroll_handle.clone();
