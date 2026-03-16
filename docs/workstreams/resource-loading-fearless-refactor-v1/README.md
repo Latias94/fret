@@ -101,7 +101,11 @@ This workstream takes a fearless posture:
   - `fret-runtime` now also exposes one generic invalidation contract for asset-consuming code:
     - `AssetReloadEpoch`,
     - `AssetReloadSupport`,
+    - `AssetReloadStatus`,
+    - `AssetReloadBackendKind`,
+    - `AssetReloadFallbackReason`,
     - `asset_reload_epoch(...)`,
+    - `asset_reload_status(...)`,
     - `bump_asset_reload_epoch(...)`.
   - desktop native startup now also has a first-party development reload automation lane:
     - `fret-launch::assets::AssetReloadPolicy`,
@@ -114,6 +118,8 @@ This workstream takes a fearless posture:
     roots cannot be installed:
     - it bumps the shared `AssetReloadEpoch`,
     - publishes `AssetReloadSupport { file_watch: true }`,
+    - publishes `AssetReloadStatus` so diagnostics can see the configured backend, active backend,
+      and watcher-install fallback reason without scraping logs,
     - and requests redraws for each tracked native window.
   - `fret-ui-assets` now consumes that shared runtime-global epoch directly; the old
     `UiAssetsReloadEpoch` / `bump_ui_assets_reload_epoch(...)` names remain only as deprecated

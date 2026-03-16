@@ -101,6 +101,8 @@ escape hatches.
     through `AssetReloadPolicy`,
   - that automation bumps the shared `AssetReloadEpoch` and publishes `file_watch = true` through
     the host-level capability snapshot,
+  - the shared runtime now also publishes `AssetReloadStatus`, so diagnostics can distinguish
+    watcher-backed reload from metadata-poll fallback and capture the fallback reason,
   - supported desktop hosts now prefer a native watcher backend and fall back to metadata polling
     if the watcher backend or current watch roots cannot be installed,
   - wasm/mobile still have no first-party automatic reload lane,

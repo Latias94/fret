@@ -206,7 +206,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       so native debug startup automatically uses the file-backed development lane while
       packaged/web/mobile keeps the compiled bundle lane,
     - `fret_runtime::{AssetReloadEpoch, AssetReloadSupport}` now define one runtime-global asset
-      invalidation contract shared by UI and non-UI consumers, and
+      invalidation contract shared by UI and non-UI consumers,
+    - `fret_runtime::{AssetReloadStatus, AssetReloadBackendKind, AssetReloadFallbackReason}` now
+      also publish the currently active automatic reload backend plus watcher fallback details for
+      diagnostics/runtime consumers, and
       `crates/fret-runtime/src/asset_resolver.rs` now merges that support into aggregated
       `AssetCapabilities.file_watch`,
     - `fret-launch::assets::AssetReloadPolicy` plus
@@ -215,8 +218,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - the current first-party desktop implementation now prefers `AssetReloadPolicy::NativeWatcher`
       on supported native hosts, falls back to metadata polling when watcher installation fails,
       watches builder-mounted manifests/directories, bumps the shared `AssetReloadEpoch`, publishes
-      `AssetReloadSupport { file_watch: true }`, and requests redraws for each tracked native
-      window,
+      `AssetReloadSupport { file_watch: true }`, publishes the effective reload backend/fallback
+      through `AssetReloadStatus`, and requests redraws for each tracked native window,
     - `BootstrapBuilder::with_asset_reload_policy(...)`,
       `UiAppBuilder::with_asset_reload_policy(...)`, and `FretApp::asset_reload_policy(...)` now
       reuse that same policy on higher authoring surfaces,
