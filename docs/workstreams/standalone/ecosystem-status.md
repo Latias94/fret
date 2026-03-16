@@ -29,12 +29,19 @@ of competing active lanes:
 6. `local-state-facade-boundary-hardening-v1` is closed:
    default local-state guidance, explicit raw-model seams, and explicit bridge APIs are now
    clearly classified.
+7. `dataflow-authoring-surface-fearless-refactor-v1` is the new narrow active planning lane:
+   it targets the remaining default dataflow authoring gap across `action`, `selector`, and
+   `query` without reopening router/history or storage-model scope, and now carries its own
+   migration/deletion matrix instead of stopping at scope notes.
 
 Practical meaning:
 
 - app/component/advanced tiering and the default authoring story are now stable enough to teach,
-- authoring follow-up should stay maintenance- and evidence-driven rather than reopen broad surface
-  redesign by default,
+- broad authoring follow-up should stay maintenance- and evidence-driven rather than reopen broad
+  surface redesign by default,
+- the one intentional exception is the new narrow dataflow lane, which reopens only the remaining
+  app-facing `action` / `selector` / `query` authoring gap with explicit proof surfaces and
+  explicit router exclusion,
 - the next truly active product work should come from still-open subsystem lanes such as text,
   font, shadcn alignment, docking, tables, and other editor-grade capability gaps rather than from
   restarting the already-closed authoring cleanup chain without new evidence.

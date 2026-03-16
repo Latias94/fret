@@ -62,6 +62,7 @@ git log --since='2026-01-01' --name-only -- docs/workstreams
 - `docs/workstreams/crate-audits/` — first 2026-02-08, latest 2026-03-12, 24 markdown docs
 - `docs/workstreams/creative-recipes-v1/` — first 2026-02-10, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/current-color-inheritance-fearless-refactor-v1/` — first 2026-02-23, latest 2026-02-24, 3 markdown docs
+- `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/` — first n/a, latest n/a, 5 markdown docs
 - `docs/workstreams/delinea-engine-contract-closure-v1/` — first 2026-02-09, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-ai-agent-debugging-v1/` — first 2026-02-21, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-06, 20 markdown docs

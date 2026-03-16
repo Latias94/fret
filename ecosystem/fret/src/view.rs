@@ -928,11 +928,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         action_listener(f)
     }
 
-    /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
-    pub fn listener(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
-        self.listen(f)
-    }
-
     pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
     where
         A: crate::TypedAction,
@@ -1126,11 +1121,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
     pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
-    }
-
-    /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
-    pub fn listener(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
-        self.listen(f)
     }
 
     pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
@@ -2252,7 +2242,7 @@ mod tests {
                 .contains("pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate")
         );
         assert!(api_source.contains("pub fn listen("));
-        assert!(api_source.contains("pub fn listener("));
+        assert!(!api_source.contains("pub fn listener("));
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Button"));
         assert!(
             !api_source
