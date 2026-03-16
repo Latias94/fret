@@ -514,7 +514,7 @@ fn render_tooltip_fixture(
 
                     let content = shadcn::TooltipContent::new(Vec::new())
                         .refine_layout(
-                            fret_ui_shadcn::LayoutRefinement::default()
+                            LayoutRefinement::default()
                                 .w_px(Px(web_content_rect.w))
                                 .h_px(Px(web_content_rect.h)),
                         )
@@ -751,9 +751,9 @@ fn radix_web_popover_open_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        let mut cfg = fret_ui_shadcn::facade::themes::shadcn_new_york_config(
+            fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
         );
         // Radix's `radix-vega` select content uses `min-w-36` (Tailwind: 9rem).
         // Keep this test aligned to the upstream snapshots without coupling the recipe default.
@@ -1023,10 +1023,10 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(false);
     let mut ui: UiTree<App> = UiTree::new();
@@ -1254,9 +1254,9 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        let mut cfg = fret_ui_shadcn::facade::themes::shadcn_new_york_config(
+            fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
         );
         // Radix's `radix-vega` select content uses `min-w-36` (Tailwind: 9rem).
         // Keep this geometry assertion aligned to upstream snapshots without changing the
@@ -1563,9 +1563,9 @@ fn radix_web_tooltip_hover_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        let mut cfg = fret_ui_shadcn::facade::themes::shadcn_new_york_config(
+            fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
         );
         cfg.metrics.insert(
             "component.menubar.min_width".to_string(),
@@ -1722,10 +1722,10 @@ fn radix_web_hover_card_hover_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -1901,10 +1901,10 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(false);
     let mut ui: UiTree<App> = UiTree::new();
@@ -2254,10 +2254,10 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(None::<Arc<str>>);
     let mut ui: UiTree<App> = UiTree::new();
@@ -2498,10 +2498,10 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -2750,10 +2750,10 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -3060,10 +3060,10 @@ fn radix_web_dialog_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(true);
     let mut ui: UiTree<App> = UiTree::new();
@@ -3176,10 +3176,10 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(true);
     let mut ui: UiTree<App> = UiTree::new();

@@ -17,10 +17,10 @@ impl WebThemeName {
         }
     }
 
-    fn scheme(&self) -> fret_ui_shadcn::shadcn_themes::ShadcnColorScheme {
+    fn scheme(&self) -> shadcn::themes::ShadcnColorScheme {
         match self {
-            WebThemeName::Light => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            WebThemeName::Dark => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            WebThemeName::Light => shadcn::themes::ShadcnColorScheme::Light,
+            WebThemeName::Dark => shadcn::themes::ShadcnColorScheme::Dark,
         }
     }
 }
@@ -69,7 +69,12 @@ fn build_navigation_menu_demo(
             vec![cx.text("Content")],
         )])
         .into_element(cx);
-    root_id_out.set(Some(el.id));
+    // NavigationMenu currently returns a container-query wrapper above the actual registry root.
+    // Overlay chrome probes need the inner root id because the viewport/content registries are
+    // keyed off `cx.root_id()` inside the component body.
+    root_id_out.set(Some(
+        el.children.first().map(|child| child.id).unwrap_or(el.id),
+    ));
     el
 }
 

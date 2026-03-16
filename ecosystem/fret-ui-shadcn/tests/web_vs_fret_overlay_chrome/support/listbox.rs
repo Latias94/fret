@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 fn hover_first_listbox_option(
     ui: &mut UiTree<App>,
@@ -59,7 +60,7 @@ pub(crate) fn assert_listbox_highlighted_option_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
     web_option_slot: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
 ) {
     let web = read_web_golden_open(web_name);
@@ -198,7 +199,7 @@ pub(crate) fn assert_listbox_focused_option_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
     web_option_slot: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
     a11y_label: &str,
 ) {

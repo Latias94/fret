@@ -10,7 +10,6 @@ fn build_shadcn_popover_demo_page(
 ) -> AnyElement {
     use fret_core::Px;
     use fret_ui::Theme;
-    use fret_ui_kit::ui;
     use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
     use shadcn::{Button, ButtonVariant, Popover, PopoverContent};
 

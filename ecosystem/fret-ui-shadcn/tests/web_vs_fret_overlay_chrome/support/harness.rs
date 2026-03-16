@@ -1,22 +1,19 @@
 use super::*;
+use fret_ui_shadcn::facade::themes as shadcn_themes;
 
 pub(crate) fn setup_app_with_shadcn_theme(app: &mut App) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn_themes::apply_shadcn_new_york(
         app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn_themes::ShadcnBaseColor::Neutral,
+        shadcn_themes::ShadcnColorScheme::Light,
     );
 }
 
 pub(crate) fn setup_app_with_shadcn_theme_scheme(
     app: &mut App,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn_themes::ShadcnColorScheme,
 ) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
-        app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        scheme,
-    );
+    shadcn_themes::apply_shadcn_new_york(app, shadcn_themes::ShadcnBaseColor::Neutral, scheme);
 }
 
 pub(crate) fn render_frame<I, F>(

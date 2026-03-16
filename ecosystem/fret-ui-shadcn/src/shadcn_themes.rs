@@ -410,12 +410,14 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
     }
 
     // shadcn new-york-v4 `NavigationMenuTrigger` open background:
-    // - `data-[state=open]:bg-accent/50`
+    // - computed surface resolves to opaque `accent`
     if !colors.contains_key("component.navigation_menu.trigger.bg_open")
         && let Some(accent) = colors.get("accent").cloned()
     {
-        let v = with_oklch_alpha(&accent, 0.5).unwrap_or(accent);
-        colors.insert("component.navigation_menu.trigger.bg_open".to_string(), v);
+        colors.insert(
+            "component.navigation_menu.trigger.bg_open".to_string(),
+            accent,
+        );
     }
 
     // Editor-like ecosystem surfaces (node graph, code editors) consume Fret viewport selection
@@ -1541,22 +1543,16 @@ mod tests {
                     .colors
                     .get("component.navigation_menu.trigger.bg_open")
                     .cloned(),
-                Some(
-                    with_oklch_alpha(&accent_light, 0.5)
-                        .expect("shadcn new-york-v4 accent token is oklch"),
-                ),
-                "expected nav-menu open bg to match accent/50 in light scheme"
+                Some(accent_light.clone()),
+                "expected nav-menu open bg to match opaque accent in light scheme"
             );
             assert_eq!(
                 cfg_dark
                     .colors
                     .get("component.navigation_menu.trigger.bg_open")
                     .cloned(),
-                Some(
-                    with_oklch_alpha(&accent_dark, 0.5)
-                        .expect("shadcn new-york-v4 accent token is oklch"),
-                ),
-                "expected nav-menu open bg to match accent/50 in dark scheme"
+                Some(accent_dark.clone()),
+                "expected nav-menu open bg to match opaque accent in dark scheme"
             );
 
             let primary_light = cfg_light

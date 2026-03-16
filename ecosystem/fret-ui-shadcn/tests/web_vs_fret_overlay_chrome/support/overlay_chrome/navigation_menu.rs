@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 pub(crate) fn assert_navigation_menu_content_chrome_matches(
     web_name: &str,
@@ -125,7 +126,7 @@ pub(crate) fn assert_navigation_menu_content_surface_colors_match(
     open_value: &str,
     trigger_label: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     build: impl Fn(
         &mut ElementContext<'_, App>,
         &Model<Option<Arc<str>>>,
@@ -298,7 +299,7 @@ pub(crate) fn assert_navigation_menu_content_shadow_insets_match(
     open_value: &str,
     trigger_label: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     build: impl Fn(
         &mut ElementContext<'_, App>,
         &Model<Option<Arc<str>>>,
@@ -410,7 +411,7 @@ pub(crate) fn assert_navigation_menu_viewport_shadow_insets_match(
     web_state: &str,
     trigger_label: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     build: impl Fn(
         &mut ElementContext<'_, App>,
         &Model<Option<Arc<str>>>,
@@ -520,7 +521,7 @@ pub(crate) fn assert_navigation_menu_viewport_surface_colors_match(
     web_state: &str,
     trigger_label: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     build: impl Fn(
         &mut ElementContext<'_, App>,
         &Model<Option<Arc<str>>>,
@@ -690,7 +691,7 @@ pub(crate) fn assert_navigation_menu_indicator_shadow_insets_match(
     web_state: &str,
     trigger_label: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     build: impl Fn(
         &mut ElementContext<'_, App>,
         &Model<Option<Arc<str>>>,

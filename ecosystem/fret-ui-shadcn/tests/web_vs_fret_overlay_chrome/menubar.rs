@@ -21,10 +21,7 @@ fn web_vs_fret_menubar_root_shadow_matches_web() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    setup_app_with_shadcn_theme_scheme(
-        &mut app,
-        shadcn::themes::ShadcnColorScheme::Light,
-    );
+    setup_app_with_shadcn_theme_scheme(&mut app, shadcn::themes::ShadcnColorScheme::Light);
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -80,10 +77,7 @@ fn web_vs_fret_menubar_root_shadow_matches_web_dark() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    setup_app_with_shadcn_theme_scheme(
-        &mut app,
-        shadcn::themes::ShadcnColorScheme::Dark,
-    );
+    setup_app_with_shadcn_theme_scheme(&mut app, shadcn::themes::ShadcnColorScheme::Dark);
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -222,30 +216,6 @@ fn build_shadcn_menubar_demo(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
-fn render_shadcn_menubar_demo_settled(
-    ui: &mut UiTree<App>,
-    app: &mut App,
-    services: &mut dyn fret_core::UiServices,
-    window: AppWindowId,
-    bounds: Rect,
-    frame_id_base: u64,
-) -> (fret_core::SemanticsSnapshot, Scene) {
-    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
-    for tick in 0..settle_frames {
-        render_frame(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            FrameId(frame_id_base + tick),
-            tick + 1 == settle_frames,
-            |cx| vec![build_shadcn_menubar_demo(cx)],
-        );
-    }
-    paint_frame(ui, app, services, bounds)
-}
-
 fn assert_menubar_focused_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
@@ -278,7 +248,7 @@ fn assert_menubar_focused_item_chrome_matches_web(
         bounds,
         FrameId(1),
         true,
-        |cx| vec![build_shadcn_menubar_demo(cx)],
+        |cx| vec![build_shadcn_menubar_file_menu_destructive(cx, false, false)],
     );
 
     let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
@@ -288,22 +258,40 @@ fn assert_menubar_focused_item_chrome_matches_web(
         .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
         .expect("menubar File trigger semantics node");
 
-    ui.set_focus(Some(file_trigger.id));
-    render_frame(
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(file_trigger.bounds),
+    );
+
+    let (snap_open, _) = render_shadcn_menubar_file_menu_settled(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
-        FrameId(200),
-        true,
-        |cx| vec![build_shadcn_menubar_demo(cx)],
+        200,
+        false,
+        false,
     );
+    let new_tab = snap_open
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Tab"))
+        .expect("menubar New Tab item semantics node after opening");
+    ui.set_focus(Some(new_tab.id));
 
-    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
-
-    let (snap, scene) =
-        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 201);
+    let (snap, scene) = render_shadcn_menubar_file_menu_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        400,
+        false,
+        false,
+    );
 
     let new_tab = snap
         .nodes
@@ -694,7 +682,7 @@ fn assert_menubar_highlighted_item_chrome_matches_web(
         bounds,
         FrameId(1),
         true,
-        |cx| vec![build_shadcn_menubar_demo(cx)],
+        |cx| vec![build_shadcn_menubar_file_menu_destructive(cx, false, false)],
     );
 
     let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
@@ -711,8 +699,16 @@ fn assert_menubar_highlighted_item_chrome_matches_web(
         bounds_center(file_trigger.bounds),
     );
 
-    let (snap, _) =
-        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 2);
+    let (snap, _) = render_shadcn_menubar_file_menu_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        false,
+        false,
+    );
 
     let new_tab = snap
         .nodes
@@ -727,8 +723,16 @@ fn assert_menubar_highlighted_item_chrome_matches_web(
         bounds_center(new_tab.bounds),
     );
 
-    let (snap, scene) =
-        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 200);
+    let (snap, scene) = render_shadcn_menubar_file_menu_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        200,
+        false,
+        false,
+    );
 
     let new_tab = snap
         .nodes
@@ -793,7 +797,7 @@ fn assert_menubar_submenu_highlighted_item_chrome_matches_web(
         bounds,
         FrameId(1),
         true,
-        |cx| vec![build_shadcn_menubar_demo(cx)],
+        |cx| vec![build_shadcn_menubar_file_menu_destructive(cx, false, false)],
     );
 
     let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
@@ -810,8 +814,16 @@ fn assert_menubar_submenu_highlighted_item_chrome_matches_web(
         bounds_center(file_trigger.bounds),
     );
 
-    let (snap2, _) =
-        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 2);
+    let (snap2, _) = render_shadcn_menubar_file_menu_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        false,
+        false,
+    );
 
     let share = snap2
         .nodes
@@ -821,8 +833,16 @@ fn assert_menubar_submenu_highlighted_item_chrome_matches_web(
     ui.set_focus(Some(share.id));
     dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
 
-    let (snap3, _) =
-        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 200);
+    let (snap3, _) = render_shadcn_menubar_file_menu_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        200,
+        false,
+        false,
+    );
     let email_link = snap3
         .nodes
         .iter()
@@ -837,7 +857,7 @@ fn assert_menubar_submenu_highlighted_item_chrome_matches_web(
         bounds,
         FrameId(350),
         true,
-        |cx| vec![build_shadcn_menubar_demo(cx)],
+        |cx| vec![build_shadcn_menubar_file_menu_destructive(cx, false, false)],
     );
 
     let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);

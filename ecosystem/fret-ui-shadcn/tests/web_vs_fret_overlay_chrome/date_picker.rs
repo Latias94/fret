@@ -17,10 +17,7 @@ fn web_vs_fret_date_picker_with_presets_select_open_vp375x160_listbox_paints_abo
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    setup_app_with_shadcn_theme_scheme(
-        &mut app,
-        shadcn::themes::ShadcnColorScheme::Light,
-    );
+    setup_app_with_shadcn_theme_scheme(&mut app, shadcn::themes::ShadcnColorScheme::Light);
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);

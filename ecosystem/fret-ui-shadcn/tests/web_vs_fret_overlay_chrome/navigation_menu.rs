@@ -10,7 +10,7 @@ fn assert_navigation_menu_trigger_surface_colors_match(
     open_value: &str,
     closed_label: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
 ) {
     use shadcn::{NavigationMenu, NavigationMenuItem};
 
@@ -167,9 +167,13 @@ fn assert_navigation_menu_trigger_surface_colors_match(
             panic!("missing fret trigger semantics node after open: {closed_label:?}")
         });
 
-    let open_quad = find_best_chrome_quad(&scene, open_trigger.bounds)
+    let open_quad = web_open_bg
+        .and_then(|bg| find_best_solid_quad_within_matching_bg(&scene, open_trigger.bounds, bg))
+        .or_else(|| find_best_chrome_quad(&scene, open_trigger.bounds))
         .expect("painted quad for navigation-menu trigger chrome (open)");
-    let closed_quad = find_best_chrome_quad(&scene, closed_trigger.bounds)
+    let closed_quad = web_closed_bg
+        .and_then(|bg| find_best_solid_quad_within_matching_bg(&scene, closed_trigger.bounds, bg))
+        .or_else(|| find_best_chrome_quad(&scene, closed_trigger.bounds))
         .expect("painted quad for navigation-menu trigger chrome (closed)");
 
     if let Some(web_open_bg) = web_open_bg

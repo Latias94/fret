@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 pub(crate) fn assert_overlay_chrome_matches(
     web_name: &str,
@@ -182,7 +183,7 @@ pub(crate) fn assert_click_overlay_surface_colors_match_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_trigger_role: SemanticsRole,
     fret_trigger_label: &str,
     settle_frames: u64,
@@ -548,7 +549,7 @@ pub(crate) fn assert_overlay_chrome_matches_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     settle_frames: u64,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
 ) {
@@ -703,7 +704,7 @@ pub(crate) fn assert_overlay_surface_colors_match(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     settle_frames: u64,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
@@ -845,7 +846,7 @@ pub(crate) fn assert_overlay_panel_size_matches_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     settle_frames: u64,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
@@ -953,7 +954,7 @@ pub(crate) fn assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     settle_frames: u64,
     tol: f32,
@@ -1058,90 +1059,11 @@ pub(crate) fn assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
     );
 }
 
-pub(crate) fn assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
-    web_name: &str,
-    web_portal_slot: &str,
-    web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
-    settle_frames: u64,
-    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
-) {
-    let web = read_web_golden_open(web_name);
-    let theme = web_theme_named(&web, web_theme_name);
-
-    let web_portal = find_portal_by_slot(theme, web_portal_slot)
-        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
-    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
-    let web_w = web_portal.rect.w;
-    let web_h = web_portal.rect.h;
-
-    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
-        Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            CoreSize::new(Px(640.0), Px(480.0)),
-        )
-    });
-
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
-
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-    let mut services = FakeServices;
-
-    let open: Model<bool> = app.models_mut().insert(false);
-
-    let build_frame1 = build.clone();
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(1),
-        false,
-        |cx| vec![build_frame1(cx, &open)],
-    );
-
-    let _ = app.models_mut().update(&open, |v| *v = true);
-    for tick in 0..settle_frames.max(1) {
-        let build_frame = build.clone();
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + tick),
-            tick + 1 == settle_frames.max(1),
-            |cx| vec![build_frame(cx, &open)],
-        );
-    }
-
-    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
-    let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
-        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
-
-    assert_close(
-        &format!("{web_name} {web_theme_name} panel.w"),
-        quad.rect.size.width.0,
-        web_w,
-        1.0,
-    );
-    assert_close(
-        &format!("{web_name} {web_theme_name} panel.h"),
-        quad.rect.size.height.0,
-        web_h,
-        1.0,
-    );
-}
-
 pub(crate) fn assert_overlay_shadow_insets_match(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     settle_frames: u64,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
@@ -1216,7 +1138,7 @@ pub(crate) fn assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_trigger_role: SemanticsRole,
     fret_trigger_label: &str,
     settle_frames: u64,
@@ -1303,7 +1225,7 @@ pub(crate) fn assert_click_overlay_panel_size_matches_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_trigger_role: SemanticsRole,
     fret_trigger_label: &str,
     settle_frames: u64,
@@ -1527,7 +1449,7 @@ pub(crate) fn assert_hover_overlay_surface_colors_match_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     fret_trigger_label: &str,
     settle_frames: u64,
@@ -1708,7 +1630,7 @@ pub(crate) fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     fret_trigger_label: &str,
     settle_frames: u64,
@@ -1735,7 +1657,7 @@ pub(crate) fn assert_hover_overlay_panel_height_matches_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     fret_trigger_label: &str,
     settle_frames: u64,
@@ -1762,7 +1684,7 @@ pub(crate) fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     fret_trigger_label: &str,
     settle_frames: u64,
