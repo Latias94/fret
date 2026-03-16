@@ -29,12 +29,9 @@ Fret (Rust) equivalent:
 ```rust
 use std::sync::Arc;
 
-use fret_ui_shadcn::{
-    Combobox, ComboboxContent, ComboboxContentPart, ComboboxEmpty, ComboboxInput, ComboboxItem,
-    ComboboxList, ComboboxPart,
-};
-use fret_ui::{AnyElement, ElementContext};
 use fret_app::App;
+use fret_ui::{AnyElement, ElementContext};
+use fret_ui_shadcn::facade as shadcn;
 use fret_runtime::Model;
 
 pub fn example_combobox(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -42,21 +39,25 @@ pub fn example_combobox(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let open: Model<bool> = cx.app.models_mut().insert(false);
 
     let items = [
-        ComboboxItem::new("next", "Next.js"),
-        ComboboxItem::new("svelte", "SvelteKit"),
-        ComboboxItem::new("nuxt", "Nuxt.js"),
-        ComboboxItem::new("remix", "Remix"),
-        ComboboxItem::new("astro", "Astro"),
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+        shadcn::ComboboxItem::new("remix", "Remix"),
+        shadcn::ComboboxItem::new("astro", "Astro"),
     ];
 
-    Combobox::new(value, open)
+    shadcn::Combobox::new(value, open)
         .a11y_label("Select a framework")
         .into_element_parts(cx, |_cx| {
             vec![
-                ComboboxPart::from(ComboboxInput::new().placeholder("Select a framework")),
-                ComboboxPart::from(ComboboxContent::new([
-                    ComboboxContentPart::from(ComboboxEmpty::new("No items found.")),
-                    ComboboxContentPart::from(ComboboxList::new().items(items)),
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxInput::new().placeholder("Select a framework"),
+                ),
+                shadcn::ComboboxPart::from(shadcn::ComboboxContent::new([
+                    shadcn::ComboboxContentPart::from(
+                        shadcn::ComboboxEmpty::new("No items found."),
+                    ),
+                    shadcn::ComboboxContentPart::from(shadcn::ComboboxList::new().items(items)),
                 ])),
             ]
         })
@@ -74,7 +75,7 @@ Notes:
 Upstream uses `showClear` on `ComboboxInput`. Fret maps it to the existing recipe clear affordance:
 
 ```rust
-ComboboxInput::new()
+shadcn::ComboboxInput::new()
     .placeholder("Select a framework")
     .show_clear(true)
 ```
@@ -110,25 +111,22 @@ In Fret:
   search input placeholder (`search_placeholder`), not the trigger placeholder.
 
 ```rust
-use fret_ui_shadcn::{
-    Combobox, ComboboxContent, ComboboxContentPart, ComboboxEmpty, ComboboxInput, ComboboxItem,
-    ComboboxList, ComboboxPart, ComboboxTrigger, ComboboxTriggerVariant,
-};
 use fret_core::Px;
+use fret_ui_shadcn::facade as shadcn;
 
-Combobox::new(value, open).into_element_parts(cx, |_cx| {
+shadcn::Combobox::new(value, open).into_element_parts(cx, |_cx| {
     vec![
-        ComboboxPart::from(
-            ComboboxTrigger::new()
-                .variant(ComboboxTriggerVariant::Button)
+        shadcn::ComboboxPart::from(
+            shadcn::ComboboxTrigger::new()
+                .variant(shadcn::ComboboxTriggerVariant::Button)
                 .width_px(Px(256.0)),
         ),
-        ComboboxPart::from(ComboboxContent::new([
-            ComboboxContentPart::from(ComboboxInput::new().placeholder("Search")),
-            ComboboxContentPart::from(ComboboxEmpty::new("No items found.")),
-            ComboboxContentPart::from(ComboboxList::new().items([
-                ComboboxItem::new("us", "United States"),
-                ComboboxItem::new("cn", "China"),
+        shadcn::ComboboxPart::from(shadcn::ComboboxContent::new([
+            shadcn::ComboboxContentPart::from(shadcn::ComboboxInput::new().placeholder("Search")),
+            shadcn::ComboboxContentPart::from(shadcn::ComboboxEmpty::new("No items found.")),
+            shadcn::ComboboxContentPart::from(shadcn::ComboboxList::new().items([
+                shadcn::ComboboxItem::new("us", "United States"),
+                shadcn::ComboboxItem::new("cn", "China"),
             ])),
         ])),
     ]
@@ -143,30 +141,27 @@ Upstream uses `ComboboxGroup`, `ComboboxLabel`, `ComboboxCollection`, and an opt
 Fret supports an equivalent shape via `ComboboxList::groups(...)` + `ComboboxGroup::separator(true)`:
 
 ```rust
-use fret_ui_shadcn::{
-    ComboboxContent, ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem,
-    ComboboxLabel, ComboboxList,
-};
+use fret_ui_shadcn::facade as shadcn;
 
-let list = ComboboxList::new().groups([
-    ComboboxGroup::new()
-        .label(ComboboxLabel::new("Europe"))
+let list = shadcn::ComboboxList::new().groups([
+    shadcn::ComboboxGroup::new()
+        .label(shadcn::ComboboxLabel::new("Europe"))
         .items([
-            ComboboxItem::new("fr", "France"),
-            ComboboxItem::new("de", "Germany"),
+            shadcn::ComboboxItem::new("fr", "France"),
+            shadcn::ComboboxItem::new("de", "Germany"),
         ])
         .separator(true),
-    ComboboxGroup::new()
-        .label(ComboboxLabel::new("Asia"))
+    shadcn::ComboboxGroup::new()
+        .label(shadcn::ComboboxLabel::new("Asia"))
         .items([
-            ComboboxItem::new("cn", "China"),
-            ComboboxItem::new("jp", "Japan"),
+            shadcn::ComboboxItem::new("cn", "China"),
+            shadcn::ComboboxItem::new("jp", "Japan"),
         ]),
 ]);
 
-let content = ComboboxContent::new([
-    ComboboxContentPart::from(ComboboxEmpty::new("No results.")),
-    ComboboxContentPart::from(list),
+let content = shadcn::ComboboxContent::new([
+    shadcn::ComboboxContentPart::from(shadcn::ComboboxEmpty::new("No results.")),
+    shadcn::ComboboxContentPart::from(list),
 ]);
 ```
 
@@ -189,29 +184,30 @@ Example:
 ```rust
 use std::sync::Arc;
 
-use fret_ui_shadcn::{
-    ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxChipsPart, ComboboxContent,
-    ComboboxContentPart, ComboboxEmpty, ComboboxItem, ComboboxList, ComboboxValue,
-};
-use fret_ui::{AnyElement, ElementContext};
 use fret_app::App;
+use fret_ui::{AnyElement, ElementContext};
+use fret_ui_shadcn::facade as shadcn;
 use fret_runtime::Model;
 
 pub fn example_combobox_multiple(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let values: Model<Vec<Arc<str>>> = cx.app.models_mut().insert(Vec::new());
     let open: Model<bool> = cx.app.models_mut().insert(false);
 
-    ComboboxChips::new(values, open).into_element_parts(cx, |_cx| {
+    shadcn::ComboboxChips::new(values, open).into_element_parts(cx, |_cx| {
         vec![
-            ComboboxChipsPart::from(
-                ComboboxValue::new([ComboboxChip::new("next").show_remove(true)]),
+            shadcn::ComboboxChipsPart::from(
+                shadcn::ComboboxValue::new([shadcn::ComboboxChip::new("next").show_remove(true)]),
             ),
-            ComboboxChipsPart::from(ComboboxChipsInput::new().placeholder("Add framework")),
-            ComboboxChipsPart::from(ComboboxContent::new([
-                ComboboxContentPart::from(ComboboxEmpty::new("No items found.")),
-                ComboboxContentPart::from(ComboboxList::new().items([
-                    ComboboxItem::new("next", "Next.js"),
-                    ComboboxItem::new("svelte", "SvelteKit"),
+            shadcn::ComboboxChipsPart::from(
+                shadcn::ComboboxChipsInput::new().placeholder("Add framework"),
+            ),
+            shadcn::ComboboxChipsPart::from(shadcn::ComboboxContent::new([
+                shadcn::ComboboxContentPart::from(
+                    shadcn::ComboboxEmpty::new("No items found."),
+                ),
+                shadcn::ComboboxContentPart::from(shadcn::ComboboxList::new().items([
+                    shadcn::ComboboxItem::new("next", "Next.js"),
+                    shadcn::ComboboxItem::new("svelte", "SvelteKit"),
                 ])),
             ])),
         ]

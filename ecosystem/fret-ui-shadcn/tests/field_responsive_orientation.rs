@@ -8,7 +8,7 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
-use fret_ui_shadcn::shadcn_themes;
+use fret_ui_shadcn::facade::themes as shadcn_themes;
 use shadcn::{Field, FieldOrientation};
 
 struct FakeServices;

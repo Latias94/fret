@@ -2231,7 +2231,10 @@ mod tests {
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let visual = ui::h_row(|cx| {
                 vec![
-                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
+                    fret_ui_kit::declarative::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.trash-2"),
+                    ),
                     ui::text("Delete now").into_element(cx),
                 ]
             })
@@ -2271,7 +2274,10 @@ mod tests {
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let visual = ui::h_row(|cx| {
                 vec![
-                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
+                    fret_ui_kit::declarative::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.arrow-left"),
+                    ),
                     ui::text("Back to safety").into_element(cx),
                 ]
             })

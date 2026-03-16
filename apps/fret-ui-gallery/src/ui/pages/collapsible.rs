@@ -30,7 +30,9 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable composable usage for `Collapsible` via the explicit raw primitives path.")
+        .description(
+            "Copyable composable usage for `Collapsible` via the explicit raw primitives path.",
+        )
         .test_id_prefix("ui-gallery-collapsible-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let controlled_state = DocSection::build(cx, "Controlled State", controlled_state)

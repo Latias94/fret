@@ -158,6 +158,23 @@ fn gallery_source_tree_rejects_legacy_shadcn_alias_patterns() {
 }
 
 #[test]
+fn gallery_source_tree_avoids_root_shadcn_glue_paths() {
+    for path in gallery_rust_sources() {
+        let source = read_path(&path);
+        assert!(
+            !source.contains("fret_ui_shadcn::decl_style"),
+            "{} reintroduced the root `decl_style` glue lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("fret_ui_shadcn::icon::"),
+            "{} reintroduced the root `icon` glue lane",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn gallery_source_tree_avoids_legacy_conversion_trait_names() {
     for path in gallery_rust_sources() {
         let source = read_path(&path);

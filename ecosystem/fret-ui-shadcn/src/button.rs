@@ -14,6 +14,7 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
@@ -1235,7 +1236,7 @@ impl Button {
                                 ComponentSize::Medium | ComponentSize::Large => Px(16.0),
                             });
                             if let Some(icon) = leading_icon.clone() {
-                                let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
+                                let icon = icon::icon_with(cx, icon, Some(icon_px), None);
                                 inline_start.push(crate::test_id::attach_test_id_suffix(
                                     icon,
                                     test_id.as_ref(),
@@ -1274,7 +1275,7 @@ impl Button {
 
                             inline_end.extend(trailing_children.take().unwrap_or_default());
                             if let Some(icon) = trailing_icon.clone() {
-                                let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
+                                let icon = icon::icon_with(cx, icon, Some(icon_px), None);
                                 inline_end.push(crate::test_id::attach_test_id_suffix(
                                     icon,
                                     test_id.as_ref(),

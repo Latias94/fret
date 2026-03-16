@@ -129,10 +129,10 @@ fn carousel_respects_reduced_motion_and_does_not_request_continuous_frames() {
     let bounds = window_bounds();
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     app.with_global_mut(fret_ui::elements::ElementRuntime::new, |rt, _app| {
         rt.set_window_prefers_reduced_motion(window, Some(true));

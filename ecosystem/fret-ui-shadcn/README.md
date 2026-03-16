@@ -27,11 +27,16 @@ Keep the component taxonomy and app wiring separate:
 - recipes/components should prefer the curated facade import
   `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
 - app-owned setup stays under `fret_ui_shadcn::app::*`
+- theme presets stay under `fret_ui_shadcn::facade::themes::*` (or `shadcn::themes::*` when you
+  already alias `facade as shadcn`)
 - environment / `UiServices`-boundary hooks stay under `fret_ui_shadcn::advanced::*`
 - explicit `fret_ui_shadcn::raw::*` access stays the escape hatch for low-level/internal use
 - flat crate-root component modules are now `#[doc(hidden)]` compatibility residue; curated
   docs/examples should teach `facade as shadcn` as the default lane, with
   `fret_ui_shadcn::raw::*` reserved for explicit escape-hatch use
+- root authoring glue is fully closed down: `icon`, `decl_style`, `ui`, style types, and
+  ui-builder extension traits are all exposed through `prelude` / `raw` instead of any flat-root
+  lane
 - `fret_ui_shadcn::app::install(...)` installs theme/app wiring only; icon packs stay explicit
   and should be composed through app setup (`fret_icons_lucide::app::install`,
   `fret_icons_radix::app::install`, or your own bundle surface) rather than hidden inside

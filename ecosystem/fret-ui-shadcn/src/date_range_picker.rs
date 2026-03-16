@@ -6,6 +6,7 @@ use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, ui};
@@ -177,7 +178,7 @@ impl DateRangePicker {
                                 .unwrap_or_else(|| fg_fallback.clone());
 
                             vec![
-                                crate::icon::icon(cx, calendar_icon_for_content),
+                                icon::icon(cx, calendar_icon_for_content),
                                 ui::text(button_text_for_content.clone())
                                     .text_size_px(text_size)
                                     .fixed_line_box_px(line_height)

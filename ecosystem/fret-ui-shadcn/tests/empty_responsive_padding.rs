@@ -10,7 +10,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::{MetricRef, Space};
 use fret_ui_shadcn::facade as shadcn;
-use fret_ui_shadcn::shadcn_themes;
+use fret_ui_shadcn::facade::themes as shadcn_themes;
 use shadcn::Empty;
 use std::sync::Arc;
 

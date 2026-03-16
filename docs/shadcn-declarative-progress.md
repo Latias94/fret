@@ -182,18 +182,21 @@ Guidelines:
   `DataGridElement` family, low-level icon helpers, and module-local advanced enums/styles such as
   `raw::{button, calendar, context_menu, dropdown_menu, kbd, menubar, select, switch, tabs,
   toggle_group}::*`) instead of importing `fret_ui_shadcn::*` directly.
+- Theme presets are no longer a parallel root lane either: first-party code should use
+  `shadcn::themes::*` (or `fret_ui_shadcn::facade::themes::*` in non-aliased contexts), not the
+  historical `fret_ui_shadcn::shadcn_themes::*` path.
 - Treat the flat `fret_ui_shadcn::*` crate root as doc-hidden non-authoring glue only;
   component-family exports now live on `facade as shadcn`, with `raw::*` as the explicit escape
   hatch.
 - The curated `prelude` and crate-internal recipe/helper glue now also source their
   authoring-critical names from explicit module/facade paths instead of hidden flat root
-  reexports; the component-family and direction-utility delete passes have landed, leaving only
-  narrow authoring-glue residue on the flat root.
+  reexports; component families, direction utilities, themes, and authoring glue now all route
+  through explicit facade/prelude/raw lanes, and internal recipe code now imports icon helpers
+  directly from `fret_ui_kit::declarative::icon` rather than relying on a flat-root shim.
 - The current first-party source-policy tests that ban root-style imports are evidence of remaining
   public-surface duplication, not proof that the current three-lane discovery story is ideal.
-  The next cleanup step is to decide whether the remaining hidden root glue should stay as internal
-  implementation convenience or move behind even more explicit lanes, not to normalize the crate
-  root as another default authoring path.
+  The next cleanup step is to keep deleting residual compatibility exposure and stale teaching copy,
+  not to normalize the crate root as another default authoring path.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 

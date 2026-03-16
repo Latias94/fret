@@ -200,6 +200,7 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(README.contains("use fret_icons::ids;"));
     assert!(README.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
     assert!(README.contains("fret_icons_lucide::app::install(app);"));
+    assert!(README.contains("`fret_ui_shadcn::facade::themes::*`"));
     assert!(
         README
             .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);")
@@ -228,7 +229,15 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("UiElementKeyContextExt"));
     assert!(!LIB_RS.contains("pub use accordion::{"));
     assert!(!LIB_RS.contains("pub use button::{"));
-    assert!(LIB_RS.contains("#[doc(hidden)]\npub use ::fret_ui_kit::declarative::icon;"));
+    assert!(!LIB_RS.contains("#[doc(hidden)]\npub mod shadcn_themes;"));
+    assert!(!LIB_RS.contains("pub mod shadcn_themes;"));
+    assert!(!LIB_RS.contains("pub use crate::shadcn_themes;"));
+    assert!(!LIB_RS.contains("#[doc(hidden)]\npub use ::fret_ui_kit::declarative::icon;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::declarative::icon;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::declarative::style as decl_style;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::ui;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::{"));
+    assert!(!LIB_RS.contains("pub use ui_builder_ext::*;"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
 }
@@ -286,6 +295,32 @@ fn curated_prelude_and_internal_glue_do_not_depend_on_hidden_root_compatibility_
             "pub use crate::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
         )),
         "prelude should not depend on hidden flat root compatibility exports"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws("pub use ::fret_ui_kit::declarative::icon;")),
+        "prelude should source icon glue directly from fret-ui-kit rather than the crate root"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use ::fret_ui_kit::declarative::style as decl_style;"
+        )),
+        "prelude should source declarative style glue directly from fret-ui-kit"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws("pub use ::fret_ui_kit::ui;")),
+        "prelude should source `ui` directly from fret-ui-kit rather than the crate root"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use crate::ui_builder_ext::{ AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt, CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt, DataGridElementUiBuilderExt, DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt, DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt, SurfaceUiBuilderExt, };"
+        )),
+        "prelude should source ui-builder extension traits from the explicit module instead of the crate root"
+    );
+    assert!(
+        !normalized_lib.contains(&normalize_ws(
+            "pub use crate::{ AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt, CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt, DataGridElementUiBuilderExt, DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt, DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt, SurfaceUiBuilderExt, };"
+        )),
+        "prelude should not depend on root-exported ui-builder extension traits"
     );
 
     for (label, source, forbidden, required) in [
@@ -357,6 +392,93 @@ fn curated_prelude_and_internal_glue_do_not_depend_on_hidden_root_compatibility_
             .contains("# use fret_ui_shadcn::{Input, text_edit_context_menu_controllable};"),
         "raw seam docs should not teach flat root component imports"
     );
+}
+
+#[test]
+fn overlay_chrome_first_party_tests_avoid_legacy_shadcn_themes_lane() {
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/web_vs_fret_overlay_chrome");
+
+    visit_rust_files(&dir, &mut |path, source| {
+        assert!(
+            !source.contains("fret_ui_shadcn::shadcn_themes::"),
+            "{} should use `shadcn::themes::*` or `fret_ui_shadcn::facade::themes::*`, not the legacy hidden lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("use fret_ui_shadcn::shadcn_themes"),
+            "{} should not import legacy `shadcn_themes` directly",
+            path.display()
+        );
+    });
+}
+
+#[test]
+fn first_party_integration_tests_prefer_facade_themes_lane() {
+    let tests_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    visit_rust_files(&tests_dir, &mut |path, source| {
+        assert!(
+            !source.contains("fret_ui_shadcn::shadcn_themes::"),
+            "{} should use `fret_ui_shadcn::facade::themes::*` instead of the legacy root theme lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("use fret_ui_shadcn::shadcn_themes"),
+            "{} should not import the legacy root `shadcn_themes` module",
+            path.display()
+        );
+    });
+}
+
+#[test]
+fn first_party_code_avoids_root_authoring_glue_lane() {
+    let tests_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    visit_rust_files(&tests_dir, &mut |path, source| {
+        assert!(
+            !source.contains("fret_ui_shadcn::decl_style"),
+            "{} should use prelude-imported `decl_style` or explicit kit paths instead of the root glue lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("fret_ui_shadcn::icon::"),
+            "{} should use `shadcn::raw::icon::*` or prelude-imported icon glue instead of the root glue lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("fret_ui_shadcn::DialogUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::PopoverUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::SheetUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DrawerUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DropdownMenuUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::ContextMenuUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::AlertDialogUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::CommandDialogUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::CollapsibleUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DataGridCanvasUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DataGridElementUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DataTableUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::BreadcrumbPrimitivesUiBuilderExt"),
+            "{} should import ui-builder extension traits from `fret_ui_shadcn::prelude` instead of the root",
+            path.display()
+        );
+    });
+}
+
+#[test]
+fn crate_source_tree_avoids_root_icon_glue_lane() {
+    let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    visit_rust_files(&src_dir, &mut |path, source| {
+        let file_name = path.file_name().and_then(std::ffi::OsStr::to_str);
+        if matches!(file_name, Some("lib.rs" | "surface_policy_tests.rs")) {
+            return;
+        }
+
+        assert!(
+            !source.contains("crate::icon::"),
+            "{} should import icon helpers from `fret_ui_kit::declarative::icon` instead of the root shim",
+            path.display()
+        );
+    });
 }
 
 #[test]

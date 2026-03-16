@@ -10,6 +10,7 @@ use fret_ui::element::{AnyElement, LayoutQueryRegionProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
+use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
@@ -1059,7 +1060,7 @@ impl<TData> DataTableToolbar<TData> {
                                      .test_id(trigger_test_id.clone())
                                      .children({
                                          let mut children = Vec::new();
-                                        children.push(crate::icon::icon(
+                                        children.push(icon::icon(
                                             cx,
                                             fret_icons::IconId::new_static("lucide.circle-plus"),
                                         ));
@@ -1192,7 +1193,7 @@ impl<TData> DataTableToolbar<TData> {
                                         });
 
                                     let maybe_icon = it.icon.as_ref().map(|icon_id| {
-                                        let icon = crate::icon::icon(cx, icon_id.clone());
+                                        let icon = icon::icon(cx, icon_id.clone());
                                         cx.opacity(0.6, move |_cx| vec![icon])
                                     });
 
@@ -1200,7 +1201,7 @@ impl<TData> DataTableToolbar<TData> {
                                         .nowrap()
                                         .into_element(cx);
 
-                                    let check = crate::icon::icon(
+                                    let check = icon::icon(
                                         cx,
                                         fret_icons::IconId::new_static("lucide.check"),
                                     );
@@ -1437,7 +1438,7 @@ impl<TData> DataTableToolbar<TData> {
                         .size(ButtonSize::Sm)
                         .test_id("data-table-toolbar-reset-filters")
                         .children(vec![
-                            crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
+                            icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
                             ui::text("Reset").into_element(cx),
                         ])
                         .on_activate(on_activate)
@@ -1718,14 +1719,14 @@ impl DataTablePagination {
                 .size(ButtonSize::Icon)
                 .disabled(!first_enabled)
                 .on_activate(first_on_activate.clone())
-                .children([crate::icon::icon(cx, rtl::chevrons_inline_start(dir))])
+                .children([icon::icon(cx, rtl::chevrons_inline_start(dir))])
                 .into_element(cx);
             let prev_btn = Button::new("Go to previous page")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::Icon)
                 .disabled(!prev_enabled)
                 .on_activate(prev_on_activate.clone())
-                .children([crate::icon::icon(cx, rtl::chevron_inline_start(dir))])
+                .children([icon::icon(cx, rtl::chevron_inline_start(dir))])
                 .into_element(cx);
             let page_btn = Button::new(page_label.clone())
                 .variant(ButtonVariant::Ghost)
@@ -1737,14 +1738,14 @@ impl DataTablePagination {
                 .size(ButtonSize::Icon)
                 .disabled(!next_enabled)
                 .on_activate(next_on_activate.clone())
-                .children([crate::icon::icon(cx, rtl::chevron_inline_end(dir))])
+                .children([icon::icon(cx, rtl::chevron_inline_end(dir))])
                 .into_element(cx);
             let last_btn = Button::new("Go to last page")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::Icon)
                 .disabled(!last_enabled)
                 .on_activate(last_on_activate.clone())
-                .children([crate::icon::icon(cx, rtl::chevrons_inline_end(dir))])
+                .children([icon::icon(cx, rtl::chevrons_inline_end(dir))])
                 .into_element(cx);
 
             let items = vec![

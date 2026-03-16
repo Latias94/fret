@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, ResizablePanelGroupProps, SemanticsProps,
 };
 use fret_ui::{ElementContext, ResizablePanelGroupStyle, Theme, UiHost};
+use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::resizable as resizable_recipe;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
@@ -345,7 +346,7 @@ fn resizable_panel_group_with_entries<H: UiHost>(
                             LayoutRefinement::default().w_px(w).h_px(h),
                         ),
                         move |cx| {
-                            [crate::icon::icon_with(
+                            [icon::icon_with(
                                 cx,
                                 icon.clone(),
                                 Some(Px(10.0)),

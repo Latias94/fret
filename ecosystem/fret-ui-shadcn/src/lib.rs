@@ -172,8 +172,7 @@ pub mod scroll_area;
 pub mod select;
 #[doc(hidden)]
 pub mod separator;
-#[doc(hidden)]
-pub mod shadcn_themes;
+mod shadcn_themes;
 #[doc(hidden)]
 pub mod sheet;
 mod shortcut_display;
@@ -299,7 +298,6 @@ pub mod raw {
     pub use crate::scroll_area;
     pub use crate::select;
     pub use crate::separator;
-    pub use crate::shadcn_themes;
     pub use crate::sheet;
     pub use crate::shortcut_hint;
     pub use crate::sidebar;
@@ -319,9 +317,12 @@ pub mod raw {
     pub use crate::toggle_group;
     pub use crate::tooltip;
     pub use crate::typography;
-    pub use crate::{
+    pub use ::fret_ui_kit::declarative::icon;
+    pub use ::fret_ui_kit::declarative::style as decl_style;
+    pub use ::fret_ui_kit::ui;
+    pub use ::fret_ui_kit::{
         ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
-        Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt, decl_style, icon, ui,
+        Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
     };
 }
 
@@ -605,25 +606,6 @@ pub mod facade {
     }
 }
 
-/// Re-exported “authoring glue” for app/component code.
-///
-/// shadcn/ui recipes assume a lightweight layout/styling vocabulary (Tailwind on the web).
-/// In Fret, the closest analogue lives in `fret-ui-kit::declarative`. Re-exporting these keeps
-/// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
-#[doc(hidden)]
-pub use ::fret_ui_kit::declarative::icon;
-#[doc(hidden)]
-pub use ::fret_ui_kit::declarative::style as decl_style;
-#[doc(hidden)]
-pub use ::fret_ui_kit::ui;
-#[doc(hidden)]
-pub use ::fret_ui_kit::{
-    ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
-    ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
-};
-#[doc(hidden)]
-pub use ui_builder_ext::*;
-
 /// Common imports for application code using `fret-ui-shadcn`.
 ///
 /// This keeps the “golden path” small: app code can typically depend on `fret-bootstrap` +
@@ -637,17 +619,19 @@ pub mod prelude {
         SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun,
         SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue,
     };
-    pub use crate::{
+    pub use crate::ui_builder_ext::{
         AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt,
         CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt,
         DataGridElementUiBuilderExt, DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt,
         DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt, SurfaceUiBuilderExt,
     };
-    pub use crate::{
+    pub use ::fret_ui_kit::declarative::icon;
+    pub use ::fret_ui_kit::declarative::style as decl_style;
+    pub use ::fret_ui_kit::ui;
+    pub use ::fret_ui_kit::{
         ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
         Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
     };
-    pub use crate::{decl_style, icon, ui};
 
     #[cfg(feature = "state-selector")]
     pub use crate::state::use_selector_badge;

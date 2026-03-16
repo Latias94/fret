@@ -40,10 +40,10 @@ fn run_fret_root_with_ui_and_services(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -85,10 +85,10 @@ fn render_calendar_in_bounds_with_scene(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -121,15 +121,15 @@ fn render_calendar_in_bounds_with_scene(
 
 fn render_calendar_in_bounds_with_scene_and_scheme(
     bounds: Rect,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (fret_core::SemanticsSnapshot, Scene) {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
         scheme,
     );
 
@@ -329,7 +329,7 @@ fn web_calendar_range_config(theme: &WebGoldenTheme) -> CalendarRangeWebConfig {
 fn render_fret_calendar_range_scene(
     config: &CalendarRangeWebConfig,
     viewport: WebViewport,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) -> Scene {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -420,8 +420,8 @@ fn assert_calendar_range_day_background_matches_web(
 
     let config = web_calendar_range_config(theme);
     let scheme = match web_theme_name {
-        "dark" => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-        _ => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        "dark" => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+        _ => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     };
     let scene = render_fret_calendar_range_scene(&config, theme.viewport, scheme);
 
@@ -3214,10 +3214,10 @@ fn assert_calendar_hover_day_background_matches_web(
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -3902,7 +3902,7 @@ fn fret_calendar_may_2026_outside_day_text_centered_in_button() {
 
 fn render_calendar_root_background_in_popover_scope(
     bounds: Rect,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
     month: fret_ui_headless::calendar::CalendarMonth,
     week_start: time::Weekday,
     show_outside_days: bool,
@@ -3915,9 +3915,9 @@ fn render_calendar_root_background_in_popover_scope(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
         scheme,
     );
 
@@ -4083,8 +4083,8 @@ fn assert_date_picker_calendar_root_background_matches_web(web_name: &str, web_t
     );
 
     let scheme = match web_theme_name {
-        "dark" => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-        _ => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        "dark" => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
+        _ => fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     };
 
     let actual_bg = render_calendar_root_background_in_popover_scope(

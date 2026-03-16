@@ -270,10 +270,10 @@ impl fret_core::MaterialService for FakeServices {
 }
 
 fn setup_app_with_shadcn_theme(app: &mut App) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 }
 
@@ -3595,17 +3595,17 @@ fn web_vs_fret_toggle_group_demo_chrome_matches() {
 
         let i1 = shadcn::ToggleGroupItem::new(
             "bold",
-            vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CHECK.clone())],
+            vec![shadcn::raw::icon::icon(cx, icon_ids::CHECK.clone())],
         )
         .a11y_label("Toggle bold");
         let i2 = shadcn::ToggleGroupItem::new(
             "italic",
-            vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CHEVRON_UP.clone())],
+            vec![shadcn::raw::icon::icon(cx, icon_ids::CHEVRON_UP.clone())],
         )
         .a11y_label("Toggle italic");
         let i3 = shadcn::ToggleGroupItem::new(
             "strike",
-            vec![fret_ui_shadcn::icon::icon(cx, icon_ids::CLOSE.clone())],
+            vec![shadcn::raw::icon::icon(cx, icon_ids::CLOSE.clone())],
         )
         .a11y_label("Toggle strikethrough");
 
