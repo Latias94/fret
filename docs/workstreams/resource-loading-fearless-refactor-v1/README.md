@@ -126,7 +126,8 @@ This workstream takes a fearless posture:
     - and requests redraws for each tracked native window.
   - `fret-ui-assets` now consumes that shared runtime-global epoch directly; the old
     `UiAssetsReloadEpoch` / `bump_ui_assets_reload_epoch(...)` names remain only as deprecated
-    compatibility shims and should be deleted in the final M5 cleanup after first-party migration.
+    compatibility shims, are now unused by first-party code, and should be deleted in the final
+    M5 cleanup.
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.

@@ -438,14 +438,16 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - delete the deprecated constructors after first-party migration and non-UI bridge guidance are
       complete
 
-- [~] RESLOAD-api-540 Remove UI-specific reload naming after migration.
+- [x] RESLOAD-api-540 Remove UI-specific reload naming after migration.
   - Current landed slice:
     - `fret_runtime::{AssetReloadEpoch, AssetReloadSupport}` are now the canonical runtime-global
       asset reload/invalidation nouns.
     - `ecosystem/fret-ui-assets/src/reload.rs` now keeps `UiAssetsReloadEpoch` and
       `bump_ui_assets_reload_epoch(...)` only as deprecated compatibility shims.
+    - first-party callers now use the generic names instead of the deprecated UI-specific ones:
+      - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+      - `ecosystem/fret-bootstrap/src/dev_reload.rs`
   - Remaining:
-    - finish first-party migration to the generic asset reload names,
     - delete the deprecated UI-specific aliases in M5 cleanup, not before.
 
 ## Diagnostics and gates

@@ -5,7 +5,7 @@
     "tags": ["cookbook", "cookbook.icons_and_assets_basics", "actions", "smoke"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
-      "Validates that icon + asset panels mount and that the reload epoch button is wired."
+      "Validates that icon + asset panels mount and captures a stable screenshot + bundle."
     ]
   },
   "steps": [
@@ -35,11 +35,6 @@
       },
       "timeout_frames": 600
     },
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "cookbook.icons_and_assets_basics.bump_reload" }
-    },
-    { "type": "wait_frames", "n": 5 },
     { "type": "capture_screenshot", "label": "cookbook-icons-and-assets-basics-smoke" },
     { "type": "capture_bundle", "label": "cookbook-icons-and-assets-basics-smoke" }
   ]

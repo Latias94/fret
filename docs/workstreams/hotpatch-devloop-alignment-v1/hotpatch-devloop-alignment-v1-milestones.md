@@ -72,7 +72,7 @@ Exit criteria:
 
 Evidence anchors:
 
-- `ecosystem/fret-ui-assets/src/reload.rs` (`UiAssetsReloadEpoch`)
+- `crates/fret-runtime/src/asset_reload.rs` (`AssetReloadEpoch`)
 - `ecosystem/fret-ui-assets/src/image_source.rs` (epoch in cache keys)
 - `ecosystem/fret-ui-assets/src/svg_file.rs` (epoch-gated SVG file bytes)
 - `ecosystem/fret-bootstrap/src/dev_reload.rs` (trigger file watcher)

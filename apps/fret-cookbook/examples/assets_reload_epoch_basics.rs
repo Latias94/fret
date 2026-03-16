@@ -71,24 +71,21 @@ impl View for AssetsReloadEpochBasicsView {
 
         let bumps = cx.state().watch(&bumps_state).layout().value_or(0);
         if bumps != self.applied_bumps {
-            fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
+            fret::assets::bump_asset_reload_epoch(&mut *cx.app);
             self.applied_bumps = bumps;
             cx.app.request_redraw(self.window);
             cx.app
                 .push_effect(Effect::RequestAnimationFrame(self.window));
         }
 
-        let epoch = cx
-            .app
-            .global::<fret_ui_assets::UiAssetsReloadEpoch>()
-            .copied()
+        let epoch = fret::assets::asset_reload_epoch(&*cx.app)
             .map(|v| v.0)
             .unwrap_or(0);
 
         let actions = ui::h_flex(|cx| {
             ui::children![
                 cx;
-                shadcn::Button::new("Bump assets reload epoch")
+                shadcn::Button::new("Bump asset reload epoch")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::BumpReload)
                     .test_id(TEST_ID_BUMP_RELOAD),
@@ -139,7 +136,7 @@ impl View for AssetsReloadEpochBasicsView {
                     ui::children![cx;
                         shadcn::card_title("Assets reload epoch basics"),
                         shadcn::card_description(
-                            "Demonstrates the native/package-dev bundle-dir lane: mount `assets/` with `FretApp::asset_dir(...)`, resolve logical bundle locators into image/SVG sources, and trigger a ViewCache-safe reload by bumping `UiAssetsReloadEpoch`.",
+                            "Demonstrates the native/package-dev bundle-dir lane: mount `assets/` with `FretApp::asset_dir(...)`, resolve logical bundle locators into image/SVG sources, and trigger a ViewCache-safe reload by bumping the shared `AssetReloadEpoch`.",
                         ),
                     ]
                 }),

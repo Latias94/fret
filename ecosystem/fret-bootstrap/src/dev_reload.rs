@@ -89,7 +89,7 @@ fn resolve_path(root: &Path, env_var: &str, default_rel: &str) -> PathBuf {
 pub(crate) struct DevReloadTick {
     pub(crate) reloaded_theme: bool,
     pub(crate) reloaded_literals: bool,
-    pub(crate) bumped_ui_assets_epoch: bool,
+    pub(crate) bumped_asset_reload_epoch: bool,
     pub(crate) reloaded_fonts: bool,
     pub(crate) theme_error: Option<String>,
     pub(crate) literals_error: Option<String>,
@@ -258,13 +258,13 @@ impl DevReloadWatcher {
         if assets_changed && self.ui_assets_trigger_stamp.is_some() {
             #[cfg(feature = "ui-assets")]
             {
-                fret_ui_assets::bump_ui_assets_reload_epoch(app);
+                fret_runtime::bump_asset_reload_epoch(app);
                 app.request_redraw(window);
-                tick.bumped_ui_assets_epoch = true;
+                tick.bumped_asset_reload_epoch = true;
             }
         }
 
-        let should_reload_fonts = fonts_manifest_changed || tick.bumped_ui_assets_epoch;
+        let should_reload_fonts = fonts_manifest_changed || tick.bumped_asset_reload_epoch;
         if should_reload_fonts {
             if let Some(_stamp) = self.fonts_manifest_stamp {
                 match std::fs::read(&self.fonts_manifest_path) {
