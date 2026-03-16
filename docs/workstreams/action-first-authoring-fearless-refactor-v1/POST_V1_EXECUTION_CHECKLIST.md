@@ -1,12 +1,13 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Post-v1 Execution Checklist
 
-Status: draft, current execution checklist
+Status: archived execution checklist
 Last updated: 2026-03-16
 
 Related:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
@@ -19,7 +20,7 @@ Related:
 
 ## Purpose
 
-This note turns the current post-v1 conclusions into an operational checklist.
+This note records the post-v1 execution order that led to closeout.
 
 It exists to answer:
 
@@ -27,7 +28,14 @@ It exists to answer:
 > until stronger evidence exists?
 
 This is not a new API design note.
-It is an execution rule for keeping post-v1 work narrow, reversible, and correctly owned.
+It is archived execution guidance for how the repo narrowed post-v1 work without reopening broad
+surface growth.
+
+Closeout reading rule:
+
+- do not treat this file as a standing invitation to reopen the action-first workstream,
+- use it only as historical sequencing evidence,
+- and open a new narrower lane first if future cross-surface evidence appears.
 
 ---
 

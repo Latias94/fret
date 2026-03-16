@@ -1,12 +1,13 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
-Status: Landed (v1), hardening follow-ups in progress
+Status: Closed (v1), maintenance only unless a new narrower lane is opened
 Last updated: 2026-03-16
 
 Related:
 
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
+- Closeout audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - Post-v1 execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
 - Shared-surface evidence matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
@@ -55,21 +56,14 @@ ID format:
 
 ---
 
-## Current post-v1 ownership correction (2026-03-16)
+## Closeout reading rule (2026-03-16)
 
-This workstream is no longer the owner of crate-discovery curation.
+This workstream is now closed for the v1 action/view migration and default-path hardening goals.
 
 - `fret-ui-shadcn` discovery-lane closure and `fret` root lane budgeting belong first to
   `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/`
-- this workstream owns the next density pass only after those lane-curation blockers are stable
-- the two active post-v1 product tasks here are:
-  - reducing happy-path ceremony on the default app path,
-  - keeping `AppActivateExt` on a shrinking bridge-only path rather than letting the bridge table
-    become a permanent growth surface
-- do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
-  this workstream until the shadcn discovery-lane and `fret` root-budget closeout items are green
-- read the remaining M2/M4 notes in `MILESTONES.md` as post-v1 productization/hardening only:
-  they do not mean the core action/view runtime contract is still mid-migration
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/` is now also a closeout /
+  maintenance lane rather than an adjacent active blocker
 - the first density-reduction batch is now already landed on the canonical trio, generated
   todo/simple-todo templates, and default-path docs:
   `state.layout(cx).value_*` / `state.paint(cx).value_*` are the taught tracked-read path, and
@@ -78,13 +72,13 @@ This workstream is no longer the owner of crate-discovery curation.
   `ui::single(cx, child)` is the narrow default helper for late-landing one typed child, and the
   first-party root/wrapper cases (`hello`, `hello_counter_demo`, `todo_demo`, generated
   todo/simple-todo templates) now use it instead of `ui::children![cx; child].into()`
-- after those lane-curation items are stable, the execution order here is:
-  1. reduce first-hour/default-path ceremony,
-  2. continue shrinking bridge-only activation residue,
-  3. only then reconsider whether any additional sugar still earns its weight
-- any such reconsideration must use the shared-evidence rule captured in
-  `SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`: Todo evidence can open investigation, but it
-  cannot by itself justify widening shared public surface
+- `AppActivateExt` now stays only as a shrinking bridge-maintenance rule; it is not a growth lane
+- multi-frontend convergence, editor-grade proof points, and local-state architecture are future
+  separate lanes rather than open items on this workstream
+- do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
+  this closed workstream
+- if fresh cross-surface evidence appears, open a narrower follow-on lane first and use
+  `SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md` to justify it
 
 ## A. Decision + Contract Locking
 
@@ -573,8 +567,14 @@ These are documentation/surface-area follow-ups, not blockers for the v1 closure
     - `examples/README.md`
     - `docs/examples/README.md`
     - `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
-- [ ] AFA-postv1-002b Decide whether all top-level example links should collapse to one canonical docs
+- [x] AFA-postv1-002b Decide whether all top-level example links should collapse to one canonical docs
   page while preserving `examples/README.md` as a GitHub portal alias.
+  - Decision (2026-03-16 closeout): yes, treat `docs/examples/README.md` as the canonical docs
+    index and keep `examples/README.md` only as the GitHub portal alias; this is now documentation
+    navigation policy, not an open action-first item.
+  - Evidence:
+    - `docs/examples/README.md`
+    - `examples/README.md`
 - [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
@@ -1048,10 +1048,16 @@ Current sequencing note (as of 2026-03-09):
     medium-surface evidence still remains after that pass, then re-evaluate narrow keyed-list /
     payload-row handler ergonomics, and keep macros last and optional.
 
-- [ ] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
-  - Goal: decide whether keyed child-list macros or optional layout collection sugar materially improve density after builder-first improvements.
-  - Guardrail: no macro should hide action identity, key context, or cache-boundary semantics.
-  - Note: this is optional polish, not a prerequisite for declaring v2 successful.
+- [x] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
+  - Decision (2026-03-16 closeout): do not open a macro lane from this workstream.
+  - Reason: the current shared-evidence set does not justify macro promotion, and the repo keeps
+    macros optional and last rather than letting them become the default authoring answer.
+  - Guardrail: if macros are reconsidered later, they must live on a separate future lane and must
+    not hide action identity, key context, or cache-boundary semantics.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 
 - Done: key context stack + diagnostics-visible context naming/stacking rules.
   - Evidence:

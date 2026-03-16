@@ -6,6 +6,7 @@ Related:
 
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
+- Closeout audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Post-v1 execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
@@ -37,7 +38,7 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-03-16)
+## Closeout status snapshot (as of 2026-03-16)
 
 This snapshot is intentionally evidence-based: only mark a milestone as “Met” when the in-tree code,
 teaching surfaces, and gates line up.
@@ -47,11 +48,12 @@ teaching surfaces, and gates line up.
 - **M2**: Met for the shipped v1 runtime surface (`View` + grouped app authoring are landed; the
   remaining template/cookbook/docs cleanup is post-v1 productization, not missing runtime
   contract work).
-- **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
-- **M4**: In progress as a post-v1 productization lane (cookbook/examples + ui-gallery now share
-  the same default `value_*` read suffix, default teaching/reference surfaces have moved off
-  `use_state`, and broader builder-first cleanup continues; this is no longer migration closure
-  on the core action/view model).
+- **M3**: Deferred out of scope for v1 closeout (multi-frontend convergence remains a future
+  cross-frontend/product lane rather than unresolved action-first migration debt).
+- **M4**: Met as the final default-path hardening batch (cookbook/examples + ui-gallery share the
+  same default `value_*` read suffix, default teaching/reference surfaces have moved off
+  `use_state`, the canonical trio/docs/templates teach the shorter tracked-read and keyed-row
+  write path, and `ui::single(cx, child)` now closes the narrow single-child late-landing batch).
 - **M4 progress correction (2026-03-16)**: the first ceremony-reduction batch is now landed on
   the canonical trio plus the generated todo/simple-todo templates and default-path docs:
   tracked reads teach `state.layout(cx).value_*` / `state.paint(cx).value_*`, and common keyed-row
@@ -64,28 +66,33 @@ teaching surfaces, and gates line up.
   audit rather than as unfinished primitive-table migration work.
 - **M4 note**: a docs-first `DataTable` golden-path note now exists, so future work should only
   widen helpers if a smaller curated recipe still looks materially too noisy in practice.
-- **M5**: Planned (editor-grade proof points: docking/workspace integration).
+- **M5**: Deferred out of scope for this closeout (editor-grade docking/workspace proof points are
+  future product/integration lanes, not blockers for the shipped action/view runtime reset).
 - **M6**: Met (MVU long-term stance is decided; in-tree MVU is removed and only archival migration notes remain).
 - **M7-M9**: Met (payload actions v2 landed; MVU hard delete and reintroduction gates are in place).
-- **Overall assessment**: v1 is successful as an architectural reset and teaching-surface convergence
-  pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
-  ergonomics work rather than unfinished migration closure.
-- **Reading rule (2026-03-16)**: the still-open M2/M4 notes should now be read as
-  productization/hardening follow-ons on the default path, not as evidence that the underlying
-  action-first/view-runtime reset is still architecturally incomplete.
+- **Closeout correction (2026-03-16)**: `CLOSEOUT_AUDIT_2026-03-16.md` now classifies this
+  workstream as closed for v1 migration and default-path hardening. Remaining future questions are
+  separate architecture/product lanes or optional ergonomics experiments, not open migration debt.
+- **Overall assessment**: the action-first workstream is now closed as an architectural reset plus
+  default-path convergence pass; future work should reopen only through narrower follow-on lanes
+  rather than by keeping this workstream marked "in progress".
+- **Reading rule (2026-03-16)**: historical M3/M5 notes describe future cross-cutting directions,
+  not blockers to the action-first closeout.
 - **Ownership correction (2026-03-16)**: shadcn discovery-lane closure and `fret` root lane
   budgeting are now explicitly treated as authoring-surface closeout work, not as this
-  workstream's main next milestone. The remaining action-first responsibility is default-path
-  density reduction plus bridge retirement pressure (`AppActivateExt` should keep shrinking, not
-  expanding).
+  workstream's main next milestone. The only remaining maintenance rule carried forward from this
+  lane is bridge retirement pressure (`AppActivateExt` should keep shrinking, not expanding).
 - **Execution gate (2026-03-16)**: do not widen the default app lane with new sugar, macro
   promotion, or bridge growth until the authoring-surface closeout has first stabilized
   `fret-ui-shadcn` discovery and the `fret` root lane budget.
 
-## Current density-reduction order (2026-03-16)
+## Historical density-reduction order (archived on 2026-03-16)
 
 The operational form of this order now lives in
 `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`.
+
+Read this section as the archived order that led to closeout, not as a standing invitation to
+reopen the workstream.
 
 1. Finish the next default-path batch on keyed/list/default child-collection ergonomics.
    Scope rule: move the canonical trio, generated templates, first-hour docs, and source-policy
