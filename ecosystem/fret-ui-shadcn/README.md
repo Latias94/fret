@@ -29,7 +29,10 @@ Keep the component taxonomy and app wiring separate:
 - app-owned setup stays under `fret_ui_shadcn::app::*`
 - theme presets stay under `fret_ui_shadcn::facade::themes::*` (or `shadcn::themes::*` when you
   already alias `facade as shadcn`)
+- `app::*` and `themes::*` are setup lanes, not peer component-family discovery lanes
 - environment / `UiServices`-boundary hooks stay under `fret_ui_shadcn::advanced::*`
+- `advanced::*` is an explicit implementation/debug/source-alignment lane, not a competing
+  default authoring path
 - explicit `fret_ui_shadcn::raw::*` access stays the escape hatch for low-level/internal use
 - root component-family modules are crate-private; curated docs/examples should teach
   `facade as shadcn` as the default lane, with `fret_ui_shadcn::raw::*` reserved for explicit

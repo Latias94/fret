@@ -466,17 +466,22 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - Direct crate usage: prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, then call
   `shadcn::themes::apply_shadcn_new_york(...)` for an explicit preset, or enable
   `fret-ui-shadcn/app-integration` and call `shadcn::app::install(...)` for the golden-path
-  default. For environment / `UiServices`-boundary hooks, stay explicit with
+  default. Treat that curated facade import as the only first-contact component-family discovery
+  lane: `shadcn::app::*` and `shadcn::themes::*` are setup lanes, not peer discovery lanes. For
+  environment / `UiServices`-boundary hooks, stay explicit with
   `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
+  `fret_ui_shadcn::advanced::*` is an implementation/debug lane, not a competing default import.
   For first-party prose/demo helpers, `shadcn::raw::typography::*` remains an explicit escape
   hatch. Only drop to `shadcn::raw::*` beyond these documented cases when you intentionally need
   the full uncurated module surface; the flat crate root is now treated as a hidden compatibility
   layer rather than a teaching lane.
 - Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)`,
   `fret::shadcn::app::install(...)`, and only drop to `fret::shadcn::raw::*` when you need the
-  full uncurated `fret_ui_shadcn` surface. That same raw escape hatch also carries advanced
-  service hooks at `fret::shadcn::raw::advanced::*`; first-party prose/demo helpers may also use
-  `fret::shadcn::raw::typography::*`.
+  full uncurated `fret_ui_shadcn` surface. Treat `fret::shadcn::{Button, Card, ...}` as the only
+  first-contact component-family lane here too: `fret::shadcn::app::*` and
+  `fret::shadcn::themes::*` are setup lanes, not peer discovery lanes. That same raw escape hatch
+  also carries advanced service hooks at `fret::shadcn::raw::advanced::*`; first-party
+  prose/demo helpers may also use `fret::shadcn::raw::typography::*`.
 
 **Tables vs grids (naming and intent):**
 

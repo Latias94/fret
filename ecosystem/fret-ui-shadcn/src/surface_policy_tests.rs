@@ -203,6 +203,9 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(README.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
     assert!(README.contains("fret_icons_lucide::app::install(app);"));
     assert!(README.contains("`fret_ui_shadcn::facade::themes::*`"));
+    assert!(README.contains("`app::*` and `themes::*` are setup lanes"));
+    assert!(README.contains("not peer component-family discovery lanes"));
+    assert!(README.contains("`advanced::*` is an explicit implementation/debug/source-alignment lane"));
     assert!(
         README
             .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);")
