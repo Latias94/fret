@@ -12,7 +12,16 @@ Companion docs:
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
 
-Execution note on 2026-03-13:
+Closeout reading rule on 2026-03-16:
+
+- this file is now a maintenance tracker, not the active owner of conversion-surface design
+- read the settled public lane story from
+  `../authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+- remaining work here is helper-tail cleanup, explicit raw-seam inventory, source-policy gates,
+  and stale-doc closeout
+- historical execution notes below are archived evidence, not current sequencing instructions
+
+Historical execution note on 2026-03-13:
 
 - this is now the first active interface-refactor lane,
 - do M0/M1 here before expanding trait-budget follow-ups elsewhere,
@@ -22,7 +31,7 @@ Execution note on 2026-03-13:
   remaining app/helper migration rather than reopening `kbd_icon(...)` or `text_edit_context_menu*`
   unless the underlying storage/builder model changes.
 
-Execution note on 2026-03-14:
+Historical execution note on 2026-03-14:
 
 - the UI Gallery `data_table` family is now on the default app-facing surface:
   top-level snippets return `impl UiChild + use<>`, the page uses `DocSection::build(cx, ...)`,
@@ -218,6 +227,11 @@ Closeout note on 2026-03-15:
 - this file is no longer the tracker for a broad migration sweep,
 - the remaining work here is maintenance only: explicit raw-seam inventory, source-policy gates,
   and target-state/docs closeout,
+- the current small first-party cleanup batch is "single-child wrapper forwarders":
+  if a render root or wrapper closure only forwards one already-typed child, prefer
+  `ui::single(cx, child)` over `ui::children![cx; child]`,
+- that follow-up is now landed on the shared cookbook scaffold, the generated `todo` template
+  shell, and the advanced `utility_window_materials_windows` example,
 - the low-level interop/app-element-context surfaces
   (`external_texture_imports*`, `external_video_imports*`, `chart_declarative_demo`,
   `node_graph_demo`) are now explicitly classified as a direct-root leaf lane; future work there
