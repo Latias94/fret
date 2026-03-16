@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-15**
+Last updated: **2026-03-16**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -157,6 +157,9 @@ Current checkpoint:
   The advanced transform proof now also demonstrates the intended heterogeneous section story
   directly: position uses editor chrome suffixes, rotation owns `°` inside the formatter/parser,
   and scale uses normalized percent formatting instead of another shared fixed-decimal readout.
+  That visible authoring story now also has a focused screenshot proof at
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-transform-presentations-screenshots.json`,
+  so review can pin the `m / ° / 100%` split without reopening the full proof surface manually.
   `GradientEditor` now also consumes the same bundle for angle and stop-position authoring instead
   of keeping another pair of raw formatter/parser closures,
 - the same numeric edit-session seam now also propagates through composite editor controls:

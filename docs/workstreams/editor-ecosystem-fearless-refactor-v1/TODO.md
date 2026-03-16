@@ -301,7 +301,10 @@ Interaction contract:
       `(section, axis, outcome)` at the same editor-layer seam, with promoted proof readouts at
       `imui-editor-proof.editor.advanced.position.outcome` and
       `imui-editor-proof.editor.advanced.transform.outcome`, plus a focused gate at
-      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`.
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-axis-outcomes.json`. The
+      visible heterogeneous TransformEdit story now also has a focused screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-transform-presentations-screenshots.json`,
+      which keeps the `m / ° / 100%` split reviewable even if surrounding proof composition shifts.
       Remaining work: keep `NumericPresentation<T>` as the recommended first-party authoring path
       whenever one editor surface needs to carry formatting/parsing plus chrome affixes together,
       only add more composite-specific constructor lanes when a real heterogeneous numeric story
@@ -416,6 +419,8 @@ Interaction contract:
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`;
       the full authoring parity surface now also has a focused screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-authoring-affordances-screenshots-default.json`;
+      the advanced transform presentation lane now also has a focused screenshot proof via
+      `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-transform-presentations-screenshots.json`;
       the anchored-overlay assist path now also has a focused popup screenshot proof via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-name-assist-popup-screenshots.json`.
       The default baseline screenshot proof was rerun again after the proof-local outcome
