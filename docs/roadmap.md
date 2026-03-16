@@ -40,6 +40,7 @@ Active tracker highlights:
 - Into-element surface cleanup (follow-on to the authoring reset; conversion vocabulary collapse): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
 - Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
+- Local-state facade boundary hardening (active narrow implementation lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`.
 
 Current pre-release authoring cleanup sequence:
 
@@ -51,9 +52,13 @@ Current pre-release authoring cleanup sequence:
 5. `local-state-architecture-fearless-refactor-v1` documented the separate follow-on decision
    around the long-term storage/ownership contract behind `LocalState<T>` after the broader
    authoring-surface cleanup chain was already closed.
+6. `local-state-facade-boundary-hardening-v1` is the narrow O1 follow-on:
+   harden the public facade around default local-state, explicit raw-model seams, and explicit
+   bridge APIs without reopening storage-model design.
 
 Treat the first four trackers as one closed execution chain rather than unrelated cleanup notes.
-Treat item 5 as a separate architecture lane, not as a continuation of default-path sugar growth.
+Treat item 5 as a closed architecture decision, and item 6 as the only active narrow local-state
+follow-on.
 
 Current execution stance on 2026-03-16:
 
@@ -73,6 +78,10 @@ Current execution stance on 2026-03-16:
   the lane now closes on `O1` (keep model-backed storage, harden the facade boundary, keep
   `use_state` as the explicit raw-model seam); reopen only if fresh cross-surface evidence shows
   that the storage model itself has become the bottleneck.
+- `local-state-facade-boundary-hardening-v1` = active narrow implementation lane:
+  classify and harden the surviving public seam families (`use_state`, `LocalState::{model,
+  clone_model}`, `LocalState::*_in(...)`, helper-context bridges, and prelude placement) so docs,
+  rustdoc, exports, and gates all describe the same O1 boundary.
 
 Recommended order from here:
 
@@ -82,8 +91,10 @@ Recommended order from here:
    wording drift,
 3. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
    treating it as another open-ended state-surface lane,
-4. only reopen code-level local-state refactors through a new narrower lane if fresh evidence can
-   name both the bottleneck and the proof surfaces + gates in advance.
+4. run `local-state-facade-boundary-hardening-v1` as the narrow follow-on for facade wording,
+   export placement, and source-policy hardening,
+5. only reopen storage-model refactors if fresh evidence can name both the bottleneck and the
+   proof surfaces + gates in advance.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 
