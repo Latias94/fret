@@ -219,7 +219,11 @@ impl View for ThemePostprocessView {
 
         let enabled = self.st.enabled.layout_in(cx).value_or(true);
         let compare = self.st.compare.layout_in(cx).value_or(true);
-        let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);
+        let theme = self
+            .st
+            .theme
+            .layout_in(cx)
+            .value_or(Option::<Arc<str>>::None);
 
         let chromatic_offset_px = watch_first_f32(cx, &self.st.chromatic_offset_px, 2.0);
         let scanline_strength = watch_first_f32(cx, &self.st.scanline_strength, 0.18);
