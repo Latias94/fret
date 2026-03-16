@@ -32,6 +32,10 @@ pub(crate) struct StatsCmdContext {
     pub check_asset_load_external_reference_unavailable_max: Option<u64>,
     pub check_asset_load_revision_changes_max: Option<u64>,
     pub check_bundled_font_baseline_source: Option<String>,
+    pub check_asset_reload_epoch_min: Option<u64>,
+    pub check_asset_reload_configured_backend: Option<String>,
+    pub check_asset_reload_active_backend: Option<String>,
+    pub check_asset_reload_fallback_reason: Option<String>,
     pub check_pixels_changed_test_id: Option<String>,
     pub check_pixels_unchanged_test_id: Option<String>,
     pub check_semantics_changed_repainted: bool,
@@ -76,6 +80,10 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_asset_load_external_reference_unavailable_max,
         check_asset_load_revision_changes_max,
         check_bundled_font_baseline_source,
+        check_asset_reload_epoch_min,
+        check_asset_reload_configured_backend,
+        check_asset_reload_active_backend,
+        check_asset_reload_fallback_reason,
         check_pixels_changed_test_id,
         check_pixels_unchanged_test_id,
         check_semantics_changed_repainted,
@@ -372,6 +380,58 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         stats::check_bundle_for_bundled_font_baseline_source(
             bundle_path.as_path(),
             expected_source,
+            warmup_frames,
+        )?;
+    }
+    if let Some(min_required) = check_asset_reload_epoch_min {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-reload-epoch-min",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_reload_epoch_min(
+            bundle_path.as_path(),
+            min_required,
+            warmup_frames,
+        )?;
+    }
+    if let Some(expected_backend) = check_asset_reload_configured_backend.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-reload-configured-backend",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_reload_configured_backend(
+            bundle_path.as_path(),
+            expected_backend,
+            warmup_frames,
+        )?;
+    }
+    if let Some(expected_backend) = check_asset_reload_active_backend.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-reload-active-backend",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_reload_active_backend(
+            bundle_path.as_path(),
+            expected_backend,
+            warmup_frames,
+        )?;
+    }
+    if let Some(expected_reason) = check_asset_reload_fallback_reason.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-asset-reload-fallback-reason",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        stats::check_bundle_for_asset_reload_fallback_reason(
+            bundle_path.as_path(),
+            expected_reason,
             warmup_frames,
         )?;
     }

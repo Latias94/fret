@@ -120,6 +120,9 @@ This workstream takes a fearless posture:
     - publishes `AssetReloadSupport { file_watch: true }`,
     - publishes `AssetReloadStatus` so diagnostics can see the configured backend, active backend,
       and watcher-install fallback reason without scraping logs,
+    - exposes that asset-reload state through both typed `UiPredicateV1` script predicates and
+      `fretboard diag` post-run bundle checks, so suites can gate the effective backend/fallback
+      without custom log parsing,
     - and requests redraws for each tracked native window.
   - `fret-ui-assets` now consumes that shared runtime-global epoch directly; the old
     `UiAssetsReloadEpoch` / `bump_ui_assets_reload_epoch(...)` names remain only as deprecated

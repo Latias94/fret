@@ -472,7 +472,8 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - current `TextFontStackKey`,
       - current native system-font rescan state.
     - `crates/fret-diag-protocol/src/lib.rs` now exposes typed `UiPredicateV1` variants over
-      `debug.resource_loading` instead of requiring stringly JSON-pointer predicates.
+      `debug.resource_loading` instead of requiring stringly JSON-pointer predicates, including
+      the current asset-reload epoch/configured-backend/active-backend/fallback-reason surface.
     - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs` now centralizes
       recent debug-snapshot predicate evaluation for both docking and resource-loading surfaces, and
       `assert` / `wait` / `drag` script steps can consume the new resource-loading predicates from
@@ -490,7 +491,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
       - unsupported file/url counter max,
       - external-reference-unavailable counter max,
       - revision-change counter max,
-      - bundled font baseline source equality.
+      - bundled font baseline source equality,
+      - asset-reload epoch minimum,
+      - asset-reload configured/active backend equality,
+      - asset-reload fallback-reason equality (with `none`/absent as a first-class expectation).
 
 - [~] RESLOAD-test-610 Add portable contract tests for asset capability and fallback behavior.
   - Current landed slice:

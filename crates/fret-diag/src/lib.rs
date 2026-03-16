@@ -487,6 +487,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_asset_load_external_reference_unavailable_max: Option<u64> = None;
     let mut check_asset_load_revision_changes_max: Option<u64> = None;
     let mut check_bundled_font_baseline_source: Option<String> = None;
+    let mut check_asset_reload_epoch_min: Option<u64> = None;
+    let mut check_asset_reload_configured_backend: Option<String> = None;
+    let mut check_asset_reload_active_backend: Option<String> = None;
+    let mut check_asset_reload_fallback_reason: Option<String> = None;
     let mut check_triage_hint_absent_codes: Vec<String> = Vec::new();
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
@@ -1840,6 +1844,45 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     );
                 };
                 check_bundled_font_baseline_source = Some(v);
+                i += 1;
+            }
+            "--check-asset-reload-epoch-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-asset-reload-epoch-min".to_string());
+                };
+                check_asset_reload_epoch_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-asset-reload-epoch-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-asset-reload-configured-backend" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-reload-configured-backend".to_string()
+                    );
+                };
+                check_asset_reload_configured_backend = Some(v);
+                i += 1;
+            }
+            "--check-asset-reload-active-backend" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-asset-reload-active-backend".to_string());
+                };
+                check_asset_reload_active_backend = Some(v);
+                i += 1;
+            }
+            "--check-asset-reload-fallback-reason" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-reload-fallback-reason".to_string()
+                    );
+                };
+                check_asset_reload_fallback_reason = Some(v);
                 i += 1;
             }
             "--check-triage-hint-absent" => {
@@ -3278,6 +3321,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_asset_load_external_reference_unavailable_max: check_asset_load_external_reference_unavailable_max.clone(),
         check_asset_load_revision_changes_max: check_asset_load_revision_changes_max.clone(),
         check_bundled_font_baseline_source: check_bundled_font_baseline_source.clone(),
+        check_asset_reload_epoch_min: check_asset_reload_epoch_min.clone(),
+        check_asset_reload_configured_backend: check_asset_reload_configured_backend.clone(),
+        check_asset_reload_active_backend: check_asset_reload_active_backend.clone(),
+        check_asset_reload_fallback_reason: check_asset_reload_fallback_reason.clone(),
         check_layout_fast_path_min: check_layout_fast_path_min.clone(),
         check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
         check_node_graph_cull_window_shifts_min: check_node_graph_cull_window_shifts_min.clone(),
@@ -3576,6 +3623,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_asset_load_external_reference_unavailable_max: check_asset_load_external_reference_unavailable_max.clone(),
                 check_asset_load_revision_changes_max: check_asset_load_revision_changes_max.clone(),
                 check_bundled_font_baseline_source: check_bundled_font_baseline_source.clone(),
+                check_asset_reload_epoch_min: check_asset_reload_epoch_min.clone(),
+                check_asset_reload_configured_backend: check_asset_reload_configured_backend.clone(),
+                check_asset_reload_active_backend: check_asset_reload_active_backend.clone(),
+                check_asset_reload_fallback_reason: check_asset_reload_fallback_reason.clone(),
                 check_layout_fast_path_min: check_layout_fast_path_min.clone(),
                 check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
                 check_node_graph_cull_window_shifts_min: check_node_graph_cull_window_shifts_min.clone(),
@@ -3760,6 +3811,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_asset_load_external_reference_unavailable_max,
                 check_asset_load_revision_changes_max,
                 check_bundled_font_baseline_source: check_bundled_font_baseline_source.clone(),
+                check_asset_reload_epoch_min,
+                check_asset_reload_configured_backend: check_asset_reload_configured_backend.clone(),
+                check_asset_reload_active_backend: check_asset_reload_active_backend.clone(),
+                check_asset_reload_fallback_reason: check_asset_reload_fallback_reason.clone(),
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
                 check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
                 check_semantics_changed_repainted,

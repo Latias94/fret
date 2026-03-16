@@ -8,6 +8,13 @@ struct ResourceLoadingCounterGateSpec {
     counter_pointer: &'static str,
 }
 
+struct ResourceLoadingStringGateSpec {
+    kind: &'static str,
+    field_name: &'static str,
+    evidence_file: &'static str,
+    field_pointer: &'static str,
+}
+
 const ASSET_LOAD_MISSING_BUNDLE_ASSETS_MAX: ResourceLoadingCounterGateSpec =
     ResourceLoadingCounterGateSpec {
         kind: "asset_load_missing_bundle_assets_max",
@@ -55,6 +62,28 @@ const ASSET_LOAD_REVISION_CHANGES_MAX: ResourceLoadingCounterGateSpec =
         evidence_file: "check.asset_load_revision_changes_max.json",
         counter_pointer: "debug.resource_loading.asset_load.revision_change_requests",
     };
+
+const ASSET_RELOAD_CONFIGURED_BACKEND: ResourceLoadingStringGateSpec =
+    ResourceLoadingStringGateSpec {
+        kind: "asset_reload_configured_backend",
+        field_name: "configured_backend",
+        evidence_file: "check.asset_reload_configured_backend.json",
+        field_pointer: "debug.resource_loading.asset_reload.configured_backend",
+    };
+
+const ASSET_RELOAD_ACTIVE_BACKEND: ResourceLoadingStringGateSpec = ResourceLoadingStringGateSpec {
+    kind: "asset_reload_active_backend",
+    field_name: "active_backend",
+    evidence_file: "check.asset_reload_active_backend.json",
+    field_pointer: "debug.resource_loading.asset_reload.active_backend",
+};
+
+const ASSET_RELOAD_FALLBACK_REASON: ResourceLoadingStringGateSpec = ResourceLoadingStringGateSpec {
+    kind: "asset_reload_fallback_reason",
+    field_name: "fallback_reason",
+    evidence_file: "check.asset_reload_fallback_reason.json",
+    field_pointer: "debug.resource_loading.asset_reload.fallback_reason",
+};
 
 pub(crate) fn check_bundle_for_asset_load_missing_bundle_assets_max(
     bundle_path: &Path,
@@ -165,6 +194,139 @@ pub(crate) fn check_bundle_for_bundled_font_baseline_source(
         expected_source,
         warmup_frames,
     )
+}
+
+pub(crate) fn check_bundle_for_asset_reload_epoch_min(
+    bundle_path: &Path,
+    min_required: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_asset_reload_epoch_min_json(&bundle, bundle_path, min_required, warmup_frames)
+}
+
+pub(crate) fn check_bundle_for_asset_reload_configured_backend(
+    bundle_path: &Path,
+    expected_backend: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_asset_reload_string_field_json(
+        &bundle,
+        bundle_path,
+        &ASSET_RELOAD_CONFIGURED_BACKEND,
+        expected_backend,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_reload_active_backend(
+    bundle_path: &Path,
+    expected_backend: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_asset_reload_string_field_json(
+        &bundle,
+        bundle_path,
+        &ASSET_RELOAD_ACTIVE_BACKEND,
+        expected_backend,
+        warmup_frames,
+    )
+}
+
+pub(crate) fn check_bundle_for_asset_reload_fallback_reason(
+    bundle_path: &Path,
+    expected_reason: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_asset_reload_string_field_json(
+        &bundle,
+        bundle_path,
+        &ASSET_RELOAD_FALLBACK_REASON,
+        expected_reason,
+        warmup_frames,
+    )
+}
+
+fn optional_string_expectation_is_absent(expected: &str) -> bool {
+    let expected = expected.trim();
+    expected.eq_ignore_ascii_case("none")
+        || expected.eq_ignore_ascii_case("null")
+        || expected.eq_ignore_ascii_case("absent")
+}
+
+fn optional_string_expectation_label(expected: &str) -> serde_json::Value {
+    if optional_string_expectation_is_absent(expected) {
+        serde_json::Value::Null
+    } else {
+        serde_json::Value::String(expected.to_string())
+    }
+}
+
+fn optional_string_matches(observed: Option<&str>, expected: &str) -> bool {
+    if optional_string_expectation_is_absent(expected) {
+        observed.is_none()
+    } else {
+        observed == Some(expected)
+    }
+}
+
+fn asset_reload_observation(
+    window_id: u64,
+    snapshot: &serde_json::Value,
+    asset_reload: Option<&serde_json::Map<String, serde_json::Value>>,
+) -> serde_json::Value {
+    let mut observation = serde_json::Map::from_iter([
+        (
+            "window".to_string(),
+            serde_json::Value::Number(window_id.into()),
+        ),
+        (
+            "tick_id".to_string(),
+            snapshot
+                .get("tick_id")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+        ),
+        (
+            "frame_id".to_string(),
+            snapshot
+                .get("frame_id")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+        ),
+        (
+            "asset_reload_present".to_string(),
+            serde_json::Value::Bool(asset_reload.is_some()),
+        ),
+    ]);
+
+    if let Some(asset_reload) = asset_reload {
+        for field in [
+            "epoch",
+            "file_watch",
+            "configured_backend",
+            "active_backend",
+            "fallback_reason",
+            "fallback_message",
+        ] {
+            observation.insert(
+                field.to_string(),
+                asset_reload
+                    .get(field)
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null),
+            );
+        }
+    }
+
+    serde_json::Value::Object(observation)
 }
 
 fn check_bundle_for_resource_loading_counter_max_json(
@@ -410,6 +572,337 @@ pub(crate) fn check_bundle_for_bundled_font_baseline_source_json(
 
     Err(format!(
         "bundled_font_baseline_source gate failed (expected source={expected_source})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(crate) fn check_bundle_for_asset_reload_epoch_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_required: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut resource_loading_snapshots: u64 = 0;
+    let mut asset_reload_snapshots: u64 = 0;
+    let mut epoch_snapshots: u64 = 0;
+    let mut max_observed: Option<u64> = None;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    for window in windows {
+        let window_id = window.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snapshots = window
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for snapshot in snapshots {
+            let frame_id = snapshot
+                .get("frame_id")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let resource_loading = snapshot
+                .get("debug")
+                .and_then(|v| v.get("resource_loading"))
+                .and_then(|v| v.as_object());
+            let Some(resource_loading) = resource_loading else {
+                continue;
+            };
+            resource_loading_snapshots = resource_loading_snapshots.saturating_add(1);
+
+            let asset_reload = resource_loading
+                .get("asset_reload")
+                .and_then(|v| v.as_object());
+            let Some(asset_reload) = asset_reload else {
+                last_observed = Some(asset_reload_observation(window_id, snapshot, None));
+                continue;
+            };
+            asset_reload_snapshots = asset_reload_snapshots.saturating_add(1);
+            last_observed = Some(asset_reload_observation(
+                window_id,
+                snapshot,
+                Some(asset_reload),
+            ));
+
+            let epoch = asset_reload.get("epoch").and_then(|v| v.as_u64());
+            let Some(epoch) = epoch else {
+                continue;
+            };
+            epoch_snapshots = epoch_snapshots.saturating_add(1);
+            max_observed = Some(max_observed.map_or(epoch, |prev| prev.max(epoch)));
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.asset_reload_epoch_min.json");
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "asset_reload_epoch_min",
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "resource_loading_snapshots": resource_loading_snapshots,
+        "asset_reload_snapshots": asset_reload_snapshots,
+        "epoch_snapshots": epoch_snapshots,
+        "min_required": min_required,
+        "max_observed": max_observed,
+        "last_observed": last_observed,
+        "expected": {
+            "field_pointer": "debug.resource_loading.asset_reload.epoch",
+            "min_required": min_required,
+        }
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if resource_loading_snapshots == 0 {
+        return Err(format!(
+            "asset_reload_epoch_min gate requires debug.resource_loading snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if asset_reload_snapshots == 0 {
+        return Err(format!(
+            "asset_reload_epoch_min gate requires debug.resource_loading.asset_reload after warmup, but none were observed (warmup_frames={warmup_frames}, resource_loading_snapshots={resource_loading_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if epoch_snapshots == 0 {
+        return Err(format!(
+            "asset_reload_epoch_min gate requires debug.resource_loading.asset_reload.epoch after warmup, but none were observed (warmup_frames={warmup_frames}, asset_reload_snapshots={asset_reload_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if max_observed.unwrap_or(0) >= min_required {
+        return Ok(());
+    }
+
+    Err(format!(
+        "asset_reload_epoch_min gate failed (expected debug.resource_loading.asset_reload.epoch >= {min_required}, observed max={})\n  bundle: {}\n  evidence: {}",
+        max_observed.unwrap_or(0),
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+#[cfg(test)]
+pub(crate) fn check_bundle_for_asset_reload_configured_backend_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    expected_backend: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_asset_reload_string_field_json(
+        bundle,
+        bundle_path,
+        &ASSET_RELOAD_CONFIGURED_BACKEND,
+        expected_backend,
+        warmup_frames,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn check_bundle_for_asset_reload_active_backend_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    expected_backend: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_asset_reload_string_field_json(
+        bundle,
+        bundle_path,
+        &ASSET_RELOAD_ACTIVE_BACKEND,
+        expected_backend,
+        warmup_frames,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn check_bundle_for_asset_reload_fallback_reason_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    expected_reason: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    check_bundle_for_asset_reload_string_field_json(
+        bundle,
+        bundle_path,
+        &ASSET_RELOAD_FALLBACK_REASON,
+        expected_reason,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_asset_reload_string_field_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    spec: &ResourceLoadingStringGateSpec,
+    expected_value: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let expected_absent = optional_string_expectation_is_absent(expected_value);
+    let mut examined_snapshots: u64 = 0;
+    let mut resource_loading_snapshots: u64 = 0;
+    let mut asset_reload_snapshots: u64 = 0;
+    let mut field_snapshots: u64 = 0;
+    let mut matched: bool = false;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    for window in windows {
+        let window_id = window.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snapshots = window
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for snapshot in snapshots {
+            let frame_id = snapshot
+                .get("frame_id")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let resource_loading = snapshot
+                .get("debug")
+                .and_then(|v| v.get("resource_loading"))
+                .and_then(|v| v.as_object());
+            let Some(resource_loading) = resource_loading else {
+                continue;
+            };
+            resource_loading_snapshots = resource_loading_snapshots.saturating_add(1);
+
+            let asset_reload = resource_loading
+                .get("asset_reload")
+                .and_then(|v| v.as_object());
+            let Some(asset_reload) = asset_reload else {
+                last_observed = Some(asset_reload_observation(window_id, snapshot, None));
+                if expected_absent {
+                    matched = true;
+                    break;
+                }
+                continue;
+            };
+
+            asset_reload_snapshots = asset_reload_snapshots.saturating_add(1);
+            last_observed = Some(asset_reload_observation(
+                window_id,
+                snapshot,
+                Some(asset_reload),
+            ));
+            let observed = asset_reload.get(spec.field_name).and_then(|v| v.as_str());
+            if observed.is_some() {
+                field_snapshots = field_snapshots.saturating_add(1);
+            }
+            if optional_string_matches(observed, expected_value) {
+                matched = true;
+                break;
+            }
+        }
+        if matched {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join(spec.evidence_file);
+    let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": spec.kind,
+        "bundle_artifact": bundle_artifact,
+        "bundle_json": bundle_json,
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "resource_loading_snapshots": resource_loading_snapshots,
+        "asset_reload_snapshots": asset_reload_snapshots,
+        "field_snapshots": field_snapshots,
+        "matched": matched,
+        "last_observed": last_observed,
+        "expected": {
+            "field_pointer": spec.field_pointer,
+            "value": optional_string_expectation_label(expected_value),
+            "value_kind": if expected_absent { "absent" } else { "equals" },
+        }
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if resource_loading_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires debug.resource_loading snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if !expected_absent && asset_reload_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires debug.resource_loading.asset_reload after warmup, but none were observed (warmup_frames={warmup_frames}, resource_loading_snapshots={resource_loading_snapshots})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if !expected_absent && field_snapshots == 0 {
+        return Err(format!(
+            "{} gate requires {} after warmup, but no matching field snapshots were observed (warmup_frames={warmup_frames}, asset_reload_snapshots={asset_reload_snapshots})\n  bundle: {}\n  evidence: {}",
+            spec.kind,
+            spec.field_pointer,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if matched {
+        return Ok(());
+    }
+
+    Err(format!(
+        "{} gate failed (expected {} = {})\n  bundle: {}\n  evidence: {}",
+        spec.kind,
+        spec.field_pointer,
+        if expected_absent {
+            "absent".to_string()
+        } else {
+            expected_value.to_string()
+        },
         bundle_path.display(),
         evidence_path.display()
     ))

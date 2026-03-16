@@ -75,7 +75,9 @@ pub(super) use resource_loading::{
     check_bundle_for_asset_load_revision_changes_max,
     check_bundle_for_asset_load_stale_manifest_max,
     check_bundle_for_asset_load_unsupported_file_max,
-    check_bundle_for_asset_load_unsupported_url_max, check_bundle_for_bundled_font_baseline_source,
+    check_bundle_for_asset_load_unsupported_url_max, check_bundle_for_asset_reload_active_backend,
+    check_bundle_for_asset_reload_configured_backend, check_bundle_for_asset_reload_epoch_min,
+    check_bundle_for_asset_reload_fallback_reason, check_bundle_for_bundled_font_baseline_source,
 };
 pub(super) use retained_vlist_gates::{
     check_bundle_for_retained_vlist_attach_detach_max,
@@ -147,6 +149,10 @@ pub(super) use resource_loading::{
     check_bundle_for_asset_load_stale_manifest_max_json,
     check_bundle_for_asset_load_unsupported_file_max_json,
     check_bundle_for_asset_load_unsupported_url_max_json,
+    check_bundle_for_asset_reload_active_backend_json,
+    check_bundle_for_asset_reload_configured_backend_json,
+    check_bundle_for_asset_reload_epoch_min_json,
+    check_bundle_for_asset_reload_fallback_reason_json,
     check_bundle_for_bundled_font_baseline_source_json,
 };
 #[cfg(test)]
