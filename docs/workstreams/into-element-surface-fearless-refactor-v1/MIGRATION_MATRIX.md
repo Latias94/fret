@@ -58,6 +58,15 @@ An old conversion name is eligible for deletion only when all of the following a
 
 ## Surface Lanes
 
+Closeout reading rule on 2026-03-16:
+
+- the remaining `In progress` rows below should now be read as helper-tail cleanup, explicit raw
+  seam inventory, and source-gate maintenance unless a newly changed boundary proves otherwise
+- they are **not** a standing invitation to reopen the public conversion taxonomy or invent a new
+  default root-builder family
+- the settled public model remains: `Ui` / `UiChild` on the app lane, `IntoUiElement<H>` on the
+  component lane, and explicit `AnyElement` / `Elements` only for intentional raw boundaries
+
 | Lane | Current surface | Target surface | Migration tactic | Delete trigger | Status | Evidence anchors |
 | --- | --- | --- | --- | --- | --- | --- |
 | App render return | `Ui = Elements` alias already exists, but raw `Elements` still appears in some checks and historical docs | keep `Ui` as the app-facing render alias | continue treating `Ui` as canonical and delete stale `Elements` teaching where it survives | default app docs/examples only teach `Ui` | Migrated | `ecosystem/fret/src/lib.rs`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` |

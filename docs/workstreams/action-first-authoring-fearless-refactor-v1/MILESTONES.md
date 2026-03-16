@@ -42,9 +42,14 @@ teaching surfaces, and gates line up.
 
 - **M0**: Met (workstream docs + ADRs exist; indices are updated).
 - **M1**: Met (typed unit actions exist; keymap/palette/menu/pointer triggers converge on the same dispatch pipeline, with diagnostics traces explaining availability/dispatch outcomes).
-- **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; default onboarding has narrowed to three entrypoints; adoption in templates + cookbook/examples is ongoing).
+- **M2**: Met for the shipped v1 runtime surface (`View` + grouped app authoring are landed; the
+  remaining template/cookbook/docs cleanup is post-v1 productization, not missing runtime
+  contract work).
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
-- **M4**: In progress (cookbook/examples + ui-gallery now share the same default `value_*` read suffix, default teaching/reference surfaces have moved off `use_state`, and broader builder-first cleanup continues).
+- **M4**: In progress as a post-v1 productization lane (cookbook/examples + ui-gallery now share
+  the same default `value_*` read suffix, default teaching/reference surfaces have moved off
+  `use_state`, and broader builder-first cleanup continues; this is no longer migration closure
+  on the core action/view model).
 - **M4 progress correction (2026-03-16)**: the first ceremony-reduction batch is now landed on
   the canonical trio plus the generated todo/simple-todo templates and default-path docs:
   tracked reads teach `state.layout(cx).value_*` / `state.paint(cx).value_*`, and common keyed-row
@@ -63,6 +68,9 @@ teaching surfaces, and gates line up.
 - **Overall assessment**: v1 is successful as an architectural reset and teaching-surface convergence
   pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
   ergonomics work rather than unfinished migration closure.
+- **Reading rule (2026-03-16)**: the still-open M2/M4 notes should now be read as
+  productization/hardening follow-ons on the default path, not as evidence that the underlying
+  action-first/view-runtime reset is still architecturally incomplete.
 - **Ownership correction (2026-03-16)**: shadcn discovery-lane closure and `fret` root lane
   budgeting are now explicitly treated as authoring-surface closeout work, not as this
   workstream's main next milestone. The remaining action-first responsibility is default-path

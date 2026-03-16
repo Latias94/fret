@@ -66,6 +66,8 @@ This workstream is no longer the owner of crate-discovery curation.
     become a permanent growth surface
 - do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
   this workstream until the shadcn discovery-lane and `fret` root-budget closeout items are green
+- read the remaining M2/M4 notes in `MILESTONES.md` as post-v1 productization/hardening only:
+  they do not mean the core action/view runtime contract is still mid-migration
 - the first density-reduction batch is now already landed on the canonical trio, generated
   todo/simple-todo templates, and default-path docs:
   `state.layout(cx).value_*` / `state.paint(cx).value_*` are the taught tracked-read path, and

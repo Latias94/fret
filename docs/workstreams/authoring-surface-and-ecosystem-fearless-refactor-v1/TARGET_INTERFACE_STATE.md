@@ -41,6 +41,16 @@ Fresh-audit reading rule on 2026-03-16:
 - post-closeout follow-ons such as ecosystem integration traits, macros, or other sugar should
   read from the stabilized lane story below rather than running ahead of it.
 
+Coordination rule on 2026-03-16:
+
+- treat this file as the public-surface owner for the adjacent post-v1 lanes
+- `action-first-authoring-fearless-refactor-v1` should only land default-path density and
+  bridge-shrink work against this lane story
+- `into-element-surface-fearless-refactor-v1` should only land conversion/helper cleanup against
+  this lane story
+- non-goal: do not let adjacent workstreams reopen the app/component/advanced tier design
+  independently
+
 1. `fret-ui-shadcn` discovery-lane closure
    - Default teaching lane: `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
    - Explicit escape hatch: `shadcn::raw::*` / `fret_ui_shadcn::raw::*`

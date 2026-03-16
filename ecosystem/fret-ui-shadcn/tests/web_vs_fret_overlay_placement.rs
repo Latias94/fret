@@ -1,7 +1,8 @@
-use fret_ui_shadcn::facade as shadcn;
 #![cfg(feature = "web-goldens")]
 // Heavy, web-golden-backed conformance. Enable via:
 //   cargo nextest run -p fret-ui-shadcn --features web-goldens
+
+use fret_ui_shadcn::facade as shadcn;
 
 use fret_app::App;
 use fret_core::{
