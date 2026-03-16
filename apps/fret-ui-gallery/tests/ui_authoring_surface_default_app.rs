@@ -205,6 +205,7 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
 
     assert!(!action_first_view.contains("use fret::prelude::*;"));
     assert!(action_first_view.contains("use fret::advanced::prelude::*;"));
+    assert!(action_first_view.contains("use fret::component::prelude::*;"));
     assert!(action_first_view.contains("use fret::app::App;"));
     assert!(action_first_view.contains("fn init(_app: &mut App, _window: AppWindowId) -> Self"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, App>"));

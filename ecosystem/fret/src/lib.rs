@@ -121,7 +121,8 @@ pub mod style {
     };
 }
 
-/// Explicit environment and responsive helpers for app code that opts into adaptive UI logic.
+/// Explicit environment and responsive helpers for app or component code that opts into adaptive
+/// UI logic.
 pub mod env {
     pub use fret_ui_kit::declarative::{
         accent_color, container_breakpoints, container_query_region,
@@ -531,18 +532,6 @@ pub mod component {
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
         pub use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
         pub use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
-        pub use fret_ui_kit::declarative::prelude::{
-            accent_color, container_breakpoints, container_query_region,
-            container_query_region_with_id, container_width_at_least, contrast_preference,
-            forced_colors_active, forced_colors_mode, preferred_color_scheme,
-            prefers_dark_color_scheme, prefers_more_contrast, prefers_reduced_motion,
-            prefers_reduced_transparency, primary_pointer_can_hover, primary_pointer_is_coarse,
-            primary_pointer_type, safe_area_insets, safe_area_insets_or_zero, tailwind,
-            text_scale_factor, viewport_aspect_ratio, viewport_breakpoints,
-            viewport_height_at_least, viewport_height_breakpoints, viewport_is_landscape,
-            viewport_is_portrait, viewport_orientation, viewport_tailwind, viewport_width_at_least,
-            window_insets_padding_refinement_or_zero,
-        };
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
         pub use fret_ui_kit::{
@@ -925,7 +914,6 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::advanced::*;
-        pub use crate::component::prelude::*;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, Ui, UiCx};
@@ -2269,6 +2257,16 @@ mod authoring_surface_policy_tests {
     const SHADCN_SELECT_V4_USAGE: &str = include_str!(
         "../../../docs/workstreams/shadcn-part-surface-alignment-v1/SELECT_V4_USAGE.md"
     );
+    const SHADCN_COMBOBOX_V4_USAGE: &str = include_str!(
+        "../../../docs/workstreams/shadcn-part-surface-alignment-v1/COMBOBOX_V4_USAGE.md"
+    );
+    const APP_ENTRY_BUILDER_DESIGN: &str =
+        include_str!("../../../docs/workstreams/app-entry-builder-v1/DESIGN.md");
+    const APP_ENTRY_BUILDER_TODO: &str =
+        include_str!("../../../docs/workstreams/app-entry-builder-v1/TODO.md");
+    const AUTHORING_SURFACE_MIGRATION_MATRIX: &str = include_str!(
+        "../../../docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md"
+    );
     const LIB_RS: &str = include_str!("lib.rs");
     const VIEW_RS: &str = include_str!("view.rs");
 
@@ -2412,6 +2410,40 @@ mod authoring_surface_policy_tests {
         (exported != "_").then_some(exported)
     }
 
+    fn exported_symbol_names(source: &str) -> std::collections::BTreeSet<String> {
+        let mut exported = std::collections::BTreeSet::new();
+
+        for statement in source
+            .split(';')
+            .filter(|statement| statement.contains("pub use "))
+        {
+            let Some(pub_use_start) = statement.find("pub use ") else {
+                continue;
+            };
+            let statement = &statement[pub_use_start + "pub use ".len()..];
+
+            if let Some((_, items)) = statement.rsplit_once("::{") {
+                let items = items.trim_end_matches('}');
+                for name in items.split(',').filter_map(exported_symbol_name) {
+                    exported.insert(name.to_owned());
+                }
+                continue;
+            }
+
+            if let Some(name) = exported_symbol_name(statement) {
+                exported.insert(name.to_owned());
+            }
+        }
+
+        exported
+    }
+
+    fn markdown_table_row<'a>(doc: &'a str, label: &str) -> &'a str {
+        doc.lines()
+            .find(|line| line.starts_with('|') && line.contains(label))
+            .unwrap_or_else(|| panic!("expected markdown table row containing `{label}`"))
+    }
+
     #[test]
     fn readme_prefers_view_entry_and_omits_ui_bridge() {
         assert!(CRATE_README.contains(
@@ -2448,6 +2480,9 @@ mod authoring_surface_policy_tests {
 
         assert!(TODO_APP_GOLDEN_PATH.contains(".view::<TodoView>()?"));
         assert!(TODO_APP_GOLDEN_PATH.contains(".run()"));
+        assert!(TODO_APP_GOLDEN_PATH.contains("fn install_todo_app(app: &mut App) {"));
+        assert!(TODO_APP_GOLDEN_PATH.contains(".setup(install_todo_app)"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("fn install_app(app: &mut App) {"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".run_view::<"));
     }
 
@@ -2732,6 +2767,37 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn app_entry_workstream_docs_match_the_shipped_builder_surface() {
+        assert!(
+            APP_ENTRY_BUILDER_DESIGN.contains("`fret::FretApp::new(...).window(...).view::<V>()?`")
+        );
+        assert!(
+            APP_ENTRY_BUILDER_DESIGN
+                .contains("`fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?`")
+        );
+        assert!(APP_ENTRY_BUILDER_DESIGN.contains(
+            "`run_view::<V>()` / `run_view_with_hooks::<V>(...)` were also removed from `FretApp`"
+        ));
+        assert!(
+            APP_ENTRY_BUILDER_DESIGN
+                .contains("Execution stays on the returned `UiAppBuilder` via `.run()`")
+        );
+        assert!(
+            !APP_ENTRY_BUILDER_DESIGN.contains(
+                "- `view::<V>()`\n- `view_with_hooks::<V>(configure)`\n- `run_view::<V>()` / `run_view_with_hooks::<V>(...)`"
+            )
+        );
+
+        assert!(APP_ENTRY_BUILDER_TODO.contains(
+            "- [x] Delete `run_view::<V>()` / `run_view_with_hooks::<V>(...)` from `FretApp` before release."
+        ));
+        assert!(
+            !APP_ENTRY_BUILDER_TODO
+                .contains("- [x] `run_view::<V>()` / `run_view_with_hooks::<V>(...)`")
+        );
+    }
+
+    #[test]
     fn usage_docs_prefer_grouped_app_ui_actions() {
         assert!(CRATE_USAGE_GUIDE.contains("start with `View` + `AppUi` + typed actions"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
@@ -2779,6 +2845,27 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
+    }
+
+    #[test]
+    fn authoring_surface_matrix_keeps_builder_setup_and_async_docs_closed() {
+        let builder_row = markdown_table_row(
+            AUTHORING_SURFACE_MIGRATION_MATRIX,
+            "Default builder setup seam",
+        );
+        assert!(builder_row.contains("| Migrated |"));
+
+        let async_docs_row =
+            markdown_table_row(AUTHORING_SURFACE_MIGRATION_MATRIX, "async integration docs");
+        assert!(async_docs_row.contains("| Migrated |"));
+
+        let component_row =
+            markdown_table_row(AUTHORING_SURFACE_MIGRATION_MATRIX, "Component prelude");
+        assert!(component_row.contains("| Migrated |"));
+
+        let advanced_row =
+            markdown_table_row(AUTHORING_SURFACE_MIGRATION_MATRIX, "Advanced imports");
+        assert!(advanced_row.contains("| Deleted |"));
     }
 
     #[test]
@@ -2947,6 +3034,22 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn component_author_docs_keep_secondary_lanes_explicit() {
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("use fret::component::prelude::*;"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains(
+            "use fret::env::{container_breakpoints, safe_area_insets, viewport_breakpoints};"
+        ));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains(
+            "use fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw};"
+        ));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`fret::overlay::*`"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE
+                .contains("`OverlayController`, `OverlayRequest`, `OverlayPresence`")
+        );
+    }
+
+    #[test]
     fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
         assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch::<"));
@@ -2978,7 +3081,10 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`ComponentCx`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::activate::{on_activate,"));
+        assert!(CRATE_USAGE_GUIDE.contains("`use fret::advanced::prelude::*;`"));
+        assert!(CRATE_USAGE_GUIDE.contains("advanced-only"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("without pulling in `FretApp`, `AppUi`, or runner-facing seams")
@@ -3030,8 +3136,10 @@ mod authoring_surface_policy_tests {
         assert!(
             SHADCN_SELECT_V4_USAGE.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};")
         );
+        assert!(SHADCN_COMBOBOX_V4_USAGE.contains("use fret_ui_shadcn::facade as shadcn;"));
         assert!(!ACTION_FIRST_MIGRATION_GUIDE.contains("use fret_ui_shadcn as shadcn;"));
         assert!(!SHADCN_SELECT_V4_USAGE.contains("use fret_ui_shadcn::{self as shadcn"));
+        assert!(!SHADCN_COMBOBOX_V4_USAGE.contains("use fret_ui_shadcn::{"));
     }
 
     #[test]
@@ -3184,6 +3292,13 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("UiTree"));
         assert!(advanced_prelude_exports_symbol("UiServices"));
         assert!(advanced_prelude_exports_symbol("TextProps"));
+        assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));
+        assert!(!advanced_prelude_exports_symbol("UiBuilder"));
+        assert!(!advanced_prelude_exports_symbol("UiPatchTarget"));
+        assert!(!advanced_prelude_exports_symbol("IntoUiElement"));
+        assert!(!advanced_prelude_exports_symbol("UiHost"));
+        assert!(!advanced_prelude_exports_symbol("AnyElement"));
+        assert!(!advanced_prelude_exports_symbol("Model"));
         assert!(!advanced_prelude_exports_symbol("ViewCx"));
         assert!(!advanced_prelude_exports_symbol("Elements"));
         assert!(
@@ -3496,6 +3611,11 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude_exports_symbol("OverlayPresence"));
         assert!(component_prelude_exports_symbol("SemanticsRole"));
         assert!(!component_prelude.contains("pub use fret_ui_kit::prelude::*;"));
+        assert!(!component_prelude_exports_symbol("accent_color"));
+        assert!(!component_prelude_exports_symbol("container_breakpoints"));
+        assert!(!component_prelude_exports_symbol("safe_area_insets"));
+        assert!(!component_prelude_exports_symbol("viewport_breakpoints"));
+        assert!(!component_prelude_exports_symbol("viewport_tailwind"));
         assert!(!component_prelude_exports_symbol("ActionHooksExt"));
         assert!(!component_prelude_exports_symbol("AnyElementSemanticsExt"));
         assert!(!component_prelude_exports_symbol("CollectionSemanticsExt"));
@@ -3525,6 +3645,18 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol(
             "on_activate_request_redraw_notify"
         ));
+    }
+
+    #[test]
+    fn app_and_component_preludes_only_overlap_on_ui_and_px() {
+        let app_symbols = exported_symbol_names(app_prelude_source());
+        let component_symbols = exported_symbol_names(component_prelude_source());
+        let overlap = app_symbols
+            .intersection(&component_symbols)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        assert_eq!(overlap, vec!["Px".to_string(), "ui".to_string()]);
     }
 
     #[test]

@@ -1,7 +1,7 @@
 # Target Interface State
 
 Status: target state for the pre-release surface reset
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 This document is the single place that records the **intended public interface state** for the
 authoring-surface reset.
@@ -13,23 +13,18 @@ It is intentionally concrete:
 - which layer owns them,
 - which names should disappear.
 
-Closeout note on 2026-03-15:
+Closeout note on 2026-03-16:
 
 - this file now describes a mostly-settled surface rather than an open redesign backlog,
 - the app/component/advanced split is considered landed **at the lane-definition level**,
 - but the closeout is still incomplete while:
-  - `fret::app::prelude::*` exports remain wider than the target list below, even though two
-    overlap-reduction batches have already landed (`as _` extension-trait imports, removal of raw
-    `on_activate*` helper re-exports from the app lane, and an explicit `fret::style` /
-    `fret::icons` split for high-frequency icon/style nouns, followed by an explicit `fret::env`
-    split for adaptive declarative helpers),
   - shadcn first-contact discovery still needs final doc tightening even though the curated
     `prelude`, crate-internal recipe/helper glue, and public component families are now off the
     hidden flat root and the default component lane is `facade as shadcn`,
   - the dedicated conversion-surface tracker is still actively deleting vocabulary families,
 - remaining work is therefore narrow follow-through rather than broad redesign:
-  delete-ready cleanup, app-prelude narrowing, shadcn discovery-lane tightening, stale-doc
-  correction, and coordination with follow-on workstreams such as
+  delete-ready cleanup, shadcn discovery-lane tightening, stale-doc correction, and coordination
+  with follow-on workstreams such as
   `into-element-surface-fearless-refactor-v1` and `action-first-authoring-fearless-refactor-v1`.
 
 ## Public Surface Tiers
@@ -264,6 +259,9 @@ Target rule:
 - reusable component code that needs explicit command identity values should import
   `fret::actions::CommandId` (or `fret-runtime`) explicitly instead of relying on the component
   prelude.
+- reusable component code that needs environment/responsive helpers should import them explicitly
+  from `fret::env::{...}` instead of relying on the component prelude for breakpoint/media/pointer
+  helper families.
 - overlap-heavy helper traits should stay anonymous `as _` imports on this lane as well, so
   reusable component method ergonomics do not force extension-trait names into first-contact
   autocomplete.
@@ -290,6 +288,16 @@ Target exports:
 Target rule:
 
 - advanced users should still have full power, but must opt into it explicitly.
+- `fret::advanced::prelude::*` is a curated advanced/manual-assembly convenience lane, not a
+  hidden umbrella over the component surface.
+- if advanced code also needs ordinary component authoring vocabulary (`ui::*`, `.ui()`,
+  `.into_element(...)`, watch/helper extension traits, overlay authoring helpers), it should add
+  an explicit `use fret::component::prelude::*;` import rather than relying on advanced-prelude
+  forwarding.
+- first-party evidence for that rule now lives on both advanced examples and gallery/manual-app
+  snippets (for example `async_playground_demo`, `imui_editor_proof_demo`, and
+  `action_first_view`), so future drift should be treated as a regression rather than unresolved
+  surface design.
 
 ## Target `AppUi` Structure
 

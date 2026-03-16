@@ -45,8 +45,8 @@ Closeout note on 2026-03-15:
 - the next real product-surface pressure is no longer "how do we split app/component/advanced?",
   but rather:
   - finishing delete-ready cleanup on old root aliases and stale docs,
-  - narrowing the default app prelude until it stops overlapping with the component prelude on
-    styling/layout/semantics helper families,
+  - keeping the default app/component lane overlap closed and routing any remaining heavy helper
+    families onto explicit secondary lanes instead of reopening wildcard-prelude growth,
   - keeping the conversion surface accurate in
     `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
   - simplifying the shadcn discovery lane so `facade as shadcn` is the only first-contact story,
@@ -55,11 +55,30 @@ Closeout note on 2026-03-15:
 
 Priority correction on 2026-03-15:
 
-1. narrow `fret::app::prelude::*`
-2. simplify shadcn first-contact discovery (`facade` first, `raw` explicit, crate root de-emphasized)
-3. finish the conversion-surface reset under
+1. simplify shadcn first-contact discovery (`facade` first, `raw` explicit, crate root de-emphasized)
+2. finish the conversion-surface reset under
    `docs/workstreams/into-element-surface-fearless-refactor-v1/`
-4. only then add more small-app authoring sugar on top of the stabilized lane
+3. only then add more small-app authoring sugar on top of the stabilized lane
+
+Closeout note on 2026-03-16:
+
+- the default app prelude is no longer the main open surface-reset blocker here; named overlap with
+  `fret::component::prelude::*` is already down to `ui` and `Px`, and the remaining anonymous
+  helper imports are the intentional app ergonomics budget rather than unresolved redesign debt,
+- the advanced-import split is now effectively closed:
+  `fret::advanced::prelude::*` no longer smuggles the component lane, first-party advanced code
+  that still needs component authoring helpers imports `fret::component::prelude::*` explicitly,
+  and both `cargo check -p fret-examples --all-targets` and
+  `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app` now validate that
+  posture,
+- the `Component prelude` row is now also functionally closed at the `fret` facade level:
+  env/responsive helpers, raw activation glue, and lower-level overlay nouns all live on explicit
+  secondary lanes (`fret::env::{...}`, `fret::activate::{...}`, `fret::overlay::*`), and the
+  component-author docs plus source-policy tests now lock that posture,
+- the highest-value remaining closeout work in this folder is therefore:
+  - continued shadcn discovery/doc tightening,
+  - keeping this tracker honest while the conversion-surface follow-on workstream keeps deleting
+    old vocabulary families.
 
 ## M0 — Freeze the target product surface
 
@@ -94,7 +113,11 @@ Priority correction on 2026-03-15:
 - [x] Add explicit advanced import modules under `fret::advanced::*`.
 - [x] Remove broad transitive re-export of `fret_ui_kit::declarative::prelude::*` from the app surface.
 - [x] Remove broad transitive re-export of `fret_ui_kit::prelude::*` from the advanced prelude convenience lane.
-- [ ] Remove low-level mechanism types from the default app prelude:
+- [x] Stop forwarding the component prelude through `fret::advanced::prelude::*`.
+  - 2026-03-16 closeout: advanced/manual-assembly code now imports `fret::component::prelude::*`
+    explicitly when it genuinely needs component authoring helpers, instead of rediscovering that
+    vocabulary through a hidden advanced-lane umbrella import.
+- [x] Remove low-level mechanism types from the default app prelude:
   - [x] `AppWindowId`
   - [x] `Event`
   - [x] `ActionId`
@@ -131,7 +154,10 @@ Priority correction on 2026-03-15:
   - [x] `UiServices`
   - [x] `UiHost`
   - [x] `AnyElement`
-  - [ ] other runner/maintainer-only types
+  - [x] other runner/maintainer-only types
+  - 2026-03-16 closeout: no known runner/maintainer-only types remain on the default
+    `fret::app::prelude::*`; remaining prelude/export cleanup now lives on the component and
+    advanced lanes rather than the app lane.
 - [x] Remove component-author overlap from `fret::app::prelude::*`.
   - Goal: an ordinary app author should not discover the same style/layout/semantics helper
     families from both `fret::app::prelude::*` and `fret::component::prelude::*`.
@@ -221,6 +247,9 @@ Priority correction on 2026-03-15:
   - `docs/crate-usage-guide.md` now also teaches reusable component authors to import
     `fret::actions::CommandId` explicitly instead of expecting it from
     `fret::component::prelude::*`.
+  - `docs/crate-usage-guide.md` and `docs/component-author-guide.md` now also teach
+    environment/responsive helpers as an explicit `fret::env::{...}` lane instead of part of
+    `fret::component::prelude::*`.
   - `docs/crate-usage-guide.md` and `docs/component-author-guide.md` now also teach raw
     activation helper glue as an explicit `fret::activate::{...}` lane instead of part of
     `fret::component::prelude::*`.
@@ -231,20 +260,24 @@ Priority correction on 2026-03-15:
 
 ## M2 — Reset the app authoring API
 
-- [ ] Introduce grouped app-facing context namespaces:
+- [x] Introduce grouped app-facing context namespaces:
   - [x] `state()`
   - [x] `actions()`
   - [x] `data()`
   - [x] `effects()`
-- [ ] Add the new default operations:
+- [x] Add the new default operations:
   - [x] local state creation/init
   - [x] local state watch/read
   - [x] default local transactions
   - [x] payload-local handlers
   - [x] transient action helpers
   - [x] selector/query integration points
-- [ ] Rename or replace flat helpers that are no longer part of the blessed path.
-- [ ] Remove redundant first-contact aliases from the app surface.
+- [x] Rename or replace flat helpers that are no longer part of the blessed path.
+- [x] Remove redundant first-contact aliases from the app surface.
+- 2026-03-16 closeout: M2 is functionally closed.
+  The grouped app model (`state/actions/data/effects`) is the shipped first-party posture, and
+  remaining authoring ergonomics work should be tracked as follow-on sugar/doc cleanup rather than
+  as unfinished app-surface reset work.
 
 ## M3 — Migrate first-party ecosystems to the new surface
 
@@ -294,6 +327,16 @@ Priority correction on 2026-03-15:
       `#[doc(hidden)]` compatibility residue rather than a peer public discovery lane. The
       intended authoring surface is therefore self-constraining in rustdoc in addition to the
       first-party source-policy tests.
+    - 2026-03-16 progress: the historical direct-crate root theme lane has also been removed from
+      the public `fret-ui-shadcn` surface; first-party integration tests now use
+      `fret_ui_shadcn::facade::themes::*` (or `shadcn::themes::*` through the alias) rather than
+      normalizing `fret_ui_shadcn::shadcn_themes::*`.
+    - 2026-03-16 progress: the remaining direct-crate root authoring glue is no longer public
+      either. `icon`, `decl_style`, `ui`, styling glue, and ui-builder extension traits are now
+      available only through explicit `prelude` / `raw` lanes, and crate-internal recipe code no
+      longer depends on a root `icon` shim either. First-party gallery/tests forbid drifting back
+      to root glue paths such as `fret_ui_shadcn::decl_style`, `fret_ui_shadcn::icon::*`, or root
+      `*UiBuilderExt`.
     - 2026-03-15 progress: the repo-level gate is wired into `tools/pre_release.py`, and
       `cargo check -p fret-ui-ai --lib` is green again after fixing the local `mic_selector.rs` /
       `voice_selector.rs` `Vec::new()` inference residue that was masking the import-lane
@@ -369,6 +412,11 @@ Priority correction on 2026-03-15:
   - 2026-03-15: UI Gallery code examples and helper snippets were normalized away from
     `fret_ui_shadcn::*` flat root/module paths; remaining stale references are bounded to a small
     set of narrative copy strings and non-gallery first-party crates.
+  - 2026-03-16: the live app-entry docs no longer describe removed `run_view*` builder methods as
+    part of `FretApp`, the golden-path todo example no longer uses the legacy-looking
+    `install_app` helper name on the default builder lane, and the async integration guides now
+    lead with grouped `cx.data().query_*` helpers. The remaining stale references are now mostly
+    historical workstream prose rather than first-contact docs/examples.
 
 ## M5 — Delete the old surface
 
@@ -409,6 +457,9 @@ Priority correction on 2026-03-15:
     runtime/render/viewport seams now stay on the explicit `fret::advanced::{kernel, interop}`
     lane.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
+  - 2026-03-16 bounded remainder: default-facing docs/examples are now largely aligned; the main
+    remaining stale guidance is historical workstream prose and closeout bookkeeping, not the
+    shipped first-contact surface.
 
 ## M6 — Add gates so the surface stays clean
 

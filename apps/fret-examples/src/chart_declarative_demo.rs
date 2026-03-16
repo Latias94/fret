@@ -1,4 +1,4 @@
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId};

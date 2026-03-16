@@ -21,7 +21,7 @@
 - [x] icon-pack app installers via `setup(...::app::install)`
 - [x] `view::<V>()`
 - [x] `view_with_hooks::<V>(configure)`
-- [x] `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
+- [x] Delete `run_view::<V>()` / `run_view_with_hooks::<V>(...)` from `FretApp` before release.
 
 ## Onboarding convergence
 
@@ -40,6 +40,8 @@
       (`view`, `view_with_hooks`) and the default main-window fallback.
 - [x] Add a focused surface gate that keeps `fret` crate root builder-only and keeps README
       onboarding text aligned with the builder story.
+- [x] Remove stale workstream wording that still described `run_view*` as part of the live
+      `FretApp` builder surface.
 - [ ] Audit more cookbook/examples for wording consistency when describing manual assembly vs builder
       entry.
 - [ ] Decide whether a closure-based entry should exist at all.

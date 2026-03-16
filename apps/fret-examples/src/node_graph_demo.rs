@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::scene::DashPatternV1;
 use fret_core::{Color, Px};
 use fret_node::core::{

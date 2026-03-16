@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
 use fret::view::ViewWindowState;
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
 use fret_core::{Color, PanelKind, Px, TextAlign};

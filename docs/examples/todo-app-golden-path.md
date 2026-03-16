@@ -134,7 +134,7 @@ apps without dropping down to `fret-bootstrap`:
 ```rust,ignore
 use fret::app::prelude::*;
 
-fn install_app(app: &mut App) {
+fn install_todo_app(app: &mut App) {
     // Register app-owned globals, commands, services, etc.
     // Example:
     // app.set_global(MyService::default());
@@ -143,7 +143,7 @@ fn install_app(app: &mut App) {
  fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
-        .setup(install_app)
+        .setup(install_todo_app)
         // Disable filesystem config loading for embedding/minimal builds:
         .config_files(false)
         // If you use images/SVG in UI, tune budgets:

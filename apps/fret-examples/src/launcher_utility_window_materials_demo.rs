@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret::advanced::prelude::*;
+use fret::component::prelude::*;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::Px;
 use fret_runtime::{

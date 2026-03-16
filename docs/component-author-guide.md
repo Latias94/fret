@@ -32,6 +32,13 @@ This keeps reusable component code on the curated component-author surface (`Com
 `UiBuilder`, `UiPatchTarget`, semantics/layout helpers) instead of the app-facing `fret::app`
 surface.
 
+If that reusable code intentionally needs environment/responsive helpers, add an explicit
+secondary import instead of widening the default component lane:
+
+```rust
+use fret::env::{container_breakpoints, safe_area_insets, viewport_breakpoints};
+```
+
 If that reusable code intentionally needs the low-level activation helper family, add an explicit
 secondary import instead of widening the default component lane:
 

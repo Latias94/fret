@@ -5,7 +5,7 @@
 - `M0` Design convergence: **Completed**
 - `M1` Builder implementation: **Completed**
 - `M2` Onboarding switch: **Completed**
-- `M3` Extension-seam polish: **In progress**
+- `M3` Extension-seam polish: **Completed**
 - `M4` Optional closure entry: **Deferred / undecided**
 
 ## M0 ? Design convergence
@@ -62,7 +62,7 @@
 
 ## M3 ? Extension-seam polish
 
-**Status:** In progress
+**Status:** Completed
 
 **What shipped already**
 
@@ -72,12 +72,14 @@
   same entry model.
 - Targeted smoke tests now cover the two recommended builder entry paths and the default
   main-window fallback behavior.
+- The stale `run_view*` builder-surface wording is now removed from the active workstream docs, so
+  the documented `FretApp` surface matches the shipped builder-only reality again.
 
-**What remains**
+**Follow-up posture**
 
 - Keep compile/doc regression coverage current if more builder conveniences land.
-- Keep docs/examples consistent about when to stay on `fret` versus when to drop down.
-- Decide whether more builder conveniences should become first-class.
+- Treat future builder-surface expansion as new additive design work, not as unfinished migration
+  from this v1 workstream.
 
 **Evidence**
 

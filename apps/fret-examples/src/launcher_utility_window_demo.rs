@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::advanced::prelude::*;
+use fret::component::prelude::*;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;

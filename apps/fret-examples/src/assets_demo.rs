@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use fret::advanced::kernel::core::{ImageColorSpace, SvgId};
 use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ColorRef, IntoUiElement, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ColorRef, IntoUiElement, LayoutRefinement, Radius, Space, ui};
 
 static DEMO_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_genui_core::catalog::{CatalogActionV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::form_validation::{

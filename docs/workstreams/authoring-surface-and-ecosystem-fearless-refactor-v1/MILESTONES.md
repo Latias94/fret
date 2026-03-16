@@ -41,24 +41,61 @@ Closeout note on 2026-03-15:
   - historical bookkeeping residue, or
   - one of the targeted surface-closeout tasks above.
 
+Closeout note on 2026-03-16:
+
+- the default `fret` app surface is now effectively in the "docs/export hygiene" phase rather
+  than the "public product surface redesign" phase,
+- `fret::app::prelude::*` is down to app nouns plus intentional hidden ergonomic helper imports;
+  the remaining export audit is primarily on `fret::component::prelude::*` and
+  `fret::advanced::prelude::*`, not on the default app lane,
+- `fret-ui-kit` no longer leaks into the default `fret` app lane through transitive prelude
+  forwarding; any future slimming of `fret_ui_kit::prelude::*` is a crate-local follow-up rather
+  than a blocker for the `fret` facade closeout,
+- the latest shadcn overlay-chrome parity sweep is green again
+  (`cargo test -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome`:
+  `20 passed; 0 failed`), so shadcn closeout is back to discovery/docs/gate maintenance rather
+  than active recipe drift.
+- the app-entry builder workstream docs now match the shipped builder surface again:
+  `FretApp` keeps `view::<V>()?` / `view_with_hooks::<V>(...)?` plus `.run()`, while the removed
+  `run_view*` convenience is now documented only as deletion history rather than live posture.
+- the async integration guides (`Tokio/Reqwest`, `SQLite/SQLx`) are now fully on the
+  "default `cx.data().query_*` path first, raw `ElementContext` note second" posture, so that
+  authoring-surface matrix row is no longer an active blocker.
+- `fret::advanced::prelude::*` now also stops silently forwarding the whole component lane:
+  advanced/manual-assembly examples that still need component authoring helpers add
+  `use fret::component::prelude::*;` explicitly, and the corresponding migration-matrix row is now
+  in the closeout/maintenance state rather than active redesign.
+- `fret::component::prelude::*` also no longer forwards environment/responsive helper families;
+  reusable component code now reaches breakpoint/media/pointer/safe-area helpers through the
+  explicit `fret::env::{...}` lane instead of rediscovering those helpers through wildcard
+  component imports.
+- the `Component prelude` migration-matrix row is now also considered migrated:
+  the `fret` facade no longer widens that lane with env/activation/overlay-heavy vocabulary, and
+  the component-author docs now lock `fret::env::{...}`, `fret::activate::{...}`, and
+  `fret::overlay::*` as explicit secondary lanes instead of wildcard-prelude discoveries.
+- that advanced-import split is now also validated end-to-end by the first-party source gates:
+  `cargo check -p fret-examples --all-targets` and
+  `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app` both pass with
+  explicit dual imports on the advanced examples/gallery surfaces that still need ordinary
+  component authoring vocabulary.
+
 If a proposed change is mainly about "too many `into_element` concepts" or "helper/component code
 still falls back to raw conversion vocabulary", it belongs in the follow-on workstream rather than
 reopening this one.
 
-## Current next-step order (2026-03-15)
+## Current next-step order (2026-03-16)
 
-1. Treat the remaining anonymous semantics/a11y/test-id helpers as the intentional app-lane
-   keeper set; they are no longer active app-prelude narrowing debt.
-2. Treat `Px` as the intentional shared primitive across app/component lanes; it is no longer
-   active prelude-narrowing debt.
-3. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
+1. Keep `fret::app::prelude::*` in maintenance mode rather than reopening another narrowing pass:
+   the named overlap is already down to `ui`/`Px`, and remaining app-lane helper traits are the
+   intentional hidden-method ergonomics budget rather than active redesign debt.
+2. Keep shadcn first-contact discovery on the already-landed `facade as shadcn` path and only add
    maintenance/gates when new first-party code tries to reintroduce crate-root drift.
    Current progress: curated `prelude` and crate-internal recipe/helper glue no longer depend on
    hidden flat root exports, and the first-contact teaching lane is already `facade as shadcn`;
    remaining work is maintenance/gate follow-through rather than another export-structure reset.
-4. Finish the conversion-surface reset under
+3. Finish the conversion-surface reset under
    `docs/workstreams/into-element-surface-fearless-refactor-v1/`.
-5. Continue thin small-app authoring sugar after the lane above is stable, starting with
+4. Continue thin small-app authoring sugar after the lane above is stable, starting with
    action-first widget aliases where command-shaped builder names still leak into the default path.
 
 ## Milestone 0 — Lock the target product surface

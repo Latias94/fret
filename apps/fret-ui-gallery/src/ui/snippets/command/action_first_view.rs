@@ -9,7 +9,9 @@ use std::sync::Arc;
 
 use fret::advanced::prelude::*;
 use fret::app::App;
+use fret::component::prelude::*;
 use fret::{UiChild, UiCx};
+use fret_runtime::Model;
 use fret_ui::CommandAvailability;
 use fret_ui_shadcn::facade as shadcn;
 

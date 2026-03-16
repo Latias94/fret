@@ -231,13 +231,28 @@ collapsed to one public component conversion trait; new docs/examples should fol
 `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
 teaching the legacy split conversion trait names. When reusable component code needs explicit
 command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead
-of expecting `CommandId` from `fret::component::prelude::*`. When reusable component or advanced
-code intentionally needs raw activation helper glue, import `fret::activate::{on_activate,
+of expecting `CommandId` from `fret::component::prelude::*`. When reusable component code needs
+environment/responsive helpers, import them explicitly from `fret::env::{...}` instead of
+expecting breakpoint/media helpers from `fret::component::prelude::*`. When reusable component or
+advanced code intentionally needs raw activation helper glue, import `fret::activate::{on_activate,
 on_activate_notify, on_activate_request_redraw, on_activate_request_redraw_notify}` explicitly
 instead of expecting those helper names from the component prelude.
 When reusable component code needs overlay anchoring helpers or overlay stack/introspection nouns,
 import them explicitly from `fret::overlay::*` instead of expecting those lower-level names from
 `fret::component::prelude::*`.
+
+**Advanced/manual-assembly surface:** `use fret::advanced::prelude::*;` is now intentionally
+advanced-only. It no longer forwards `fret::component::prelude::*` wholesale. If an advanced demo
+or integration also authors ordinary component/UI composition (`ui::*`, `.ui()`, `.into_element`,
+model watch helpers, overlay authoring helpers), add an explicit second import:
+
+```rust
+use fret::advanced::prelude::*;
+use fret::component::prelude::*;
+```
+
+This keeps the tier boundary visible instead of letting advanced code rediscover component
+authoring vocabulary through a hidden umbrella import.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 

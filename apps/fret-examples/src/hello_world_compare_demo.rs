@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{AppWindowId, Color, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_render::{Renderer, RendererPerfFrameStore, WgpuContext};
 use fret_runtime::{

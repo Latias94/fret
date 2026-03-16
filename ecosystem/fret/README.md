@@ -210,6 +210,11 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`
 - Advanced low-level runtime/render/viewport seams: `fret::advanced::{kernel::*, interop::*}`
 
+If advanced/manual-assembly code also wants the ordinary component authoring vocabulary
+(`ui::*`, `.ui()`, `.into_element(...)`, model/overlay helper traits), import it explicitly with
+`use fret::component::prelude::*;`. `fret::advanced::prelude::*` intentionally stays on the
+advanced lane and no longer forwards the component prelude implicitly.
+
 ## What remains first-class on `fret`
 
 Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
