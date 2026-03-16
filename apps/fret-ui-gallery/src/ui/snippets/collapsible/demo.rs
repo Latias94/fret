@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui_shadcn::collapsible_primitives as shadcn_col;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use shadcn::raw::collapsible::primitives as shadcn_col;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Mirrors upstream shadcn/ui v4 `collapsible-demo.tsx` composition: free structure with

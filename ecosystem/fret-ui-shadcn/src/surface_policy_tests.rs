@@ -213,7 +213,9 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
 
     assert!(LIB_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
     assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` as the raw"));
-    assert!(LIB_RS.contains("Component-family root modules stay crate-private"));
+    assert!(LIB_RS.contains(
+        "crate-private so ordinary autocomplete only sees the curated facade plus the explicit raw lane."
+    ));
     assert!(LIB_RS.contains("pub mod facade {"));
     assert!(LIB_RS.contains("pub mod themes {"));
     assert!(LIB_RS.contains("pub mod raw {"));
@@ -1642,9 +1644,8 @@ fn state_helpers_prefer_typed_badge_outputs_when_no_runtime_landing_seam_is_requ
 fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
     let normalized_lib = normalize_ws(LIB_RS);
     assert!(
-        normalized_lib.contains(
-            "#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]#[doc(hidden)]pubmodstate;"
-        ),
+        normalized_lib
+            .contains("#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]modstate;"),
         "lib.rs should keep the state helper module behind explicit opt-in features"
     );
     assert!(

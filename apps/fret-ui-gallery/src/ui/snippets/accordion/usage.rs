@@ -4,8 +4,8 @@ pub const SOURCE: &str = include_str!("usage.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 use shadcn::raw::accordion::composable as acc;
+use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let item = acc::AccordionItem::new(Arc::from("item-1"))

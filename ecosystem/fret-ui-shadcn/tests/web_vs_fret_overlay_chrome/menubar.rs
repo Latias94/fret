@@ -356,7 +356,8 @@ fn build_shadcn_menubar_file_menu_destructive(
     let mut new_window =
         MenubarItem::new("New Window").trailing(MenubarShortcut::new("⌘N").into_element(cx));
     if new_window_destructive {
-        new_window = new_window.variant(fret_ui_shadcn::raw::menubar::MenubarItemVariant::Destructive);
+        new_window =
+            new_window.variant(fret_ui_shadcn::raw::menubar::MenubarItemVariant::Destructive);
     }
 
     Menubar::new(vec![MenubarMenu::new("File").entries(vec![

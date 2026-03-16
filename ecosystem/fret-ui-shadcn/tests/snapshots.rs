@@ -1124,8 +1124,10 @@ fn snapshot_extras_marquee_default() {
     );
     snapshot_for_root("extras_marquee_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::raw::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .into_element(cx),
         ]
     });
 }
@@ -1138,9 +1140,11 @@ fn snapshot_extras_marquee_right_default() {
     );
     snapshot_for_root("extras_marquee_right_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::raw::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .direction(fret_ui_shadcn::raw::extras::MarqueeDirection::Right)
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .direction(fret_ui_shadcn::raw::extras::MarqueeDirection::Right)
+            .into_element(cx),
         ]
     });
 }
@@ -1153,9 +1157,11 @@ fn snapshot_extras_marquee_static_default() {
     );
     snapshot_for_root("extras_marquee_static_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::raw::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .speed_px_per_frame(Px(0.0))
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .speed_px_per_frame(Px(0.0))
+            .into_element(cx),
         ]
     });
 }
@@ -1168,9 +1174,11 @@ fn snapshot_extras_marquee_cycle_width_default() {
     );
     snapshot_for_root("extras_marquee_cycle_width_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::raw::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .cycle_width_px(Px(240.0))
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .cycle_width_px(Px(240.0))
+            .into_element(cx),
         ]
     });
 }
@@ -1300,7 +1308,11 @@ fn snapshot_extras_kanban_default() {
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
-            fret_ui_shadcn::raw::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new(
+                "card-4",
+                "Fix regressions",
+                "in_progress",
+            ),
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
         ]);
 
@@ -1325,7 +1337,11 @@ fn snapshot_extras_kanban_custom_cards() {
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
-            fret_ui_shadcn::raw::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new(
+                "card-4",
+                "Fix regressions",
+                "in_progress",
+            ),
             fret_ui_shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
         ]);
 

@@ -1483,7 +1483,8 @@ fn web_vs_fret_layout_chart_bar_horizontal_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::raw::recharts_geometry::horizontal_bar_rects(plot, values, layout);
+        let rects =
+            fret_ui_shadcn::raw::recharts_geometry::horizontal_bar_rects(plot, values, layout);
         assert_chart_bar_rects_match_web(
             web_name,
             rects,
@@ -1512,14 +1513,15 @@ fn assert_pie_sector_rects_match_web(
     );
 
     let layout = fret_ui_shadcn::raw::recharts_geometry::PieLayout::default();
-    let mut expected = fret_ui_shadcn::raw::recharts_geometry::pie_sectors_with_outer_radius_overrides(
-        svg_rect,
-        values,
-        inner_radius,
-        outer_radius,
-        layout,
-        outer_overrides,
-    );
+    let mut expected =
+        fret_ui_shadcn::raw::recharts_geometry::pie_sectors_with_outer_radius_overrides(
+            svg_rect,
+            values,
+            inner_radius,
+            outer_radius,
+            layout,
+            outer_overrides,
+        );
 
     for (index, ring_inner, ring_outer) in extra_rings {
         let rings = fret_ui_shadcn::raw::recharts_geometry::pie_sectors(
@@ -1626,8 +1628,13 @@ fn web_vs_fret_layout_chart_pie_sector_rects_match_web() {
         CoreSize::new(Px(svg.rect.w), Px(svg.rect.h)),
     );
     let layout = fret_ui_shadcn::raw::recharts_geometry::PieLayout::default();
-    let mut expected =
-        fret_ui_shadcn::raw::recharts_geometry::pie_sectors(svg_rect, &desktop, 0.0, Some(60.0), layout);
+    let mut expected = fret_ui_shadcn::raw::recharts_geometry::pie_sectors(
+        svg_rect,
+        &desktop,
+        0.0,
+        Some(60.0),
+        layout,
+    );
     expected.extend(fret_ui_shadcn::raw::recharts_geometry::pie_sectors(
         svg_rect,
         &mobile,
@@ -1843,7 +1850,9 @@ fn assert_radar_geometry_matches_web(
                 svg_rect, sides, radii,
             )
         } else {
-            fret_ui_shadcn::raw::recharts_geometry::radar_grid_polygon_rects(svg_rect, sides, layout)
+            fret_ui_shadcn::raw::recharts_geometry::radar_grid_polygon_rects(
+                svg_rect, sides, layout,
+            )
         };
         let actual = web_find_polar_grid_concentric_polygons(&theme.root);
         assert_eq!(
@@ -1864,7 +1873,8 @@ fn assert_radar_geometry_matches_web(
     }
 
     if grid_circle {
-        let expected = fret_ui_shadcn::raw::recharts_geometry::radar_grid_circle_rects(svg_rect, layout);
+        let expected =
+            fret_ui_shadcn::raw::recharts_geometry::radar_grid_circle_rects(svg_rect, layout);
         let actual = web_find_polar_grid_concentric_circles(&theme.root);
         assert_eq!(
             expected.len(),
@@ -2458,10 +2468,10 @@ fn assert_chart_series_curve_bounds_match_web(
         .iter()
         .enumerate()
         .map(|(i, (values, kind))| {
-            fret_ui_shadcn::raw::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
-                .unwrap_or_else(|| {
-                    panic!("{web_name}: failed to compute curve bounds for series {i}")
-                })
+            fret_ui_shadcn::raw::recharts_geometry::line_curve_bounds(
+                plot, values, *kind, domain_max,
+            )
+            .unwrap_or_else(|| panic!("{web_name}: failed to compute curve bounds for series {i}"))
         })
         .collect();
     expected.sort_by(|a, b| {
@@ -2537,10 +2547,10 @@ fn assert_chart_stacked_area_fill_bounds_match_web(
         .iter()
         .enumerate()
         .map(|(i, (values, kind))| {
-            fret_ui_shadcn::raw::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
-                .unwrap_or_else(|| {
-                    panic!("{web_name}: failed to compute curve bounds for series {i}")
-                })
+            fret_ui_shadcn::raw::recharts_geometry::line_curve_bounds(
+                plot, values, *kind, domain_max,
+            )
+            .unwrap_or_else(|| panic!("{web_name}: failed to compute curve bounds for series {i}"))
         })
         .collect();
 
@@ -2739,7 +2749,10 @@ fn web_vs_fret_layout_chart_area_variants_curve_bounds_match_web() {
 
     assert_chart_series_curve_bounds_match_web(
         "chart-area-step",
-        &[(&desktop, fret_ui_shadcn::raw::recharts_geometry::CurveKind::Step)],
+        &[(
+            &desktop,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Step,
+        )],
         5,
         None,
     );
