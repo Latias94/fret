@@ -612,7 +612,11 @@ mod authoring_surface_policy_tests {
         assert!(SIMPLE_TODO_DEMO.contains("ui::for_each_keyed_with_cx("));
         assert!(SIMPLE_TODO_DEMO.contains("fn todo_row("));
         assert!(SIMPLE_TODO_DEMO.contains(") -> impl fret_ui_kit::IntoUiElement<App> + use<> {"));
+        assert!(SIMPLE_TODO_DEMO.contains("shadcn::CardContent::new(ui::single(cx, content))"));
+        assert!(SIMPLE_TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, card))"));
         assert!(!SIMPLE_TODO_DEMO.contains(") -> fret_ui::element::AnyElement {"));
+        assert!(!SIMPLE_TODO_DEMO.contains("shadcn::CardContent::new(ui::children![cx; content])"));
+        assert!(!SIMPLE_TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; card])"));
     }
 
     #[test]

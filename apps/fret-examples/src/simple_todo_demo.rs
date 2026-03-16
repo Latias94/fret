@@ -144,7 +144,7 @@ impl SimpleTodoDriver {
                             ),
                             header_actions,
                         ]),
-                        shadcn::CardContent::new(ui::children![cx; content]),
+                        shadcn::CardContent::new(ui::single(cx, content)),
                     ])
                     .ui()
                     .bg(ColorRef::Color(theme.color_token("background")))
@@ -236,14 +236,14 @@ where
     C: fret_ui_kit::IntoUiElement<App>,
 {
     ui::container(move |cx| {
-        ui::children![
-            cx;
-            ui::v_flex(move |cx| ui::children![cx; card])
+        ui::single(
+            cx,
+            ui::v_flex(move |cx| ui::single(cx, card))
                 .w_full()
                 .h_full()
                 .justify_center()
-                .items_center()
-        ]
+                .items_center(),
+        )
     })
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
