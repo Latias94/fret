@@ -15,16 +15,18 @@ pub(super) fn preview_aspect_ratio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let portrait = snippets::portrait::render_preview(cx, tall_image);
     let rtl = snippets::rtl::render_preview(cx, wide_image);
 
-    let notes = doc_layout::notes_block([
-        "Preview follows the shadcn docs flow more closely: demo first, then a minimal usage example.",
-        "API reference: `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`.",
-        "Prefer `AspectRatio::with_child(content).ratio(...)` when you want a prop-like builder that reads closer to shadcn/Radix usage.",
-        "Use `AspectRatio` to lock geometry first, then style radius/border/background around it.",
-        "For richer composition, build a single wrapper element (for example a stack with image + overlay chrome) and pass that wrapper as the child.",
-        "Pick ratio by content type: 16:9 for landscape previews, 1:1 for avatars/thumbnails, 9:16 for reels or short video cards.",
-        "Keep max width explicit on narrow ratios to avoid over-tall layouts in dense editor sidebars.",
-        "Validate RTL and constrained width together so captions and controls remain stable during localization.",
+    let api_reference = doc_layout::notes_block([
+        "`AspectRatio::new(ratio, child)` stays as the minimal explicit constructor; `AspectRatio::with_child(child).ratio(...)` reads closest to the shadcn/Radix docs shape.",
+        "`AspectRatio::new_children(ratio, [...])` and `AspectRatio::with_children([...]).ratio(...)` support direct image + overlay compositions without forcing an extra wrapper at the call site.",
+        "`ratio` defaults to `1 / 1` on `with_child(...)` and `with_children(...)`, matching the upstream optional-ratio contract.",
+        "The primitive owns ratio geometry plus the full-size absolute content host; caller-owned refinements still include max width, radius, border, background, and inner media sizing such as `w_full()` / `h_full()`.",
+        "Overflow remains visible by default, matching Radix. Only opt into clipping when clipping is part of the caller-owned chrome contract.",
+        "API surface owner: `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs` re-exports `ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs`.",
     ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("docsec-api-reference")
+        .description("Public surface summary and ownership notes.");
 
     let sections = vec![
         DocSection::build(cx, "Demo", demo)
@@ -40,16 +42,15 @@ pub(super) fn preview_aspect_ratio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .description("9:16 portrait media for reels/short video cards.")
             .code_rust_from_file_region(snippets::portrait::SOURCE, "example"),
         DocSection::build(cx, "RTL", rtl)
-            .description("AspectRatio should remain direction-agnostic.")
+            .description("AspectRatio should remain direction-agnostic while Arabic caption text still reads naturally in RTL.")
             .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-        DocSection::build(cx, "Notes", notes)
-            .description("API reference pointers and usage notes."),
+        api_reference,
     ];
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Displays content within a desired ratio. Gallery keeps the official 16:9 demo first, then adds Fret-specific square/portrait/RTL examples.",
+            "Preview mirrors the shadcn Aspect Ratio docs path first: Demo, Usage, Square, Portrait, RTL, and API Reference.",
         ),
         sections,
     );

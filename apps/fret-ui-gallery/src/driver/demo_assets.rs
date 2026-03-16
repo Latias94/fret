@@ -4,6 +4,8 @@ use fret_app::App;
 pub(crate) const UI_GALLERY_DEMO_ASSET_BUNDLE_NAME: &str = "ui-gallery-demo-assets";
 pub(crate) const UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY: &str = "shared/media-preview.jpg";
 pub(crate) const UI_GALLERY_CARD_EVENT_COVER_KEY: &str = "card/event-cover.jpg";
+pub(crate) const UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY: &str = "aspect-ratio/landscape.jpg";
+pub(crate) const UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY: &str = "aspect-ratio/portrait.jpg";
 #[cfg(any(test, feature = "gallery-dev"))]
 pub(crate) const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY: &str = "ai/attachments/landscape.jpg";
 #[cfg(any(test, feature = "gallery-dev"))]
@@ -13,6 +15,10 @@ const UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/test-1.jpg");
 const UI_GALLERY_CARD_EVENT_COVER_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/test.jpg");
+const UI_GALLERY_ASPECT_RATIO_LANDSCAPE_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/aspect-ratio-landscape.jpg");
+const UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/aspect-ratio-portrait.jpg");
 #[cfg(any(test, feature = "gallery-dev"))]
 const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/aspect-ratio-landscape.jpg");
@@ -20,21 +26,6 @@ const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES: &[u8] =
 const UI_GALLERY_AI_ATTACHMENT_PORTRAIT_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/aspect-ratio-portrait.jpg");
 #[cfg(not(any(test, feature = "gallery-dev")))]
-const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 2] = [
-    StaticAssetEntry::new(
-        UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
-        AssetRevision(1),
-        UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES,
-    )
-    .with_media_type("image/jpeg"),
-    StaticAssetEntry::new(
-        UI_GALLERY_CARD_EVENT_COVER_KEY,
-        AssetRevision(1),
-        UI_GALLERY_CARD_EVENT_COVER_BYTES,
-    )
-    .with_media_type("image/jpeg"),
-];
-#[cfg(any(test, feature = "gallery-dev"))]
 const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 4] = [
     StaticAssetEntry::new(
         UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
@@ -46,6 +37,45 @@ const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 4] = [
         UI_GALLERY_CARD_EVENT_COVER_KEY,
         AssetRevision(1),
         UI_GALLERY_CARD_EVENT_COVER_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY,
+        AssetRevision(1),
+        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY,
+        AssetRevision(1),
+        UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+];
+#[cfg(any(test, feature = "gallery-dev"))]
+const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 6] = [
+    StaticAssetEntry::new(
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
+        AssetRevision(1),
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_CARD_EVENT_COVER_KEY,
+        AssetRevision(1),
+        UI_GALLERY_CARD_EVENT_COVER_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY,
+        AssetRevision(1),
+        UI_GALLERY_ASPECT_RATIO_LANDSCAPE_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY,
+        AssetRevision(1),
+        UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES,
     )
     .with_media_type("image/jpeg"),
     StaticAssetEntry::new(
@@ -72,6 +102,14 @@ pub(crate) fn ui_gallery_shared_media_preview_request() -> AssetRequest {
 
 pub(crate) fn ui_gallery_card_event_cover_request() -> AssetRequest {
     ui_gallery_demo_bundle_request(UI_GALLERY_CARD_EVENT_COVER_KEY)
+}
+
+pub(crate) fn ui_gallery_aspect_ratio_landscape_request() -> AssetRequest {
+    ui_gallery_demo_bundle_request(UI_GALLERY_ASPECT_RATIO_LANDSCAPE_KEY)
+}
+
+pub(crate) fn ui_gallery_aspect_ratio_portrait_request() -> AssetRequest {
+    ui_gallery_demo_bundle_request(UI_GALLERY_ASPECT_RATIO_PORTRAIT_KEY)
 }
 
 #[cfg(any(test, feature = "gallery-dev"))]
@@ -144,6 +182,53 @@ mod tests {
         assert_eq!(resolved.bytes.as_ref(), UI_GALLERY_CARD_EVENT_COVER_BYTES);
         assert_eq!(
             resolved
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/jpeg")
+        );
+    }
+
+    #[test]
+    fn install_gallery_demo_asset_bundle_registers_aspect_ratio_preview_locators() {
+        let mut app = App::new();
+
+        install_gallery_demo_asset_bundle(&mut app);
+
+        let landscape =
+            fret_runtime::resolve_asset_bytes(&app, &ui_gallery_aspect_ratio_landscape_request())
+                .expect("expected Aspect Ratio landscape preview asset to resolve");
+        assert_eq!(
+            landscape.locator,
+            ui_gallery_aspect_ratio_landscape_request().locator
+        );
+        assert_eq!(landscape.revision, AssetRevision(1));
+        assert_eq!(
+            landscape.bytes.as_ref(),
+            UI_GALLERY_ASPECT_RATIO_LANDSCAPE_BYTES
+        );
+        assert_eq!(
+            landscape
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/jpeg")
+        );
+
+        let portrait =
+            fret_runtime::resolve_asset_bytes(&app, &ui_gallery_aspect_ratio_portrait_request())
+                .expect("expected Aspect Ratio portrait preview asset to resolve");
+        assert_eq!(
+            portrait.locator,
+            ui_gallery_aspect_ratio_portrait_request().locator
+        );
+        assert_eq!(portrait.revision, AssetRevision(1));
+        assert_eq!(
+            portrait.bytes.as_ref(),
+            UI_GALLERY_ASPECT_RATIO_PORTRAIT_BYTES
+        );
+        assert_eq!(
+            portrait
                 .media_type
                 .as_ref()
                 .map(|media_type| media_type.as_str()),

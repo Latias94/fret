@@ -13,13 +13,15 @@ fn portrait_image<H: UiHost>(
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let image_id = demo_image
+    let model_image_id = demo_image
         .as_ref()
-        .and_then(|model| cx.watch_model(model).layout().cloned().flatten())
-        .or_else(|| super::images::portrait_image_id(cx));
+        .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
+    let asset_image = super::images::portrait_image_state(cx);
+    let image_id = model_image_id.or(asset_image.image);
+    let loading = model_image_id.is_none() && asset_image.loading;
 
     shadcn::MediaImage::maybe(image_id)
-        .loading(true)
+        .loading(loading)
         .fit(fret_core::ViewportFit::Cover)
         .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
         .refine_layout(LayoutRefinement::default().w_full().h_full())

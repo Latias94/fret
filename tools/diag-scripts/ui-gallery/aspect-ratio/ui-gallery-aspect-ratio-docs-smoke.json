@@ -303,7 +303,29 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
+          "id": "ui-gallery-aspect-ratio-rtl-figure"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
           "id": "ui-gallery-aspect-ratio-rtl-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-aspect-ratio-rtl-caption"
         }
       },
       "timeout_frames": 600
@@ -318,7 +340,25 @@
       "type": "wait_bounds_stable",
       "target": {
         "kind": "test_id",
+        "id": "ui-gallery-aspect-ratio-rtl-figure"
+      },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
         "id": "ui-gallery-aspect-ratio-rtl-content"
+      },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-aspect-ratio-rtl-caption"
       },
       "stable_frames": 10,
       "timeout_frames": 600
@@ -352,8 +392,36 @@
       "predicate": {
         "kind": "bounds_center_approx_equal",
         "a": { "kind": "test_id", "id": "docsec-rtl-content" },
-        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl-figure" },
         "eps_px": 64.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl-caption" },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl-caption" },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-api-reference-content" }
       },
       "timeout_frames": 600
     },

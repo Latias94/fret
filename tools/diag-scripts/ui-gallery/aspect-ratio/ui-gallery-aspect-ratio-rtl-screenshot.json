@@ -1,20 +1,23 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-aspect-ratio-demo-screenshot",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "name": "ui-gallery-aspect-ratio-rtl-screenshot",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "aspect_ratio", "rtl", "screenshots"]
   },
   "steps": [
     { "type": "reset_diagnostics" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
       },
-      "timeout_frames": 600
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -22,7 +25,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
       },
-      "timeout_frames": 600
+      "timeout_frames": 240
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
@@ -35,7 +38,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-aspect-ratio" }
       },
-      "timeout_frames": 600
+      "timeout_frames": 240
     },
     {
       "type": "scroll_into_view",
@@ -57,22 +60,6 @@
       "timeout_frames": 600
     },
     {
-      "type": "wait_bounds_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-demo" },
-      "stable_frames": 10,
-      "timeout_frames": 600
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "bounds_center_approx_equal",
-        "a": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-demo" },
-        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-demo-content" },
-        "eps_px": 8.0
-      },
-      "timeout_frames": 600
-    },
-    {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
@@ -83,7 +70,28 @@
       },
       "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-aspect-ratio-demo-screenshot" },
-    { "type": "capture_screenshot", "label": "ui-gallery-aspect-ratio-demo-screenshot" }
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl-figure" },
+      "delta_y": -200.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl-figure" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl-caption" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-aspect-ratio-rtl" },
+    { "type": "capture_screenshot", "label": "ui-gallery-aspect-ratio-rtl" }
   ]
 }
