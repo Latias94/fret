@@ -5,12 +5,13 @@
 use std::sync::Arc;
 
 use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
-use fret_runtime::Model;
+use fret_runtime::{ActionId, Model};
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
     AnyElement, LayoutStyle, PressableProps, SemanticsDecoration, SemanticsProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::controllable_state;
@@ -23,7 +24,7 @@ use fret_ui_kit::{
 };
 use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, Input, OnInputSubmit,
-    Tooltip, TooltipContent, TooltipTrigger,
+    Tooltip, TooltipContent, TooltipTrigger, separator,
 };
 
 #[cfg(feature = "webview")]
@@ -506,7 +507,7 @@ impl WebPreviewNavigation {
             move |_cx| vec![row],
         );
 
-        let separator = fret_ui_shadcn::separator().into_element(cx);
+        let separator = separator().into_element(cx);
         let el = ui::v_stack(move |_cx| vec![bar, separator])
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N0)
@@ -527,6 +528,7 @@ impl WebPreviewNavigation {
 pub struct WebPreviewNavigationButton {
     tooltip: Option<Arc<str>>,
     disabled: bool,
+    action: Option<ActionId>,
     on_activate: Option<fret_ui::action::OnActivate>,
     #[cfg(feature = "webview")]
     backend_action: Option<WebPreviewBackendAction>,
@@ -539,6 +541,7 @@ impl std::fmt::Debug for WebPreviewNavigationButton {
         f.debug_struct("WebPreviewNavigationButton")
             .field("tooltip", &self.tooltip.as_deref())
             .field("disabled", &self.disabled)
+            .field("action", &self.action)
             .field("has_on_activate", &self.on_activate.is_some())
             .field("children_len", &self.children.len())
             .field("test_id", &self.test_id.as_deref())
@@ -551,6 +554,7 @@ impl WebPreviewNavigationButton {
         Self {
             tooltip: None,
             disabled: false,
+            action: None,
             on_activate: None,
             #[cfg(feature = "webview")]
             backend_action: None,
@@ -566,6 +570,12 @@ impl WebPreviewNavigationButton {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Bind a stable action ID to this web-preview navigation button (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
         self
     }
 
@@ -612,18 +622,23 @@ impl WebPreviewNavigationButton {
         };
         #[cfg(not(feature = "webview"))]
         let derived_disabled = false;
+        let action_disabled = self
+            .action
+            .as_ref()
+            .is_some_and(|action| !cx.command_is_enabled(action));
 
         let mut button = Button::new("")
             .children(self.children)
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Sm)
-            .disabled(self.disabled || derived_disabled)
+            .disabled(self.disabled || derived_disabled || action_disabled)
             .refine_layout(LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)))
             .refine_style(
                 ChromeRefinement::default()
                     .p(Space::N0)
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
             );
+        let widget_action = self.action;
 
         #[cfg(feature = "webview")]
         let backend_action = self.backend_action;
@@ -637,25 +652,49 @@ impl WebPreviewNavigationButton {
         if let Some(action) = backend_action {
             if let Some(controller) = use_web_preview_controller(cx) {
                 let nav_intent = controller.nav_intent.clone();
+                let widget_action = widget_action.clone();
                 let user_on_activate = user_on_activate.clone();
                 button = button.on_activate(Arc::new(move |host, action_cx, reason| {
                     let _ = host.models_mut().update(&nav_intent, |v| *v = Some(action));
+                    if let Some(widget_action) = widget_action.as_ref() {
+                        host.record_pending_command_dispatch_source(
+                            action_cx,
+                            widget_action,
+                            reason,
+                        );
+                        host.dispatch_command(Some(action_cx.window), widget_action.clone());
+                    }
                     if let Some(user) = user_on_activate.as_ref() {
                         user(host, action_cx, reason);
                     }
                     host.notify(action_cx);
                     host.request_redraw(action_cx.window);
                 }));
-            } else if let Some(on_activate) = user_on_activate {
+            } else {
+                if let Some(action_id) = widget_action.clone() {
+                    button = button.action(action_id);
+                }
+                if let Some(on_activate) = user_on_activate {
+                    button = button.on_activate(on_activate);
+                }
+            }
+        } else {
+            if let Some(action_id) = widget_action.clone() {
+                button = button.action(action_id);
+            }
+            if let Some(on_activate) = user_on_activate {
                 button = button.on_activate(on_activate);
             }
-        } else if let Some(on_activate) = user_on_activate {
-            button = button.on_activate(on_activate);
         }
 
         #[cfg(not(feature = "webview"))]
-        if let Some(on_activate) = user_on_activate {
-            button = button.on_activate(on_activate);
+        {
+            if let Some(action_id) = widget_action.clone() {
+                button = button.action(action_id);
+            }
+            if let Some(on_activate) = user_on_activate {
+                button = button.on_activate(on_activate);
+            }
         }
         if let Some(test_id) = self.test_id.clone() {
             button = button.test_id(test_id);

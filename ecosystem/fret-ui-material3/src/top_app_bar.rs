@@ -10,6 +10,7 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use fret_core::{Axis, Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_icons::IconId;
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -384,6 +385,7 @@ struct TopAppBarScrollLayout {
 #[derive(Clone)]
 pub struct TopAppBarAction {
     icon: IconId,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
@@ -394,6 +396,7 @@ impl std::fmt::Debug for TopAppBarAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TopAppBarAction")
             .field("icon", &self.icon.as_str())
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id)
@@ -405,11 +408,18 @@ impl TopAppBarAction {
     pub fn new(icon: IconId) -> Self {
         Self {
             icon,
+            action: None,
             on_activate: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    /// Bind a stable action ID to this top-app-bar action (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
     }
 
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
@@ -966,6 +976,9 @@ fn top_app_bar_icon_button<H: UiHost>(
         .style(style)
         .disabled(action.disabled);
 
+    if let Some(action_id) = action.action.clone() {
+        btn = btn.action(action_id);
+    }
     if let Some(handler) = action.on_activate.clone() {
         btn = btn.on_activate(handler);
     }

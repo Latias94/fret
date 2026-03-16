@@ -11,13 +11,15 @@ use std::sync::Arc;
 use fret_core::{
     Axis, Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
-use fret_runtime::Model;
+use fret_runtime::{ActionId, Model};
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
@@ -102,6 +104,7 @@ impl DialogStyle {
 #[derive(Clone)]
 pub struct DialogAction {
     label: Arc<str>,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
@@ -112,6 +115,7 @@ impl std::fmt::Debug for DialogAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DialogAction")
             .field("label", &self.label)
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("disabled", &self.disabled)
             .field("a11y_label", &self.a11y_label)
@@ -124,11 +128,18 @@ impl DialogAction {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
+            action: None,
             on_activate: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    /// Bind a stable action ID to this dialog action (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
     }
 
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
@@ -158,6 +169,7 @@ impl DialogAction {
     ) -> AnyElement {
         let DialogAction {
             label,
+            action,
             on_activate,
             disabled,
             a11y_label,
@@ -168,9 +180,15 @@ impl DialogAction {
             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
         cx.pressable_with_id_props(move |cx, st, pressable_id| {
-            let enabled = !disabled;
+            let action_enabled = action
+                .as_ref()
+                .is_none_or(|action| cx.command_is_enabled(action));
+            let enabled = !disabled && action_enabled;
 
             if enabled {
+                if let Some(action) = action.clone() {
+                    cx.pressable_dispatch_action_if_enabled(action);
+                }
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate(on_activate);
                 }

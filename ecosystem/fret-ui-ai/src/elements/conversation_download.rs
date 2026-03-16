@@ -1,7 +1,9 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px};
 use fret_icons::IconId;
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -13,6 +15,8 @@ use fret_ui_shadcn::facade::{Button, ButtonSize, ButtonVariant};
 
 use super::conversation::{CONVERSATION_DOWNLOAD_SLOT_KEY, use_conversation_context};
 
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
+
 /// A small “download/export transcript” button.
 ///
 /// This component emits an intent via `on_activate`; performing the actual effect (clipboard/file IO)
@@ -20,6 +24,8 @@ use super::conversation::{CONVERSATION_DOWNLOAD_SLOT_KEY, use_conversation_conte
 pub struct ConversationDownload {
     label: Arc<str>,
     disabled: bool,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
     children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
@@ -33,6 +39,8 @@ impl std::fmt::Debug for ConversationDownload {
         f.debug_struct("ConversationDownload")
             .field("label", &self.label.as_ref())
             .field("disabled", &self.disabled)
+            .field("action", &self.action)
+            .field("action_payload", &self.action_payload.is_some())
             .field("has_on_activate", &self.on_activate.is_some())
             .field("has_children", &self.children.is_some())
             .field("test_id", &self.test_id.as_deref())
@@ -46,6 +54,8 @@ impl ConversationDownload {
         Self {
             label: label.into(),
             disabled: false,
+            action: None,
+            action_payload: None,
             on_activate: None,
             children: None,
             test_id: None,
@@ -68,6 +78,28 @@ impl ConversationDownload {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Bind a stable action ID to this conversation download control (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized conversation-download actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`ConversationDownload::action_payload`], but computes the payload lazily.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -116,6 +148,12 @@ impl ConversationDownload {
         .variant(ButtonVariant::Outline)
         .disabled(self.disabled);
 
+        if let Some(action) = self.action {
+            btn = btn.action(action);
+        }
+        if let Some(payload) = self.action_payload {
+            btn = btn.action_payload_factory(payload);
+        }
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
         }

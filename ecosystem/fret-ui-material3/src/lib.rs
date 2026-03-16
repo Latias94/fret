@@ -255,6 +255,8 @@ mod tests {
         let action_sources = [
             include_str!("button.rs"),
             include_str!("fab.rs"),
+            include_str!("card.rs"),
+            include_str!("dialog.rs"),
             include_str!("icon_button.rs"),
             include_str!("checkbox.rs"),
             include_str!("switch.rs"),
@@ -263,6 +265,7 @@ mod tests {
             include_str!("suggestion_chip.rs"),
             include_str!("filter_chip.rs"),
             include_str!("input_chip.rs"),
+            include_str!("top_app_bar.rs"),
         ];
 
         for src in action_sources {

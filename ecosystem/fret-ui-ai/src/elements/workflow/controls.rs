@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
@@ -12,6 +13,8 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space, ui,
 };
 use fret_ui_shadcn::facade::{Button, ButtonSize, ButtonVariant};
+
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 
 /// AI Elements-aligned workflow `Controls` chrome (UI-only).
 ///
@@ -111,6 +114,7 @@ pub struct WorkflowControlsButton {
     disabled: bool,
     test_id: Option<Arc<str>>,
     command: Option<CommandId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
 }
 
@@ -122,6 +126,7 @@ impl std::fmt::Debug for WorkflowControlsButton {
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id.as_deref())
             .field("command", &self.command)
+            .field("action_payload", &self.action_payload.is_some())
             .field("on_activate", &self.on_activate.is_some())
             .finish()
     }
@@ -135,6 +140,7 @@ impl WorkflowControlsButton {
             disabled: false,
             test_id: None,
             command: None,
+            action_payload: None,
             on_activate: None,
         }
     }
@@ -146,6 +152,28 @@ impl WorkflowControlsButton {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    /// Bind a stable action ID to this workflow controls button (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized workflow-controls actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`WorkflowControlsButton::action_payload`], but computes the payload lazily.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -170,6 +198,9 @@ impl WorkflowControlsButton {
 
         if let Some(command) = self.command {
             btn = btn.on_click(command);
+        }
+        if let Some(payload) = self.action_payload {
+            btn = btn.action_payload_factory(payload);
         }
 
         if let Some(on_activate) = self.on_activate {
