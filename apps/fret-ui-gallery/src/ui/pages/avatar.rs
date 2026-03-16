@@ -27,7 +27,7 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "Core parity is already in a good place: default size, circular clipping, fallback timing, overlap geometry, and dropdown trigger attribution all match the audited upstream outcomes.",
         "Gallery sections now mirror shadcn Avatar docs first: Demo, Usage, Basic, Badge, Badge with Icon, Avatar Group, Avatar Group Count, Avatar Group with Icon, Sizes, Dropdown, RTL, API Reference.",
-        "Gallery snippets now generate a self-contained `ImageSource::rgba8(...) -> ImageId` demo asset locally instead of relaying a page-owned `Model<Option<ImageId>>` through the docs shell.",
+        "Gallery snippets now resolve their demo image through the shared gallery demo asset bundle instead of relaying page-owned image models or synthesizing local RGBA buffers.",
         "`Fallback only` remains a Fret-specific follow-up section for compact regression coverage across sizes.",
     ]);
 
@@ -50,7 +50,7 @@ pub(super) fn preview_avatar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-avatar-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
-        .description("Single avatar with an image + fallback using a self-contained demo image.")
+        .description("Single avatar with an image + fallback using a bundle-backed demo image.")
         .test_id_prefix("ui-gallery-avatar-basic")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let with_badge = DocSection::build(cx, "Badge", with_badge)
