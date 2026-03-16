@@ -952,12 +952,12 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
         .and_then(|label| label.chars().next())
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let in_view = |d: time::Date| {
         (d.month() == month_a && d.year() == year_a) || (d.month() == month_b && d.year() == year_b)
@@ -3170,7 +3170,7 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
         let selected = selected.clone();
 
         vec![
-            fret_ui_shadcn::card::card_content(move |cx| {
+            fret_ui_shadcn::raw::card::card_content(move |cx| {
                 let calendar =
                     shadcn::Calendar::new(month_model.clone(), selected.clone()).into_element(cx);
                 let container_props = match &calendar.kind {

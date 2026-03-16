@@ -1094,10 +1094,10 @@ fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
         Point::new(Px(web_plot.x), Px(web_plot.y)),
         CoreSize::new(Px(web_plot.w), Px(web_plot.h)),
     );
-    let bars = fret_ui_shadcn::recharts_geometry::bar_rects(
+    let bars = fret_ui_shadcn::raw::recharts_geometry::bar_rects(
         plot,
         &values,
-        fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::BarChartSeriesLayout::default(),
     );
     assert_eq!(bars.len(), web_bars.len());
 
@@ -1176,7 +1176,7 @@ fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
 
 #[test]
 fn web_vs_fret_layout_chart_bar_interactive_bar_rects_match_web() {
-    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let layout = fret_ui_shadcn::raw::recharts_geometry::BarChartSeriesLayout::default();
     let web_name = "chart-bar-interactive";
 
     let web = read_web_golden(web_name);
@@ -1198,7 +1198,7 @@ fn web_vs_fret_layout_chart_bar_interactive_bar_rects_match_web() {
         CoreSize::new(Px(plot.w), Px(plot.h)),
     );
     let rects =
-        fret_ui_shadcn::recharts_geometry::bar_rects(plot, &CHART_INTERACTIVE_DESKTOP, layout);
+        fret_ui_shadcn::raw::recharts_geometry::bar_rects(plot, &CHART_INTERACTIVE_DESKTOP, layout);
     assert_chart_bar_rects_match_web(
         web_name,
         rects,
@@ -1208,7 +1208,7 @@ fn web_vs_fret_layout_chart_bar_interactive_bar_rects_match_web() {
 
 #[test]
 fn web_vs_fret_layout_chart_bar_interactive_mobile_bar_rects_match_web() {
-    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let layout = fret_ui_shadcn::raw::recharts_geometry::BarChartSeriesLayout::default();
     let web_name = "chart-bar-interactive.mobile";
 
     let web = read_web_golden(web_name);
@@ -1230,7 +1230,7 @@ fn web_vs_fret_layout_chart_bar_interactive_mobile_bar_rects_match_web() {
         CoreSize::new(Px(plot.w), Px(plot.h)),
     );
     let rects =
-        fret_ui_shadcn::recharts_geometry::bar_rects(plot, &CHART_INTERACTIVE_MOBILE, layout);
+        fret_ui_shadcn::raw::recharts_geometry::bar_rects(plot, &CHART_INTERACTIVE_MOBILE, layout);
     assert_chart_bar_rects_match_web(
         web_name,
         rects,
@@ -1240,7 +1240,7 @@ fn web_vs_fret_layout_chart_bar_interactive_mobile_bar_rects_match_web() {
 
 fn assert_chart_bar_rects_match_web(
     web_name: &str,
-    rects: Vec<fret_ui_shadcn::recharts_geometry::BarRect>,
+    rects: Vec<fret_ui_shadcn::raw::recharts_geometry::BarRect>,
     expected: &[WebRect],
 ) {
     let mut actual: Vec<Rect> = rects.into_iter().map(|b| b.rect).collect();
@@ -1281,7 +1281,7 @@ fn assert_chart_bar_rects_match_web(
 
 #[test]
 fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
-    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let layout = fret_ui_shadcn::raw::recharts_geometry::BarChartSeriesLayout::default();
 
     {
         let web_name = "chart-bar-active";
@@ -1296,7 +1296,7 @@ fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::recharts_geometry::bar_rects(plot, &values, layout);
+        let rects = fret_ui_shadcn::raw::recharts_geometry::bar_rects(plot, &values, layout);
         assert_chart_bar_rects_match_web(
             web_name,
             rects,
@@ -1318,7 +1318,7 @@ fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::recharts_geometry::grouped_bar_rects(
+        let rects = fret_ui_shadcn::raw::recharts_geometry::grouped_bar_rects(
             plot,
             &[&desktop, &mobile],
             layout,
@@ -1345,7 +1345,7 @@ fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::recharts_geometry::stacked_bar_rects(
+        let rects = fret_ui_shadcn::raw::recharts_geometry::stacked_bar_rects(
             plot,
             &[&desktop, &mobile],
             layout,
@@ -1370,7 +1370,7 @@ fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::recharts_geometry::bar_rects(plot, &values, layout);
+        let rects = fret_ui_shadcn::raw::recharts_geometry::bar_rects(plot, &values, layout);
         assert_chart_bar_rects_match_web(
             web_name,
             rects,
@@ -1392,7 +1392,7 @@ fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::recharts_geometry::grouped_bar_rects(
+        let rects = fret_ui_shadcn::raw::recharts_geometry::grouped_bar_rects(
             plot,
             &[&desktop, &mobile],
             layout,
@@ -1422,7 +1422,7 @@ fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::recharts_geometry::grouped_bar_rects(
+        let rects = fret_ui_shadcn::raw::recharts_geometry::grouped_bar_rects(
             plot,
             &[&desktop, &mobile],
             layout,
@@ -1438,7 +1438,7 @@ fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
 
 #[test]
 fn web_vs_fret_layout_chart_bar_negative_bar_rects_match_web() {
-    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let layout = fret_ui_shadcn::raw::recharts_geometry::BarChartSeriesLayout::default();
     let web_name = "chart-bar-negative";
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -1451,7 +1451,7 @@ fn web_vs_fret_layout_chart_bar_negative_bar_rects_match_web() {
         Point::new(Px(plot.x), Px(plot.y)),
         CoreSize::new(Px(plot.w), Px(plot.h)),
     );
-    let rects = fret_ui_shadcn::recharts_geometry::symmetric_bar_rects(plot, &values, layout);
+    let rects = fret_ui_shadcn::raw::recharts_geometry::symmetric_bar_rects(plot, &values, layout);
     assert_chart_bar_rects_match_web(
         web_name,
         rects,
@@ -1461,7 +1461,7 @@ fn web_vs_fret_layout_chart_bar_negative_bar_rects_match_web() {
 
 #[test]
 fn web_vs_fret_layout_chart_bar_horizontal_variants_bar_rects_match_web() {
-    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let layout = fret_ui_shadcn::raw::recharts_geometry::BarChartSeriesLayout::default();
 
     let month_desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
     let visitors = [275.0_f32, 200.0, 187.0, 173.0, 90.0];
@@ -1483,7 +1483,7 @@ fn web_vs_fret_layout_chart_bar_horizontal_variants_bar_rects_match_web() {
             Point::new(Px(plot.x), Px(plot.y)),
             CoreSize::new(Px(plot.w), Px(plot.h)),
         );
-        let rects = fret_ui_shadcn::recharts_geometry::horizontal_bar_rects(plot, values, layout);
+        let rects = fret_ui_shadcn::raw::recharts_geometry::horizontal_bar_rects(plot, values, layout);
         assert_chart_bar_rects_match_web(
             web_name,
             rects,
@@ -1511,8 +1511,8 @@ fn assert_pie_sector_rects_match_web(
         CoreSize::new(Px(svg.rect.w), Px(svg.rect.h)),
     );
 
-    let layout = fret_ui_shadcn::recharts_geometry::PieLayout::default();
-    let mut expected = fret_ui_shadcn::recharts_geometry::pie_sectors_with_outer_radius_overrides(
+    let layout = fret_ui_shadcn::raw::recharts_geometry::PieLayout::default();
+    let mut expected = fret_ui_shadcn::raw::recharts_geometry::pie_sectors_with_outer_radius_overrides(
         svg_rect,
         values,
         inner_radius,
@@ -1522,7 +1522,7 @@ fn assert_pie_sector_rects_match_web(
     );
 
     for (index, ring_inner, ring_outer) in extra_rings {
-        let rings = fret_ui_shadcn::recharts_geometry::pie_sectors(
+        let rings = fret_ui_shadcn::raw::recharts_geometry::pie_sectors(
             svg_rect,
             values,
             *ring_inner,
@@ -1625,10 +1625,10 @@ fn web_vs_fret_layout_chart_pie_sector_rects_match_web() {
         Point::new(Px(svg.rect.x), Px(svg.rect.y)),
         CoreSize::new(Px(svg.rect.w), Px(svg.rect.h)),
     );
-    let layout = fret_ui_shadcn::recharts_geometry::PieLayout::default();
+    let layout = fret_ui_shadcn::raw::recharts_geometry::PieLayout::default();
     let mut expected =
-        fret_ui_shadcn::recharts_geometry::pie_sectors(svg_rect, &desktop, 0.0, Some(60.0), layout);
-    expected.extend(fret_ui_shadcn::recharts_geometry::pie_sectors(
+        fret_ui_shadcn::raw::recharts_geometry::pie_sectors(svg_rect, &desktop, 0.0, Some(60.0), layout);
+    expected.extend(fret_ui_shadcn::raw::recharts_geometry::pie_sectors(
         svg_rect,
         &mobile,
         70.0,
@@ -1716,7 +1716,7 @@ fn web_vs_fret_layout_chart_pie_sector_rects_match_web() {
 fn assert_radar_geometry_matches_web(
     web_name: &str,
     series: &[&[f32]],
-    layout: fret_ui_shadcn::recharts_geometry::PolarChartLayout,
+    layout: fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout,
     grid_polygon: bool,
     grid_circle: bool,
     grid_radii_override: Option<&[f32]>,
@@ -1737,7 +1737,7 @@ fn assert_radar_geometry_matches_web(
         all_values.extend_from_slice(values);
     }
     let domain_max =
-        fret_ui_shadcn::recharts_geometry::nice_polar_domain_max_for_values(&all_values, 5);
+        fret_ui_shadcn::raw::recharts_geometry::nice_polar_domain_max_for_values(&all_values, 5);
 
     fn union_rect(rects: &[Rect]) -> Option<Rect> {
         let mut min_x = f32::INFINITY;
@@ -1768,7 +1768,7 @@ fn assert_radar_geometry_matches_web(
 
     let expected_dots = if dots {
         let values = series.first().copied().unwrap_or(&[]);
-        let mut rects = fret_ui_shadcn::recharts_geometry::radar_dot_rects(
+        let mut rects = fret_ui_shadcn::raw::recharts_geometry::radar_dot_rects(
             svg_rect, values, domain_max, 4.0, layout,
         );
         rects.sort_by(|a, b| {
@@ -1799,7 +1799,7 @@ fn assert_radar_geometry_matches_web(
             .iter()
             .enumerate()
             .map(|(i, values)| {
-                fret_ui_shadcn::recharts_geometry::radar_polygon_rect(
+                fret_ui_shadcn::raw::recharts_geometry::radar_polygon_rect(
                     svg_rect, values, domain_max, layout,
                 )
                 .unwrap_or_else(|| {
@@ -1839,11 +1839,11 @@ fn assert_radar_geometry_matches_web(
     if grid_polygon {
         let sides = series.first().map(|s| s.len()).unwrap_or(0).max(3);
         let expected = if let Some(radii) = grid_radii_override {
-            fret_ui_shadcn::recharts_geometry::radar_grid_polygon_rects_with_radii(
+            fret_ui_shadcn::raw::recharts_geometry::radar_grid_polygon_rects_with_radii(
                 svg_rect, sides, radii,
             )
         } else {
-            fret_ui_shadcn::recharts_geometry::radar_grid_polygon_rects(svg_rect, sides, layout)
+            fret_ui_shadcn::raw::recharts_geometry::radar_grid_polygon_rects(svg_rect, sides, layout)
         };
         let actual = web_find_polar_grid_concentric_polygons(&theme.root);
         assert_eq!(
@@ -1864,7 +1864,7 @@ fn assert_radar_geometry_matches_web(
     }
 
     if grid_circle {
-        let expected = fret_ui_shadcn::recharts_geometry::radar_grid_circle_rects(svg_rect, layout);
+        let expected = fret_ui_shadcn::raw::recharts_geometry::radar_grid_circle_rects(svg_rect, layout);
         let actual = web_find_polar_grid_concentric_circles(&theme.root);
         assert_eq!(
             expected.len(),
@@ -1923,7 +1923,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-default",
         &[&default],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         true,
         false,
         None,
@@ -1934,7 +1934,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-dots",
         &[&default],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         true,
         false,
         None,
@@ -1945,7 +1945,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-grid-none",
         &[&default],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         false,
         false,
         None,
@@ -1956,7 +1956,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-grid-fill",
         &[&default_grid_fill],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         true,
         false,
         None,
@@ -1967,7 +1967,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-grid-circle",
         &[&default],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         false,
         true,
         None,
@@ -1978,7 +1978,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-grid-circle-fill",
         &[&default_grid_fill],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         false,
         true,
         None,
@@ -1989,7 +1989,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-grid-circle-no-lines",
         &[&circle_no_lines],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         false,
         true,
         None,
@@ -2000,7 +2000,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-grid-custom",
         &[&default],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         true,
         false,
         Some(&[90.0]),
@@ -2011,7 +2011,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-multiple",
         &[&multiple_desktop, &multiple_mobile],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         true,
         false,
         None,
@@ -2022,7 +2022,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-lines-only",
         &[&lines_only_desktop, &lines_only_mobile],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         true,
         false,
         None,
@@ -2033,7 +2033,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     assert_radar_geometry_matches_web(
         "chart-radar-radius",
         &[&multiple_desktop, &multiple_mobile],
-        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default(),
         true,
         false,
         None,
@@ -2042,7 +2042,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     );
 
     {
-        let mut layout = fret_ui_shadcn::recharts_geometry::PolarChartLayout::default();
+        let mut layout = fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default();
         layout.margin_top_px = 10.0;
         layout.margin_right_px = 10.0;
         layout.margin_bottom_px = 10.0;
@@ -2061,7 +2061,7 @@ fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
     }
 
     {
-        let mut layout = fret_ui_shadcn::recharts_geometry::PolarChartLayout::default();
+        let mut layout = fret_ui_shadcn::raw::recharts_geometry::PolarChartLayout::default();
         layout.margin_top_px = -40.0;
         layout.margin_bottom_px = -10.0;
 
@@ -2094,13 +2094,13 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
         let web = read_web_golden("chart-radial-grid");
         let theme = web_theme(&web);
         let svg_rect = svg_rect(theme);
-        let expected_grid = fret_ui_shadcn::recharts_geometry::radial_grid_circle_rects(
+        let expected_grid = fret_ui_shadcn::raw::recharts_geometry::radial_grid_circle_rects(
             svg_rect,
             30.0,
             100.0,
             values.len(),
         );
-        let expected_sectors = fret_ui_shadcn::recharts_geometry::radial_bar_sector_rects(
+        let expected_sectors = fret_ui_shadcn::raw::recharts_geometry::radial_bar_sector_rects(
             svg_rect, &values, 275.0, 0.0, 360.0, 30.0, 100.0, 5.6,
         );
 
@@ -2158,7 +2158,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
         let theme = web_theme(&web);
         let svg_rect = svg_rect(theme);
 
-        let expected_bg = fret_ui_shadcn::recharts_geometry::radial_bar_background_rects(
+        let expected_bg = fret_ui_shadcn::raw::recharts_geometry::radial_bar_background_rects(
             svg_rect,
             values.len(),
             0.0,
@@ -2167,7 +2167,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
             110.0,
             5.6,
         );
-        let expected_fg = fret_ui_shadcn::recharts_geometry::radial_bar_sector_rects(
+        let expected_fg = fret_ui_shadcn::raw::recharts_geometry::radial_bar_sector_rects(
             svg_rect, &values, 1400.0, 0.0, 360.0, 30.0, 110.0, 5.6,
         );
 
@@ -2209,7 +2209,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
         let start_angle = -90.0;
         let end_angle = 380.0;
 
-        let expected_bg = fret_ui_shadcn::recharts_geometry::radial_bar_background_rects(
+        let expected_bg = fret_ui_shadcn::raw::recharts_geometry::radial_bar_background_rects(
             svg_rect,
             values.len(),
             0.0,
@@ -2218,7 +2218,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
             110.0,
             5.6,
         );
-        let expected_fg = fret_ui_shadcn::recharts_geometry::radial_bar_sector_rects(
+        let expected_fg = fret_ui_shadcn::raw::recharts_geometry::radial_bar_sector_rects(
             svg_rect,
             &values,
             1400.0,
@@ -2283,7 +2283,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
 
         let circles = web_find_polar_grid_concentric_circles(&theme.root);
         let mut expected_circles =
-            fret_ui_shadcn::recharts_geometry::polar_circle_rects(svg_rect, &[86.0, 74.0]);
+            fret_ui_shadcn::raw::recharts_geometry::polar_circle_rects(svg_rect, &[86.0, 74.0]);
         expected_circles.sort_by(|a, b| {
             a.size
                 .width
@@ -2327,7 +2327,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
             0.0
         };
         let expected_bg =
-            fret_ui_shadcn::recharts_geometry::annular_sector_rect_with_corner_radius(
+            fret_ui_shadcn::raw::recharts_geometry::annular_sector_rect_with_corner_radius(
                 svg_rect,
                 0.0,
                 total_span,
@@ -2346,7 +2346,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
             fg.len()
         );
         let end = (value / domain_max) * total_span;
-        let expected_fg = fret_ui_shadcn::recharts_geometry::annular_sector_rect(
+        let expected_fg = fret_ui_shadcn::raw::recharts_geometry::annular_sector_rect(
             svg_rect, 0.0, end, band_inner, band_outer,
         )
         .unwrap_or_else(|| panic!("{web_name}: failed to compute sector rect"));
@@ -2367,7 +2367,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
 
         let desktop_end = (desktop / total) * span;
         let expected = [
-            fret_ui_shadcn::recharts_geometry::annular_sector_rect(
+            fret_ui_shadcn::raw::recharts_geometry::annular_sector_rect(
                 svg_rect,
                 0.0,
                 desktop_end,
@@ -2375,7 +2375,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
                 outer,
             )
             .unwrap_or_else(|| panic!("chart-radial-stacked: failed to compute desktop rect")),
-            fret_ui_shadcn::recharts_geometry::annular_sector_rect(
+            fret_ui_shadcn::raw::recharts_geometry::annular_sector_rect(
                 svg_rect,
                 desktop_end,
                 span,
@@ -2423,7 +2423,7 @@ fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
 
 fn assert_chart_series_curve_bounds_match_web(
     web_name: &str,
-    series: &[(&[f32], fret_ui_shadcn::recharts_geometry::CurveKind)],
+    series: &[(&[f32], fret_ui_shadcn::raw::recharts_geometry::CurveKind)],
     y_tick_count: usize,
     domain_max: Option<f32>,
 ) {
@@ -2451,14 +2451,14 @@ fn assert_chart_series_curve_bounds_match_web(
         for (values, _) in series {
             all.extend_from_slice(values);
         }
-        fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(&all, y_tick_count)
+        fret_ui_shadcn::raw::recharts_geometry::nice_domain_max_for_values(&all, y_tick_count)
     });
 
     let mut expected: Vec<Rect> = series
         .iter()
         .enumerate()
         .map(|(i, (values, kind))| {
-            fret_ui_shadcn::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
+            fret_ui_shadcn::raw::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
                 .unwrap_or_else(|| {
                     panic!("{web_name}: failed to compute curve bounds for series {i}")
                 })
@@ -2491,7 +2491,7 @@ fn assert_chart_series_curve_bounds_match_web(
 
 fn assert_chart_stacked_area_fill_bounds_match_web(
     web_name: &str,
-    stacked_series: &[(&[f32], fret_ui_shadcn::recharts_geometry::CurveKind)],
+    stacked_series: &[(&[f32], fret_ui_shadcn::raw::recharts_geometry::CurveKind)],
     y_tick_count: usize,
     domain_max: Option<f32>,
 ) {
@@ -2519,7 +2519,7 @@ fn assert_chart_stacked_area_fill_bounds_match_web(
         for (values, _) in stacked_series {
             all.extend_from_slice(values);
         }
-        fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(&all, y_tick_count)
+        fret_ui_shadcn::raw::recharts_geometry::nice_domain_max_for_values(&all, y_tick_count)
     });
 
     fn union_rect(a: Rect, b: Rect) -> Rect {
@@ -2537,7 +2537,7 @@ fn assert_chart_stacked_area_fill_bounds_match_web(
         .iter()
         .enumerate()
         .map(|(i, (values, kind))| {
-            fret_ui_shadcn::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
+            fret_ui_shadcn::raw::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
                 .unwrap_or_else(|| {
                     panic!("{web_name}: failed to compute curve bounds for series {i}")
                 })
@@ -2593,23 +2593,23 @@ fn web_vs_fret_layout_chart_line_variants_curve_bounds_match_web() {
     let cases = [
         (
             "chart-line-linear",
-            fret_ui_shadcn::recharts_geometry::CurveKind::Linear,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Linear,
         ),
         (
             "chart-line-step",
-            fret_ui_shadcn::recharts_geometry::CurveKind::Step,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Step,
         ),
         (
             "chart-line-dots",
-            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
         ),
         (
             "chart-line-dots-custom",
-            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
         ),
         (
             "chart-line-label",
-            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
         ),
     ];
 
@@ -2625,7 +2625,7 @@ fn web_vs_fret_layout_chart_line_dots_colors_curve_bounds_match_web() {
         "chart-line-dots-colors",
         &[(
             &visitors,
-            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
         )],
         5,
         None,
@@ -2639,7 +2639,7 @@ fn web_vs_fret_layout_chart_line_label_custom_curve_bounds_match_web() {
         "chart-line-label-custom",
         &[(
             &visitors,
-            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
         )],
         5,
         None,
@@ -2655,11 +2655,11 @@ fn web_vs_fret_layout_chart_line_multiple_curve_bounds_match_web() {
         &[
             (
                 &desktop,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Monotone,
             ),
             (
                 &mobile,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Monotone,
             ),
         ],
         5,
@@ -2673,7 +2673,7 @@ fn web_vs_fret_layout_chart_line_interactive_curve_bounds_match_web() {
         "chart-line-interactive",
         &[(
             &CHART_INTERACTIVE_DESKTOP,
-            fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Monotone,
         )],
         5,
         None,
@@ -2686,7 +2686,7 @@ fn web_vs_fret_layout_chart_line_interactive_mobile_curve_bounds_match_web() {
         "chart-line-interactive.mobile",
         &[(
             &CHART_INTERACTIVE_MOBILE,
-            fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Monotone,
         )],
         5,
         None,
@@ -2706,11 +2706,11 @@ fn web_vs_fret_layout_chart_area_variants_curve_bounds_match_web() {
     let stacked_series = &[
         (
             &mobile[..],
-            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
         ),
         (
             &stacked[..],
-            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
         ),
     ];
 
@@ -2731,7 +2731,7 @@ fn web_vs_fret_layout_chart_area_variants_curve_bounds_match_web() {
         "chart-area-linear",
         &[(
             &desktop,
-            fret_ui_shadcn::recharts_geometry::CurveKind::Linear,
+            fret_ui_shadcn::raw::recharts_geometry::CurveKind::Linear,
         )],
         5,
         None,
@@ -2739,7 +2739,7 @@ fn web_vs_fret_layout_chart_area_variants_curve_bounds_match_web() {
 
     assert_chart_series_curve_bounds_match_web(
         "chart-area-step",
-        &[(&desktop, fret_ui_shadcn::recharts_geometry::CurveKind::Step)],
+        &[(&desktop, fret_ui_shadcn::raw::recharts_geometry::CurveKind::Step)],
         5,
         None,
     );
@@ -2766,15 +2766,15 @@ fn web_vs_fret_layout_chart_area_stacked_expand_curve_bounds_match_web() {
         &[
             (
                 &other_top[..],
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &mobile_top[..],
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &desktop_top[..],
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,
@@ -2786,15 +2786,15 @@ fn web_vs_fret_layout_chart_area_stacked_expand_curve_bounds_match_web() {
         &[
             (
                 &other_top[..],
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &mobile_top[..],
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &desktop_top[..],
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,
@@ -2815,11 +2815,11 @@ fn web_vs_fret_layout_chart_area_interactive_curve_bounds_match_web() {
         &[
             (
                 &CHART_INTERACTIVE_MOBILE,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &stacked,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,
@@ -2840,11 +2840,11 @@ fn web_vs_fret_layout_chart_area_interactive_fill_bounds_match_web() {
         &[
             (
                 &CHART_INTERACTIVE_MOBILE,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &stacked,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,
@@ -2868,11 +2868,11 @@ fn web_vs_fret_layout_chart_area_interactive_30d_curve_bounds_match_web() {
         &[
             (
                 mobile,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &stacked,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,
@@ -2896,11 +2896,11 @@ fn web_vs_fret_layout_chart_area_interactive_30d_fill_bounds_match_web() {
         &[
             (
                 mobile,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &stacked,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,
@@ -2924,11 +2924,11 @@ fn web_vs_fret_layout_chart_area_interactive_7d_curve_bounds_match_web() {
         &[
             (
                 mobile,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &stacked,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,
@@ -2952,11 +2952,11 @@ fn web_vs_fret_layout_chart_area_interactive_7d_fill_bounds_match_web() {
         &[
             (
                 mobile,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
             (
                 &stacked,
-                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+                fret_ui_shadcn::raw::recharts_geometry::CurveKind::Natural,
             ),
         ],
         5,

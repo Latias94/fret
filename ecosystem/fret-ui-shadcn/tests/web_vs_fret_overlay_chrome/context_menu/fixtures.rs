@@ -104,7 +104,7 @@ fn build_context_menu_more_tools_submenu(
                         ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
                         ContextMenuEntry::Separator,
                         ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
-                            fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                            fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
                         )),
                     ]),
                 )]

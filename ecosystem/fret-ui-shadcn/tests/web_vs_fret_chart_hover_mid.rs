@@ -509,11 +509,11 @@ fn web_vs_fret_chart_line_interactive_hover_mid_active_dot_rect_matches_web() {
         "{web_name}: expected the hover-mid point to match the tooltip value"
     );
 
-    let domain_max = fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(
+    let domain_max = fret_ui_shadcn::raw::recharts_geometry::nice_domain_max_for_values(
         &CHART_INTERACTIVE_DESKTOP,
         5,
     );
-    let expected = fret_ui_shadcn::recharts_geometry::line_dot_rect(
+    let expected = fret_ui_shadcn::raw::recharts_geometry::line_dot_rect(
         plot,
         &CHART_INTERACTIVE_DESKTOP,
         domain_max,
@@ -560,11 +560,11 @@ fn web_vs_fret_chart_line_interactive_hover_mid_vp1440x240_active_dot_rect_match
         "{web_name}: expected the hover-mid point to match the tooltip value"
     );
 
-    let domain_max = fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(
+    let domain_max = fret_ui_shadcn::raw::recharts_geometry::nice_domain_max_for_values(
         &CHART_INTERACTIVE_DESKTOP,
         5,
     );
-    let expected = fret_ui_shadcn::recharts_geometry::line_dot_rect(
+    let expected = fret_ui_shadcn::raw::recharts_geometry::line_dot_rect(
         plot,
         &CHART_INTERACTIVE_DESKTOP,
         domain_max,

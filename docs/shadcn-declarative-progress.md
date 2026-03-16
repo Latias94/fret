@@ -95,9 +95,10 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
 
 - `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
 - The `fret` app-facing facade now keeps the lower-level activation glue under `cx.actions()`
-  (`dispatch`, `dispatch_payload`, `listener`) and teaches the default app lane through
-  `widget.dispatch::<A>()`, `widget.dispatch_payload::<A>(payload)`, and
-  `widget.listen(|host, acx| { ... })` for activation-only surfaces via
+  (`action`, `action_payload`, `dispatch`, `dispatch_payload`, `listen`) and teaches the default
+  app lane through `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and
+  `widget.listen(|host, acx| { ... })` for activation-only surfaces via an explicit
+  `use fret::app::AppActivateExt as _;` import on
   `fret::app::AppActivateSurface` / `AppActivateExt`.
   That sugar intentionally works from both `View::render(&mut AppUi)` and extracted `UiCx`
   helper functions, so first-party snippets do not need to reopen raw `.on_activate(...)` after
@@ -158,6 +159,28 @@ Recommended imports for app code:
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 ```
 
+### Current authoring-surface closeout status (2026-03-16)
+
+The main remaining shadcn problem is now **discovery pressure**, not runtime ownership or breadth
+parity.
+
+- ordinary component/app authors should make one first-contact choice for component families:
+  `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
+- `raw::*` remains the only explicit component-family escape hatch
+- `app::*` and `themes::*` are setup lanes, not peer discovery lanes
+- `advanced::*` is an implementation/debug/source-alignment lane, not a competing default
+- the hidden flat root remains shrinking compatibility residue and should not be normalized as a
+  fourth authoring path
+
+Release-blocking closeout consequences:
+
+- stale first-party docs/examples that still make the flat root feel like a peer path should be
+  treated as authoring-surface debt even if the underlying component implementation is correct
+- source-policy tests are guardrails, not the desired end-state; the goal is to remove the need
+  for humans to mentally sort multiple peer discovery lanes in the first place
+- broader ecosystem trait/sugar work should read from this settled discovery story rather than
+  compete with it
+
 Guidelines:
 
 - Prefer `ui()` for all authoring (chrome + layout + debug helpers).
@@ -172,10 +195,11 @@ Guidelines:
   `.action_payload(...)`; curated first-party button and action-capable UI Gallery slices are now
   policy-gated away from legacy `.on_click(...)`.
 - For activation-only surfaces rendered inside a `fret` app shell, prefer
-  `use fret::app::AppActivateExt as _;` plus `.dispatch::<A>()` /
-  `.dispatch_payload::<A>(payload)` / `.listen(...)`; do not reopen raw `.on_activate(...)`
-  on first-party snippet surfaces unless the example is intentionally documenting a raw/advanced
-  seam.
+  `use fret::app::AppActivateExt as _;` plus `.action(act::Save)` /
+  `.action_payload(act::Remove, payload)` / `.listen(...)`; `.dispatch::<A>()` /
+  `.dispatch_payload::<A>(payload)` remain the explicit aliases. Do not reopen raw
+  `.on_activate(...)` on first-party snippet surfaces unless the example is intentionally
+  documenting a raw/advanced seam.
 - Non-curated seams should stay explicit in app code: use `fret_ui_shadcn::advanced::*` for
   environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
   lanes (`typography` prose helpers, `extras`, breadcrumb primitives, the experimental

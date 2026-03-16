@@ -17,7 +17,7 @@
 //!
 //! Use `fret_ui_shadcn::app::*` for default app setup, `fret_ui_shadcn::advanced::*` for
 //! environment or `UiServices`-boundary hooks, and treat `fret_ui_shadcn::raw::*` as the raw
-//! escape hatch rather than the doc-hidden flat crate-root compatibility modules.
+//! escape hatch rather than any private crate-internal component modules.
 //!
 //! Most thin public helper constructors now stay on the typed `IntoUiElement<H>` lane (for
 //! example `badge`, `checkbox`, `input`, `textarea`, `slider`, `progress`, `switch`, `toggle`,
@@ -49,169 +49,94 @@
 //! - `state-selector`, `state-query`: opt-in state helpers used by some recipes/demos.
 
 mod a11y_modal;
-#[doc(hidden)]
-pub mod accordion;
-#[doc(hidden)]
-pub mod alert;
-#[doc(hidden)]
-pub mod alert_dialog;
-#[doc(hidden)]
-pub mod aspect_ratio;
-#[doc(hidden)]
-pub mod avatar;
-#[doc(hidden)]
-pub mod badge;
-#[doc(hidden)]
-pub mod breadcrumb;
-#[doc(hidden)]
-pub mod button;
-#[doc(hidden)]
-pub mod button_group;
-#[doc(hidden)]
-pub mod calendar;
-#[doc(hidden)]
-pub mod calendar_hijri;
-#[doc(hidden)]
-pub mod calendar_multiple;
-#[doc(hidden)]
-pub mod calendar_range;
-#[doc(hidden)]
-pub mod card;
-#[doc(hidden)]
-pub mod carousel;
-#[doc(hidden)]
-pub mod chart;
-#[doc(hidden)]
-pub mod checkbox;
-#[doc(hidden)]
-pub mod collapsible;
-#[doc(hidden)]
-pub mod collapsible_primitives;
-#[doc(hidden)]
-pub mod combobox;
-#[doc(hidden)]
-pub mod combobox_chips;
-#[doc(hidden)]
-pub mod command;
+mod accordion;
+mod alert;
+mod alert_dialog;
+mod aspect_ratio;
+mod avatar;
+mod badge;
+mod breadcrumb;
+mod button;
+mod button_group;
+mod calendar;
+mod calendar_hijri;
+mod calendar_multiple;
+mod calendar_range;
+mod card;
+mod carousel;
+mod chart;
+mod checkbox;
+mod collapsible;
+mod collapsible_primitives;
+mod combobox;
+mod combobox_chips;
+mod command;
 mod command_gating;
-#[doc(hidden)]
-pub mod context_menu;
+mod context_menu;
 mod data_grid;
-#[doc(hidden)]
-pub mod data_grid_canvas;
-#[doc(hidden)]
-pub mod data_table;
+mod data_grid_canvas;
+mod data_table;
 mod data_table_controls;
 mod data_table_recipes;
-#[doc(hidden)]
-pub mod date_picker;
-#[doc(hidden)]
-pub mod date_picker_with_presets;
-#[doc(hidden)]
-pub mod date_range_picker;
-#[doc(hidden)]
-pub mod dialog;
-#[doc(hidden)]
-pub mod direction;
-#[doc(hidden)]
-pub mod drawer;
-#[doc(hidden)]
-pub mod dropdown_menu;
-#[doc(hidden)]
-pub mod empty;
-#[doc(hidden)]
-pub mod experimental;
-#[doc(hidden)]
-pub mod extras;
-#[doc(hidden)]
-pub mod field;
-#[doc(hidden)]
-pub mod form;
-#[doc(hidden)]
-pub mod hover_card;
-#[doc(hidden)]
-pub mod input;
-#[doc(hidden)]
-pub mod input_group;
-#[doc(hidden)]
-pub mod input_otp;
-#[doc(hidden)]
-pub mod item;
-#[doc(hidden)]
-pub mod kbd;
-#[doc(hidden)]
-pub mod label;
+mod date_picker;
+mod date_picker_with_presets;
+mod date_range_picker;
+mod dialog;
+mod direction;
+mod drawer;
+mod dropdown_menu;
+mod empty;
+mod experimental;
+mod extras;
+mod field;
+mod form;
+mod hover_card;
+mod input;
+mod input_group;
+mod input_otp;
+mod item;
+mod kbd;
+mod label;
 mod layout;
-#[doc(hidden)]
-pub mod media_image;
+mod media_image;
 mod menu_authoring;
-#[doc(hidden)]
-pub mod menubar;
-#[doc(hidden)]
-pub mod native_select;
-#[doc(hidden)]
-pub mod navigation_menu;
+mod menubar;
+mod native_select;
+mod navigation_menu;
 mod overlay_motion;
-#[doc(hidden)]
-pub mod pagination;
-#[doc(hidden)]
-pub mod popover;
+mod pagination;
+mod popover;
 mod popper_arrow;
-#[doc(hidden)]
-pub mod progress;
-#[doc(hidden)]
-pub mod radio_group;
-#[doc(hidden)]
-pub mod recharts_geometry;
-#[doc(hidden)]
-pub mod resizable;
+mod progress;
+mod radio_group;
+mod recharts_geometry;
+mod resizable;
 mod rtl;
-#[doc(hidden)]
-pub mod scroll_area;
-#[doc(hidden)]
-pub mod select;
-#[doc(hidden)]
-pub mod separator;
+mod scroll_area;
+mod select;
+mod separator;
 mod shadcn_themes;
-#[doc(hidden)]
-pub mod sheet;
+mod sheet;
 mod shortcut_display;
-#[doc(hidden)]
-pub mod shortcut_hint;
-#[doc(hidden)]
-pub mod sidebar;
-#[doc(hidden)]
-pub mod skeleton;
-#[doc(hidden)]
-pub mod slider;
-#[doc(hidden)]
-pub mod sonner;
-#[doc(hidden)]
-pub mod spinner;
+mod shortcut_hint;
+mod sidebar;
+mod skeleton;
+mod slider;
+mod sonner;
+mod spinner;
 #[cfg(any(feature = "state-selector", feature = "state-query"))]
-#[doc(hidden)]
-pub mod state;
-#[doc(hidden)]
-pub mod switch;
-#[doc(hidden)]
-pub mod table;
-#[doc(hidden)]
-pub mod tabs;
+mod state;
+mod switch;
+mod table;
+mod tabs;
 mod text_edit_context_menu;
-#[doc(hidden)]
-pub mod text_value_model;
-#[doc(hidden)]
-pub mod textarea;
-#[doc(hidden)]
-pub mod toast;
-#[doc(hidden)]
-pub mod toggle;
-#[doc(hidden)]
-pub mod toggle_group;
-#[doc(hidden)]
-pub mod tooltip;
-#[doc(hidden)]
-pub mod typography;
+mod text_value_model;
+mod textarea;
+mod toast;
+mod toggle;
+mod toggle_group;
+mod tooltip;
+mod typography;
 
 #[cfg(feature = "app-integration")]
 pub mod advanced;
@@ -235,88 +160,96 @@ mod surface_policy_tests;
 /// surface.
 ///
 /// This keeps the default discovery lane on `facade + prelude` while preserving explicit module
-/// escape hatches for advanced or source-alignment work. Direct root component modules remain
-/// doc-hidden compatibility residue rather than the preferred discovery lane.
+/// escape hatches for advanced or source-alignment work. Component-family root modules stay
+/// crate-private so ordinary autocomplete only sees the curated facade plus the explicit raw lane.
 pub mod raw {
-    pub use crate::accordion;
+    macro_rules! raw_module {
+        ($name:ident) => {
+            pub mod $name {
+                pub use crate::$name::*;
+            }
+        };
+    }
+
+    raw_module!(accordion);
     #[cfg(feature = "app-integration")]
-    pub use crate::advanced;
-    pub use crate::alert;
-    pub use crate::alert_dialog;
+    raw_module!(advanced);
+    raw_module!(alert);
+    raw_module!(alert_dialog);
     #[cfg(feature = "app-integration")]
-    pub use crate::app;
-    pub use crate::aspect_ratio;
-    pub use crate::avatar;
-    pub use crate::badge;
-    pub use crate::breadcrumb;
-    pub use crate::button;
-    pub use crate::button_group;
-    pub use crate::calendar;
-    pub use crate::calendar_hijri;
-    pub use crate::calendar_multiple;
-    pub use crate::calendar_range;
-    pub use crate::card;
-    pub use crate::carousel;
-    pub use crate::chart;
-    pub use crate::checkbox;
-    pub use crate::collapsible;
-    pub use crate::collapsible_primitives;
-    pub use crate::combobox;
-    pub use crate::combobox_chips;
-    pub use crate::command;
-    pub use crate::context_menu;
-    pub use crate::data_grid_canvas;
-    pub use crate::data_table;
-    pub use crate::date_picker;
-    pub use crate::date_picker_with_presets;
-    pub use crate::date_range_picker;
-    pub use crate::dialog;
-    pub use crate::direction;
-    pub use crate::drawer;
-    pub use crate::dropdown_menu;
-    pub use crate::empty;
-    pub use crate::experimental;
-    pub use crate::extras;
-    pub use crate::field;
-    pub use crate::form;
-    pub use crate::hover_card;
-    pub use crate::input;
-    pub use crate::input_group;
-    pub use crate::input_otp;
-    pub use crate::item;
-    pub use crate::kbd;
-    pub use crate::label;
-    pub use crate::media_image;
-    pub use crate::menubar;
-    pub use crate::native_select;
-    pub use crate::navigation_menu;
-    pub use crate::pagination;
-    pub use crate::popover;
-    pub use crate::progress;
-    pub use crate::radio_group;
-    pub use crate::resizable;
-    pub use crate::scroll_area;
-    pub use crate::select;
-    pub use crate::separator;
-    pub use crate::sheet;
-    pub use crate::shortcut_hint;
-    pub use crate::sidebar;
-    pub use crate::skeleton;
-    pub use crate::slider;
-    pub use crate::sonner;
-    pub use crate::spinner;
+    raw_module!(app);
+    raw_module!(aspect_ratio);
+    raw_module!(avatar);
+    raw_module!(badge);
+    raw_module!(breadcrumb);
+    raw_module!(button);
+    raw_module!(button_group);
+    raw_module!(calendar);
+    raw_module!(calendar_hijri);
+    raw_module!(calendar_multiple);
+    raw_module!(calendar_range);
+    raw_module!(card);
+    raw_module!(carousel);
+    raw_module!(chart);
+    raw_module!(checkbox);
+    raw_module!(collapsible);
+    raw_module!(collapsible_primitives);
+    raw_module!(combobox);
+    raw_module!(combobox_chips);
+    raw_module!(command);
+    raw_module!(context_menu);
+    raw_module!(data_grid_canvas);
+    raw_module!(data_table);
+    raw_module!(date_picker);
+    raw_module!(date_picker_with_presets);
+    raw_module!(date_range_picker);
+    raw_module!(dialog);
+    raw_module!(direction);
+    raw_module!(drawer);
+    raw_module!(dropdown_menu);
+    raw_module!(empty);
+    raw_module!(experimental);
+    raw_module!(extras);
+    raw_module!(field);
+    raw_module!(form);
+    raw_module!(hover_card);
+    raw_module!(input);
+    raw_module!(input_group);
+    raw_module!(input_otp);
+    raw_module!(item);
+    raw_module!(kbd);
+    raw_module!(label);
+    raw_module!(media_image);
+    raw_module!(menubar);
+    raw_module!(native_select);
+    raw_module!(navigation_menu);
+    raw_module!(pagination);
+    raw_module!(popover);
+    raw_module!(progress);
+    raw_module!(radio_group);
+    raw_module!(resizable);
+    raw_module!(scroll_area);
+    raw_module!(select);
+    raw_module!(separator);
+    raw_module!(sheet);
+    raw_module!(shortcut_hint);
+    raw_module!(sidebar);
+    raw_module!(skeleton);
+    raw_module!(slider);
+    raw_module!(sonner);
+    raw_module!(spinner);
     #[cfg(any(feature = "state-selector", feature = "state-query"))]
-    pub use crate::state;
-    pub use crate::switch;
-    pub use crate::table;
-    pub use crate::tabs;
-    pub use crate::text_value_model;
-    pub use crate::textarea;
-    pub use crate::toast;
-    pub use crate::toggle;
-    pub use crate::toggle_group;
-    pub use crate::tooltip;
-    pub use crate::typography;
+    raw_module!(state);
+    raw_module!(switch);
+    raw_module!(table);
+    raw_module!(tabs);
+    raw_module!(text_value_model);
+    raw_module!(textarea);
+    raw_module!(toast);
+    raw_module!(toggle);
+    raw_module!(toggle_group);
+    raw_module!(tooltip);
+    raw_module!(typography);
     pub use ::fret_ui_kit::declarative::icon;
     pub use ::fret_ui_kit::declarative::style as decl_style;
     pub use ::fret_ui_kit::ui;

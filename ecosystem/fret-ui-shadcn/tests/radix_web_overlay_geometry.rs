@@ -1317,7 +1317,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
                                 shadcn::Select::new(value.clone(), open.clone())
                                     .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
                                     .a11y_label("Select a fruit")
-                                    .position(fret_ui_shadcn::select::SelectPosition::ItemAligned)
+                                    .position(fret_ui_shadcn::raw::select::SelectPosition::ItemAligned)
                                     .items(items.clone())
                                     .into_element(cx),
                             ]
@@ -1399,7 +1399,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
                                         )
                                         .a11y_label("Select a fruit")
                                         .position(
-                                            fret_ui_shadcn::select::SelectPosition::ItemAligned,
+                                            fret_ui_shadcn::raw::select::SelectPosition::ItemAligned,
                                         )
                                         .items(items.clone())
                                         .into_element(cx),

@@ -350,13 +350,13 @@ fn build_shadcn_menubar_file_menu_destructive(
     let mut new_tab =
         MenubarItem::new("New Tab").trailing(MenubarShortcut::new("⌘T").into_element(cx));
     if new_tab_destructive {
-        new_tab = new_tab.variant(fret_ui_shadcn::menubar::MenubarItemVariant::Destructive);
+        new_tab = new_tab.variant(fret_ui_shadcn::raw::menubar::MenubarItemVariant::Destructive);
     }
 
     let mut new_window =
         MenubarItem::new("New Window").trailing(MenubarShortcut::new("⌘N").into_element(cx));
     if new_window_destructive {
-        new_window = new_window.variant(fret_ui_shadcn::menubar::MenubarItemVariant::Destructive);
+        new_window = new_window.variant(fret_ui_shadcn::raw::menubar::MenubarItemVariant::Destructive);
     }
 
     Menubar::new(vec![MenubarMenu::new("File").entries(vec![

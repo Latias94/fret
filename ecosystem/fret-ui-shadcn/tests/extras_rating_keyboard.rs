@@ -205,7 +205,7 @@ fn rating_arrow_keys_update_value() {
 
     let render = |cx: &mut ElementContext<'_, App>| {
         vec![
-            fret_ui_shadcn::extras::Rating::new(rating.clone())
+            fret_ui_shadcn::raw::extras::Rating::new(rating.clone())
                 .count(5)
                 .into_element(cx),
         ]

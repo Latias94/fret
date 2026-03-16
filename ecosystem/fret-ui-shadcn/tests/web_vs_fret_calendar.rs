@@ -787,7 +787,7 @@ fn days_in_month(year: i32, month: time::Month) -> u8 {
 
 #[derive(Debug, Clone, Copy)]
 struct CalendarChromeConfig {
-    locale: fret_ui_shadcn::calendar::CalendarLocale,
+    locale: fret_ui_shadcn::raw::calendar::CalendarLocale,
     month: time::Month,
     year: i32,
     origin_x: f32,
@@ -810,7 +810,7 @@ enum CalendarSelectionMode {
 
 #[derive(Debug, Clone)]
 struct CalendarHoverChromeConfig {
-    locale: fret_ui_shadcn::calendar::CalendarLocale,
+    locale: fret_ui_shadcn::raw::calendar::CalendarLocale,
     month: time::Month,
     year: i32,
     origin_x: f32,
@@ -1313,12 +1313,12 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
         .and_then(|label| label.chars().next())
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let in_view = |d: time::Date| {
         (d.month() == month_a && d.year() == year_a) || (d.month() == month_b && d.year() == year_b)
@@ -2040,12 +2040,12 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
         .and_then(|label| label.chars().next())
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let in_view = |d: time::Date| {
         (d.month() == month_a && d.year() == year_a) || (d.month() == month_b && d.year() == year_b)
@@ -2370,12 +2370,12 @@ fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
         .next()
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let web_weekday_headers = find_all(&theme.root, &|n| {
         class_has_token(n, "rdp-weekday")
@@ -2743,12 +2743,12 @@ fn assert_calendar_selected_day_background_matches_web(
         .next()
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let web_day_buttons = find_all(&theme.root, &|n| {
         n.tag == "button"
@@ -2886,12 +2886,12 @@ fn assert_calendar_selected_day_foreground_matches_web(web_name: &str, fg_label:
         .next()
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let web_day_buttons = find_all(&theme.root, &|n| {
         n.tag == "button"
@@ -3072,12 +3072,12 @@ fn assert_calendar_hover_day_background_matches_web(
         .next()
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let web_day_buttons = find_all(&theme.root, &|n| {
         n.tag == "button"
@@ -3372,12 +3372,12 @@ fn assert_calendar_selected_day_text_centered_in_button(
         .next()
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let web_day_buttons = find_all(&theme.root, &|n| {
         n.tag == "button"
@@ -3567,12 +3567,12 @@ fn assert_calendar_unselected_day_text_centered_in_button(
         .next()
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let web_day_buttons = find_all(&theme.root, &|n| {
         n.tag == "button"

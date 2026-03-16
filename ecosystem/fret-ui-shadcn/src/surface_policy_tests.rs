@@ -53,6 +53,8 @@ const RESIZABLE_RS: &str = include_str!("resizable.rs");
 const SCROLL_AREA_RS: &str = include_str!("scroll_area.rs");
 const SWITCH_RS: &str = include_str!("switch.rs");
 const TABS_RS: &str = include_str!("tabs.rs");
+const EXTRAS_BANNER_RS: &str = include_str!("extras/banner.rs");
+const EXTRAS_TICKER_RS: &str = include_str!("extras/ticker.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
@@ -207,13 +209,11 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     );
     assert!(!README.contains("recipes/components stay under `fret_ui_shadcn::*`"));
     assert!(README.contains("`fret_ui_shadcn::raw::*` access stays the escape hatch"));
-    assert!(README.contains(
-        "flat crate-root component modules are now `#[doc(hidden)]` compatibility residue"
-    ));
+    assert!(README.contains("root component-family modules are crate-private"));
 
     assert!(LIB_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
     assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` as the raw"));
-    assert!(LIB_RS.contains("doc-hidden flat crate-root compatibility modules"));
+    assert!(LIB_RS.contains("Component-family root modules stay crate-private"));
     assert!(LIB_RS.contains("pub mod facade {"));
     assert!(LIB_RS.contains("pub mod themes {"));
     assert!(LIB_RS.contains("pub mod raw {"));
@@ -243,9 +243,8 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
 }
 
 #[test]
-fn flat_root_component_modules_stay_doc_hidden() {
-    let allowed_visible = ["app", "advanced"];
-    let mut previous_non_empty = "";
+fn root_component_modules_are_no_longer_public() {
+    let allowed_visible = ["advanced", "app", "facade", "prelude", "raw"];
 
     for line in LIB_RS.lines() {
         let trimmed = line.trim();
@@ -257,15 +256,11 @@ fn flat_root_component_modules_stay_doc_hidden() {
             .strip_prefix("pub mod ")
             .and_then(|tail| tail.strip_suffix(';'))
         {
-            if !allowed_visible.contains(&module) {
-                assert_eq!(
-                    previous_non_empty, "#[doc(hidden)]",
-                    "flat root shadcn module `{module}` should stay doc-hidden"
-                );
-            }
+            assert!(
+                allowed_visible.contains(&module),
+                "root shadcn module `{module}` should stay private and only reappear through curated explicit lanes"
+            );
         }
-
-        previous_non_empty = trimmed;
     }
 }
 
@@ -1886,6 +1881,24 @@ fn thin_constructor_trial_modules_keep_public_anyelement_free_functions_explicit
 #[test]
 fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders() {
     for (label, source, markers) in [
+        (
+            "badge.rs",
+            BADGE_RS,
+            &["Bind a stable action ID to this badge (action-first authoring)."][..],
+        ),
+        (
+            "extras/banner.rs",
+            EXTRAS_BANNER_RS,
+            &[
+                "Bind a stable action ID to this banner action (action-first authoring).",
+                "Bind a stable action ID to this banner close affordance (action-first authoring).",
+            ][..],
+        ),
+        (
+            "extras/ticker.rs",
+            EXTRAS_TICKER_RS,
+            &["Bind a stable action ID to this ticker (action-first authoring)."][..],
+        ),
         (
             "breadcrumb.rs",
             BREADCRUMB_RS,
