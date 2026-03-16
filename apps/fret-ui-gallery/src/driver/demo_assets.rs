@@ -123,12 +123,15 @@ impl UiGalleryDriver {
 }
 
 pub(crate) const UI_GALLERY_DEMO_ASSET_BUNDLE_NAME: &str = "ui-gallery-demo-assets";
+pub(crate) const UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY: &str = "shared/media-preview.jpg";
 pub(crate) const UI_GALLERY_CARD_EVENT_COVER_KEY: &str = "card/event-cover.jpg";
 #[cfg(any(test, feature = "gallery-dev"))]
 pub(crate) const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_KEY: &str = "ai/attachments/landscape.jpg";
 #[cfg(any(test, feature = "gallery-dev"))]
 pub(crate) const UI_GALLERY_AI_ATTACHMENT_PORTRAIT_KEY: &str = "ai/attachments/portrait.jpg";
 
+const UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES: &[u8] =
+    include_bytes!("../../../../assets/textures/test-1.jpg");
 const UI_GALLERY_CARD_EVENT_COVER_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/test.jpg");
 #[cfg(any(test, feature = "gallery-dev"))]
@@ -138,14 +141,28 @@ const UI_GALLERY_AI_ATTACHMENT_LANDSCAPE_BYTES: &[u8] =
 const UI_GALLERY_AI_ATTACHMENT_PORTRAIT_BYTES: &[u8] =
     include_bytes!("../../../../assets/textures/aspect-ratio-portrait.jpg");
 #[cfg(not(any(test, feature = "gallery-dev")))]
-const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 1] = [StaticAssetEntry::new(
-    UI_GALLERY_CARD_EVENT_COVER_KEY,
-    AssetRevision(1),
-    UI_GALLERY_CARD_EVENT_COVER_BYTES,
-)
-.with_media_type("image/jpeg")];
+const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 2] = [
+    StaticAssetEntry::new(
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
+        AssetRevision(1),
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+    StaticAssetEntry::new(
+        UI_GALLERY_CARD_EVENT_COVER_KEY,
+        AssetRevision(1),
+        UI_GALLERY_CARD_EVENT_COVER_BYTES,
+    )
+    .with_media_type("image/jpeg"),
+];
 #[cfg(any(test, feature = "gallery-dev"))]
-const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 3] = [
+const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 4] = [
+    StaticAssetEntry::new(
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY,
+        AssetRevision(1),
+        UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES,
+    )
+    .with_media_type("image/jpeg"),
     StaticAssetEntry::new(
         UI_GALLERY_CARD_EVENT_COVER_KEY,
         AssetRevision(1),
@@ -168,6 +185,10 @@ const UI_GALLERY_DEMO_ASSET_ENTRIES: [StaticAssetEntry; 3] = [
 
 pub(crate) fn ui_gallery_demo_asset_bundle() -> AssetBundleId {
     AssetBundleId::package(UI_GALLERY_DEMO_ASSET_BUNDLE_NAME)
+}
+
+pub(crate) fn ui_gallery_shared_media_preview_request() -> AssetRequest {
+    ui_gallery_demo_bundle_request(UI_GALLERY_SHARED_MEDIA_PREVIEW_KEY)
 }
 
 pub(crate) fn ui_gallery_card_event_cover_request() -> AssetRequest {
@@ -199,6 +220,33 @@ pub(crate) fn install_gallery_demo_asset_bundle(app: &mut App) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn install_gallery_demo_asset_bundle_registers_shared_media_preview_locator() {
+        let mut app = App::new();
+
+        install_gallery_demo_asset_bundle(&mut app);
+
+        let resolved =
+            fret_runtime::resolve_asset_bytes(&app, &ui_gallery_shared_media_preview_request())
+                .expect("expected UI Gallery shared media preview asset to resolve");
+        assert_eq!(
+            resolved.locator,
+            ui_gallery_shared_media_preview_request().locator
+        );
+        assert_eq!(resolved.revision, AssetRevision(1));
+        assert_eq!(
+            resolved.bytes.as_ref(),
+            UI_GALLERY_SHARED_MEDIA_PREVIEW_BYTES
+        );
+        assert_eq!(
+            resolved
+                .media_type
+                .as_ref()
+                .map(|media_type| media_type.as_str()),
+            Some("image/jpeg")
+        );
+    }
 
     #[test]
     fn install_gallery_demo_asset_bundle_registers_card_cover_locator() {

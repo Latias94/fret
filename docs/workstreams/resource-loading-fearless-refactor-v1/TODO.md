@@ -556,6 +556,9 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - UI Gallery `AI Attachments` preview-bearing variants (`Usage`, `Grid`, `Inline`, `List`) now
       resolve thumbnails from gallery-owned logical package bundle requests rather than synthesizing
       inline RGBA previews inside each snippet.
+    - UI Gallery `AI Image`, `AI Queue`, and `AI Chain of Thought` now resolve their preview media
+      from the shared gallery demo asset bundle instead of synthesizing inline RGBA sources inside
+      each snippet.
     - Public guidance now links the transitive icon-pack + package-bundle composition story back to
       one ecosystem-owned installer surface instead of teaching apps to replay low-level icon or
       asset registration manually.
@@ -571,6 +574,10 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_inline.rs`
     - `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_list.rs`
     - `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/image_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/queue_demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_demo.rs`
+    - `apps/fret-ui-gallery/src/driver/demo_assets.rs`
     - `docs/crate-usage-guide.md`
     - `docs/component-author-guide.md`
     - `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`
