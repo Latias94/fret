@@ -93,7 +93,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
                 shadcn::Button::new(format!("Append {append_batch} messages"))
                     .test_id("ui-gallery-ai-transcript-append")
-                    .listen(cx, append_messages)
+                    .listen(append_messages)
                     .into_element(cx),
             ]
         })

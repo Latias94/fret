@@ -137,7 +137,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For activation-only surfaces, prefer `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and `widget.listen(cx, |host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For activation-only surfaces, prefer `widget.dispatch::<A>()`, `widget.dispatch_payload::<A>(payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches.
 
 `fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they only cover
 activation-only widgets that expose the standard `OnActivate` slot. Typed payload/context
@@ -235,6 +235,9 @@ of expecting `CommandId` from `fret::component::prelude::*`. When reusable compo
 code intentionally needs raw activation helper glue, import `fret::activate::{on_activate,
 on_activate_notify, on_activate_request_redraw, on_activate_request_redraw_notify}` explicitly
 instead of expecting those helper names from the component prelude.
+When reusable component code needs overlay anchoring helpers or overlay stack/introspection nouns,
+import them explicitly from `fret::overlay::*` instead of expecting those lower-level names from
+`fret::component::prelude::*`.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 

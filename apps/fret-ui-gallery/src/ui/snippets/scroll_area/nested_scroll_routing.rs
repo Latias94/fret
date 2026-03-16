@@ -54,7 +54,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let inner_handle = inner_handle.clone();
             shadcn::Button::new("Reset")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .listen(cx, move |host, action_cx| {
+                .listen(move |host, action_cx| {
                     outer_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
                     inner_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
                     host.request_redraw(action_cx.window);

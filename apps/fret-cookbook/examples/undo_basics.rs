@@ -1,3 +1,4 @@
+use fret::actions::CommandId;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Space, Theme};

@@ -166,7 +166,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui_ai::ConversationContent::new(content_children).into_element(cx),
                 ui_ai::ConversationDownload::new("Download conversation")
                     .disabled(messages_empty)
-                    .listen(cx, download)
+                    .listen(download)
                     .test_id("ui-ai-conversation-demo-download")
                     .into_element(cx),
                 ui_ai::ConversationScrollButton::default()

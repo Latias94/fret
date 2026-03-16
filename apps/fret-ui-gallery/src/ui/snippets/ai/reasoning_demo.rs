@@ -20,7 +20,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-start-streaming")
-        .listen(cx, {
+        .listen({
             let streaming = streaming.clone();
             move |host, action_cx| {
                 let _ = host.models_mut().update(&streaming, |v| *v = true);
@@ -33,7 +33,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-stop-streaming")
-        .listen(cx, {
+        .listen({
             let streaming = streaming.clone();
             move |host, action_cx| {
                 let _ = host.models_mut().update(&streaming, |v| *v = false);

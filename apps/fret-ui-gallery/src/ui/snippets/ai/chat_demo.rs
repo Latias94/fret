@@ -515,7 +515,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ButtonVariant::Secondary)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-gallery-ai-chat-start-stream")
-                .listen(cx, start_streaming)
+                .listen(start_streaming)
                 .into_element(cx),
         ]
     })

@@ -58,14 +58,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .tooltip("Run code")
             .icon(fret_icons::IconId::new_static("lucide.play"))
             .test_id("ui-ai-artifact-docs-run")
-            .listen(cx, status_action(status.clone(), "Run action triggered."))
+            .listen(status_action(status.clone(), "Run action triggered."))
             .into_element(cx),
         ui_ai::ArtifactAction::new()
             .label("Copy")
             .tooltip("Copy to clipboard")
             .icon(fret_icons::IconId::new_static("lucide.copy"))
             .test_id("ui-ai-artifact-docs-copy")
-            .listen(cx, status_action(status.clone(), "Copy action triggered."))
+            .listen(status_action(status.clone(), "Copy action triggered."))
             .into_element(cx),
         ui_ai::ArtifactAction::new()
             .label("Regenerate")
@@ -92,7 +92,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .tooltip("Share artifact")
             .icon(fret_icons::IconId::new_static("lucide.share"))
             .test_id("ui-ai-artifact-docs-share")
-            .listen(cx, status_action(status.clone(), "Share action triggered."))
+            .listen(status_action(status.clone(), "Share action triggered."))
             .into_element(cx),
     ])
     .test_id("ui-ai-artifact-docs-actions")

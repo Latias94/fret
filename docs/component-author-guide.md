@@ -258,6 +258,13 @@ route those typed callbacks back through the default app lane. Controls such as 
 `QueueItemAction`, `Test`, `FileTreeAction`, `Suggestion`, and `MessageBranch` should stay on
 their component-owned typed callback surfaces.
 
+Keep overlay imports similarly tiered:
+
+- default reusable-component lane: `OverlayController`, `OverlayRequest`, `OverlayPresence` from
+  `fret::component::prelude::*`
+- explicit lower-level lane: `fret::overlay::*` for anchoring helpers, overlay stack snapshots,
+  and other introspection-oriented overlay nouns
+
 Avoid:
 
 - Hard-coding shortcut behavior by intercepting raw key-down events inside component rendering.

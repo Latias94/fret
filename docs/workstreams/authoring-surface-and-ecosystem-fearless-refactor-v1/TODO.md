@@ -132,7 +132,7 @@ Priority correction on 2026-03-15:
   - [x] `UiHost`
   - [x] `AnyElement`
   - [ ] other runner/maintainer-only types
-- [ ] Remove component-author overlap from `fret::app::prelude::*`.
+- [x] Remove component-author overlap from `fret::app::prelude::*`.
   - Goal: an ordinary app author should not discover the same style/layout/semantics helper
     families from both `fret::app::prelude::*` and `fret::component::prelude::*`.
   - [x] First batch on 2026-03-15: move overlap-heavy extension traits (`TrackedStateExt`,
@@ -143,7 +143,7 @@ Priority correction on 2026-03-15:
   - [x] First batch on 2026-03-15: remove raw `on_activate`, `on_activate_notify`,
     `on_activate_request_redraw`, and `on_activate_request_redraw_notify` free-function exports
     from `fret::app::prelude::*`; the default app lane now teaches widget-local
-    `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` / `.listen(cx, ...)` instead.
+    `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` instead.
   - [x] Second batch on 2026-03-15: move high-frequency icon/style nouns off
     `fret::app::prelude::*` into explicit `fret::icons::{icon, IconId}` and `fret::style::{Theme,
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space}`
@@ -161,7 +161,7 @@ Priority correction on 2026-03-15:
     `.a11y_role(...)`, and `.test_id(...)` remain high-frequency first-party app/gallery
     capabilities and are therefore treated as app-justified helper affordances rather than more
     prelude debt to delete.
-  - [x] Sixth batch on 2026-03-15: keep `CommandId` on the default app lane, but remove it from
+  - [x] Sixth batch on 2026-03-15: remove `CommandId` from
     `fret::component::prelude::*` and point reusable component code at explicit
     `fret::actions::CommandId` / `fret-runtime` imports instead.
   - [x] Seventh batch on 2026-03-15: move `SemanticsRole` off `fret::app::prelude::*` into an
@@ -180,6 +180,26 @@ Priority correction on 2026-03-15:
     prelude; code that intentionally calls `cx.action_is_enabled(...)` now imports
     `use fret::actions::ElementCommandGatingExt as _;` explicitly instead of rediscovering command
     gating through first-contact wildcard imports.
+  - [x] Twelfth batch on 2026-03-15: move `CommandId`, `ThemeSnapshot`, and `LocalState` off
+    `fret::app::prelude::*` into explicit `fret::actions::CommandId`,
+    `fret::style::ThemeSnapshot`, and `fret::app::LocalState` lanes, and mirror the same
+    autocomplete-tightening rule on `fret::component::prelude::*` by keeping overlap-heavy helper
+    traits as anonymous `as _` imports instead of named exports.
+  - [x] Thirteenth batch on 2026-03-15: keep `AppActivateExt` usable on the default app lane only
+    as an anonymous helper import; code that intentionally names the activation-widget contract now
+    goes through the explicit `fret::app::{AppActivateSurface, AppActivateExt}` lane instead of
+    teaching `AppActivateExt` as first-contact autocomplete vocabulary.
+  - [x] Fourteenth batch on 2026-03-15: close the remaining UI Gallery source-shape fallout from
+    that prelude/activation cleanup. Material 3 dialog copyable roots now stay on the typed
+    `UiCx`/`UiChild` lane, routed `render_doc_page(...)` pages keep an explicit final
+    `vec![body.into_element(cx)]` landing line, and
+    `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+    now passes again after the default app surface tightening.
+  - [x] Fifteenth batch on 2026-03-15: narrow the component prelude's overlay vocabulary. The
+    default component lane now keeps only `OverlayController`, `OverlayRequest`, and
+    `OverlayPresence`; overlay anchoring helpers and stack/introspection nouns moved to explicit
+    `fret::overlay::*` imports so reusable component authors do not meet runtime-ish overlay terms
+    via wildcard autocomplete.
   - Minimum audit set:
     - semantics/test-id/key-context helper families that are still duplicated across app and
       component preludes without an app-specific justification,
@@ -270,6 +290,10 @@ Priority correction on 2026-03-15:
     - 2026-03-15 progress: `ecosystem/fret-ui-ai/tests/shadcn_import_surface.rs` records the
       crate-local source policy, and `tools/gate_fret_ui_ai_curated_shadcn_surfaces.py` now keeps
       the wider first-party workspace on the same curated-lane rule.
+    - 2026-03-15 implementation follow-up: `fret-ui-shadcn` root component modules are now
+      `#[doc(hidden)]` compatibility residue rather than a peer public discovery lane. The
+      intended authoring surface is therefore self-constraining in rustdoc in addition to the
+      first-party source-policy tests.
     - 2026-03-15 progress: the repo-level gate is wired into `tools/pre_release.py`, and
       `cargo check -p fret-ui-ai --lib` is green again after fixing the local `mic_selector.rs` /
       `voice_selector.rs` `Vec::new()` inference residue that was masking the import-lane

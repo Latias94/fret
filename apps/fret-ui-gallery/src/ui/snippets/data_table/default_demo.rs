@@ -62,7 +62,7 @@ fn footer(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!prev_enabled)
-                .listen(cx, {
+                .listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |table_state| {
@@ -77,7 +77,7 @@ fn footer(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!next_enabled)
-                .listen(cx, {
+                .listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |table_state| {

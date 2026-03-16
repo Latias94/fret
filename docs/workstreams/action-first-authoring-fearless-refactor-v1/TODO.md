@@ -1042,7 +1042,7 @@ Current sequencing note (as of 2026-03-09):
     - track density/ergonomics work in a separate post-v1 phase,
     - do not add more tiny helpers until another round of template/demo evidence shows repeated pressure.
 - Helper visibility policy snapshot (as of 2026-03-15):
-  - Default teaching surface: `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.dispatch::<A>(cx)`, `.dispatch_payload::<A>(cx, payload)`, and `.listen(cx, |host, acx| ...)` for activation-only surfaces.
+  - Default teaching surface: `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.dispatch::<A>()`, `.dispatch_payload::<A>(payload)`, and `.listen(|host, acx| ...)` for activation-only surfaces.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
   - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
@@ -1057,7 +1057,7 @@ Current sequencing note (as of 2026-03-09):
     - `docs/authoring-golden-path-v2.md`
 - [x] AFA-postv1-024 Add only thin activatable-widget sugar after the docs/template rewrite proves it is still needed.
   - Goal: if activation-only surfaces still feel materially noisier than `.action(...)`-capable widgets, add a single app-facing extension trait in `ecosystem/fret` rather than another helper family.
-  - Landed target: `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and `widget.listen(cx, |host, acx| ...)` for types that already expose `on_activate(...)`.
+  - Landed target: `widget.dispatch::<A>()`, `widget.dispatch_payload::<A>(payload)`, and `widget.listen(|host, acx| ...)` for types that already expose `on_activate(...)`.
   - Guardrails: do not replace `.action(...)` / `.action_payload(...)` as the default for widgets that already have stable action slots; do not add `click` / `submit` / `listener_notify` style helper taxonomies.
   - Evidence:
     - `ecosystem/fret/src/view.rs` (`AppActivateSurface`, `AppActivateExt`)
@@ -1066,6 +1066,10 @@ Current sequencing note (as of 2026-03-09):
   - Follow-up evidence (as of 2026-03-15):
     - `ecosystem/fret/src/lib.rs` now explicitly exports `fret::app::AppActivateExt` alongside
       `fret::app::AppActivateSurface`, and the facade self-tests lock that shape
+    - `ecosystem/fret/src/view.rs` dropped the no-op `cx` marker parameter from
+      `AppActivateExt::{dispatch, dispatch_payload, listen}`, so the default activation sugar is
+      now `widget.dispatch::<A>()`, `widget.dispatch_payload::<A>(payload)`, and
+      `widget.listen(|host, acx| ...)` instead of carrying an unused context argument
     - `ecosystem/fret/src/view.rs` now extends the same thin sugar lane to
       `fret_ui_shadcn::facade::Button`, `fret_ui_shadcn::facade::SidebarMenuButton`, and optional
       `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`
@@ -1075,9 +1079,13 @@ Current sequencing note (as of 2026-03-09):
     - selected activation-only UI Gallery snippets (`ai/{artifact_code_display,artifact_demo,chat_demo,checkpoint_demo,confirmation_demo,conversation_demo,message_usage,message_demo,persona_demo,prompt_input_docs_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture,web_preview_demo,workflow_controls_demo,workflow_node_graph_demo}`,
       `drawer/demo`, `data_table/{basic_demo,default_demo,rtl_demo}`,
       `scroll_area/nested_scroll_routing`, `sidebar/{demo,controlled,mobile,rtl}`,
-      `sonner/{demo,extras,usage,position}`) now prefer `.listen(cx, ...)`
+      `sonner/{demo,extras,usage,position}`) now prefer `.listen(...)`
     - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
       (`selected_activation_snippets_prefer_app_activate_listen`) locks that default teaching lane
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+      now also passes the routed-page/copyable-root cleanup that was exposed by the sugar rewrite,
+      including `material3_overlay_snippets_prefer_uncontrolled_copyable_roots` and
+      `render_doc_page_callers_land_the_typed_doc_page_explicitly`
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 

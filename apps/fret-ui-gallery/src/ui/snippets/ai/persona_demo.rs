@@ -34,7 +34,7 @@ fn state_button(
         })
         .a11y_label(label)
         .test_id(format!("ui-ai-persona-demo-state-{}", state.as_str()))
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&state_model, |value| *value = state);
@@ -56,7 +56,7 @@ fn variant_button(
             shadcn::ButtonVariant::Outline
         })
         .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&variant_model, |value| *value = variant);

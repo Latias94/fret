@@ -155,13 +155,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .tooltip("Retry")
                                 .icon(fret_icons::ids::ui::LOADER)
                                 .test_id("ui-ai-message-usage-action-retry")
-                                .listen(cx, set_action("assistant.retry"))
+                                .listen(set_action("assistant.retry"))
                                 .into_element(cx),
                             ui_ai::MessageAction::new("Copy")
                                 .tooltip("Copy")
                                 .icon(fret_icons::ids::ui::COPY)
                                 .test_id("ui-ai-message-usage-action-copy")
-                                .listen(cx, set_action("assistant.copy"))
+                                .listen(set_action("assistant.copy"))
                                 .into_element(cx),
                         ])
                         .justify(Justify::Start)

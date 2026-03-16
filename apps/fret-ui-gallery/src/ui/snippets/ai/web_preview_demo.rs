@@ -86,7 +86,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let back = ui_ai::WebPreviewNavigationButton::new([cx.text("←")])
                 .disabled(!can_back)
                 .test_id("ui-ai-web-preview-demo-nav-back")
-                .listen(cx, {
+                .listen({
                     let history = history.clone();
                     let history_ix = history_ix.clone();
                     let url = controller.url.clone();
@@ -112,7 +112,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let forward = ui_ai::WebPreviewNavigationButton::new([cx.text("→")])
                 .disabled(!can_forward)
                 .test_id("ui-ai-web-preview-demo-nav-forward")
-                .listen(cx, {
+                .listen({
                     let history = history.clone();
                     let history_ix = history_ix.clone();
                     let url = controller.url.clone();

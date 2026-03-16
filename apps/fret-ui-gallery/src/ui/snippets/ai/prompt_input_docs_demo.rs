@@ -86,7 +86,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::ButtonVariant::Ghost
                 })
                 .test_id("ui-gallery-ai-prompt-input-docs-search")
-                .listen(cx, toggle_search)
+                .listen(toggle_search)
                 .into_element(cx);
 
             let select = shadcn::Select::new(model_value.clone(), model_open.clone())

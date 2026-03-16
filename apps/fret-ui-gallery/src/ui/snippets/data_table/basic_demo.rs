@@ -126,7 +126,7 @@ fn bottom_controls(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!prev_enabled)
-                .listen(cx, {
+                .listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |st| {
@@ -139,7 +139,7 @@ fn bottom_controls(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!next_enabled)
-                .listen(cx, {
+                .listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |st| {

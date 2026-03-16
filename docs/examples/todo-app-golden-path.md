@@ -157,7 +157,7 @@ fn install_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` / `.listen(cx, ...)` only when a control truly needs activation glue. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` only when a control truly needs activation glue. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 

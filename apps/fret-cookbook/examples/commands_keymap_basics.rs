@@ -1,4 +1,4 @@
-use fret::actions::ElementCommandGatingExt as _;
+use fret::actions::{CommandId, ElementCommandGatingExt as _};
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
 use fret::semantics::SemanticsRole;

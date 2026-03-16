@@ -300,7 +300,7 @@ fn selected_activation_snippets_prefer_app_activate_listen() {
     ] {
         assert_selected_activation_snippets_prefer_app_activate_listen(
             relative_path,
-            &["use fret::app::AppActivateExt as _;", ".listen(cx,"],
+            &["use fret::app::AppActivateExt as _;", ".listen("],
             &[".on_activate("],
         );
     }

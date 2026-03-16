@@ -26,7 +26,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let swipe = shadcn::Button::new("Swipe Dismiss Toast")
         .variant(shadcn::ButtonVariant::Outline)
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             sonner.toast(
                 host,
                 action_cx.window,

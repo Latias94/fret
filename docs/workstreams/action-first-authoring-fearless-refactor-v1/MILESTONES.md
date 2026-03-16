@@ -269,7 +269,7 @@ Hardening follow-up (open):
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
-- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` / `.listen(cx, ...)` as the default activation glue; advanced aliases remain available but stay off the default teaching surfaces via `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` plus scaffold template unit tests, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
+- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` as the default activation glue; advanced aliases remain available but stay off the default teaching surfaces via `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` plus scaffold template unit tests, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
 
 Post-v1 direction (recommended):
 
@@ -345,10 +345,16 @@ Post-v1 direction (recommended):
     `shadcn::Button`, `shadcn::SidebarMenuButton`, and optional
     `fret-ui-ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`,
     and selected activation-only UI Gallery snippets moved from raw `.on_activate(...)` to
-    `.listen(cx, ...)` including `sonner/demo`, the data-table pagination demos,
+    `.listen(...)` including `sonner/demo`, the data-table pagination demos,
     `scroll_area/nested_scroll_routing`, and
     `ai/{artifact_code_display,artifact_demo,chat_demo,checkpoint_demo,confirmation_demo,conversation_demo,message_usage,message_demo,persona_demo,prompt_input_docs_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture,web_preview_demo,workflow_controls_demo,workflow_node_graph_demo}`, with
     `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locking that teaching lane.
+  - Activation-sugar closure note (as of 2026-03-15): `AppActivateExt::{dispatch, dispatch_payload, listen}`
+    no longer carries a no-op `cx` marker argument, the default widget-local story is now the
+    shorter `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` /
+    `widget.listen(|host, acx| ...)`, and the full
+    `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+    suite is green after the remaining copyable-root/page-landing fallout was cleaned up.
   - Activation-sugar boundary follow-up (as of 2026-03-15): custom callback signatures still stay
     out of the default app lane. `ecosystem/fret/src/view.rs` now source-locks the absence of a
     parallel `AppActionCxSurface` family and explicitly keeps typed payload/context surfaces such as

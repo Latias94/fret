@@ -3,7 +3,11 @@ use fret::UiChild;
 use fret::UiCx;
 use fret_ui_kit::IntoUiElement;
 
-fn gate_panel<B>(cx: &mut UiCx<'_>, theme: &Theme, child: B) -> impl UiChild + use<B>
+fn gate_panel<B>(
+    cx: &mut UiCx<'_>,
+    theme: &Theme,
+    child: B,
+) -> impl IntoUiElement<fret_app::App> + use<B>
 where
     B: IntoUiElement<fret_app::App>,
 {

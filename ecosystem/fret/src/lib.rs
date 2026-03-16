@@ -151,6 +151,19 @@ pub mod activate {
     };
 }
 
+/// Explicit overlay composition and introspection vocabulary for reusable component code.
+///
+/// The component prelude keeps only the highest-frequency overlay builder nouns. Lower-level
+/// overlay stack snapshots and anchoring helpers stay on this explicit lane so reusable component
+/// authors do not meet them via first-contact wildcard imports.
+pub mod overlay {
+    pub use fret_ui_kit::overlay::*;
+    pub use fret_ui_kit::{
+        OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
+        OverlayRequest, OverlayStackEntryKind, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
+    };
+}
+
 /// Explicit logical asset-contract vocabulary and host registration helpers for app code.
 ///
 /// The portable default story is bundle/embedded locators. Prefer `AssetBundleId::app(...)` and
@@ -175,7 +188,8 @@ pub mod assets {
     };
     pub use fret_runtime::AssetResolverService;
     pub use fret_runtime::{
-        AssetReloadEpoch, AssetReloadSupport, asset_reload_epoch, asset_reload_support,
+        AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
+        AssetReloadSupport, asset_reload_epoch, asset_reload_status, asset_reload_support,
         bump_asset_reload_epoch,
     };
 
@@ -533,10 +547,8 @@ pub mod component {
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
         pub use fret_ui_kit::{
             ChromeRefinement, ColorRef, Corners4, Edges4, IntoUiElement, LayoutRefinement,
-            MetricRef, OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
-            OverlayRequest, OverlayStackEntryKind, Radius, ShadowPreset, Size, Space, UiBuilder,
-            UiExt, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, WindowOverlayStackEntry,
-            WindowOverlayStackSnapshot,
+            MetricRef, OverlayController, OverlayPresence, OverlayRequest, Radius, ShadowPreset,
+            Size, Space, UiBuilder, UiExt, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
         };
 
         #[cfg(feature = "icons")]
@@ -2115,14 +2127,14 @@ mod builder_surface_tests {
 mod tests {
     use std::any::TypeId;
 
-    use crate::advanced::KernelApp;
+    use crate::{advanced::KernelApp, shadcn};
     use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
     use fret_ui::{Theme, UiTree};
 
     #[test]
     fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
         let mut app = KernelApp::new();
-        fret_ui_shadcn::app::install(&mut app);
+        shadcn::app::install(&mut app);
 
         let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
         app.with_global_mut(WindowMetricsService::default, |svc, _app| {
@@ -2172,10 +2184,10 @@ mod tests {
     #[test]
     fn shadcn_auto_theme_middleware_reapplies_installed_editor_preset_once() {
         let mut app = KernelApp::new();
-        fret_ui_shadcn::app::install_with_theme(
+        shadcn::app::install_with_theme(
             &mut app,
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            shadcn::themes::ShadcnBaseColor::Slate,
+            shadcn::themes::ShadcnColorScheme::Dark,
         );
         fret_ui_editor::theme::install_editor_theme_preset_v1(
             &mut app,
@@ -2760,9 +2772,9 @@ mod authoring_surface_policy_tests {
                     "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
                 )
         );
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>(cx)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(cx, payload)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(cx, |host, acx| { ... })`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(|host, acx| { ... })`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
@@ -2809,9 +2821,9 @@ mod authoring_surface_policy_tests {
     fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>(cx)`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(cx, payload)`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(cx, |host, acx| { ... })`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(|host, acx| { ... })`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
     }
@@ -2996,7 +3008,7 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn shadcn_docs_keep_advanced_hooks_off_curated_lane() {
-        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`widget.dispatch::<A>(cx)`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`widget.dispatch::<A>()`"));
         assert!(
             SHADCN_DECLARATIVE_PROGRESS
                 .contains("`fret::app::AppActivateSurface` / `AppActivateExt`")
@@ -3273,6 +3285,21 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn root_surface_exposes_explicit_overlay_module() {
+        let root_header = root_surface_header_source();
+
+        assert!(root_header.contains("pub mod overlay {"));
+        assert!(root_header.contains("pub use fret_ui_kit::overlay::*;"));
+        assert!(
+            root_header.contains("OverlayArbitrationSnapshot, OverlayController, OverlayKind,")
+        );
+        assert!(root_header.contains("OverlayPresence,"));
+        assert!(root_header.contains("OverlayRequest, OverlayStackEntryKind,"));
+        assert!(root_header.contains("WindowOverlayStackEntry,"));
+        assert!(root_header.contains("WindowOverlayStackSnapshot,"));
+    }
+
+    #[test]
     fn root_surface_exposes_explicit_assets_module() {
         let root_header = root_surface_header_source();
 
@@ -3466,6 +3493,7 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude_exports_symbol("Model"));
         assert!(component_prelude_exports_symbol("OverlayController"));
         assert!(component_prelude_exports_symbol("OverlayRequest"));
+        assert!(component_prelude_exports_symbol("OverlayPresence"));
         assert!(component_prelude_exports_symbol("SemanticsRole"));
         assert!(!component_prelude.contains("pub use fret_ui_kit::prelude::*;"));
         assert!(!component_prelude_exports_symbol("ActionHooksExt"));
@@ -3480,6 +3508,15 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol("UiIntoElement"));
         assert!(!component_prelude_exports_symbol("UiHostBoundIntoElement"));
         assert!(!component_prelude_exports_symbol("UiChildIntoElement"));
+        assert!(!component_prelude_exports_symbol(
+            "OverlayArbitrationSnapshot"
+        ));
+        assert!(!component_prelude_exports_symbol("OverlayKind"));
+        assert!(!component_prelude_exports_symbol("OverlayStackEntryKind"));
+        assert!(!component_prelude_exports_symbol("WindowOverlayStackEntry"));
+        assert!(!component_prelude_exports_symbol(
+            "WindowOverlayStackSnapshot"
+        ));
         assert!(!component_prelude_exports_symbol("on_activate"));
         assert!(!component_prelude_exports_symbol("on_activate_notify"));
         assert!(!component_prelude_exports_symbol(

@@ -27,7 +27,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-confirmation-requested-btn")
-        .listen(cx, {
+        .listen({
             let state = state.clone();
             let approval = approval.clone();
             move |host, action_cx| {
@@ -45,7 +45,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let reject_btn = ui_ai::ConfirmationAction::new("Reject")
         .variant(shadcn::ButtonVariant::Outline)
         .test_id("ui-ai-confirmation-reject")
-        .listen(cx, {
+        .listen({
             let state = state.clone();
             let approval = approval.clone();
             move |host, action_cx| {
@@ -65,7 +65,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let approve_btn = ui_ai::ConfirmationAction::new("Approve")
         .variant(shadcn::ButtonVariant::Default)
         .test_id("ui-ai-confirmation-approve")
-        .listen(cx, {
+        .listen({
             let state = state.clone();
             let approval = approval.clone();
             move |host, action_cx| {

@@ -16,7 +16,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let preset_for_react = preset.clone();
     let react_dev = shadcn::Button::new("React Development")
         .variant(shadcn::ButtonVariant::Outline)
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host.models_mut().update(&preset_for_react, |v| *v = 0);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);
@@ -26,7 +26,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let preset_for_api = preset.clone();
     let api_integration = shadcn::Button::new("API Integration")
         .variant(shadcn::ButtonVariant::Outline)
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host.models_mut().update(&preset_for_api, |v| *v = 1);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);

@@ -50,7 +50,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
-            .listen(cx, move |host, action_cx| {
+            .listen(move |host, action_cx| {
                 let _ = host.models_mut().update(&position_model, |v| *v = target);
                 sonner.toast(
                     host,

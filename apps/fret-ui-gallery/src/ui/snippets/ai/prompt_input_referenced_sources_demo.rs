@@ -15,7 +15,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-gallery-ai-prompt-input-referenced-sources-add")
-        .listen(cx, {
+        .listen({
             let sources = sources.clone();
             move |host, action_cx| {
                 let src = ui_ai::AttachmentSourceDocumentData::new("src-0")

@@ -25,8 +25,8 @@ missing default guideline).
 | Multi-slot LocalState transaction | `cx.actions().locals::<A>(|tx| ...)` | Hides `ModelStore` for LocalState-only coordination. |
 | Multi-slot payload transaction | `cx.actions().payload::<A>().locals(|tx, payload| ...)` | Use when one payload action updates multiple locals. |
 | Widget action binding | `.action(...)` / `.action_payload(...)` | Prefer this whenever the widget already exposes a stable action slot. |
-| Widget-local action dispatch | `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, payload)` | Use for activation-only surfaces that implement `fret::app::AppActivateSurface`. |
-| Widget-local imperative glue | `.listen(cx, |host, acx| { ... })` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks on activation-only surfaces. |
+| Widget-local action dispatch | `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` | Use for activation-only surfaces that implement `fret::app::AppActivateSurface`. |
+| Widget-local imperative glue | `.listen(|host, acx| { ... })` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks on activation-only surfaces. |
 | Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper. |
 | Derived values | `cx.data().selector(deps, compute)` | Prefer explicit `fret::selector::DepsBuilder` when tracked locals/models must build the dependency signature. |
 | Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key; import explicit query nouns from `fret::query::{...}` when needed. |
@@ -91,10 +91,10 @@ shadcn::Button::new("Save")
     .action(act::Save);
 
 widget_that_only_exposes_on_activate()
-    .dispatch::<act::Save>(cx);
+    .dispatch::<act::Save>();
 
 shadcn::Button::new("Close")
-    .listen(cx, |host, acx| {
+    .listen(|host, acx| {
         host.request_redraw(acx.window);
         host.notify(acx);
     });

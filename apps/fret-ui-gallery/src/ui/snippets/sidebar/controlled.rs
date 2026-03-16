@@ -36,7 +36,7 @@ fn menu_button<H: UiHost>(
         .icon(fret_icons::IconId::new_static(icon))
         .active(is_active)
         .collapsed(collapsed)
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&selected_for_activate, |v| *v = value_for_activate.clone());
@@ -68,7 +68,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     })
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
-                    .listen(cx, {
+                    .listen({
                         let open_for_toggle = open_for_toggle.clone();
                         move |host, action_cx| {
                             let _ = host.models_mut().update(&open_for_toggle, |v| *v = !*v);

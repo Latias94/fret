@@ -127,7 +127,7 @@ fn bottom_controls(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!prev_enabled)
-                .listen(cx, {
+                .listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |st| {
@@ -140,7 +140,7 @@ fn bottom_controls(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!next_enabled)
-                .listen(cx, {
+                .listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |st| {
@@ -289,40 +289,38 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .into_element(cx);
                         align_inline_start(cx, amount_text).into_element(cx)
                     }
-                    "actions" => cx.keyed(("ui-gallery-data-table-rtl-row-actions", row.key), |cx| {
-                        let open = cx.local_model(|| false);
+                    "actions" => {
+                        cx.keyed(("ui-gallery-data-table-rtl-row-actions", row.key), |cx| {
+                            let open = cx.local_model(|| false);
 
-                        let trigger = shadcn::Button::new("")
-                            .a11y_label(lang.open_menu)
-                            .variant(shadcn::ButtonVariant::Ghost)
-                            .size(shadcn::ButtonSize::IconXs)
-                            .test_id(Arc::<str>::from(format!(
-                                "ui-gallery-data-table-rtl-row-actions-open-{}",
-                                row.key
-                            )))
-                            .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
-                            .into_element(cx);
+                            let trigger = shadcn::Button::new("")
+                                .a11y_label(lang.open_menu)
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::IconXs)
+                                .test_id(Arc::<str>::from(format!(
+                                    "ui-gallery-data-table-rtl-row-actions-open-{}",
+                                    row.key
+                                )))
+                                .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                                .into_element(cx);
 
-                        let payment_id = row.id.clone();
-                        shadcn::DropdownMenu::from_open(open)
-                            .align(shadcn::DropdownMenuAlign::End)
-                            .side(shadcn::DropdownMenuSide::Bottom)
-                            .build(
-                                cx,
-                                trigger,
-                                move |_cx| {
+                            let payment_id = row.id.clone();
+                            shadcn::DropdownMenu::from_open(open)
+                                .align(shadcn::DropdownMenuAlign::End)
+                                .side(shadcn::DropdownMenuSide::Bottom)
+                                .build(cx, trigger, move |_cx| {
                                     vec![
                                         shadcn::DropdownMenuEntry::Label(
                                             shadcn::DropdownMenuLabel::new(lang.actions),
                                         ),
                                         shadcn::DropdownMenuEntry::Item(
                                             shadcn::DropdownMenuItem::new(lang.copy_payment_id)
-                                                .on_select(CommandId::new(Arc::<str>::from(
-                                                    format!(
-                                                        "ui_gallery.data_table.rtl.copy_payment_id.{}",
-                                                        payment_id
-                                                    ),
+                                                .on_select(
+                                                CommandId::new(Arc::<str>::from(format!(
+                                                    "ui_gallery.data_table.rtl.copy_payment_id.{}",
+                                                    payment_id
                                                 ))),
+                                            ),
                                         ),
                                         shadcn::DropdownMenuEntry::Separator,
                                         shadcn::DropdownMenuEntry::Item(
@@ -332,15 +330,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 )),
                                         ),
                                         shadcn::DropdownMenuEntry::Item(
-                                            shadcn::DropdownMenuItem::new(lang.view_payment_details)
-                                                .on_select(CommandId::new(
-                                                    "ui_gallery.data_table.rtl.view_payment_details",
-                                                )),
+                                            shadcn::DropdownMenuItem::new(
+                                                lang.view_payment_details,
+                                            )
+                                            .on_select(CommandId::new(
+                                                "ui_gallery.data_table.rtl.view_payment_details",
+                                            )),
                                         ),
                                     ]
-                                },
-                            )
-                    }),
+                                })
+                        })
+                    }
                     _ => cx.text("?"),
                 },
             )
@@ -351,10 +351,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .test_id("ui-gallery-data-table-rtl-footer");
 
         ui::v_flex(move |_cx| vec![direction_toggle, toolbar, table, controls])
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
-        .test_id("ui-gallery-data-table-rtl-root")
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
+            .test_id("ui-gallery-data-table-rtl-root")
     })
 }
 // endregion: example

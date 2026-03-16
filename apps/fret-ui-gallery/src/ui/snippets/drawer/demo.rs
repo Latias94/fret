@@ -20,7 +20,6 @@ const GOAL_SERIES: [i32; 13] = [
 ];
 
 fn goal_adjust_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
     goal: Model<i32>,
     adjustment: i32,
     icon: &'static str,
@@ -34,7 +33,7 @@ fn goal_adjust_button<H: UiHost>(
         .icon(IconId::new_static(icon))
         .a11y_label(a11y_label)
         .disabled(disabled)
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host.models_mut().update(&goal, |value| {
                 *value = (*value + adjustment).clamp(GOAL_MIN, GOAL_MAX);
             });
@@ -121,7 +120,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             ui::h_flex(|cx| {
                                 vec![
                                     goal_adjust_button(
-                                        cx,
                                         goal_for_decrease.clone(),
                                         -GOAL_STEP,
                                         "lucide.minus",
@@ -149,7 +147,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                     .layout(LayoutRefinement::default().flex_1().min_w_0())
                                     .into_element(cx),
                                     goal_adjust_button(
-                                        cx,
                                         goal_for_increase.clone(),
                                         GOAL_STEP,
                                         "lucide.plus",

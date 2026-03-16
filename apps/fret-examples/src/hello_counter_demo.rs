@@ -3,10 +3,13 @@ use std::sync::Arc;
 use fret::app::prelude::*;
 use fret::{
     FretApp,
+    actions::CommandId,
     icons::{IconId, icon},
     semantics::SemanticsRole,
     shadcn,
-    style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme},
+    style::{
+        ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme, ThemeSnapshot,
+    },
 };
 use fret_core::Corners;
 use fret_ui::element::TextProps;

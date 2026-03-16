@@ -115,7 +115,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .tooltip(checkpoint.tooltip)
                             .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
                             .test_id("ui-ai-checkpoint-trigger")
-                            .listen(cx, restore_to_checkpoint.clone())
+                            .listen(restore_to_checkpoint.clone())
                             .into_element(cx),
                     ])
                     .test_id("ui-ai-checkpoint-row")
@@ -160,7 +160,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-ai-checkpoint-reset")
-                .listen(cx, reset_demo.clone())
+                .listen(reset_demo.clone())
                 .into_element(cx),
         ]
     })

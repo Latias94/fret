@@ -370,19 +370,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let controls = ui_ai::WorkflowControls::new([
         ui_ai::WorkflowControlsButton::new("Zoom in", IconId::new_static("lucide.plus"))
             .test_id("ui-ai-workflow-node-graph-demo-zoom-in")
-            .listen(cx, zoom_in)
+            .listen(zoom_in)
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Zoom out", IconId::new_static("lucide.minus"))
             .test_id("ui-ai-workflow-node-graph-demo-zoom-out")
-            .listen(cx, zoom_out)
+            .listen(zoom_out)
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Fit view", IconId::new_static("lucide.maximize-2"))
             .test_id("ui-ai-workflow-node-graph-demo-fit-view")
-            .listen(cx, fit_view)
+            .listen(fit_view)
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Reset view", IconId::new_static("lucide.refresh-ccw"))
             .test_id("ui-ai-workflow-node-graph-demo-reset-view")
-            .listen(cx, reset_view)
+            .listen(reset_view)
             .into_element(cx),
     ])
     .test_id("ui-ai-workflow-node-graph-demo-controls")

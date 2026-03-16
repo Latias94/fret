@@ -31,7 +31,7 @@ fn action_button(
 ) -> AnyElement {
     shadcn::Button::new(label)
         .variant(variant)
-        .listen(cx, on_activate)
+        .listen(on_activate)
         .test_id(test_id)
         .into_element(cx)
 }
@@ -45,7 +45,7 @@ fn type_button(
 ) -> AnyElement {
     let mut button = shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Ghost)
-        .listen(cx, on_activate)
+        .listen(on_activate)
         .test_id(test_id);
 
     if active {

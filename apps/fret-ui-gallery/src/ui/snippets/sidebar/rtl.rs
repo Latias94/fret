@@ -36,7 +36,7 @@ fn menu_button(
         .icon(fret_icons::IconId::new_static(icon))
         .active(is_active)
         .collapsed(collapsed)
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&selected_for_activate, |v| *v = value_for_activate.clone());

@@ -56,9 +56,9 @@ The default app-facing event story should collapse to four concepts:
 2. **Dispatch that action from widget-local activation sugar**
    - if a widget already has `.action(...)` / `.action_payload(...)`, prefer those direct action
      slots first,
-   - use `widget.dispatch::<act::Save>(cx)` only for activation-only surfaces that do not already
+   - use `widget.dispatch::<act::Save>()` only for activation-only surfaces that do not already
      expose a stable action slot,
-   - use `widget.dispatch_payload::<act::ToggleTodo>(cx, todo.id)` only when the widget-local
+   - use `widget.dispatch_payload::<act::ToggleTodo>(todo.id)` only when the widget-local
      surface is activation-only but the action still needs payload dispatch,
    - treat raw `.on_activate(...)` wired with `cx.actions().dispatch* / listener(...)` as the
      lower-level building block behind that sugar, not as the default teaching lane.
@@ -68,7 +68,7 @@ The default app-facing event story should collapse to four concepts:
    - `cx.actions().payload::<A>().locals(...)`
    - `cx.actions().transient::<A>(...)`
 4. **Use an explicit listener escape hatch for local imperative glue**
-   - `widget.listen(cx, |host, acx| { ... })`
+   - `widget.listen(|host, acx| { ... })`
 
 Everything else should read as advanced or retained seam.
 
@@ -89,13 +89,13 @@ shadcn::Checkbox::from_checked(todo.done)
     .action_payload(todo.id);
 
 widget_that_only_exposes_on_activate()
-    .dispatch::<act::Save>(cx);
+    .dispatch::<act::Save>();
 
 widget_that_only_exposes_on_activate()
-    .dispatch_payload::<act::RemoveTodo>(cx, todo.id);
+    .dispatch_payload::<act::RemoveTodo>(todo.id);
 
 shadcn::Button::new("Close")
-    .listen(cx, |host, acx| {
+    .listen(|host, acx| {
         host.request_redraw(acx.window);
         host.notify(acx);
     });
@@ -142,8 +142,8 @@ Move default docs toward:
 
 - widget binding via `.action(...)` / `.action_payload(...)` whenever the widget already exposes a
   stable action slot,
-- widget-local activation via `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` /
-  `.listen(cx, ...)` only for activation-only surfaces,
+- widget-local activation via `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` /
+  `.listen(...)` only for activation-only surfaces,
 - root/view handling via `cx.actions().locals/models/payload/transient`
 
 Demote:
@@ -161,10 +161,10 @@ Default shape:
 
 ```rust,ignore
 activation_only_widget()
-    .dispatch::<act::OpenPalette>(cx);
+    .dispatch::<act::OpenPalette>();
 
 activation_only_widget()
-    .listen(cx, |host, acx| {
+    .listen(|host, acx| {
         host.request_redraw(acx.window);
         host.notify(acx);
     });
@@ -174,6 +174,9 @@ Trait boundary:
 
 - app-facing extension trait in `ecosystem/fret`,
 - implemented only for widgets/types that already expose `on_activate(...)`,
+- the authoring surface intentionally does **not** carry an unused `cx` marker argument anymore;
+  widget-local activation sugar is now pure widget syntax (`dispatch`, `dispatch_payload`,
+  `listen`) because the context value was never part of the runtime behavior,
 - current first-party coverage intentionally stays narrow and real: `shadcn::Badge`,
   `shadcn::Button`, `shadcn::SidebarMenuButton`, `shadcn::extras::{BannerAction, BannerClose, Ticker}`,
   optional `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`,
@@ -191,7 +194,7 @@ Trait boundary:
 Current first-party teaching evidence (as of 2026-03-15):
 
 - selected UI Gallery activation-only snippets now import `fret::app::AppActivateExt as _;`,
-- those snippets prefer `.listen(cx, |host, acx| { ... })` over reopening raw `.on_activate(...)`,
+- those snippets prefer `.listen(|host, acx| { ... })` over reopening raw `.on_activate(...)`,
 - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locks that default teaching
   surface with `selected_activation_snippets_prefer_app_activate_listen`, including the primary
   `sonner/demo` snippet, the data-table pagination demos, `scroll_area/nested_scroll_routing`, and

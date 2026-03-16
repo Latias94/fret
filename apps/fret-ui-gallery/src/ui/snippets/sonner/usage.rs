@@ -12,7 +12,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let last_action = last_action_model(cx);
 
     shadcn::Button::new("Show toast")
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             sonner.toast(
                 host,
                 action_cx.window,

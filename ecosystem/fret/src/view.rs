@@ -545,30 +545,21 @@ pub trait AppActivateSurface: Sized {
     fn on_activate(self, on_activate: OnActivate) -> Self;
 }
 
-#[doc(hidden)]
-pub trait AppActivateCxMarker {}
-
-impl<'cx, 'a, H: UiHost> AppActivateCxMarker for AppUi<'cx, 'a, H> {}
-
-impl<'a, H: UiHost> AppActivateCxMarker for ElementContext<'a, H> {}
-
 /// Thin app-facing sugar for activation-only widget surfaces.
 ///
 /// Prefer widget-native `.action(...)` / `.action_payload(...)` whenever a stable action slot
 /// already exists. Use this only for activation-only surfaces that would otherwise force
-/// `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, payload)` / `.listen(cx, ...)` boilerplate
-/// to reopen the raw `OnActivate` closure shape. The `cx` argument intentionally accepts both
-/// `View::render(&mut AppUi)` and extracted `UiCx` helper builders so the sugar stays consistent
-/// after authors split UI into smaller functions.
+/// `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` / `.listen(...)` boilerplate to reopen
+/// the raw `OnActivate` closure shape.
 pub trait AppActivateExt: AppActivateSurface {
-    fn dispatch<A, Cx: AppActivateCxMarker>(self, _cx: &mut Cx) -> Self
+    fn dispatch<A>(self) -> Self
     where
         A: crate::TypedAction,
     {
         <Self as AppActivateSurface>::on_activate(self, dispatch_action_listener::<A>())
     }
 
-    fn dispatch_payload<A, Cx: AppActivateCxMarker>(self, _cx: &mut Cx, payload: A::Payload) -> Self
+    fn dispatch_payload<A>(self, payload: A::Payload) -> Self
     where
         A: crate::actions::TypedPayloadAction,
         A::Payload: Clone,
@@ -579,11 +570,7 @@ pub trait AppActivateExt: AppActivateSurface {
         )
     }
 
-    fn listen<Cx: AppActivateCxMarker>(
-        self,
-        _cx: &mut Cx,
-        f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static,
-    ) -> Self {
+    fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> Self {
         <Self as AppActivateSurface>::on_activate(self, action_listener(f))
     }
 }
@@ -1810,14 +1797,16 @@ mod tests {
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
-        assert!(api_source.contains("pub trait AppActivateCxMarker"));
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
-        assert!(api_source.contains("AppActivateCxMarker for AppUi"));
-        assert!(api_source.contains("AppActivateCxMarker for ElementContext"));
-        assert!(api_source.contains("fn dispatch<A, Cx: AppActivateCxMarker>(self, _cx: &mut Cx)"));
-        assert!(api_source.contains("fn dispatch_payload<A, Cx: AppActivateCxMarker>("));
-        assert!(api_source.contains("fn listen<Cx: AppActivateCxMarker>("));
+        assert!(!api_source.contains("pub trait AppActivateCxMarker"));
+        assert!(!api_source.contains("AppActivateCxMarker for AppUi"));
+        assert!(!api_source.contains("AppActivateCxMarker for ElementContext"));
+        assert!(api_source.contains("fn dispatch<A>(self) -> Self"));
+        assert!(api_source.contains("fn dispatch_payload<A>(self, payload: A::Payload) -> Self"));
+        assert!(api_source.contains(
+            "fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> Self"
+        ));
         assert!(api_source.contains("pub fn dispatch<A>(self) -> OnActivate"));
         assert!(
             api_source

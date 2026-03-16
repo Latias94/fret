@@ -16,7 +16,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let present_for_reset = present.clone();
     let reset = shadcn::Button::new("Reset artifact")
         .variant(shadcn::ButtonVariant::Secondary)
-        .listen(cx, move |host, action_cx| {
+        .listen(move |host, action_cx| {
             let _ = host.models_mut().update(&present_for_reset, |v| *v = true);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);
@@ -27,7 +27,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let artifact = if is_present {
         let close = ui_ai::ArtifactClose::new()
             .test_id("ui-ai-artifact-close")
-            .listen(cx, {
+            .listen({
                 let present = present.clone();
                 move |host, action_cx| {
                     let _ = host.models_mut().update(&present, |v| *v = false);

@@ -72,25 +72,30 @@ Target exports:
 - `WindowId`
 - `AppUi`
 - `UiCx`
-- `LocalState`
 - `Ui`
 - `UiChild`
 - `ui`
 - `Px`
 - `shadcn` (feature-gated)
-- `ThemeSnapshot`
-- typed action/payload action macros plus `CommandId`
+- typed action/payload action macros
 
 Explicit secondary app lanes:
 
-- `fret::actions::*` for explicit command metadata, payload-action contracts, and action-registry
-  helper nouns beyond bare `CommandId`; add `ElementCommandGatingExt as _` when code needs
-  explicit `cx.action_is_enabled(...)` reads
+- `fret::actions::*` for explicit command identity/metadata, payload-action contracts, and
+  action-registry helper nouns; add `ElementCommandGatingExt as _` when code needs explicit
+  `cx.action_is_enabled(...)` reads
+- `fret::app::{AppActivateSurface, AppActivateExt}` for helper signatures that intentionally name
+  the narrow activation-widget contract instead of relying on the anonymous app-prelude method
+  import
+- `fret::app::LocalState` for helper signatures or validators that intentionally name local
+  state-handle types
 - `fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw,
   on_activate_request_redraw_notify}` for intentional raw activation-helper glue outside the
   default app lane
 - `fret::workspace_menu::*` for opt-in in-window menubar/menu-model integration helpers
 - `fret::semantics::SemanticsRole` for explicit semantic-role nouns
+- `fret::style::ThemeSnapshot` for extracted helper signatures that intentionally take snapshot
+  value types
 - `fret::selector::{DepsBuilder, DepsSignature}` for selector dependency signatures
 - `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` for explicit query nouns
 - `fret::children::UiElementSinkExt as _` for explicit sink-style `*_build(|cx, out| ...)`
@@ -101,6 +106,7 @@ Target non-exports:
 - `Event`
 - `KernelApp`
 - `AppWindowId`
+- `AppActivateExt` as a named app-prelude export
 - `TrackedStateExt` as a named app-prelude export
 - `ElementContext`
 - `UiTree`
@@ -190,6 +196,9 @@ Target rule:
 - overlap-heavy extension traits may still arrive through anonymous `as _` imports so method calls
   remain ergonomic, but those trait names are not part of the default app-lane vocabulary and
   should not be taught as first-contact imports.
+- `AppActivateExt` follows the same rule: app code may call `.dispatch::<A>()`,
+  `.dispatch_payload::<A>(...)`, or `.listen(...)` without importing the trait name, but
+  helper code that intentionally names the contract should import it from `fret::app`.
 - the remaining anonymous semantics/a11y/test-id helpers are intentionally retained on the app
   lane: `.role(...)`, `.a11y_role(...)`, and `.test_id(...)` are treated as app-justified
   diagnostics/accessibility affordances even though the underlying trait names stay hidden.
@@ -231,6 +240,10 @@ Target exports:
 - semantics/layout utilities needed by reusable components
 - explicit overlay/focus composition helpers intended for reusable libraries
 - explicit raw escape hatches such as `AnyElement`, `UiHost`, and `Invalidation`
+- only the high-frequency overlay builder nouns stay directly on this lane
+  (`OverlayController`, `OverlayRequest`, `OverlayPresence`); overlay stack snapshots, anchoring
+  helpers, and lower-level overlay introspection vocabulary live on explicit `fret::overlay::*`
+  imports instead of widening first-contact autocomplete
 
 Target non-exports:
 
@@ -241,6 +254,8 @@ Target non-exports:
 - runner/manual assembly types
 - legacy split conversion names such as `UiIntoElement`, `UiHostBoundIntoElement`,
   and `UiChildIntoElement`
+- overlay introspection/stack snapshot nouns such as `OverlayArbitrationSnapshot`,
+  `OverlayStackEntryKind`, `WindowOverlayStackEntry`, and `WindowOverlayStackSnapshot`
 
 Target rule:
 
@@ -249,6 +264,9 @@ Target rule:
 - reusable component code that needs explicit command identity values should import
   `fret::actions::CommandId` (or `fret-runtime`) explicitly instead of relying on the component
   prelude.
+- overlap-heavy helper traits should stay anonymous `as _` imports on this lane as well, so
+  reusable component method ergonomics do not force extension-trait names into first-contact
+  autocomplete.
 - reusable component code that needs raw activation helper glue should import it explicitly from
   `fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw,
   on_activate_request_redraw_notify}` instead of relying on the component prelude.
@@ -390,11 +408,14 @@ Direct crate usage rule for first-party recipe crates:
 - theme presets stay on `shadcn::themes::*`
 - full crate-root escape hatches must be explicit via `shadcn::raw::*`
 - the full `fret_ui_shadcn` crate root is no longer a component-family or direction-utility
-  discovery lane; remaining flat-root exposure is limited to explicit glue residue rather than
-  peer first-contact API
+  discovery lane; remaining flat-root exposure is limited to doc-hidden compatibility/glue residue
+  rather than peer first-contact API
 - first-party teaching surfaces may currently use only the documented raw lanes:
   `shadcn::raw::typography::*`, `shadcn::raw::extras::*`,
-  `shadcn::raw::breadcrumb::primitives`, low-level `shadcn::raw::icon::*`, and
+  `shadcn::raw::breadcrumb::primitives`, `shadcn::raw::experimental::*` for the
+  `DataGridElement` prototype, low-level `shadcn::raw::icon::*`, module-local advanced
+  customization enums/styles such as `shadcn::raw::{button, calendar, context_menu,
+  dropdown_menu, kbd, menubar, select, switch, tabs, toggle_group}::*`, and
   explicitly justified retained/interop seams such as `fret::shadcn::raw::prelude::*`
 - 2026-03-15 implementation note: first-party UI Gallery snippet/page surfaces are now aligned to
   this rule; remaining direct-crate cleanup is bounded to non-gallery first-party consumers and
