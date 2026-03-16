@@ -125,13 +125,11 @@ This workstream takes a fearless posture:
       `fretboard diag` post-run bundle checks, so suites can gate the effective backend/fallback
       without custom log parsing,
     - and requests redraws for each tracked native window.
-  - `fret-ui-assets` now consumes that shared runtime-global epoch directly; the old
-    `UiAssetsReloadEpoch` / `bump_ui_assets_reload_epoch(...)` names remain only as deprecated
-    compatibility shims, are now unused by first-party code, and should be deleted in the final
-    M5 cleanup.
-  - the M5 delete/rename scope is now tracked explicitly in
+  - `fret-ui-assets` now consumes that shared runtime-global epoch directly, and the old
+    UI-specific reload aliases have been removed from the first-party surface.
+  - the completed M5 delete/rename scope is tracked explicitly in
     `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`, including
-    the remaining shim symbols plus the legacy dev-reload env/file naming.
+    the removed shim symbols plus the dev-reload env/file rename.
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.

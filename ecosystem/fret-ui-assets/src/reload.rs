@@ -1,24 +1,11 @@
 //! Development-oriented reload controls for UI assets.
 //!
-//! UI-specific compatibility shims now sit on top of the shared runtime asset reload epoch.
+//! `fret-ui-assets` intentionally re-exports the shared runtime asset-reload vocabulary rather than
+//! inventing a UI-specific reload contract.
 //! Desktop hosts may drive that epoch from native file watchers or metadata polling depending on
 //! startup policy and platform support.
 
-use fret_runtime::GlobalsHost;
-
 pub use fret_runtime::{
     AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
-    asset_reload_epoch, asset_reload_status, asset_reload_support,
+    asset_reload_epoch, asset_reload_status, asset_reload_support, bump_asset_reload_epoch,
 };
-
-#[deprecated(
-    note = "prefer fret_runtime::AssetReloadEpoch or app-facing asset helpers; the generic asset reload epoch is no longer UI-specific"
-)]
-pub type UiAssetsReloadEpoch = AssetReloadEpoch;
-
-#[deprecated(
-    note = "prefer fret_runtime::bump_asset_reload_epoch or app-facing asset helpers; the generic asset reload epoch is no longer UI-specific"
-)]
-pub fn bump_ui_assets_reload_epoch<H: GlobalsHost>(host: &mut H) {
-    fret_runtime::bump_asset_reload_epoch(host);
-}

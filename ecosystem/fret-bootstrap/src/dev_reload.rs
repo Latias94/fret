@@ -85,23 +85,6 @@ fn resolve_path(root: &Path, env_var: &str, default_rel: &str) -> PathBuf {
     root.join(default_rel)
 }
 
-// Prefer the generic asset-reload knob while the legacy UI-assets env var remains in the overlap
-// window before M5 cleanup removes it.
-fn resolve_path_with_legacy_env(
-    root: &Path,
-    env_var: &str,
-    legacy_env_var: &str,
-    default_rel: &str,
-) -> PathBuf {
-    if std::env::var_os(env_var).is_some() {
-        return resolve_path(root, env_var, default_rel);
-    }
-    if std::env::var_os(legacy_env_var).is_some() {
-        return resolve_path(root, legacy_env_var, default_rel);
-    }
-    root.join(default_rel)
-}
-
 #[derive(Debug, Clone, Default)]
 pub(crate) struct DevReloadTick {
     pub(crate) reloaded_theme: bool,
@@ -156,11 +139,10 @@ impl DevReloadWatcher {
             "FRET_DEV_RELOAD_LITERALS_PATH",
             ".fret/literals.json",
         );
-        let asset_reload_trigger_path = resolve_path_with_legacy_env(
+        let asset_reload_trigger_path = resolve_path(
             &root,
             "FRET_DEV_RELOAD_ASSET_RELOAD_TRIGGER_PATH",
-            "FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH",
-            ".fret/ui_assets.touch",
+            ".fret/asset_reload.touch",
         );
         let fonts_manifest_path =
             resolve_path(&root, "FRET_DEV_RELOAD_FONTS_PATH", ".fret/fonts.json");

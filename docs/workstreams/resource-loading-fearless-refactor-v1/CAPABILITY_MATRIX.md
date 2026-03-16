@@ -110,8 +110,8 @@ escape hatches.
   - supported desktop hosts now prefer a native watcher backend and fall back to metadata polling
     if the watcher backend or current watch roots cannot be installed,
   - wasm/mobile still have no first-party automatic reload lane,
-  - `UiAssetsReloadEpoch` remains only as a deprecated compatibility alias; new code should use
-    the shared `AssetReloadEpoch`.
+  - the old UI-specific reload alias was removed; code should use the shared
+    `AssetReloadEpoch`.
 - Guidance:
   - the `file_watch` capability bit means “the host can automatically detect native file-backed
     asset changes and publish invalidation,” not necessarily “the host uses OS file events,”

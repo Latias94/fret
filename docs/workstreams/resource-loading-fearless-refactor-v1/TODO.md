@@ -442,17 +442,15 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
   - Current landed slice:
     - `fret_runtime::{AssetReloadEpoch, AssetReloadSupport}` are now the canonical runtime-global
       asset reload/invalidation nouns.
-    - `ecosystem/fret-ui-assets/src/reload.rs` now keeps `UiAssetsReloadEpoch` and
-      `bump_ui_assets_reload_epoch(...)` only as deprecated compatibility shims.
     - first-party callers now use the generic names instead of the deprecated UI-specific ones:
       - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
       - `ecosystem/fret-bootstrap/src/dev_reload.rs`
-  - Remaining:
-    - delete the deprecated UI-specific aliases in M5 cleanup, not before.
-    - complete the external-shell-facing cleanup tracked in
-      `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`:
-      - legacy env alias `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH`
-      - legacy trigger file name `.fret/ui_assets.touch`
+    - the deprecated UI-specific aliases and the legacy dev-reload env/file naming have now been
+      removed from first-party code:
+      - `ecosystem/fret-ui-assets/src/reload.rs`
+      - `ecosystem/fret-bootstrap/src/dev_reload.rs`
+  - Follow-up record:
+    - `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`
 
 ## Diagnostics and gates
 

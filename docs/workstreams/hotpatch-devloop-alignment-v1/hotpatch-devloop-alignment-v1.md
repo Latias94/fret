@@ -119,11 +119,10 @@ Channels:
 
 2) **Asset reload**
    - svg/png/fonts; invalidate caches and request redraw
-   - default trigger file: `.fret/ui_assets.touch` (bump the shared `AssetReloadEpoch`)
-   - note: the file name is legacy; the resource-loading M5 cleanup plan keeps `.fret/asset_reload.touch` as the target replacement once docs/tooling switch together
+   - default trigger file: `.fret/asset_reload.touch` (bump the shared `AssetReloadEpoch`)
    - intended usage: a tooling watcher updates the trigger file when assets change
    - current scope (L1): file-path image decode (`ImageSource::from_file_path`) and SVG file bytes (`SvgFileSource`)
-   - fonts: `.fret/fonts.json` (list of TTF/OTF/TTC files) is applied via `Effect::TextAddFonts` on change or when `ui_assets.touch` bumps
+   - fonts: `.fret/fonts.json` (list of TTF/OTF/TTC files) is applied via `Effect::TextAddFonts` on change or when `asset_reload.touch` bumps
 
 3) **Hot literals**
    - developer strings/labels/tooltips sourced from a data file in `.fret/` or the app root
@@ -136,8 +135,7 @@ Enablement (native):
 - Path overrides:
   - `FRET_DEV_RELOAD_THEME_PATH`
   - `FRET_DEV_RELOAD_LITERALS_PATH`
-  - `FRET_DEV_RELOAD_ASSET_RELOAD_TRIGGER_PATH` (preferred)
-  - `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH` (legacy alias)
+  - `FRET_DEV_RELOAD_ASSET_RELOAD_TRIGGER_PATH`
 
 Principle:
 

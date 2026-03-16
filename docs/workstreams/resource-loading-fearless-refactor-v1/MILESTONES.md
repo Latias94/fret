@@ -99,7 +99,7 @@ Deliverables:
 
 - Legacy path-first helpers are deprecated or removed.
 - Deprecated UI-specific reload aliases are removed once first-party migration is complete.
-- The explicit M5 cleanup checklist for remaining compatibility surfaces is burned down:
+- The explicit M5 cleanup checklist for the former compatibility surfaces is burned down:
   - `UiAssetsReloadEpoch`
   - `bump_ui_assets_reload_epoch(...)`
   - `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH`

@@ -40,6 +40,7 @@ mod surface_policy_tests {
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
     const IMAGE_SOURCE_RS: &str = include_str!("image_source.rs");
+    const RELOAD_RS: &str = include_str!("reload.rs");
     const SVG_FILE_RS: &str = include_str!("svg_file.rs");
 
     fn public_surface() -> &'static str {
@@ -107,5 +108,13 @@ mod surface_policy_tests {
                 "use configure_caches_with_ui_services_and_budgets; this only configures caches and does not wire event handling"
             )
         );
+    }
+
+    #[test]
+    fn reload_surface_keeps_only_generic_asset_reload_names() {
+        assert!(RELOAD_RS.contains("AssetReloadEpoch"));
+        assert!(RELOAD_RS.contains("bump_asset_reload_epoch"));
+        assert!(!RELOAD_RS.contains("UiAssetsReloadEpoch"));
+        assert!(!RELOAD_RS.contains("bump_ui_assets_reload_epoch"));
     }
 }

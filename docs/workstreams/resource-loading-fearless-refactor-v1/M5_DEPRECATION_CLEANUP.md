@@ -1,6 +1,6 @@
 # Resource Loading Fearless Refactor v1 — M5 Deprecation Cleanup
 
-Status: In progress (first-party migration complete; compatibility surfaces still intentionally present)
+Status: Completed (legacy UI-specific reload names and legacy trigger/env defaults removed)
 
 ## Purpose
 
@@ -9,23 +9,14 @@ This document is the explicit delete/rename checklist for the final M5 cleanup p
 It exists to prevent the last stage of the resource-loading refactor from drifting back into
 "leave the old name around forever" behavior.
 
-## Current rule
-
-Before M5:
-
-- first-party code should already use the generic asset-reload contract,
-- compatibility surfaces may remain only when they protect external callers or an existing
-  shell/devloop contract,
-- every remaining legacy name must have a named delete or rename decision below.
-
-## Remaining compatibility surfaces
+## Removed surfaces
 
 | Surface | Current status | Why it still exists | M5 action |
 | --- | --- | --- | --- |
-| `UiAssetsReloadEpoch` in `ecosystem/fret-ui-assets/src/reload.rs` | Deprecated shim | External callers may still compile against the old UI-specific type alias | Delete the alias |
-| `bump_ui_assets_reload_epoch(...)` in `ecosystem/fret-ui-assets/src/reload.rs` | Deprecated shim | External callers may still compile against the old helper | Delete the function |
-| `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH` | Legacy env alias | Existing local scripts/shells may still export the old variable | Remove the alias after docs and tooling no longer advertise it |
-| `.fret/ui_assets.touch` | Legacy trigger filename | The trigger file name is still external-shell-facing and has not yet been renamed in a coordinated pass | Replace with `.fret/asset_reload.touch` only when the first-party docs/tooling default changes together |
+| `UiAssetsReloadEpoch` in `ecosystem/fret-ui-assets/src/reload.rs` | Removed | UI-specific reload alias no longer matches the shared asset contract | Deleted |
+| `bump_ui_assets_reload_epoch(...)` in `ecosystem/fret-ui-assets/src/reload.rs` | Removed | UI-specific helper no longer matches the shared asset contract | Deleted |
+| `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH` | Removed | Generic asset-reload env naming is now the only first-party contract | Deleted |
+| `.fret/ui_assets.touch` | Removed as the first-party default | Generic asset-reload trigger naming is now the only first-party contract | Replaced by `.fret/asset_reload.touch` |
 
 ## Explicit decisions
 
@@ -35,7 +26,7 @@ Decision:
 
 - They are not part of the long-term contract.
 - They should not gain any new first-party references.
-- They are removed in M5, not later.
+- They were removed in M5.
 
 Exit check:
 
@@ -48,41 +39,34 @@ Exit check:
 
 Decision:
 
-- `FRET_DEV_RELOAD_ASSET_RELOAD_TRIGGER_PATH` is the preferred generic name.
-- `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH` is a compatibility alias only.
+- `FRET_DEV_RELOAD_ASSET_RELOAD_TRIGGER_PATH` is the generic first-party name.
+- `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH` is no longer supported.
 
 Exit check:
 
 - docs teach only the generic env var,
-- code still accepts the legacy env var during the overlap window,
-- M5 removes the legacy alias after the overlap window is no longer needed.
+- code accepts only the generic env var.
 
 ### 3. Trigger file naming
 
 Decision:
 
-- `.fret/ui_assets.touch` is a legacy filename, not the target naming model.
-- The final target name should be `.fret/asset_reload.touch`.
-- Rename only when first-party docs and any first-party tooling defaults move together.
-
-Reason:
-
-- The file path is shell-facing and easier for users to script against than a Rust symbol, so it
-  deserves a small overlap window instead of a silent rename.
+- `.fret/asset_reload.touch` is now the first-party trigger filename.
+- `.fret/ui_assets.touch` is no longer the first-party default.
 
 Exit check:
 
-- the preferred path in docs/tooling is `.fret/asset_reload.touch`,
-- any temporary fallback to `.fret/ui_assets.touch` is removed in M5.
+- docs/tooling use `.fret/asset_reload.touch`,
+- first-party code no longer defaults to `.fret/ui_assets.touch`.
 
 ## Practical M5 checklist
 
-- [ ] Delete `UiAssetsReloadEpoch`
-- [ ] Delete `bump_ui_assets_reload_epoch(...)`
-- [ ] Remove `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH`
-- [ ] Rename the preferred trigger file from `.fret/ui_assets.touch` to `.fret/asset_reload.touch`
-- [ ] Re-run the repo-wide grep and confirm no first-party code/docs teach the UI-specific names
-- [ ] Update the workstream status docs to record the removal commit(s)
+- [x] Delete `UiAssetsReloadEpoch`
+- [x] Delete `bump_ui_assets_reload_epoch(...)`
+- [x] Remove `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH`
+- [x] Rename the preferred trigger file from `.fret/ui_assets.touch` to `.fret/asset_reload.touch`
+- [x] Re-run the repo-wide grep and confirm no first-party code/docs teach the UI-specific names
+- [x] Update the workstream status docs to record the removal
 
 ## Evidence anchors
 
