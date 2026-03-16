@@ -362,10 +362,22 @@ Interaction contract:
       `workspace-tabstrip-*` workstreams remain the lower-level tab semantics reference.
 - [ ] `EER-SHELL-121` Keep shell tabstrip and docking tab/drop chrome aligned through adapter
       seeding/aliasing rather than crate coupling.
-- [ ] `EER-THEME-122` Audit the editor proof preset so it stops mutating shared component/palette
+- [~] `EER-THEME-122` Audit the editor proof preset so it stops mutating shared component/palette
       keys whenever editor-owned families are sufficient.
-- [ ] `EER-THEME-123` Decide whether `workspace.tab.*` also needs adapter-side seeding or should
+      First ownership slice is now landed: editor text-field chrome defaults moved from
+      `component.text_field.*` writes into `editor.text_field.*`, while editor controls still keep
+      legacy `component.text_field.*` read fallback for app compatibility. Remaining work is now
+      narrower: audit the residual shared palette writes (`card`, `muted`, `border`,
+      `foreground`, `muted-foreground`, `accent`, `ring`) and only keep the ones that still back
+      real non-editor-owned seams.
+- [x] `EER-THEME-123` Decide whether `workspace.tab.*` also needs adapter-side seeding or should
       remain fallback-first for v1.
+      Decision: keep `workspace.tab.*` fallback-first for v1. `fret-ui-shadcn` continues seeding
+      only shell-level `workspace.frame.*`, `workspace.top_bar.*`, `workspace.status_bar.*`, and
+      `workspace.tabstrip.*`; tab-item colors remain opt-in owner overrides on top of generic app
+      tokens. `WorkspaceTabStripTheme` now also prefers owner overrides such as
+      `workspace.tab.hover_bg` before generic fallback tokens so keeping this family unseeded does
+      not weaken owner-token precedence.
 - [ ] `EER-EXTRACT-124` Decide whether to introduce a future inspector/property protocol crate or
       explicitly defer extraction until a second consumer exists.
 - [ ] `EER-EXTRACT-125` Rebase reusable viewport tool logic onto `fret-viewport-tooling` /
