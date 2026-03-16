@@ -8,6 +8,7 @@ Related:
 - Target interface state: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - TODO: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`
 - Tracked-read audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TRACKED_READ_AUDIT_2026-03-16.md`
+- Selector/query audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_AUDIT_2026-03-16.md`
 - Authoring-surface closeout: `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - Action-first post-v1 summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Into-element closeout target: `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -15,9 +16,9 @@ Related:
 ## Current status snapshot (as of 2026-03-16)
 
 - **M0**: Met once this directory and the main docs indices land.
-- **M1**: In progress (tracked-read adoption cleanup on `AppUi` surfaces plus remaining
-  `UiCx`/`ElementContext` gap audit).
-- **M2**: Planned (selector/query happy-path density reduction).
+- **M1**: Closeout mode (shared tracked-read surface settled; remaining work is breadth cleanup and
+  wording/gate retirement).
+- **M2**: Next active design question (selector/query happy-path density reduction).
 - **M3**: Planned (re-evaluate keyed/list/default child-collection pressure after read-side work).
 - **M4**: Planned (hard-delete displaced wording and lock the shorter path with docs/gates).
 
@@ -45,6 +46,13 @@ Tracked-read note on 2026-03-16:
 - second-pass proof across `simple_todo_demo`, `async_playground_demo`, and custom-effect/postprocess
   helpers shows repeated `cx.watch_model(&model).layout()/paint()` pressure outside Todo-only
   comparisons, so a narrow component-layer handle-first helper is justified there.
+- third/fourth-pass proof across `genui_demo` and `imui_editor_proof_demo` shows that the
+  unresolved larger pressure has now shifted from tracked-read helper shape to selector/query-style
+  derived-state choreography.
+- `genui_demo` has since absorbed its remaining low-risk tracked-read cleanup, so the remaining M1
+  work is best treated as closeout-only breadth cleanup rather than another design phase.
+- therefore M1 should be treated as design-complete with remaining breadth cleanup, and M2 should
+  become the next active design step.
 
 ## Milestone 0 — Freeze the lane
 

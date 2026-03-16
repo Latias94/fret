@@ -1685,6 +1685,28 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            GENUI_DEMO,
+            &[
+                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);",
+                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);",
+                "st.genui_state",
+                ".layout_in(cx)",
+                ".read_ref(|v| {",
+                "st.action_queue",
+                "st.validation_state",
+                "let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);",
+            ],
+            &[
+                "cx.watch_model(&st.auto_apply_standard_actions)",
+                "cx.watch_model(&st.auto_fix_on_apply)",
+                "cx.watch_model(&st.genui_state)",
+                "cx.watch_model(&st.action_queue)",
+                "cx.watch_model(&st.validation_state)",
+                "cx.watch_model(&st.stream_patch_only)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_DEMO,
             &[
                 "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",

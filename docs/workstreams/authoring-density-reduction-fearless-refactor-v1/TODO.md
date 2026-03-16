@@ -14,6 +14,7 @@ Companion docs:
 - `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
 - `TRACKED_READ_AUDIT_2026-03-16.md`
+- `SELECTOR_QUERY_AUDIT_2026-03-16.md`
 
 ## Current priority checklist
 
@@ -47,6 +48,12 @@ Companion docs:
       demo family,
     - the remaining work is mostly breadth cleanup on other first-party `ElementContext` examples
       or larger editor-style surfaces rather than another shared-surface design question.
+  - 2026-03-16 selector/query audit:
+    - `genui_demo` confirmed the last low-risk tracked-read cleanup shape and does not justify
+      another shared read helper,
+    - `imui_editor_proof_demo` splits between low-risk `paint_in(cx)` cleanup and a more important
+      repeated assist/query-derived-state choreography problem,
+    - that larger choreography problem is M2 evidence, not a reason to reopen M1 surface design.
 - [ ] Land the smallest justified tracked-read reduction.
   - Constraints:
     - keep invalidation intent explicit,
@@ -89,11 +96,20 @@ Companion docs:
   - a narrower grouped helper,
   - or a different existing helper that should become the taught default.
 - [ ] Land the chosen reduction and remove the displaced taught wording from default docs/examples.
+  - Current reading:
+    - the tracked-read helper decision is already made,
+    - representative non-Todo adoption is already proven,
+    - remaining work is closeout/breadth cleanup rather than another shared-surface question.
 
 ## M2 — Selector/query density
 
 - [ ] Inventory selector LocalState-first boilerplate that still reads like raw model plumbing.
 - [ ] Inventory query observe/read boilerplate that still reads like low-level handle plumbing.
+  - 2026-03-16 starting evidence:
+    - `genui_demo` remains a medium non-Todo proof surface for selector/query follow-up after the
+      final low-risk tracked-read cleanup landed,
+    - `imui_editor_proof_demo` already shows repeated assist-state derived-read choreography that is
+      better classified as M2 pressure than as M1 tracked-read debt.
 - [ ] Decide which parts are:
   - intentional ownership/runtime complexity,
   - versus removable authoring noise.
