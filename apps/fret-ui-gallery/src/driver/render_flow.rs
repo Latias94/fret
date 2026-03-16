@@ -2101,12 +2101,17 @@ mod tests {
 
         for target in [
             "ui-gallery-button-group-demo-content",
+            "ui-gallery-button-group-usage-content",
+            "ui-gallery-button-group-accessibility-content",
+            "ui-gallery-button-group-vs-toggle-group-content",
             "ui-gallery-button-group-orientation-content",
             "ui-gallery-button-group-size-content",
             "ui-gallery-button-group-nested-content",
             "ui-gallery-button-group-nested-step-1",
             "ui-gallery-button-group-nested-previous",
             "ui-gallery-button-group-nested-next",
+            "ui-gallery-button-group-separator-content",
+            "ui-gallery-button-group-split-content",
             "ui-gallery-button-group-input-content",
             "ui-gallery-button-group-input-group-content",
             "ui-gallery-button-group-input-group-add-button",
@@ -2116,9 +2121,11 @@ mod tests {
             "ui-gallery-button-group-select-content",
             "ui-gallery-button-group-select-currency-trigger",
             "ui-gallery-button-group-select-amount",
+            "ui-gallery-button-group-popover-content",
             "ui-gallery-button-group-rtl-content",
             "ui-gallery-button-group-api-reference-content",
             "ui-gallery-button-group-text-content",
+            "ui-gallery-button-group-flex1-content",
         ] {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
             let bounds = visual_bounds_by_test_id(&rendered, target);

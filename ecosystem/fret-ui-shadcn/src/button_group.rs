@@ -14,7 +14,7 @@ use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -442,6 +442,7 @@ pub struct ButtonGroup {
     layout: LayoutRefinement,
     radius_override: Option<Radius>,
     a11y_label: Option<Arc<str>>,
+    labelled_by_element: Option<GlobalElementId>,
 }
 
 impl ButtonGroup {
@@ -453,6 +454,7 @@ impl ButtonGroup {
             layout: LayoutRefinement::default(),
             radius_override: None,
             a11y_label: None,
+            labelled_by_element: None,
         }
     }
 
@@ -463,6 +465,12 @@ impl ButtonGroup {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Associates this group with an external label element (`aria-labelledby`-like outcome).
+    pub fn labelled_by_element(mut self, label: GlobalElementId) -> Self {
+        self.labelled_by_element = Some(label);
         self
     }
 
@@ -521,6 +529,7 @@ impl ButtonGroup {
         let orientation = self.orientation;
         let radius_override = self.radius_override;
         let a11y_label = self.a11y_label;
+        let labelled_by_element = self.labelled_by_element;
 
         let group = cx.flex(props, move |cx| {
             let radius = {
@@ -773,6 +782,9 @@ impl ButtonGroup {
         if let Some(a11y_label) = a11y_label {
             decoration = decoration.label(a11y_label);
         }
+        if let Some(labelled_by_element) = labelled_by_element {
+            decoration = decoration.labelled_by_element(labelled_by_element.0);
+        }
         group.attach_semantics(decoration)
     }
 }
@@ -841,6 +853,42 @@ mod tests {
                 .as_ref()
                 .and_then(|d| d.label.as_deref()),
             Some("Actions")
+        );
+    }
+
+    #[test]
+    fn button_group_can_reference_a_label_element_for_a11y_association() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
+                let label = crate::label::Label::new("Formatting").into_element(cx);
+                let label_id = label.id;
+
+                cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                    vec![
+                        label,
+                        ButtonGroup::new([
+                            ButtonGroupText::new("Bold").into(),
+                            ButtonGroupText::new("Italic").into(),
+                        ])
+                        .labelled_by_element(label_id)
+                        .into_element(cx),
+                    ]
+                })
+            });
+
+        let group = element.children.get(1).expect("button group child");
+        let decoration = group
+            .semantics_decoration
+            .as_ref()
+            .expect("expected semantics decoration on ButtonGroup root");
+        assert_eq!(decoration.role, Some(fret_core::SemanticsRole::Group));
+        assert_eq!(
+            decoration.labelled_by_element,
+            Some(element.children[0].id.0)
         );
     }
 
