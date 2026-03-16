@@ -16,6 +16,7 @@ Companion docs:
 - `TRACKED_READ_AUDIT_2026-03-16.md`
 - `SELECTOR_QUERY_AUDIT_2026-03-16.md`
 - `SELECTOR_QUERY_DIRECTION_2026-03-16.md`
+- `CHILD_COLLECTION_AUDIT_2026-03-16.md`
 
 ## Current priority checklist
 
@@ -77,10 +78,18 @@ Companion docs:
     - normalize taught declarative/component-path reads to
       `handle.layout_query(cx).value_or_default()`,
     - do not add new shared query sugar until the post-cleanup surface is re-measured.
-- [ ] Re-evaluate keyed/list/default child-collection pressure after the read-side reductions.
+- [x] Re-evaluate keyed/list/default child-collection pressure after the read-side reductions.
   - Decision rule:
     - prefer existing helpers and tighter docs first,
     - only add new shared API if the pressure still repeats beyond the Todo compare set.
+  - 2026-03-16 audit result:
+    - the canonical compare set already converges on `ui::for_each_keyed(...)`,
+      `ui::children![cx; ...]`, and `ui::single(cx, child)`,
+    - `hello.rs` and `assets_reload_epoch_basics.rs` confirm the same posture on non-Todo
+      app-facing surfaces,
+    - `embedded_viewport_basics.rs` / `chart_interactions_basics.rs` still have explicit landing
+      seams, but those are intentional advanced retained/interop boundaries rather than evidence
+      for another default-path helper.
 - [ ] Keep this lane from turning into a bridge-growth lane.
   - `AppActivateExt` growth is out of scope and should be treated as regression pressure, not as an
     ergonomics win.
@@ -136,10 +145,10 @@ Companion docs:
 
 ## M3 — Keyed/list/default child-collection follow-up
 
-- [ ] Re-audit the canonical compare set after M1/M2.
-- [ ] Check whether the remaining list/collection pressure is still materially visible.
-- [ ] If yes, prove it outside the Todo lane before adding shared API.
-- [ ] If no, lock the result as docs/adoption discipline instead of reopening helper growth.
+- [x] Re-audit the canonical compare set after M1/M2.
+- [x] Check whether the remaining list/collection pressure is still materially visible.
+- [x] If yes, prove it outside the Todo lane before adding shared API.
+- [x] If no, lock the result as docs/adoption discipline instead of reopening helper growth.
 
 ## M4 — Delete and lock
 

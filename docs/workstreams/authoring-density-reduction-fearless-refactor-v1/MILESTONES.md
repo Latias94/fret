@@ -10,6 +10,7 @@ Related:
 - Tracked-read audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TRACKED_READ_AUDIT_2026-03-16.md`
 - Selector/query audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_AUDIT_2026-03-16.md`
 - Selector/query direction: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_DIRECTION_2026-03-16.md`
+- Child-collection audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CHILD_COLLECTION_AUDIT_2026-03-16.md`
 - Authoring-surface closeout: `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - Action-first post-v1 summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Into-element closeout target: `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -22,9 +23,12 @@ Related:
 - **M2**: Met (query default-read cleanup is now landed on the default teaching surfaces, and the
   first LocalState-aware selector dependency bridge landed at the `fret` layer without prelude
   widening or `fret-selector` ownership creep).
-- **M3**: Next active design question (re-evaluate keyed/list/default child-collection pressure
-  after the read-side reductions).
-- **M4**: In progress (delete displaced wording and lock the shorter path with docs/gates).
+- **M3**: Met (the post-M1/M2 child-collection audit found no new shared-surface gap; the
+  canonical compare set and non-Todo app-facing proofs already converge on
+  `ui::for_each_keyed(...)` + `ui::children![cx; ...]` + `ui::single(cx, child)`, while the
+  remaining awkward seams are intentional advanced/interop boundaries).
+- **M4**: Next active closeout lane (delete displaced wording and lock the shorter path with
+  docs/gates).
 
 Overall reading:
 
@@ -71,6 +75,13 @@ Tracked-read note on 2026-03-16:
     LocalState-first selector path on helper-heavy `ElementContext` surfaces,
   - and the `fret` surface-policy tests now explicitly keep this lane out of
     `fret::app::prelude::*`.
+- `CHILD_COLLECTION_AUDIT_2026-03-16.md` now closes the next question after M2:
+  - the canonical compare set no longer teaches old single-child landing or keyed-list patterns,
+  - `hello.rs` and `assets_reload_epoch_basics.rs` show the same child-collection posture outside
+    Todo,
+  - and the remaining `ViewElements` / `AnyElement` seams in advanced cookbook surfaces are now
+    explicitly classified as intentional retained/interop boundaries rather than missing default
+    authoring API.
 
 ## Milestone 0 — Freeze the lane
 
