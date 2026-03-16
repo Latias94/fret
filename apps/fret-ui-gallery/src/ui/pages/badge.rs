@@ -17,8 +17,10 @@ pub(super) fn preview_badge(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`Badge::new(label)` and `variant(...)` cover the documented `default`, `secondary`, `destructive`, `outline`, `ghost`, and `link` recipe surface.",
+        "`leading_children(...)` / `trailing_children(...)` are the curated mapping for the upstream inline child compositions (`data-icon=\"inline-start|inline-end\"`) without widening the public surface into a fully free-form content slot.",
         "`BadgeRender::Link` is the Fret equivalent of the upstream `render` / `asChild` outcome and keeps link semantics on the badge-owned render surface without widening the mechanism layer.",
         "Icons, spinners, and custom color overrides stay on the badge recipe surface, while page-level width negotiation remains caller-owned.",
+        "Badge doc snippets own the centered preview rows because upstream places `justify-center` on the example call site, not the component source.",
         "`Counts (Fret)` intentionally stays after the upstream path so compact numeric badge diagnostics remain stable without polluting the docs-aligned example sequence.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);

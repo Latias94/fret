@@ -28,13 +28,15 @@ base examples, and the existing badge chrome/layout gates.
 ### Authoring surface
 
 - Pass: `Badge::new(label)` plus `variant(...)` covers the documented badge surface, including `default`, `secondary`, `destructive`, `outline`, `ghost`, and `link`.
+- Pass: `leading_children(...)` / `trailing_children(...)` are the curated Fret mapping for the upstream inline child compositions (`data-icon="inline-start|inline-end"`), so the official icon/spinner examples do not require a wider free-form content API.
 - Pass: `BadgeRender::Link` is the right Fret equivalent of the upstream `render` / `asChild` outcome and keeps link semantics on the badge-owned render surface.
-- Pass: icons, spinners, and custom color overrides remain recipe-owned additions on the badge surface; no extra generic `compose()` API is needed here.
+- Pass: icons, spinners, and custom color overrides remain recipe-owned additions on the badge surface; a fully free-form `children` API is still unnecessary for the current upstream docs/examples.
 
 ### Layout & default-style ownership
 
 - Pass: padding, radius, font weight, shrink behavior, and intrinsic chrome remain recipe-owned because the upstream badge source defines them on the component itself.
 - Pass: surrounding width negotiation and row placement remain caller-owned.
+- Pass: docs-aligned gallery rows center their badges at the snippet/example layer because upstream applies `justify-center` on the example call site rather than inside `Badge`.
 - Pass: badge height/chrome and the `font-medium` / `shrink-0` defaults remain covered by the existing web/layout and unit-test gates.
 
 ### Gallery / docs parity

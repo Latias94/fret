@@ -187,9 +187,18 @@ impl Badge {
         self
     }
 
-    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+    /// Adds extra inline content rendered before the badge label.
+    ///
+    /// This is the curated Fret mapping for upstream child compositions such as
+    /// `data-icon="inline-start"`.
+    pub fn leading_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
         self
+    }
+
+    /// Backwards-compatible alias for [`Badge::leading_children`].
+    pub fn children(self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.leading_children(children)
     }
 
     /// Adds extra inline content rendered after the badge label.
@@ -823,6 +832,33 @@ mod tests {
                 style.weight,
                 FontWeight::MEDIUM,
                 "expected shadcn Badge label to use font-medium"
+            );
+        });
+    }
+
+    #[test]
+    fn badge_leading_and_trailing_children_preserve_inline_order() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Badge::new("Core")
+                .leading_children([cx.text("Start")])
+                .trailing_children([cx.text("End")])
+                .into_element(cx);
+
+            let mut texts = Vec::new();
+            let mut icons = Vec::new();
+            collect_colors(&el, &mut texts, &mut icons);
+
+            let ordered = texts
+                .into_iter()
+                .map(|(text, _)| text.to_string())
+                .collect::<Vec<_>>();
+            assert_eq!(ordered, vec!["Start", "Core", "End"]);
+            assert!(
+                icons.is_empty(),
+                "expected inline-order test to stay text-only"
             );
         });
     }

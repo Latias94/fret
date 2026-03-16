@@ -27,6 +27,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .gap(Space::N2)
     .wrap()
     .w_full()
+    .justify_center()
     .items_center()
     .into_element(cx)
     .test_id("ui-gallery-badge-link-row")

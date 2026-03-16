@@ -552,6 +552,30 @@ fn badge_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn badge_docs_snippets_keep_centered_rows_and_explicit_inline_child_slots() {
+    for relative_path in [
+        "src/ui/snippets/badge/demo.rs",
+        "src/ui/snippets/badge/variants.rs",
+        "src/ui/snippets/badge/icon.rs",
+        "src/ui/snippets/badge/spinner.rs",
+        "src/ui/snippets/badge/colors.rs",
+        "src/ui/snippets/badge/rtl.rs",
+        "src/ui/snippets/badge/counts.rs",
+        "src/ui/snippets/badge/link.rs",
+    ] {
+        assert_normalized_markers_present(relative_path, &[".justify_center()"]);
+    }
+
+    assert_normalized_markers_present(
+        "src/ui/snippets/badge/spinner.rs",
+        &[
+            ".leading_children([shadcn::Spinner::new().into_element(cx)])",
+            ".trailing_children([shadcn::Spinner::new().into_element(cx)])",
+        ],
+    );
+}
+
+#[test]
 fn aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
