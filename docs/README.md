@@ -40,6 +40,7 @@ Unless a document says otherwise:
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
 - Action-first authoring + view runtime refactor: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - Current endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Post-v1 authoring density reduction (current active happy-path refactor lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
