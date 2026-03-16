@@ -82,6 +82,12 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   driven).
 - Pass: `AlertDialogCancel::variant(...)` now supports the upstream destructive example's
   ghost-cancel pairing without requiring a lower-level escape hatch.
+- Note: The current `repo-ref/ui` routed web-golden surfaces only expose `alert-dialog-demo`.
+  Docs-only examples such as `alert-dialog-small`, `alert-dialog-media`,
+  `alert-dialog-small-media`, and `alert-dialog-destructive` are present in source/docs, but they
+  are not currently emitted as routable `view`/`preview` items in the local snapshot. Visual
+  evidence for those examples therefore relies on first-party UI Gallery diagnostics until upstream
+  routeable goldens become available.
 
 ## Validation
 
@@ -96,6 +102,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (`web_vs_fret_alert_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_alert_dialog_open_geometry_matches_fret`).
+- UI Gallery docs-example screenshot gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-example-open-screenshots.json`
+  (covers `Small`, `Media`, `Small with Media`, and `Destructive` on the first-party docs page).
 
 ## Authoring note: `from_scope(...)`
 
