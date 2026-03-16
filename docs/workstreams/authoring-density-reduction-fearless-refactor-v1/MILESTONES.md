@@ -9,6 +9,7 @@ Related:
 - TODO: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`
 - Tracked-read audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TRACKED_READ_AUDIT_2026-03-16.md`
 - Selector/query audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_AUDIT_2026-03-16.md`
+- Selector/query direction: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_DIRECTION_2026-03-16.md`
 - Authoring-surface closeout: `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - Action-first post-v1 summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Into-element closeout target: `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -53,6 +54,12 @@ Tracked-read note on 2026-03-16:
   work is best treated as closeout-only breadth cleanup rather than another design phase.
 - therefore M1 should be treated as design-complete with remaining breadth cleanup, and M2 should
   become the next active design step.
+- `SELECTOR_QUERY_DIRECTION_2026-03-16.md` now narrows M2 further:
+  - query read-side work starts as adoption/docs cleanup to the already-shipped handle-first read
+    posture,
+  - selector dependency choreography remains the first likely new shared-surface question,
+  - and any LocalState-aware selector helper must land at the `fret` facade/runtime layer instead
+    of teaching `fret-selector` about `LocalState<T>`.
 
 ## Milestone 0 — Freeze the lane
 
@@ -102,13 +109,19 @@ Deliverables:
 
 - selector dependency/read reduction for view-owned LocalState-first examples
 - query observe/read reduction for default app-facing examples
+- written layering rationale for why query cleanup and selector dependency reduction take different
+  forms
 - proof that the resulting surface still keeps read-vs-write ownership explicit
 
 Exit criteria:
 
 - the third-rung `todo` surface is materially shorter,
 - at least one additional non-todo surface benefits from the same reduction,
-- the solution does not widen the default app prelude.
+- the solution does not widen the default app prelude,
+- default docs/templates stop teaching `clone_model()` as the first-contact selector dependency
+  story on LocalState-first app surfaces,
+- and query examples stop teaching older `watch(...).layout().value_or_else(...)`-style defaults
+  where the shipped handle-first `value_or_default()` path already suffices.
 
 ## Milestone 3 — Re-evaluate keyed/list/default child-collection pressure
 

@@ -15,6 +15,7 @@ Companion docs:
 - `MILESTONES.md`
 - `TRACKED_READ_AUDIT_2026-03-16.md`
 - `SELECTOR_QUERY_AUDIT_2026-03-16.md`
+- `SELECTOR_QUERY_DIRECTION_2026-03-16.md`
 
 ## Current priority checklist
 
@@ -62,9 +63,20 @@ Companion docs:
 - [ ] Audit LocalState-first selector dependency/read ceremony.
   - Goal: stop teaching raw model-handle choreography on first-contact LocalState-first surfaces
     unless shared ownership is the point.
+  - 2026-03-16 direction:
+    - this is now the first likely real M2 shared-surface gap,
+    - the helper should live at the `ecosystem/fret` app-facing layer,
+    - and `fret-selector` should remain unaware of `LocalState<T>`.
 - [ ] Audit query observe/read ceremony.
   - Goal: keep query lifecycle explicit while reducing repeated watch/read/default plumbing on the
     default app path.
+  - 2026-03-16 direction:
+    - treat current `value_or_else(QueryState::<T>::default)` repetition primarily as adoption/docs
+      drift,
+    - normalize taught app-path reads to `handle.layout(cx).value_or_default()`,
+    - normalize taught declarative/component-path reads to
+      `handle.layout_query(cx).value_or_default()`,
+    - do not add new shared query sugar until the post-cleanup surface is re-measured.
 - [ ] Re-evaluate keyed/list/default child-collection pressure after the read-side reductions.
   - Decision rule:
     - prefer existing helpers and tighter docs first,
@@ -104,12 +116,18 @@ Companion docs:
 ## M2 — Selector/query density
 
 - [ ] Inventory selector LocalState-first boilerplate that still reads like raw model plumbing.
+- [ ] Freeze the layering rule for selector work.
+  - Any LocalState-aware dependency helper belongs in `ecosystem/fret`, not `fret-selector`.
 - [ ] Inventory query observe/read boilerplate that still reads like low-level handle plumbing.
   - 2026-03-16 starting evidence:
     - `genui_demo` remains a medium non-Todo proof surface for selector/query follow-up after the
       final low-risk tracked-read cleanup landed,
     - `imui_editor_proof_demo` already shows repeated assist-state derived-read choreography that is
       better classified as M2 pressure than as M1 tracked-read debt.
+- [ ] Normalize query docs/templates/examples to the already-shipped shorter default reads before
+  adding any new shared query helper.
+- [ ] Design the smallest LocalState-aware selector dependency bridge that keeps invalidation
+  explicit without teaching `clone_model()` on the default app path.
 - [ ] Decide which parts are:
   - intentional ownership/runtime complexity,
   - versus removable authoring noise.
