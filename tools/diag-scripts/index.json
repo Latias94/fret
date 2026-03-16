@@ -4388,6 +4388,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-collapsible-basic-double-click-close",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-collapsible-demo-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-first-open-height.json",
       "required_capabilities": [],
@@ -4400,6 +4410,18 @@
     {
       "id": "ui-gallery-collapsible-demo-order-details-shows-sections",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-order-details-shows-sections.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-file-tree-open-components-ui-shows-button",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-file-tree-open-components-ui-shows-button.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
@@ -4432,6 +4454,18 @@
     {
       "id": "ui-gallery-collapsible-rtl-open-scrolls-to-content",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-open-scrolls-to-content.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-settings-open-shows-inputs",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-settings-open-shows-inputs.json",
       "required_capabilities": [
         "diag.script_v2"
       ],

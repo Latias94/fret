@@ -9,6 +9,174 @@ use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
+#[derive(Clone, Copy)]
+enum TreeItem {
+    File {
+        key: &'static str,
+        label: &'static str,
+    },
+    Folder {
+        key: &'static str,
+        label: &'static str,
+        children: &'static [TreeItem],
+    },
+}
+
+const COMPONENTS_UI_ITEMS: &[TreeItem] = &[
+    TreeItem::File {
+        key: "components-ui-button",
+        label: "button.tsx",
+    },
+    TreeItem::File {
+        key: "components-ui-card",
+        label: "card.tsx",
+    },
+    TreeItem::File {
+        key: "components-ui-dialog",
+        label: "dialog.tsx",
+    },
+    TreeItem::File {
+        key: "components-ui-input",
+        label: "input.tsx",
+    },
+    TreeItem::File {
+        key: "components-ui-select",
+        label: "select.tsx",
+    },
+    TreeItem::File {
+        key: "components-ui-table",
+        label: "table.tsx",
+    },
+];
+
+const COMPONENTS_ITEMS: &[TreeItem] = &[
+    TreeItem::Folder {
+        key: "components-ui",
+        label: "ui",
+        children: COMPONENTS_UI_ITEMS,
+    },
+    TreeItem::File {
+        key: "components-login-form",
+        label: "login-form.tsx",
+    },
+    TreeItem::File {
+        key: "components-register-form",
+        label: "register-form.tsx",
+    },
+];
+
+const LIB_ITEMS: &[TreeItem] = &[
+    TreeItem::File {
+        key: "lib-utils",
+        label: "utils.ts",
+    },
+    TreeItem::File {
+        key: "lib-cn",
+        label: "cn.ts",
+    },
+    TreeItem::File {
+        key: "lib-api",
+        label: "api.ts",
+    },
+];
+
+const HOOKS_ITEMS: &[TreeItem] = &[
+    TreeItem::File {
+        key: "hooks-use-media-query",
+        label: "use-media-query.ts",
+    },
+    TreeItem::File {
+        key: "hooks-use-debounce",
+        label: "use-debounce.ts",
+    },
+    TreeItem::File {
+        key: "hooks-use-local-storage",
+        label: "use-local-storage.ts",
+    },
+];
+
+const TYPES_ITEMS: &[TreeItem] = &[
+    TreeItem::File {
+        key: "types-index",
+        label: "index.d.ts",
+    },
+    TreeItem::File {
+        key: "types-api",
+        label: "api.d.ts",
+    },
+];
+
+const PUBLIC_ITEMS: &[TreeItem] = &[
+    TreeItem::File {
+        key: "public-favicon",
+        label: "favicon.ico",
+    },
+    TreeItem::File {
+        key: "public-logo",
+        label: "logo.svg",
+    },
+    TreeItem::File {
+        key: "public-images",
+        label: "images",
+    },
+];
+
+const FILE_TREE_ITEMS: &[TreeItem] = &[
+    TreeItem::Folder {
+        key: "components",
+        label: "components",
+        children: COMPONENTS_ITEMS,
+    },
+    TreeItem::Folder {
+        key: "lib",
+        label: "lib",
+        children: LIB_ITEMS,
+    },
+    TreeItem::Folder {
+        key: "hooks",
+        label: "hooks",
+        children: HOOKS_ITEMS,
+    },
+    TreeItem::Folder {
+        key: "types",
+        label: "types",
+        children: TYPES_ITEMS,
+    },
+    TreeItem::Folder {
+        key: "public",
+        label: "public",
+        children: PUBLIC_ITEMS,
+    },
+    TreeItem::File {
+        key: "app",
+        label: "app.tsx",
+    },
+    TreeItem::File {
+        key: "layout",
+        label: "layout.tsx",
+    },
+    TreeItem::File {
+        key: "globals",
+        label: "globals.css",
+    },
+    TreeItem::File {
+        key: "package-json",
+        label: "package.json",
+    },
+    TreeItem::File {
+        key: "tsconfig",
+        label: "tsconfig.json",
+    },
+    TreeItem::File {
+        key: "readme",
+        label: "README.md",
+    },
+    TreeItem::File {
+        key: "gitignore",
+        label: ".gitignore",
+    },
+];
+
 fn rotated_lucide<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     id: &'static str,
@@ -48,6 +216,8 @@ fn file_leaf<H: UiHost>(
     key: &'static str,
     label: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
+    let theme = Theme::global(&*cx.app).snapshot();
+    let foreground = ColorRef::Color(theme.color_token("foreground"));
     let row = ui::h_flex(|cx| {
         vec![
             icon::icon_with(
@@ -68,7 +238,12 @@ fn file_leaf<H: UiHost>(
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Link)
         .size(shadcn::ButtonSize::Sm)
-        .refine_layout(LayoutRefinement::default().w_full())
+        .content_justify_start()
+        .style(
+            shadcn::raw::button::ButtonStyle::default()
+                .foreground(fret_ui_kit::WidgetStateProperty::new(Some(foreground))),
+        )
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .children([row])
         .into_element(cx)
         .test_id(format!("ui-gallery-collapsible-tree-leaf-{key}"))
@@ -78,11 +253,10 @@ fn folder<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     key: &'static str,
     label: &'static str,
-    open_model: Model<bool>,
-    children: Vec<AnyElement>,
+    children: &'static [TreeItem],
 ) -> impl IntoUiElement<H> + use<H> {
-    shadcn::Collapsible::new(open_model)
-        .refine_layout(LayoutRefinement::default().w_full())
+    shadcn::Collapsible::uncontrolled(false)
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element_with_open_model(
             cx,
             |cx, open, is_open| {
@@ -111,7 +285,8 @@ fn folder<H: UiHost>(
                 shadcn::Button::new(label)
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::ButtonSize::Sm)
-                    .refine_layout(LayoutRefinement::default().w_full())
+                    .content_justify_start()
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                     .children([row])
                     .toggle_model(open)
                     .test_id(format!("ui-gallery-collapsible-tree-trigger-{key}"))
@@ -119,62 +294,66 @@ fn folder<H: UiHost>(
             },
             |cx| {
                 shadcn::CollapsibleContent::new(vec![
-                    ui::v_flex(|_cx| children)
+                    ui::v_flex(|cx| render_items(cx, children))
                         .gap(Space::N1)
                         .items_stretch()
-                        .layout(LayoutRefinement::default().w_full().ml(Space::N4))
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element(cx),
                 ])
-                .refine_layout(LayoutRefinement::default().w_full())
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0().ml(Space::N5))
                 .into_element(cx)
                 .test_id(format!("ui-gallery-collapsible-tree-content-{key}"))
             },
         )
 }
 
+fn render_item<H: UiHost>(cx: &mut ElementContext<'_, H>, item: &TreeItem) -> AnyElement {
+    match item {
+        TreeItem::File { key, label } => file_leaf(cx, key, label).into_element(cx),
+        TreeItem::Folder {
+            key,
+            label,
+            children,
+        } => folder(cx, key, label, children).into_element(cx),
+    }
+}
+
+fn render_items<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    items: &'static [TreeItem],
+) -> Vec<AnyElement> {
+    items.iter().map(|item| render_item(cx, item)).collect()
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let tree_components_open = cx.local_model_keyed("tree_components_open", || true);
-    let tree_src_open = cx.local_model_keyed("tree_src_open", || false);
-    let tree_src_ui_open = cx.local_model_keyed("tree_src_ui_open", || false);
+    let tabs = shadcn::TabsRoot::uncontrolled(Some("explorer"))
+        .list(
+            shadcn::TabsList::new()
+                .trigger(shadcn::TabsTrigger::new("explorer", "Explorer"))
+                .trigger(shadcn::TabsTrigger::new("outline", "Outline")),
+        )
+        .gap_px(Px(0.0))
+        .content_fill_remaining(false)
+        .list_full_width(true)
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
 
-    let ui_button = file_leaf(cx, "src-ui-button", "button.rs").into_element(cx);
-    let ui_dialog = file_leaf(cx, "src-ui-dialog", "dialog.rs").into_element(cx);
-    let ui_folder = folder(
-        cx,
-        "src-ui",
-        "ui",
-        tree_src_ui_open.clone(),
-        vec![ui_button, ui_dialog],
-    )
-    .into_element(cx);
-
-    let src_main = file_leaf(cx, "src-main", "main.rs").into_element(cx);
-    let src_folder = folder(
-        cx,
-        "src",
-        "src",
-        tree_src_open.clone(),
-        vec![ui_folder, src_main],
-    )
-    .into_element(cx);
-
-    let comp_card = file_leaf(cx, "components-card", "card.rs").into_element(cx);
-    let comp_table = file_leaf(cx, "components-table", "table.rs").into_element(cx);
-    let components_folder = folder(
-        cx,
-        "components",
-        "components",
-        tree_components_open.clone(),
-        vec![comp_card, comp_table],
-    )
-    .into_element(cx);
-
-    let cargo_toml = file_leaf(cx, "cargo-toml", "Cargo.toml").into_element(cx);
-    ui::v_flex(|_cx| vec![components_folder, src_folder, cargo_toml])
+    let tree = ui::v_flex(|cx| render_items(cx, FILE_TREE_ITEMS))
         .gap(Space::N1)
         .items_stretch()
-        .layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-collapsible-file-tree")
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
+
+    shadcn::card(|cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| ui::children![cx; tabs]),
+            shadcn::card_content(|cx| ui::children![cx; tree]),
+        ]
+    })
+    .size(shadcn::CardSize::Sm)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(256.0)))
+    .into_element(cx)
+    .test_id("ui-gallery-collapsible-file-tree")
 }
 // endregion: example
