@@ -282,7 +282,7 @@ authoring vocabulary through a hidden umbrella import.
 | Goal | Suggested `fret` features | Notes |
 | --- | --- | --- |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
-| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
+| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
 | Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
 | Add editor theming integration | `["editor"]` | Keeps installed `fret-ui-editor` presets resilient to `FretApp` shadcn auto-theme resets; widgets still come from `fret-ui-editor`. |
@@ -298,7 +298,7 @@ Minimal / explicit profile (useful for embed/minimal builds that must avoid file
 fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
 ```
 
-Enable selector/query helpers (for `cx.data().selector(...)` / `cx.data().query(...)` on `AppUi`):
+Enable selector/query helpers (for `cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, and `cx.data().query(...)` on `AppUi`):
 
 ```toml
 [dependencies]
@@ -611,16 +611,24 @@ consistent inbox + cancellation vocabulary.
 
 - memoize expensive derived values behind an explicit dependency signature (`Deps: PartialEq`),
 - optional UI sugar (`ElementContext::use_selector(...)`) plus the `fret` app-surface bridge
-  (`cx.data().selector(...)`) to keep view code readable.
+  (`cx.data().selector_layout(...)` for LocalState-first inputs, raw `cx.data().selector(...)`
+  otherwise) to keep view code readable.
 
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer
-`cx.data().selector(...)`. When app code needs to spell dependency-signature helpers explicitly,
-import them from `fret::selector::{DepsBuilder, DepsSignature}` instead of expecting them from
+`cx.data().selector_layout(...)` for view-owned `LocalState<T>` inputs. Keep raw
+`cx.data().selector(...)` for explicit shared `Model<T>` / global signatures. When app code needs
+to spell dependency-signature helpers explicitly, import them from
+`fret::selector::{DepsBuilder, DepsSignature}` instead of expecting them from
 `fret::app::prelude::*`. Enable `fret-selector/ui` only when you are working directly with
 `ElementContext` in component/advanced surfaces.
 
 **Use it when:** you need stable derived values (counts, filtered views, projections) without
 introducing “tick models” or storing every derived value in the model store.
+
+**Default app note:** on the `fret` golden path, prefer `cx.data().selector_layout(...)` when the
+inputs are view-owned `LocalState<T>` slots. Keep raw `cx.data().selector(...)` plus
+`fret::selector::{DepsBuilder, DepsSignature}` for explicit shared `Model<T>` / global signatures
+or direct component/advanced `ElementContext` work.
 
 ### `fret-query`
 

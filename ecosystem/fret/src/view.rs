@@ -562,6 +562,97 @@ impl<'cx, 'a, H: UiHost> LocalDepsBuilderExt for fret_selector::ui::DepsBuilder<
     }
 }
 
+#[cfg(feature = "state-selector")]
+fn local_selector_value_in<T: Any + Clone, H: UiHost>(
+    local: &LocalState<T>,
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+) -> T {
+    let value = match invalidation {
+        Invalidation::Paint => local.paint_in(cx).value(),
+        Invalidation::Layout => local.layout_in(cx).value(),
+        Invalidation::HitTest | Invalidation::HitTestOnly => local.hit_test_in(cx).value(),
+    };
+    value.expect("LocalState-first selector inputs should always resolve a tracked value")
+}
+
+/// App-facing LocalState selector inputs for the grouped `cx.data()` lane.
+///
+/// This trait is intentionally hidden from docs because app authors should use the methods on
+/// `cx.data()` rather than naming the trait directly.
+#[cfg(feature = "state-selector")]
+#[doc(hidden)]
+pub trait LocalSelectorInputs<'a, H: UiHost>: Copy {
+    type Values;
+
+    fn deps_in(
+        self,
+        cx: &mut ElementContext<'a, H>,
+        invalidation: Invalidation,
+    ) -> fret_selector::DepsSignature;
+
+    fn values_in(self, cx: &mut ElementContext<'a, H>, invalidation: Invalidation) -> Self::Values;
+}
+
+#[cfg(feature = "state-selector")]
+impl<'a, H: UiHost, T: Any + Clone> LocalSelectorInputs<'a, H> for &LocalState<T> {
+    type Values = T;
+
+    fn deps_in(
+        self,
+        cx: &mut ElementContext<'a, H>,
+        invalidation: Invalidation,
+    ) -> fret_selector::DepsSignature {
+        let mut deps = fret_selector::ui::DepsBuilder::new(cx);
+        deps.local_rev_invalidation(self, invalidation);
+        deps.finish()
+    }
+
+    fn values_in(self, cx: &mut ElementContext<'a, H>, invalidation: Invalidation) -> Self::Values {
+        local_selector_value_in(self, cx, invalidation)
+    }
+}
+
+#[cfg(feature = "state-selector")]
+macro_rules! impl_local_selector_inputs_tuple {
+    ($(($($name:ident:$idx:tt),+)),+ $(,)?) => {
+        $(
+            impl<'a, H: UiHost, $($name: Any + Clone),+> LocalSelectorInputs<'a, H>
+                for ($(&LocalState<$name>,)+)
+            {
+                type Values = ($($name,)+);
+
+                fn deps_in(
+                    self,
+                    cx: &mut ElementContext<'a, H>,
+                    invalidation: Invalidation,
+                ) -> fret_selector::DepsSignature {
+                    let mut deps = fret_selector::ui::DepsBuilder::new(cx);
+                    $(deps.local_rev_invalidation(self.$idx, invalidation);)+
+                    deps.finish()
+                }
+
+                fn values_in(
+                    self,
+                    cx: &mut ElementContext<'a, H>,
+                    invalidation: Invalidation,
+                ) -> Self::Values {
+                    ($(local_selector_value_in(self.$idx, cx, invalidation),)+)
+                }
+            }
+        )+
+    };
+}
+
+#[cfg(feature = "state-selector")]
+impl_local_selector_inputs_tuple!(
+    (A:0, B:1),
+    (A:0, B:1, C:2),
+    (A:0, B:1, C:2, D:3),
+    (A:0, B:1, C:2, D:3, E:4),
+    (A:0, B:1, C:2, D:3, E:4, F:5),
+);
+
 /// Per-frame view construction context passed to [`View::render`].
 ///
 /// This is a thin wrapper over [`ElementContext`] that:
@@ -1221,6 +1312,50 @@ pub struct AppUiData<'view, 'cx, 'a, H: UiHost> {
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
+    /// Default LocalState-first selector path for app-facing derived values that affect layout.
+    ///
+    /// Use this when the deps are view-owned `LocalState<T>` slots. Keep raw `selector(...)` for
+    /// explicit shared `Model<T>` signatures, global tokens, or custom dependency builders.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_layout<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: LocalSelectorInputs<'a, H>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Layout),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
+    /// Keyed LocalState-first selector path for repeated callsites (lists/loops) on the default
+    /// app-facing lane.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_layout_keyed<K: Hash, Inputs, TValue>(
+        self,
+        key: K,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: LocalSelectorInputs<'a, H>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
+            self.cx.cx,
+            key,
+            move |cx| inputs.deps_in(cx, Invalidation::Layout),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector<Deps, TValue>(
@@ -1302,6 +1437,46 @@ pub struct UiCxData<'cx, 'a> {
 }
 
 impl<'cx, 'a> UiCxData<'cx, 'a> {
+    /// Default LocalState-first selector path for extracted `UiCx` helpers on the app-facing lane.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_layout<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: LocalSelectorInputs<'a, crate::app::App>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Layout),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
+    /// Keyed LocalState-first selector path for repeated extracted `UiCx` helper callsites.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_layout_keyed<K: Hash, Inputs, TValue>(
+        self,
+        key: K,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: LocalSelectorInputs<'a, crate::app::App>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
+            self.cx,
+            key,
+            move |cx| inputs.deps_in(cx, Invalidation::Layout),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector<Deps, TValue>(
@@ -2158,10 +2333,13 @@ mod tests {
         assert!(!api_source.contains("pub fn use_query_async<"));
         assert!(!api_source.contains("pub fn use_query_async_local<"));
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
+        assert!(api_source.contains("pub trait LocalSelectorInputs"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
+        assert!(api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
         assert!(!api_source.contains("pub trait AppActivateCxMarker"));

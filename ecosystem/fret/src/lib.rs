@@ -53,8 +53,9 @@
 //!
 //! Optional ecosystem extensions stay explicit:
 //!
-//! - enable `state` for grouped selector/query helpers on `AppUi`; when app code needs explicit
-//!   state helper nouns, use `fret::selector::{DepsBuilder, DepsSignature}` and
+//! - enable `state` for grouped selector/query helpers on `AppUi`; prefer
+//!   `cx.data().selector_layout(...)` for LocalState-first derived values, and when app code needs
+//!   explicit state helper nouns, use `fret::selector::{DepsBuilder, DepsSignature}` and
 //!   `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` instead of expecting
 //!   those names from `fret::app::prelude::*`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
@@ -557,7 +558,8 @@ pub mod component {
 /// Optional selector integration surface for app code.
 ///
 /// This keeps the selector story explicit:
-/// - grouped default app data stays on `cx.data().selector(...)`,
+/// - grouped default app data stays on `cx.data().selector_layout(...)` for LocalState-first
+///   inputs, with raw `cx.data().selector(...)` kept explicit,
 /// - `fret-selector` remains the portable derived-state crate,
 /// - `fret::selector` gives app authors one explicit lane for dependency-signature nouns without
 ///   widening `fret::app::prelude::*`.
@@ -2895,7 +2897,8 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch::<A>()`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch_payload::<A>(payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector_layout(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("raw `cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
@@ -2967,7 +2970,8 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector_layout(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(deps, compute)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));

@@ -411,7 +411,8 @@ mod authoring_surface_policy_tests {
 
     fn assert_prefers_grouped_data_surface(src: &str) {
         assert!(
-            src.contains("cx.data().selector(")
+            src.contains("cx.data().selector_layout(")
+                || src.contains("cx.data().selector(")
                 || src.contains("cx.data().query(")
                 || src.contains("cx.data().query_async(")
                 || src.contains("cx.data().query_async_local(")

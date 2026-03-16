@@ -273,7 +273,6 @@ use fret::app::prelude::*;
 use fret::{
     icons::{icon, IconId},
     query::{QueryKey, QueryPolicy, QueryStatus},
-    selector::{DepsBuilder, LocalDepsBuilderExt as _},
     style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
@@ -400,17 +399,9 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        let derived: TodoDerived = cx.data().selector(
-            |cx| {
-                let mut deps = DepsBuilder::new(cx);
-                deps.local_layout_rev(&todos_state);
-                deps.local_layout_rev(&filter_state);
-                deps.finish()
-            },
-            |cx| {
-                let todos = todos_state.layout_in(cx).value_or_default();
-                let filter = filter_state.layout_in(cx).value_or(TodoFilter::All);
-
+        let derived: TodoDerived = cx
+            .data()
+            .selector_layout((&todos_state, &filter_state), |(todos, filter)| {
                 let mut rows = Vec::new();
                 let mut completed = 0usize;
                 for t in todos.iter() {
@@ -433,8 +424,7 @@ impl View for TodoView {
                     active: total.saturating_sub(completed),
                     completed,
                 }
-            },
-        );
+            });
 
         let tip_nonce_value = tip_nonce_state.paint(cx).value_or(0);
         let tip_handle = cx.data().query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
@@ -1436,14 +1426,19 @@ mod tests {
         assert!(src.contains(
             ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
         ));
-        assert!(src.contains("cx.data().selector("));
+        assert!(src.contains("cx.data()"));
+        assert!(
+            src.contains(".selector_layout((&todos_state, &filter_state), |(todos, filter)| {")
+        );
         assert!(src.contains("cx.data().query("));
         assert!(src.contains("query::{QueryKey, QueryPolicy, QueryStatus},"));
-        assert!(src.contains("selector::{DepsBuilder, LocalDepsBuilderExt as _},"));
-        assert!(src.contains("deps.local_layout_rev(&todos_state);"));
-        assert!(src.contains("deps.local_layout_rev(&filter_state);"));
-        assert!(src.contains("let todos = todos_state.layout_in(cx).value_or_default();"));
-        assert!(src.contains("let filter = filter_state.layout_in(cx).value_or(TodoFilter::All);"));
+        assert!(!src.contains("selector::{DepsBuilder, LocalDepsBuilderExt as _},"));
+        assert!(!src.contains("deps.local_layout_rev(&todos_state);"));
+        assert!(!src.contains("deps.local_layout_rev(&filter_state);"));
+        assert!(!src.contains("let todos = todos_state.layout_in(cx).value_or_default();"));
+        assert!(
+            !src.contains("let filter = filter_state.layout_in(cx).value_or(TodoFilter::All);")
+        );
         assert!(!src.contains("use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus};"));
         assert!(!src.contains("use fret_query::{QueryKey, QueryPolicy, QueryStatus};"));
         assert!(!src.contains("use fret_selector::ui::DepsBuilder;"));

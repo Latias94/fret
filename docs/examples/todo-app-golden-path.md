@@ -201,12 +201,12 @@ This section describes the **best-practice baseline** (`todo`) and the `cargo ru
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
-Current status note (as of 2026-03-16): the `todo` scaffold is **LocalState-first** (view-owned
+Current status note (as of 2026-03-17): the `todo` scaffold is **LocalState-first** (view-owned
 slots) and uses typed payload actions + keyed lists for per-row interaction, while still
 showcasing selector and query hooks. On the current third rung, selector dependencies now stay on
-the LocalState-first teaching path via `fret::selector::{DepsBuilder, LocalDepsBuilderExt as _}`
-plus `LocalState::{layout_in, paint_in, hit_test_in}`, so the default authoring surface no longer
-teaches `clone_model()` as the selector dependency story.
+the LocalState-first teaching path via `cx.data().selector_layout(...)`, so the default authoring
+surface no longer teaches `clone_model()` or raw `DepsBuilder` choreography as the first selector
+story.
 
 The official baseline uses a 3-layer state split:
 
@@ -290,22 +290,11 @@ memoizing these computations with selectors instead of:
 High-level sketch (matching the current third-rung scaffold):
 
 ```rust,ignore
-use fret::selector::{DepsBuilder, LocalDepsBuilderExt as _};
-
-let derived = cx.data().selector(
-    |cx| {
-        let mut deps = DepsBuilder::new(cx);
-        deps.local_layout_rev(&todos_state);
-        deps.local_layout_rev(&filter_state);
-        deps.finish()
-    },
-    |cx| {
-        let todos = todos_state.layout_in(cx).value_or_default();
-        let filter = filter_state.layout_in(cx).value_or(TodoFilter::All);
-
-        compute(cx, &todos, filter)
-    },
-);
+let derived = cx
+    .data()
+    .selector_layout((&todos_state, &filter_state), |(todos, filter)| {
+        compute(&todos, filter)
+    });
 ```
 
 ## Async resource state (queries)
