@@ -154,7 +154,10 @@ Important observation:
   `workspace.status_bar.*`, and `workspace.tabstrip.*` in `shadcn_new_york_config(...)`.
 - `apps/fret-ui-gallery` plus
   `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json`
-  now provide the end-to-end proof surface for this shell-level seeding.
+  now provide the end-to-end proof surface for this shell-level seeding. That shell proof is now
+  promoted into recurring suite membership as well via
+  `tools/diag-scripts/suites/ui-gallery-workspace-shell/suite.json`, which keeps shell chrome,
+  focus/command-scope, and tab-command evidence tied to one review target.
 - This intentionally does not seed `workspace.tab.*` yet.
 
 ## Rule for Future Skins
@@ -174,9 +177,7 @@ This is consistent with ADR 0316 and is the recommended standing rule for future
    generic-fallback-first for v1.
 2. Decide whether `fret-workspace` should keep only its small resolver surface or also gain an
    opt-in local preset helper for proof/demo use.
-3. Decide whether the current `ui_gallery` workspace-shell diagnostics proof should be promoted
-   into a recurring suite membership.
-4. Audit the editor proof preset so more of its visual intent lands in editor-owned namespaces and
+3. Audit the editor proof preset so more of its visual intent lands in editor-owned namespaces and
    less in shared palette mutation.
 
 ## Evidence Anchors

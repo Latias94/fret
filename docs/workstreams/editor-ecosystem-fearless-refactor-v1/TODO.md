@@ -413,6 +413,11 @@ Interaction contract:
       `fret-ui-kit::primitives::combobox`, so the remaining work is narrower: decide which
       additional shared popup/list behaviors deserve promotion into `ui-kit` beyond the now-landed
       reason/focus/query lifecycle helpers, and back those promotions with focused proof surfaces.
+      The workspace-shell side is now promoted explicitly as well: the UI Gallery shell proof is no
+      longer just a one-off screenshot script, but a recurring suite
+      (`tools/diag-scripts/suites/ui-gallery-workspace-shell/suite.json`) that groups shell chrome
+      screenshot evidence with focus/command-scope and tab-command smoke coverage on the same
+      `workspace_shell` profile.
 - [~] `EER-GATE-133` Keep screenshot coverage tied to actual baseline-review states, not just
       arbitrary captures.
       The neutral default baseline now has a screenshot proof via
