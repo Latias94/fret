@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("prompt_input_docs_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
@@ -14,12 +14,25 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
+mod act {
+    fret::actions!([ToggleSearch = "ui-gallery.ai.prompt_input_docs.toggle_search.v1"]);
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let text = cx.local_model_keyed("text", String::new);
     let attachments = cx.local_model_keyed("attachments", Vec::<ui_ai::AttachmentData>::new);
     let use_web_search = cx.local_model_keyed("use_web_search", || false);
     let model_value = cx.local_model_keyed("model_value", || Some(Arc::<str>::from("gpt-4o")));
     let model_open = cx.local_model_keyed("model_open", || false);
+
+    cx.actions().models::<act::ToggleSearch>({
+        let use_web_search = use_web_search.clone();
+        move |models| {
+            models
+                .update(&use_web_search, |value| *value = !*value)
+                .is_ok()
+        }
+    });
 
     let on_send: fret_ui::action::OnActivate = Arc::new(|host, action_cx, _reason| {
         host.notify(action_cx);
@@ -62,14 +75,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let searching = cx
                 .get_model_cloned(&use_web_search, fret_ui::Invalidation::Layout)
                 .unwrap_or(false);
-            let toggle_search = {
-                let use_web_search = use_web_search.clone();
-                move |host, action_cx| {
-                    let _ = host.models_mut().update(&use_web_search, |v| *v = !*v);
-                    host.notify(action_cx);
-                }
-            };
-
             let search_btn = ui_ai::PromptInputButton::new("Search")
                 .children([
                     decl_icon::icon(cx, IconId::new("lucide.globe")),
@@ -86,7 +91,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::ButtonVariant::Ghost
                 })
                 .test_id("ui-gallery-ai-prompt-input-docs-search")
-                .listen(toggle_search)
+                .action(act::ToggleSearch)
                 .into_element(cx);
 
             let select = shadcn::Select::new(model_value.clone(), model_open.clone())

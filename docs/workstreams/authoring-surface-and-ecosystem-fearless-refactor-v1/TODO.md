@@ -82,10 +82,37 @@ Closeout note on 2026-03-16:
 
 Release-blocking closeout order on 2026-03-16:
 
-1. close `fret-ui-shadcn` discovery-lane duplication
-2. freeze the `fret` root lane budget
-3. reduce happy-path ceremony on the default app lane
-4. keep `AppActivateExt` on a shrinking bridge-only path
+1. reduce happy-path ceremony on the default app lane
+2. keep `AppActivateExt` on a shrinking bridge-only path
+3. resume ecosystem integration-trait budgeting against the frozen public lane story
+
+Discovery-lane closeout note on 2026-03-16:
+
+- `fret-ui-shadcn` component-family root modules are now crate-private rather than doc-hidden
+  public residue,
+- `raw::*` is now a real explicit wrapper lane rather than a re-export of public root modules,
+- first-party gallery/example/source-policy gates now compile and pass against that posture,
+- remaining shadcn work in this folder is therefore documentation/gate hygiene, not another
+  discovery-lane redesign.
+
+Root-budget freeze note on 2026-03-16:
+
+- the `fret` root now keeps an explicit public-module allowlist gate and direct `pub use`
+  allowlist gate,
+- raw view-runtime helpers (`ViewWindowState`, `view_init_window`, `view_view`,
+  `view_record_engine_frame`) now live on `fret::advanced::view::*` instead of `fret::view::*`,
+- devloop helpers now live on `fret::advanced::dev::*` instead of `fret::dev::*`,
+- remaining work in this folder is therefore no longer "what should still be on the root?", but
+  "how much ceremony remains on the default app lane after the root is already closed".
+
+Verification note on 2026-03-16:
+
+- the closeout posture above has been revalidated after the latest docs/source updates with:
+  - `cargo nextest run -p fret --lib authoring_surface_policy_tests:: --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+  - `cargo check -p fret-examples --all-targets`
+- treat those commands as the minimum revalidation bundle before reopening any lane-budget or
+  discovery-lane edits in this folder.
 
 Ownership split on 2026-03-16:
 
@@ -117,19 +144,21 @@ Audit reconciliation note on 2026-03-16:
 
 ## Current release-blocking closeout checklist
 
-- [ ] Lock `fret-ui-shadcn` to one taught component-family discovery lane:
-  `facade as shadcn`, with `raw::*` as the only explicit escape hatch and the hidden flat root
-  treated as compatibility residue rather than another valid default path.
-  - Exit pressure to remove:
-    - stale first-party teaching copy that still makes the crate root feel like a peer path,
-    - hidden-root compatibility exposure that still leaks into autocomplete or review load,
-    - uncertainty over whether `app::*`, `themes::*`, or `advanced::*` are peer discovery lanes.
-- [ ] Freeze the `fret` root lane budget so new optional ecosystems only land as explicit
+- [x] Lock `fret-ui-shadcn` to one taught component-family discovery lane:
+  `facade as shadcn`, with `raw::*` as the only explicit escape hatch and component-family root
+  modules kept crate-private instead of public/doc-hidden.
+  - Closed on 2026-03-16:
+    - root component-family modules are no longer public,
+    - `raw::*` now wraps private component-family modules explicitly,
+    - first-party gallery/examples/tests compile and pass on the curated facade + explicit raw
+      posture.
+- [x] Freeze the `fret` root lane budget so new optional ecosystems only land as explicit
   secondary lanes and do not reopen default-lane autocomplete pressure for ordinary app authors.
-  - Exit pressure to remove:
-    - root-level exports that read like a second prelude,
-    - new lane additions without an explicit "why not under an existing lane?" justification,
-    - source/docs drift where app authors must rediscover optional ecosystems from the root.
+  - Closed on 2026-03-16:
+    - root-level public modules and direct `pub use` exports are now protected by explicit
+      allowlist tests,
+    - raw view-runtime helpers moved from `fret::view::*` to `fret::advanced::view::*`,
+    - devloop helpers moved from `fret::dev::*` to `fret::advanced::dev::*`.
 - [ ] Coordinate the next happy-path ceremony pass across `fret`, `fret-ui-kit`, and first-party
   docs/examples so the first-hour/default todo path gets materially shorter without reopening the
   kernel/mechanism split.
@@ -137,6 +166,37 @@ Audit reconciliation note on 2026-03-16:
     - tracked-value reads,
     - common local/payload write paths,
     - keyed/list/default child-collection ergonomics.
+  - 2026-03-16 batch landed:
+    - the canonical trio (`simple_todo`, `simple_todo_v2_target`, `todo_demo`) now prefers the
+      shorter tracked-read surface `state.layout(cx).value_*` / `state.paint(cx).value_*` over
+      `cx.state().watch(&state)...` for ordinary reads,
+    - the same trio plus the `fretboard` todo/simple-todo templates now prefer
+      `cx.actions().payload_local_update_if::<A, _>(...)` for the common keyed-row payload update
+      path,
+    - the default-path docs (`docs/examples/todo-app-golden-path.md`,
+      `docs/authoring-golden-path-v2.md`) and the first-party source gates were updated to teach
+      that shorter wording.
+  - 2026-03-16 next batch scope:
+    - audit the canonical trio plus the generated templates for remaining keyed/list/default
+      child-collection noise (`ui::for_each_keyed(...)`, `ui::children![...]`, focused `*_build`
+      seams),
+    - prefer already-shipped helpers and tighter teaching copy before inventing any new surface,
+    - if a genuinely new helper is still needed, keep it narrow, prove it on the canonical trio,
+      and land it through the action-first / into-element follow-on workstreams instead of
+      reopening this closeout lane with broad sugar design.
+  - 2026-03-16 follow-up landed:
+    - `ui::single(cx, child)` now covers the narrow "late-land one typed child" case,
+    - canonical first-party roots/wrappers (`hello`, `hello_counter_demo`, `todo_demo`, generated
+      todo/simple-todo templates, and their docs/gates) now use that helper instead of
+      `ui::children![cx; child].into()`,
+    - single-child wrapper closures such as `shadcn::card_content(|cx| ...)` on the canonical
+      trio now also use `ui::single(...)` where they were only forwarding one typed subtree.
+  - 2026-03-16 cookbook follow-up landed:
+    - first-party cookbook examples now also move the obvious single-child
+      `shadcn::card_content(|cx| ...)` wrappers onto `ui::single(...)`,
+    - this batch intentionally stops at typed-child wrapper closures and does not treat shared
+      scaffold page roots (`centered_page*`) as eligible `ui::single(...)` sites, because those
+      helpers still return `Elements` rather than a typed child.
 - [ ] Keep `AppActivateExt` on a shrinking bridge-only path: no new first-party bridge impls for
   widgets that can instead ship native `.action(...)` / `.action_payload(...)` slots.
   - Exit pressure to remove:
@@ -144,14 +204,45 @@ Audit reconciliation note on 2026-03-16:
     - new first-party docs/snippets that normalize `AppActivateExt` as a default app-lane import,
     - any ambiguity about whether `.dispatch::<A>()` is the preferred path over native widget
       action slots.
+  - 2026-03-16 shrink batch landed:
+    - `fret::app::AppActivateSurface` no longer forwards shadcn `Badge`,
+      `raw::extras::{BannerAction, BannerClose, Ticker}`, or
+      `fret_ui_material3::{Card, DialogAction, TopAppBarAction}`,
+    - those types already expose native `.action(...)` / `.action_payload(...)`, so they are no
+      longer counted as intentional bridge residue.
+  - 2026-03-16 `UiCx` grouped-actions follow-up:
+    - `fret::app::UiCxActionsExt` now gives extracted helper functions the same grouped
+      `cx.actions()` story as `View::render(&mut AppUi)`,
+    - UI Gallery snippets for `confirmation_demo`, `conversation_demo`,
+      `prompt_input_docs_demo`, and `web_preview_demo` now use `cx.actions().models::<A>(...)`
+      plus native widget `.action(...)`,
+    - `fret_ui_ai::{ConfirmationAction, ConversationDownload, PromptInputButton, WebPreviewNavigationButton}`
+      were removed from the bridge table because those widgets already expose stable action slots.
+  - 2026-03-16 widget-native hook clarification:
+    - widget-owned `.on_activate(...)` also counts as a bridge-free surface when the component
+      already exposes that hook directly,
+    - the first-party `apps/fret-ui-gallery/src/ui/snippets/badge/link.rs` example now uses
+      `Badge::on_activate(...)` to suppress link launch during diagnostics instead of importing
+      `AppActivateExt` for a no-op listener.
+  - 2026-03-16 next residue shortlist:
+    - `WorkflowControlsButton`
+    - `MessageAction`
+    - `ArtifactAction`
+    - `ArtifactClose`
+    - `CheckpointTrigger`
+  - Revalidation rule:
+    - keep `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+      green for each bridge-shrink batch before updating this tracker to claim closure.
+  - 2026-03-16 sequencing rule:
+    - do not resume ecosystem integration-trait budgeting, macro work, or other new public sugar
+      until the next ceremony batch and the remaining bridge-table shrink both stop moving.
 
 Post-closeout handoff order on 2026-03-16:
 
-1. finish shadcn discovery-lane closure
-2. freeze the `fret` root lane budget
-3. run the next happy-path ceremony pass across action-first and conversion follow-ons
-4. continue shrinking the remaining `AppActivateExt` bridge table
-5. resume ecosystem integration-trait budgeting only after the four items above are stable
+1. run the next happy-path ceremony pass across action-first and conversion follow-ons
+2. continue shrinking the remaining `AppActivateExt` bridge table
+3. resume ecosystem integration-trait budgeting only after the two items above are stable
+   and the canonical trio/templates/docs no longer need wording churn for the default path
 
 ## M0 — Freeze the target product surface
 

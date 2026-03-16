@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("conversation_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::{Px, SemanticsRole};
 use fret_icons::IconId;
@@ -15,6 +15,10 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use std::sync::Arc;
+
+mod act {
+    fret::actions!([DownloadConversation = "ui-gallery.ai.conversation.download.v1"]);
+}
 
 const DIAG_SEED_MESSAGES_ENV: &str = "FRET_UI_GALLERY_AI_CONVERSATION_SEED_MESSAGES";
 
@@ -58,6 +62,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         cx.local_model_keyed("next_id", || (diag_seed_message_count() as u64).max(3) + 1);
     let exported_md_len_model = cx.local_model_keyed("exported_md_len", || 0u64);
 
+    cx.actions().models::<act::DownloadConversation>({
+        let messages_model = messages_model.clone();
+        let exported_md_len_model = exported_md_len_model.clone();
+        move |models| {
+            let messages = models.get_cloned(&messages_model).unwrap_or_default();
+            let md = ui_ai::messages_to_markdown(&messages);
+            models
+                .update(&exported_md_len_model, |value| {
+                    *value = md.len().min(u64::MAX as usize) as u64;
+                })
+                .is_ok()
+        }
+    });
+
     let messages = cx
         .get_model_cloned(&messages_model, Invalidation::Layout)
         .unwrap_or_default();
@@ -99,22 +117,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             host.request_redraw(acx.window);
         }
     });
-
-    let download = {
-        let messages_model = messages_model.clone();
-        let exported_md_len_model = exported_md_len_model.clone();
-        move |host, acx| {
-            let messages = host
-                .models_mut()
-                .get_cloned(&messages_model)
-                .unwrap_or_default();
-            let md = ui_ai::messages_to_markdown(&messages);
-            let _ = host.models_mut().update(&exported_md_len_model, |v| {
-                *v = md.len().min(u64::MAX as usize) as u64;
-            });
-            host.request_redraw(acx.window);
-        }
-    };
 
     let conversation = ui_ai::Conversation::new([])
         .content_revision(revision)
@@ -166,7 +168,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui_ai::ConversationContent::new(content_children).into_element(cx),
                 ui_ai::ConversationDownload::new("Download conversation")
                     .disabled(messages_empty)
-                    .listen(download)
+                    .action(act::DownloadConversation)
                     .test_id("ui-ai-conversation-demo-download")
                     .into_element(cx),
                 ui_ai::ConversationScrollButton::default()

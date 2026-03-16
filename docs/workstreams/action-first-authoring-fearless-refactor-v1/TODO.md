@@ -66,6 +66,14 @@ This workstream is no longer the owner of crate-discovery curation.
     become a permanent growth surface
 - do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
   this workstream until the shadcn discovery-lane and `fret` root-budget closeout items are green
+- the first density-reduction batch is now already landed on the canonical trio, generated
+  todo/simple-todo templates, and default-path docs:
+  `state.layout(cx).value_*` / `state.paint(cx).value_*` are the taught tracked-read path, and
+  `cx.actions().payload_local_update_if::<A, _>(...)` is the taught keyed-row payload write path
+- the next child-collection follow-up has now also started landing:
+  `ui::single(cx, child)` is the narrow default helper for late-landing one typed child, and the
+  first-party root/wrapper cases (`hello`, `hello_counter_demo`, `todo_demo`, generated
+  todo/simple-todo templates) now use it instead of `ui::children![cx; child].into()`
 - after those lane-curation items are stable, the execution order here is:
   1. reduce first-hour/default-path ceremony,
   2. continue shrinking bridge-only activation residue,
@@ -173,6 +181,15 @@ This workstream is no longer the owner of crate-discovery curation.
       (`BannerAction::action`, `BannerClose::action`, close-first action dispatch helper)
     - `ecosystem/fret-ui-shadcn/src/extras/ticker.rs` (`Ticker::action`, `Ticker::action_payload`)
     - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
+  - 2026-03-16 bridge-shrink follow-up:
+    - `fret::app::AppActivateSurface` no longer forwards `Badge`, `BannerAction`,
+      `BannerClose`, or `Ticker`,
+    - those widgets now stay on their native `.action(...)` / `.action_payload(...)` surface,
+      while bridge-only `.listen(...)` remains reserved for the smaller residue that still lacks
+      native action slots.
+    - first-party UI Gallery link-badge authoring also now stays on the widget-owned
+      `Badge::on_activate(...)` hook when it needs to suppress the default URL open effect during
+      diagnostics; it does not reintroduce `AppActivateExt` just to attach a no-op override.
 - [x] AFA-actions-016b Expand native action-first slots on first-party AI wrapper buttons.
   - Goal: `fret-ui-ai` wrappers that are structurally just button/tooltip/layout composition
     should not require `AppActivateExt` for ordinary action dispatch.
@@ -194,6 +211,11 @@ This workstream is no longer the owner of crate-discovery curation.
     - `ecosystem/fret-ui-material3/src/dialog.rs`
     - `ecosystem/fret-ui-material3/src/top_app_bar.rs`
     - `ecosystem/fret-ui-material3/src/lib.rs`
+  - 2026-03-16 bridge-shrink follow-up:
+    - `fret::app::AppActivateSurface` no longer forwards `fret_ui_material3::{Card,
+      DialogAction, TopAppBarAction}`,
+    - those wrappers now stay entirely on their native `.action(...)` surface unless a caller
+      intentionally drops to raw `.on_activate(...)`.
 - [x] AFA-actions-017 Add action-first naming parity helpers in `fret-ui-kit`.
   - Evidence:
     - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
@@ -203,6 +225,21 @@ This workstream is no longer the owner of crate-discovery curation.
   - Evidence:
     - `crates/fret-ui/src/tree/commands.rs` (dispatch/availability fallback to default root)
     - `crates/fret-ui/src/tree/tests/command_availability.rs` (cross-layer fallback tests)
+- [~] AFA-actions-016d Continue shrinking bridge-only residue after the grouped `UiCx` helper pass.
+  - Goal: keep `AppActivateExt` as an explicitly shrinking residue list rather than a stable
+    ecosystem integration surface.
+  - Immediate audit shortlist (2026-03-16):
+    - `WorkflowControlsButton`
+    - `MessageAction`
+    - `ArtifactAction`
+    - `ArtifactClose`
+    - `CheckpointTrigger`
+  - Revalidation bundle:
+    - `cargo nextest run -p fret grouped_authoring_surfaces_replace_flat_app_ui_helpers usage_and_component_docs_keep_app_activate_surface_narrow shadcn_docs_keep_advanced_hooks_off_curated_lane app_prelude_stays_explicit_instead_of_reexporting_legacy_surface advanced_prelude_reexports_app_facing_view_aliases uicx_actions_ext_is_part_of_the_default_and_advanced_preludes app_lane_keeps_explicit_uicx_helper_traits_for_manual_imports crate_usage_guide_keeps_query_guidance_on_grouped_app_surfaces --no-fail-fast`
+    - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+  - Rule:
+    - if a widget can stay on native `.action(...)`, `.action_payload(...)`, or widget-owned
+      `.on_activate(...)`, do not add or keep it on `AppActivateSurface`.
 
 ---
 
@@ -1124,13 +1161,16 @@ Current sequencing note (as of 2026-03-09):
       `use fret::app::AppActivateExt as _;` explicitly, while ordinary action-capable snippets
       such as `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` stay on native
       widget `.action(...)` slots without the bridge import
+    - follow-up shrink on 2026-03-16 also landed `UiCxActionsExt` for extracted helper functions,
+      so first-party helper-heavy snippets can stay on `cx.actions().models::<A>(...)` instead of
+      falling back to raw `on_action*` calls or bridge `.listen(...)`
     - `ecosystem/fret/src/view.rs` now extends the same thin sugar lane to
       `fret_ui_shadcn::facade::Button`, `fret_ui_shadcn::facade::SidebarMenuButton`, and optional
-      `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`
+      `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, MessageAction, WorkflowControlsButton}`
     - `ecosystem/fret/src/view.rs` source-policy also locks the exclusion boundary: no
       `AppActionCxSurface` family, and no `AppActivateSurface` impls for typed payload/context
       callbacks like `fret_ui_ai::{Attachment, FileTreeAction, MessageBranch, QueueItemAction, Suggestion, Test}`.
-    - selected activation-only UI Gallery snippets (`ai/{artifact_code_display,artifact_demo,chat_demo,checkpoint_demo,confirmation_demo,conversation_demo,message_usage,message_demo,persona_demo,prompt_input_docs_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture,web_preview_demo,workflow_controls_demo,workflow_node_graph_demo}`,
+    - selected activation-only UI Gallery snippets (`ai/{artifact_code_display,artifact_demo,chat_demo,checkpoint_demo,message_usage,message_demo,persona_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture,workflow_controls_demo,workflow_node_graph_demo}`,
       `drawer/demo`, `data_table/{basic_demo,default_demo,rtl_demo}`,
       `scroll_area/nested_scroll_routing`, `sidebar/{demo,controlled,mobile,rtl}`,
       `sonner/{demo,extras,usage,position}`) now prefer `.listen(...)`

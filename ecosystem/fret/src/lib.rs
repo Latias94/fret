@@ -343,7 +343,7 @@ pub(crate) enum AssetMount {
 }
 
 pub mod actions;
-pub mod view;
+mod view;
 pub mod workspace_menu;
 pub mod workspace_shell;
 
@@ -467,22 +467,16 @@ impl Default for Defaults {
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod interop;
 
-/// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
-pub mod dev {
-    pub use fret_launch::dev_state::{
-        DevStateExport, DevStateHook, DevStateHooks, DevStateSnapshot, DevStateWindowKeyRegistry,
-    };
-}
-
 /// Re-export the kernel facade (desktop builds).
 #[cfg(feature = "desktop")]
 use fret_framework as kernel;
 
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
-    /// Explicit local state-handle type for app helper signatures that intentionally name it.
-    pub use crate::view::LocalState;
+    /// Canonical app-facing view trait on the explicit app lane.
+    pub use crate::view::View;
+    /// Explicit helper types/traits for app helper signatures that intentionally name them.
+    pub use crate::view::{LocalState, UiCxActionsExt, UiCxDataExt};
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
     /// This is the same underlying runtime type as the raw kernel alias exposed on
@@ -498,6 +492,7 @@ pub mod app {
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         pub use crate::view::TrackedStateExt as _;
+        pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::View;
         pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
@@ -702,6 +697,22 @@ pub mod docking {
 
 /// Explicit advanced/manual-assembly imports for power users and integration code.
 pub mod advanced {
+    /// Low-level view-runtime helpers kept off the default crate root.
+    pub mod view {
+        pub use crate::view::{
+            ViewWindowState, view_init_window, view_record_engine_frame, view_view,
+        };
+    }
+
+    /// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
+    pub mod dev {
+        pub use fret_launch::dev_state::{
+            DevStateExport, DevStateHook, DevStateHooks, DevStateSnapshot,
+            DevStateWindowKeyRegistry,
+        };
+    }
+
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     /// Low-level interop helpers kept off the default crate root.
     pub mod interop {
@@ -918,6 +929,7 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::advanced::*;
+        pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, Ui, UiCx};
@@ -2763,6 +2775,7 @@ mod authoring_surface_policy_tests {
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
         assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
+        assert!(FIRST_HOUR.contains("`ui::single(cx, page(...))`"));
         assert!(FIRST_HOUR.contains("use fret::children::UiElementSinkExt as _;"));
         assert!(!FIRST_HOUR.contains("run_view::<"));
         assert!(!FIRST_HOUR.contains("ViewCx::"));
@@ -2850,6 +2863,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().listen(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
@@ -2889,9 +2903,10 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`WorkflowControlsButton`"));
         assert!(CRATE_USAGE_GUIDE.contains("`MessageAction`"));
         assert!(CRATE_USAGE_GUIDE.contains("`ArtifactAction`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`ConversationDownload`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`PromptInputButton`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`WebPreviewNavigationButton`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`ArtifactClose`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`CheckpointTrigger`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`ConfirmationAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("native `.action(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`Attachment`"));
         assert!(CRATE_USAGE_GUIDE.contains("`QueueItemAction`"));
         assert!(CRATE_USAGE_GUIDE.contains("`Test`"));
@@ -2917,6 +2932,7 @@ mod authoring_surface_policy_tests {
     fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
@@ -3069,6 +3085,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
         assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
+        assert!(TODO_APP_GOLDEN_PATH.contains("`ui::single(cx, page(...))`"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().listener("));
@@ -3142,6 +3159,7 @@ mod authoring_surface_policy_tests {
                 .contains("`fret::app::AppActivateSurface` / `AppActivateExt`")
         );
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`use fret::app::AppActivateExt as _;`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`UiCxActionsExt` / `UiCxDataExt`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_shadcn::advanced::*`"));
         assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`shadcn::advanced::*`"));
         assert!(AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret_ui_shadcn::advanced`"));
@@ -3209,6 +3227,8 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
         assert!(
             app_prelude.contains("pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;")
         );
@@ -3313,6 +3333,8 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("ViewElements"));
         assert!(advanced_prelude_exports_symbol("ElementContext"));
         assert!(advanced_prelude_exports_symbol("UiTree"));
+        assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
+        assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
         assert!(advanced_prelude_exports_symbol("UiServices"));
         assert!(advanced_prelude_exports_symbol("TextProps"));
         assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));
@@ -3381,6 +3403,70 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol(
             "workspace_shell_model_default_menu"
         ));
+    }
+
+    #[test]
+    fn root_surface_module_budget_is_curated_and_closed() {
+        let root_header = root_surface_header_source();
+        let actual = root_header
+            .lines()
+            .filter_map(|line| {
+                let module = line.strip_prefix("pub mod ")?;
+                Some(
+                    module
+                        .trim_end_matches(';')
+                        .trim_end_matches('{')
+                        .trim()
+                        .to_owned(),
+                )
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        let expected = [
+            "activate",
+            "actions",
+            "assets",
+            "children",
+            "env",
+            "icons",
+            "integration",
+            "overlay",
+            "semantics",
+            "style",
+            "workspace_menu",
+            "workspace_shell",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual, expected,
+            "root-level public modules should stay on the curated explicit-lane budget"
+        );
+        assert!(!root_header.contains("pub mod view;"));
+        assert!(!root_header.contains("pub mod dev {"));
+    }
+
+    #[test]
+    fn root_surface_direct_pub_use_budget_is_curated_and_closed() {
+        let root_header = root_surface_header_source();
+        let actual = root_header
+            .lines()
+            .filter(|line| line.starts_with("pub use "))
+            .map(str::trim)
+            .collect::<std::collections::BTreeSet<_>>();
+        let expected = [
+            "pub use app_entry::FretApp;",
+            "pub use fret_runtime::{ActionId, CommandId, TypedAction};",
+            "pub use fret_ui_shadcn::facade as shadcn;",
+        ]
+        .into_iter()
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual, expected,
+            "root-level direct re-exports should stay on the curated budget"
+        );
     }
 
     #[test]
@@ -3496,6 +3582,30 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("viewport_breakpoints, viewport_height_at_least"));
         assert!(root_header.contains("viewport_tailwind,"));
         assert!(root_header.contains("window_insets_padding_refinement_or_zero,"));
+    }
+
+    #[test]
+    fn app_and_advanced_modules_expose_view_runtime_on_explicit_lanes_only() {
+        let root_header = root_surface_header_source();
+        let advanced_surface = advanced_prelude_source();
+
+        assert!(LIB_RS.contains("pub use crate::view::View;"));
+        assert!(!root_header.contains("pub mod view;"));
+        assert!(advanced_surface.contains("pub mod view {"));
+        assert!(advanced_surface.contains("ViewWindowState, view_init_window,"));
+        assert!(advanced_surface.contains("view_record_engine_frame, view_view,"));
+    }
+
+    #[test]
+    fn advanced_surface_quarantines_devloop_helpers_off_root() {
+        let root_header = root_surface_header_source();
+        let advanced_surface = advanced_prelude_source();
+
+        assert!(!root_header.contains("pub mod dev {"));
+        assert!(advanced_surface.contains("pub mod dev {"));
+        assert!(advanced_surface.contains("DevStateExport, DevStateHook, DevStateHooks,"));
+        assert!(advanced_surface.contains("DevStateSnapshot,"));
+        assert!(advanced_surface.contains("DevStateWindowKeyRegistry,"));
     }
 
     #[test]

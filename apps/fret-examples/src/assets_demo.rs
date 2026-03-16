@@ -67,7 +67,7 @@ fn on_event(
     _services: &mut dyn UiServices,
     window: AppWindowId,
     _ui: &mut UiTree<KernelApp>,
-    _state: &mut fret::view::ViewWindowState<AssetsDemoView>,
+    _state: &mut fret::advanced::view::ViewWindowState<AssetsDemoView>,
     event: &Event,
 ) {
     match event {

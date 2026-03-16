@@ -501,7 +501,7 @@ struct ExternalTextureImportsView {
     decoded: Option<DecodedPngSource>,
 }
 
-impl fret::view::View for ExternalTextureImportsView {
+impl fret::app::View for ExternalTextureImportsView {
     fn init(app: &mut App, _window: AppWindowId) -> Self {
         Self {
             show: app.models_mut().insert(true),
@@ -532,7 +532,7 @@ fn on_event(
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut fret::view::ViewWindowState<ExternalTextureImportsView>,
+    st: &mut fret::advanced::view::ViewWindowState<ExternalTextureImportsView>,
     event: &Event,
 ) {
     if let Event::KeyDown { key, .. } = event
@@ -673,7 +673,7 @@ fn record_engine_frame(
     app: &mut App,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut fret::view::ViewWindowState<ExternalTextureImportsView>,
+    st: &mut fret::advanced::view::ViewWindowState<ExternalTextureImportsView>,
     context: &WgpuContext,
     renderer: &mut Renderer,
     _scale_factor: f32,

@@ -184,10 +184,15 @@ Trait boundary:
 - the authoring surface intentionally does **not** carry an unused `cx` marker argument anymore;
   widget-local activation sugar is now pure widget syntax (`dispatch`, `dispatch_payload`,
   `listen`) because the context value was never part of the runtime behavior,
-- current first-party coverage intentionally stays narrow and real: `shadcn::Badge`,
-  `shadcn::Button`, `shadcn::SidebarMenuButton`, `shadcn::extras::{BannerAction, BannerClose, Ticker}`,
-  optional `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, ConfirmationAction, ConversationDownload, MessageAction, PromptInputButton, WebPreviewNavigationButton, WorkflowControlsButton}`,
-  plus Material 3 `Card`, `DialogAction`, and `TopAppBarAction`,
+- current first-party bridge coverage intentionally stays narrow and real: `shadcn::Button`,
+  `shadcn::SidebarMenuButton`,
+  optional `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, MessageAction, WorkflowControlsButton}`,
+  with Material 3 wrappers no longer kept on the bridge table,
+- shadcn widgets that already ship native `.action(...)` / `.action_payload(...)` such as
+  `Badge` and `extras::{BannerAction, BannerClose, Ticker}` stay off the bridge table so
+  `AppActivateExt` keeps shrinking instead of becoming a permanent integration list,
+- Material 3 wrappers that already ship native `.action(...)` such as `Card`, `DialogAction`,
+  and `TopAppBarAction` also stay off the bridge table for the same reason,
 - powered internally by `cx.actions().action(...)` / `action_payload(...)` / `listen(...)`,
   with `dispatch` / `dispatch_payload` / `listener` kept as equivalent explicit aliases,
 - kept off `crates/fret-ui` and off component-policy crates.
@@ -203,6 +208,9 @@ Current first-party teaching evidence (as of 2026-03-16):
 
 - selected UI Gallery activation-only snippets now import `fret::app::AppActivateExt as _;`,
 - those snippets prefer `.listen(|host, acx| { ... })` over reopening raw `.on_activate(...)`,
+- extracted `UiCx` helper functions now get the same grouped action surface through
+  `fret::app::UiCxActionsExt`, so UI Gallery snippets with native widget `.action(...)` slots can
+  stay on `cx.actions().models::<A>(...)` instead of reaching for the bridge,
 - the UI Gallery `command/action_first_view` snippet now stays on native widget `.action(...)`
   slots without importing `AppActivateExt`, which keeps ordinary action-capable authoring off the
   bridge lane,
@@ -210,10 +218,12 @@ Current first-party teaching evidence (as of 2026-03-16):
   surface with `selected_activation_snippets_prefer_app_activate_listen`, including the primary
   `sonner/demo` snippet, the data-table pagination demos, `scroll_area/nested_scroll_routing`, and
   the AI `artifact_code_display` / `artifact_demo` / `chat_demo` / `checkpoint_demo` /
-  `confirmation_demo` / `conversation_demo` / `message_usage` / `prompt_input_docs_demo` /
-  `prompt_input_referenced_sources_demo` / `reasoning_demo` / `transcript_torture` /
-  `web_preview_demo` / `workflow_controls_demo` / `workflow_node_graph_demo` / `message_demo` /
-  `task_demo` / `persona_demo` snippets when `fret`'s optional `ui-ai` lane is enabled.
+  `message_usage` / `prompt_input_referenced_sources_demo` / `reasoning_demo` /
+  `transcript_torture` / `workflow_controls_demo` / `workflow_node_graph_demo` /
+  `message_demo` / `task_demo` / `persona_demo` snippets when `fret`'s optional `ui-ai` lane is
+  enabled. The remaining `confirmation_demo`, `conversation_demo`, `prompt_input_docs_demo`, and
+  `web_preview_demo` snippets now demonstrate the preferred native-widget lane instead of the
+  bridge lane.
 
 Non-goals for this thin sugar lane:
 

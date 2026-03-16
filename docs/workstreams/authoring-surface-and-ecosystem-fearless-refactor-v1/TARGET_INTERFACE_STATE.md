@@ -23,7 +23,7 @@ Closeout note on 2026-03-16:
     hidden flat root and the default component lane is `facade as shadcn`,
   - the dedicated conversion-surface tracker is still actively deleting vocabulary families,
 - remaining work is therefore narrow follow-through rather than broad redesign:
-  delete-ready cleanup, shadcn discovery-lane tightening, stale-doc correction, and coordination
+  delete-ready cleanup, ceremony reduction, bridge shrinkage, stale-doc correction, and coordination
   with follow-on workstreams such as
   `into-element-surface-fearless-refactor-v1` and `action-first-authoring-fearless-refactor-v1`.
 
@@ -48,8 +48,8 @@ Fresh-audit reading rule on 2026-03-16:
      work only, not as peer component-family discovery lanes
    - Non-goal: do not normalize the hidden flat crate root, `advanced::*`, and `raw::*` as equal
      first-contact choices for ordinary component authoring
-   - Audit snapshot on 2026-03-16: `fret-ui-shadcn` still exposes `83 pub mod` / `174 pub use`,
-     so discovery pressure is still materially higher than the target product story
+   - Status on 2026-03-16: component-family root modules are crate-private and first-party
+     source-policy/gallery gates now pass on the curated facade + explicit raw posture
 2. `fret` root lane budget freeze
    - `fret::app`, `fret::component`, and `fret::advanced` are the product tiers
    - root-level secondary lanes such as `assets`, `env`, `router`, and `docking` remain allowed,
@@ -59,13 +59,25 @@ Fresh-audit reading rule on 2026-03-16:
      surface just because optional ecosystems exist
    - New root lanes should require an explicit justification for why the surface cannot live under
      an existing lane or remain crate-local
-   - Audit snapshot on 2026-03-16: `fret` still exposes `35 pub mod` / `96 pub use`, so lane
-     budgeting remains a real release concern even though the app prelude itself is much smaller
+   - Status on 2026-03-16: root public-module/direct-reexport budgets are now source-gated, and
+     raw view-runtime/devloop seams moved to `fret::advanced::{view, dev}`
 3. Happy-path ceremony reduction
    - The next density problem is no longer "mechanism vs policy"; it is reducing the amount of
      surface an ordinary app author has to hold in their head in the first hour
    - Priority targets: tracked-value reads, common local/payload write paths, and list/keyed-row
      defaults
+   - Status on 2026-03-16:
+     - first batch already landed on the canonical trio (`simple_todo`,
+       `simple_todo_v2_target`, `todo_demo`), the generated todo/simple-todo templates, and the
+       default-path docs,
+     - the taught tracked-read wording is now `state.layout(cx).value_*` /
+       `state.paint(cx).value_*`,
+      - the taught keyed-row payload write wording is now
+        `cx.actions().payload_local_update_if::<A, _>(...)`,
+      - the narrow single-child late-landing wording is now `ui::single(cx, child)` for root or
+        wrapper closures that only forward one typed subtree,
+      - the next batch should stay focused on keyed/list/default child-collection ergonomics and
+        should prefer already-shipped helpers before any new public sugar is minted
    - Ownership split: this workstream sets the target product surface, while
      `action-first-authoring-fearless-refactor-v1` and
      `into-element-surface-fearless-refactor-v1` land the concrete API reductions
@@ -75,13 +87,33 @@ Fresh-audit reading rule on 2026-03-16:
    - The bridge remains acceptable only for truly activation-only legacy/default-path surfaces
    - New first-party widgets should not add fresh `AppActivateSurface` impls when they can expose
      native `.action(...)` / `.action_payload(...)` slots directly
+   - extracted `UiCx` helper functions should stay on grouped `cx.actions()` / `cx.data()` via
+     `UiCxActionsExt` / `UiCxDataExt` before anyone proposes new bridge entries just to make split
+     helper functions authorable again
    - The target end-state is "shrinking bridge residue", not "permanent growing integration list"
 
 Post-closeout follow-on:
 
-- ecosystem integration-trait budgeting is not a release blocker ahead of items 1-4
+- ecosystem integration-trait budgeting is not a release blocker ahead of items 3-4
 - resume it only after the public lane story above is stable enough that router/query/docking/
   catalog integration seams can be audited against final, not transitional, imports
+- sequencing rule:
+  - do not start new public trait budgeting while the canonical trio/templates/docs still need
+    default-path wording churn,
+  - every new ecosystem contract must declare its target tier up front:
+    app-level install/setup/integration, component-level composition/adaptor, or explicit
+    advanced/raw hook,
+  - non-goal: do not solve ecosystem extensibility by widening `fret::app::prelude::*`,
+    `fret::component::prelude::*`, or the `fret` crate root again
+
+Revalidation note on 2026-03-16:
+
+- the current target-state reading above is backed by:
+  - `cargo nextest run -p fret --lib authoring_surface_policy_tests:: --no-fail-fast`
+  - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+  - `cargo check -p fret-examples --all-targets`
+- if one of those commands starts failing, treat that as target-state drift and update the lane
+  docs or shipped exports before broadening the surface again.
 
 ## Public Surface Tiers
 
@@ -424,8 +456,9 @@ Target rule:
   surface; low-level `ElementContext` query/selector helpers remain explicit for component or
   advanced call sites.
 - extracted `UiCx` helpers on the default/advanced app-facing surface use the same grouped
-  `data()` namespace through `UiCxDataExt`, so first-party helper functions do not fall back to raw
-  `use_query*` / `use_selector*` calls just because they were split out of `render()`.
+  `actions()` / `data()` namespaces through `UiCxActionsExt` / `UiCxDataExt`, so first-party helper
+  functions do not fall back to raw `on_action*` / `use_query*` / `use_selector*` calls just
+  because they were split out of `render()`.
 
 ### `ui.effects()`
 

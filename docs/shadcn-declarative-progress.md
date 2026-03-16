@@ -100,9 +100,16 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
   `widget.listen(|host, acx| { ... })` for activation-only surfaces via an explicit
   `use fret::app::AppActivateExt as _;` import on
   `fret::app::AppActivateSurface` / `AppActivateExt`.
-  That sugar intentionally works from both `View::render(&mut AppUi)` and extracted `UiCx`
-  helper functions, so first-party snippets do not need to reopen raw `.on_activate(...)` after
-  being factored into smaller helpers.
+  Shadcn widgets that already expose native `.action(...)` / `.action_payload(...)` slots or a
+  widget-owned `.on_activate(...)` hook (`Badge`, `extras::{BannerAction, BannerClose, Ticker}`)
+  now stay on that native surface and are no longer part of the `AppActivateSurface` bridge list.
+  The first-party `badge/link.rs` example now overrides link launching through
+  `Badge::on_activate(...)` instead of reopening the activation bridge just to keep diagnostics
+  runs side-effect free.
+  Extracted `UiCx` helper functions now get the same grouped action/data surface through
+  `UiCxActionsExt` / `UiCxDataExt`, and AI widgets such as `ConversationDownload`,
+  `PromptInputButton`, `WebPreviewNavigationButton`, and `ConfirmationAction` now stay on their
+  native `.action(...)` slots instead of extending the bridge table.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.
@@ -161,25 +168,44 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 ### Current authoring-surface closeout status (2026-03-16)
 
-The main remaining shadcn problem is now **discovery pressure**, not runtime ownership or breadth
-parity.
+The discovery-lane closure is now structurally landed. The main remaining shadcn work is
+**docs/gate hygiene on top of that closure**, not another public-surface redesign.
 
 - ordinary component/app authors should make one first-contact choice for component families:
   `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
 - `raw::*` remains the only explicit component-family escape hatch
 - `app::*` and `themes::*` are setup lanes, not peer discovery lanes
 - `advanced::*` is an implementation/debug/source-alignment lane, not a competing default
-- the hidden flat root remains shrinking compatibility residue and should not be normalized as a
-  fourth authoring path
+- component-family root modules are now crate-private instead of public/doc-hidden residue
 
 Release-blocking closeout consequences:
 
-- stale first-party docs/examples that still make the flat root feel like a peer path should be
-  treated as authoring-surface debt even if the underlying component implementation is correct
+- stale first-party docs/examples that still make any non-facade lane feel like a peer path
+  should be treated as authoring-surface debt even if the underlying component implementation is
+  correct
 - source-policy tests are guardrails, not the desired end-state; the goal is to remove the need
   for humans to mentally sort multiple peer discovery lanes in the first place
 - broader ecosystem trait/sugar work should read from this settled discovery story rather than
   compete with it
+
+### Extension-contract sequencing (2026-03-16)
+
+The next ecosystem-trait pass should be **sequenced after**, not during, the current authoring
+surface closeout.
+
+- start gate: do not budget new public integration traits while the canonical todo/default-path
+  docs and templates still need wording churn for the default lane
+- every new ecosystem contract should declare its tier up front:
+  - app-level install/setup/integration
+  - component-level composition/adaptor
+  - explicit advanced/raw hook
+- non-goal: do not widen `fret::app::prelude::*`, `fret::component::prelude::*`, or the flat
+  `fret_ui_shadcn` discovery surface in the name of extensibility
+- first-party UI Gallery snippets/pages remain the teaching-source checkpoint for default shadcn
+  authoring; if a proposed trait or helper does not make that surface clearer, it likely does not
+  belong on the default lane
+- when a family intentionally needs both a compact default lane and a raw/parts lane, ship both
+  exemplars and lock them with a source-policy gate instead of relying on docs prose alone
 
 Guidelines:
 
@@ -209,18 +235,17 @@ Guidelines:
 - Theme presets are no longer a parallel root lane either: first-party code should use
   `shadcn::themes::*` (or `fret_ui_shadcn::facade::themes::*` in non-aliased contexts), not the
   historical `fret_ui_shadcn::shadcn_themes::*` path.
-- Treat the flat `fret_ui_shadcn::*` crate root as doc-hidden non-authoring glue only;
-  component-family exports now live on `facade as shadcn`, with `raw::*` as the explicit escape
-  hatch.
+- Treat the flat `fret_ui_shadcn::*` crate root as non-authoring glue only; component-family
+  exports now live on `facade as shadcn`, with `raw::*` as the explicit escape hatch.
 - The curated `prelude` and crate-internal recipe/helper glue now also source their
   authoring-critical names from explicit module/facade paths instead of hidden flat root
   reexports; component families, direction utilities, themes, and authoring glue now all route
   through explicit facade/prelude/raw lanes, and internal recipe code now imports icon helpers
   directly from `fret_ui_kit::declarative::icon` rather than relying on a flat-root shim.
 - The current first-party source-policy tests that ban root-style imports are evidence of remaining
-  public-surface duplication, not proof that the current three-lane discovery story is ideal.
-  The next cleanup step is to keep deleting residual compatibility exposure and stale teaching copy,
-  not to normalize the crate root as another default authoring path.
+  public-surface duplication, not proof that the current lane budget is ideal forever.
+  The next cleanup step is to keep deleting stale teaching copy and to keep the curated
+  facade/raw/app/themes/advanced budget stable, not to normalize any new peer discovery lane.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 

@@ -538,6 +538,18 @@ pub struct AppUiPayloadActions<'view, 'cx, 'a, H: UiHost, A> {
     _marker: std::marker::PhantomData<A>,
 }
 
+/// Grouped action/effect registration helpers for extracted `UiCx` child builders on the default
+/// app surface.
+pub struct UiCxActions<'cx, 'a> {
+    cx: &'cx mut ElementContext<'a, crate::app::App>,
+}
+
+/// Grouped payload-action helpers for extracted `UiCx` child builders on the default app surface.
+pub struct UiCxPayloadActions<'cx, 'a, A> {
+    cx: &'cx mut ElementContext<'a, crate::app::App>,
+    _marker: std::marker::PhantomData<A>,
+}
+
 /// Contract for app-facing widgets that expose an activation-only callback slot.
 ///
 /// This stays in `ecosystem/fret` because it is authoring sugar, not runtime mechanism.
@@ -596,6 +608,8 @@ pub trait AppActivateExt: AppActivateSurface {
 
 impl<T> AppActivateExt for T where T: AppActivateSurface {}
 
+// Keep this bridge list intentionally narrow: widgets that already ship native `.action(...)` /
+// `.action_payload(...)` stay off `AppActivateSurface` so the bridge table keeps shrinking.
 #[cfg(feature = "shadcn")]
 impl AppActivateSurface for fret_ui_shadcn::facade::Button {
     fn on_activate(self, on_activate: OnActivate) -> Self {
@@ -604,58 +618,9 @@ impl AppActivateSurface for fret_ui_shadcn::facade::Button {
 }
 
 #[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::facade::Badge {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::facade::Badge::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "shadcn")]
 impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton {
     fn on_activate(self, on_activate: OnActivate) -> Self {
         fret_ui_shadcn::facade::SidebarMenuButton::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerAction {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::raw::extras::BannerAction::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerClose {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::raw::extras::BannerClose::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::raw::extras::Ticker {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::raw::extras::Ticker::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "material3")]
-impl AppActivateSurface for fret_ui_material3::Card {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_material3::Card::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "material3")]
-impl AppActivateSurface for fret_ui_material3::DialogAction {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_material3::DialogAction::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "material3")]
-impl AppActivateSurface for fret_ui_material3::TopAppBarAction {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_material3::TopAppBarAction::on_activate(self, on_activate)
     }
 }
 
@@ -681,13 +646,6 @@ impl AppActivateSurface for fret_ui_ai::ArtifactClose {
 }
 
 #[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::ConfirmationAction {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::ConfirmationAction::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
 impl AppActivateSurface for fret_ui_ai::CheckpointTrigger {
     fn on_activate(self, on_activate: OnActivate) -> Self {
         fret_ui_ai::CheckpointTrigger::on_activate(self, on_activate)
@@ -698,27 +656,6 @@ impl AppActivateSurface for fret_ui_ai::CheckpointTrigger {
 impl AppActivateSurface for fret_ui_ai::ArtifactAction {
     fn on_activate(self, on_activate: OnActivate) -> Self {
         fret_ui_ai::ArtifactAction::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::ConversationDownload {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::ConversationDownload::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::PromptInputButton {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::PromptInputButton::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::WebPreviewNavigationButton {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::WebPreviewNavigationButton::on_activate(self, on_activate)
     }
 }
 
@@ -748,6 +685,130 @@ where
 
 fn action_listener(f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
     Arc::new(move |host, action_cx, _reason| f(host, action_cx))
+}
+
+#[derive(Default)]
+struct UiCxActionHooksFrameSlot {
+    frame_id: Option<fret_runtime::FrameId>,
+}
+
+fn prepare_uicx_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
+    let frame_id = cx.frame_id;
+    let action_root = cx.root_id();
+    let needs_reset = cx.root_state(UiCxActionHooksFrameSlot::default, |slot| {
+        if slot.frame_id == Some(frame_id) {
+            return false;
+        }
+        slot.frame_id = Some(frame_id);
+        true
+    });
+    if needs_reset {
+        cx.command_clear_on_command_for(action_root);
+        cx.command_clear_on_command_availability_for(action_root);
+    }
+}
+
+fn uicx_on_action<A>(
+    cx: &mut ElementContext<'_, crate::app::App>,
+    f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx) -> bool + 'static,
+) where
+    A: crate::TypedAction,
+{
+    prepare_uicx_action_hooks(cx);
+    let action_root = cx.root_id();
+    let action = A::action_id();
+    cx.command_add_on_command_for(
+        action_root,
+        Arc::new(move |host, action_cx, command| {
+            if command != action {
+                return false;
+            }
+            f(host, action_cx)
+        }),
+    );
+}
+
+fn uicx_on_action_notify<A>(
+    cx: &mut ElementContext<'_, crate::app::App>,
+    f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx) -> bool + 'static,
+) where
+    A: crate::TypedAction,
+{
+    uicx_on_action::<A>(cx, move |host, action_cx| {
+        let handled = f(host, action_cx);
+        if handled {
+            host.request_redraw(action_cx.window);
+            host.notify(action_cx);
+        }
+        handled
+    });
+}
+
+fn uicx_on_payload_action<A>(
+    cx: &mut ElementContext<'_, crate::app::App>,
+    f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx, A::Payload) -> bool + 'static,
+) where
+    A: crate::actions::TypedPayloadAction,
+{
+    prepare_uicx_action_hooks(cx);
+    let action_root = cx.root_id();
+    let action = A::action_id();
+    cx.command_add_on_command_for(
+        action_root,
+        Arc::new(move |host, action_cx, command| {
+            if command != action {
+                return false;
+            }
+            let Some(payload_any) = host.consume_pending_action_payload(action_cx.window, &action)
+            else {
+                return false;
+            };
+            let Ok(payload) = payload_any.downcast::<A::Payload>() else {
+                return false;
+            };
+            f(host, action_cx, *payload)
+        }),
+    );
+}
+
+fn uicx_on_payload_action_notify<A>(
+    cx: &mut ElementContext<'_, crate::app::App>,
+    f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx, A::Payload) -> bool + 'static,
+) where
+    A: crate::actions::TypedPayloadAction,
+{
+    uicx_on_payload_action::<A>(cx, move |host, action_cx, payload| {
+        let handled = f(host, action_cx, payload);
+        if handled {
+            host.request_redraw(action_cx.window);
+            host.notify(action_cx);
+        }
+        handled
+    });
+}
+
+fn uicx_on_action_availability<A>(
+    cx: &mut ElementContext<'_, crate::app::App>,
+    f: impl Fn(
+        &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+        fret_ui::action::CommandAvailabilityActionCx,
+    ) -> fret_ui::CommandAvailability
+    + 'static,
+) where
+    A: crate::TypedAction,
+{
+    prepare_uicx_action_hooks(cx);
+    let action_root = cx.root_id();
+    let action = A::action_id();
+    cx.command_add_on_command_availability_for(
+        action_root,
+        Arc::new(move |host, action_cx, command| {
+            if command != action {
+                return fret_ui::CommandAvailability::NotHandled;
+            }
+            f(host, action_cx)
+        }),
+    );
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
@@ -950,6 +1011,200 @@ where
     }
 }
 
+impl<'cx, 'a> UiCxActions<'cx, 'a> {
+    /// Build a widget-local activation handler using the same action-first vocabulary as widgets
+    /// that already expose `.action(...)`.
+    pub fn action<A>(self, _action: A) -> OnActivate
+    where
+        A: crate::TypedAction,
+    {
+        dispatch_action_listener::<A>()
+    }
+
+    /// Build a widget-local activation handler that dispatches a typed payload action while
+    /// keeping the action marker on the call site.
+    pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate
+    where
+        A: crate::actions::TypedPayloadAction,
+        A::Payload: Clone,
+    {
+        dispatch_payload_action_listener::<A>(payload)
+    }
+
+    /// Build a widget-local activation handler that dispatches the typed action through the
+    /// existing command/action pipeline.
+    pub fn dispatch<A>(self) -> OnActivate
+    where
+        A: crate::TypedAction,
+    {
+        dispatch_action_listener::<A>()
+    }
+
+    /// Build a widget-local activation handler that dispatches a typed payload action.
+    pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate
+    where
+        A: crate::actions::TypedPayloadAction,
+        A::Payload: Clone,
+    {
+        dispatch_payload_action_listener::<A>(payload)
+    }
+
+    /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
+    pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
+        action_listener(f)
+    }
+
+    /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
+    pub fn listener(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
+        self.listen(f)
+    }
+
+    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+        T: Any,
+    {
+        let local = LocalState::clone(local);
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| update(value))
+        });
+    }
+
+    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
+    where
+        A: crate::TypedAction,
+        T: Any + Clone,
+    {
+        let local = LocalState::clone(local);
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.set_action(host, action_cx, value.clone())
+        });
+    }
+
+    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
+    where
+        A: crate::TypedAction,
+    {
+        let local = LocalState::clone(local);
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| *value = !*value)
+        });
+    }
+
+    pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| f(host.models_mut()));
+    }
+
+    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| {
+            let mut tx = LocalTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx)
+        });
+    }
+
+    pub fn transient<A>(self, transient_key: u64)
+    where
+        A: crate::TypedAction,
+    {
+        uicx_on_action_notify::<A>(self.cx, move |host, action_cx| {
+            host.record_transient_event(action_cx, transient_key);
+            true
+        });
+    }
+
+    pub fn payload<A>(self) -> UiCxPayloadActions<'cx, 'a, A>
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        UiCxPayloadActions {
+            cx: self.cx,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    pub fn payload_local_update_if<A, T>(
+        self,
+        local: &LocalState<T>,
+        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+        T: Any,
+    {
+        let local = LocalState::clone(local);
+        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+            local.update_action_if(host, action_cx, |value| update(value, payload))
+        });
+    }
+
+    pub fn payload_locals<A>(
+        self,
+        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+    {
+        uicx_on_payload_action_notify::<A>(self.cx, move |host, _action_cx, payload| {
+            let mut tx = LocalTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, payload)
+        });
+    }
+
+    pub fn availability<A>(
+        self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
+    ) where
+        A: crate::TypedAction,
+    {
+        uicx_on_action_availability::<A>(self.cx, f);
+    }
+}
+
+impl<'cx, 'a, A> UiCxPayloadActions<'cx, 'a, A>
+where
+    A: crate::actions::TypedPayloadAction,
+{
+    pub fn models(self, f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static) {
+        uicx_on_payload_action_notify::<A>(self.cx, move |host, _action_cx, payload| {
+            f(host.models_mut(), payload)
+        });
+    }
+
+    pub fn local_update_if<T>(
+        self,
+        local: &LocalState<T>,
+        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
+    ) where
+        T: Any,
+    {
+        let local = LocalState::clone(local);
+        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+            local.update_action_if(host, action_cx, |value| update(value, payload))
+        });
+    }
+
+    pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static) {
+        uicx_on_payload_action_notify::<A>(self.cx, move |host, _action_cx, payload| {
+            let mut tx = LocalTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, payload)
+        });
+    }
+}
+
 /// Grouped selector/query helpers for the default app authoring surface.
 pub struct AppUiData<'view, 'cx, 'a, H: UiHost> {
     #[allow(dead_code)]
@@ -1118,6 +1373,17 @@ pub trait UiCxDataExt<'a> {
 impl<'a> UiCxDataExt<'a> for ElementContext<'a, crate::app::App> {
     fn data(&mut self) -> UiCxData<'_, 'a> {
         UiCxData { cx: self }
+    }
+}
+
+/// Brings the grouped `actions()` namespace to extracted `UiCx` helper functions.
+pub trait UiCxActionsExt<'a> {
+    fn actions(&mut self) -> UiCxActions<'_, 'a>;
+}
+
+impl<'a> UiCxActionsExt<'a> for ElementContext<'a, crate::app::App> {
+    fn actions(&mut self) -> UiCxActions<'_, 'a> {
+        UiCxActions { cx: self }
     }
 }
 
@@ -1885,6 +2151,7 @@ mod tests {
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
+        assert!(api_source.contains("pub trait UiCxActionsExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
@@ -1918,36 +2185,35 @@ mod tests {
                 api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Button")
             );
             assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Badge")
-            );
-            assert!(
                 api_source.contains(
                     "impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton"
                 )
             );
             assert!(
-                api_source
-                    .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerAction")
+                !api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Badge")
             );
             assert!(
-                api_source
-                    .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerClose")
+                !api_source.contains(
+                    "impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerAction"
+                )
             );
             assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::Ticker")
+                !api_source.contains(
+                    "impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerClose"
+                )
+            );
+            assert!(
+                !api_source
+                    .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::Ticker")
             );
         }
-        #[cfg(feature = "material3")]
-        {
-            assert!(api_source.contains("impl AppActivateSurface for fret_ui_material3::Card"));
-            assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_material3::DialogAction")
-            );
-            assert!(
-                api_source
-                    .contains("impl AppActivateSurface for fret_ui_material3::TopAppBarAction")
-            );
-        }
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_material3::Card"));
+        assert!(
+            !api_source.contains("impl AppActivateSurface for fret_ui_material3::DialogAction")
+        );
+        assert!(
+            !api_source.contains("impl AppActivateSurface for fret_ui_material3::TopAppBarAction")
+        );
         #[cfg(feature = "ui-ai")]
         {
             assert!(
@@ -1957,27 +2223,23 @@ mod tests {
             assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::MessageAction"));
             assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactClose"));
             assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_ai::ConfirmationAction")
-            );
-            assert!(
                 api_source.contains("impl AppActivateSurface for fret_ui_ai::CheckpointTrigger")
             );
             assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactAction"));
-            assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_ai::ConversationDownload")
-            );
-            assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_ai::PromptInputButton")
-            );
-            assert!(
-                api_source
-                    .contains("impl AppActivateSurface for fret_ui_ai::WebPreviewNavigationButton")
-            );
         }
         assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
         assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));
         assert!(!api_source.contains("pub trait AppActionCxSurface"));
         assert!(!api_source.contains("pub trait AppActionCxExt"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::ConfirmationAction"));
+        assert!(
+            !api_source.contains("impl AppActivateSurface for fret_ui_ai::ConversationDownload")
+        );
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::PromptInputButton"));
+        assert!(
+            !api_source
+                .contains("impl AppActivateSurface for fret_ui_ai::WebPreviewNavigationButton")
+        );
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::Attachment"));
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::QueueItemAction"));
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::Test"));

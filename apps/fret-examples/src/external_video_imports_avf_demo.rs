@@ -67,7 +67,7 @@ struct ExternalVideoImportsAvfView {
     avf_last_decode_at: Option<Instant>,
 }
 
-impl fret::view::View for ExternalVideoImportsAvfView {
+impl fret::app::View for ExternalVideoImportsAvfView {
     fn init(app: &mut App, _window: AppWindowId) -> Self {
         Self {
             show: app.models_mut().insert(true),
@@ -101,7 +101,7 @@ fn on_event(
     _services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut fret::view::ViewWindowState<ExternalVideoImportsAvfView>,
+    st: &mut fret::advanced::view::ViewWindowState<ExternalVideoImportsAvfView>,
     event: &Event,
 ) {
     if let Event::KeyDown { key, .. } = event
@@ -225,7 +225,7 @@ fn record_engine_frame(
     app: &mut App,
     window: AppWindowId,
     _ui: &mut fret_ui::UiTree<App>,
-    st: &mut fret::view::ViewWindowState<ExternalVideoImportsAvfView>,
+    st: &mut fret::advanced::view::ViewWindowState<ExternalVideoImportsAvfView>,
     context: &WgpuContext,
     renderer: &mut Renderer,
     _scale_factor: f32,

@@ -270,16 +270,12 @@ fn selected_activation_snippets_prefer_app_activate_listen() {
     for relative_path in [
         "src/ui/snippets/ai/chat_demo.rs",
         "src/ui/snippets/ai/checkpoint_demo.rs",
-        "src/ui/snippets/ai/confirmation_demo.rs",
         "src/ui/snippets/ai/artifact_demo.rs",
         "src/ui/snippets/ai/artifact_code_display.rs",
-        "src/ui/snippets/ai/conversation_demo.rs",
         "src/ui/snippets/ai/message_usage.rs",
-        "src/ui/snippets/ai/prompt_input_docs_demo.rs",
         "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
         "src/ui/snippets/ai/reasoning_demo.rs",
         "src/ui/snippets/ai/transcript_torture.rs",
-        "src/ui/snippets/ai/web_preview_demo.rs",
         "src/ui/snippets/ai/workflow_controls_demo.rs",
         "src/ui/snippets/ai/workflow_node_graph_demo.rs",
         "src/ui/snippets/ai/message_demo.rs",
@@ -303,6 +299,80 @@ fn selected_activation_snippets_prefer_app_activate_listen() {
             relative_path,
             &["use fret::app::AppActivateExt as _;", ".listen("],
             &[".on_activate("],
+        );
+    }
+}
+
+#[test]
+fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_action_slots() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/ai/confirmation_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::RequestApproval>(",
+                "shadcn::Button::new(\"Request approval\")",
+                ".action(act::RequestApproval)",
+                "ui_ai::ConfirmationAction::new(\"Reject\")",
+                ".action(act::RejectApproval)",
+                "ui_ai::ConfirmationAction::new(\"Approve\")",
+                ".action(act::ApproveApproval)",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/conversation_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::DownloadConversation>(",
+                "ui_ai::ConversationDownload::new(\"Download conversation\")",
+                ".action(act::DownloadConversation)",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/prompt_input_docs_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::ToggleSearch>(",
+                "ui_ai::PromptInputButton::new(\"Search\")",
+                ".action(act::ToggleSearch)",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/web_preview_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::NavigateBack>(",
+                "cx.actions().models::<act::NavigateForward>(",
+                "ui_ai::WebPreviewNavigationButton::new([cx.text(\"←\")])",
+                ".action(act::NavigateBack)",
+                "ui_ai::WebPreviewNavigationButton::new([cx.text(\"→\")])",
+                ".action(act::NavigateForward)",
+            ][..],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing grouped UiCx action marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        assert!(
+            !normalized.contains("usefret::app::AppActivateExtas_;"),
+            "{} should no longer import AppActivateExt once the widget has a native `.action(...)` slot",
+            path.display()
+        );
+        assert!(
+            !normalized.contains(".listen("),
+            "{} should stay on grouped `UiCx` actions + widget `.action(...)` instead of AppActivate `.listen(...)`",
+            path.display()
         );
     }
 }
