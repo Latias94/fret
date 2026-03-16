@@ -48,6 +48,7 @@
     "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
     "tools/diag-scripts/ui-gallery-empty-background-gradient-screenshot.json",
     "tools/diag-scripts/ui-gallery-input-file-browse-mocked.json",
+    "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
     "tools/diag-scripts/ui-gallery-input-group-addon-after-control-tab-focus.json",
     "tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json",
     "tools/diag-scripts/ui-gallery-input-otp-docs-smoke.json",

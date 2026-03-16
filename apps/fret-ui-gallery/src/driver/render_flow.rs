@@ -2021,6 +2021,38 @@ mod tests {
     }
 
     #[test]
+    fn gallery_input_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INPUT);
+
+        for target in [
+            "ui-gallery-input-usage-content",
+            "ui-gallery-input-basic-content",
+            "ui-gallery-input-field-content",
+            "ui-gallery-input-field-group-content",
+            "ui-gallery-input-disabled-content",
+            "ui-gallery-input-invalid-content",
+            "ui-gallery-input-file-section-content",
+            "ui-gallery-input-inline-content",
+            "ui-gallery-input-grid-content",
+            "ui-gallery-input-required-content",
+            "ui-gallery-input-badge-content",
+            "ui-gallery-input-input-group-content",
+            "ui-gallery-input-button-group-content",
+            "ui-gallery-input-form-content",
+            "ui-gallery-input-rtl-content",
+            "ui-gallery-input-label-content",
+            "ui-gallery-input-api-reference-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Input page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
     fn gallery_button_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON);
 

@@ -5,6 +5,7 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::input as snippets;
 
 pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);
     let field = snippets::field::render(cx);
     let field_group = snippets::field_group::render(cx);
@@ -20,11 +21,6 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let button_group = snippets::button_group::render(cx);
     let form = snippets::form::render(cx);
     let rtl = snippets::rtl::render(cx);
-
-    let usage = doc_layout::muted_full_width(
-        cx,
-        "Bind `Input` to a model, then compose it with `Field` parts when you need labels, descriptions, or validation copy.",
-    );
 
     let api_reference = doc_layout::notes_block([
         "`Input::new(model)` is the Fret equivalent of the upstream `<Input />`; `placeholder(...)`, `disabled(...)`, and `aria_invalid(...)` cover the documented core surface.",
@@ -48,57 +44,63 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-input-notes")
         .description("Usage guidance and parity notes.");
     let usage = DocSection::build(cx, "Usage", usage)
+        .test_id_prefix("ui-gallery-input-usage")
         .description("Copyable minimal usage for `Input` before the example matrix.")
-        .code_rust(
-            r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
-
-let value = cx.local_model_keyed("value", String::new);
-
-shadcn::Input::new(value)
-    .a11y_label("Search")
-    .placeholder("Type to search...")
-    .into_element(cx);"#,
-        );
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
+        .test_id_prefix("ui-gallery-input-basic")
         .description("Single input field (used by IME routing regression scripts).")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let field = DocSection::build(cx, "Field", field)
+        .test_id_prefix("ui-gallery-input-field")
         .description("Field composition with label, description, and error slots.")
         .code_rust_from_file_region(snippets::field::SOURCE, "example");
     let field_group = DocSection::build(cx, "Field Group", field_group)
+        .test_id_prefix("ui-gallery-input-field-group")
         .description("FieldGroup stacks related fields and action rows.")
         .code_rust_from_file_region(snippets::field_group::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
+        .test_id_prefix("ui-gallery-input-disabled")
         .description("Disabled inputs should block focus/interaction and use muted styling.")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
+        .test_id_prefix("ui-gallery-input-invalid")
         .description("Invalid state uses `aria_invalid` plus field-level error copy.")
         .code_rust_from_file_region(snippets::invalid::SOURCE, "example");
     let file = DocSection::build(cx, "File", file)
+        .test_id_prefix("ui-gallery-input-file-section")
         .description("Native file picking uses a file dialog; diagnostics runs mock it.")
         .code_rust_from_file_region(snippets::file::SOURCE, "example");
     let inline = DocSection::build(cx, "Inline", inline)
+        .test_id_prefix("ui-gallery-input-inline")
         .description("Horizontal Field orientation is useful for compact toolbars.")
         .code_rust_from_file_region(snippets::inline::SOURCE, "example");
     let grid = DocSection::build(cx, "Grid", grid)
+        .test_id_prefix("ui-gallery-input-grid")
         .description("Two-column input layout with shared row alignment.")
         .code_rust_from_file_region(snippets::grid::SOURCE, "example");
     let required = DocSection::build(cx, "Required", required)
+        .test_id_prefix("ui-gallery-input-required")
         .description("Required affordance is represented by label composition in this gallery.")
         .code_rust_from_file_region(snippets::required::SOURCE, "example");
     let badge = DocSection::build(cx, "Badge", badge)
+        .test_id_prefix("ui-gallery-input-badge")
         .description("Use Badge inside a label row.")
         .code_rust_from_file_region(snippets::badge::SOURCE, "example");
     let input_group = DocSection::build(cx, "Input Group", input_group)
+        .test_id_prefix("ui-gallery-input-input-group")
         .description("Inline addons and trailing buttons via InputGroup composition.")
         .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
     let button_group = DocSection::build(cx, "Button Group", button_group)
+        .test_id_prefix("ui-gallery-input-button-group")
         .description("ButtonGroup composes an input and a button with shared chrome.")
         .code_rust_from_file_region(snippets::button_group::SOURCE, "example");
     let form = DocSection::build(cx, "Form", form)
+        .test_id_prefix("ui-gallery-input-form")
         .description("Multi-field form layout using FieldGroup plus responsive rows.")
         .code_rust_from_file_region(snippets::form::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
+        .test_id_prefix("ui-gallery-input-rtl")
         .description("Input plus Field composition under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association", label)

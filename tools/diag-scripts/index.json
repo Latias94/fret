@@ -5692,6 +5692,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs",
+        "input",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Input page via the left nav search.",
+        "Captures representative screenshots for docs-aligned sections and the Fret-only label association follow-up."
+      ]
+    },
+    {
       "id": "ui-gallery-input-file-browse-mocked",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-file-browse-mocked.json",
       "required_capabilities": [],
