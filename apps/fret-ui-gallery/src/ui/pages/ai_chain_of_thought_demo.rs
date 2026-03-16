@@ -46,10 +46,8 @@ pub(super) fn preview_ai_chain_of_thought_demo(
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-page-ai-chain-of-thought-demo")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-page-ai-chain-of-thought-demo");
+    vec![body.into_element(cx)]
 }
 
 fn chain_of_thought_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {

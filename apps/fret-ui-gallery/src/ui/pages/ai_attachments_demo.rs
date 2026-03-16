@@ -48,8 +48,6 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-page-ai-attachments-demo")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-page-ai-attachments-demo");
+    vec![body.into_element(cx)]
 }

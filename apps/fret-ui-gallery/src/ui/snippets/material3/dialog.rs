@@ -10,7 +10,11 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
+#[rustfmt::skip]
+pub fn render(
+    cx: &mut UiCx<'_>,
+    last_action: Model<Arc<str>>,
+) -> impl UiChild + use<> {
     let default_dialog = material3::Dialog::uncontrolled(cx);
     let open = default_dialog.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);

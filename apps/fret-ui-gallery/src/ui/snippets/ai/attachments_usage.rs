@@ -16,7 +16,11 @@ fn landscape_image_id(cx: &mut UiCx<'_>) -> Option<ImageId> {
     cx.use_image_source_state_from_asset_request(&request).image
 }
 
-fn render_grid_attachment(cx: &mut UiCx<'_>, data: ui_ai::AttachmentData) -> impl UiChild + use<> {
+#[rustfmt::skip]
+fn render_grid_attachment(
+    cx: &mut UiCx<'_>,
+    data: ui_ai::AttachmentData,
+) -> impl UiChild + use<> {
     ui_ai::Attachment::new(data)
         .variant(ui_ai::AttachmentVariant::Grid)
         .into_element_with_children(cx, move |cx, _parts| {

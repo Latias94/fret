@@ -87,8 +87,6 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-command-component")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-command-component");
+    vec![body.into_element(cx)]
 }

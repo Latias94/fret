@@ -55,8 +55,6 @@ pub(super) fn preview_aspect_ratio(
         sections,
     );
 
-    vec![
-        body.test_id("ui-gallery-aspect-ratio-component")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-aspect-ratio-component");
+    vec![body.into_element(cx)]
 }

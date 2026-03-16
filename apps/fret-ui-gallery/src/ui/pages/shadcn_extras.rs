@@ -51,8 +51,6 @@ pub(super) fn preview_shadcn_extras(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-shadcn-extras-component")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-shadcn-extras-component");
+    vec![body.into_element(cx)]
 }
