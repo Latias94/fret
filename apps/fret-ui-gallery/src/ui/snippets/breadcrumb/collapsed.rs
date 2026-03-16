@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("collapsed.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use fret_ui_shadcn::facade as shadcn;
 use shadcn::raw::breadcrumb::primitives as bc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
