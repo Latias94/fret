@@ -683,9 +683,8 @@ pub trait AppActivateSurface: Sized {
 ///
 /// Prefer widget-native `.action(...)` / `.action_payload(...)` whenever a stable action slot
 /// already exists. Activation-only surfaces can still stay on the same action-first vocabulary via
-/// `.action(act::Save)` / `.action_payload(act::Remove, payload)`, with
-/// `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` kept as the more explicit aliases and
-/// `.listen(...)` as the imperative escape hatch.
+/// `.action(act::Save)` / `.action_payload(act::Remove, payload)` plus `.listen(...)` as the
+/// imperative escape hatch.
 pub trait AppActivateExt: AppActivateSurface {
     fn action<A>(self, _action: A) -> Self
     where
@@ -695,24 +694,6 @@ pub trait AppActivateExt: AppActivateSurface {
     }
 
     fn action_payload<A>(self, _action: A, payload: A::Payload) -> Self
-    where
-        A: crate::actions::TypedPayloadAction,
-        A::Payload: Clone,
-    {
-        <Self as AppActivateSurface>::on_activate(
-            self,
-            dispatch_payload_action_listener::<A>(payload),
-        )
-    }
-
-    fn dispatch<A>(self) -> Self
-    where
-        A: crate::TypedAction,
-    {
-        <Self as AppActivateSurface>::on_activate(self, dispatch_action_listener::<A>())
-    }
-
-    fn dispatch_payload<A>(self, payload: A::Payload) -> Self
     where
         A: crate::actions::TypedPayloadAction,
         A::Payload: Clone,
@@ -905,24 +886,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         dispatch_payload_action_listener::<A>(payload)
     }
 
-    /// Build a widget-local activation handler that dispatches the typed action through the
-    /// existing command/action pipeline.
-    pub fn dispatch<A>(self) -> OnActivate
-    where
-        A: crate::TypedAction,
-    {
-        dispatch_action_listener::<A>()
-    }
-
-    /// Build a widget-local activation handler that dispatches a typed payload action.
-    pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate
-    where
-        A: crate::actions::TypedPayloadAction,
-        A::Payload: Clone,
-    {
-        dispatch_payload_action_listener::<A>(payload)
-    }
-
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
     pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
@@ -1093,24 +1056,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     /// Build a widget-local activation handler that dispatches a typed payload action while
     /// keeping the action marker on the call site.
     pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate
-    where
-        A: crate::actions::TypedPayloadAction,
-        A::Payload: Clone,
-    {
-        dispatch_payload_action_listener::<A>(payload)
-    }
-
-    /// Build a widget-local activation handler that dispatches the typed action through the
-    /// existing command/action pipeline.
-    pub fn dispatch<A>(self) -> OnActivate
-    where
-        A: crate::TypedAction,
-    {
-        dispatch_action_listener::<A>()
-    }
-
-    /// Build a widget-local activation handler that dispatches a typed payload action.
-    pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate
     where
         A: crate::actions::TypedPayloadAction,
         A::Payload: Clone,
@@ -2227,8 +2172,6 @@ mod tests {
             api_source
                 .contains("fn action_payload<A>(self, _action: A, payload: A::Payload) -> Self")
         );
-        assert!(api_source.contains("fn dispatch<A>(self) -> Self"));
-        assert!(api_source.contains("fn dispatch_payload<A>(self, payload: A::Payload) -> Self"));
         assert!(api_source.contains(
             "fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> Self"
         ));
@@ -2236,9 +2179,11 @@ mod tests {
         assert!(api_source.contains(
             "pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate"
         ));
-        assert!(api_source.contains("pub fn dispatch<A>(self) -> OnActivate"));
+        assert!(!api_source.contains("fn dispatch<A>(self) -> Self"));
+        assert!(!api_source.contains("fn dispatch_payload<A>(self, payload: A::Payload) -> Self"));
+        assert!(!api_source.contains("pub fn dispatch<A>(self) -> OnActivate"));
         assert!(
-            api_source
+            !api_source
                 .contains("pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate")
         );
         assert!(api_source.contains("pub fn listen("));

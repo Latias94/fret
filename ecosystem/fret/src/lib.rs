@@ -512,8 +512,8 @@ pub mod app {
     ///
     /// This intentionally stays off `fret::app::prelude::*` so default app autocomplete remains
     /// focused on native widget action slots. Import `use fret::app::AppActivateExt as _;`
-    /// explicitly at call sites that still need activation-only `.action(...)`, `.dispatch::<A>()`,
-    /// or `.listen(...)` sugar.
+    /// explicitly at call sites that still need activation-only `.action(...)`,
+    /// `.action_payload(...)`, or `.listen(...)` sugar.
     pub use crate::view::{AppActivateExt, AppActivateSurface};
 }
 
@@ -2777,6 +2777,8 @@ mod authoring_surface_policy_tests {
         assert!(DOCS_README.contains("`use fret::app::prelude::*;`"));
         assert!(DOCS_README.contains("`FretApp::new(...).window(...).view::<MyView>()?.run()`"));
         assert!(DOCS_README.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(!DOCS_README.contains("`.dispatch::<A>()`"));
+        assert!(!DOCS_README.contains("`.dispatch_payload::<A>(...)`"));
         assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!DOCS_README.contains(".on_activate(cx.actions().listener("));
@@ -2790,6 +2792,8 @@ mod authoring_surface_policy_tests {
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
         assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
+        assert!(!FIRST_HOUR.contains("`.dispatch::<A>()`"));
+        assert!(!FIRST_HOUR.contains("`.dispatch_payload::<A>(...)`"));
         assert!(FIRST_HOUR.contains("`ui::single(cx, page(...))`"));
         assert!(FIRST_HOUR.contains("When observing tracked state in views:"));
         assert!(FIRST_HOUR.contains(
@@ -2881,13 +2885,15 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action(act::Save)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action_payload(act::Remove, payload)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(|host, acx| { ... })`"));
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::app::AppActivateExt as _;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().listen(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch::<A>()`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch_payload::<A>(payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
@@ -2966,8 +2972,6 @@ mod authoring_surface_policy_tests {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(|host, acx| { ... })`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`use fret::app::AppActivateExt as _;`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
@@ -2975,6 +2979,8 @@ mod authoring_surface_policy_tests {
             AUTHORING_GOLDEN_PATH_V2
                 .contains("`cx.actions().action_payload(act::RemoveTodo, todo.id)`")
         );
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
     }
@@ -3122,6 +3128,8 @@ mod authoring_surface_policy_tests {
             TODO_APP_GOLDEN_PATH
                 .contains("selector dependencies now stay on\nthe LocalState-first teaching path")
         );
+        assert!(!TODO_APP_GOLDEN_PATH.contains("`.dispatch::<A>()`"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("`.dispatch_payload::<A>(...)`"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().listener("));
@@ -3200,8 +3208,6 @@ mod authoring_surface_policy_tests {
         assert!(
             SHADCN_DECLARATIVE_PROGRESS.contains("`widget.action_payload(act::Remove, payload)`")
         );
-        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch::<A>()`"));
-        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(
             SHADCN_DECLARATIVE_PROGRESS
                 .contains("`fret::app::AppActivateSurface` / `AppActivateExt`")
@@ -3210,6 +3216,8 @@ mod authoring_surface_policy_tests {
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`UiCxActionsExt` / `UiCxDataExt`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("first-party"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("bridge table is intentionally empty"));
+        assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch::<A>()`"));
+        assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_shadcn::advanced::*`"));
         assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`shadcn::advanced::*`"));
         assert!(AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret_ui_shadcn::advanced`"));
@@ -3252,6 +3260,8 @@ mod authoring_surface_policy_tests {
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().models::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(!FEARLESS_REFACTORING.contains("`.dispatch::<A>()`"));
+        assert!(!FEARLESS_REFACTORING.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().listener("));

@@ -26,7 +26,6 @@ missing default guideline).
 | Multi-slot payload transaction | `cx.actions().payload_locals::<A>(|tx, payload| ...)` | Use when one payload action updates multiple locals; do not treat it as the default row-write path. |
 | Widget action binding | `.action(...)` / `.action_payload(...)` | Prefer this whenever the widget already exposes a stable action slot. |
 | Widget-local action dispatch | `.action(act::Save)` / `.action_payload(act::Remove, payload)` | Activation-only bridge; add `use fret::app::AppActivateExt as _;` explicitly when a widget only exposes `on_activate(...)`. |
-| Widget-local explicit dispatch alias | `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` | Keep this when you want the type-directed wording on activation-only surfaces after importing `AppActivateExt`. |
 | Widget-local imperative glue | `.listen(|host, acx| { ... })` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks on activation-only surfaces; import `use fret::app::AppActivateExt as _;` explicitly. |
 | Single typed child landing | `ui::single(cx, child)` | Prefer this when `render()` or a wrapper closure only needs to return one already-typed child. |
 | Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper, then prefer `payload_local_update_if::<A>(...)` for the common row-write path. |
@@ -114,7 +113,7 @@ Custom app-facing widgets can opt into this lane by implementing
 `fret::app::AppActivateSurface` and forwarding their `on_activate(...)` slot.
 If you intentionally need the lower-level host-side seam, prefer
 `cx.actions().action(act::Save)` / `cx.actions().action_payload(act::RemoveTodo, todo.id)` /
-`cx.actions().listen(...)` over the older turbofish-heavy `dispatch` helpers.
+`cx.actions().listen(...)`.
 
 ## Why this exists (product goal)
 
