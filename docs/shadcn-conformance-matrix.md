@@ -90,7 +90,7 @@ Legend:
 | Carousel | `carousel` | TODO | TODO | TODO | TODO | |
 | Chart | `chart` | TODO | TODO | TODO | TODO | |
 | Checkbox | `checkbox` | TODO | TODO | TODO | TODO | |
-| Collapsible | `collapsible` | `tools/diag-scripts/ui-gallery-collapsible-demo-open-non-overlap.json`, `tools/diag-scripts/ui-gallery-collapsible-basic-double-click-close.json`, `tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json` | TODO | Hit-testing + layout (open non-overlap; first-open height) | In progress | Expand coverage: nested tree nodes + animated height clamp. |
+| Collapsible | `collapsible` | `tools/diag-scripts/ui-gallery-collapsible-demo-open-non-overlap.json`, `tools/diag-scripts/ui-gallery-collapsible-basic-double-click-close.json`, `tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json`, `tools/diag-scripts/ui-gallery-collapsible-demo-order-details-shows-sections.json`, `tools/diag-scripts/ui-gallery-collapsible-rtl-open-scrolls-to-content.json` | TODO | Hit-testing + layout + docs-demo content parity (open non-overlap; first-open height; order-details sections; RTL order-details width/content reveal) | In progress | Expand coverage: nested tree nodes + animated height clamp. |
 | Combobox | `combobox` | `tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json`, `tools/diag-scripts/ui-gallery-combobox-commit-pixels-changed.json` | TODO | Focus restore + selection commit | In progress | Add disabled item + outside press policy. |
 | Command Palette | `command` | TODO | TODO | TODO | TODO | |
 | Context Menu | `context_menu` | `tools/diag-scripts/ui-gallery-context-menu-right-click.json` | TODO | Right-click routing + overlay | In progress | Add click-through + submenu bounds gates. |

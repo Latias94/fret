@@ -17,6 +17,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Collapsible::new(Model<bool>)` and `Collapsible::uncontrolled(default_open)` cover the documented controlled and uncontrolled authoring paths.",
         "`fret_ui_shadcn::raw::collapsible::primitives::{Collapsible, CollapsibleTrigger, CollapsibleContent}` is the source-aligned children surface for free-form composition.",
         "The top-level `shadcn::Collapsible` wrapper stays a compact Fret-first builder for dense editor UIs, so no extra generic `compose()` API is needed here.",
+        "The `Demo` section now follows the current shadcn/base docs order-details card instead of the legacy repository-list example.",
         "Disclosure state, trigger semantics, and measured open/close motion remain recipe/primitive-owned; surrounding width, gap, and card/layout constraints remain caller-owned.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
@@ -25,7 +26,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-collapsible-api-reference")
         .description("Public surface summary and ownership notes.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Uncontrolled disclosure with a compact trigger and a details list.")
+        .description("Order-details card demo aligned with the current shadcn/base docs example.")
         .test_id_prefix("ui-gallery-collapsible-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
@@ -59,7 +60,7 @@ pub(super) fn preview_collapsible(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Collapsible docs path first: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL, and API Reference.",
+            "Preview mirrors the shadcn Collapsible docs path first: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL, and API Reference. The lead demo now follows the current order-details card from the base docs while the raw primitives usage section keeps the source-aligned children API explicit.",
         ),
         vec![
             demo,

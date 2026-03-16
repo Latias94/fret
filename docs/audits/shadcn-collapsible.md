@@ -45,10 +45,16 @@ base examples, and the current gallery/docs surface.
 ### Gallery / docs parity
 
 - Pass: The gallery now mirrors the upstream base Collapsible docs path first: `Demo`, `Usage`, `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference`.
+- Pass: The `Demo` section now matches the current shadcn/base docs order-details card rather than the older repository-list example.
+- Pass: The `RTL` section now mirrors the current upstream order-details composition as an Arabic RTL card instead of a simplified English-only disclosure layout.
 - Pass: The `Basic` section maps to the upstream outcome even though the example is authored through Fret's compact top-level wrapper rather than only the primitives path.
+- Pass: The `Usage` section keeps the source-aligned children/parts composition model explicit through `fret_ui_shadcn::raw::collapsible::primitives`, so no extra top-level `compose()` API is required.
+- Pass: The raw `Collapsible` root now forwards caller-owned width into its internal stack, so `children` compositions that use `.w_full()` behave like the upstream flex-column root instead of collapsing to intrinsic content width.
 - Pass: This work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib collapsible`
+- `CARGO_TARGET_DIR=target-codex-collapsible cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-collapsible cargo nextest run -p fret-ui-shadcn --lib -- collapsible`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-demo-order-details-shows-sections.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-rtl-open-scrolls-to-content.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`

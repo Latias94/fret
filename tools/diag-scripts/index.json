@@ -468,7 +468,7 @@
         "smoke"
       ],
       "target_hints": [
-        "Validates that icon + asset panels mount and that the reload epoch button is wired."
+        "Validates that icon + asset panels mount and captures a stable screenshot + bundle."
       ]
     },
     {
@@ -4398,6 +4398,18 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-collapsible-demo-order-details-shows-sections",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-order-details-shows-sections.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-collapsible-rtl-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-code-tab-scroll-range.json",
       "required_capabilities": [
@@ -4415,6 +4427,18 @@
         "tabs",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-rtl-open-scrolls-to-content",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-open-scrolls-to-content.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {

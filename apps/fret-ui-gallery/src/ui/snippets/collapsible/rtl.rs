@@ -2,153 +2,137 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::declarative::ElementContextThemeExt;
+use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn details_collapsible<H: UiHost>(
+fn detail_card<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    test_id_prefix: &'static str,
-    open: Option<Model<bool>>,
-    label: &'static str,
-    status: &'static str,
-) -> impl IntoUiElement<H> + use<H> {
-    let container_props =
-        |cx: &mut ElementContext<'_, H>, chrome: ChromeRefinement, layout: LayoutRefinement| {
-            cx.with_theme(|theme| decl_style::container_props(theme, chrome, layout))
-        };
-
-    let details_content = |cx: &mut ElementContext<'_, H>| {
-        shadcn::CollapsibleContent::new(vec![
-            {
-                let props = container_props(
-                    cx,
-                    ChromeRefinement::default()
-                        .border_1()
-                        .rounded(Radius::Sm)
-                        .px(Space::N4)
-                        .py(Space::N2),
-                    LayoutRefinement::default().w_full(),
-                );
-                cx.container(props, |cx| {
-                    vec![
-                        ui::h_flex(|cx| {
-                            vec![
-                                shadcn::raw::typography::muted("Shipping address").into_element(cx),
-                                cx.text("100 Market St, San Francisco"),
-                            ]
-                        })
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_between()
-                        .into_element(cx),
-                    ]
-                })
-            },
-            {
-                let props = container_props(
-                    cx,
-                    ChromeRefinement::default()
-                        .border_1()
-                        .rounded(Radius::Sm)
-                        .px(Space::N4)
-                        .py(Space::N2),
-                    LayoutRefinement::default().w_full(),
-                );
-                cx.container(props, |cx| {
-                    vec![
-                        ui::h_flex(|cx| {
-                            vec![
-                                shadcn::raw::typography::muted("Items").into_element(cx),
-                                cx.text("2x Studio Headphones"),
-                            ]
-                        })
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_between()
-                        .into_element(cx),
-                    ]
-                })
-            },
-        ])
-        .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
-        .into_element(cx)
-        .test_id(format!("{test_id_prefix}-content"))
-    };
-
-    let collapsible = match open {
-        Some(open_model) => shadcn::Collapsible::new(open_model)
-            .refine_layout(LayoutRefinement::default().w_full())
-            .into_element_with_open_model(
-                cx,
-                |cx, open, _is_open| {
-                    shadcn::Button::new("")
-                        .a11y_label("Toggle")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Icon)
-                        .refine_layout(LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)))
-                        .icon(fret_icons::IconId::new_static("lucide.chevrons-up-down"))
-                        .toggle_model(open)
-                        .test_id(format!("{test_id_prefix}-trigger"))
-                        .into_element(cx)
-                },
-                |cx| details_content(cx),
-            ),
-        None => shadcn::Collapsible::uncontrolled(false)
-            .refine_layout(LayoutRefinement::default().w_full())
-            .into_element_with_open_model(
-                cx,
-                |cx, open, _is_open| {
-                    shadcn::Button::new("")
-                        .a11y_label("Toggle")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Icon)
-                        .refine_layout(LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)))
-                        .icon(fret_icons::IconId::new_static("lucide.chevrons-up-down"))
-                        .toggle_model(open)
-                        .test_id(format!("{test_id_prefix}-trigger"))
-                        .into_element(cx)
-                },
-                |cx| details_content(cx),
-            ),
-    };
-
-    let wrapper_props = container_props(
-        cx,
-        ChromeRefinement::default().px(Space::N3).py(Space::N2),
-        LayoutRefinement::default().w_full(),
+    test_id: &'static str,
+    title: &'static str,
+    detail: &'static str,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).snapshot();
+    let props = decl_style::container_props(
+        &theme,
+        ChromeRefinement::default()
+            .border_1()
+            .rounded(Radius::Md)
+            .px(Space::N4)
+            .py(Space::N2),
+        LayoutRefinement::default().w_full().min_w_0(),
     );
-    cx.container(wrapper_props, |cx| {
+
+    cx.container(props, move |cx| {
         vec![
-            ui::v_flex(move |cx| {
+            ui::v_flex(|cx| {
                 vec![
-                    ui::h_flex(|cx| vec![cx.text(label), cx.text(status)])
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_between()
-                        .into_element(cx),
-                    collapsible,
+                    shadcn::raw::typography::small(title).into_element(cx),
+                    shadcn::raw::typography::muted(detail).into_element(cx),
                 ]
             })
-            .gap(Space::N2)
-            .items_stretch()
-            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N1)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx),
         ]
     })
-    .test_id(test_id_prefix)
+    .test_id(test_id)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let open = cx.local_model_keyed("open", || false);
+    let open = cx.local_model_keyed("rtl_open", || false);
+
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        details_collapsible(
-            cx,
-            "ui-gallery-collapsible-rtl",
-            Some(open.clone()),
-            "Order #4189",
-            "Shipped",
-        )
-        .into_element(cx)
+        shadcn::Collapsible::new(open.clone())
+            .refine_layout(LayoutRefinement::default().w_px(Px(350.0)).min_w_0())
+            .into_element_with_open_model(
+                cx,
+                |cx, open, _is_open| {
+                    let title = shadcn::raw::typography::small("الطلب #4189").into_element(cx);
+                    let button = shadcn::Button::new("")
+                        .a11y_label("Toggle details")
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::Icon)
+                        .refine_layout(LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)))
+                        .icon(fret_icons::IconId::new_static("lucide.chevrons-up-down"))
+                        .toggle_model(open)
+                        .test_id("ui-gallery-collapsible-rtl-trigger")
+                        .into_element(cx);
+
+                    let header = {
+                        let row = ui::h_flex(move |_cx| vec![title, button])
+                            .gap(Space::N4)
+                            .items_center()
+                            .justify_between()
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .into_element(cx);
+                        let theme = Theme::global(&*cx.app).snapshot();
+                        let props = decl_style::container_props(
+                            &theme,
+                            ChromeRefinement::default().px(Space::N4),
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.container(props, move |_cx| vec![row])
+                    };
+
+                    let status = {
+                        let theme = Theme::global(&*cx.app).snapshot();
+                        let props = decl_style::container_props(
+                            &theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .px(Space::N4)
+                                .py(Space::N2),
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.container(props, move |cx| {
+                            vec![
+                                ui::h_flex(|cx| {
+                                    vec![
+                                        shadcn::raw::typography::muted("الحالة").into_element(cx),
+                                        shadcn::raw::typography::small("تم الشحن").into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .items_center()
+                                .justify_between()
+                                .layout(LayoutRefinement::default().w_full().min_w_0())
+                                .into_element(cx),
+                            ]
+                        })
+                        .test_id("ui-gallery-collapsible-rtl-status")
+                    };
+
+                    ui::v_flex(move |_cx| vec![header, status])
+                        .gap(Space::N2)
+                        .items_stretch()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx)
+                },
+                |cx| {
+                    shadcn::CollapsibleContent::new([
+                        detail_card(
+                            cx,
+                            "ui-gallery-collapsible-rtl-shipping-address",
+                            "عنوان الشحن",
+                            "100 Market St, San Francisco",
+                        ),
+                        detail_card(
+                            cx,
+                            "ui-gallery-collapsible-rtl-items",
+                            "العناصر",
+                            "2x سماعات الاستوديو",
+                        ),
+                    ])
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0().mt(Space::N2))
+                    .into_element(cx)
+                    .test_id("ui-gallery-collapsible-rtl-content")
+                },
+            )
+            .test_id("ui-gallery-collapsible-rtl-card")
     })
-    .test_id("ui-gallery-collapsible-rtl")
+    .test_id("ui-gallery-collapsible-rtl-demo")
 }
 // endregion: example
