@@ -183,6 +183,9 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     );
     color(&mut cfg, EditorTokenKeys::TEXT_FIELD_FG, "#edf3fa");
     color(&mut cfg, EditorTokenKeys::TEXT_FIELD_SELECTION, "#284d75");
+    color(&mut cfg, EditorTokenKeys::CHROME_MUTED_FG, "#9eabbc");
+    color(&mut cfg, EditorTokenKeys::CHROME_ACCENT, "#355a86");
+    color(&mut cfg, EditorTokenKeys::CHROME_RING, "#7faee8");
 
     color(&mut cfg, "card", "#10161e");
     color(&mut cfg, "muted", "#171d26");
@@ -287,6 +290,9 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     );
     color(&mut cfg, EditorTokenKeys::TEXT_FIELD_FG, "#e6e8eb");
     color(&mut cfg, EditorTokenKeys::TEXT_FIELD_SELECTION, "#315b8b");
+    color(&mut cfg, EditorTokenKeys::CHROME_MUTED_FG, "#acb4bf");
+    color(&mut cfg, EditorTokenKeys::CHROME_ACCENT, "#4c88c7");
+    color(&mut cfg, EditorTokenKeys::CHROME_RING, "#6ea8e0");
 
     color(&mut cfg, "card", "#202328");
     color(&mut cfg, "muted", "#2a2d33");

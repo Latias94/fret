@@ -24,6 +24,9 @@ impl EditorTokenKeys {
     pub const TEXT_FIELD_FG: &'static str = "editor.text_field.fg";
     pub const TEXT_FIELD_TEXT_PX: &'static str = "editor.text_field.text_px";
     pub const TEXT_FIELD_SELECTION: &'static str = "editor.text_field.selection";
+    pub const CHROME_MUTED_FG: &'static str = "editor.chrome.muted_fg";
+    pub const CHROME_ACCENT: &'static str = "editor.chrome.accent";
+    pub const CHROME_RING: &'static str = "editor.chrome.ring";
 
     pub const CONTROL_INVALID_FG: &'static str = "editor.control.invalid_fg";
     pub const CONTROL_INVALID_BORDER: &'static str = "editor.control.invalid_border";
