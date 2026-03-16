@@ -235,7 +235,7 @@ fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
     ui::container(move |cx| {
         ui::single(
             cx,
-            ui::v_flex(move |cx| ui::children![cx; content])
+            ui::v_flex(move |cx| ui::single(cx, content))
                 .w_full()
                 .h_full()
                 .justify_center()

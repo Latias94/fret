@@ -603,6 +603,8 @@ mod authoring_surface_policy_tests {
     fn todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(TODO_DEMO);
         assert_avoids_legacy_conversion_names(TODO_DEMO);
+        assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
+        assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
     }
 
     #[test]
