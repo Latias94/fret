@@ -13,6 +13,18 @@ impl EditorTokenKeys {
     pub const DENSITY_HIT_THICKNESS: &'static str = "editor.density.hit_thickness";
     pub const DENSITY_ICON_SIZE: &'static str = "editor.density.icon_size";
 
+    pub const TEXT_FIELD_PADDING_X: &'static str = "editor.text_field.padding_x";
+    pub const TEXT_FIELD_PADDING_Y: &'static str = "editor.text_field.padding_y";
+    pub const TEXT_FIELD_MIN_HEIGHT: &'static str = "editor.text_field.min_height";
+    pub const TEXT_FIELD_RADIUS: &'static str = "editor.text_field.radius";
+    pub const TEXT_FIELD_BORDER_WIDTH: &'static str = "editor.text_field.border_width";
+    pub const TEXT_FIELD_BG: &'static str = "editor.text_field.bg";
+    pub const TEXT_FIELD_BORDER: &'static str = "editor.text_field.border";
+    pub const TEXT_FIELD_BORDER_FOCUS: &'static str = "editor.text_field.border_focus";
+    pub const TEXT_FIELD_FG: &'static str = "editor.text_field.fg";
+    pub const TEXT_FIELD_TEXT_PX: &'static str = "editor.text_field.text_px";
+    pub const TEXT_FIELD_SELECTION: &'static str = "editor.text_field.selection";
+
     pub const CONTROL_INVALID_FG: &'static str = "editor.control.invalid_fg";
     pub const CONTROL_INVALID_BORDER: &'static str = "editor.control.invalid_border";
     pub const CONTROL_INVALID_BG: &'static str = "editor.control.invalid_bg";

@@ -164,21 +164,25 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_GAP, 14.0);
     metric(&mut cfg, EditorTokenKeys::PROPERTY_PANEL_HEADER_GAP, 12.0);
 
-    // Text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
-    metric(&mut cfg, "component.text_field.padding_x", 6.0);
-    metric(&mut cfg, "component.text_field.padding_y", 4.0);
-    metric(&mut cfg, "component.text_field.min_height", 24.0);
-    metric(&mut cfg, "component.text_field.radius", 4.0);
-    metric(&mut cfg, "component.text_field.border_width", 1.0);
-    metric(&mut cfg, "component.text_field.text_px", 12.0);
+    // Editor-owned text-field-like metrics (used by MiniSearchBox / NumericInput / ColorEdit).
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_PADDING_X, 6.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_PADDING_Y, 4.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_MIN_HEIGHT, 24.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_RADIUS, 4.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_BORDER_WIDTH, 1.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_TEXT_PX, 12.0);
 
     // Default editor baseline colors. These stay more technical and contrast-forward than the
     // underlying app theme without turning the default preset into an imgui clone.
-    color(&mut cfg, "component.text_field.bg", "#141b24");
-    color(&mut cfg, "component.text_field.border", "#3b4758");
-    color(&mut cfg, "component.text_field.border_focus", "#7faee8");
-    color(&mut cfg, "component.text_field.fg", "#edf3fa");
-    color(&mut cfg, "component.text_field.selection", "#284d75");
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_BG, "#141b24");
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_BORDER, "#3b4758");
+    color(
+        &mut cfg,
+        EditorTokenKeys::TEXT_FIELD_BORDER_FOCUS,
+        "#7faee8",
+    );
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_FG, "#edf3fa");
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_SELECTION, "#284d75");
 
     color(&mut cfg, "card", "#10161e");
     color(&mut cfg, "muted", "#171d26");
@@ -267,18 +271,22 @@ fn imgui_like_dense_patch_v1() -> ThemeConfig {
     metric(&mut cfg, EditorTokenKeys::SLIDER_TRACK_HEIGHT, 3.0);
     metric(&mut cfg, EditorTokenKeys::SLIDER_THUMB_DIAMETER, 10.0);
 
-    metric(&mut cfg, "component.text_field.padding_x", 5.0);
-    metric(&mut cfg, "component.text_field.padding_y", 3.0);
-    metric(&mut cfg, "component.text_field.min_height", 22.0);
-    metric(&mut cfg, "component.text_field.radius", 2.0);
-    metric(&mut cfg, "component.text_field.border_width", 1.0);
-    metric(&mut cfg, "component.text_field.text_px", 12.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_PADDING_X, 5.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_PADDING_Y, 3.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_MIN_HEIGHT, 22.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_RADIUS, 2.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_BORDER_WIDTH, 1.0);
+    metric(&mut cfg, EditorTokenKeys::TEXT_FIELD_TEXT_PX, 12.0);
 
-    color(&mut cfg, "component.text_field.bg", "#1a1c20");
-    color(&mut cfg, "component.text_field.border", "#4b5563");
-    color(&mut cfg, "component.text_field.border_focus", "#6ea8e0");
-    color(&mut cfg, "component.text_field.fg", "#e6e8eb");
-    color(&mut cfg, "component.text_field.selection", "#315b8b");
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_BG, "#1a1c20");
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_BORDER, "#4b5563");
+    color(
+        &mut cfg,
+        EditorTokenKeys::TEXT_FIELD_BORDER_FOCUS,
+        "#6ea8e0",
+    );
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_FG, "#e6e8eb");
+    color(&mut cfg, EditorTokenKeys::TEXT_FIELD_SELECTION, "#315b8b");
 
     color(&mut cfg, "card", "#202328");
     color(&mut cfg, "muted", "#2a2d33");
@@ -358,7 +366,7 @@ mod tests {
             Some(Px(24.0))
         );
         assert_eq!(
-            theme.metric_by_key("component.text_field.min_height"),
+            theme.metric_by_key(EditorTokenKeys::TEXT_FIELD_MIN_HEIGHT),
             Some(Px(24.0))
         );
         assert_eq!(
@@ -402,9 +410,11 @@ mod tests {
             Some(Px(12.0))
         );
         assert_eq!(
-            theme.color_by_key("component.text_field.bg"),
+            theme.color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             Some(Color::from_srgb_hex_rgb(0x14_1b_24))
         );
+        assert_eq!(theme.metric_by_key("component.text_field.min_height"), None);
+        assert_eq!(theme.color_by_key("component.text_field.bg"), None);
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG),
             Some(Color::from_srgb_hex_rgb(0x0f_15_1d))
@@ -550,13 +560,15 @@ mod tests {
             Some(Px(24.0))
         );
         assert_eq!(
-            theme.metric_by_key("component.text_field.radius"),
+            theme.metric_by_key(EditorTokenKeys::TEXT_FIELD_RADIUS),
             Some(Px(2.0))
         );
         assert_eq!(
-            theme.color_by_key("component.text_field.bg"),
+            theme.color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             Some(Color::from_srgb_hex_rgb(0x1a_1c_20))
         );
+        assert_eq!(theme.metric_by_key("component.text_field.radius"), None);
+        assert_eq!(theme.color_by_key("component.text_field.bg"), None);
         assert_eq!(
             theme.color_by_key("border"),
             Some(Color::from_srgb_hex_rgb(0x45_4d_59))
@@ -600,7 +612,7 @@ mod tests {
         let expected_field_bg = Some(Color::from_srgb_hex_rgb(0x14_1b_24));
         let expected_panel_bg = Some(Color::from_srgb_hex_rgb(0x0f_15_1d));
         assert_eq!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
+            Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             expected_field_bg
         );
         assert_eq!(
@@ -610,7 +622,7 @@ mod tests {
 
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Light);
         assert_ne!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
+            Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             expected_field_bg
         );
 
@@ -619,7 +631,7 @@ mod tests {
             Some(EditorThemePresetV1::Default)
         );
         assert_eq!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
+            Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             expected_field_bg
         );
         assert_eq!(
@@ -648,7 +660,7 @@ mod tests {
 
         assert_eq!(replayed, Some(EditorThemePresetV1::Default));
         assert_eq!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
+            Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             expected_field_bg
         );
     }
@@ -668,7 +680,7 @@ mod tests {
         );
         install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
 
-        let expected_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+        let expected_field_bg = Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG);
         let before_rev = Theme::global(&app).revision();
         let changed = [TypeId::of::<fret_core::WindowMetricsService>()];
 
@@ -689,7 +701,7 @@ mod tests {
         assert_eq!(replayed, None);
         assert_eq!(Theme::global(&app).revision(), before_rev);
         assert_eq!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
+            Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             expected_field_bg
         );
     }
@@ -700,7 +712,7 @@ mod tests {
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
         install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
 
-        let expected_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+        let expected_field_bg = Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG);
         let changed = [TypeId::of::<Theme>()];
 
         let replayed =
@@ -708,7 +720,7 @@ mod tests {
 
         assert_eq!(replayed, None);
         assert_eq!(
-            Theme::global(&app).color_by_key("component.text_field.bg"),
+            Theme::global(&app).color_by_key(EditorTokenKeys::TEXT_FIELD_BG),
             expected_field_bg
         );
     }

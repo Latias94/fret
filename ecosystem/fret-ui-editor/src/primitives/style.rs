@@ -7,9 +7,8 @@
 
 use fret_core::Px;
 use fret_ui::Theme;
-use fret_ui_kit::recipes::input::InputTokenKeys;
 
-use super::chrome::{ResolvedEditorFrameChrome, resolve_editor_frame_chrome};
+use super::chrome::{ResolvedEditorFrameChrome, resolve_editor_text_field_frame_chrome};
 use super::{EditorDensity, EditorTokenKeys};
 use fret_ui_kit::{ChromeRefinement, Size};
 
@@ -39,33 +38,11 @@ impl<'a> EditorStyle<'a> {
         }
     }
 
-    /// Standard input chrome tokens for editor controls (TextField/NumericInput/DragValue).
-    pub(crate) fn text_field_input_tokens() -> InputTokenKeys {
-        InputTokenKeys {
-            padding_x: Some("component.text_field.padding_x"),
-            padding_y: Some("component.text_field.padding_y"),
-            min_height: Some("component.text_field.min_height"),
-            radius: Some("component.text_field.radius"),
-            border_width: Some("component.text_field.border_width"),
-            bg: Some("component.text_field.bg"),
-            border: Some("component.text_field.border"),
-            border_focus: Some("component.text_field.border_focus"),
-            fg: Some("component.text_field.fg"),
-            text_px: Some("component.text_field.text_px"),
-            selection: Some("component.text_field.selection"),
-        }
-    }
-
     pub(crate) fn frame_chrome_small(&self) -> ResolvedEditorFrameChrome {
         self.frame_chrome(Size::Small)
     }
 
     pub(crate) fn frame_chrome(&self, size: Size) -> ResolvedEditorFrameChrome {
-        resolve_editor_frame_chrome(
-            self.theme,
-            size,
-            &ChromeRefinement::default(),
-            Self::text_field_input_tokens(),
-        )
+        resolve_editor_text_field_frame_chrome(self.theme, size, &ChromeRefinement::default())
     }
 }
