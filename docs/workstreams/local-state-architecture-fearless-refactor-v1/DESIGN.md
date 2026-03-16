@@ -8,6 +8,8 @@ Related:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+- `docs/workstreams/local-state-architecture-fearless-refactor-v1/INVARIANT_MATRIX.md`
+- `docs/workstreams/local-state-architecture-fearless-refactor-v1/SURFACE_CLASSIFICATION_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`
 - `docs/adr/0031-app-owned-models-and-leasing-updates.md`

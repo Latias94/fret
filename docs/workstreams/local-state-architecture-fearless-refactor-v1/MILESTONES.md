@@ -6,6 +6,8 @@ Related:
 
 - Design: `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`
+- Invariant matrix: `docs/workstreams/local-state-architecture-fearless-refactor-v1/INVARIANT_MATRIX.md`
+- Surface classification: `docs/workstreams/local-state-architecture-fearless-refactor-v1/SURFACE_CLASSIFICATION_2026-03-16.md`
 - Action-first closeout: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Action-first endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Authoring-density closeout: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
@@ -18,7 +20,8 @@ Related:
 This lane exists because the broad authoring-reset work is already closed.
 
 - **M0**: Met (the workstream is opened, indexed, and scoped as a separate architecture lane).
-- **M1**: Next active milestone (freeze invariants + ownership rules).
+- **M1**: Met (invariant matrix + surface classification now freeze what is genuinely
+  architectural versus what is already closed or intentionally explicit).
 - **M2**: Planned (compare architecture options without coding first).
 - **M3**: Planned only if justified (smallest proof surface + gates).
 - **M4**: Planned (close the lane or spin out a narrower implementation lane).
@@ -51,6 +54,13 @@ Exit target:
 - one invariant matrix exists,
 - one ownership classification exists,
 - and the repo can distinguish architecture pressure from docs/adoption drift.
+
+Current result (2026-03-16):
+
+- `INVARIANT_MATRIX.md` now records the non-negotiable constraints,
+- `SURFACE_CLASSIFICATION_2026-03-16.md` now classifies current pressure into architecture vs
+  already-closed default-path work vs intentional hybrid/runtime-owned seams,
+- and M2 can therefore focus on option comparison rather than on rediscovering the same evidence.
 
 Key questions:
 

@@ -7,13 +7,15 @@ Companion docs:
 
 - `DESIGN.md`
 - `MILESTONES.md`
+- `INVARIANT_MATRIX.md`
+- `SURFACE_CLASSIFICATION_2026-03-16.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 
 ## Current priority checklist
 
-- [ ] Freeze the evidence set for this lane.
+- [x] Freeze the evidence set for this lane.
   - Keep the default-path compare set explicit:
     - `apps/fret-examples/src/hello_counter_demo.rs`
     - `apps/fret-examples/src/query_demo.rs`
@@ -28,7 +30,7 @@ Companion docs:
     - `apps/fret-cookbook/examples/virtual_list_basics.rs`
     - `apps/fret-cookbook/examples/theme_switching_basics.rs`
     - `apps/fret-cookbook/examples/customv1_basics.rs`
-- [ ] Write the invariant matrix from ADR 0308 + current implementation.
+- [x] Write the invariant matrix from ADR 0308 + current implementation.
   - Freeze what must not regress:
     - hook/key determinism,
     - explicit invalidation,
@@ -36,7 +38,7 @@ Companion docs:
     - selector/query compatibility,
     - shared-model interop,
     - typed action write semantics.
-- [ ] Classify current pressure into:
+- [x] Classify current pressure into:
   - architecture question,
   - docs/adoption problem,
   - intentional hybrid/runtime-owned boundary.
@@ -52,21 +54,28 @@ Companion docs:
 
 - [x] Add the workstream docs directory and connect it from `docs/README.md`, `docs/roadmap.md`,
   and `docs/workstreams/README.md`.
-- [ ] Freeze the reading list and evidence set.
-- [ ] State the non-goals and hard constraints explicitly enough that future edits cannot quietly
+- [x] Freeze the reading list and evidence set.
+- [x] State the non-goals and hard constraints explicitly enough that future edits cannot quietly
   turn this into another density-only helper pass.
 
 ## M1 — Freeze invariants and ownership rules
 
-- [ ] Record the non-negotiable invariants for local-state architecture.
-- [ ] Record which parts of today's local-state story are already working and should be treated as
+- [x] Record the non-negotiable invariants for local-state architecture.
+- [x] Record which parts of today's local-state story are already working and should be treated as
   settled.
-- [ ] Record which current pains are:
+- [x] Record which current pains are:
   - genuine storage/ownership questions,
   - versus first-party adoption/teaching drift,
   - versus intentional explicit model/runtime seams.
-- [ ] Freeze the layering rule:
+- [x] Freeze the layering rule:
   - lower portable crates do not learn about app-facing `LocalState<T>`.
+  - 2026-03-16 result:
+    - `INVARIANT_MATRIX.md` now freezes the non-negotiable runtime/diagnostics/layering
+      constraints,
+    - `SURFACE_CLASSIFICATION_2026-03-16.md` now separates architecture pressure from
+      already-closed default-path drift and intentional hybrid/runtime-owned seams,
+    - and M2 can now focus on option comparison rather than relitigating whether first-contact
+      local-state migration is still unfinished.
 
 ## M2 — Compare architecture options
 
