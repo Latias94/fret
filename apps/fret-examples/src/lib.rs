@@ -1639,6 +1639,93 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn selected_element_context_examples_prefer_handle_first_tracked_model_reads() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            SIMPLE_TODO_DEMO,
+            &[
+                "let todos = todos_model.layout_in(cx).value_or_default();",
+                "let draft_value = draft_model.paint_in(cx).value_or_default();",
+                "if t.done.paint_in(cx).value_or_default() {",
+                "let done = item.done.paint_in(cx).value_or_default();",
+            ],
+            &[
+                "let todos = cx.watch_model(&todos_model).layout().value_or_default();",
+                "let draft_value = cx.watch_model(&draft_model).paint().value_or_default();",
+                "if cx.watch_model(&t.done).paint().value_or_default() {",
+                "let done = cx.watch_model(&item.done).paint().value_or_default();",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            ASYNC_PLAYGROUND_DEMO,
+            &[
+                "let selected = self.st.selected.layout_in(cx).value_or_default();",
+                "let dark = self.st.dark.layout_in(cx).value_or_default();",
+                "let search = st.search_input.layout_in(cx).value_or_default();",
+                "let symbol = st.stock_symbol.layout_in(cx).value_or_default();",
+                "let tab = st.tabs.layout_in(cx).value_or_default();",
+                "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
+                "config.fail_mode.layout_in(cx).value_or_default()",
+            ],
+            &[
+                "let selected = cx.watch_model(&self.st.selected).layout().value_or_default();",
+                "let dark = cx.watch_model(&self.st.dark).layout().value_or_default();",
+                "let search = cx.watch_model(&st.search_input).layout().value_or_default();",
+                "let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();",
+                "let tab = cx.watch_model(&st.tabs).layout().value_or_default();",
+                "let stale_s = cx.watch_model(&config.stale_time_s).layout().value_or_default();",
+                "cx.watch_model(&config.fail_mode)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_DEMO,
+            &[
+                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "let use_non_filterable_input = st.use_non_filterable_input.layout_in(cx).value_or(false);",
+                "let debug_input = st.debug_input.layout_in(cx).value_or(false);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
+                "let use_non_filterable_input = cx.watch_model(&st.use_non_filterable_input)",
+                "let debug_input = cx.watch_model(&st.debug_input).layout().value_or(false);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V3_DEMO,
+            &[
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "let show_user0_probe = st.show_user0_probe.layout_in(cx).value_or(false);",
+                "let use_non_filterable_user1 = st.use_non_filterable_user1.layout_in(cx).value_or(false);",
+            ],
+            &[
+                "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
+                "let show_user0_probe = cx.watch_model(&st.show_user0_probe)",
+                "let use_non_filterable_user1 = cx.watch_model(&st.use_non_filterable_user1)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            POSTPROCESS_THEME_DEMO,
+            &[
+                "let enabled = self.st.enabled.layout_in(cx).value_or(true);",
+                "let compare = self.st.compare.layout_in(cx).value_or(true);",
+                "let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);",
+                "let retro_dither = self.st.retro_dither.layout_in(cx).value_or(true);",
+            ],
+            &[
+                "let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);",
+                "let compare = cx.watch_model(&self.st.compare).layout().value_or(true);",
+                "let theme = cx.watch_model(&self.st.theme).layout().value_or(Option::<Arc<str>>::None);",
+                "let retro_dither = cx.watch_model(&self.st.retro_dither).layout().value_or(true);",
+            ],
+        );
+    }
+
+    #[test]
     fn embedded_viewport_driver_extensions_are_discoverable_from_advanced_prelude() {
         assert!(EMBEDDED_VIEWPORT_DEMO.contains(".drive_embedded_viewport()"));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains(".drive_embedded_viewport()"));

@@ -42,6 +42,9 @@ Tracked-read note on 2026-03-16:
   migrated consistently.
 - the likely next real shared-surface question has therefore narrowed to helper-heavy
   `UiCx` / `ElementContext` model-read ergonomics after that adoption cleanup is absorbed.
+- second-pass proof across `simple_todo_demo`, `async_playground_demo`, and custom-effect/postprocess
+  helpers shows repeated `cx.watch_model(&model).layout()/paint()` pressure outside Todo-only
+  comparisons, so a narrow component-layer handle-first helper is justified there.
 
 ## Milestone 0 — Freeze the lane
 

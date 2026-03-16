@@ -285,15 +285,9 @@ impl View for AsyncPlaygroundView {
         }
 
         let theme = Theme::global(&*cx.app).snapshot();
-        let selected = cx
-            .watch_model(&self.st.selected)
-            .layout()
-            .value_or_default();
-        let dark = cx.watch_model(&self.st.dark).layout().value_or_default();
-        let global_slow = cx
-            .watch_model(&self.st.global_slow)
-            .layout()
-            .value_or_default();
+        let selected = self.st.selected.layout_in(cx).value_or_default();
+        let dark = self.st.dark.layout_in(cx).value_or_default();
+        let global_slow = self.st.global_slow.layout_in(cx).value_or_default();
 
         let header =
             header_bar(cx, &mut self.st, theme.clone(), global_slow, dark).into_element(cx);
@@ -862,15 +856,15 @@ fn query_panel_for_mode(
 
     let handle = match mode {
         FetchMode::Sync => {
-            let search = cx.watch_model(&st.search_input).layout().value_or_default();
-            let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
+            let search = st.search_input.layout_in(cx).value_or_default();
+            let symbol = st.stock_symbol.layout_in(cx).value_or_default();
             cx.data().query(key, policy.clone(), move |token| {
                 mock_fetch_sync(token, id, delay, fail_mode, search, symbol)
             })
         }
         FetchMode::Async => {
-            let search = cx.watch_model(&st.search_input).layout().value_or_default();
-            let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
+            let search = st.search_input.layout_in(cx).value_or_default();
+            let symbol = st.stock_symbol.layout_in(cx).value_or_default();
             cx.data()
                 .query_async(key, policy.clone(), move |token| async move {
                     mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
@@ -1034,7 +1028,7 @@ fn query_result_view(
 }
 
 fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode {
-    let tab = cx.watch_model(&st.tabs).layout().value_or_default();
+    let tab = st.tabs.layout_in(cx).value_or_default();
     match tab.as_deref() {
         Some("sync") => FetchMode::Sync,
         _ => FetchMode::Async,
@@ -1043,22 +1037,14 @@ fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode {
 
 fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy {
     let config = st.configs.get(&id).expect("missing config");
-    let stale_s = cx
-        .watch_model(&config.stale_time_s)
-        .layout()
-        .value_or_default();
-    let cache_s = cx
-        .watch_model(&config.cache_time_s)
-        .layout()
-        .value_or_default();
-    let keep_prev = cx
-        .watch_model(&config.keep_prev)
-        .layout()
-        .value_or_default();
+    let stale_s = config.stale_time_s.layout_in(cx).value_or_default();
+    let cache_s = config.cache_time_s.layout_in(cx).value_or_default();
+    let keep_prev = config.keep_prev.layout_in(cx).value_or_default();
 
-    let cancel_mode = cx
-        .watch_model(&config.cancel_mode.value)
-        .layout()
+    let cancel_mode = config
+        .cancel_mode
+        .value
+        .layout_in(cx)
         .value_or_default()
         .unwrap_or_else(|| Arc::<str>::from("cancel"));
     let cancel_mode = match cancel_mode.as_ref() {
@@ -1077,9 +1063,7 @@ fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> Qu
 
 fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
-    cx.watch_model(&config.fail_mode)
-        .layout()
-        .value_or_default()
+    config.fail_mode.layout_in(cx).value_or_default()
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {
@@ -1107,8 +1091,8 @@ fn query_key_for_id(
     st: &AsyncPlaygroundState,
     id: QueryId,
 ) -> QueryKey<Arc<str>> {
-    let search = cx.watch_model(&st.search_input).layout().value_or_default();
-    let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
+    let search = st.search_input.layout_in(cx).value_or_default();
+    let symbol = st.stock_symbol.layout_in(cx).value_or_default();
     query_key_for_params(id, search, symbol)
 }
 

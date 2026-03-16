@@ -38,6 +38,52 @@ impl<'a, H: UiHost> ModelWatchExt for ElementContext<'a, H> {
     }
 }
 
+/// Handle-first tracked-read helpers for helper-heavy `ElementContext` surfaces.
+///
+/// This stays in the component/declarative layer for the same reason as `ModelWatchExt`: it is
+/// sugar over the explicit `observe_model(..., Invalidation)` contract, not a new runtime
+/// mechanism.
+pub trait TrackedModelExt<T: Any> {
+    fn watch_in<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, T>;
+
+    fn paint_in<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, T> {
+        self.watch_in(cx).paint()
+    }
+
+    fn layout_in<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, T> {
+        self.watch_in(cx).layout()
+    }
+
+    fn hit_test_in<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, T> {
+        self.watch_in(cx).hit_test()
+    }
+}
+
+impl<T: Any> TrackedModelExt<T> for Model<T> {
+    fn watch_in<'cx, 'a, H: UiHost>(
+        &self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> WatchedModel<'cx, '_, 'a, H, T> {
+        WatchedModel {
+            cx,
+            model: self,
+            invalidation: Invalidation::Paint,
+        }
+    }
+}
+
 #[must_use]
 pub struct WatchedModel<'cx, 'm, 'a, H: UiHost, T: Any> {
     cx: &'cx mut ElementContext<'a, H>,

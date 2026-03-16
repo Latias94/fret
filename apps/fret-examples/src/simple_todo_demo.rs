@@ -11,7 +11,7 @@ use fret_ui::Invalidation;
 use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::TrackedModelExt as _;
 use fret_ui_kit::{ColorRef, Radius, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -62,12 +62,12 @@ impl SimpleTodoDriver {
 
                     let theme = cx.theme_snapshot();
 
-                    let todos = cx.watch_model(&todos_model).layout().value_or_default();
-                    let draft_value = cx.watch_model(&draft_model).paint().value_or_default();
+                    let todos = todos_model.layout_in(cx).value_or_default();
+                    let draft_value = draft_model.paint_in(cx).value_or_default();
 
                     let mut done_count = 0usize;
                     for t in &todos {
-                        if cx.watch_model(&t.done).paint().value_or_default() {
+                        if t.done.paint_in(cx).value_or_default() {
                             done_count += 1;
                         }
                     }
@@ -258,7 +258,7 @@ fn todo_row(
     item: &TodoItem,
     remove_cmd: CommandId,
 ) -> impl fret_ui_kit::IntoUiElement<App> + use<> {
-    let done = cx.watch_model(&item.done).paint().value_or_default();
+    let done = item.done.paint_in(cx).value_or_default();
 
     let checkbox = shadcn::Checkbox::new(item.done.clone());
 

@@ -286,8 +286,8 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    cx.watch_model(model)
-        .layout()
+    model
+        .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
         .ok()
         .unwrap_or(default)
@@ -316,19 +316,16 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
             .into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
-    let use_non_filterable_input = cx
-        .watch_model(&st.use_non_filterable_input)
-        .layout()
-        .value_or(false);
+    let enabled = st.enabled.layout_in(cx).value_or(true);
+    let use_non_filterable_input = st.use_non_filterable_input.layout_in(cx).value_or(false);
     let input_image = if use_non_filterable_input {
         non_filterable_input_image
     } else {
         filterable_input_image
     };
-    let sampling_value = cx
-        .watch_model(&st.sampling)
-        .layout()
+    let sampling_value = st
+        .sampling
+        .layout_in(cx)
         .read_ref(|v| v.clone())
         .ok()
         .and_then(|v| v.as_ref().map(|s| s.to_string()))
@@ -337,7 +334,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
     let input_strength = watch_first_f32(cx, &st.input_strength, 0.35);
     let rim_strength = watch_first_f32(cx, &st.rim_strength, 0.65);
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 10.0);
-    let debug_input = cx.watch_model(&st.debug_input).layout().value_or(false);
+    let debug_input = st.debug_input.layout_in(cx).value_or(false);
 
     let inspector = inspector(
         cx,

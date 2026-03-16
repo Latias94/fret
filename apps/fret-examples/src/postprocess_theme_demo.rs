@@ -217,12 +217,9 @@ impl View for ThemePostprocessView {
             .into();
         };
 
-        let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);
-        let compare = cx.watch_model(&self.st.compare).layout().value_or(true);
-        let theme = cx
-            .watch_model(&self.st.theme)
-            .layout()
-            .value_or(Option::<Arc<str>>::None);
+        let enabled = self.st.enabled.layout_in(cx).value_or(true);
+        let compare = self.st.compare.layout_in(cx).value_or(true);
+        let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);
 
         let chromatic_offset_px = watch_first_f32(cx, &self.st.chromatic_offset_px, 2.0);
         let scanline_strength = watch_first_f32(cx, &self.st.scanline_strength, 0.18);
@@ -232,10 +229,7 @@ impl View for ThemePostprocessView {
         let grain_scale = watch_first_f32(cx, &self.st.grain_scale, 1.5);
 
         let retro_pixel_scale = watch_first_f32(cx, &self.st.retro_pixel_scale, 10.0);
-        let retro_dither = cx
-            .watch_model(&self.st.retro_dither)
-            .layout()
-            .value_or(true);
+        let retro_dither = self.st.retro_dither.layout_in(cx).value_or(true);
 
         let inspector = inspector(
             cx,
@@ -317,8 +311,8 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    cx.watch_model(model)
-        .layout()
+    model
+        .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
         .ok()
         .unwrap_or(default)

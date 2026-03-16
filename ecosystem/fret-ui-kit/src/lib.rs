@@ -840,6 +840,22 @@ mod source_policy_tests {
     }
 
     #[test]
+    fn tracked_model_handle_helpers_are_part_of_default_declarative_surface() {
+        assert!(
+            DECLARATIVE_MODEL_WATCH_RS.contains("pub trait TrackedModelExt<T: Any>"),
+            "declarative/model_watch.rs should expose the handle-first tracked-model helper"
+        );
+        assert!(
+            DECLARATIVE_MOD_RS.contains("pub use model_watch::TrackedModelExt;"),
+            "declarative/mod.rs should re-export the tracked-model helper"
+        );
+        assert!(
+            DECLARATIVE_PRELUDE_RS.contains("pub use super::model_watch::TrackedModelExt;"),
+            "declarative/prelude.rs should include the tracked-model helper in the default declarative prelude"
+        );
+    }
+
+    #[test]
     fn readme_keeps_icon_provider_installation_explicit_for_ui_kit() {
         assert!(README.contains("it does not install a default icon pack"));
         assert!(README.contains("`fret_icons_lucide::app::install`"));

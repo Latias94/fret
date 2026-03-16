@@ -35,6 +35,12 @@ Companion docs:
     - the first meaningful batch is AppUi adoption cleanup on non-todo surfaces,
     - the likely next shared-surface question narrows to `UiCx` / `ElementContext` model-read
       ergonomics rather than another AppUi read helper.
+  - 2026-03-16 second pass:
+    - helper-heavy `ElementContext` surfaces now show repeated non-todo pressure as well,
+    - the next justified reduction is a narrow handle-first tracked-model helper on the
+      declarative/component layer,
+    - `app::prelude::*` should stay unchanged while `component` / `advanced` helper surfaces adopt
+      the shorter read path.
 - [ ] Land the smallest justified tracked-read reduction.
   - Constraints:
     - keep invalidation intent explicit,

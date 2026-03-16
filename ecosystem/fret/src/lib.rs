@@ -528,6 +528,7 @@ pub mod component {
         pub use fret_ui_kit::declarative::ElementContextThemeExt as _;
         pub use fret_ui_kit::declarative::GlobalWatchExt as _;
         pub use fret_ui_kit::declarative::ModelWatchExt as _;
+        pub use fret_ui_kit::declarative::TrackedModelExt as _;
         pub use fret_ui_kit::declarative::UiElementA11yExt as _;
         pub use fret_ui_kit::declarative::UiElementKeyContextExt as _;
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
@@ -944,6 +945,7 @@ pub mod advanced {
         pub use fret_ui::{ElementContext, ThemeSnapshot, UiTree};
         #[cfg(feature = "icons")]
         pub use fret_ui_kit::declarative::icon;
+        pub use fret_ui_kit::declarative::TrackedModelExt as _;
     }
 }
 
@@ -3144,11 +3146,16 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("only first-contact component-family discovery"));
-        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes")
+        );
         assert!(CRATE_USAGE_GUIDE.contains(
             "`fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`"
         ));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::advanced::*` is an implementation/debug lane"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`fret_ui_shadcn::advanced::*` is an implementation/debug lane")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::typography::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::install(...)`"));
@@ -3357,6 +3364,7 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("UiTree"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
+        assert!(advanced_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;"));
         assert!(advanced_prelude_exports_symbol("UiServices"));
         assert!(advanced_prelude_exports_symbol("TextProps"));
         assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));
@@ -3366,6 +3374,7 @@ mod authoring_surface_policy_tests {
         assert!(!advanced_prelude_exports_symbol("UiHost"));
         assert!(!advanced_prelude_exports_symbol("AnyElement"));
         assert!(!advanced_prelude_exports_symbol("Model"));
+        assert!(!advanced_prelude_exports_symbol("TrackedModelExt"));
         assert!(!advanced_prelude_exports_symbol("ViewCx"));
         assert!(!advanced_prelude_exports_symbol("Elements"));
         assert!(
@@ -3752,6 +3761,10 @@ mod authoring_surface_policy_tests {
             component_prelude
                 .contains("pub use fret_ui_kit::declarative::UiElementTestIdExt as _;")
         );
+        assert!(
+            component_prelude
+                .contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
+        );
         assert!(component_prelude_exports_symbol("UiBuilder"));
         assert!(component_prelude_exports_symbol("UiPatchTarget"));
         assert!(component_prelude_exports_symbol("IntoUiElement"));
@@ -3777,6 +3790,7 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol("ElementContextThemeExt"));
         assert!(!component_prelude_exports_symbol("GlobalWatchExt"));
         assert!(!component_prelude_exports_symbol("ModelWatchExt"));
+        assert!(!component_prelude_exports_symbol("TrackedModelExt"));
         assert!(!component_prelude_exports_symbol("UiElementA11yExt"));
         assert!(!component_prelude_exports_symbol("UiElementKeyContextExt"));
         assert!(!component_prelude_exports_symbol("UiElementTestIdExt"));

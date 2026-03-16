@@ -371,23 +371,11 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         return vec![shadcn::raw::typography::h3(msg).into_element(cx)].into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
-    let show_user0_probe = cx
-        .watch_model(&st.show_user0_probe)
-        .layout()
-        .value_or(false);
-    let show_user1_probe = cx
-        .watch_model(&st.show_user1_probe)
-        .layout()
-        .value_or(false);
-    let use_non_filterable_user0 = cx
-        .watch_model(&st.use_non_filterable_user0)
-        .layout()
-        .value_or(false);
-    let use_non_filterable_user1 = cx
-        .watch_model(&st.use_non_filterable_user1)
-        .layout()
-        .value_or(false);
+    let enabled = st.enabled.layout_in(cx).value_or(true);
+    let show_user0_probe = st.show_user0_probe.layout_in(cx).value_or(false);
+    let show_user1_probe = st.show_user1_probe.layout_in(cx).value_or(false);
+    let use_non_filterable_user0 = st.use_non_filterable_user0.layout_in(cx).value_or(false);
+    let use_non_filterable_user1 = st.use_non_filterable_user1.layout_in(cx).value_or(false);
     let user0_image = if use_non_filterable_user0 {
         user0_non_filterable
     } else {
