@@ -61,7 +61,7 @@ For new app authors, keep the default authoring model small and explicit:
 
 - `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state, including starter keyed lists,
 - `cx.actions().locals(...)` for most LocalState-first typed UI actions,
-- `.action_payload(...)` plus `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)` for view-owned keyed-row interactions,
+- `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default row-write path for view-owned keyed-row interactions; reserve `payload_locals::<A>(...)` for the rarer case where one payload action coordinates multiple locals,
 - `cx.actions().transient(...)` when an action must trigger an `App`-only effect in `render()`,
 - `cx.actions().models(...)` only when you intentionally coordinate shared `Model<T>` graphs,
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
