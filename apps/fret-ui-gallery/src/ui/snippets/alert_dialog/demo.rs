@@ -21,7 +21,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         );
                         out.push(
                             shadcn::AlertDialogDescription::new(
-                                "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+                                "This action cannot be undone. This will permanently delete your account from our servers.",
                             )
                             .into_element(cx),
                         );

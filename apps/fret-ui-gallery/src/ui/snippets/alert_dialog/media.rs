@@ -11,43 +11,44 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::AlertDialog::new(open)
         .children([
             shadcn::AlertDialogPart::trigger(shadcn::AlertDialogTrigger::build(
-                shadcn::Button::new("Default (Media)")
+                shadcn::Button::new("Share Project")
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-alert-dialog-media-trigger"),
             )),
-            shadcn::AlertDialogPart::content(shadcn::AlertDialogContent::build(|cx, out| {
-                let icon = shadcn::raw::icon::icon_with(
-                    cx,
-                    fret_icons::IconId::new_static("lucide.bluetooth"),
-                    Some(Px(32.0)),
-                    None,
-                );
+            shadcn::AlertDialogPart::content(
+                shadcn::AlertDialogContent::build(|cx, out| {
+                    let icon = shadcn::raw::icon::icon_with(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.circle-fading-plus"),
+                        Some(Px(32.0)),
+                        None,
+                    );
 
-                out.push(
-                    shadcn::AlertDialogHeader::new([
-                        shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                    out.push(
+                        shadcn::AlertDialogHeader::new([
+                            shadcn::AlertDialogTitle::new("Share this project?").into_element(cx),
+                            shadcn::AlertDialogDescription::new(
+                                "Anyone with the link will be able to view and edit this project.",
+                            )
                             .into_element(cx),
-                        shadcn::AlertDialogDescription::new(
-                            "This will permanently delete your account and remove your data from our servers.",
-                        )
+                        ])
+                        .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
                         .into_element(cx),
-                    ])
-                    .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
-                    .into_element(cx),
-                );
-                out.push(
-                    shadcn::AlertDialogFooter::new([
-                        shadcn::AlertDialogCancel::from_scope("Cancel")
-                            .test_id("ui-gallery-alert-dialog-media-cancel")
-                            .into_element(cx),
-                        shadcn::AlertDialogAction::from_scope("Continue")
-                            .test_id("ui-gallery-alert-dialog-media-action")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                );
-            })
-            .test_id("ui-gallery-alert-dialog-media-content")),
+                    );
+                    out.push(
+                        shadcn::AlertDialogFooter::new([
+                            shadcn::AlertDialogCancel::from_scope("Cancel")
+                                .test_id("ui-gallery-alert-dialog-media-cancel")
+                                .into_element(cx),
+                            shadcn::AlertDialogAction::from_scope("Share")
+                                .test_id("ui-gallery-alert-dialog-media-action")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    );
+                })
+                .test_id("ui-gallery-alert-dialog-media-content"),
+            ),
         ])
         .into_element(cx)
 }

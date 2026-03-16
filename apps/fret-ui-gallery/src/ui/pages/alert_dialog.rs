@@ -21,7 +21,7 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`AlertDialogContent::size(...)` accepts `AlertDialogContentSize::Default` and `AlertDialogContentSize::Sm`, matching the upstream `size=\"default\" | \"sm\"` surface.",
         "`AlertDialog::children([...])` is the default copyable root path for part-based composition, and `AlertDialogPart` is available on the curated `shadcn` facade so the default import lane stays copyable.",
         "`AlertDialogAction::from_scope(...)` and `AlertDialogCancel::from_scope(...)` keep footer composition close to shadcn docs without threading the same open model through every button.",
-        "`AlertDialogCancel::variant(...)` keeps the destructive example aligned with the upstream ghost-cancel + destructive-action button pairing.",
+        "`AlertDialogCancel::variant(...)` keeps non-default destructive cancel styling available for upstream example surfaces without requiring a lower-level escape hatch.",
         "`AlertDialogTitle::new_children(...)` and `AlertDialogDescription::new_children(...)` already support composed or attributed subtree content when string-only labels are not enough.",
     ]);
 
@@ -34,6 +34,7 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`, and `repo-ref/ui/apps/v4/registry/new-york-v4/examples/alert-dialog-demo.tsx`.",
         "Preview mirrors the shadcn docs path after skipping `Installation`: `Demo`, `Usage`, `Basic`, `Small`, `Media`, `Small with Media`, `Destructive`, `RTL`, and `API Reference`.",
+        "Example copy now follows the docs-page examples (`Show Dialog`, `Share Project`, dual-example RTL) rather than the registry-base example labels such as `Default (Media)`.",
         "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
         "Modal semantics follow Radix/Base UI outcomes: outside press does not dismiss, `role=alertdialog` is preserved, and initial focus prefers `AlertDialogCancel` when present.",
         "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `Parts` remains the explicit adapter lane for portal/overlay ownership.",
@@ -64,22 +65,22 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("A minimal alert dialog with default buttons.")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let small = DocSection::build(cx, "Small", small)
-        .description("Compact dialog size for short copy.")
+        .description("Use the `size=\"sm\"` prop to make the alert dialog smaller.")
         .test_id_prefix("ui-gallery-alert-dialog-small-docsec")
         .code_rust_from_file_region(snippets::small::SOURCE, "example");
     let media = DocSection::build(cx, "Media", media)
-        .description("Dialogs can optionally show a leading media/icon in the header.")
+        .description("Use the `AlertDialogMedia` component to add a media element such as an icon or image to the alert dialog.")
         .test_id_prefix("ui-gallery-alert-dialog-media-docsec")
         .code_rust_from_file_region(snippets::media::SOURCE, "example");
     let small_with_media = DocSection::build(cx, "Small with Media", small_with_media)
-        .description("Small size + media variant.")
+        .description("Use the `size=\"sm\"` prop to make the alert dialog smaller and the `AlertDialogMedia` component to add a media element such as an icon or image to the alert dialog.")
         .code_rust_from_file_region(snippets::small_with_media::SOURCE, "example");
     let destructive = DocSection::build(cx, "Destructive", destructive)
-        .description("Destructive styling for irreversible actions.")
+        .description("Use the `AlertDialogAction` component to add a destructive action button to the alert dialog.")
         .test_id_prefix("ui-gallery-alert-dialog-destructive-docsec")
         .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("All shadcn components should work under an RTL direction provider.")
+        .description("To enable RTL support in shadcn/ui, see the RTL configuration guide.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)
         .description(

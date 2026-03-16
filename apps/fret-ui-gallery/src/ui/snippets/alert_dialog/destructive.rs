@@ -3,6 +3,9 @@ pub const SOURCE: &str = include_str!("destructive.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
+use fret_core::window::ColorScheme;
+use fret_ui::Theme;
+use fret_ui_kit::{ChromeRefinement, ColorRef};
 use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -16,6 +19,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .test_id("ui-gallery-alert-dialog-destructive-trigger"),
             )),
             shadcn::AlertDialogPart::content(shadcn::AlertDialogContent::build(|cx, out| {
+                let theme = Theme::global(&*cx.app).snapshot();
+                let destructive_fg = theme
+                    .color_by_key("destructive")
+                    .unwrap_or_else(|| theme.color_token("destructive"));
+                let destructive_bg = theme
+                    .color_by_key(if theme.color_scheme == Some(ColorScheme::Dark) {
+                        "destructive/20"
+                    } else {
+                        "destructive/10"
+                    })
+                    .unwrap_or_else(|| theme.color_token("muted"));
                 let icon = shadcn::raw::icon::icon_with(
                     cx,
                     fret_icons::IconId::new_static("lucide.trash-2"),
@@ -31,13 +45,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         )
                         .into_element(cx),
                     ])
-                    .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
+                    .media(
+                        shadcn::AlertDialogMedia::new(icon)
+                            .refine_style(
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(destructive_bg))
+                                    .text_color(ColorRef::Color(destructive_fg)),
+                            )
+                            .into_element(cx),
+                    )
                     .into_element(cx),
                 );
                 out.push(
                     shadcn::AlertDialogFooter::new([
                         shadcn::AlertDialogCancel::from_scope("Cancel")
-                            .variant(shadcn::ButtonVariant::Ghost)
+                            .variant(shadcn::ButtonVariant::Outline)
                             .test_id("ui-gallery-alert-dialog-destructive-cancel")
                             .into_element(cx),
                         shadcn::AlertDialogAction::from_scope("Delete")

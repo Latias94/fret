@@ -11,7 +11,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::AlertDialog::new(open)
         .children([
             shadcn::AlertDialogPart::trigger(shadcn::AlertDialogTrigger::build(
-                shadcn::Button::new("Small (Media)")
+                shadcn::Button::new("Show Dialog")
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-alert-dialog-small-media-trigger"),
             )),

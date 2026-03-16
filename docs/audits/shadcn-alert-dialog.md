@@ -10,11 +10,16 @@ Upstream sources:
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
 This audit compares Fret's shadcn-aligned `AlertDialog` surface against the upstream shadcn/ui v4
-docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
+docs/examples surfaces and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx`
+- Docs pages:
+  - `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx`
+  - `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`
+- Docs examples:
+  - `repo-ref/ui/apps/v4/examples/base/alert-dialog-*.tsx`
+  - `repo-ref/ui/apps/v4/examples/radix/alert-dialog-*.tsx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx`
 - Underlying primitive concept: Radix `@radix-ui/react-alert-dialog` (dialog + safety defaults)
 
@@ -80,8 +85,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Pass: Motion matches shadcn's `fade` + `zoom-in-95` / `zoom-out-95` outcomes (best-effort, tick
   driven).
-- Pass: `AlertDialogCancel::variant(...)` now supports the upstream destructive example's
-  ghost-cancel pairing without requiring a lower-level escape hatch.
+- Pass: `AlertDialogCancel::variant(...)` now supports the non-default cancel styling used by
+  upstream destructive example surfaces without requiring a lower-level escape hatch.
+- Pass: The first-party UI Gallery examples now follow the docs-page teaching surface (`Show
+  Dialog`, `Share Project`, dual-example RTL) instead of the older registry-base example labels.
 - Note: The current `repo-ref/ui` routed web-golden surfaces only expose `alert-dialog-demo`.
   Docs-only examples such as `alert-dialog-small`, `alert-dialog-media`,
   `alert-dialog-small-media`, and `alert-dialog-destructive` are present in source/docs, but they
