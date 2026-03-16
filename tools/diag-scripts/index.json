@@ -2881,6 +2881,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-button-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button",
+        "docs",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button page via the left nav search.",
+        "Captures representative screenshots for the docs-aligned sections plus the Fret-only children section code tab."
+      ]
+    },
+    {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
       "required_capabilities": [

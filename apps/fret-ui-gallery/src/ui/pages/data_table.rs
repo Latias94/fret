@@ -19,11 +19,21 @@ pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Ownership: recipe owns chrome/row heights/selection/pagination/column-action menus; callers own data shape, filtering rules, and page width/height negotiation.",
         "`DataGrid` remains the canvas-first option for dense editor surfaces; use `experimental::DataGridElement` when you need richer per-cell UI than the guide-style table surface.",
     ]);
+    let notes = doc_layout::notes_block([
+        "This page intentionally starts with a curated default recipe, then keeps denser guide-aligned examples as advanced reference material.",
+        "Prefer the default recipe when you want a copyable business-table baseline; reach for the advanced sections when you need explicit sorting, selection, actions, or pagination composition.",
+        "Layout and diagnostics regressions here usually come from viewport ownership, column sizing, or row chrome, so keep page-scoped `ui-gallery-data-table-*` ids stable when extending the page.",
+    ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .description("Extension-surface summary and ownership notes.")
         .no_shell()
         .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-data-table-api-reference");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .description("Usage guidance and parity notes.")
+        .no_shell()
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-data-table-notes");
     let default_recipe = DocSection::build(cx, "Default Recipe", default_demo)
         .max_w(Px(980.0))
         .code_rust_from_file_region(snippets::default_demo::SOURCE, "example");
@@ -64,6 +74,7 @@ pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             advanced_rtl,
             reference_outline,
             api_reference,
+            notes,
         ],
     );
 

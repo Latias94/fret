@@ -34,10 +34,19 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Required markers remain label/call-site composition; the recipe owns input chrome, not surrounding form-policy affordances.",
         "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
     ]);
+    let notes = doc_layout::notes_block([
+        "This page follows the upstream Input docs examples first, then keeps `Label Association` and `API Reference` as focused Fret follow-ups.",
+        "Use plain `Input` when you only need an editable value; compose with `Field` parts or `InputGroup` once labels, descriptions, validation copy, or inline addons become part of the authoring surface.",
+        "Most regressions here come from IME routing, label/control wiring, or width negotiation, so keep `ui-gallery-input-*` ids stable when extending the page or adding diag scripts.",
+    ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-input-api-reference")
         .description("Public surface summary, ownership notes, and current caveats.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-input-notes")
+        .description("Usage guidance and parity notes.");
     let usage = DocSection::build(cx, "Usage", usage)
         .description("Copyable minimal usage for `Input` before the example matrix.")
         .code_rust(
@@ -122,6 +131,7 @@ shadcn::Input::new(value)
             rtl,
             label,
             api_reference,
+            notes,
         ],
     );
 

@@ -7,6 +7,7 @@
 //! Keep `ui-gallery-button-*` `test_id`s stable: diag scripts depend on them.
 
 pub mod button_group;
+pub mod children;
 pub mod default;
 pub mod demo;
 pub mod destructive;

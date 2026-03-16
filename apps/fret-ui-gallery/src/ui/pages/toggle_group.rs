@@ -28,10 +28,19 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned; item-root custom layout and surrounding width/flex negotiation remain caller-owned.",
         "`Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
     ]);
+    let notes = doc_layout::notes_block([
+        "This page mirrors the upstream Toggle Group docs path first, then keeps the single/size/label/fill examples as focused Fret regression slices.",
+        "Prefer the documented single or multiple constructors as the primary authoring surface; item-root refinements belong on the item call site instead of in the default group chrome.",
+        "The main parity risks here are roving focus, segmented borders, RTL order, and stretch/fill ownership, so stable `ui-gallery-toggle-group-*` ids remain part of the automation contract.",
+    ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-toggle-group-api-reference")
         .description("Public surface summary and ownership notes.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-toggle-group-notes")
+        .description("Usage guidance and parity notes.");
 
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Compact icon-only preview for quick visual scanning.")
@@ -116,6 +125,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             label,
             full_width_items,
             stretch,
+            notes,
         ],
     );
 

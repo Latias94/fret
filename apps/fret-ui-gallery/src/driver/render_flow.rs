@@ -2021,6 +2021,49 @@ mod tests {
     }
 
     #[test]
+    fn gallery_button_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON);
+
+        for target in [
+            "ui-gallery-button-demo-content",
+            "ui-gallery-button-usage-content",
+            "ui-gallery-button-cursor-content",
+            "ui-gallery-button-size-content",
+            "ui-gallery-button-default-content",
+            "ui-gallery-button-outline-content",
+            "ui-gallery-button-secondary-content",
+            "ui-gallery-button-ghost-content",
+            "ui-gallery-button-destructive-content",
+            "ui-gallery-button-link-content",
+            "ui-gallery-button-icon-content",
+            "ui-gallery-button-with-icon-content",
+            "ui-gallery-button-rounded-content",
+            "ui-gallery-button-spinner-content",
+            "ui-gallery-button-button-group-content",
+            "ui-gallery-button-link-semantic-content",
+            "ui-gallery-button-rtl-content",
+            "ui-gallery-button-api-reference-content",
+            "ui-gallery-button-children-content",
+            "ui-gallery-button-variants-overview-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Button page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_button_notes_keep_stable_height_while_scrolling_into_view() {
+        assert_notes_section_keeps_stable_height_while_scrolling_into_view(
+            PAGE_BUTTON,
+            "ui-gallery-button-notes-content",
+        );
+    }
+
+    #[test]
     fn gallery_button_group_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON_GROUP);
 
@@ -2199,6 +2242,7 @@ mod tests {
             (PAGE_ALERT, "ui-gallery-alert-notes-content"),
             (PAGE_ALERT_DIALOG, "ui-gallery-alert-dialog-notes-content"),
             (PAGE_AVATAR, "ui-gallery-avatar-notes-content"),
+            (PAGE_BUTTON, "ui-gallery-button-notes-content"),
             (PAGE_BUTTON_GROUP, "ui-gallery-button-group-notes-content"),
             (PAGE_CALENDAR, "ui-gallery-calendar-notes-content"),
             (PAGE_CARD, "ui-gallery-card-section-notes-content"),

@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("loading.rs");
+pub const SOURCE: &str = include_str!("children.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -19,21 +19,22 @@ where
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     wrap_row(|cx| {
         vec![
-            shadcn::Button::new("Generating")
+            shadcn::Button::new("Refresh")
                 .variant(shadcn::ButtonVariant::Outline)
-                .disabled(true)
-                .test_id("ui-gallery-button-loading-submit")
-                .leading_child(shadcn::Spinner::new().into_element(cx))
+                .leading_child(shadcn::Spinner::new().speed(0.0).into_element(cx))
+                .trailing_child(shadcn::Kbd::new("Cmd+R").into_element(cx))
+                .test_id("ui-gallery-button-children-slotted")
                 .into_element(cx),
-            shadcn::Button::new("Downloading")
+            shadcn::Button::new("")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .disabled(true)
-                .test_id("ui-gallery-button-loading-download")
-                .trailing_child(shadcn::Spinner::new().into_element(cx))
+                .a11y_label("Open command menu")
+                .child(cx.text("Command Menu"))
+                .child(shadcn::Kbd::new("Cmd+K").into_element(cx))
+                .test_id("ui-gallery-button-children-command")
                 .into_element(cx),
         ]
     })
     .into_element(cx)
-    .test_id("ui-gallery-button-loading")
+    .test_id("ui-gallery-button-children-row")
 }
 // endregion: example
