@@ -1,5 +1,6 @@
 # Authoring Density Reduction (Fearless Refactor v1) — Milestones
 
+Status: Historical closeout record
 Last updated: 2026-03-16
 
 Related:
@@ -34,11 +35,13 @@ Related:
 
 Overall reading:
 
-- this is the next active post-v1 authoring refactor lane,
-- it is not a reopen of the app/component/advanced taxonomy,
-- and it is not a stealth runtime/state-architecture redesign.
+- this lane is now closed and should be read as a historical closeout record,
+- it did not reopen the app/component/advanced taxonomy,
+- it did not turn into a stealth runtime/state-architecture redesign,
+- and remaining follow-up is maintenance only: keep docs/templates/examples/gates aligned with the
+  shipped shorter path.
 
-## Current execution order
+## Historical execution order
 
 1. Freeze scope and evidence rules.
 2. Audit repeated tracked-read ceremony and land the smallest justified shared reduction.
@@ -109,8 +112,8 @@ Deliverables:
 
 Exit criteria:
 
-- reviewers can tell that this is the next active authoring lane without reopening
-  app/component/advanced or into-element design debates.
+- reviewers can tell exactly what this lane owned without reopening app/component/advanced or
+  into-element design debates.
 
 ## Milestone 1 — Shorten tracked reads
 

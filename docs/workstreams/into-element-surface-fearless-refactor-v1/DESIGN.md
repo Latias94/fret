@@ -1,7 +1,7 @@
 # Into-Element Surface (Fearless Refactor v1)
 
-Status: proposed focused pre-release reset
-Last updated: 2026-03-12
+Status: closeout / maintenance lane
+Last updated: 2026-03-16
 
 Related:
 
@@ -10,6 +10,15 @@ Related:
 - `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0148-component-ecosystem-authoring-conventions-v1.md`
+
+Closeout reading rule on 2026-03-16:
+
+- treat this document as the settled design record for a closed conversion-surface cleanup lane
+- the broad `IntoUiElement<H>` migration and public conversion-taxonomy collapse are already
+  landed; use `MILESTONES.md`, `TODO.md`, and `TARGET_INTERFACE_STATE.md` as the current closure
+  evidence
+- remaining work here is maintenance only: explicit raw-seam inventory, low-noise wrapper cleanup,
+  and source-gate/docs alignment
 
 This workstream focuses on one narrow product-surface problem:
 

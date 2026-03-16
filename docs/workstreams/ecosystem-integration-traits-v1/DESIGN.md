@@ -1,7 +1,7 @@
 # Ecosystem Integration Traits v1
 
-Status: Active working plan (pre-release fearless refactor)
-Last updated: 2026-03-12
+Status: maintenance closeout lane
+Last updated: 2026-03-16
 
 Related:
 
@@ -15,6 +15,14 @@ Related:
 - `docs/workstreams/router-ui-v1/router-ui-v1.md`
 - `docs/workstreams/query-lifecycle-v1/query-lifecycle-v1.md`
 - `docs/workstreams/state-management-v1/state-management-v1-extension-contract.md`
+
+Closeout reading rule on 2026-03-16:
+
+- treat this document as the settled trait-budget record, not as an active trait-expansion plan
+- the core v1 seams are landed (`InstallIntoApp`, `CommandCatalog`, `RouteCodec`,
+  `DockPanelFactory`) and `QueryAdapter` is explicitly deferred
+- remaining work here is maintenance only: docs/export cleanup, mixed-posture auditing, and
+  keeping ecosystem docs aligned with the closed conversion story
 
 This workstream defines a **trait budget** for ecosystem integration before the first public
 release.

@@ -1,8 +1,10 @@
 # Authoring Density Reduction (Fearless Refactor v1) — TODO
 
-This TODO list tracks the next active post-v1 authoring lane.
+Status: Maintenance / historical tracker
 
-Because the repo is still pre-release, "done" means:
+This TODO file now records the historical execution trail for a closed workstream.
+
+Because the repo is still pre-release, "done" on this lane meant:
 
 - land the shorter path,
 - move docs/examples/templates to it,
@@ -19,7 +21,14 @@ Companion docs:
 - `CHILD_COLLECTION_AUDIT_2026-03-16.md`
 - `CLOSEOUT_AUDIT_2026-03-16.md`
 
-## Current priority checklist
+Closeout reading rule on 2026-03-16:
+
+- M0 through M4 are closed; read `CLOSEOUT_AUDIT_2026-03-16.md` for the final outcome
+- remaining unchecked boxes below are archived execution notes, not an active backlog
+- reopen this lane only with fresh cross-surface evidence that the shipped default path has
+  regressed or left a new repeated gap outside the already-audited surfaces
+
+## Historical execution checklist
 
 - [ ] Freeze the evidence set for density work.
   - Keep the canonical compare set explicit:

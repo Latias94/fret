@@ -10,22 +10,34 @@ This document summarizes the current state of the Fret library + ecosystem by re
 
 It is intentionally **non-normative**. Treat it as a “where we are today” snapshot, not a contract.
 
-## Current Refactor Order (2026-03-12)
+## Authoring Cleanup Status (2026-03-16)
 
-The current recommended execution order across the active interface-cleanup lanes is:
+The pre-release authoring cleanup chain should now be read as a **closed sequence**, not as a set
+of competing active lanes:
 
-1. Treat `authoring-surface-and-ecosystem-fearless-refactor-v1` as closeout-only.
-2. Keep `into-element-surface-fearless-refactor-v1` as the main authoring-surface lane until
-   builder/child-pipeline cleanup is done.
-3. Resume `ecosystem-integration-traits-v1` cleanup only after the conversion surface is stable
-   enough that ecosystem helpers do not re-teach old split conversion names.
+1. `authoring-surface-and-ecosystem-fearless-refactor-v1` closed the app/component/advanced lane
+   split and the default teaching surface.
+2. `ecosystem-integration-traits-v1` is now a maintenance closeout lane:
+   the core trait-budget seams are landed and `QueryAdapter` is explicitly deferred for v1.
+3. `into-element-surface-fearless-refactor-v1` is now a closeout / maintenance lane:
+   conversion taxonomy collapse is landed, and the remaining work is raw-seam inventory plus
+   source-gate upkeep.
+4. `authoring-density-reduction-fearless-refactor-v1` is closed:
+   the shorter default-path docs/templates/examples/gates are aligned.
+5. `local-state-architecture-fearless-refactor-v1` is closed as a design-decision lane:
+   `LocalState<T>` remains model-backed for v1.
+6. `local-state-facade-boundary-hardening-v1` is closed:
+   default local-state guidance, explicit raw-model seams, and explicit bridge APIs are now
+   clearly classified.
 
 Practical meaning:
 
-- app/component/advanced tiering is already decided,
-- the remaining "write UI" feel gap is mostly conversion-surface closure,
-- trait-budget follow-up should now bias toward deletion, naming cleanup, and ecosystem helper
-  alignment rather than inventing new authoring vocabulary in parallel.
+- app/component/advanced tiering and the default authoring story are now stable enough to teach,
+- authoring follow-up should stay maintenance- and evidence-driven rather than reopen broad surface
+  redesign by default,
+- the next truly active product work should come from still-open subsystem lanes such as text,
+  font, shadcn alignment, docking, tables, and other editor-grade capability gaps rather than from
+  restarting the already-closed authoring cleanup chain without new evidence.
 
 ## What Fret Is (and Is Not)
 
