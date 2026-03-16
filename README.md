@@ -61,10 +61,11 @@ For new app authors, keep the default authoring model small and explicit:
 
 - `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state, including starter keyed lists,
 - `cx.actions().locals(...)` for most LocalState-first typed UI actions,
+- `.action_payload(...)` plus `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)` for view-owned keyed-row interactions,
 - `cx.actions().transient(...)` when an action must trigger an `App`-only effect in `render()`,
 - `cx.actions().models(...)` only when you intentionally coordinate shared `Model<T>` graphs,
-- `on_activate*` only for local pressable/widget glue.
-- Everything else (`on_action_notify`, single-model aliases, redraw-oriented `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it.
+- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
+- Everything else (`on_action_notify`, single-model aliases, lower-level `cx.actions().payload::<A>()`, redraw-oriented raw `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it.
 - The remaining raw `on_action_notify` examples are cookbook/reference-only host-side integrations (toasts, router availability sync, background scheduling, RAF effects).
 
 Use the onboarding ladder on purpose:
