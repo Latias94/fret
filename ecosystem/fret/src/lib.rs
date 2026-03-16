@@ -723,6 +723,11 @@ pub mod advanced {
         pub use crate::interop::embedded_viewport;
         pub use crate::interop::run_native_with_compat_driver;
     }
+    /// Explicit raw-model local-state hooks kept on the advanced lane.
+    ///
+    /// This keeps `use_state*` discoverable for advanced/manual assembly and intentional
+    /// `Model<T>`-centric code while leaving `fret::app::prelude::*` focused on
+    /// `LocalState<T>` / `cx.state().local*`.
     pub use crate::view::AppUiRawStateExt;
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver};
@@ -3406,6 +3411,11 @@ mod authoring_surface_policy_tests {
         assert!(!advanced_prelude.contains(
             "pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};"
         ));
+        assert!(
+            advanced_prelude
+                .contains("Explicit raw-model local-state hooks kept on the advanced lane.")
+        );
+        assert!(advanced_prelude.contains("while leaving `fret::app::prelude::*` focused on"));
     }
 
     #[test]

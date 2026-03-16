@@ -20,8 +20,10 @@ This lane exists only because the storage-model decision is already closed.
 - **M0**: Met (the lane is opened and indexed as the O1 implementation follow-on).
 - **M1**: Met (the initial surface inventory now classifies the surviving raw-model and bridge
   seams).
-- **M2**: Planned (freeze the exact target boundary wording and patch scope).
-- **M3**: Planned (land the narrowest wording/export/gate hardening batch).
+- **M2**: Met (the target wording now explicitly separates default local-state, advanced raw-model,
+  and explicit bridge seams).
+- **M3**: Met for the initial batch (the narrowest wording/export/gate hardening patch is now
+  landed and verified).
 - **M4**: Planned (close the lane once the boundary is stable).
 
 Execution rule:
@@ -71,6 +73,14 @@ Decision rule:
 - prefer wording/rustdoc/gate clarity before export churn,
 - and only change code placement if wording alone cannot express the boundary honestly.
 
+Current result:
+
+- `ecosystem/fret/src/view.rs` now classifies:
+  - `LocalState<T>` as the default app-facing handle,
+  - `AppUiRawStateExt::use_state*` as the explicit raw-model seam,
+  - and `LocalState::{model, clone_model, *_in, watch_in}` as explicit bridge APIs.
+- `ecosystem/fret/src/lib.rs` now states that `AppUiRawStateExt` lives on the advanced lane.
+
 ## Milestone 3 — Land the smallest hardening batch
 
 Exit target:
@@ -87,6 +97,18 @@ Scope rule:
 - keep the patch narrow,
 - keep first-contact surfaces stable,
 - and avoid mixing this batch with unrelated authoring cleanup.
+
+Current result:
+
+- `ecosystem/fret/src/view.rs` rustdoc is tightened without changing runtime semantics,
+- `ecosystem/fret/src/lib.rs` authoring-surface tests now lock the advanced-lane wording for
+  `AppUiRawStateExt`,
+- `docs/examples/todo-app-golden-path.md` no longer shows `use_state` on a default teaching
+  surface,
+- validation passed via:
+  - `cargo test -p fret --lib local_state_docs_classify_default_and_bridge_surfaces -- --nocapture`
+  - `cargo test -p fret --lib advanced_prelude_reexports_app_facing_view_aliases -- --nocapture`
+  - `python3 tools/gate_no_use_state_in_default_teaching_surfaces.py`
 
 ## Milestone 4 — Close cleanly
 

@@ -23,12 +23,22 @@ Companion docs:
   - `fret::app::prelude::*` vs `fret::advanced::prelude::*`,
   - `tools/gate_no_use_state_in_default_teaching_surfaces.py`.
 - [x] Record the initial classification in `SURFACE_INVENTORY_2026-03-16.md`.
-- [ ] Write the target boundary wording for:
+- [x] Write the target boundary wording for:
   - default app lane,
   - explicit raw-model lane,
   - explicit bridge lane.
-- [ ] Land the smallest docs/rustdoc/source-policy patch batch that makes the three lanes read
+- [x] Land the smallest docs/rustdoc/source-policy patch batch that makes the three lanes read
   consistently.
+  - 2026-03-16 initial batch:
+    - `ecosystem/fret/src/view.rs` now labels `LocalState<T>` as the default app-facing handle and
+      classifies `model()`, `clone_model()`, `*_in(...)`, and `watch_in(...)` as explicit bridge
+      APIs,
+    - `ecosystem/fret/src/lib.rs` now labels `AppUiRawStateExt` as an advanced-lane raw-model
+      seam,
+    - `docs/examples/todo-app-golden-path.md` no longer reintroduces `use_state` in a default
+      teaching surface,
+    - targeted crate tests plus `tools/gate_no_use_state_in_default_teaching_surfaces.py` now pass
+      on the updated wording.
 - [ ] Close the lane once the boundary is stable, or spin out one narrower follow-on if review
   finds a truly separate bounded patch.
 
@@ -50,18 +60,32 @@ Companion docs:
 
 ## M2 — Freeze the target boundary state
 
-- [ ] Decide the contract sentence for each remaining seam family.
-- [ ] Decide which docs/rustdoc surfaces must change first.
-- [ ] Decide whether any export/placement change is actually needed, or whether wording + tests are
+- [x] Decide the contract sentence for each remaining seam family.
+  - 2026-03-16 result:
+    - `LocalState<T>` is the default app-facing local-state handle,
+    - `AppUiRawStateExt::use_state*` is the explicit raw-model seam on the advanced lane,
+    - `LocalState::{model, clone_model, *_in, watch_in}` are explicit bridge APIs.
+- [x] Decide which docs/rustdoc surfaces must change first.
+  - 2026-03-16 result:
+    - start with `ecosystem/fret/src/view.rs`,
+    - then `ecosystem/fret/src/lib.rs`,
+    - then the default teaching surface that still mentioned `use_state`.
+- [x] Decide whether any export/placement change is actually needed, or whether wording + tests are
   enough.
-- [ ] Keep any future reduction path optional rather than implied.
+  - 2026-03-16 result:
+    - wording + source-policy hardening is sufficient for the initial batch,
+    - no export move is needed for the current O1 boundary.
+- [x] Keep any future reduction path optional rather than implied.
+  - 2026-03-16 result:
+    - the lane hardens wording and gates first,
+    - it does not imply deprecation or storage-model reduction from this batch.
 
 ## M3 — Land the narrowest hardening batch
 
-- [ ] Tighten the wording in `ecosystem/fret/src/view.rs` and related public docs if needed.
-- [ ] Add or refresh the narrowest source-policy tests protecting the intended lane split.
-- [ ] Keep `use_state` explicit and advanced-lane only.
-- [ ] Keep default-path docs/templates/examples on `use_local*` / `LocalState<T>`.
+- [x] Tighten the wording in `ecosystem/fret/src/view.rs` and related public docs if needed.
+- [x] Add or refresh the narrowest source-policy tests protecting the intended lane split.
+- [x] Keep `use_state` explicit and advanced-lane only.
+- [x] Keep default-path docs/templates/examples on `use_local*` / `LocalState<T>`.
 
 ## M4 — Close or spin out
 

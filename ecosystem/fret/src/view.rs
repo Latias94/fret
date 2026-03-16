@@ -34,6 +34,16 @@ pub trait View: 'static {
     fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui;
 }
 
+/// Default app-facing handle for view-owned local state.
+///
+/// `LocalState<T>` is the normal local-state story for app code on the `fret::app` lane.
+/// The explicit raw-model and bridge helpers that still live on this type are intentionally
+/// non-default:
+///
+/// - use `cx.state().local*` plus tracked reads for the default app-authoring path,
+/// - use [`AppUiRawStateExt::use_state`] when code intentionally wants a raw `Model<T>` handle,
+/// - use the bridge helpers below only when ownership or helper-context boundaries still require
+///   direct `ModelStore`, `ElementContext`, or `Model<T>` access.
 pub struct LocalState<T> {
     model: Model<T>,
 }
@@ -47,14 +57,26 @@ impl<T> Clone for LocalState<T> {
 }
 
 impl<T> LocalState<T> {
+    /// Expose the underlying `Model<T>` as an explicit bridge.
+    ///
+    /// This exists for advanced/component/hybrid surfaces that intentionally still speak
+    /// `Model<T>`. It is not the default app-authoring path.
     pub fn model(&self) -> &Model<T> {
         &self.model
     }
 
+    /// Clone the underlying `Model<T>` as an explicit bridge.
+    ///
+    /// Prefer staying on `LocalState<T>` for default app code. Reach for this only when a widget,
+    /// helper, or runtime-owned boundary intentionally needs a raw `Model<T>` handle.
     pub fn clone_model(&self) -> Model<T> {
         self.model.clone()
     }
 
+    /// Read this local through an explicit `ModelStore` bridge.
+    ///
+    /// This is for code that already owns `ModelStore` and intentionally needs store-level access.
+    /// Prefer tracked reads on `LocalState<T>` in ordinary render-time app code.
     pub fn read_in<R>(
         &self,
         models: &ModelStore,
@@ -66,6 +88,10 @@ impl<T> LocalState<T> {
         models.read(&self.model, f)
     }
 
+    /// Query the underlying model revision through an explicit `ModelStore` bridge.
+    ///
+    /// This is primarily for advanced transactions, diagnostics, or helper surfaces that already
+    /// operate on `ModelStore`.
     pub fn revision_in(&self, models: &ModelStore) -> Option<u64>
     where
         T: Any,
@@ -73,10 +99,11 @@ impl<T> LocalState<T> {
         models.revision(&self.model)
     }
 
-    /// Clone the current local value through an explicit `ModelStore` read.
+    /// Clone the current local value through an explicit `ModelStore` bridge read.
     ///
     /// This mirrors the render-time `watch(...).value_*` helpers for multi-state transactions that
-    /// still need to read from `ModelStore` inside `cx.actions().models::<A>(...)`.
+    /// still need to read from `ModelStore` inside `cx.actions().models::<A>(...)`. It is not the
+    /// normal render-loop read path for first-contact app code.
     pub fn value_in(&self, models: &ModelStore) -> Option<T>
     where
         T: Any + Clone,
@@ -203,8 +230,11 @@ impl<T> LocalState<T> {
         cx.watch_local(self)
     }
 
-    /// Observe/read this local from helper-heavy `ElementContext` surfaces without dropping down to
-    /// `local.model()`.
+    /// Observe/read this local from helper-heavy `ElementContext` surfaces.
+    ///
+    /// This is an explicit bridge for helpers that already operate on `ElementContext` and would
+    /// otherwise have to drop down to `local.model()`. Prefer `watch(...)` on `AppUi` for the
+    /// default app-authoring path.
     pub fn watch_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
@@ -215,6 +245,7 @@ impl<T> LocalState<T> {
         WatchedState::new(cx, &self.model)
     }
 
+    /// Convenience bridge over [`LocalState::watch_in`] for paint invalidation reads.
     pub fn paint_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
@@ -225,6 +256,7 @@ impl<T> LocalState<T> {
         self.watch_in(cx).paint()
     }
 
+    /// Convenience bridge over [`LocalState::watch_in`] for layout invalidation reads.
     pub fn layout_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
@@ -235,6 +267,7 @@ impl<T> LocalState<T> {
         self.watch_in(cx).layout()
     }
 
+    /// Convenience bridge over [`LocalState::watch_in`] for hit-test invalidation reads.
     pub fn hit_test_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
@@ -543,7 +576,10 @@ pub struct AppUi<'cx, 'a, H: UiHost> {
 
 /// Explicit raw-model state hooks that intentionally stay off the default app authoring surface.
 ///
-/// Import this trait explicitly when advanced code still wants stable callsite-keyed `Model<T>`
+/// This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
+/// `fret::advanced::prelude::*`.
+///
+/// Import it explicitly when advanced code still wants stable callsite-keyed `Model<T>`
 /// allocation rather than the grouped `cx.state().local*` surface.
 pub trait AppUiRawStateExt {
     #[track_caller]
@@ -2270,5 +2306,25 @@ mod tests {
         assert!(
             !api_source.contains("impl AppActivateSurface for fret_ui_ai::TerminalClearButton")
         );
+    }
+
+    #[test]
+    fn local_state_docs_classify_default_and_bridge_surfaces() {
+        let api_source = VIEW_RS_SOURCE
+            .split("\nmod tests {")
+            .next()
+            .expect("view.rs test module marker should exist");
+        assert!(api_source.contains("Default app-facing handle for view-owned local state."));
+        assert!(api_source.contains("Expose the underlying `Model<T>` as an explicit bridge."));
+        assert!(api_source.contains("Clone the underlying `Model<T>` as an explicit bridge."));
+        assert!(api_source.contains("Read this local through an explicit `ModelStore` bridge."));
+        assert!(
+            api_source
+                .contains("Observe/read this local from helper-heavy `ElementContext` surfaces.")
+        );
+        assert!(api_source.contains(
+            "This trait is intentionally omitted from `fret::app::prelude::*` and reexported from"
+        ));
+        assert!(api_source.contains("`fret::advanced::prelude::*`."));
     }
 }
