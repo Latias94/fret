@@ -1,6 +1,6 @@
 ---
 name: fret-material-source-alignment
-description: "This skill should be used when the user asks to \"align Material 3 components\", \"port Material 3 (Expressive)\", \"match MUI/Compose Material behavior\", or \"build a Material design-system layer\" for Fret. It provides a source-of-truth workflow (Material spec + MUI + Compose Material3 + Base UI) that maps changes to the correct Fret layer and locks outcomes with targeted tests and `fretboard diag` scripted repros."
+description: "This skill should be used when the user asks to \"align Material 3 components\", \"port Material 3 (Expressive)\", \"match MUI/Compose Material behavior\", or \"build a Material design-system layer\" for Fret. It provides a source-of-truth workflow that treats Material spec + MUI + Compose Material3 + Base UI as parallel references with explicit axis-based precedence, prefers local `repo-ref/` mirrors when available, and maps changes to the correct Fret layer with targeted tests and `fretboard diag` scripted repros."
 ---
 
 # Material 3 (Expressive) source alignment
@@ -43,6 +43,12 @@ description: "This skill should be used when the user asks to \"align Material 3
   - touch target / hit-testing
 - What is the upstream source of truth for this case?
   - Material 3 guidelines/spec, MUI behavior, Compose Material3 behavior, and/or Base UI headless patterns
+- Which source axis is drifting?
+  - visual chrome / defaults
+  - semantics / state machine / touch behavior
+  - docs page grouping / demo flow
+  - app-facing teaching surface
+- Do we have local `repo-ref/` mirrors for both the MUI side and the Compose Multiplatform core side in this checkout?
 - Which Fret layer should own the change (mechanism vs shared policy/foundation vs recipe)?
 - What regression protection is required: unit test, parity harness case, and/or diag script?
 - Do we need stable `test_id` targets for automation?
@@ -50,9 +56,10 @@ description: "This skill should be used when the user asks to \"align Material 3
 Defaults if unclear:
 
 - Treat Material spec as the primary UX truth.
-- Treat Compose Material3 as the primary reference for non-DOM state machines, semantics, and motion/touch behavior.
-- Treat MUI Material UI as the primary reference for web-facing defaults and composition details.
+- Treat Compose Material3 as the primary reference for non-DOM state machines, semantics, motion/touch behavior, and toolkit-style foundations.
+- Treat MUI Material UI as the primary reference for web-facing defaults, composition details, and browser-facing overlay/focus behavior.
 - Treat Base UI as an additional headless reference for accessibility-first part composition.
+- Prefer local `repo-ref/` mirrors for both MUI and Compose-side source reads when they exist in the checkout; only fall back to upstream docs/source when the local mirror is absent or insufficient for the task at hand.
 - When a mature in-tree shadcn component already solved the same Fret-side mechanism split, use it as an implementation exemplar for layering and gates, not as the visual/taxonomy truth.
 - Treat default-style ownership as a first-class decision: keep recipe defaults for intrinsic component chrome/state layers/slot spacing, and keep page/container negotiation (`fillMaxWidth`, `widthIn/maxWidth`, `flex`, centering, grid placement, `w-full`, `min-w-0`) caller-owned unless upstream makes it part of the component source or default API itself.
 - Treat policy/state machines as `ecosystem/*` unless it is a true mechanism/contract.
@@ -100,7 +107,7 @@ Use these notes to keep the main workflow lean:
 
 When the component belongs to the field family (`TextField`, `Select`, `Autocomplete`, `ExposedDropdown`, `DatePicker`, `TimePicker`), read both before coding.
 
-### 1) Pick the upstream reference stack explicitly
+### 1) Pick the upstream reference stack and precedence explicitly
 
 Use the right source for the right kind of parity:
 
@@ -108,8 +115,18 @@ Use the right source for the right kind of parity:
 - **Compose Material3**: non-DOM state machines, semantics, touch targets, motion/foundation patterns.
 - **MUI Material UI**: web defaults, field/menu/select composition, portal/dismiss/focus edge cases.
 - **Base UI**: accessibility-first headless part composition.
+- **Local repo mirrors when available**: prefer `repo-ref/material-ui` and the local Compose Multiplatform core mirror under `repo-ref/` before browsing upstream docs/repos.
 
-If sources disagree, document the chosen ordering in the change.
+Precedence rule:
+
+- If the user names one upstream family explicitly (`MUI`, `Compose Material3`, `Material Web`, etc.), use that family as the first implementation reference for the relevant axes.
+- If the user asks for generic “Material 3 alignment”, keep the spec as top-level UX intent, then split by axis:
+  - visual chrome / defaults / web composition → MUI first,
+  - semantics / state machine / touch / motion foundations → Compose first,
+  - headless accessibility parts → Base UI as a supporting reference,
+  - docs/demo grouping or public teaching flow → the corresponding upstream docs/demo surface for the chosen family.
+- Do not collapse all disputes into one linear ordering. State which axis you are aligning before editing: `chrome`, `semantics`, `docs surface`, or `teaching surface`.
+- When both MUI and Compose local mirrors exist, inspect both before changing shared Material foundation code.
 
 ### 2) Map the work to the right Fret layer (non-negotiable)
 
@@ -255,7 +272,7 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
 - Gallery harness/pages:
   - `apps/fret-ui-gallery/src/ui/pages/material3/`
   - `apps/fret-ui-gallery/src/ui/snippets/material3/`
-- Optional upstream snapshots: `repo-ref/material-ui`, `repo-ref/base-ui`, `repo-ref/ui`, `repo-ref/primitives`
+- Optional upstream snapshots: `repo-ref/material-ui`, the local Compose Multiplatform core mirror under `repo-ref/` when present, `repo-ref/base-ui`, `repo-ref/ui`, `repo-ref/primitives`
 
 ## Examples
 
@@ -264,7 +281,7 @@ Prefer bounded, fast gates that catch regressions without compiling the entire w
   - Actions:
     - inspect the reference stack note plus the field-family checklist,
     - inspect one Fret-side exemplar before changing code,
-    - choose a source-of-truth ordering (spec + Compose + MUI),
+    - choose a source-of-truth ordering by axis (spec + Compose + MUI),
     - keep overlay/listbox policy in the right ecosystem layer,
     - lock width floor, filtering/typeahead, a11y, and bounds with targeted tests/scripts.
   - Result: parity improvement with regression protection and Fret-consistent layering.

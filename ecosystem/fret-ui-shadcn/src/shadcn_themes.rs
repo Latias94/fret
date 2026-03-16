@@ -642,6 +642,53 @@ pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) 
         .entry("component.label.line_height".to_string())
         .or_insert(14.0);
 
+    // new-york-v4 `Alert` defaults:
+    // - Root uses `px-4 py-3`, `gap-y-0.5`, and `has-[>svg]:gap-x-3`.
+    // - Icon uses `size-4` with `translate-y-0.5`.
+    // - Title inherits `text-sm` (14px) / 20px line-height with `tracking-tight`.
+    // - Description uses `text-sm` (14px) / 20px line-height.
+    // - Action support stays aligned with the current radix/base docs surface (`pr-18`, `top-2`,
+    //   `right-2`).
+    metrics
+        .entry("component.alert.padding_x".to_string())
+        .or_insert(16.0);
+    metrics
+        .entry("component.alert.padding_y".to_string())
+        .or_insert(12.0);
+    metrics
+        .entry("component.alert.gap_x".to_string())
+        .or_insert(12.0);
+    metrics
+        .entry("component.alert.gap_y".to_string())
+        .or_insert(2.0);
+    metrics
+        .entry("component.alert.icon_size".to_string())
+        .or_insert(16.0);
+    metrics
+        .entry("component.alert.icon_offset_y".to_string())
+        .or_insert(2.0);
+    metrics
+        .entry("component.alert.title_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.alert.title_line_height".to_string())
+        .or_insert(20.0);
+    metrics
+        .entry("component.alert.description_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.alert.description_line_height".to_string())
+        .or_insert(20.0);
+    metrics
+        .entry("component.alert.action_padding_right".to_string())
+        .or_insert(72.0);
+    metrics
+        .entry("component.alert.action_top".to_string())
+        .or_insert(8.0);
+    metrics
+        .entry("component.alert.action_right".to_string())
+        .or_insert(8.0);
+
     // new-york-v4 `AlertDialog` defaults:
     // - Title uses `text-lg` (18px) and Tailwind default leading (28px).
     // - Description uses `text-sm` (14px) and Tailwind default leading (20px).
@@ -1650,6 +1697,62 @@ mod tests {
         assert_eq!(
             theme.metric_by_key("component.navigation_menu.viewport.side_offset"),
             Some(fret_core::Px(6.0))
+        );
+    }
+
+    #[test]
+    fn new_york_v4_seeds_alert_metrics() {
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        assert_eq!(
+            cfg.metrics.get("component.alert.padding_x").copied(),
+            Some(16.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("component.alert.padding_y").copied(),
+            Some(12.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("component.alert.gap_x").copied(),
+            Some(12.0)
+        );
+        assert_eq!(cfg.metrics.get("component.alert.gap_y").copied(), Some(2.0));
+        assert_eq!(
+            cfg.metrics.get("component.alert.icon_size").copied(),
+            Some(16.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("component.alert.action_padding_right")
+                .copied(),
+            Some(72.0)
+        );
+
+        let mut app = fret_app::App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let theme = Theme::global(&app);
+        assert_eq!(
+            theme.metric_by_key("component.alert.padding_x"),
+            Some(fret_core::Px(16.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.alert.padding_y"),
+            Some(fret_core::Px(12.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.alert.gap_x"),
+            Some(fret_core::Px(12.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.alert.gap_y"),
+            Some(fret_core::Px(2.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.alert.icon_size"),
+            Some(fret_core::Px(16.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.alert.action_padding_right"),
+            Some(fret_core::Px(72.0))
         );
     }
 

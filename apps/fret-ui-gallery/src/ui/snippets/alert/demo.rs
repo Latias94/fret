@@ -186,57 +186,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
             .into_element(cx)
             .test_id("ui-gallery-alert-demo-success"),
-            shadcn::alert(|cx| {
-                ui::children![
-                    cx;
-                    icon::icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.circle-alert"),
-                    ),
-                    shadcn::AlertTitle::new(
-                        "This is a very long alert title that demonstrates how the component handles extended text content and potentially wraps across multiple lines",
-                    ),
-                ]
-            })
-            .variant(shadcn::AlertVariant::Default)
-            .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
-            .into_element(cx)
-            .test_id("ui-gallery-alert-demo-long-title"),
-            shadcn::alert(|cx| {
-                ui::children![
-                    cx;
-                    icon::icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.circle-alert"),
-                    ),
-                    shadcn::AlertDescription::new(
-                        "This is a very long alert description that demonstrates how the component handles extended text content and potentially wraps across multiple lines.",
-                    ),
-                ]
-            })
-            .variant(shadcn::AlertVariant::Default)
-            .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
-            .into_element(cx)
-            .test_id("ui-gallery-alert-demo-long-description"),
-            shadcn::alert(|cx| {
-                ui::children![
-                    cx;
-                    icon::icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.circle-alert"),
-                    ),
-                    shadcn::AlertTitle::new(
-                        "This is an extremely long alert title that spans multiple lines to demonstrate how the component handles very lengthy headings while maintaining readability and proper text wrapping behavior",
-                    ),
-                    shadcn::AlertDescription::new(
-                        "This is an equally long description that contains detailed information about the alert. It shows how the component can accommodate extensive content while preserving proper spacing, alignment, and readability across different screen sizes and viewport widths.",
-                    ),
-                ]
-            })
-            .variant(shadcn::AlertVariant::Default)
-            .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
-            .into_element(cx)
-            .test_id("ui-gallery-alert-demo-long-combined"),
         ]
     })
     .gap(Space::N4)
