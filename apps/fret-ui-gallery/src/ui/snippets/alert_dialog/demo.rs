@@ -6,23 +6,22 @@ use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
-    let open_for_trigger = open.clone();
-    let open_for_children = open.clone();
 
-    shadcn::AlertDialog::new(open).build(
-        cx,
-        shadcn::Button::new("Show Dialog")
-            .variant(shadcn::ButtonVariant::Outline)
-            .toggle_model(open_for_trigger.clone())
-            .test_id("ui-gallery-alert-dialog-demo-trigger"),
-        shadcn::AlertDialogContent::build(|cx, out| {
+    shadcn::AlertDialog::new(open)
+        .children([
+            shadcn::AlertDialogPart::trigger(shadcn::AlertDialogTrigger::build(
+                shadcn::Button::new("Show Dialog")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-alert-dialog-demo-trigger"),
+            )),
+            shadcn::AlertDialogPart::content(shadcn::AlertDialogContent::build(|cx, out| {
                 out.push(shadcn::AlertDialogHeader::build(|cx, out| {
                         out.push(
                             shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
                         );
                         out.push(
                             shadcn::AlertDialogDescription::new(
-                                "This action cannot be undone. This will permanently delete your account from our servers.",
+                                "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
                             )
                             .into_element(cx),
                         );
@@ -30,19 +29,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx));
                 out.push(shadcn::AlertDialogFooter::build(|cx, out| {
                         out.push(
-                            shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
+                            shadcn::AlertDialogCancel::from_scope("Cancel")
                                 .test_id("ui-gallery-alert-dialog-demo-cancel")
                                 .into_element(cx),
                         );
                         out.push(
-                            shadcn::AlertDialogAction::new("Continue", open_for_children.clone())
+                            shadcn::AlertDialogAction::from_scope("Continue")
                                 .test_id("ui-gallery-alert-dialog-demo-action")
                                 .into_element(cx),
                         );
                     })
                     .into_element(cx));
-        })
-        .test_id("ui-gallery-alert-dialog-demo-content"),
-    )
+            })
+            .test_id("ui-gallery-alert-dialog-demo-content")),
+        ])
+        .into_element(cx)
 }
 // endregion: example

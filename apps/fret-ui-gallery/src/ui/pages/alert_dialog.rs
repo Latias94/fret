@@ -19,8 +19,9 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`AlertDialogContent::size(...)` accepts `AlertDialogContentSize::Default` and `AlertDialogContentSize::Sm`, matching the upstream `size=\"default\" | \"sm\"` surface.",
-        "`AlertDialog::compose()` is the closest shadcn-style root today; the top-level authoring surface still uses a builder/closure bridge instead of a fully nested children API.",
+        "`AlertDialog::children([...])` is the default copyable root path for part-based composition, and `AlertDialogPart` is available on the curated `shadcn` facade so the default import lane stays copyable.",
         "`AlertDialogAction::from_scope(...)` and `AlertDialogCancel::from_scope(...)` keep footer composition close to shadcn docs without threading the same open model through every button.",
+        "`AlertDialogCancel::variant(...)` keeps the destructive example aligned with the upstream ghost-cancel + destructive-action button pairing.",
         "`AlertDialogTitle::new_children(...)` and `AlertDialogDescription::new_children(...)` already support composed or attributed subtree content when string-only labels are not enough.",
     ]);
 
@@ -35,8 +36,8 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Preview mirrors the shadcn docs path after skipping `Installation`: `Demo`, `Usage`, `Basic`, `Small`, `Media`, `Small with Media`, `Destructive`, `RTL`, and `API Reference`.",
         "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
         "Modal semantics follow Radix/Base UI outcomes: outside press does not dismiss, `role=alertdialog` is preserved, and initial focus prefers `AlertDialogCancel` when present.",
-        "`Usage` is the default copyable path; `Parts` remains an advanced adapter lane for explicit root-part ownership.",
-        "Current remaining differences are mostly authoring-surface follow-ups, not layout or dismissal-policy drift.",
+        "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `Parts` remains the explicit adapter lane for portal/overlay ownership.",
+        "Current remaining differences are mostly advanced authoring-surface follow-ups, not layout or dismissal-policy drift.",
     ]);
 
     let api_reference = DocSection::build(cx, "API Reference", api_reference)

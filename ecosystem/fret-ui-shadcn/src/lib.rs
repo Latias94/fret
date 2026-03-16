@@ -274,8 +274,8 @@ pub mod facade {
     pub use crate::alert_dialog::{
         AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
         AlertDialogContentSize, AlertDialogDescription, AlertDialogFooter, AlertDialogHandle,
-        AlertDialogHeader, AlertDialogMedia, AlertDialogOverlay, AlertDialogPortal,
-        AlertDialogTitle, AlertDialogTrigger,
+        AlertDialogHeader, AlertDialogMedia, AlertDialogOverlay, AlertDialogPart,
+        AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
     };
     pub use crate::aspect_ratio::AspectRatio;
     pub use crate::avatar::{

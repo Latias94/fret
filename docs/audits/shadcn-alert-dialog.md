@@ -50,10 +50,17 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: `AlertDialogAction` / `AlertDialogCancel` now provide `from_scope(...)` authoring helpers for
   content-local composition while preserving the explicit `new(label, open)` constructors.
+- Pass: `AlertDialog::children([...])` now provides a root-level part-children surface that is
+  closer to upstream nested children authoring while still lowering into the existing slot-based
+  recipe.
+- Pass: `AlertDialogPart` is now reachable from the curated `facade` import lane, so the default
+  `use fret_ui_shadcn::{facade as shadcn, prelude::*};` teaching path can author
+  `AlertDialog::children([...])` without dropping to `raw::*`.
 - Pass: `AlertDialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
-- Note: Public-surface drift remains at the root authoring surface: Fret still uses a closure/compose
-  root instead of a fully nested children API, but `compose()` is the current recipe-level bridge.
+- Note: Public-surface drift still exists compared with full React/JSX nesting. Fret now supports
+  root-level part children, but it still collects recipe parts explicitly instead of accepting
+  arbitrary nested JSX-like children.
 
 ### Dismissal behavior (safety defaults)
 
@@ -73,11 +80,14 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Pass: Motion matches shadcn's `fade` + `zoom-in-95` / `zoom-out-95` outcomes (best-effort, tick
   driven).
+- Pass: `AlertDialogCancel::variant(...)` now supports the upstream destructive example's
+  ghost-cancel pairing without requiring a lower-level escape hatch.
 
 ## Validation
 
 - `cargo check -p fret-ui-shadcn`
-- `cargo nextest run -p fret-ui-shadcn alert_dialog::tests`
+- `cargo check -p fret-ui-gallery`
+- `cargo test -p fret-ui-shadcn --lib alert_dialog::tests`
 - Contract test: `alert_dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `alert_dialog_open_change_events_complete_without_animation`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
@@ -100,20 +110,32 @@ recipe-layer sugar.
 - Failure mode: `from_scope(...)` panics when rendered outside alert-dialog content so misuse is
   caught early during development.
 
+## Authoring note: `children([...])`
+
+`AlertDialog::children([...])` is now the default copyable root path for first-party examples.
+
+- Scope: ergonomics only; it lowers into `AlertDialog::into_element_parts(...)`.
+- Shape: root-level `AlertDialogPart::{trigger, portal, overlay, content}` adapters keep the part
+  collection explicit while still reading closer to upstream nested children.
+- Default teaching path: first-party examples now prefer
+  `AlertDialog::new_controllable(cx, None, false).children([AlertDialogPart::trigger(...), AlertDialogPart::content(...)])`.
+- Limitation: this is still not a full React-style nested children API; Fret stores deferred recipe
+  parts and assembles them at the final call site.
+
 ## Authoring note: `compose()`
 
 `AlertDialog::compose()` is a recipe-layer bridge for authors who want a more composable part-based
 style than the raw closure root.
 
 - Scope: ergonomics only; it lowers into `AlertDialog::into_element_parts(...)`.
-- Default teaching path: first-party examples now prefer
-  `AlertDialog::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`.
+- Default teaching path: `compose()` is now the explicit builder/escape hatch when callers prefer
+  chained configuration over root-level part collection.
 - Focused follow-up lanes: explicit root-part ownership stays documented through `Parts`, while
   `Detached Trigger` and `Rich Content` remain additional Fret-specific follow-ups instead of
   replacing the default copyable path.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
-- Limitation: this is still not a full React-style nested children API; Fret stores already-built
-  elements and assembles them at the final call site.
+- Limitation: it is still a builder/closure bridge, so `children([...])` is the closer upstream
+  mental model for first-party teaching.
 
 ## Follow-ups (recommended)
 

@@ -232,6 +232,9 @@ fn ui_builder_nested_surfaces_compile<H: UiHost>(
         );
 
         let _ = primitives::BreadcrumbSeparator::new().ui().into_element(cx);
+        let _ = primitives::BreadcrumbSeparator::new()
+            .children(|cx| [cx.text("/")])
+            .into_element(cx);
         let _ = primitives::BreadcrumbEllipsis::new().ui().into_element(cx);
         let _ = primitives::BreadcrumbPage::new("Page")
             .ui()
@@ -444,7 +447,14 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = AlertDialogAction::new("x", alert_dialog_open.clone())
         .ui()
         .build();
-    let _ = AlertDialogCancel::new("x", alert_dialog_open).ui().build();
+    let _ = AlertDialogCancel::new("x", alert_dialog_open.clone())
+        .ui()
+        .build();
+    let _ = AlertDialogCancel::new("x", alert_dialog_open.clone())
+        .variant(shadcn::ButtonVariant::Ghost)
+        .ui()
+        .build();
+    let _ = shadcn::AlertDialogPart::<fret_ui_app::App>::portal(shadcn::AlertDialogPortal::new());
     let _ = SheetContent::new(Vec::new()).ui().p_4().build();
     let _ = SheetHeader::new(Vec::new()).ui().build();
     let _ = SheetFooter::new(Vec::new()).ui().build();
