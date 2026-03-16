@@ -185,10 +185,7 @@ impl MarkdownDemoView {
             return;
         };
 
-        let pending = cx
-            .watch_model(&self.st.pending_anchor)
-            .layout()
-            .value_or_default();
+        let pending = self.st.pending_anchor.layout(cx).value_or_default();
         let Some(fragment) = pending.as_deref() else {
             return;
         };
@@ -382,14 +379,8 @@ $$
         let theme = cx.theme_snapshot();
         let padding_md = theme.metric_token("metric.padding.md");
 
-        let wrap_enabled = cx
-            .watch_model(&self.st.wrap_code)
-            .layout()
-            .value_or_default();
-        let cap_enabled = cx
-            .watch_model(&self.st.cap_code_height)
-            .layout()
-            .value_or_default();
+        let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();
+        let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();
 
         let mut components = markdown::MarkdownComponents::<KernelApp>::default();
         components.on_link_activate = Some(Self::on_link_activate(self.st.pending_anchor.clone()));

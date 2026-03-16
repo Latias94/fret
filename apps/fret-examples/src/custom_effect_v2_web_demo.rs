@@ -200,8 +200,8 @@ impl CustomEffectV2WebDriver {
         model: &Model<Vec<f32>>,
         default: f32,
     ) -> f32 {
-        cx.watch_model(model)
-            .paint()
+        model
+            .paint_in(cx)
             .read_ref(|v| v.first().copied().unwrap_or(default))
             .ok()
             .unwrap_or(default)
@@ -212,8 +212,8 @@ impl CustomEffectV2WebDriver {
         model: &Model<Option<Arc<str>>>,
         default: &str,
     ) -> String {
-        cx.watch_model(model)
-            .paint()
+        model
+            .paint_in(cx)
             .read_ref(|v| v.as_ref().map(|s| s.to_string()))
             .ok()
             .flatten()
@@ -401,7 +401,7 @@ impl CustomEffectV2WebDriver {
         let effect = pack.and_then(|p| p.program.id());
         let input_image = pack.and_then(|p| p.input_image);
 
-        let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);
+        let enabled = controls.enabled.paint_in(cx).value_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
         let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
         let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
@@ -417,10 +417,7 @@ impl CustomEffectV2WebDriver {
             .clamp(1.0, 4.0) as u32;
         let lens_corner_radius_px =
             Self::watch_first_f32(cx, &controls.lens_corner_radius_px, 24.0).clamp(0.0, 64.0);
-        let debug_input = cx
-            .watch_model(&controls.debug_input)
-            .paint()
-            .value_or(false);
+        let debug_input = controls.debug_input.paint_in(cx).value_or(false);
 
         let radius = Px(lens_corner_radius_px);
 

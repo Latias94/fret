@@ -1629,11 +1629,17 @@ mod authoring_surface_policy_tests {
                 "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
                 "cx.actions().payload::<act::ToggleCodeBlockExpand>().models({",
+                "let pending = self.st.pending_anchor.layout(cx).value_or_default();",
+                "let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();",
+                "let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();",
             ],
             &[
                 "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.on_action_notify_transient::<act::RefreshRemoteImages>",
                 "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>",
+                "cx.watch_model(&self.st.pending_anchor)",
+                "cx.watch_model(&self.st.wrap_code)",
+                "cx.watch_model(&self.st.cap_code_height)",
             ],
         );
     }
@@ -1695,6 +1701,66 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_WEB_DEMO,
+            &[
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
+                "cx.watch_model(&controls.debug_input)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
+            &[
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
+                "cx.watch_model(&controls.debug_input)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
+            &[
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
+                "cx.watch_model(&controls.debug_input)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
+            &[
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
+                "cx.watch_model(&controls.debug_input)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
             &[
                 "let enabled = st.enabled.layout_in(cx).value_or(true);",
@@ -1705,6 +1771,18 @@ mod authoring_surface_policy_tests {
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let show_user0_probe = cx.watch_model(&st.show_user0_probe)",
                 "let use_non_filterable_user1 = cx.watch_model(&st.use_non_filterable_user1)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V1_DEMO,
+            &[
+                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
             ],
         );
 
@@ -1722,6 +1800,46 @@ mod authoring_surface_policy_tests {
                 "let theme = cx.watch_model(&self.st.theme).layout().value_or(Option::<Arc<str>>::None);",
                 "let retro_dither = cx.watch_model(&self.st.retro_dither).layout().value_or(true);",
             ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            LIQUID_GLASS_DEMO,
+            &[
+                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "let show_fake = st.show_fake.layout_in(cx).value_or(true);",
+                "let custom_v3_source_group = st.custom_v3_source_group.layout_in(cx).value_or(false);",
+                "let use_backdrop = st.use_backdrop.layout_in(cx).value_or(true);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let show_fake = cx.watch_model(&st.show_fake).layout().value_or(true);",
+                "let custom_v3_source_group = cx",
+                "let use_backdrop = cx.watch_model(&st.use_backdrop).layout().value_or(true);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            LAUNCHER_UTILITY_WINDOW_DEMO,
+            &[
+                "let always_on_top = st.always_on_top.layout_in(cx).value_or(false);",
+                "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+            ],
+            &[
+                "let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);",
+                "cx.watch_model(&st.status)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            WINDOW_HIT_TEST_PROBE_DEMO,
+            &["let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));"],
+            &["cx.watch_model(&st.status)"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
+            &["let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));"],
+            &["cx.watch_model(&st.status)"],
         );
     }
 

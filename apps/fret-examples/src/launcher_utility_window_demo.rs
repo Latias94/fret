@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::advanced::prelude::*;
-use fret::component::prelude::*;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;
@@ -189,11 +188,8 @@ fn view(
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
-    let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);
-    let status = cx
-        .watch_model(&st.status)
-        .layout()
-        .value_or_else(|| Arc::from("Idle"));
+    let always_on_top = st.always_on_top.layout_in(cx).value_or(false);
+    let status = st.status.layout_in(cx).value_or_else(|| Arc::from("Idle"));
 
     let effective_style = cx
         .app

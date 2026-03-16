@@ -151,8 +151,8 @@ impl CustomEffectV2IdentityWebDriver {
         model: &Model<Vec<f32>>,
         default: f32,
     ) -> f32 {
-        cx.watch_model(model)
-            .paint()
+        model
+            .paint_in(cx)
             .read_ref(|v| v.first().copied().unwrap_or(default))
             .ok()
             .unwrap_or(default)
@@ -163,8 +163,8 @@ impl CustomEffectV2IdentityWebDriver {
         model: &Model<Option<Arc<str>>>,
         default: &str,
     ) -> String {
-        cx.watch_model(model)
-            .paint()
+        model
+            .paint_in(cx)
             .read_ref(|v| v.as_ref().map(|s| s.to_string()))
             .ok()
             .flatten()
@@ -327,16 +327,13 @@ impl CustomEffectV2IdentityWebDriver {
         let effect = pack.and_then(|p| p.effect);
         let input_image = pack.and_then(|p| p.input_image);
 
-        let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);
+        let enabled = controls.enabled.paint_in(cx).value_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
         let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
         let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
         let uv_span = Self::watch_first_f32(cx, &controls.uv_span, 1.0).clamp(0.05, 1.0);
         let mix01 = Self::watch_first_f32(cx, &controls.mix01, 0.65).clamp(0.0, 1.0);
-        let debug_input = cx
-            .watch_model(&controls.debug_input)
-            .paint()
-            .value_or(false);
+        let debug_input = controls.debug_input.paint_in(cx).value_or(false);
 
         let radius = Px(24.0);
 

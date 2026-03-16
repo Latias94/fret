@@ -41,6 +41,12 @@ Companion docs:
       declarative/component layer,
     - `app::prelude::*` should stay unchanged while `component` / `advanced` helper surfaces adopt
       the shorter read path.
+  - 2026-03-16 third pass:
+    - representative advanced/example adoption cleanup now includes custom-effect, liquid-glass,
+      markdown, launcher utility-window, hit-test probe, and the custom-effect-v2 web/material
+      demo family,
+    - the remaining work is mostly breadth cleanup on other first-party `ElementContext` examples
+      or larger editor-style surfaces rather than another shared-surface design question.
 - [ ] Land the smallest justified tracked-read reduction.
   - Constraints:
     - keep invalidation intent explicit,

@@ -187,8 +187,8 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    cx.watch_model(model)
-        .layout()
+    model
+        .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
         .ok()
         .unwrap_or(default)
@@ -636,18 +636,15 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
     let use_backdrop_model = st.use_backdrop.clone();
     let use_dither_model = st.use_dither.clone();
 
-    let show_fake = cx.watch_model(&st.show_fake).layout().value_or(true);
-    let show_warp = cx.watch_model(&st.show_warp).layout().value_or(true);
-    let show_warp_v2 = cx.watch_model(&st.show_warp_v2).layout().value_or(false);
-    let show_custom_v2 = cx.watch_model(&st.show_custom_v2).layout().value_or(false);
-    let show_custom_v3 = cx.watch_model(&st.show_custom_v3).layout().value_or(false);
-    let custom_v3_pair = cx.watch_model(&st.custom_v3_pair).layout().value_or(false);
-    let custom_v3_source_group = cx
-        .watch_model(&st.custom_v3_source_group)
-        .layout()
-        .value_or(false);
-    let show_inspector = cx.watch_model(&st.show_inspector).layout().value_or(true);
-    let animate = cx.watch_model(&st.animate).layout().value_or(true);
+    let show_fake = st.show_fake.layout_in(cx).value_or(true);
+    let show_warp = st.show_warp.layout_in(cx).value_or(true);
+    let show_warp_v2 = st.show_warp_v2.layout_in(cx).value_or(false);
+    let show_custom_v2 = st.show_custom_v2.layout_in(cx).value_or(false);
+    let show_custom_v3 = st.show_custom_v3.layout_in(cx).value_or(false);
+    let custom_v3_pair = st.custom_v3_pair.layout_in(cx).value_or(false);
+    let custom_v3_source_group = st.custom_v3_source_group.layout_in(cx).value_or(false);
+    let show_inspector = st.show_inspector.layout_in(cx).value_or(true);
+    let animate = st.animate.layout_in(cx).value_or(true);
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
 
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 16.0);
@@ -676,8 +673,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
     let custom_v3_bevel_angle_deg = watch_first_f32(cx, &st.custom_v3_bevel_angle_deg, 45.0);
     let custom_v3_bevel_secondary = watch_first_f32(cx, &st.custom_v3_bevel_secondary, 1.0);
 
-    let use_backdrop = cx.watch_model(&st.use_backdrop).layout().value_or(true);
-    let use_dither = cx.watch_model(&st.use_dither).layout().value_or(true);
+    let use_backdrop = st.use_backdrop.layout_in(cx).value_or(true);
+    let use_dither = st.use_dither.layout_in(cx).value_or(true);
     let mode = if use_backdrop {
         EffectMode::Backdrop
     } else {
