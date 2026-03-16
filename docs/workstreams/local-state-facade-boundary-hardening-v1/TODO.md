@@ -1,12 +1,13 @@
 # Local-State Facade Boundary Hardening v1 — TODO
 
-Status: active narrow implementation lane
+Status: closed / maintenance lane
 Last updated: 2026-03-16
 
 Companion docs:
 
 - `DESIGN.md`
 - `MILESTONES.md`
+- `CLOSEOUT_AUDIT_2026-03-16.md`
 - `SURFACE_INVENTORY_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
@@ -39,8 +40,12 @@ Companion docs:
       teaching surface,
     - targeted crate tests plus `tools/gate_no_use_state_in_default_teaching_surfaces.py` now pass
       on the updated wording.
-- [ ] Close the lane once the boundary is stable, or spin out one narrower follow-on if review
+- [x] Close the lane once the boundary is stable, or spin out one narrower follow-on if review
   finds a truly separate bounded patch.
+  - 2026-03-16 result:
+    - `CLOSEOUT_AUDIT_2026-03-16.md` closes the lane as closed / maintenance,
+    - no narrower follow-on opens under current evidence,
+    - and future reduction work must reopen through a separate bounded lane.
 
 ## M0 — Open the lane correctly
 
@@ -89,10 +94,16 @@ Companion docs:
 
 ## M4 — Close or spin out
 
-- [ ] Record the closeout once wording, exports, and gates align.
-- [ ] If a remaining patch is still needed, spin it into a narrower lane with concrete code/gate
+- [x] Record the closeout once wording, exports, and gates align.
+  - 2026-03-16 result:
+    - `CLOSEOUT_AUDIT_2026-03-16.md` now records the final read,
+    - the lane is now closed / maintenance by default.
+- [x] If a remaining patch is still needed, spin it into a narrower lane with concrete code/gate
   scope.
-- [ ] Do not let this TODO turn into another open-ended authoring ergonomics backlog.
+  - 2026-03-16 result:
+    - no remaining patch is required right now,
+    - future seam reduction must reopen through a separate bounded lane if needed later.
+- [x] Do not let this TODO turn into another open-ended authoring ergonomics backlog.
 
 ## Standing rules
 

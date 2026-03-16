@@ -1,6 +1,6 @@
 # Local-State Facade Boundary Hardening v1 — Design
 
-Status: active narrow implementation lane (O1 follow-on; no storage-model refactor)
+Status: closed / maintenance lane (initial O1 hardening batch landed)
 Last updated: 2026-03-16
 
 Related:
@@ -10,6 +10,7 @@ Related:
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_SURFACE_PLAYBOOK.md`
+- `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`
@@ -20,7 +21,7 @@ Related:
 
 ---
 
-## 0) Why this lane exists
+## 0) Why this lane existed
 
 `local-state-architecture-fearless-refactor-v1` is now closed on **O1**:
 
@@ -38,6 +39,12 @@ What remains is implementation hardening:
 
 This is intentionally narrower than the closed architecture lane.
 It is not allowed to reopen the storage-model question by accident.
+
+Closeout update on 2026-03-16:
+
+- the initial O1 hardening batch is now landed,
+- `CLOSEOUT_AUDIT_2026-03-16.md` closes this lane as closed / maintenance,
+- and no narrower follow-on is required under current evidence.
 
 ---
 
@@ -200,6 +207,12 @@ Avoid larger code motion unless a smaller wording/gate patch cannot express the 
 Close this lane once the boundary is stable.
 Only spin out another lane if review finds a narrower code-level change that is real, bounded, and
 not just deferred architecture anxiety.
+
+Current result:
+
+- the initial wording/gate batch is landed,
+- the closeout audit now records that wording + source-policy hardening was sufficient,
+- and the lane closes without opening another immediate follow-on.
 
 ---
 

@@ -6,6 +6,7 @@ Related:
 
 - Design: `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`
 - TODO: `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`
+- Closeout audit: `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Surface inventory: `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`
 - Local-state architecture closeout: `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `use_state` policy draft: `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_POLICY_DECISION_DRAFT.md`
@@ -24,12 +25,14 @@ This lane exists only because the storage-model decision is already closed.
   and explicit bridge seams).
 - **M3**: Met for the initial batch (the narrowest wording/export/gate hardening patch is now
   landed and verified).
-- **M4**: Planned (close the lane once the boundary is stable).
+- **M4**: Met (the lane is now explicitly closed after the initial hardening batch).
 
 Execution rule:
 
 - treat this as boundary hardening, not another ergonomics expansion lane,
-- and do not reopen storage-model questions from inside this tracker.
+- do not reopen storage-model questions from inside this tracker,
+- and now read this file as the historical record of the O1 facade hardening closeout rather than
+  as an active queue.
 
 ---
 
@@ -124,3 +127,10 @@ Definition of done:
 - explicit raw-model seams are clearly advanced,
 - bridge APIs are classified rather than ambiguous,
 - and no storage-model redesign has been smuggled back in.
+
+Current result:
+
+- `CLOSEOUT_AUDIT_2026-03-16.md` now records the final closeout read,
+- the lane is now closed / maintenance,
+- no further export move or storage-level change is required from this tracker,
+- and future work must reopen only through a new narrower lane if fresh evidence appears.

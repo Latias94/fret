@@ -42,7 +42,7 @@ Unless a document says otherwise:
   - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Local-state architecture follow-on (closed decision lane; reopen only with fresh cross-surface evidence): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
-- Local-state facade boundary hardening (active narrow implementation lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`
+- Local-state facade boundary hardening (closed maintenance lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
@@ -141,9 +141,10 @@ now taught as `LocalState` + view runtime + typed actions.
   - Purpose: record why the long-term `LocalState<T>` contract stays model-backed in v1, keep
     `use_state` as the explicit raw-model seam, and name the evidence required before reopening a
     narrower storage-model lane.
-- Local-state facade boundary hardening (active narrow follow-on):
+- Local-state facade boundary hardening (closed narrow follow-on):
   - Workstream: `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`
   - Inventory: `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`
+  - Closeout: `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
   - Purpose: translate the O1 decision into a hardened public facade by classifying `use_state`,
     `LocalState::{model, clone_model}`, `LocalState::*_in(...)`, and helper-context bridge
     surfaces without changing the storage model.
