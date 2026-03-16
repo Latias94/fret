@@ -321,7 +321,7 @@ fn view(
     let card = shadcn::card(|cx| {
         ui::children![cx;
             header,
-            shadcn::card_content(|cx| ui::children![cx; content]),
+            shadcn::card_content(|cx| ui::single(cx, content)),
         ]
     })
     .ui()

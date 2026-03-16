@@ -131,11 +131,13 @@ Key points:
 - `ui::*` constructors return `UiBuilder<T>` (a patchable builder surface).
 - Apply layout/chrome refinement via fluent methods (`px_2()`, `gap(Space::N2)`, `rounded_md()`, ...).
 - Convert into `AnyElement` at the boundary via `.into_element(cx)`.
+- If a render root or wrapper closure only needs to late-land one typed child, prefer
+  `ui::single(cx, child)` over `ui::children![cx; child].into()`.
 - If a local helper actually reads state, emits text/layout nodes, or otherwise needs runtime
   access, give it `cx: &mut UiCx<'_>`.
 - If a local helper is only a pure page shell around already-typed children, prefer
   `fn page(...) -> impl UiChild` and let `render(...)` late-land it through
-  `ui::children![cx; page(...)]`.
+  `ui::single(cx, page(...))`.
 - If you have a patchable component type (implements `UiPatchTarget`), you can opt into the same fluent
   authoring style with `.ui()`.
 - Most `ui::*` layout constructors accept children through `IntoUiElement<H>`, so you can pass `UiBuilder` values
@@ -144,10 +146,12 @@ Key points:
 Minimal pattern:
 
 ```rust
-let header = ui::h_flex(|_cx| [ui::text("Hello")])
-    .gap(Space::N2)
-    .px_3()
-    .into_element(cx);
+let header = ui::single(
+    cx,
+    ui::h_flex(|_cx| [ui::text("Hello")])
+        .gap(Space::N2)
+        .px_3(),
+);
 ```
 
 ### C) Iterator helpers for child collection

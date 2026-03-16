@@ -68,8 +68,8 @@ impl View for TodoDemoView {
             ]
         });
 
-        let todos = cx.state().watch(&todos_state).layout().value_or_default();
-        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
+        let todos = todos_state.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
@@ -77,8 +77,7 @@ impl View for TodoDemoView {
 
         let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
             .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx)
-            .attach_semantics(
+            .a11y(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
                     .test_id(TEST_ID_PROGRESS)
@@ -157,11 +156,12 @@ impl View for TodoDemoView {
                     ]
                 }),
                 shadcn::card_content(|cx| {
-                    ui::children![cx;
+                    ui::single(
+                        cx,
                         ui::v_flex(|cx| ui::children![cx; input_row, rows, note])
                             .gap(Space::N4)
-                            .w_full()
-                    ]
+                            .w_full(),
+                    )
                 }),
             ]
         })
@@ -211,8 +211,7 @@ impl View for TodoDemoView {
         });
 
         cx.actions()
-            .payload::<act::Toggle>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
@@ -222,27 +221,26 @@ impl View for TodoDemoView {
             });
 
         cx.actions()
-            .payload::<act::Remove>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Remove, Vec<TodoRow>>(&todos_state, |rows, id| {
                 let before = rows.len();
                 rows.retain(|row| row.id != id);
                 rows.len() != before
             });
 
-        ui::children![cx; todo_page(theme, card)].into()
+        ui::single(cx, todo_page(theme, card))
     }
 }
 
 fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
     ui::container(move |cx| {
-        ui::children![
-            cx;
+        ui::single(
+            cx,
             ui::v_flex(move |cx| ui::children![cx; content])
                 .w_full()
                 .h_full()
                 .justify_center()
-                .items_center()
-        ]
+                .items_center(),
+        )
     })
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)

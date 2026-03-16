@@ -385,12 +385,8 @@ impl View for TodoView {
             ]
         });
 
-        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
-        let filter_value = cx
-            .state()
-            .watch(&filter_state)
-            .layout()
-            .value_or(TodoFilter::All);
+        let draft_value = draft_state.layout(cx).value_or_default();
+        let filter_value = filter_state.layout(cx).value_or(TodoFilter::All);
 
         let add_enabled = !draft_value.trim().is_empty();
 
@@ -450,8 +446,7 @@ impl View for TodoView {
         );
 
         cx.actions()
-            .payload::<act::Toggle>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
@@ -501,7 +496,7 @@ impl View for TodoView {
             },
         );
 
-        let tip_nonce_value = cx.state().watch(&tip_nonce_state).paint().value_or(0);
+        let tip_nonce_value = tip_nonce_state.paint(cx).value_or(0);
         let tip_handle = cx.data().query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
                 #[cfg(not(target_arch = "wasm32"))]
                 std::thread::sleep(Duration::from_millis(150));
@@ -626,7 +621,7 @@ __PALETTE_BUTTON__
                         shadcn::card_description("View runtime + typed actions + selector + query (v1)."),
                     ]
                 }),
-                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_content(|cx| ui::single(cx, content)),
             ]
         })
         .ui()
@@ -638,7 +633,7 @@ __PALETTE_BUTTON__
         .max_w(Px(520.0))
         ;
 
-        ui::children![cx; todo_page(theme, card)].into()
+        ui::single(cx, todo_page(theme, card))
     }
 }
 
@@ -646,14 +641,14 @@ fn todo_page(
     theme: ThemeSnapshot,
     content: impl UiChild,
 ) -> impl UiChild {
-    ui::container(move |cx| ui::children![cx;
+    ui::container(move |cx| ui::single(
+        cx,
         ui::v_flex(|cx| ui::children![cx; content])
             .w_full()
             .h_full()
             .justify_center()
-            .items_center()
-            ,
-    ])
+            .items_center(),
+    ))
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .w_full()
@@ -767,20 +762,21 @@ impl View for HelloView {{
             *v = v.saturating_add(1);
         }});
 
-        ui::v_flex(|cx| {{
-            ui::children![cx;
-                shadcn::Label::new("Hello, world!"),
-                cx.text(format!("Clicks: {{click_count_value}}")),
-                shadcn::Button::new("Click me").action(act::Click),
+        ui::single(
+            cx,
+            ui::v_flex(|cx| {{
+                ui::children![cx;
+                    shadcn::Label::new("Hello, world!"),
+                    cx.text(format!("Clicks: {{click_count_value}}")),
+                    shadcn::Button::new("Click me").action(act::Click),
 __PALETTE_BUTTON__
-            ]
-        }})
-        .size_full()
-        .gap(Space::N4)
-        .items_center()
-        .justify_center()
-        .into_element(cx)
-        .into()
+                ]
+            }})
+            .size_full()
+            .gap(Space::N4)
+            .items_center()
+            .justify_center(),
+        )
     }}
 }}
 
@@ -899,8 +895,8 @@ impl View for TodoView {
             ]
         });
 
-        let todos = cx.state().watch(&todos_state).layout().value_or_default();
-        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
+        let todos = todos_state.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
         let add_enabled = !draft_value.trim().is_empty();
@@ -944,8 +940,7 @@ impl View for TodoView {
         });
 
         cx.actions()
-            .payload::<act::Toggle>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
@@ -1014,7 +1009,7 @@ __ADD_BTN_DEF__
                         header_actions,
                     ]
                 }),
-                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_content(|cx| ui::single(cx, content)),
             ]
         })
         .ui()
@@ -1035,7 +1030,7 @@ __PALETTE_BUTTON__
         .justify_center()
         .items_center();
 
-        ui::children![cx; todo_page(theme, content)].into()
+        ui::single(cx, todo_page(theme, content))
     }
 }
 
@@ -1043,7 +1038,7 @@ fn todo_page(
     theme: ThemeSnapshot,
     content: impl UiChild,
 ) -> impl UiChild {
-    ui::container(|cx| ui::children![cx; content])
+    ui::container(|cx| ui::single(cx, content))
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
@@ -1304,6 +1299,7 @@ cargo run --release
 
 - Edit UI in `src/main.rs`
 - Use `ui::children![cx; ...]` to build heterogeneous child lists without call-site `.into_element(cx)` noise.
+- Use `ui::single(cx, child)` when a render root or wrapper closure only needs to late-land one typed child.
 - When rendering dynamic lists, prefer `ui::for_each_keyed(cx, items, |item| id, |item| ...)` to keep identity stable without dropping back to `v_flex_build(...)`.
 "#
     )
@@ -1400,7 +1396,7 @@ mod tests {
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("shadcn::card(|cx| {"));
         assert!(src.contains("shadcn::card_header(|cx| {"));
-        assert!(src.contains("shadcn::card_content(|cx| ui::children![cx; content])"));
+        assert!(src.contains("shadcn::card_content(|cx| ui::single(cx, content))"));
         assert!(src.contains("shadcn::card_title(\"Todo\")"));
         assert!(src.contains(
             "shadcn::card_description(\"View runtime + typed actions + selector + query (v1).\")"
@@ -1416,8 +1412,12 @@ mod tests {
         assert!(
             src.contains("cx.actions()\n            .local_set::<act::FilterAll, TodoFilter>(")
         );
-        assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
-        assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
+        assert!(src.contains(
+            "cx.actions()\n            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>("
+        ));
+        assert!(src.contains(
+            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {"
+        ));
         assert!(src.contains("cx.data().selector("));
         assert!(src.contains("cx.data().query("));
         assert!(src.contains("query::{QueryKey, QueryPolicy, QueryState, QueryStatus},"));
@@ -1427,7 +1427,7 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("ui::children![cx; todo_page(theme, card)].into()"));
+        assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
         assert!(!src.contains("let card = card.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
@@ -1476,7 +1476,7 @@ mod tests {
         assert!(src.contains("cx.actions().local_update::<act::Click, u32>"));
         assert!(!src.contains("cx.on_action_notify_models::<act::Click>"));
         assert!(!src.contains("cx.use_state::<u32>()"));
-        assert!(src.contains(".into_element(cx)"));
+        assert!(src.contains("ui::single("));
         assert!(!src.contains("decl_style::container_props"));
     }
 
@@ -1502,7 +1502,7 @@ mod tests {
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains("shadcn::card(|cx| {"));
         assert!(src.contains("shadcn::card_header(|cx| {"));
-        assert!(src.contains("shadcn::card_content(|cx| ui::children![cx; content])"));
+        assert!(src.contains("shadcn::card_content(|cx| ui::single(cx, content))"));
         assert!(src.contains("shadcn::card_title(\"Simple Todo\")"));
         assert!(src.contains("shadcn::card_description("));
         assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
@@ -1512,13 +1512,17 @@ mod tests {
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
         assert!(src.contains(".submit_action(act::Add)"));
         assert!(!src.contains(".submit_command(act::Add.into())"));
-        assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
-        assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
+        assert!(src.contains(
+            "cx.actions()\n            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>("
+        ));
+        assert!(src.contains(
+            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {"
+        ));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("ui::children![cx; todo_page(theme, content)].into()"));
+        assert!(src.contains("ui::single(cx, todo_page(theme, content))"));
         assert!(!src.contains("let content = content.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, content).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
@@ -1582,7 +1586,7 @@ mod tests {
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains(
-            "When rendering dynamic lists, prefer `ui::for_each_keyed(cx, items, |item| id, |item| ...)`"
+            "Use `ui::single(cx, child)` when a render root or wrapper closure only needs to late-land one typed child."
         ));
         assert!(simple.contains("prefer `LocalState<Vec<_>>` + payload actions"));
         assert!(simple.contains("Read tracked state near the top of `render()`"));

@@ -177,7 +177,7 @@ impl View for DropShadowBasicsView {
                         ),
                     ]
                 }),
-                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_content(|cx| ui::single(cx, content)),
             ]
         })
         .ui()

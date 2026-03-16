@@ -294,7 +294,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         ui::children![
             cx;
             header,
-            shadcn::card_content(|cx| ui::children![cx; content]),
+            shadcn::card_content(|cx| ui::single(cx, content)),
         ]
     })
     .ui()

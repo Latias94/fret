@@ -63,8 +63,8 @@ impl View for SimpleTodoV2TargetView {
             ]
         });
 
-        let todos = cx.state().watch(&todos_state).layout().value_or_default();
-        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
+        let todos = todos_state.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
@@ -150,11 +150,12 @@ impl View for SimpleTodoV2TargetView {
                     ]
                 }),
                 shadcn::card_content(|cx| {
-                    ui::children![cx;
+                    ui::single(
+                        cx,
                         ui::v_flex(|cx| ui::children![cx; input_row, rows, note])
                             .gap(Space::N4)
-                            .w_full()
-                    ]
+                            .w_full(),
+                    )
                 }),
             ]
         })
@@ -204,8 +205,7 @@ impl View for SimpleTodoV2TargetView {
         });
 
         cx.actions()
-            .payload::<act::Toggle>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
@@ -215,8 +215,7 @@ impl View for SimpleTodoV2TargetView {
             });
 
         cx.actions()
-            .payload::<act::Remove>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Remove, Vec<TodoRow>>(&todos_state, |rows, id| {
                 let before = rows.len();
                 rows.retain(|row| row.id != id);
                 rows.len() != before

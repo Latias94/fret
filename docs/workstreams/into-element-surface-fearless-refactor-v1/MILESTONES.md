@@ -385,12 +385,12 @@ Exit criteria:
 - the same page-shell cleanup now also reaches the scaffold generation lane:
   `apps/fretboard/src/scaffold/templates.rs` now generates both `todo` and `simple-todo` page
   helpers as `impl UiChild`, drops helper-local `cx` from `todo_page(...)`, and lands those page
-  shells at the render root through `ui::children![cx; todo_page(...)]` in the emitted templates.
+  shells at the render root through `ui::single(cx, todo_page(...))` in the emitted templates.
 - the same first-contact cleanup now also reaches the onboarding and counter samples:
   `apps/fret-cookbook/examples/hello.rs::hello_page(...)` and
   `apps/fret-examples/src/hello_counter_demo.rs::hello_counter_page(...)` now both stay on
   `impl UiChild`, drop helper-local `cx`, and let `render(...)` land them through
-  `ui::children![cx; ...]` instead of helper-local `.into_element(cx)`.
+  `ui::single(cx, ...)` instead of helper-local `.into_element(cx)`.
 - the same page-shell cleanup now also reaches the shared cookbook scaffold:
   `apps/fret-cookbook/src/scaffold.rs::{centered_page,centered_page_background,centered_page_muted}`
   now accept `IntoUiElement<H>` directly, keep `AnyElement` only as the named final page-root

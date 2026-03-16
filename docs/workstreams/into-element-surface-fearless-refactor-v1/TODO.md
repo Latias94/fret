@@ -411,7 +411,7 @@ Implementation note on 2026-03-13:
 - `apps/fretboard/src/scaffold/templates.rs::{todo_page(...),simple_todo::todo_page(...)}`
   now follows that same rule: page helpers stay on `impl UiChild`, drop helper-local `cx`, and
   let the generated `todo` / `simple-todo` templates land those helpers through
-  `ui::children![cx; todo_page(...)]` instead of helper-local `.into_element(cx)`.
+  `ui::single(cx, todo_page(...))` instead of helper-local `.into_element(cx)`.
 - `apps/fret-cookbook/src/scaffold.rs::{centered_page,centered_page_background,centered_page_muted}`
   now follows the same input-side rule: the shared cookbook page shell accepts
   `IntoUiElement<H>` directly, keeps `AnyElement` only as the named final page-root landing seam,

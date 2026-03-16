@@ -220,20 +220,18 @@ mod authoring_surface_policy_tests {
             "fn hello_page(render_marker: &'static str, count_value: u32) -> impl UiChild"
         ));
         assert!(!HELLO_EXAMPLE.contains("fn hello_page(cx: &mut UiCx<'_>,"));
-        assert!(
-            HELLO_EXAMPLE
-                .contains("ui::children![cx; hello_page(render_marker, count_value)].into()")
-        );
+        assert!(HELLO_EXAMPLE.contains("ui::single(cx, hello_page(render_marker, count_value))"));
         assert!(HELLO_EXAMPLE.contains("cx.state().local::<u32>()"));
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
-        assert!(SIMPLE_TODO_EXAMPLE.contains(".payload::<act::Toggle>()"));
         assert!(
-            SIMPLE_TODO_EXAMPLE
-                .contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {")
+            SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
         );
+        assert!(SIMPLE_TODO_EXAMPLE.contains(
+            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {"
+        ));
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));

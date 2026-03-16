@@ -12,8 +12,8 @@ use fret_core::{
     TextOverflow, TextSpan, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, EffectLayerProps, FlexProps, InsetStyle, LayoutStyle, Length,
-    Overflow, PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
+    AnyElement, ContainerProps, EffectLayerProps, Elements, FlexProps, InsetStyle, LayoutStyle,
+    Length, Overflow, PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
     ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::scroll::ScrollHandle;
@@ -39,6 +39,18 @@ where
         out.push(IntoUiElement::into_element(child, cx));
     }
     out
+}
+
+/// Late-lands a single typed child into `Ui` / `Elements`.
+///
+/// This is the narrow default-path helper for render roots or wrapper closures that only need to
+/// return one already-typed child without spelling `ui::children![cx; child].into()`.
+#[track_caller]
+pub fn single<H: UiHost, T: IntoUiElement<H>>(
+    cx: &mut ElementContext<'_, H>,
+    child: T,
+) -> Elements {
+    Elements::from(IntoUiElement::into_element(child, cx))
 }
 
 /// Extension helpers for `*_build` child sinks.
@@ -1916,6 +1928,20 @@ mod tests {
         })
         .test_id("rows")
         .into_element(cx)
+    }
+
+    // Compile-only: ensure a single typed child can be late-landed into `Ui` / `Elements`
+    // without spelling `ui::children![cx; child].into()` at the call site.
+    #[allow(dead_code)]
+    fn single_accepts_typed_child_roots<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> fret_ui::element::Elements {
+        single(
+            cx,
+            container(|_cx| [text("root child")])
+                .w_full()
+                .test_id("single-root"),
+        )
     }
 
     // Compile-only: ensure low-level raw `ContainerProps` roots can still keep children on the

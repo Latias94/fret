@@ -186,12 +186,12 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
 - the remaining canonical compare-set roots now follow the same rule too:
   `apps/fret-examples/src/todo_demo.rs::todo_page(...)` and the generated helpers in
   `apps/fretboard/src/scaffold/templates.rs` now stay on `impl UiChild`, drop helper-local `cx`,
-  and let `render(...)` land them through `ui::children![cx; todo_page(...)]`, so `todo_demo`
+  and let `render(...)` land them through `ui::single(cx, todo_page(...))`, so `todo_demo`
   plus both todo templates no longer teach `todo_page(...).into_element(cx).into()` as the
   default root story.
 - `apps/fret-examples/src/hello_counter_demo.rs::hello_counter_page(...)` now also follows that
   same default-app root posture: the helper itself now stays on `impl UiChild`, and `render(...)`
-  lands it through `ui::children![cx; hello_counter_page(...)]`, so the first-contact counter demo
+  lands it through `ui::single(cx, hello_counter_page(...))`, so the first-contact counter demo
   does not keep inline root wrapper chrome inside `render(...)`.
 - the onboarding cookbook `hello.rs` sample now follows the same posture through
   `hello_page(...) -> impl UiChild`, so the default first-contact example no longer keeps a

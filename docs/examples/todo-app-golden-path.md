@@ -220,7 +220,8 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` / `cx.actions().payload::<A>().locals(...)` over `cx.actions().models(...)`.
+  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` /
+    `cx.actions().payload_locals::<A>(...)` over `cx.actions().models(...)`.
 
 ## Actions (UI -> app logic)
 
@@ -243,10 +244,11 @@ impl View for TodoView {
         let draft = cx.state().local::<String>();
         cx.actions().local_set::<act::Add, String>(&draft, String::new());
 
-        shadcn::Button::new("Add")
-            .action(act::Add)
-            .into_element(cx)
-            .into()
+        ui::single(
+            cx,
+            shadcn::Button::new("Add")
+                .action(act::Add),
+        )
     }
 }
 ```
@@ -265,7 +267,7 @@ Default helper rule on this path:
 - give a helper `&mut UiCx<'_>` only when the helper body actually needs runtime/context access,
 - if a helper is only wrapping already-typed children into page chrome, prefer
   `fn page(...) -> impl UiChild` and late-land it from `render(...)` with
-  `ui::children![cx; page(...)]`.
+  `ui::single(cx, page(...))`.
 
 If a product intentionally needs the raw model-backed hook, keep that explicit and advanced:
 
@@ -315,7 +317,7 @@ High-level sketch:
 use fret::query::{QueryKey, QueryPolicy, QueryState};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = handle.watch(cx).layout().value_or_default();
+let state: QueryState<T> = handle.layout(cx).value_or_default();
 ```
 
 To invalidate/refetch from app logic:

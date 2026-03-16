@@ -471,7 +471,7 @@ fn view(
         ui::children![
             cx;
             shadcn::card_header(|cx| ui::children![cx; header, size_controls, info]),
-            shadcn::card_content(|cx| ui::children![cx; content]),
+            shadcn::card_content(|cx| ui::single(cx, content)),
         ]
     })
     .ui()
