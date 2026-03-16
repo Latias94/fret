@@ -15,8 +15,8 @@ example implementations in `repo-ref/ui`.
 ## Upstream references (source of truth)
 
 - Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/card.mdx`
-- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/card.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/examples/base/card-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/card-image.tsx`, `repo-ref/ui/apps/v4/examples/base/card-rtl.tsx`
+- Component implementation: `repo-ref/ui/apps/v4/registry/bases/base/ui/card.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-with-form.tsx`
 
 ## Fret implementation
 
@@ -28,9 +28,10 @@ example implementations in `repo-ref/ui`.
 
 - Pass: `Card::new([...])` plus `CardHeader` / `CardContent` / `CardFooter` / `CardTitle` / `CardDescription` / `CardAction` covers the common shadcn authoring path.
 - Pass: Free helpers (`card`, `card_header`, `card_title`, `card_description`, `card_action`, `card_content`, `card_footer`) now cover the copyable “children-style” path without forcing every example to allocate slot structs manually.
+- Pass: `CardTitle::new_children(...)` plus `card_title_children(...)` now cover the missing title-side composable children lane for rich/selectable text and caller-owned composition roots.
 - Pass: Builder-first helpers such as `CardBuild`, `CardHeader::build(...)`, and `CardFooter::build(...)` still cover advanced composition when a slot needs extra policy (for example footer direction/gap).
 - Pass: `CardSize::Sm` and per-slot layout/style refinements provide the expected recipe-level sizing hooks.
-- Note: Recommended authoring pattern is: free helpers for the common path, slot builders for advanced per-slot policy, and root-level `refine_layout(...)` for call-site-owned width constraints.
+- Note: Recommended authoring pattern is: free helpers for the common path, slot builders for advanced per-slot policy, root-level `refine_layout(...)` for call-site-owned width constraints, and title/description children helpers only when the compact text lane is genuinely too narrow.
 
 ### Layout & geometry (shadcn parity)
 
@@ -43,12 +44,18 @@ example implementations in `repo-ref/ui`.
 
 ### Gallery / docs parity
 
-- Pass: the gallery already mirrors the upstream docs path first: `Demo`, `Usage`, `Size`, `Image`, and `RTL`.
+- Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Size`, `Image`, `RTL`, and `API Reference`.
+- Pass: `Rich Title (Fret)` now follows `API Reference` as the copyable app-facing teaching lane for `card_title_children(...)`, so rich title content does not require teaching `CardTitle::build(...)` directly.
 - Pass: `Compositions`, `CardContent`, and `Meeting Notes` remain explicit Fret follow-ups after the upstream path, because they lock regression coverage for slot permutations and intrinsic-size behavior.
+- Pass: `API Reference` now spells out the Fret public surface explicitly, including caller-owned width, `CardFooter` direction/gap ownership, and the `CardTitle` children lane.
 - Pass: the `footer only` drift was a recipe-owned `CardFooter` width-budget issue, not a page-level `w-full` / `min-w-0` problem in the gallery composition.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn card_footer_row_requests_fill_width_and_min_w_0 --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn card_title_children --status-level fail`
 - `cargo nextest run -p fret-ui-shadcn card --status-level fail`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app card_page_uses_typed_doc_sections_for_app_facing_snippets`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app card_rich_title_snippet_prefers_copyable_card_title_children_helper`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`

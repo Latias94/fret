@@ -25,6 +25,7 @@
     "tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json",
     "tools/diag-scripts/ui-gallery-card-content-button-hitbox-not-stretched.json",
     "tools/diag-scripts/ui-gallery-card-demo-screenshot.json",
+    "tools/diag-scripts/ui-gallery-card-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
     "tools/diag-scripts/ui-gallery-chart-accessibility-layer-keyboard.json",
     "tools/diag-scripts/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",

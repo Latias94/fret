@@ -3044,6 +3044,18 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-card-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-card-memory-retained-analysis",
       "path": "tools/diag-scripts/ui-gallery/memory/ui-gallery-card-memory-retained-analysis.json",
       "required_capabilities": [

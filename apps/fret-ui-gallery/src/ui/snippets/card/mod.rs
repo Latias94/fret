@@ -5,4 +5,5 @@ pub mod image;
 pub mod meeting_notes;
 pub mod rtl;
 pub mod size;
+pub mod title_children;
 pub mod usage;

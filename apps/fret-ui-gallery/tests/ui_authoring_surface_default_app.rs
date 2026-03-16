@@ -3722,6 +3722,7 @@ fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/card/meeting_notes.rs",
             "src/ui/snippets/card/rtl.rs",
             "src/ui/snippets/card/size.rs",
+            "src/ui/snippets/card/title_children.rs",
             "src/ui/snippets/card/usage.rs",
         ],
         &[
@@ -3741,6 +3742,27 @@ fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn card_rich_title_snippet_prefers_copyable_card_title_children_helper() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/card/title_children.rs",
+        &[
+            "shadcn::card_title_children(|cx|",
+            "cx.styled_text(rich_title_text())",
+            "icon::icon(cx, IconId::new_static(\"lucide.sparkles\"))",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("CardTitle::build("),
+        "src/ui/snippets/card/title_children.rs reintroduced the lower-level `CardTitle::build(...)` teaching surface",
+    );
+    assert!(
+        !normalized.contains("CardTitle::new_children("),
+        "src/ui/snippets/card/title_children.rs should prefer the app-facing `shadcn::card_title_children(...)` helper",
+    );
+}
+
+#[test]
 fn card_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/card.rs",
@@ -3750,6 +3772,8 @@ fn card_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Size\", size)",
             "DocSection::build(cx, \"Image\", image)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Rich Title (Fret)\", rich_title)",
             "DocSection::build(cx, \"Compositions\", compositions)",
             "DocSection::build(cx, \"CardContent\", card_content_inline_button)",
             "DocSection::build(cx, \"Meeting Notes\", meeting_notes)",
@@ -3761,6 +3785,8 @@ fn card_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Size\", size)",
             "DocSection::new(\"Image\", image)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Rich Title (Fret)\", rich_title)",
             "DocSection::new(\"Compositions\", compositions)",
             "DocSection::new(\"CardContent\", card_content_inline_button)",
             "DocSection::new(\"Meeting Notes\", meeting_notes)",

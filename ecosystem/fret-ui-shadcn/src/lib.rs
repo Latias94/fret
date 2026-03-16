@@ -307,6 +307,7 @@ pub mod facade {
         Card, CardAction, CardContent, CardDescription, CardFooter, CardFooterDirection,
         CardHeader, CardSize, CardTitle, card, card_action, card_content, card_description,
         card_description_children, card_footer, card_header, card_sized, card_title,
+        card_title_children,
     };
     pub use crate::carousel::{
         Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayApi,
