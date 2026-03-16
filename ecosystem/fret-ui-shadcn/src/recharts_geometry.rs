@@ -2,6 +2,7 @@
 //!
 //! This module is not part of the public shadcn surface; it exists to support golden-driven
 //! parity tests and to concentrate any Recharts-specific math in one place.
+#![allow(dead_code)]
 
 use fret_core::{Px, Rect};
 

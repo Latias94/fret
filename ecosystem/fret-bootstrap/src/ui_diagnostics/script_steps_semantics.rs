@@ -81,8 +81,6 @@ pub(super) fn handle_focus_step(
     true
 }
 
-use super::*;
-
 pub(super) fn handle_activate_step(
     svc: &mut UiDiagnosticsService,
     app: &mut App,

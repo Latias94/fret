@@ -144,6 +144,7 @@ pub(crate) fn vec_main_with_inline_start<T>(
     }
 }
 
+#[cfg(test)]
 #[inline]
 pub(crate) fn concat_inline_start_end<T>(
     dir: LayoutDirection,
@@ -218,22 +219,6 @@ pub(crate) fn inset_style_set_inline_start(inset: &mut InsetStyle, dir: LayoutDi
         LayoutDirection::Rtl => {
             inset.right = Some(px).into();
             inset.left = None.into();
-        }
-    }
-}
-
-#[inline]
-pub(crate) fn layout_margin_inline_start_px(
-    layout: &mut fret_ui::element::LayoutStyle,
-    dir: LayoutDirection,
-    px: Px,
-) {
-    match dir {
-        LayoutDirection::Ltr => {
-            layout.margin.left = fret_ui::element::MarginEdge::Px(px);
-        }
-        LayoutDirection::Rtl => {
-            layout.margin.right = fret_ui::element::MarginEdge::Px(px);
         }
     }
 }

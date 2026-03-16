@@ -289,6 +289,8 @@ pub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any> {
 }
 
 pub type WatchedLocal<'cx, 'm, 'a, H, T> = WatchedState<'cx, 'm, 'a, H, T>;
+#[allow(dead_code)]
+/// Legacy alias retained for model-first terminology in downstream code.
 pub type WatchedModel<'cx, 'm, 'a, H, T> = WatchedState<'cx, 'm, 'a, H, T>;
 
 impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
