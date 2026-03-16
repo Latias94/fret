@@ -139,14 +139,14 @@ now taught as `LocalState` + view runtime + typed actions.
 - Canonical startup/import reminder:
   - app-facing imports live under `use fret::app::prelude::*;`
   - default native startup uses `FretApp::new(...).window(...).view::<MyView>()?.run()`
-- Per-item/payload dispatch (advanced): `fret::payload_actions!` + `cx.actions().payload::<A>()` / `cx.actions().payload_locals::<A>(...)` (use when unit actions are not enough).
+- Keyed row payloads (default when rows are view-owned): `fret::payload_actions!` + `ui::for_each_keyed(...)` + `.action_payload(...)`, with `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)` handling the row write path.
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
   - `cx.actions().locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
-  - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
   - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
-- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - activation-only bridge via explicit `use fret::app::AppActivateExt as _;`; `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` remain explicit aliases and raw `on_activate*` helper families stay component/advanced-oriented.
-  - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
+  - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
+- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - use this only when a control exposes activation glue rather than a narrower widget-owned app-facing helper. Import `use fret::app::AppActivateExt as _;` explicitly for that bridge; `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` remain explicit aliases and raw `on_activate*` helper families stay component/advanced-oriented.
+  - Treat raw `on_action` / `on_action_notify`, single-model aliases, and the lower-level `cx.actions().payload::<A>()` chain as advanced shorthands; keep first-contact docs and templates focused on the default entrypoints above plus keyed-row payload binding. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
 - Surface taxonomy:
   - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons
   - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples
