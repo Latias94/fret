@@ -1,6 +1,8 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::ImageId;
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -9,6 +11,8 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 use crate::avatar::{Avatar, AvatarFallback, AvatarImage};
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::test_id::attach_test_id;
+
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 
 /// A compact stock/asset ticker block inspired by Kibo's shadcn blocks.
 ///
@@ -25,6 +29,8 @@ pub struct Ticker {
     price: Arc<str>,
     change: Arc<str>,
     change_kind: TickerChangeKind,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
@@ -40,6 +46,8 @@ impl std::fmt::Debug for Ticker {
             .field("price", &self.price)
             .field("change", &self.change)
             .field("change_kind", &self.change_kind)
+            .field("action", &self.action)
+            .field("action_payload", &self.action_payload.is_some())
             .field("on_activate", &self.on_activate.is_some())
             .field("test_id", &self.test_id)
             .field("chrome", &self.chrome)
@@ -66,6 +74,8 @@ impl Ticker {
             price: Arc::<str>::from(""),
             change: Arc::<str>::from(""),
             change_kind: TickerChangeKind::default(),
+            action: None,
+            action_payload: None,
             on_activate: None,
             test_id: None,
             chrome: ChromeRefinement::default(),
@@ -96,6 +106,28 @@ impl Ticker {
 
     pub fn change_kind(mut self, kind: TickerChangeKind) -> Self {
         self.change_kind = kind;
+        self
+    }
+
+    /// Bind a stable action ID to this ticker (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized ticker actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`Ticker::action_payload`], but computes the payload lazily on activation.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -172,6 +204,12 @@ impl Ticker {
                 )
                 .refine_layout(LayoutRefinement::default().merge(self.layout))
                 .children([icon, symbol_text, price_text, change_text]);
+            if let Some(action) = self.action {
+                button = button.action(action);
+            }
+            if let Some(payload) = self.action_payload {
+                button = button.action_payload_factory(payload);
+            }
             if let Some(on_activate) = self.on_activate {
                 button = button.on_activate(on_activate);
             }
