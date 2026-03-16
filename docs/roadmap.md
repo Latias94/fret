@@ -38,19 +38,22 @@ Active tracker highlights:
 - Authoring surface + ecosystem reset (pre-release, no-compat cleanup): `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md`.
 - Ecosystem integration traits budget (install/catalog/router/docking/query seams): `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`, `docs/workstreams/ecosystem-integration-traits-v1/TODO.md`, `docs/workstreams/ecosystem-integration-traits-v1/MILESTONES.md`, `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`.
 - Into-element surface cleanup (follow-on to the authoring reset; conversion vocabulary collapse): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
-- Post-v1 authoring density reduction (current active happy-path refactor lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`.
+- Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
+- Local-state architecture follow-on (next state-boundary decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`.
 
 Current pre-release authoring cleanup sequence:
 
 1. `authoring-surface-and-ecosystem-fearless-refactor-v1` shrinks the app/component/advanced lanes and the default teaching surface.
 2. `ecosystem-integration-traits-v1` locks the ecosystem trait budget for install/catalog/router/docking/query seams.
 3. `into-element-surface-fearless-refactor-v1` finishes the remaining conversion-surface cleanup so curated first-party examples, including shadcn/UI Gallery surfaces, converge on one authoring vocabulary.
-4. `authoring-density-reduction-fearless-refactor-v1` is the next active post-v1 lane: reduce the
-   highest-frequency default-path ceremony (tracked reads, LocalState-first selector/query reads,
-   and any remaining repeated keyed/list noise) without reopening the lane taxonomy or widening the
-   app prelude.
+4. `authoring-density-reduction-fearless-refactor-v1` closes the shorter default-path teaching
+   surface and locks it with docs/gates.
+5. `local-state-architecture-fearless-refactor-v1` is a separate follow-on decision lane:
+   investigate the long-term storage/ownership contract behind `LocalState<T>` only after the
+   broader authoring-surface cleanup chain is already closed.
 
-Treat these four trackers as one continuous execution chain rather than unrelated cleanup notes.
+Treat the first four trackers as one closed execution chain rather than unrelated cleanup notes.
+Treat item 5 as a separate architecture lane, not as a continuation of default-path sugar growth.
 
 Current execution stance on 2026-03-16:
 
@@ -63,18 +66,23 @@ Current execution stance on 2026-03-16:
 - `into-element-surface-fearless-refactor-v1` = closeout / maintenance lane:
   the broad conversion-surface migration is now landed; remaining work is explicit seam inventory
   and source-gate maintenance.
-- `authoring-density-reduction-fearless-refactor-v1` = active post-v1 fearless-refactor lane:
-  improve the boring path where users still feel unnecessary ceremony, but do not use that pressure
-  to reopen app/component/advanced, `LocalState` architecture, or prelude/root budgeting.
+- `authoring-density-reduction-fearless-refactor-v1` = closeout / maintenance lane:
+  the shorter default-path teaching surface is landed; remaining work is wording/gate maintenance
+  rather than another helper-growth pass.
+- `local-state-architecture-fearless-refactor-v1` = next active decision lane:
+  freeze the long-term `LocalState<T>` invariants and option set before adding any further state
+  sugar or reopening runtime-level state refactors.
 
 Recommended order from here:
 
 1. keep the remaining ecosystem-trait docs/export cleanup and the conversion-surface
    inventories/gates aligned as maintenance rather than reopening broad redesign,
-2. run `authoring-density-reduction-fearless-refactor-v1` against the canonical compare set plus
-   at least one non-todo medium surface before minting any new shared helper/API,
-3. only reopen the longer-horizon LocalState architecture question separately if the remaining pain
-   is no longer explainable as default-path density.
+2. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
+   wording drift,
+3. run `local-state-architecture-fearless-refactor-v1` as a contract-first decision lane before
+   minting any new state-surface sugar,
+4. only reopen code-level local-state refactors after that lane chooses a direction and names the
+   proof surfaces + gates.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 
