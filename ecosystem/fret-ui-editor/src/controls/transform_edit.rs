@@ -24,8 +24,9 @@ use crate::controls::{
     NumericValidateFn, OnVecEditAxisOutcome, Vec3Edit, VecEditAxis, VecEditAxisOutcome,
     VecEditOptions,
 };
-use crate::primitives::{EditorDensity, NumericPresentation};
+use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::input_group::derived_test_id;
+use crate::primitives::{EditorDensity, NumericPresentation};
 
 fn derived_id_source(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> {
     base.map(|id| Arc::<str>::from(format!("{}.{}", id.as_ref(), suffix)))
@@ -553,10 +554,7 @@ fn section_row<H: UiHost>(
     content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
-    let label_fg = theme
-        .color_by_key("muted-foreground")
-        .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_token("foreground"));
+    let label_fg = editor_muted_foreground(theme);
     let badge_bg = theme
         .color_by_key("muted")
         .or_else(|| theme.color_by_key("component.card.bg"))
@@ -700,10 +698,7 @@ fn section_col<H: UiHost>(
     content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
-    let label_fg = theme
-        .color_by_key("muted-foreground")
-        .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_token("foreground"));
+    let label_fg = editor_muted_foreground(theme);
 
     cx.flex(
         FlexProps {
@@ -763,10 +758,7 @@ fn section_col_with_link<H: UiHost>(
     let mut col = section_col(cx, label, content);
     if show_link {
         let theme = Theme::global(&*cx.app);
-        let label_fg = theme
-            .color_by_key("muted-foreground")
-            .or_else(|| theme.color_by_key("muted_foreground"))
-            .unwrap_or_else(|| theme.color_token("foreground"));
+        let label_fg = editor_muted_foreground(theme);
 
         col = cx.flex(
             FlexProps {

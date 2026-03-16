@@ -25,6 +25,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
+use crate::primitives::colors::{editor_accent, editor_foreground};
 use crate::primitives::icons::editor_icon_with;
 use crate::primitives::input_group::{
     editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
@@ -769,9 +770,9 @@ fn enum_select_row<H: UiHost>(
     let (bg_hover, fg_hover, fg) = {
         let theme = Theme::global(&*cx.app);
         (
-            theme.color_token("accent"),
+            editor_accent(theme),
             theme.color_token("accent-foreground"),
-            theme.color_token("foreground"),
+            editor_foreground(theme),
         )
     };
 

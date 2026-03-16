@@ -37,6 +37,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use super::{TextField, TextFieldAssistiveSemantics, TextFieldOptions};
+use crate::primitives::colors::{editor_accent, editor_foreground, editor_muted_foreground};
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 use crate::primitives::style::EditorStyle;
 
@@ -317,7 +318,7 @@ impl TextAssistField {
                     children.push(panel);
                 } else if show_inline_empty_label {
                     let mut props = TextProps::new(empty_label.clone());
-                    props.color = Some(Theme::global(&*cx.app).color_token("muted-foreground"));
+                    props.color = Some(editor_muted_foreground(Theme::global(&*cx.app)));
                     let empty = cx.text_props(props);
                     let empty = if let Some(test_id) = empty_test_id.as_ref() {
                         empty.test_id(test_id.clone())
@@ -377,10 +378,10 @@ fn render_text_assist_panel<H: UiHost>(
         (
             style.density,
             resolve_editor_popup_surface_chrome(theme, is_overlay_surface),
-            theme.color_token("accent"),
+            editor_accent(theme),
             theme.color_token("accent-foreground"),
-            theme.color_token("foreground"),
-            theme.color_token("muted-foreground"),
+            editor_foreground(theme),
+            editor_muted_foreground(theme),
         )
     };
 

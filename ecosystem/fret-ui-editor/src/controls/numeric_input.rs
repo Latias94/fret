@@ -22,8 +22,10 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
+use crate::primitives::colors::{
+    editor_invalid_border, editor_invalid_foreground, editor_muted_foreground,
+};
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id, editor_icon_segment,
     editor_joined_input_frame_segments_with_overrides, editor_text_segment,
@@ -273,10 +275,7 @@ where
             },
             move |cx| {
                 let theme = Theme::global(&*cx.app);
-                let affix_color = theme
-                    .color_by_key("muted-foreground")
-                    .or_else(|| theme.color_by_key("muted_foreground"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let affix_color = editor_muted_foreground(theme);
                 let mut segments = Vec::new();
 
                 if let Some(prefix) = prefix.clone() {
@@ -450,10 +449,7 @@ where
                 let mut segments = Vec::new();
                 let affix_color = {
                     let theme = Theme::global(&*cx.app);
-                    theme
-                        .color_by_key("muted-foreground")
-                        .or_else(|| theme.color_by_key("muted_foreground"))
-                        .unwrap_or_else(|| theme.color_token("foreground"))
+                    editor_muted_foreground(theme)
                 };
 
                 if let Some(suffix) = suffix.clone() {
@@ -489,12 +485,7 @@ where
 
                 let error_border = {
                     let theme = Theme::global(&*cx.app);
-                    theme
-                        .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
-                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER))
-                        .or_else(|| theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
-                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                        .unwrap_or_else(|| theme.color_token("destructive"))
+                    editor_invalid_border(theme)
                 };
 
                 let mut icon = editor_icon_segment(
@@ -518,10 +509,7 @@ where
 
         let error_color = {
             let theme = Theme::global(&*cx.app);
-            theme
-                .color_by_key(EditorTokenKeys::CONTROL_INVALID_FG)
-                .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                .unwrap_or_else(|| theme.color_token("destructive"))
+            editor_invalid_foreground(theme)
         };
         let show_inline_error = matches!(
             error_display,

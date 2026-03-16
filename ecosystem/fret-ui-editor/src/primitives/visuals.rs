@@ -10,7 +10,10 @@ use fret_ui::Theme;
 use super::{
     EditorTokenKeys,
     chrome::ResolvedEditorFrameChrome,
-    colors::{editor_accent, editor_border, editor_muted_foreground},
+    colors::{
+        editor_accent, editor_border, editor_invalid_border, editor_invalid_foreground,
+        editor_muted_foreground,
+    },
 };
 
 /// Shared editor-grade widget visuals policy.
@@ -278,22 +281,11 @@ fn mix(a: Color, b: Color, t: f32) -> Color {
 
 impl<'a> EditorWidgetVisuals<'a> {
     fn control_invalid_fg(&self) -> Color {
-        self.theme
-            .color_by_key(EditorTokenKeys::CONTROL_INVALID_FG)
-            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-            .unwrap_or_else(|| self.theme.color_token("destructive"))
+        editor_invalid_foreground(self.theme)
     }
 
     fn control_invalid_border(&self) -> Color {
-        self.theme
-            .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
-            .or_else(|| {
-                self.theme
-                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
-            })
-            .or_else(|| self.theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
-            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-            .unwrap_or_else(|| self.theme.color_token("destructive"))
+        editor_invalid_border(self.theme)
     }
 
     fn control_invalid_bg(&self, base: Color, border: Color) -> Color {

@@ -12,6 +12,7 @@ use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
     NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
+use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
@@ -328,10 +329,7 @@ where
                             },
                             move |cx| {
                                 let theme = Theme::global(&*cx.app);
-                                let affix_color = theme
-                                    .color_by_key("muted-foreground")
-                                    .or_else(|| theme.color_by_key("muted_foreground"))
-                                    .unwrap_or_else(|| theme.color_token("foreground"));
+                                let affix_color = editor_muted_foreground(theme);
                                 let divider = visuals.border;
                                 let value_text_el = cx.text_props(TextProps {
                                     layout: LayoutStyle {

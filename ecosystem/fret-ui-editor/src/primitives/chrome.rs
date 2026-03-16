@@ -11,6 +11,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use super::EditorTokenKeys;
+use super::colors::editor_muted_foreground;
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
@@ -373,7 +374,7 @@ pub(crate) fn resolve_editor_text_area_field_style(
         }),
         corner_radii: Corners::all(resolved.radius),
         text_color: resolved.text_color,
-        placeholder_color: theme.color_token("muted-foreground"),
+        placeholder_color: editor_muted_foreground(theme),
         selection_color: resolved.selection_color,
         caret_color: resolved.text_color,
         preedit_bg_color: Color {

@@ -37,6 +37,22 @@ pub(crate) fn editor_focus_ring(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("primary"))
 }
 
+pub(crate) fn editor_invalid_foreground(theme: &Theme) -> Color {
+    theme
+        .color_by_key(EditorTokenKeys::CONTROL_INVALID_FG)
+        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+        .unwrap_or_else(|| theme.color_token("destructive"))
+}
+
+pub(crate) fn editor_invalid_border(theme: &Theme) -> Color {
+    theme
+        .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
+        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER))
+        .or_else(|| theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
+        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
+        .unwrap_or_else(|| theme.color_token("destructive"))
+}
+
 pub(crate) fn editor_border(theme: &Theme) -> Color {
     theme
         .color_by_key(EditorTokenKeys::TEXT_FIELD_BORDER)
@@ -62,8 +78,8 @@ mod tests {
     use fret_ui::{Theme, ThemeConfig};
 
     use super::{
-        editor_accent, editor_border, editor_focus_ring, editor_foreground,
-        editor_muted_foreground, editor_subtle_bg,
+        editor_accent, editor_border, editor_focus_ring, editor_foreground, editor_invalid_border,
+        editor_invalid_foreground, editor_muted_foreground, editor_subtle_bg,
     };
     use crate::primitives::EditorTokenKeys;
 
@@ -96,6 +112,14 @@ mod tests {
                 EditorTokenKeys::TEXT_FIELD_BORDER.to_string(),
                 "#3b4758".to_string(),
             );
+            cfg.colors.insert(
+                EditorTokenKeys::CONTROL_INVALID_FG.to_string(),
+                "#ffd3d6".to_string(),
+            );
+            cfg.colors.insert(
+                EditorTokenKeys::CONTROL_INVALID_BORDER.to_string(),
+                "#c76f77".to_string(),
+            );
             cfg.colors
                 .insert("foreground".to_string(), "#ffffff".to_string());
             cfg.colors
@@ -121,6 +145,14 @@ mod tests {
         assert_eq!(
             editor_focus_ring(theme),
             Color::from_srgb_hex_rgb(0x7f_ae_e8)
+        );
+        assert_eq!(
+            editor_invalid_foreground(theme),
+            Color::from_srgb_hex_rgb(0xff_d3_d6)
+        );
+        assert_eq!(
+            editor_invalid_border(theme),
+            Color::from_srgb_hex_rgb(0xc7_6f_77)
         );
         assert_eq!(editor_border(theme), Color::from_srgb_hex_rgb(0x3b_47_58));
         assert_eq!(
@@ -163,6 +195,25 @@ mod tests {
         assert_eq!(
             editor_muted_foreground(theme),
             Color::from_srgb_hex_rgb(0x9e_ab_bc)
+        );
+    }
+
+    #[test]
+    fn editor_invalid_border_falls_back_to_numeric_error_lane() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors.insert(
+                EditorTokenKeys::NUMERIC_ERROR_BORDER.to_string(),
+                "#d06a6a".to_string(),
+            );
+            theme.apply_config_patch(&cfg);
+        });
+
+        let theme = Theme::global(&app);
+        assert_eq!(
+            editor_invalid_border(theme),
+            Color::from_srgb_hex_rgb(0xd0_6a_6a)
         );
     }
 }

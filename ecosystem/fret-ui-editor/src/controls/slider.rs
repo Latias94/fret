@@ -14,6 +14,7 @@ use crate::controls::numeric_input::{
     NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::EditorTokenKeys;
+use crate::primitives::colors::{editor_accent, editor_border};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_frame,
@@ -561,7 +562,7 @@ where
                 let pressed = st.pressed;
                 let focused = st.focused;
 
-                let accent = theme.color_token("accent");
+                let accent = editor_accent(theme);
                 let disabled_alpha = if interactive_enabled { 1.0 } else { 0.55 };
 
                 let mut track_bg = theme
@@ -577,8 +578,7 @@ where
                     .unwrap_or_else(|| theme.color_token("background"));
                 let thumb_border = theme
                     .color_by_key("component.slider.thumb_border")
-                    .or_else(|| theme.color_by_key("border"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
+                    .unwrap_or_else(|| editor_border(theme));
 
                 if hovered && enabled {
                     track_bg = mix(track_bg, accent, 0.06);

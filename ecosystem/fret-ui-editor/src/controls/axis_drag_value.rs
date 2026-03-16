@@ -24,8 +24,8 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
-use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::resolve_editor_text_field_style;
+use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
@@ -401,10 +401,7 @@ where
                             move |cx, visuals| {
                                 let affix_color = {
                                     let theme = Theme::global(&*cx.app);
-                                    theme
-                                        .color_by_key("muted-foreground")
-                                        .or_else(|| theme.color_by_key("muted_foreground"))
-                                        .unwrap_or_else(|| theme.color_token("foreground"))
+                                    editor_muted_foreground(theme)
                                 };
                                 let mut axis = editor_axis_segment(
                                     cx,
@@ -750,10 +747,7 @@ where
                 move |cx, visuals| {
                     let affix_color = {
                         let theme = Theme::global(&*cx.app);
-                        theme
-                            .color_by_key("muted-foreground")
-                            .or_else(|| theme.color_by_key("muted_foreground"))
-                            .unwrap_or_else(|| theme.color_token("foreground"))
+                        editor_muted_foreground(theme)
                     };
                     let mut axis =
                         editor_axis_segment(cx, density, axis_label.clone(), axis_tint, visuals.bg);
@@ -800,14 +794,7 @@ where
                     if has_error {
                         let error_border = {
                             let theme = Theme::global(&*cx.app);
-                            theme
-                                .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
-                                .or_else(|| {
-                                    theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
-                                })
-                                .or_else(|| theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
-                                .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                                .unwrap_or_else(|| theme.color_token("destructive"))
+                            editor_invalid_border(theme)
                         };
                         segments.push(editor_input_group_divider(cx, divider));
                         let mut icon = editor_icon_segment(

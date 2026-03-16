@@ -19,6 +19,7 @@ use fret_ui_kit::typography;
 
 use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
+use super::colors::editor_foreground;
 use super::icons::{editor_icon, editor_icon_with};
 use super::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
@@ -669,7 +670,7 @@ pub(crate) fn editor_axis_segment<H: UiHost>(
     bg: Color,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
-    let fg = theme.color_token("foreground");
+    let fg = editor_foreground(theme);
 
     // Keep the axis marker subtle: it should read as part of the input group, not a standalone button.
     let seg_bg = mix(bg, Color { a: 0.16, ..tint }, 0.35);
