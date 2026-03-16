@@ -49,7 +49,7 @@ These channels must work even when Rust hotpatch is not active (reload-boundary-
 - Theme: `.fret/theme.json` → `Theme::apply_config`
 - Hot literals: `.fret/literals.json` → global `HotLiterals`
 - Assets: `.fret/asset_reload.touch` bumps the shared `AssetReloadEpoch` to invalidate path-based asset caches
-  - file-path images: `ImageSource::from_file_path` cache key includes the epoch
+  - native file-reference image decode bridges include the epoch in their cache key
   - SVG files: `SvgFileSource` file bytes cache respects the epoch
 - Fonts: `.fret/fonts.json` (TTF/OTF/TTC list) applied via `Effect::TextAddFonts`
 

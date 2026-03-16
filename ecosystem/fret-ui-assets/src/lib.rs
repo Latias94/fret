@@ -66,16 +66,11 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn legacy_path_helpers_stay_deprecated_until_locator_first_migration_finishes() {
+    fn legacy_public_path_helpers_are_deleted_while_internal_native_bridges_remain() {
         for source in [IMAGE_SOURCE_RS, SVG_FILE_RS] {
-            assert!(source.contains("pub fn from_file_path("));
-            assert!(source.contains("pub fn from_path("));
-            assert!(source.contains("#[deprecated("));
-            assert!(
-                source.contains(
-                    "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
-                )
-            );
+            assert!(source.contains("pub(crate) fn from_native_file_path("));
+            assert!(!source.contains("pub fn from_file_path("));
+            assert!(!source.contains("pub fn from_path("));
         }
     }
 

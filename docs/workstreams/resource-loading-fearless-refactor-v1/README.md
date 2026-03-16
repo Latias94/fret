@@ -211,7 +211,8 @@ This workstream takes a fearless posture:
   - it marks raw-file and URL lanes truthfully per platform,
   - and it records the current mobile inference: generated embedded/bundle modules are the only
     trustworthy first-party packaged story today.
-- Legacy file-path helpers still exist only as migration/dev/native compatibility shims.
+- Legacy public file-path constructors have been removed; native/dev compatibility now stays on the
+  explicit locator/reference bridge helpers plus crate-private native bridge constructors.
 - Generated directory scanning is still only a native/package-dev convenience lane today; the new
   generated Rust module is the first packaged/web/mobile-friendly lane, but it does not yet cover
   hashed web output rewriting or mobile platform-native bundle mapping.
@@ -245,8 +246,8 @@ That makes it too easy for each asset class to drift into a different platform t
 
 ### 2) `path` is treated like a primary authoring surface
 
-Current resource helpers still expose file-path loading and older workstream/docs history taught it
-as a primary authoring path:
+Historically, resource helpers exposed file-path loading and older workstream/docs history taught
+it as a primary authoring path:
 
 - `ImageSource::from_file_path(...)` in `ecosystem/fret-ui-assets/src/image_source.rs`
 - `SvgFileSource::from_file_path(...)` in `ecosystem/fret-ui-assets/src/svg_file.rs`
@@ -661,8 +662,7 @@ Recommended new ownership:
 
 These surfaces should not remain part of the “recommended Fret way”:
 
-- `ImageSource::from_file_path(...)`
-- `SvgFileSource::from_file_path(...)`
+- direct raw file-path widget loading
 - cookbook examples that teach repo-relative asset paths as the normal story
 - `install()` naming that implies complete installation while only configuring budgets
 
@@ -670,9 +670,10 @@ Acceptable transitional rule:
 
 - keep native/dev escape hatches temporarily,
 - remove them from teaching surfaces immediately,
-- deprecate or rename them while the portable bundle-based path is landing,
-- then delete the deprecated compatibility names once the unified asset contract, first-party
-  migration, and replacement authoring/docs are complete.
+- keep them behind explicit lower-level resolver/locator seams while the portable bundle-based path
+  lands,
+- and delete public compatibility names once the unified asset contract, first-party migration, and
+  replacement authoring/docs are complete.
 
 ## Recommended execution order
 

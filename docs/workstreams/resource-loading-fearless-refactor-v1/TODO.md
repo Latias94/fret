@@ -424,19 +424,17 @@ When completing an item, leave 1–3 evidence anchors and prefer small executabl
     - bootstrap templates
     - any remaining dedicated dev/native escape-hatch examples should be labeled as such
 
-- [~] RESLOAD-api-530 Decide deprecation/removal sequencing for:
+- [x] RESLOAD-api-530 Remove deprecated direct file-path constructors after first-party migration.
   - `ImageSource::from_file_path(...)`
   - `SvgFileSource::from_file_path(...)`
   - Current landed slice:
-    - both direct file-path constructors are now explicitly deprecated in
-      `ecosystem/fret-ui-assets/src/{image_source.rs,svg_file.rs}` while internal bridge code
-      moved onto crate-private constructors so the compatibility seam stays available without
-      teaching it as the default authoring path
-  - Remaining:
-    - decide whether the lower-level host locator bridge helpers should also be deprecated, or stay
-      as the long-term non-UI compatibility seam
-    - delete the deprecated constructors after first-party migration and non-UI bridge guidance are
-      complete
+    - internal bridge code stays on crate-private native constructors in
+      `ecosystem/fret-ui-assets/src/{image_source.rs,svg_file.rs}`.
+    - the public deprecated direct file-path constructors are removed from
+      `ecosystem/fret-ui-assets/src/{image_source.rs,svg_file.rs}`.
+    - the lower-level host locator bridge helpers remain as the explicit non-UI compatibility seam:
+      - `resolve_image_source_from_host_locator(...)`
+      - `resolve_svg_file_source_from_host_locator(...)`
 
 - [x] RESLOAD-api-540 Remove UI-specific reload naming after migration.
   - Current landed slice:

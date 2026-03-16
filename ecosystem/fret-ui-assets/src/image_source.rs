@@ -197,22 +197,6 @@ impl ImageSource {
             },
         }
     }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    #[deprecated(
-        note = "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
-    )]
-    pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        Self::from_native_file_path(path)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    #[deprecated(
-        note = "prefer locator-first asset requests and UI helpers; direct file paths are a native/dev-only compatibility seam"
-    )]
-    pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        Self::from_native_file_path(path)
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

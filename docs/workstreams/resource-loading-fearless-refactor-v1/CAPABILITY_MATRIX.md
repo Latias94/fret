@@ -72,8 +72,8 @@ escape hatches.
     paths directly.
   - native `fret-ui-assets::resolve_svg_file_source*` provides the same bridge for reloadable SVG
     file ergonomics while keeping the file-only shim explicit.
-  - Direct `ImageSource::from_file_path(...)` and `SvgFileSource::from_file_path(...)` are legacy
-    UI escape hatches that bypass the general asset resolver contract.
+  - the old public direct file-path constructors were removed; the remaining escape hatch is the
+    explicit locator/reference bridge, not widget-level raw paths.
 - First-party truth today:
   - desktop: native/package-dev convenience lane exists,
   - web: no file-backed lane,

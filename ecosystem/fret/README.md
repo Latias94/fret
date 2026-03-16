@@ -151,8 +151,8 @@ When native/dev-only UI helpers still need file reload ergonomics, keep app/widg
 logical bundle locators and let
 `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
 or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
-consume the resolver's bundle/reference bridge instead of constructing `ImageSource::from_file_path(...)`
-/ `SvgFileSource::from_file_path(...)` directly. Keep
+consume the resolver's bundle/reference bridge instead of introducing direct raw file-path widget
+loading. Keep
 `resolve_image_source_from_host_locator(...)` / `resolve_svg_file_source_from_host_locator(...)`
 as the lower-level compatibility seam when a non-UI integration truly needs the bridged source or
 native file handoff object itself.
