@@ -74,6 +74,37 @@ Builder-seam inventory update (as of 2026-03-09):
 
 ---
 
+## Current ceremony candidate triage (2026-03-16)
+
+This triage answers a narrower question than the priority matrix:
+
+> When a maintainer sees visible authoring ceremony today, should the next move be docs-only,
+> local helper/recipe adoption, or a possible shared public-surface change?
+
+Use the buckets below to avoid turning every Todo-shaped complaint into framework API expansion.
+
+| Bucket | Candidate | Current evidence | Recommended handling |
+| --- | --- | --- | --- |
+| Docs-only / productization | Default vs richer-rung framing (`hello` / `simple-todo` / `todo`) | The code path is already settled; users still mainly get confused when a richer third rung or a comparison surface is read as the default first-hour path. | Treat this as docs/template/gallery wording discipline; do not add API just to make the ladder easier to explain. |
+| Docs-only / productization | Default vs comparison vs advanced taxonomy drift | Current ingress drift is wording-level rather than structural. The remaining failures are usually labeling drift in READMEs, examples indexes, or workstream notes. | Fix the wording and source-policy gates first. If the same API still feels wrong after taxonomy is stable, reopen the API question separately. |
+| Local helper / recipe adoption | Single-child wrapper landing and root/page-shell cleanup | The repo already has `ui::single(cx, child)` and the default app lane now teaches `impl UiChild` helpers. Remaining noise is mostly uneven adoption in first-party examples/docs. | Keep migrating call sites and snippets onto the existing helper; do not mint another conversion family for this. |
+| Local helper / recipe adoption | Native widget action-slot adoption instead of activation-bridge growth | First-party default widgets already prefer native `.action(...)` / `.action_payload(...)` slots. Remaining friction usually comes from stale examples or recipe-local wrappers, not from a missing default bridge. | Prefer recipe/widget-local narrowing or docs cleanup. Do not grow `AppActivateExt` just to shorten one surface. |
+| Local helper / recipe adoption | Existing builder adoption on medium surfaces | `Alert`, `ScrollArea`, and `Field` now already have the needed builders; remaining noise in surfaces such as `form_basics` is mostly adoption and snippet cleanup, not a missing public seam. | Use the existing builders and local wrapper cleanup before proposing more family-level API. |
+| Consider shared public surface only with more evidence | Tracked-value read density (`state.layout(cx).value_*`, watched-local reads) | Repeats on Todo plus non-Todo surfaces such as `form_basics` and `assets_reload_epoch_basics`, but the current path is at least coherent and source-aligned. | Keep as a candidate, but require another real medium surface and a concrete design that does not hide invalidation ownership before widening the public surface. |
+| Consider shared public surface only with more evidence | Coordinated `locals::<A>(...)` write-closure ceremony | Repeats on the canonical Todo compare set and appears in non-Todo form flows too. The pressure is real, but it is easy to overreact with broad sugar that obscures write ownership. | Only reopen with a narrow proposal that improves at least one additional non-Todo real surface and preserves action identity + transaction ownership. |
+| Consider shared public surface only with more evidence | Keyed-row payload mutation density | Strongest evidence still comes from `simple_todo_v2_target`, `todo_demo`, and the scaffold template. Outside that Todo-shaped lane, the pressure is not yet broad enough to justify generic sugar. | Keep this on the canonical trio productization lane first. Do not promote a repo-wide helper until the same pain clearly repeats on another real default-facing surface. |
+| Adjacent dedicated track (not a fresh generic helper pass) | Conversion-surface collapse / `.into_element(cx)` vocabulary | The biggest remaining write-UI feel gap still spans helper/component lanes, but it already has a dedicated owner in the `into-element` workstream. | Route this work through the dedicated conversion-surface track; do not answer it by adding unrelated action/local-state sugar. |
+| Explicitly not a default-path ceremony target | Advanced/runtime-owned friction in `advanced::prelude::*` surfaces | Examples such as `async_playground_demo` still show heavy raw landing and runtime-owned seams, but that is expected on advanced/manual-assembly lanes. | Do not use these surfaces as the primary justification for widening the default app-facing API. Handle them on their own advanced/runtime tracks. |
+
+Short rule:
+
+- if the pain is wording/taxonomy, fix docs;
+- if the pain is uneven use of an already-shipped helper, fix adoption;
+- if the pain still remains on multiple real default-facing surfaces after those two steps, only
+  then consider widening the shared public surface.
+
+---
+
 ## Explicitly deferred surfaces
 
 | Surface | Why it is not worth prioritizing now | Re-entry condition |
