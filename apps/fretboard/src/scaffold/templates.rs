@@ -1210,7 +1210,7 @@ cargo run --release
 - Authoring: view runtime + typed actions + local-state slots (action-first, v2)
 - Hooks: selector + query (v1)
 - State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
-- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, use `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs, and use `cx.actions().payload::<A>()` for per-row list interactions.
+- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, bind keyed-row payloads via `.action_payload(...)`, and handle row writes with `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)`. Use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read tracked state values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `cx.actions().transient::<A>(...)` in the handler and consume the transient via `cx.effects().take_transient(...)` in `render()`.
@@ -1291,7 +1291,8 @@ cargo run --release
 {ui_assets_line}
 - Ladder position: second rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed actions + local-state keyed lists (action-first, v2)
-- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, use `cx.actions().payload::<A>()` for per-row list interactions, and keep `on_activate*` for local widget glue only.
+- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, bind per-row payloads via `.action_payload(...)` inside `ui::for_each_keyed(...)`, and handle row writes with `payload_local_update_if::<A>(...)`.
+- Keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only glue instead of reopening raw `on_activate*` on the default path.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - For keyed dynamic lists, prefer `LocalState<Vec<_>>` + payload actions when the rows are view-owned; keep explicit `Model<Vec<_>>` only when shared ownership or runtime coordination is the point.
 - Read tracked state near the top of `render()` and keep row rendering driven by local snapshots.
@@ -1343,7 +1344,7 @@ cargo run --release
 {icons_line}{palette_line}
 - Ladder position: first rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
-- Default entrypoints: start with `cx.actions().local_update::<A>(...)`; use `on_activate*` only for local pressable glue.
+- Default entrypoints: start with `cx.actions().local_update::<A>(...)`; if a control only exposes activation glue, prefer widget-local `.action(...)` / `.listen(...)` instead of teaching raw `on_activate*` first.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read local state values near the top of `render()` and keep action handlers on `cx.actions()` when possible.
 - Next: edit `src/main.rs` and replace the view tree
@@ -1584,7 +1585,9 @@ mod tests {
         assert!(hello.contains("cookbook/reference-only host-side glue"));
         assert!(hello.contains("first rung of the default onboarding path"));
         assert!(hello.contains("`cx.actions().local_update::<A>(...)`"));
+        assert!(hello.contains("widget-local `.action(...)` / `.listen(...)`"));
         assert!(!hello.contains("on_action_notify_models"));
+        assert!(!hello.contains("use `on_activate*` only for local pressable glue"));
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains(
@@ -1593,9 +1596,14 @@ mod tests {
         assert!(simple.contains("prefer `LocalState<Vec<_>>` + payload actions"));
         assert!(simple.contains("Read tracked state near the top of `render()`"));
         assert!(simple.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(simple.contains("bind per-row payloads via `.action_payload(...)`"));
+        assert!(simple.contains("`payload_local_update_if::<A>(...)`"));
+        assert!(simple.contains("widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)`"));
         assert!(simple.contains("cookbook/reference-only host-side glue"));
         assert!(simple.contains("second rung of the default onboarding path"));
         assert!(!simple.contains("on_action_notify_locals"));
+        assert!(!simple.contains("`cx.actions().payload::<A>()`"));
+        assert!(!simple.contains("keep `on_activate*` for local widget glue only"));
 
         let simple_with_assets =
             simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets());
@@ -1615,8 +1623,11 @@ mod tests {
         assert!(todo.contains("`cx.effects().take_transient(...)`"));
         assert!(todo.contains("State: LocalState-first"));
         assert!(todo.contains("third rung of the default onboarding path"));
+        assert!(todo.contains("bind keyed-row payloads via `.action_payload(...)`"));
+        assert!(todo.contains("`payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)`"));
         assert!(!todo.contains("on_action_notify_locals"));
         assert!(!todo.contains("on_action_notify_transient"));
+        assert!(!todo.contains("`cx.actions().payload::<A>()`"));
 
         let todo_with_assets = todo_template_readme_md("todo-app", opts_with_ui_assets());
         assert!(todo_with_assets.contains("`generated_assets::mount(builder)?`"));
