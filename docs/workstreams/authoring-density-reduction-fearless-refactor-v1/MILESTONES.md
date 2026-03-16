@@ -11,6 +11,7 @@ Related:
 - Selector/query audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_AUDIT_2026-03-16.md`
 - Selector/query direction: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_DIRECTION_2026-03-16.md`
 - Child-collection audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CHILD_COLLECTION_AUDIT_2026-03-16.md`
+- Closeout audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Authoring-surface closeout: `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - Action-first post-v1 summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Into-element closeout target: `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -27,8 +28,9 @@ Related:
   canonical compare set and non-Todo app-facing proofs already converge on
   `ui::for_each_keyed(...)` + `ui::children![cx; ...]` + `ui::single(cx, child)`, while the
   remaining awkward seams are intentional advanced/interop boundaries).
-- **M4**: Next active closeout lane (delete displaced wording and lock the shorter path with
-  docs/gates).
+- **M4**: Met (default docs/templates/examples now teach only the shorter path, source-policy
+  gates protect that baseline, and the remaining older wording is explicitly classified as
+  advanced/history-only context).
 
 Overall reading:
 
@@ -82,6 +84,14 @@ Tracked-read note on 2026-03-16:
   - and the remaining `ViewElements` / `AnyElement` seams in advanced cookbook surfaces are now
     explicitly classified as intentional retained/interop boundaries rather than missing default
     authoring API.
+- `CLOSEOUT_AUDIT_2026-03-16.md` now closes the workstream:
+  - `docs/first-hour.md`, `docs/examples/todo-app-golden-path.md`,
+    `docs/authoring-golden-path-v2.md`, and the scaffold/source-policy gates all agree on the
+    shorter default path,
+  - onboarding docs no longer teach `cx.watch_model(...)` or explicit
+    `.into_element(cx)` / `AnyElement` seams as the default app-authoring posture,
+  - and the remaining longer wording is now recorded as advanced/component/runtime or historical
+    workstream context.
 
 ## Milestone 0 — Freeze the lane
 

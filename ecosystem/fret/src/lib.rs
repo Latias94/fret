@@ -2786,9 +2786,19 @@ mod authoring_surface_policy_tests {
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
         assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
         assert!(FIRST_HOUR.contains("`ui::single(cx, page(...))`"));
+        assert!(FIRST_HOUR.contains("When observing tracked state in views:"));
+        assert!(FIRST_HOUR.contains(
+            "Treat explicit `.into_element(cx)` / `AnyElement` seams as advanced helper or interop boundaries"
+        ));
         assert!(FIRST_HOUR.contains("use fret::children::UiElementSinkExt as _;"));
         assert!(!FIRST_HOUR.contains("run_view::<"));
         assert!(!FIRST_HOUR.contains("ViewCx::"));
+        assert!(!FIRST_HOUR.contains("When observing models (via `cx.watch_model(...)`):"));
+        assert!(
+            !FIRST_HOUR
+                .contains("Convert into `AnyElement` at the boundary via `.into_element(cx)`.")
+        );
+        assert!(!FIRST_HOUR.contains("cx.watch_model(&models.clicks)"));
         assert!(!FIRST_HOUR.contains("`fret_ui_shadcn::prelude::*`"));
     }
 
@@ -3102,11 +3112,18 @@ mod authoring_surface_policy_tests {
     fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
         assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
         assert!(TODO_APP_GOLDEN_PATH.contains("`ui::single(cx, page(...))`"));
+        assert!(TODO_APP_GOLDEN_PATH.contains("When observing tracked state in views:"));
+        assert!(
+            TODO_APP_GOLDEN_PATH
+                .contains("selector dependencies now stay on\nthe LocalState-first teaching path")
+        );
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().listener("));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".register_icon_pack("));
         assert!(!TODO_APP_GOLDEN_PATH.contains("IconRegistry"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("When observing models in views:"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("model handles cloned off those locals"));
     }
 
     #[test]

@@ -129,11 +129,14 @@ For UI composition, you will mostly author via `ui::*` constructors from that ap
 
 Key points:
 
-- `ui::*` constructors return `UiBuilder<T>` (a patchable builder surface).
+- `ui::*` constructors return typed builder/child values that usually stay typed until a sink
+  lands them.
 - Apply layout/chrome refinement via fluent methods (`px_2()`, `gap(Space::N2)`, `rounded_md()`, ...).
-- Convert into `AnyElement` at the boundary via `.into_element(cx)`.
+- Prefer `ui::children![cx; ...]` for heterogeneous child groups.
 - If a render root or wrapper closure only needs to late-land one typed child, prefer
   `ui::single(cx, child)` over `ui::children![cx; child].into()`.
+- Treat explicit `.into_element(cx)` / `AnyElement` seams as advanced helper or interop boundaries,
+  not as the first thing to memorize on the default path.
 - If a local helper actually reads state, emits text/layout nodes, or otherwise needs runtime
   access, give it `cx: &mut UiCx<'_>`.
 - If a local helper is only a pure page shell around already-typed children, prefer
@@ -199,7 +202,7 @@ remain explicit at the ecosystem boundary.
 
 Fret uses explicit invalidation (this is a contract, not an optimization detail).
 
-When observing models (via `cx.watch_model(...)`):
+When observing tracked state in views:
 
 | If the value affects… | Choose | Notes |
 | --- | --- | --- |
@@ -207,11 +210,17 @@ When observing models (via `cx.watch_model(...)`):
 | layout (size/flow/scroll extents) | `Layout` | safe when in doubt |
 | hit regions only | `HitTest` | pointer-only changes without layout changes |
 
+Keep the default path handle-first:
+
+- for view-owned state, prefer `local.paint(cx)` / `local.layout(cx)` / `local.hit_test(cx)`
+- when you intentionally drop to explicit shared handles on helper-heavy surfaces, keep the same
+  handle-side shape (`model.paint_in(cx)` / `model.layout_in(cx)` / `model.hit_test_in(cx)`)
+
 Examples:
 
 ```rust
-let clicks = cx.watch_model(&models.clicks).paint().value_or_default();
-let label = cx.watch_model(&models.label).layout().value_or_default();
+let clicks = clicks_state.paint(cx).value_or_default();
+let label = label_state.layout(cx).value_or_default();
 ```
 
 If you are unsure, start with `Layout` and tighten later.

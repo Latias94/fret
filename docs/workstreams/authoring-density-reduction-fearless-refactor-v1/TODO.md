@@ -17,6 +17,7 @@ Companion docs:
 - `SELECTOR_QUERY_AUDIT_2026-03-16.md`
 - `SELECTOR_QUERY_DIRECTION_2026-03-16.md`
 - `CHILD_COLLECTION_AUDIT_2026-03-16.md`
+- `CLOSEOUT_AUDIT_2026-03-16.md`
 
 ## Current priority checklist
 
@@ -152,9 +153,19 @@ Companion docs:
 
 ## M4 — Delete and lock
 
-- [ ] Remove displaced public-looking wording from default docs/templates/examples.
-- [ ] Refresh/extend source-policy tests or other gates that protect the shorter path.
-- [ ] Record which older wording survives only as advanced/history-only context, if any.
+- [x] Remove displaced public-looking wording from default docs/templates/examples.
+- [x] Refresh/extend source-policy tests or other gates that protect the shorter path.
+- [x] Record which older wording survives only as advanced/history-only context, if any.
+  - 2026-03-16 closeout result:
+    - `docs/first-hour.md` no longer teaches `cx.watch_model(...)` or explicit
+      `.into_element(cx)` / `AnyElement` seams as the default app-authoring story,
+    - `docs/examples/todo-app-golden-path.md` now reflects the shipped LocalState-first selector
+      dependency bridge instead of describing `clone_model()`-driven selector deps as current
+      guidance,
+    - `ecosystem/fret/src/lib.rs` source-policy tests now gate those onboarding/default-doc
+      expectations directly,
+    - remaining older wording is classified in `CLOSEOUT_AUDIT_2026-03-16.md` as either
+      advanced/component/runtime context or historical workstream context.
 
 ## Standing rules
 

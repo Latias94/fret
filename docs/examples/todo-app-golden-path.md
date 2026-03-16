@@ -78,7 +78,7 @@ Notes:
 
 ## Invalidation rules of thumb (keep it simple)
 
-When observing models in views:
+When observing tracked state in views:
 
 - Visual-only changes → `Paint`
 - Affects sizing/flow/scroll extents → `Layout`
@@ -203,9 +203,10 @@ The `simple-todo` template intentionally stops earlier (no selector/query).
 
 Current status note (as of 2026-03-16): the `todo` scaffold is **LocalState-first** (view-owned
 slots) and uses typed payload actions + keyed lists for per-row interaction, while still
-showcasing selector and query hooks. In the current third rung, selector dependencies are still
-built from model handles cloned off those locals, but the authoring surface stays centered on local
-slots and typed actions.
+showcasing selector and query hooks. On the current third rung, selector dependencies now stay on
+the LocalState-first teaching path via `fret::selector::{DepsBuilder, LocalDepsBuilderExt as _}`
+plus `LocalState::{layout_in, paint_in, hit_test_in}`, so the default authoring surface no longer
+teaches `clone_model()` as the selector dependency story.
 
 The official baseline uses a 3-layer state split:
 
