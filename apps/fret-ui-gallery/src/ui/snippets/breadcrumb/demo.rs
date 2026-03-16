@@ -17,7 +17,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![
                         bc::BreadcrumbLink::new("Home")
-                            .href("/home")
+                            .href("/")
                             .on_activate(Arc::new(|_host, _acx, _reason| {}))
                             .into_element(cx),
                     ]
@@ -64,7 +64,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![
                         bc::BreadcrumbLink::new("Components")
-                            .href("/components")
+                            .href("/docs/components")
                             .on_activate(Arc::new(|_host, _acx, _reason| {}))
                             .into_element(cx),
                     ]
