@@ -1237,7 +1237,7 @@ cargo run --release
 - Authoring: view runtime + typed actions + local-state slots (action-first, v2)
 - Hooks: selector + query (v1)
 - State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
-- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, bind keyed-row payloads via `.action_payload(...)`, and handle row writes with `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)`. Use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
+- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, bind keyed-row payloads via `.action_payload(...)`, use `payload_local_update_if::<A>(...)` as the default row-write path, and reserve `payload_locals::<A>(...)` for the rarer case where one payload action coordinates multiple locals. Use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read tracked state values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `cx.actions().transient::<A>(...)` in the handler and consume the transient via `cx.effects().take_transient(...)` in `render()`.
@@ -1652,7 +1652,8 @@ mod tests {
         assert!(todo.contains("State: LocalState-first"));
         assert!(todo.contains("third rung of the default onboarding path"));
         assert!(todo.contains("bind keyed-row payloads via `.action_payload(...)`"));
-        assert!(todo.contains("`payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)`"));
+        assert!(todo.contains("`payload_local_update_if::<A>(...)` as the default row-write path"));
+        assert!(todo.contains("reserve `payload_locals::<A>(...)`"));
         assert!(!todo.contains("on_action_notify_locals"));
         assert!(!todo.contains("on_action_notify_transient"));
         assert!(!todo.contains("`cx.actions().payload::<A>()`"));

@@ -139,7 +139,7 @@ now taught as `LocalState` + view runtime + typed actions.
 - Canonical startup/import reminder:
   - app-facing imports live under `use fret::app::prelude::*;`
   - default native startup uses `FretApp::new(...).window(...).view::<MyView>()?.run()`
-- Keyed row payloads (default when rows are view-owned): `fret::payload_actions!` + `ui::for_each_keyed(...)` + `.action_payload(...)`, with `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)` handling the row write path.
+- Keyed row payloads (default when rows are view-owned): `fret::payload_actions!` + `ui::for_each_keyed(...)` + `.action_payload(...)`, with `payload_local_update_if::<A>(...)` as the default row write path and `payload_locals::<A>(...)` reserved for the rarer case where one payload action coordinates multiple locals.
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
   - `cx.actions().locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.

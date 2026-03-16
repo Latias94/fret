@@ -23,13 +23,13 @@ missing default guideline).
 | View-owned state | `cx.state().local::<T>()` / `cx.state().local_init(|| ...)` | Prefer `LocalState<Vec<_>>` for view-owned keyed lists. |
 | 1-slot action write | `cx.actions().local_set/update` | Keeps the notify/dirty closure correct. |
 | Multi-slot LocalState transaction | `cx.actions().locals::<A>(|tx| ...)` | Hides `ModelStore` for LocalState-only coordination. |
-| Multi-slot payload transaction | `cx.actions().payload_locals::<A>(|tx, payload| ...)` | Use when one payload action updates multiple locals. |
+| Multi-slot payload transaction | `cx.actions().payload_locals::<A>(|tx, payload| ...)` | Use when one payload action updates multiple locals; do not treat it as the default row-write path. |
 | Widget action binding | `.action(...)` / `.action_payload(...)` | Prefer this whenever the widget already exposes a stable action slot. |
 | Widget-local action dispatch | `.action(act::Save)` / `.action_payload(act::Remove, payload)` | Activation-only bridge; add `use fret::app::AppActivateExt as _;` explicitly when a widget only exposes `on_activate(...)`. |
 | Widget-local explicit dispatch alias | `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` | Keep this when you want the type-directed wording on activation-only surfaces after importing `AppActivateExt`. |
 | Widget-local imperative glue | `.listen(|host, acx| { ... })` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks on activation-only surfaces; import `use fret::app::AppActivateExt as _;` explicitly. |
 | Single typed child landing | `ui::single(cx, child)` | Prefer this when `render()` or a wrapper closure only needs to return one already-typed child. |
-| Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper. |
+| Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper, then prefer `payload_local_update_if::<A>(...)` for the common row-write path. |
 | Derived values | `cx.data().selector(deps, compute)` | Prefer explicit `fret::selector::DepsBuilder` when tracked locals/models must build the dependency signature. |
 | Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key; import explicit query nouns from `fret::query::{...}` when needed. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |

@@ -44,7 +44,17 @@ When users say “the API feels complex”, it usually comes from these layers b
 1. **Mechanism runtime** (`crates/fret-ui`): tree, layout, hit-testing, events, effects, IDs.
 2. **Policy / authoring surface** (`ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `fret`):
    default padding/row height, focus policy, dismiss semantics, hover intent, tokens → styles.
-   For the `fret` golden path, keep the default first-contact handler surface on `cx.actions().locals::<A>(...)`, keyed-row payload binding via `.action_payload(...)` plus `payload_local_update_if::<A>(...)` / `payload_locals::<A>(...)` for view-owned list rows, `cx.actions().transient::<A>(...)`, and widget `.action(...)` / `.action_payload(...)` when a stable action slot exists. Keep the same action-first vocabulary (`.action(...)` / `.action_payload(...)` / `.listen(...)`) for activation-only surfaces after an explicit `use fret::app::AppActivateExt as _;`; `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` stay available as explicit aliases. Drop down to `cx.actions().models::<A>(...)` only for shared graphs. Treat raw `on_action_notify`, lower-level `cx.actions().payload::<A>()`, and low-level `.on_activate(cx.actions()....)` helpers as cookbook/reference-only host-side glue.
+   For the `fret` golden path, keep the default first-contact handler surface on
+   `cx.actions().locals::<A>(...)`, keyed-row payload binding via `.action_payload(...)`,
+   `payload_local_update_if::<A>(...)` as the default view-owned row-write path, and
+   `payload_locals::<A>(...)` only when one payload action coordinates multiple locals,
+   `cx.actions().transient::<A>(...)`, and widget `.action(...)` / `.action_payload(...)` when a
+   stable action slot exists. Keep the same action-first vocabulary (`.action(...)` /
+   `.action_payload(...)` / `.listen(...)`) for activation-only surfaces after an explicit
+   `use fret::app::AppActivateExt as _;`; `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` stay
+   available as explicit aliases. Drop down to `cx.actions().models::<A>(...)` only for shared
+   graphs. Treat raw `on_action_notify`, lower-level `cx.actions().payload::<A>()`, and low-level
+   `.on_activate(cx.actions()....)` helpers as cookbook/reference-only host-side glue.
 3. **Embedding surfaces** (viewport panels, retained-widget bridge): how to host “foreign” systems.
 
 To keep the core contract stable, the ergonomics work should focus on (2) while (1) stays minimal.

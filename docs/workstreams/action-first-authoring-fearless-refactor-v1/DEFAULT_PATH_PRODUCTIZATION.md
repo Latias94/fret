@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Default-Path Productization
 
 Status: active post-v1 productization note
-Last updated: 2026-03-10
+Last updated: 2026-03-16
 
 Related:
 
@@ -93,9 +93,12 @@ The default path should continue to teach only:
 
 - `LocalState` for view-owned state,
 - typed actions,
-- `on_action_notify_models` for coordinated writes,
-- `on_action_notify_transient` for App-bound effects,
-- local `on_activate*` only when widget glue truly needs it.
+- `cx.actions().locals::<A>(...)` for coordinated LocalState writes,
+- keyed-row `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default row-write path,
+- `payload_locals::<A>(...)` only when one payload action coordinates multiple locals,
+- `cx.actions().transient::<A>(...)` for App-bound effects,
+- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when widget glue truly
+  needs it after an explicit `use fret::app::AppActivateExt as _;`.
 
 Anything beyond that should be labeled as comparison or advanced.
 

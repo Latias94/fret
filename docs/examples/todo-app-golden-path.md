@@ -201,9 +201,11 @@ This section describes the **best-practice baseline** (`todo`) and the `cargo ru
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
-Current status note (as of 2026-03-10): the `todo` scaffold is **LocalState-first** (view-owned slots)
-and uses typed payload actions + keyed lists for per-row interaction, while still showcasing selector
-and query hooks.
+Current status note (as of 2026-03-16): the `todo` scaffold is **LocalState-first** (view-owned
+slots) and uses typed payload actions + keyed lists for per-row interaction, while still
+showcasing selector and query hooks. In the current third rung, selector dependencies are still
+built from model handles cloned off those locals, but the authoring surface stays centered on local
+slots and typed actions.
 
 The official baseline uses a 3-layer state split:
 
@@ -220,8 +222,10 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` /
-    `cx.actions().payload_locals::<A>(...)` over `cx.actions().models(...)`.
+- for non-payload multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)`.
+- for keyed-row payload writes, start with `payload_local_update_if::<A>(...)`; reserve
+  `payload_locals::<A>(...)` for the rarer case where one payload action coordinates multiple local
+  slots.
 
 ## Actions (UI -> app logic)
 
@@ -287,29 +291,37 @@ memoizing these computations with selectors instead of:
 - recomputing every frame, or
 - introducing user-managed “tick models” to force refresh.
 
-High-level sketch:
+High-level sketch (matching the current third-rung scaffold):
 
 ```rust,ignore
 use fret::selector::DepsBuilder;
 
+let todos_model = todos_state.clone_model();
+let filter_model = filter_state.clone_model();
+let deps_todos_model = todos_model.clone();
+let deps_filter_model = filter_model.clone();
+
 let derived = cx.data().selector(
-    |cx| {
+    move |cx| {
         let mut deps = DepsBuilder::new(cx);
-        deps.model_rev(&self.todos);
-        deps.model_rev(&self.filter);
+        deps.model_rev(&deps_todos_model);
+        deps.model_rev(&deps_filter_model);
         deps.finish()
     },
-    |cx| {
-        // expensive projection (filtering/counts)
-        compute(cx)
+    move |cx| {
+        let todos = cx.watch_model(&todos_model).layout().value_or_default();
+        let filter = cx.watch_model(&filter_model).layout().value_or(TodoFilter::All);
+
+        compute(cx, &todos, filter)
     },
 );
 ```
 
 ## Async resource state (queries)
 
-For async data (network, disk, indexing), we recommend storing cached resource state in
-`Model<QueryState<T>>` via `fret-query` so the UI can observe loading/error/success consistently.
+For async data (network, disk, indexing), we recommend `cx.data().query(...)` so the UI can observe
+loading/error/success/cache state consistently. Internally this still rides on tracked query state,
+but app code should stay handle-first.
 
 High-level sketch:
 
@@ -317,22 +329,25 @@ High-level sketch:
 use fret::query::{QueryKey, QueryPolicy, QueryState};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = handle.layout(cx).value_or_default();
+let state: QueryState<T> = handle
+    .watch(cx)
+    .layout()
+    .value_or_else(QueryState::<T>::default);
 ```
 
 To invalidate/refetch from app logic:
 
 ```rust,ignore
-// v1 (view runtime): if refetch is just a pure state projection, keep it as a normal model
-// transaction (for example, bump a `Model<u64>` nonce like `tip_nonce`).
-cx.actions().models::<act::RefreshTip>({
-    let tip_nonce = self.tip_nonce.clone();
-    move |models| models.update(&tip_nonce, |v| *v = v.saturating_add(1)).is_ok()
-});
+// If refetch is just a pure state projection, keep it on the LocalState-first lane
+// (for example, bump a local nonce like `tip_nonce_state`).
+cx.actions()
+    .local_update::<act::RefreshTip, u64>(&tip_nonce_state, |value| {
+        *value = value.saturating_add(1);
+    });
 
 // then include the nonce in the query key:
-let nonce = cx.watch_model(&tip_nonce).paint().value_or(0);
-let handle = cx.data().query(tip_key(nonce), policy, move |token| fetch(token));
+let tip_nonce_value = tip_nonce_state.paint(cx).value_or(0);
+let handle = cx.data().query(tip_key(tip_nonce_value), policy, move |token| fetch(token));
 ```
 
 ## Event pipeline (platform → UI)
@@ -344,33 +359,54 @@ In a typical window driver:
 
 ## Action handlers (logic)
 
-In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates. Start with `cx.actions().locals(...)` for LocalState-first flows, drop to `cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use `cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
+In the view runtime shape, typed action handlers are the boundary where you mutate tracked state and
+request UI updates. Start with `cx.actions().locals(...)` for LocalState-first flows, use
+`payload_local_update_if::<A>(...)` as the default keyed-row payload write path, reserve
+`payload_locals::<A>(...)` for the rarer case where one payload action coordinates multiple local
+slots, drop to `cx.actions().models(...)` when you intentionally coordinate explicit shared model
+graphs, use `cx.actions().transient(...)` when the real work must happen with `&mut App` in
+`render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
 
 ```rust,ignore
-cx.actions().models::<act::Add>({
-    let draft = self.draft.clone();
-    let todos = self.todos.clone();
-    move |models| {
-        let text = models
-            .read(&draft, |v| v.trim().to_string())
-            .ok()
-            .unwrap_or_default();
+cx.actions().locals::<act::Add>({
+    let draft_state = LocalState::clone(&draft_state);
+    let next_id_state = LocalState::clone(&next_id_state);
+    let todos_state = LocalState::clone(&todos_state);
+    move |tx| {
+        let text = tx
+            .value_or_else(&draft_state, String::new)
+            .trim()
+            .to_string();
         if text.is_empty() {
             return false;
         }
 
-        let done = models.insert(false);
-        let _ = models.update(&todos, |todos| {
-            todos.push(TodoItem {
-                id: todos.len() as u64,
-                done,
-                text: Arc::from(text.clone()),
+        let id = tx.value_or(&next_id_state, 1);
+        let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
+
+        if !tx.update(&todos_state, |rows| {
+            rows.insert(0, TodoRow {
+                id,
+                done: false,
+                text: Arc::from(text),
             });
-        });
-        let _ = models.update(&draft, String::clear);
-        true
+        }) {
+            return false;
+        }
+
+        tx.set(&draft_state, String::new())
     }
 });
+
+cx.actions()
+    .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
+        if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+            row.done = !row.done;
+            true
+        } else {
+            false
+        }
+    });
 ```
 
 ## Async / background work (two patterns)
