@@ -23,6 +23,34 @@ pub struct AssetReloadSupport {
     pub file_watch: bool,
 }
 
+/// Configured or active backend for automatic development asset reload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetReloadBackendKind {
+    PollMetadata,
+    NativeWatcher,
+}
+
+/// Reason why the active automatic reload backend differs from the configured one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetReloadFallbackReason {
+    WatcherInstallFailed,
+}
+
+/// Best-effort host-published status for the current automatic asset reload lane.
+///
+/// This is intentionally separate from [`AssetReloadSupport`]:
+/// - `AssetReloadSupport` answers whether the host can automatically publish reload invalidations,
+/// - `AssetReloadStatus` answers which backend is currently active and whether a fallback occurred.
+///
+/// Hosts may leave this unset until the effective backend is known.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AssetReloadStatus {
+    pub configured_backend: AssetReloadBackendKind,
+    pub active_backend: AssetReloadBackendKind,
+    pub fallback_reason: Option<AssetReloadFallbackReason>,
+    pub fallback_message: Option<String>,
+}
+
 pub fn asset_reload_epoch(host: &impl GlobalsHost) -> Option<AssetReloadEpoch> {
     host.global::<AssetReloadEpoch>().copied()
 }
@@ -41,14 +69,23 @@ pub fn set_asset_reload_support(host: &mut impl GlobalsHost, support: AssetReloa
     host.set_global(support);
 }
 
+pub fn asset_reload_status(host: &impl GlobalsHost) -> Option<AssetReloadStatus> {
+    host.global::<AssetReloadStatus>().cloned()
+}
+
+pub fn set_asset_reload_status(host: &mut impl GlobalsHost, status: AssetReloadStatus) {
+    host.set_global(status);
+}
+
 #[cfg(test)]
 mod tests {
     use std::any::{Any, TypeId};
     use std::collections::HashMap;
 
     use super::{
-        AssetReloadEpoch, AssetReloadSupport, asset_reload_epoch, asset_reload_support,
-        bump_asset_reload_epoch, set_asset_reload_support,
+        AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
+        AssetReloadSupport, asset_reload_epoch, asset_reload_status, asset_reload_support,
+        bump_asset_reload_epoch, set_asset_reload_status, set_asset_reload_support,
     };
     use crate::ui_host::GlobalsHost;
 
@@ -103,6 +140,32 @@ mod tests {
         assert_eq!(
             asset_reload_support(&host),
             Some(AssetReloadSupport { file_watch: true })
+        );
+    }
+
+    #[test]
+    fn set_asset_reload_status_publishes_active_backend_and_fallback() {
+        let mut host = TestHost::default();
+        assert_eq!(asset_reload_status(&host), None);
+
+        set_asset_reload_status(
+            &mut host,
+            AssetReloadStatus {
+                configured_backend: AssetReloadBackendKind::NativeWatcher,
+                active_backend: AssetReloadBackendKind::PollMetadata,
+                fallback_reason: Some(AssetReloadFallbackReason::WatcherInstallFailed),
+                fallback_message: Some("watch root missing".to_string()),
+            },
+        );
+
+        assert_eq!(
+            asset_reload_status(&host),
+            Some(AssetReloadStatus {
+                configured_backend: AssetReloadBackendKind::NativeWatcher,
+                active_backend: AssetReloadBackendKind::PollMetadata,
+                fallback_reason: Some(AssetReloadFallbackReason::WatcherInstallFailed),
+                fallback_message: Some("watch root missing".to_string()),
+            })
         );
     }
 }

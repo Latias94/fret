@@ -6,7 +6,10 @@
 
 use fret_runtime::GlobalsHost;
 
-pub use fret_runtime::{AssetReloadEpoch, asset_reload_epoch, asset_reload_support};
+pub use fret_runtime::{
+    AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
+    asset_reload_epoch, asset_reload_status, asset_reload_support,
+};
 
 #[deprecated(
     note = "prefer fret_runtime::AssetReloadEpoch or app-facing asset helpers; the generic asset reload epoch is no longer UI-specific"

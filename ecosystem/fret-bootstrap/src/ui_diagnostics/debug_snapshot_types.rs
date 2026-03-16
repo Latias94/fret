@@ -213,6 +213,8 @@ pub struct UiResourceLoadingDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub asset_load: Option<UiAssetLoadDiagnosticsSnapshotV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_reload: Option<UiAssetReloadDiagnosticsSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_environment: Option<UiFontEnvironmentDiagnosticsSnapshotV1>,
 }
 
@@ -318,6 +320,65 @@ impl UiAssetLoadDiagnosticEventV1 {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiAssetReloadDiagnosticsSnapshotV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub epoch: Option<u64>,
+    #[serde(default)]
+    pub file_watch: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub configured_backend: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_backend: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback_message: Option<String>,
+}
+
+impl UiAssetReloadDiagnosticsSnapshotV1 {
+    pub(super) fn from_runtime(
+        epoch: Option<fret_runtime::AssetReloadEpoch>,
+        support: Option<fret_runtime::AssetReloadSupport>,
+        status: Option<fret_runtime::AssetReloadStatus>,
+    ) -> Option<Self> {
+        if epoch.is_none() && support.is_none() && status.is_none() {
+            return None;
+        }
+
+        Some(Self {
+            epoch: epoch.map(|epoch| epoch.0),
+            file_watch: support.is_some_and(|support| support.file_watch),
+            configured_backend: status
+                .as_ref()
+                .map(|status| asset_reload_backend_kind_name(status.configured_backend).to_string()),
+            active_backend: status
+                .as_ref()
+                .map(|status| asset_reload_backend_kind_name(status.active_backend).to_string()),
+            fallback_reason: status
+                .as_ref()
+                .and_then(|status| status.fallback_reason)
+                .map(|reason| asset_reload_fallback_reason_name(reason).to_string()),
+            fallback_message: status.and_then(|status| status.fallback_message),
+        })
+    }
+}
+
+fn asset_reload_backend_kind_name(kind: fret_runtime::AssetReloadBackendKind) -> &'static str {
+    match kind {
+        fret_runtime::AssetReloadBackendKind::PollMetadata => "poll_metadata",
+        fret_runtime::AssetReloadBackendKind::NativeWatcher => "native_watcher",
+    }
+}
+
+fn asset_reload_fallback_reason_name(
+    reason: fret_runtime::AssetReloadFallbackReason,
+) -> &'static str {
+    match reason {
+        fret_runtime::AssetReloadFallbackReason::WatcherInstallFailed => "watcher_install_failed",
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiFontEnvironmentDiagnosticsSnapshotV1 {
     pub bundled_baseline_source: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -375,6 +436,39 @@ impl UiFontEnvironmentDiagnosticsSnapshotV1 {
             system_font_rescan_in_flight: system_font_rescan.map(|state| state.in_flight),
             system_font_rescan_pending: system_font_rescan.map(|state| state.pending),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UiAssetReloadDiagnosticsSnapshotV1;
+
+    #[test]
+    fn asset_reload_snapshot_from_runtime_keeps_backend_and_fallback_details() {
+        let snapshot = UiAssetReloadDiagnosticsSnapshotV1::from_runtime(
+            Some(fret_runtime::AssetReloadEpoch(7)),
+            Some(fret_runtime::AssetReloadSupport { file_watch: true }),
+            Some(fret_runtime::AssetReloadStatus {
+                configured_backend: fret_runtime::AssetReloadBackendKind::NativeWatcher,
+                active_backend: fret_runtime::AssetReloadBackendKind::PollMetadata,
+                fallback_reason: Some(fret_runtime::AssetReloadFallbackReason::WatcherInstallFailed),
+                fallback_message: Some("backend unavailable".to_string()),
+            }),
+        )
+        .expect("asset reload snapshot should be emitted when runtime state exists");
+
+        assert_eq!(snapshot.epoch, Some(7));
+        assert!(snapshot.file_watch);
+        assert_eq!(snapshot.configured_backend.as_deref(), Some("native_watcher"));
+        assert_eq!(snapshot.active_backend.as_deref(), Some("poll_metadata"));
+        assert_eq!(
+            snapshot.fallback_reason.as_deref(),
+            Some("watcher_install_failed")
+        );
+        assert_eq!(
+            snapshot.fallback_message.as_deref(),
+            Some("backend unavailable")
+        );
     }
 }
 

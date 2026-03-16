@@ -14,7 +14,8 @@ pub use fret_assets::{
     asset_app_bundle_id, asset_package_bundle_id,
 };
 pub use fret_runtime::{
-    AssetReloadEpoch, AssetReloadSupport, AssetResolverService, asset_reload_epoch,
+    AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
+    AssetReloadSupport, AssetResolverService, asset_reload_epoch, asset_reload_status,
     asset_reload_support, bump_asset_reload_epoch,
 };
 

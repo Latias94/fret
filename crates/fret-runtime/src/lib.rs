@@ -83,8 +83,9 @@ pub mod window_text_input_snapshot;
 pub use action::{ActionId, ActionMeta, ActionRegistry, TypedAction};
 pub use action_payload::WindowPendingActionPayloadService;
 pub use asset_reload::{
-    AssetReloadEpoch, AssetReloadSupport, asset_reload_epoch, asset_reload_support,
-    bump_asset_reload_epoch, set_asset_reload_support,
+    AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
+    AssetReloadSupport, asset_reload_epoch, asset_reload_status, asset_reload_support,
+    bump_asset_reload_epoch, set_asset_reload_status, set_asset_reload_support,
 };
 pub use asset_resolver::{
     AssetLoadAccessKind, AssetLoadDiagnosticEvent, AssetLoadDiagnosticsSnapshot,

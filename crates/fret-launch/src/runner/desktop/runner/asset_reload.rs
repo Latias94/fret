@@ -283,6 +283,15 @@ impl AssetReloadController {
             app,
             fret_runtime::AssetReloadSupport { file_watch: true },
         );
+        if matches!(self.mode, AssetReloadMode::Poll(_)) {
+            Self::publish_runtime_status(
+                app,
+                fret_runtime::AssetReloadBackendKind::PollMetadata,
+                fret_runtime::AssetReloadBackendKind::PollMetadata,
+                None,
+                None,
+            );
+        }
     }
 
     pub(super) fn arm_for_startup(
@@ -306,14 +315,39 @@ impl AssetReloadController {
         proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
     ) {
         match &mut self.mode {
-            AssetReloadMode::Poll(poll) => poll.ensure_scheduled(app, now, timers),
+            AssetReloadMode::Poll(poll) => {
+                poll.ensure_scheduled(app, now, timers);
+                Self::publish_runtime_status(
+                    app,
+                    fret_runtime::AssetReloadBackendKind::PollMetadata,
+                    fret_runtime::AssetReloadBackendKind::PollMetadata,
+                    None,
+                    None,
+                );
+            }
             AssetReloadMode::NativeWatch(watch) => {
                 if let Err(error) = watch.set_event_loop_proxy(&self.targets, proxy, proxy_events) {
+                    let fallback_message = error.to_string();
                     tracing::warn!(
                         ?error,
                         "asset reload watcher unavailable; falling back to metadata polling"
                     );
                     watch.ensure_fallback_poll(app, now, timers);
+                    Self::publish_runtime_status(
+                        app,
+                        fret_runtime::AssetReloadBackendKind::NativeWatcher,
+                        fret_runtime::AssetReloadBackendKind::PollMetadata,
+                        Some(fret_runtime::AssetReloadFallbackReason::WatcherInstallFailed),
+                        Some(fallback_message),
+                    );
+                } else {
+                    Self::publish_runtime_status(
+                        app,
+                        fret_runtime::AssetReloadBackendKind::NativeWatcher,
+                        fret_runtime::AssetReloadBackendKind::NativeWatcher,
+                        None,
+                        None,
+                    );
                 }
             }
         }
@@ -366,6 +400,24 @@ impl AssetReloadController {
             app.request_redraw(window);
         }
         true
+    }
+
+    fn publish_runtime_status(
+        app: &mut App,
+        configured_backend: fret_runtime::AssetReloadBackendKind,
+        active_backend: fret_runtime::AssetReloadBackendKind,
+        fallback_reason: Option<fret_runtime::AssetReloadFallbackReason>,
+        fallback_message: Option<String>,
+    ) {
+        fret_runtime::set_asset_reload_status(
+            app,
+            fret_runtime::AssetReloadStatus {
+                configured_backend,
+                active_backend,
+                fallback_reason,
+                fallback_message,
+            },
+        );
     }
 
     #[cfg(test)]
@@ -603,6 +655,15 @@ mod tests {
         .expect("polling policy should install controller");
 
         controller.publish_support(&mut app);
+        assert_eq!(
+            fret_runtime::asset_reload_status(&app),
+            Some(fret_runtime::AssetReloadStatus {
+                configured_backend: fret_runtime::AssetReloadBackendKind::PollMetadata,
+                active_backend: fret_runtime::AssetReloadBackendKind::PollMetadata,
+                fallback_reason: None,
+                fallback_message: None,
+            })
+        );
         controller.arm_for_startup(&mut app, Instant::now(), &mut timers);
         let token = controller.poll_timer_token().expect("poll timer installed");
 
