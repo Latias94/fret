@@ -13,6 +13,7 @@ Companion docs:
 - `DESIGN.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
+- `TRACKED_READ_AUDIT_2026-03-16.md`
 
 ## Current priority checklist
 
@@ -29,6 +30,11 @@ Companion docs:
     - docs/adoption problem,
     - local helper problem,
     - or real shared-surface gap.
+  - 2026-03-16 first pass:
+    - the compare set itself is already mostly on the shorter `state.layout(cx).value_*` posture,
+    - the first meaningful batch is AppUi adoption cleanup on non-todo surfaces,
+    - the likely next shared-surface question narrows to `UiCx` / `ElementContext` model-read
+      ergonomics rather than another AppUi read helper.
 - [ ] Land the smallest justified tracked-read reduction.
   - Constraints:
     - keep invalidation intent explicit,

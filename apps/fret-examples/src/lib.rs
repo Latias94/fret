@@ -1525,7 +1525,7 @@ mod authoring_surface_policy_tests {
             EMBEDDED_VIEWPORT_DEMO,
             &[
                 "let size_preset_state = cx.state().local_init(|| 1usize);",
-                "let preset = cx.state().watch(&size_preset_state).layout().value_or_default();",
+                "let preset = size_preset_state.layout(cx).value_or_default();",
                 "cx.actions().local_set::<act::PickSize640, usize>(&size_preset_state, 0);",
             ],
             &[
@@ -1542,8 +1542,8 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0u32);",
                 "let enabled_state = cx.state().local_init(|| false);",
-                "let count = cx.state().watch(&count_state).layout().value_or_default();",
-                "let enabled = cx.state().watch(&enabled_state).paint().value_or_default();",
+                "let count = count_state.layout(cx).value_or_default();",
+                "let enabled = enabled_state.paint(cx).value_or_default();",
             ],
             &["cx.use_local_with(|| 0u32)", "cx.use_local_with(|| false)"],
         );
@@ -1553,7 +1553,7 @@ mod authoring_surface_policy_tests {
             &[
                 "let left_clicks = cx.state().local_init(|| 0u32);",
                 "let drag_offset = cx.state().local_init(Point::default);",
-                "let last_anchor_value = cx.state().watch(&last_context_menu_anchor).layout().value_or_default();",
+                "let last_anchor_value = last_context_menu_anchor.layout(cx).value_or_default();",
             ],
             &[
                 "cx.use_local_with(|| 0u32)",

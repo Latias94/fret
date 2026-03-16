@@ -66,11 +66,7 @@ impl View for QueryDemoView {
         cx.actions()
             .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = cx
-            .state()
-            .watch(&fail_mode_state)
-            .layout()
-            .value_or_default();
+        let fail_mode = fail_mode_state.layout(cx).value_or_default();
 
         let query_handle = cx.data().query(demo_key(), query_policy(), move |_token| {
             if fail_mode {

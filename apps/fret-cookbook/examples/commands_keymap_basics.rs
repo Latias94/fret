@@ -77,12 +77,8 @@ impl View for CommandsKeymapBasicsView {
 
         let cmd: CommandId = act::TogglePanel.into();
 
-        let panel_open = cx.state().watch(&panel_open_state).layout().value_or(false);
-        let allow_command = cx
-            .state()
-            .watch(&allow_command_state)
-            .layout()
-            .value_or(true);
+        let panel_open = panel_open_state.layout(cx).value_or(false);
+        let allow_command = allow_command_state.layout(cx).value_or(true);
 
         let enabled = cx.action_is_enabled(&cmd);
         let enabled_label = if enabled { "Enabled" } else { "Disabled" };

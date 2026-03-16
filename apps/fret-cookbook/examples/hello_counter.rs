@@ -63,12 +63,8 @@ impl View for HelloCounterView {
         let count_state = cx.state().local_init(|| 0i64);
         let step_state = cx.state().local_init(|| "1".to_string());
 
-        let count = cx.state().watch(&count_state).layout().value_or(0);
-        let step_text = cx
-            .state()
-            .watch(&step_state)
-            .layout()
-            .value_or_else(String::new);
+        let count = count_state.layout(cx).value_or(0);
+        let step_text = step_state.layout(cx).value_or_else(String::new);
         let (effective_step, step_valid) = parse_step(&step_text);
 
         let count_color = if count > 0 {

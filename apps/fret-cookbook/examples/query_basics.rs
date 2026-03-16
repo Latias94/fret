@@ -59,17 +59,9 @@ impl View for QueryBasicsView {
         cx.actions()
             .availability::<act::InvalidateNamespace>(|_host, _acx| CommandAvailability::Available);
 
-        let fail_mode_enabled = cx.state().watch(&fail_mode).layout().value_or(false);
-        let do_invalidate = cx
-            .state()
-            .watch(&invalidate_requested)
-            .layout()
-            .value_or(false);
-        let do_invalidate_namespace = cx
-            .state()
-            .watch(&invalidate_namespace_requested)
-            .layout()
-            .value_or(false);
+        let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
+        let do_invalidate = invalidate_requested.layout(cx).value_or(false);
+        let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
         let window = cx.window;
 
         if do_invalidate {
@@ -106,8 +98,7 @@ impl View for QueryBasicsView {
         });
 
         let state = handle
-            .watch(cx)
-            .layout()
+            .layout(cx)
             .value_or_else(QueryState::<DemoData>::default);
 
         let status_label = match state.status {

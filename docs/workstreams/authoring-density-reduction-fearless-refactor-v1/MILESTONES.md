@@ -7,6 +7,7 @@ Related:
 - Design: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`
 - Target interface state: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - TODO: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`
+- Tracked-read audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TRACKED_READ_AUDIT_2026-03-16.md`
 - Authoring-surface closeout: `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - Action-first post-v1 summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Into-element closeout target: `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -14,7 +15,8 @@ Related:
 ## Current status snapshot (as of 2026-03-16)
 
 - **M0**: Met once this directory and the main docs indices land.
-- **M1**: Planned (tracked-read density reduction).
+- **M1**: In progress (tracked-read adoption cleanup on `AppUi` surfaces plus remaining
+  `UiCx`/`ElementContext` gap audit).
 - **M2**: Planned (selector/query happy-path density reduction).
 - **M3**: Planned (re-evaluate keyed/list/default child-collection pressure after read-side work).
 - **M4**: Planned (hard-delete displaced wording and lock the shorter path with docs/gates).
@@ -32,6 +34,14 @@ Overall reading:
 3. Audit selector/query ceremony and land the smallest justified shared reduction.
 4. Re-measure keyed/list/default child-collection pressure after the read-side reductions.
 5. Delete displaced public-looking wording and keep docs/templates/examples/gates aligned.
+
+Tracked-read note on 2026-03-16:
+
+- `TRACKED_READ_AUDIT_2026-03-16.md` now records that the first batch is primarily adoption cleanup:
+  the shorter `AppUi` tracked-read path already existed, but first-party app surfaces had not
+  migrated consistently.
+- the likely next real shared-surface question has therefore narrowed to helper-heavy
+  `UiCx` / `ElementContext` model-read ergonomics after that adoption cleanup is absorbed.
 
 ## Milestone 0 — Freeze the lane
 
