@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -21,8 +22,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<shadcn::CarouselApiSnapshot>,
+    opts: shadcn::CarouselOptions,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -31,7 +32,7 @@ fn render_frame(
     let root =
         fret_ui::declarative::render_root(ui, app, services, window, bounds, "carousel", |cx| {
             let slides = (0..2).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 // Narrow basis reproduces the UI gallery "cannotLoop" configuration.
                 .item_basis_main_px(Px(240.0))
@@ -63,9 +64,9 @@ fn carousel_loop_downgrades_when_cannot_loop_even_without_embla_engine() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
 
-    let mut opts = fret_ui_shadcn::CarouselOptions::default();
+    let mut opts = shadcn::CarouselOptions::default();
     opts.loop_enabled = true;
     opts.embla_engine = false;
 
@@ -103,9 +104,9 @@ fn carousel_loop_downgrade_keeps_end_controls_disabled_without_embla_engine() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
 
-    let mut opts = fret_ui_shadcn::CarouselOptions::default();
+    let mut opts = shadcn::CarouselOptions::default();
     opts.loop_enabled = true;
     opts.embla_engine = false;
     opts.start_snap = 1;

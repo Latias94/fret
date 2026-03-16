@@ -21,7 +21,7 @@ use fret_ui_kit::declarative::visually_hidden::visually_hidden;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Radius, Space};
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Command, CommandDialog, CommandEmpty, CommandEntry,
     CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut,
     Dialog, DialogContent, DialogTitle, Spinner,
@@ -329,7 +329,7 @@ impl VoiceSelectorTrigger {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let open = controller.open.clone();
@@ -493,7 +493,7 @@ impl VoiceSelectorInput {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let mut input = CommandInput::new(controller.query)
@@ -581,7 +581,7 @@ impl VoiceSelectorList {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let list = match self.mode {
@@ -1062,7 +1062,7 @@ impl VoiceSelectorAccent {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(emoji) = voice_selector_accent_emoji(self.value.as_deref()) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -1206,7 +1206,7 @@ impl VoiceSelectorValue {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -1278,7 +1278,7 @@ impl VoiceSelectorButton {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_voice_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let open = controller.open.clone();

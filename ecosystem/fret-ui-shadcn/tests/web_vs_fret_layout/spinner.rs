@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
@@ -65,10 +66,10 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model0: Model<String> = app.models_mut().insert(String::new());
@@ -103,10 +104,10 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
                             label: Some(Arc::from("Golden:spinner-input-group:0:spinner")),
                             ..Default::default()
                         },
-                        move |cx| vec![fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)],
+                        move |cx| vec![shadcn::Spinner::new().speed(0.0).into_element(cx)],
                     );
 
-                    let group0 = fret_ui_shadcn::InputGroup::new(model0.clone())
+                    let group0 = shadcn::InputGroup::new(model0.clone())
                         .a11y_label("Golden:spinner-input-group:0:input")
                         .trailing(vec![spinner0])
                         .into_element(cx);
@@ -125,7 +126,7 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
                             label: Some(Arc::from("Golden:spinner-input-group:1:spinner")),
                             ..Default::default()
                         },
-                        move |cx| vec![fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)],
+                        move |cx| vec![shadcn::Spinner::new().speed(0.0).into_element(cx)],
                     );
                     let arrow = cx.semantics(
                         fret_ui::element::SemanticsProps {
@@ -170,7 +171,7 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
                     );
 
                     let group1_addon = vec![spinner1, cx.text("Validating..."), send_button];
-                    let group1 = fret_ui_shadcn::InputGroup::new(model1.clone())
+                    let group1 = shadcn::InputGroup::new(model1.clone())
                         .textarea()
                         .a11y_label("Golden:spinner-input-group:1:textarea")
                         .block_end(group1_addon)
@@ -406,7 +407,7 @@ fn web_vs_fret_layout_spinner_basic_geometry_matches_web() {
                 test_id: Some(Arc::from("Golden:spinner-basic:spinner")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)],
+            move |cx| vec![shadcn::Spinner::new().speed(0.0).into_element(cx)],
         );
         vec![spinner]
     });
@@ -447,7 +448,7 @@ fn web_vs_fret_layout_spinner_custom_geometry_matches_web() {
                 test_id: Some(Arc::from("Golden:spinner-custom:spinner")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)],
+            move |cx| vec![shadcn::Spinner::new().speed(0.0).into_element(cx)],
         );
         vec![spinner]
     });
@@ -498,7 +499,7 @@ fn web_vs_fret_layout_spinner_size_variants_match_web() {
                 },
                 move |cx| {
                     vec![
-                        fret_ui_shadcn::Spinner::new()
+                        shadcn::Spinner::new()
                             .refine_layout(layout)
                             .speed(0.0)
                             .into_element(cx),
@@ -566,31 +567,25 @@ fn web_vs_fret_layout_spinner_button_disabled_sm_heights_match_web() {
     let mut services = StyleAwareServices::default();
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let buttons = vec![
-            fret_ui_shadcn::Button::new("Loading...")
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Loading...")
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(true)
                 .test_id("Golden:spinner-button:btn-0")
-                .children(vec![
-                    fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                ])
+                .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("Please wait")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Please wait")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(true)
                 .test_id("Golden:spinner-button:btn-1")
-                .children(vec![
-                    fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                ])
+                .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                 .into_element(cx),
-            fret_ui_shadcn::Button::new("Processing")
-                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
+            shadcn::Button::new("Processing")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
                 .disabled(true)
                 .test_id("Golden:spinner-button:btn-2")
-                .children(vec![
-                    fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                ])
+                .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                 .into_element(cx),
         ];
 
@@ -638,23 +633,17 @@ fn web_vs_fret_layout_spinner_badge_heights_match_web() {
     let mut services = StyleAwareServices::default();
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let badges = vec![
-            fret_ui_shadcn::Badge::new("Syncing")
-                .children(vec![
-                    fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                ])
+            shadcn::Badge::new("Syncing")
+                .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                 .refine_layout(LayoutRefinement::default())
                 .into_element(cx),
-            fret_ui_shadcn::Badge::new("Updating")
-                .variant(fret_ui_shadcn::BadgeVariant::Secondary)
-                .children(vec![
-                    fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                ])
+            shadcn::Badge::new("Updating")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                 .into_element(cx),
-            fret_ui_shadcn::Badge::new("Processing")
-                .variant(fret_ui_shadcn::BadgeVariant::Outline)
-                .children(vec![
-                    fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                ])
+            shadcn::Badge::new("Processing")
+                .variant(shadcn::BadgeVariant::Outline)
+                .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                 .into_element(cx),
         ];
 
@@ -736,7 +725,7 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
                     },
                     move |cx| {
                         vec![
-                            fret_ui_shadcn::ItemMedia::new([fret_ui_shadcn::Spinner::new()
+                            shadcn::ItemMedia::new([shadcn::Spinner::new()
                                 .speed(0.0)
                                 .into_element(cx)])
                             .into_element(cx),
@@ -752,7 +741,7 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
                     },
                     move |cx| {
                         vec![
-                            fret_ui_shadcn::ItemContent::new([fret_ui_shadcn::ItemTitle::new(
+                            shadcn::ItemContent::new([shadcn::ItemTitle::new(
                                 "Processing payment...",
                             )
                             .into_element(cx)])
@@ -769,7 +758,7 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
                     },
                     move |cx| {
                         vec![
-                            fret_ui_shadcn::ItemContent::new([ui::text("$100.00")
+                            shadcn::ItemContent::new([ui::text("$100.00")
                                 .text_size_px(Theme::global(&*cx.app).metric_token("font.size"))
                                 .line_height_px(
                                     Theme::global(&*cx.app).metric_token("font.line_height"),
@@ -782,8 +771,8 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
                     },
                 );
 
-                let item = fret_ui_shadcn::Item::new([media, content, price])
-                    .variant(fret_ui_shadcn::ItemVariant::Muted)
+                let item = shadcn::Item::new([media, content, price])
+                    .variant(shadcn::ItemVariant::Muted)
                     .into_element(cx);
                 vec![item]
             },
@@ -864,28 +853,24 @@ fn web_vs_fret_layout_spinner_item_height_matches_web() {
                 ..Default::default()
             },
             move |cx| {
-                let item = fret_ui_shadcn::Item::new([
-                    fret_ui_shadcn::ItemMedia::new([fret_ui_shadcn::Spinner::new()
-                        .speed(0.0)
-                        .into_element(cx)])
-                    .variant(fret_ui_shadcn::ItemMediaVariant::Icon)
-                    .into_element(cx),
-                    fret_ui_shadcn::ItemContent::new([
-                        fret_ui_shadcn::ItemTitle::new("Downloading...").into_element(cx),
-                        fret_ui_shadcn::ItemDescription::new("129 MB / 1000 MB").into_element(cx),
+                let item = shadcn::Item::new([
+                    shadcn::ItemMedia::new([shadcn::Spinner::new().speed(0.0).into_element(cx)])
+                        .variant(shadcn::ItemMediaVariant::Icon)
+                        .into_element(cx),
+                    shadcn::ItemContent::new([
+                        shadcn::ItemTitle::new("Downloading...").into_element(cx),
+                        shadcn::ItemDescription::new("129 MB / 1000 MB").into_element(cx),
                     ])
                     .into_element(cx),
-                    fret_ui_shadcn::ItemActions::new([fret_ui_shadcn::Button::new("Cancel")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                        .size(fret_ui_shadcn::ButtonSize::Sm)
+                    shadcn::ItemActions::new([shadcn::Button::new("Cancel")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
                         .into_element(cx)])
                     .into_element(cx),
-                    fret_ui_shadcn::ItemFooter::new([
-                        fret_ui_shadcn::Progress::new(value).into_element(cx)
-                    ])
-                    .into_element(cx),
+                    shadcn::ItemFooter::new([shadcn::Progress::new(value).into_element(cx)])
+                        .into_element(cx),
                 ])
-                .variant(fret_ui_shadcn::ItemVariant::Outline)
+                .variant(shadcn::ItemVariant::Outline)
                 .into_element(cx);
                 vec![item]
             },
@@ -918,10 +903,10 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -937,9 +922,9 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
         bounds,
         "web-vs-fret-layout",
         |cx| {
-            let empty = fret_ui_shadcn::Empty::new([
+            let empty = shadcn::Empty::new([
                 EmptyHeader::new([
-                    EmptyMedia::new([fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)])
+                    EmptyMedia::new([shadcn::Spinner::new().speed(0.0).into_element(cx)])
                         .variant(EmptyMediaVariant::Icon)
                         .into_element(cx),
                     EmptyTitle::new("Processing your request").into_element(cx),
@@ -949,9 +934,9 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                EmptyContent::new([fret_ui_shadcn::Button::new("Cancel")
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                    .size(fret_ui_shadcn::ButtonSize::Sm)
+                EmptyContent::new([shadcn::Button::new("Cancel")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
                     .into_element(cx)])
                 .into_element(cx),
             ])
@@ -1067,28 +1052,22 @@ fn fret_spinner_in_badge_inherits_variant_foreground_when_uncolored() {
 
         let cases = [
             (
-                fret_ui_shadcn::Badge::new("Syncing")
-                    .children(vec![
-                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                    ])
+                shadcn::Badge::new("Syncing")
+                    .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                     .into_element(cx),
                 theme.color_token("primary-foreground"),
             ),
             (
-                fret_ui_shadcn::Badge::new("Updating")
-                    .variant(fret_ui_shadcn::BadgeVariant::Secondary)
-                    .children(vec![
-                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                    ])
+                shadcn::Badge::new("Updating")
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                     .into_element(cx),
                 theme.color_token("secondary-foreground"),
             ),
             (
-                fret_ui_shadcn::Badge::new("Processing")
-                    .variant(fret_ui_shadcn::BadgeVariant::Outline)
-                    .children(vec![
-                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-                    ])
+                shadcn::Badge::new("Processing")
+                    .variant(shadcn::BadgeVariant::Outline)
+                    .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
                     .into_element(cx),
                 theme.color_token("foreground"),
             ),
@@ -1115,10 +1094,8 @@ fn fret_badge_forces_child_spinner_icon_size_to_12px() {
 
     let mut services = StyleAwareServices::default();
     let _snap = run_fret_root_with_services(bounds, &mut services, |cx| {
-        let badge = fret_ui_shadcn::Badge::new("Syncing")
-            .children(vec![
-                fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-            ])
+        let badge = shadcn::Badge::new("Syncing")
+            .children(vec![shadcn::Spinner::new().speed(0.0).into_element(cx)])
             .into_element(cx);
 
         let props = first_visual_transform_props(&badge).expect("expected spinner VisualTransform");
@@ -1138,19 +1115,17 @@ fn fret_badge_spinner_rotation_uses_visual_transform_center_after_badge_resize_p
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     // Frame 0: initialize the spinner's loop-progress state under a stable `root_id`.
     app.set_frame_id(fret_runtime::FrameId(0));
     fret_ui::elements::with_element_cx(&mut app, window, bounds, "badge-spinner-rotation", |cx| {
-        let _ = fret_ui_shadcn::Badge::new("Syncing")
-            .children(vec![
-                fret_ui_shadcn::Spinner::new().speed(1.0).into_element(cx),
-            ])
+        let _ = shadcn::Badge::new("Syncing")
+            .children(vec![shadcn::Spinner::new().speed(1.0).into_element(cx)])
             .into_element(cx);
     });
 
@@ -1162,10 +1137,8 @@ fn fret_badge_spinner_rotation_uses_visual_transform_center_after_badge_resize_p
         bounds,
         "badge-spinner-rotation",
         |cx| {
-            fret_ui_shadcn::Badge::new("Syncing")
-                .children(vec![
-                    fret_ui_shadcn::Spinner::new().speed(1.0).into_element(cx),
-                ])
+            shadcn::Badge::new("Syncing")
+                .children(vec![shadcn::Spinner::new().speed(1.0).into_element(cx)])
                 .into_element(cx)
         },
     );

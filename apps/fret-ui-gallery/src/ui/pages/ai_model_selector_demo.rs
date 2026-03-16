@@ -75,8 +75,6 @@ pub(super) fn preview_ai_model_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-page-ai-model-selector-demo")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-page-ai-model-selector-demo");
+    vec![body.into_element(cx)]
 }

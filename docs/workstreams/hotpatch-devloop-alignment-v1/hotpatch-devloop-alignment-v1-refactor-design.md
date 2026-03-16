@@ -48,15 +48,15 @@ These channels must work even when Rust hotpatch is not active (reload-boundary-
 
 - Theme: `.fret/theme.json` → `Theme::apply_config`
 - Hot literals: `.fret/literals.json` → global `HotLiterals`
-- Assets: `.fret/ui_assets.touch` bumps `UiAssetsReloadEpoch` to invalidate path-based asset caches
-  - file-path images: `ImageSource::from_file_path` cache key includes the epoch
+- Assets: `.fret/asset_reload.touch` bumps the shared `AssetReloadEpoch` to invalidate path-based asset caches
+  - native file-reference image decode bridges include the epoch in their cache key
   - SVG files: `SvgFileSource` file bytes cache respects the epoch
 - Fonts: `.fret/fonts.json` (TTF/OTF/TTC list) applied via `Effect::TextAddFonts`
 
 Evidence anchors:
 
 - `ecosystem/fret-bootstrap/src/dev_reload.rs` (polling watcher + apply)
-- `ecosystem/fret-ui-assets/src/reload.rs` (`UiAssetsReloadEpoch`)
+- `crates/fret-runtime/src/asset_reload.rs` (`AssetReloadEpoch`)
 - `ecosystem/fret-ui-assets/src/image_source.rs` (epoch in cache key)
 - `ecosystem/fret-ui-assets/src/svg_file.rs` (epoch-gated file bytes cache)
 - `crates/fret-launch/src/runner/desktop/runner/effects.rs` (`Effect::TextAddFonts`)

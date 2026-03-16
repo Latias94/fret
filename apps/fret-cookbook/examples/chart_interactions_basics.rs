@@ -355,22 +355,22 @@ fn view(
             cx;
             shadcn::Button::new("Zoom in (X)")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_ZOOM_IN)
+                .action(CMD_ZOOM_IN)
                 .test_id(TEST_ID_ZOOM_IN),
             shadcn::Button::new("Zoom out (X)")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_ZOOM_OUT)
+                .action(CMD_ZOOM_OUT)
                 .test_id(TEST_ID_ZOOM_OUT),
             shadcn::Button::new("Reset view")
                 .variant(shadcn::ButtonVariant::Outline)
-                .on_click(CMD_RESET_VIEW)
+                .action(CMD_RESET_VIEW)
                 .test_id(TEST_ID_RESET_VIEW),
             shadcn::Button::new("Select hovered")
                 .variant(shadcn::ButtonVariant::Outline)
-                .on_click(CMD_SELECT_HOVER),
+                .action(CMD_SELECT_HOVER),
             shadcn::Button::new("Clear selection")
                 .variant(shadcn::ButtonVariant::Ghost)
-                .on_click(CMD_CLEAR_SELECTION),
+                .action(CMD_CLEAR_SELECTION),
             x_span_badge,
             hover_badge,
             selected_badge,

@@ -9,10 +9,9 @@ use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::dropdown_menu::{
-    DropdownMenu, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
+use fret_ui_shadcn::facade::{
+    DropdownMenu, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide, themes as shadcn_themes,
 };
-use fret_ui_shadcn::shadcn_themes;
 use std::sync::Arc;
 
 struct FakeServices;

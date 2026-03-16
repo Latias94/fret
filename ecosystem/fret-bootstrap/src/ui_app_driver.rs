@@ -1357,7 +1357,7 @@ fn ui_app_handle_event<S>(
     {
         let actionable = tick.reloaded_theme
             || tick.reloaded_literals
-            || tick.bumped_ui_assets_epoch
+            || tick.bumped_asset_reload_epoch
             || tick.theme_error.is_some()
             || tick.literals_error.is_some();
 
@@ -1367,7 +1367,7 @@ fn ui_app_handle_event<S>(
                 "dev_reload: window={window:?} theme_reload={} literals_reload={} assets_epoch={} fonts_reload={} theme_err={:?} literals_err={:?} fonts_err={:?}",
                 tick.reloaded_theme,
                 tick.reloaded_literals,
-                tick.bumped_ui_assets_epoch,
+                tick.bumped_asset_reload_epoch,
                 tick.reloaded_fonts,
                 tick.theme_error,
                 tick.literals_error,

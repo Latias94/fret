@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -32,12 +33,15 @@ use fret_ui_kit::primitives::transition as transition_prim;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
-use crate::SeparatorOrientation;
+use crate::button::{Button, ButtonSize, ButtonVariant};
+use crate::input::Input;
 use crate::input::InputStyle as ShadcnInputStyle;
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+use crate::separator::SeparatorOrientation;
+use crate::sheet::{Sheet, SheetContent, SheetSide};
+use crate::skeleton::Skeleton;
 use crate::tooltip::{Tooltip, TooltipAlign, TooltipContent, TooltipProvider, TooltipSide};
-use crate::{Button, ButtonSize, ButtonVariant, Input, Sheet, SheetContent, SheetSide, Skeleton};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
@@ -3501,6 +3505,7 @@ pub struct SidebarMenuButton {
     rel: Option<Arc<str>>,
     on_navigate: Option<OnActivate>,
     on_click: Option<CommandId>,
+    action_payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
 }
@@ -3522,6 +3527,7 @@ impl std::fmt::Debug for SidebarMenuButton {
             .field("rel", &self.rel)
             .field("on_navigate", &self.on_navigate.is_some())
             .field("on_click", &self.on_click)
+            .field("action_payload", &self.action_payload.is_some())
             .field("on_activate", &self.on_activate.is_some())
             .field("test_id", &self.test_id)
             .finish()
@@ -3545,6 +3551,7 @@ impl SidebarMenuButton {
             rel: None,
             on_navigate: None,
             on_click: None,
+            action_payload: None,
             on_activate: None,
             test_id: None,
         }
@@ -3619,6 +3626,25 @@ impl SidebarMenuButton {
         self
     }
 
+    /// Attach a payload for parameterized actions while staying on the native sidebar button surface.
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`SidebarMenuButton::action_payload`], but computes the payload lazily on activation.
+    pub fn action_payload_factory(
+        mut self,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    ) -> Self {
+        self.action_payload = Some(payload);
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.on_click = Some(command.into());
         self
@@ -3658,6 +3684,7 @@ impl SidebarMenuButton {
 
         let label = self.label.clone();
         let on_click = self.on_click.clone();
+        let action_payload = self.action_payload.clone();
         let on_navigate = self.on_navigate.clone();
         let on_activate = self.on_activate.clone();
         let test_id = self.test_id.clone();
@@ -3707,7 +3734,14 @@ impl SidebarMenuButton {
         };
 
         let element = cx.pressable(pressable, move |cx, st| {
-            cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
+            if let Some(payload) = action_payload.clone() {
+                cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                    on_click.clone(),
+                    payload,
+                );
+            } else {
+                cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
+            }
             if let Some(on_navigate) = navigate_handler.clone() {
                 cx.pressable_add_on_activate(on_navigate);
             }

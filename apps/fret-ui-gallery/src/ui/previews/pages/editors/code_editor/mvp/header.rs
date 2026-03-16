@@ -83,12 +83,12 @@ pub(super) fn build_header(
                         shadcn::Button::new("Load fonts…")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                            .action(CMD_CODE_EDITOR_LOAD_FONTS)
                             .into_element(cx),
                         shadcn::Button::new("Dump layout…")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
+                            .action(CMD_CODE_EDITOR_DUMP_TAFFY)
                             .into_element(cx),
                         shadcn::Switch::new(soft_wrap_switch.clone())
                             .test_id("ui-gallery-code-editor-mvp-soft-wrap")

@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::element::{AnyElement, LayoutStyle, Length};
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/web_golden_shadcn.rs"]
@@ -83,10 +84,10 @@ fn run_fret_root(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -136,10 +137,10 @@ fn assert_rect_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) 
 
 fn assert_chart_tooltip_rect_matches_web(
     web_name: &str,
-    indicator: fret_ui_shadcn::ChartTooltipIndicator,
+    indicator: shadcn::ChartTooltipIndicator,
     hide_indicator: bool,
     hide_label: bool,
-    kind: fret_ui_shadcn::ChartTooltipContentKind,
+    kind: shadcn::ChartTooltipContentKind,
     fixed_width_border_box: Option<Px>,
 ) {
     let web = read_web_golden(web_name);
@@ -154,10 +155,8 @@ fn assert_chart_tooltip_rect_matches_web(
     })
     .expect("web chart tooltip node");
 
-    let advanced_layout = matches!(
-        kind,
-        fret_ui_shadcn::ChartTooltipContentKind::AdvancedKcalTotal
-    ) && web_name == "chart-tooltip-advanced";
+    let advanced_layout = matches!(kind, shadcn::ChartTooltipContentKind::AdvancedKcalTotal)
+        && web_name == "chart-tooltip-advanced";
 
     let (web_item_0, web_item_1, web_total_row) = if advanced_layout {
         let item_row = |name: &str| {
@@ -200,15 +199,15 @@ fn assert_chart_tooltip_rect_matches_web(
     let label = Arc::<str>::from(format!("Golden:{web_name}:tooltip"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let mut tooltip = fret_ui_shadcn::ChartTooltipContent::new()
+        let mut tooltip = shadcn::ChartTooltipContent::new()
             .label("Tue")
             .indicator(indicator)
             .hide_indicator(hide_indicator)
             .hide_label(hide_label)
             .kind(kind)
             .items([
-                fret_ui_shadcn::ChartTooltipItem::new("Running", "380"),
-                fret_ui_shadcn::ChartTooltipItem::new("Swimming", "420"),
+                shadcn::ChartTooltipItem::new("Running", "380"),
+                shadcn::ChartTooltipItem::new("Swimming", "420"),
             ]);
         if advanced_layout {
             tooltip = tooltip.test_id_prefix(label.clone());
@@ -289,9 +288,9 @@ fn assert_chart_legend_rect_matches_web(web_name: &str) {
     .expect("web chart legend node");
 
     let vertical_align = if class_has_token(web_legend, "pb-3") {
-        fret_ui_shadcn::ChartLegendVerticalAlign::Top
+        shadcn::ChartLegendVerticalAlign::Top
     } else {
-        fret_ui_shadcn::ChartLegendVerticalAlign::Bottom
+        shadcn::ChartLegendVerticalAlign::Bottom
     };
 
     let bounds = Rect::new(
@@ -302,11 +301,11 @@ fn assert_chart_legend_rect_matches_web(web_name: &str) {
     let label = Arc::<str>::from(format!("Golden:{web_name}:legend"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let legend = fret_ui_shadcn::ChartLegendContent::new()
+        let legend = shadcn::ChartLegendContent::new()
             .vertical_align(vertical_align)
             .items([
-                fret_ui_shadcn::ChartLegendItem::new("Desktop"),
-                fret_ui_shadcn::ChartLegendItem::new("Mobile"),
+                shadcn::ChartLegendItem::new("Desktop"),
+                shadcn::ChartLegendItem::new("Mobile"),
             ])
             .into_element(cx);
 
@@ -365,17 +364,17 @@ fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
     let label = Arc::<str>::from(format!("Golden:{web_name}:pie-legend"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let legend = fret_ui_shadcn::ChartLegendContent::new()
+        let legend = shadcn::ChartLegendContent::new()
             .gap(fret_ui_kit::Space::N2)
             .wrap(true)
             .item_width_px(Px(72.5))
             .item_justify_center(true)
             .items([
-                fret_ui_shadcn::ChartLegendItem::new("Chrome"),
-                fret_ui_shadcn::ChartLegendItem::new("Safari"),
-                fret_ui_shadcn::ChartLegendItem::new("Firefox"),
-                fret_ui_shadcn::ChartLegendItem::new("Edge"),
-                fret_ui_shadcn::ChartLegendItem::new("Other"),
+                shadcn::ChartLegendItem::new("Chrome"),
+                shadcn::ChartLegendItem::new("Safari"),
+                shadcn::ChartLegendItem::new("Firefox"),
+                shadcn::ChartLegendItem::new("Edge"),
+                shadcn::ChartLegendItem::new("Other"),
             ])
             .into_element(cx);
 
@@ -409,10 +408,10 @@ fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
 fn web_vs_fret_chart_tooltip_default_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-default",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         false,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -421,10 +420,10 @@ fn web_vs_fret_chart_tooltip_default_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_indicator_line_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-indicator-line",
-        fret_ui_shadcn::ChartTooltipIndicator::Line,
+        shadcn::ChartTooltipIndicator::Line,
         false,
         false,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -433,10 +432,10 @@ fn web_vs_fret_chart_tooltip_indicator_line_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_indicator_none_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-indicator-none",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         true,
         false,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -445,10 +444,10 @@ fn web_vs_fret_chart_tooltip_indicator_none_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_label_none_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-label-none",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -457,10 +456,10 @@ fn web_vs_fret_chart_tooltip_label_none_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_icons_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-icons",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -469,10 +468,10 @@ fn web_vs_fret_chart_tooltip_icons_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_label_custom_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-label-custom",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         false,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -481,10 +480,10 @@ fn web_vs_fret_chart_tooltip_label_custom_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_label_formatter_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-label-formatter",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         false,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -493,10 +492,10 @@ fn web_vs_fret_chart_tooltip_label_formatter_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_formatter_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-formatter",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
-        fret_ui_shadcn::ChartTooltipContentKind::FormatterKcal,
+        shadcn::ChartTooltipContentKind::FormatterKcal,
         None,
     );
 }
@@ -505,10 +504,10 @@ fn web_vs_fret_chart_tooltip_formatter_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_advanced_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-advanced",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
-        fret_ui_shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
+        shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
         Some(Px(180.0)),
     );
 }
@@ -537,10 +536,10 @@ fn web_vs_fret_chart_pie_legend_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_default_small_viewport_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-default.vp375x320",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         false,
-        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        shadcn::ChartTooltipContentKind::Default,
         None,
     );
 }
@@ -549,10 +548,10 @@ fn web_vs_fret_chart_tooltip_default_small_viewport_geometry_matches_web() {
 fn web_vs_fret_chart_tooltip_advanced_small_viewport_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-advanced.vp375x320",
-        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
-        fret_ui_shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
+        shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
         Some(Px(180.0)),
     );
 }

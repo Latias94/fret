@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -33,12 +33,13 @@ use fret_ui_kit::{
     resolve_override_slot, ui,
 };
 
-use crate::overlay_motion;
-use crate::test_id::test_id_slug;
-use crate::{
-    CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
-    DrawerContent, Popover, PopoverAlign, PopoverContent, PopoverSide,
+use crate::command::{
+    CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator,
 };
+use crate::drawer::{Drawer, DrawerContent};
+use crate::overlay_motion;
+use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
+use crate::test_id::test_id_slug;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -1457,7 +1458,7 @@ fn combobox_with_patch<H: UiHost>(
 	                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
 	                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
 	                            states.set(WidgetState::Open, is_open);
-	                            let dir = crate::use_direction(cx, None);
+	                            let dir = crate::direction::use_direction(cx, None);
 
 	                            let bg_ref = resolve_override_slot(
 	                                style_override.trigger_background.as_ref(),
@@ -2236,7 +2237,7 @@ fn combobox_with_patch<H: UiHost>(
 	                        .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
 	                    let mut states = WidgetStates::from_pressable(cx, st, enabled);
 	                    states.set(WidgetState::Open, is_open);
-	                    let dir = crate::use_direction(cx, None);
+	                    let dir = crate::direction::use_direction(cx, None);
 
 	                    let bg_ref = resolve_override_slot(
 	                        style_override.trigger_background.as_ref(),
@@ -2564,7 +2565,7 @@ fn combobox_with_patch<H: UiHost>(
                         fret_ui::Invalidation::Layout,
                         window_margin,
                     );
-                    let direction = crate::use_direction(cx, None);
+                    let direction = crate::direction::use_direction(cx, None);
                     let placement = combobox_content_placement(
                         direction,
                         content_side,

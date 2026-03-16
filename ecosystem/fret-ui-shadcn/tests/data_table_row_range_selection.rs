@@ -8,6 +8,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::table::PointerRowSelectionPolicy;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -37,7 +38,7 @@ fn render_frame(
         bounds,
         "data-table-row-range-selection",
         move |cx| {
-            let table = fret_ui_shadcn::DataTable::new()
+            let table = shadcn::DataTable::new()
                 .row_click_selection(true)
                 .row_click_selection_policy(PointerRowSelectionPolicy::ListLike)
                 .single_row_selection(false)
@@ -125,10 +126,10 @@ fn data_table_row_click_selection_list_like_shift_click_selects_range() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let data: Arc<[usize]> = Arc::from((0..6usize).collect::<Vec<_>>().into_boxed_slice());

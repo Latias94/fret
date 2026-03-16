@@ -46,12 +46,12 @@ impl View for HelloView {
         cx.actions()
             .availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
-        hello_page(cx, render_marker, count_value)
+        ui::single(cx, hello_page(render_marker, count_value))
     }
 }
 
-fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) -> Ui {
-    ui::v_flex(|cx| {
+fn hello_page(render_marker: &'static str, count_value: u32) -> impl UiChild {
+    ui::v_flex(move |cx| {
         ui::children![
             cx;
             shadcn::Label::new("Hello, Fret cookbook!").test_id(TEST_ID_LABEL),
@@ -67,8 +67,6 @@ fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) 
     .items_center()
     .justify_center()
     .test_id(TEST_ID_ROOT)
-    .into_element(cx)
-    .into()
 }
 
 fn main() -> anyhow::Result<()> {

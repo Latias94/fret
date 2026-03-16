@@ -42,10 +42,11 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, ui,
 };
 
+use crate::dialog::{Dialog, DialogContent};
 use crate::layout as shadcn_layout;
 use crate::rtl;
+use crate::scroll_area::ScrollArea;
 use crate::shortcut_display::shortcut_text_element;
-use crate::{Dialog, DialogContent, ScrollArea};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnOpenChangeWithReason =
@@ -443,7 +444,7 @@ impl CommandShortcut {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let style = shortcut_text_style(&theme);
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let shortcut_layout = if self.auto_margin_inline_start {
             rtl::layout_refinement_margin_inline_start_auto(dir)
         } else {
@@ -698,7 +699,7 @@ impl CommandInput {
             let pad_right = padding.right.map(|m| m.resolve(theme)).unwrap_or(pad_x);
             let pad_bottom = padding.bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
             let pad_left = padding.left.map(|m| m.resolve(theme)).unwrap_or(pad_x);
-            let dir = crate::use_direction(cx, None);
+            let dir = crate::direction::use_direction(cx, None);
 
             let icon_fg = theme.color_token("popover-foreground");
 
@@ -1726,7 +1727,7 @@ impl CommandList {
 	                                                    ColorRef::Color(text_fg),
 	                                                    |cx| {
 	                                                        let dir =
-	                                                            crate::use_direction(cx, None);
+	                                                            crate::direction::use_direction(cx, None);
 	                                                        let justify = crate::rtl::inline_start_end_pair(
 	                                                            dir,
 	                                                            MainAlign::Start,
@@ -2943,7 +2944,7 @@ impl CommandPalette {
                                             cx,
                                             ColorRef::Color(text_fg),
                                             |cx| {
-                                                let dir = crate::use_direction(cx, None);
+                                                let dir = crate::direction::use_direction(cx, None);
                                                 vec![cx.row(
                                                     RowProps {
                                                         layout: {
@@ -3176,7 +3177,7 @@ impl CommandPalette {
                 Some(ColorRef::Color(icon_fg)),
             );
             let icon = cx.opacity(0.5, move |_cx| vec![icon]);
-            let dir = crate::use_direction(cx, None);
+            let dir = crate::direction::use_direction(cx, None);
 
             let mut input = cx.row(
                 RowProps {
@@ -4374,7 +4375,7 @@ mod tests {
                                     .push((is_open, reason));
                             }
                         })))
-                        .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
+                        .into_element(cx, |cx| crate::button::Button::new("Open").into_element(cx)),
                     ]
                 },
             );
@@ -4476,7 +4477,7 @@ mod tests {
                 vec![
                     CommandDialog::new(open, query, items)
                         .close_on_select(close_on_select)
-                        .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
+                        .into_element(cx, |cx| crate::button::Button::new("Open").into_element(cx)),
                 ]
             },
         );

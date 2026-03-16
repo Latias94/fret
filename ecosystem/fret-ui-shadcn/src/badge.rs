@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::{
@@ -5,7 +6,7 @@ use fret_core::{
     TextFontFeatureSetting, Transform2D,
 };
 use fret_icons::IconId;
-use fret_runtime::Effect;
+use fret_runtime::{ActionId, Effect};
 use fret_ui::ThemeNamedColorKey;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
@@ -13,6 +14,7 @@ use fret_ui::element::{
     PressableProps, SpinnerProps, SvgIconProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -89,12 +91,16 @@ fn open_url_on_activate(
     })
 }
 
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
+
 pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,
     render: Option<BadgeRender>,
     visited: bool,
     aria_invalid: bool,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
@@ -115,6 +121,8 @@ impl std::fmt::Debug for Badge {
             .field("label", &self.label.as_ref())
             .field("variant", &self.variant)
             .field("render", &self.render)
+            .field("action", &self.action)
+            .field("action_payload", &self.action_payload.is_some())
             .field("on_activate", &self.on_activate.is_some())
             .field("aria_invalid", &self.aria_invalid)
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
@@ -133,6 +141,8 @@ impl Badge {
             render: None,
             visited: false,
             aria_invalid: false,
+            action: None,
+            action_payload: None,
             on_activate: None,
             test_id: None,
             leading_icon: None,
@@ -223,6 +233,28 @@ impl Badge {
         self
     }
 
+    /// Bind a stable action ID to this badge (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized badge actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`Badge::action_payload`], but computes the payload lazily on activation.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self
@@ -252,6 +284,8 @@ impl Badge {
             self.aria_invalid,
             self.render,
             self.visited,
+            self.action,
+            self.action_payload,
             self.on_activate,
             self.test_id,
             self.leading_icon,
@@ -398,6 +432,8 @@ fn badge_with_patch<H: UiHost>(
     aria_invalid: bool,
     render: Option<BadgeRender>,
     visited: bool,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
@@ -524,18 +560,29 @@ fn badge_with_patch<H: UiHost>(
             .max(bottom_left.0))
     };
 
+    let should_fallback_open_url = action.is_none() && on_activate.is_none();
     let (render_role, render_key_activation, render_on_activate) = match render {
         Some(BadgeRender::Link { href, target, rel }) => (
             Some(SemanticsRole::Link),
             PressableKeyActivation::EnterOnly,
-            on_activate.or_else(|| Some(open_url_on_activate(href, target, rel))),
+            on_activate.or_else(|| {
+                should_fallback_open_url.then(|| open_url_on_activate(href, target, rel))
+            }),
         ),
         None => (None, PressableKeyActivation::EnterAndSpace, on_activate),
     };
 
-    if render_role.is_some() || render_on_activate.is_some() {
+    if render_role.is_some() || render_on_activate.is_some() || action.is_some() {
         let visited = visited && render_role == Some(SemanticsRole::Link);
         return control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
+            if let Some(payload) = action_payload.clone() {
+                cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                    action.clone(),
+                    payload,
+                );
+            } else {
+                cx.pressable_dispatch_action_if_enabled_opt(action.clone());
+            }
             if let Some(on_activate) = render_on_activate.clone() {
                 cx.pressable_on_activate(on_activate);
             }

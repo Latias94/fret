@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("position.rs");
 
 // region: example
 use crate::ui::snippets::sonner::{last_action_model, position_model, request};
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -46,24 +47,24 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         let sonner = sonner.clone();
         let position_model = sonner_position.clone();
         let last_action_model = last_action.clone();
-        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            let _ = host.models_mut().update(&position_model, |v| *v = target);
-            sonner.toast(
-                host,
-                action_cx.window,
-                request("Event has been created")
-                    .position(target)
-                    .description(format!("position: {}", toast_position_key(target))),
-            );
-            let _ = host.models_mut().update(&last_action_model, |v| {
-                *v = Arc::<str>::from(format!("sonner.position.{}", toast_position_key(target)));
-            });
-            host.request_redraw(action_cx.window);
-        });
 
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
-            .on_activate(on_activate)
+            .on_activate(cx.actions().listen(move |host, action_cx| {
+                let _ = host.models_mut().update(&position_model, |v| *v = target);
+                sonner.toast(
+                    host,
+                    action_cx.window,
+                    request("Event has been created")
+                        .position(target)
+                        .description(format!("position: {}", toast_position_key(target))),
+                );
+                let _ = host.models_mut().update(&last_action_model, |v| {
+                    *v =
+                        Arc::<str>::from(format!("sonner.position.{}", toast_position_key(target)));
+                });
+                host.request_redraw(action_cx.window);
+            }))
             .test_id(test_id)
             .into_element(cx)
     };

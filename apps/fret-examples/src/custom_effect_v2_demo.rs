@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
     ImageSamplingHint, UvRect,
@@ -22,7 +22,7 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
-use fret_ui_kit::{IntoUiElement, Space};
+use fret_ui_kit::{IntoUiElement, Space, ui};
 
 mod act {
     fret::actions!([Reset = "custom_effect_v2_demo.reset.v1"]);

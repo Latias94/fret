@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Event Surface Unification
 
 Status: in progress, post-v1 productization lane
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 Related:
 
@@ -56,19 +56,19 @@ The default app-facing event story should collapse to four concepts:
 2. **Dispatch that action from widget-local activation sugar**
    - if a widget already has `.action(...)` / `.action_payload(...)`, prefer those direct action
      slots first,
-   - use `widget.dispatch::<act::Save>(cx)` only for activation-only surfaces that do not already
-     expose a stable action slot,
-   - use `widget.dispatch_payload::<act::ToggleTodo>(cx, todo.id)` only when the widget-local
-     surface is activation-only but the action still needs payload dispatch,
-   - treat raw `.on_activate(cx.actions().dispatch* / listener(...))` as the lower-level building
-     block behind that sugar, not as the default teaching lane.
+   - activation-only surfaces should still prefer the same action-first wording when possible:
+     `widget.action(act::Save)` and `widget.action_payload(act::ToggleTodo, todo.id)`,
+   - keep `widget.dispatch::<act::Save>()` / `widget.dispatch_payload::<act::ToggleTodo>(todo.id)`
+     as explicit aliases when the turbofish wording is clearer at the call site,
+   - treat raw `.on_activate(...)` wired with `cx.actions().action* / dispatch* / listen(...)` as the
+     lower-level building block behind that sugar, not as the default teaching lane.
 3. **Handle actions at the view/root layer**
    - `cx.actions().locals::<A>(...)`
    - `cx.actions().models::<A>(...)`
    - `cx.actions().payload::<A>().locals(...)`
    - `cx.actions().transient::<A>(...)`
 4. **Use an explicit listener escape hatch for local imperative glue**
-   - `widget.listen(cx, |host, acx| { ... })`
+   - `widget.listen(|host, acx| { ... })`
 
 Everything else should read as advanced or retained seam.
 
@@ -89,13 +89,13 @@ shadcn::Checkbox::from_checked(todo.done)
     .action_payload(todo.id);
 
 widget_that_only_exposes_on_activate()
-    .dispatch::<act::Save>(cx);
+    .action(act::Save);
 
 widget_that_only_exposes_on_activate()
-    .dispatch_payload::<act::RemoveTodo>(cx, todo.id);
+    .action_payload(act::RemoveTodo, todo.id);
 
 shadcn::Button::new("Close")
-    .listen(cx, |host, acx| {
+    .listen(|host, acx| {
         host.request_redraw(acx.window);
         host.notify(acx);
     });
@@ -128,6 +128,9 @@ The following remain valid, but should not be the first-contact story:
 
 Land:
 
+- `cx.actions().action(act::Save)`
+- `cx.actions().action_payload(act::RemoveTodo, payload)`
+- `cx.actions().listen(...)`
 - `cx.actions().dispatch::<A>()`
 - `cx.actions().dispatch_payload::<A>(payload)`
 - `cx.actions().listener(...)`
@@ -142,8 +145,9 @@ Move default docs toward:
 
 - widget binding via `.action(...)` / `.action_payload(...)` whenever the widget already exposes a
   stable action slot,
-- widget-local activation via `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` /
-  `.listen(cx, ...)` only for activation-only surfaces,
+- widget-local activation via `.action(...)` / `.action_payload(...)` / `.listen(...)` for
+  activation-only surfaces, with `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` as explicit
+  aliases,
 - root/view handling via `cx.actions().locals/models/payload/transient`
 
 Demote:
@@ -153,17 +157,19 @@ Demote:
 
 ### Phase 2.5 — Land thin app-facing sugar for activation-only seams
 
-Status (as of 2026-03-15): landed in `ecosystem/fret` as `fret::app::AppActivateSurface` plus the
-blanket `AppActivateExt` methods imported by `fret::app::prelude::*`.
+Status (as of 2026-03-16): landed in `ecosystem/fret` as `fret::app::AppActivateSurface` plus the
+blanket `AppActivateExt` methods available behind an explicit app-lane import path,
+`use fret::app::AppActivateExt as _;`. The trait intentionally stays off
+`fret::app::prelude::*` so bridge-only helpers do not widen default app autocomplete.
 
 Default shape:
 
 ```rust,ignore
-shadcn::DrawerTrigger::build(...)
-    .dispatch::<act::OpenPalette>(cx);
+activation_only_widget()
+    .action(act::OpenPalette);
 
-custom_canvas_hotspot(...)
-    .listen(cx, |host, acx| {
+activation_only_widget()
+    .listen(|host, acx| {
         host.request_redraw(acx.window);
         host.notify(acx);
     });
@@ -172,16 +178,61 @@ custom_canvas_hotspot(...)
 Trait boundary:
 
 - app-facing extension trait in `ecosystem/fret`,
+- not part of `fret::app::prelude::*`; call sites import `use fret::app::AppActivateExt as _;`
+  only when they intentionally use the activation-only bridge,
 - implemented only for widgets/types that already expose `on_activate(...)`,
-- powered internally by `cx.actions().dispatch(...)` / `dispatch_payload(...)` / `listener(...)`,
+- the authoring surface intentionally does **not** carry an unused `cx` marker argument anymore;
+  widget-local activation sugar is now pure widget syntax (`dispatch`, `dispatch_payload`,
+  `listen`) because the context value was never part of the runtime behavior,
+- current first-party bridge coverage intentionally stays empty: `shadcn::Button`,
+  `shadcn::SidebarMenuButton`, Material 3 wrappers, and the audited AI widgets now all stay on
+  native `.action(...)` / `.action_payload(...)` / widget-owned `.on_activate(...)` surfaces,
+- shadcn widgets that already ship native `.action(...)` / `.action_payload(...)` such as
+  `Badge` and `extras::{BannerAction, BannerClose, Ticker}` stay off the bridge table so
+  `AppActivateExt` keeps shrinking instead of becoming a permanent integration list,
+- AI widgets that already ship native `.action(...)` or widget-owned `.on_activate(...)` such as
+  `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`, `ArtifactClose`, and
+  `CheckpointTrigger` also stay off the bridge table for the same reason,
+- Material 3 wrappers that already ship native `.action(...)` such as `Card`, `DialogAction`,
+  and `TopAppBarAction` also stay off the bridge table for the same reason,
+- powered internally by `cx.actions().action(...)` / `action_payload(...)` / `listen(...)`,
+  with `dispatch` / `dispatch_payload` / `listener` kept as equivalent explicit aliases,
 - kept off `crates/fret-ui` and off component-policy crates.
 - custom widgets join this lane by implementing `fret::app::AppActivateSurface` and forwarding
   their `on_activate(...)` slot.
+- intentionally excluded: surfaces whose callback contract already carries extra domain data or a
+  specialized `ActionCx`-only seam, such as `fret_ui_ai::Attachment` (`Arc<str>` id payload),
+  `QueueItemAction`, `Test`, `FileTreeAction`, `Suggestion`, `MessageBranch`, and terminal/file-tree
+  helper actions. Those remain component-owned typed callbacks rather than joining a second generic
+  app-facing trait family.
+
+Current first-party teaching evidence (as of 2026-03-16):
+
+- selected UI Gallery button/sidebar listener snippets now import `fret::app::UiCxActionsExt as _;`,
+- those snippets prefer widget-owned `.on_activate(cx.actions().listen(...))` over bridge imports,
+- extracted `UiCx` helper functions now get the same grouped action surface through
+  `fret::app::UiCxActionsExt`, so UI Gallery snippets with native widget `.action(...)` slots can
+  stay on `cx.actions().models::<A>(...)` instead of reaching for the bridge,
+- the UI Gallery `command/action_first_view` snippet now stays on native widget `.action(...)`
+  slots without importing `AppActivateExt`, which keeps ordinary action-capable authoring off the
+  bridge lane,
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locks that default teaching
+  surface with `selected_activation_snippets_prefer_app_activate_listen`, including the primary
+  `sonner/demo` snippet, the data-table pagination demos, `scroll_area/nested_scroll_routing`, and
+  the AI `artifact_code_display` / `artifact_demo` / `chat_demo` / `checkpoint_demo` /
+  `message_usage` / `prompt_input_referenced_sources_demo` / `reasoning_demo` /
+  `transcript_torture` / `workflow_controls_demo` / `workflow_node_graph_demo` /
+  `message_demo` / `task_demo` / `persona_demo` snippets when `fret`'s optional `ui-ai` lane is
+  enabled. The remaining `confirmation_demo`, `conversation_demo`, `prompt_input_docs_demo`, and
+  `web_preview_demo` snippets now demonstrate the preferred native-widget lane instead of the
+  bridge lane.
 
 Non-goals for this thin sugar lane:
 
 - do not replace `.action(...)` as the default for widgets that already have action slots,
 - do not add a new family like `click`, `submit`, `select`, `listener_notify`, `listener_redraw`,
+- do not introduce a parallel `AppActionCxSurface`-style trait family for custom callback
+  signatures; keep payload/context-carrying widget contracts typed and component-local,
 - do not flatten the grouped `cx.actions()` namespace back into another flat helper taxonomy.
 
 ### Phase 3 — Shrink command-shaped widget naming

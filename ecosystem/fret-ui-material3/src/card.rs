@@ -7,12 +7,15 @@
 use std::sync::Arc;
 
 use fret_core::{Edges, Px, SemanticsRole};
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, Overflow, PointerRegionProps, PressableA11y, PressableProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
@@ -78,6 +81,7 @@ impl CardStyle {
 #[derive(Clone)]
 pub struct Card {
     variant: CardVariant,
+    action: Option<ActionId>,
     on_activate: Option<OnActivate>,
     style: CardStyle,
     disabled: bool,
@@ -89,6 +93,7 @@ impl std::fmt::Debug for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Card")
             .field("variant", &self.variant)
+            .field("action", &self.action)
             .field("on_activate", &self.on_activate.is_some())
             .field("style", &self.style)
             .field("disabled", &self.disabled)
@@ -102,6 +107,7 @@ impl Card {
     pub fn new() -> Self {
         Self {
             variant: CardVariant::default(),
+            action: None,
             on_activate: None,
             style: CardStyle::default(),
             disabled: false,
@@ -112,6 +118,12 @@ impl Card {
 
     pub fn variant(mut self, variant: CardVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    /// Bind a stable action ID to this card (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
         self
     }
 
@@ -151,9 +163,16 @@ impl Card {
     {
         cx.scope(|cx| {
             control_chrome_pressable_with_id_props(cx, |cx, st, pressable_id| {
-                let interactive = self.on_activate.is_some();
-                let enabled = interactive && !self.disabled;
+                let action_enabled = self
+                    .action
+                    .as_ref()
+                    .is_none_or(|action| cx.command_is_enabled(action));
+                let interactive = self.action.is_some() || self.on_activate.is_some();
+                let enabled = interactive && !self.disabled && action_enabled;
 
+                if let Some(action) = self.action.clone() {
+                    cx.pressable_dispatch_action_if_enabled(action);
+                }
                 if let Some(handler) = self.on_activate.clone() {
                     cx.pressable_on_activate(handler);
                 }

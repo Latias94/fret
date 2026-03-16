@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_ui_shadcn::collapsible_primitives as shadcn_col;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use shadcn::raw::collapsible::primitives as shadcn_col;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Mirrors upstream shadcn/ui v4 `collapsible-demo.tsx` composition: free structure with
@@ -36,7 +36,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element(cx);
                     let theme = Theme::global(&*cx.app).snapshot();
-                    let props = fret_ui_shadcn::decl_style::container_props(
+                    let props = decl_style::container_props(
                         &theme,
                         ChromeRefinement::default().px(Space::N4),
                         LayoutRefinement::default().w_full().min_w_0(),
@@ -46,7 +46,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                 let item = |cx: &mut UiCx<'_>, text: &'static str| {
                     let theme = Theme::global(&*cx.app).snapshot();
-                    let props = fret_ui_shadcn::decl_style::container_props(
+                    let props = decl_style::container_props(
                         &theme,
                         ChromeRefinement::default()
                             .border_1()

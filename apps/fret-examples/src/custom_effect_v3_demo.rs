@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::scene::{
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, EffectChain,
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, ImageSamplingHint, UvRect,

@@ -2,10 +2,9 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::ImageId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-pub fn render(cx: &mut UiCx<'_>, avatar_image: Model<Option<ImageId>>) -> impl UiChild + use<> {
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Align with upstream shadcn/ui HoverCard demo composition:
     // - trigger: link-style button (`@nextjs`)
     // - content: `w-80` (320px), avatar + text block
@@ -17,9 +16,10 @@ pub fn render(cx: &mut UiCx<'_>, avatar_image: Model<Option<ImageId>>) -> impl U
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
 
-    let avatar_image_el = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+    let avatar_image = crate::ui::snippets::avatar::demo_image(cx);
+    let avatar_image_el = shadcn::AvatarImage::maybe(avatar_image).into_element(cx);
     let avatar_fallback = shadcn::AvatarFallback::new("VC")
-        .when_image_missing_model(avatar_image)
+        .when_image_missing(avatar_image)
         .delay_ms(120)
         .into_element(cx);
     let avatar = shadcn::Avatar::new([avatar_image_el, avatar_fallback]).into_element(cx);

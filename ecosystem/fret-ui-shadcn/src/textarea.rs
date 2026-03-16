@@ -1021,7 +1021,7 @@ mod tests {
 
         let model = app.models_mut().insert(String::new());
         let root = elements::with_element_cx(&mut app, window, bounds, "labelled-textarea", |cx| {
-            let label = crate::Label::new("Notes").into_element(cx);
+            let label = crate::label::Label::new("Notes").into_element(cx);
             let label_id = label.id;
 
             let textarea = Textarea::new(model.clone())

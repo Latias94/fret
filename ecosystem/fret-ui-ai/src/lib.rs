@@ -70,6 +70,9 @@ pub mod elements;
 pub mod export;
 pub mod model;
 
+#[cfg(test)]
+mod surface_policy_tests;
+
 pub use elements::{
     Agent, AgentContent, AgentHeader, AgentInstructions, AgentOutput, AgentTool,
     AgentToolDefinition, AgentTools, AiChat, AiConversationTranscript, Artifact, ArtifactAction,

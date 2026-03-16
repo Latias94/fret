@@ -1,5 +1,4 @@
 use fret_app::Model;
-use fret_core::ImageId;
 #[cfg(feature = "gallery-dev")]
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_shadcn::facade as shadcn;
@@ -48,9 +47,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) tabs_value: Model<Option<Arc<str>>>,
     pub(crate) accordion_value: Model<Option<Arc<str>>>,
 
-    pub(crate) avatar_demo_image: Model<Option<ImageId>>,
-    pub(crate) image_fit_demo_wide_image: Model<Option<ImageId>>,
-    pub(crate) image_fit_demo_tall_image: Model<Option<ImageId>>,
     pub(crate) progress: Model<f32>,
     #[cfg(feature = "gallery-dev")]
     pub(crate) checkbox: Model<bool>,

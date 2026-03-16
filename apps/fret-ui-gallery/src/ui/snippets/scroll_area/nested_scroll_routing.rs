@@ -1,14 +1,13 @@
 pub const SOURCE: &str = include_str!("nested_scroll_routing.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::{Point, Px};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
-
 fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> impl IntoUiElement<H> + use<H> {
     let zebra = (i % 2) == 0;
     let theme = cx.theme();
@@ -55,7 +54,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let inner_handle = inner_handle.clone();
             shadcn::Button::new("Reset")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                .on_activate(cx.actions().listen(move |host, action_cx| {
                     outer_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
                     inner_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
                     host.request_redraw(action_cx.window);

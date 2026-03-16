@@ -13,6 +13,17 @@ pub(crate) fn hello_world_compare_script_idle_present_max_delta(script: &Path) -
     hello_world_compare_script_prefers_external_no_diag_post_run(script).then_some(1)
 }
 
+pub(crate) fn script_default_asset_reload_epoch_min(script: &Path) -> Option<u64> {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return None;
+    };
+
+    match name {
+        "cookbook-assets-reload-epoch-basics-smoke.json" => Some(1),
+        _ => None,
+    }
+}
+
 pub(crate) fn bundle_paint_cache_hit_test_only_replay_maxes(
     bundle_path: &Path,
     warmup_frames: u64,

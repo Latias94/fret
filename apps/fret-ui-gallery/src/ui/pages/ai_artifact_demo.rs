@@ -61,8 +61,6 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
         sections,
     );
 
-    vec![
-        body.test_id("ui-gallery-page-ai-artifact-demo")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-page-ai-artifact-demo");
+    vec![body.into_element(cx)]
 }

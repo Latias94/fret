@@ -113,6 +113,7 @@ struct DiagWindowInsetsOverride {
 }
 
 mod app_handler;
+mod asset_reload;
 #[cfg(feature = "dev-state")]
 mod dev_state;
 mod diag_bundle_screenshots;
@@ -202,6 +203,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     pub config: WinitRunnerConfig,
     pub app: App,
     pub driver: D,
+    asset_reload: Option<asset_reload::AssetReloadController>,
     dispatcher: DesktopDispatcher,
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
@@ -810,6 +812,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
         macos_hit_test::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         self.dispatcher.set_event_loop_proxy(proxy.clone());
+        #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+        if let Some(asset_reload) = self.asset_reload.as_mut() {
+            asset_reload.set_event_loop_proxy(
+                &mut self.app,
+                Instant::now(),
+                &mut self.timers,
+                proxy.clone(),
+                self.proxy_events.clone(),
+            );
+        }
         self.event_loop_proxy = Some(proxy);
 
         #[cfg(target_os = "linux")]

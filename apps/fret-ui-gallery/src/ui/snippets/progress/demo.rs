@@ -10,16 +10,18 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
 
+fn centered<B>(body: B) -> impl UiChild + use<B>
+where
+    B: UiChild,
+{
+    ui::h_flex(move |cx| [body.into_element(cx)])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_center()
+}
+
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || 13.0);
     let timer_token = cx.local_model_keyed("timer_token", || None::<TimerToken>);
-
-    let centered = |cx: &mut UiCx<'_>, body: AnyElement| {
-        ui::h_flex(move |_cx| [body])
-            .layout(LayoutRefinement::default().w_full())
-            .justify_center()
-            .into_element(cx)
-    };
 
     cx.keyed("ui_gallery.progress.demo", |cx| {
         let value_for_timer = value.clone();
@@ -75,7 +77,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx)
                     .test_id("ui-gallery-progress-demo-bar");
 
-                vec![centered(cx, bar)]
+                vec![centered(bar).into_element(cx)]
             },
         );
 

@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/paint.rs"]
 mod paint;
@@ -173,7 +174,7 @@ pub(super) fn render_fret_calendar_range_scene(
             to: Some(config.range_max),
         });
 
-        let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+        let mut calendar = shadcn::CalendarRange::new(month_model, selected)
             .week_start(config.week_start)
             .show_outside_days(config.show_outside_days)
             .disable_outside_days(config.disable_outside_days)

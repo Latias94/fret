@@ -63,11 +63,20 @@
 //! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
 //!   `AssetBundleId::package(...)` over raw global strings; on native/package-dev lanes you can
-//!   mount a scanned bundle directory via `FretApp::asset_dir(...)`,
-//!   `UiAppBuilder::with_asset_dir(...)`, or `register_file_bundle_dir(...)`; use
+//!   mount a scanned bundle directory via `AssetStartupPlan` + `AssetStartupMode` on the high
+//!   lane, or `FretApp::asset_dir(...)`, `UiAppBuilder::with_asset_dir(...)`, and
+//!   `register_file_bundle_dir(...)` on the lower-level native/package-dev lane; use
 //!   `FretApp::asset_manifest(...)`, `UiAppBuilder::with_asset_manifest(...)`, or
 //!   `register_file_manifest(...)` when tooling already emits an explicit manifest artifact; treat
-//!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches
+//!   `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches;
+//!   when native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
+//!   logical bundle locators and let
+//!   `fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
+//!   or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+//!   consume the resolver's bundle/reference bridge instead of constructing raw file-path sources
+//!   directly; keep `resolve_image_source_from_host_locator(...)` /
+//!   `resolve_svg_file_source_from_host_locator(...)` as the lower-level compatibility seam when a
+//!   non-UI integration truly needs the bridged source or native file handoff object
 //! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
 //!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
@@ -77,6 +86,8 @@
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
 //!   passing named installer functions to `.setup(...)` and keeps inline one-off closures or
 //!   runtime-captured config on `UiAppBuilder::setup_with(...)`
+use std::path::PathBuf;
+
 use crate::advanced::KernelApp;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
@@ -89,21 +100,29 @@ pub use fret_ui_shadcn::facade as shadcn;
 /// Re-export portable action/command identity types for app code and macros.
 pub use fret_runtime::{ActionId, CommandId, TypedAction};
 
-/// Explicit icon identifiers for app and component code that opt into icon-specific authoring.
+/// Explicit icon helpers and identifiers for app and component code that opt into icon-specific
+/// authoring.
 pub mod icons {
     pub use fret_icons::IconId;
+    pub use fret_ui_kit::declarative::icon;
+}
+
+/// Explicit accessibility/semantics nouns for app code that needs semantic-role overrides.
+pub mod semantics {
+    pub use fret_core::SemanticsRole;
 }
 
 /// Explicit style/token nouns for app code that customizes layout or chrome beyond the default lane.
 pub mod style {
     pub use fret_core::{TextOverflow, TextWrap};
-    pub use fret_ui::Theme;
+    pub use fret_ui::{Theme, ThemeSnapshot};
     pub use fret_ui_kit::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset, Size, Space,
     };
 }
 
-/// Explicit environment and responsive helpers for app code that opts into adaptive UI logic.
+/// Explicit environment and responsive helpers for app or component code that opts into adaptive
+/// UI logic.
 pub mod env {
     pub use fret_ui_kit::declarative::{
         accent_color, container_breakpoints, container_query_region,
@@ -119,6 +138,33 @@ pub mod env {
     };
 }
 
+/// Explicit child-collection helpers for app code that opts into manual sink-style composition.
+pub mod children {
+    pub use fret_ui_kit::ui::UiElementSinkExt;
+}
+
+/// Explicit activation-helper glue for component or advanced code that intentionally authors raw
+/// `on_activate(...)` handlers.
+pub mod activate {
+    pub use fret_ui_kit::{
+        on_activate, on_activate_notify, on_activate_request_redraw,
+        on_activate_request_redraw_notify,
+    };
+}
+
+/// Explicit overlay composition and introspection vocabulary for reusable component code.
+///
+/// The component prelude keeps only the highest-frequency overlay builder nouns. Lower-level
+/// overlay stack snapshots and anchoring helpers stay on this explicit lane so reusable component
+/// authors do not meet them via first-contact wildcard imports.
+pub mod overlay {
+    pub use fret_ui_kit::overlay::*;
+    pub use fret_ui_kit::{
+        OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
+        OverlayRequest, OverlayStackEntryKind, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
+    };
+}
+
 /// Explicit logical asset-contract vocabulary and host registration helpers for app code.
 ///
 /// The portable default story is bundle/embedded locators. Prefer `AssetBundleId::app(...)` and
@@ -131,13 +177,22 @@ pub mod assets {
     #[cfg(not(target_arch = "wasm32"))]
     pub use fret_assets::FileAssetManifestResolver;
     pub use fret_assets::{
-        AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetKey, AssetKindHint,
-        AssetLoadError, AssetLocator, AssetLocatorKind, AssetManifestLoadError, AssetMediaType,
-        AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision, FILE_ASSET_MANIFEST_KIND_V1,
-        FileAssetManifestBundleV1, FileAssetManifestEntryV1, FileAssetManifestV1,
-        ResolvedAssetBytes, StaticAssetEntry, asset_app_bundle_id, asset_package_bundle_id,
+        AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetExternalReference, AssetKey,
+        AssetKindHint, AssetLoadError, AssetLocator, AssetLocatorKind, AssetManifestLoadError,
+        AssetMediaType, AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision,
+        FILE_ASSET_MANIFEST_KIND_V1, FileAssetManifestBundleV1, FileAssetManifestEntryV1,
+        FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
+        asset_app_bundle_id, asset_package_bundle_id,
+    };
+    pub use fret_bootstrap::{
+        AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
     };
     pub use fret_runtime::AssetResolverService;
+    pub use fret_runtime::{
+        AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
+        AssetReloadSupport, asset_reload_epoch, asset_reload_status, asset_reload_support,
+        bump_asset_reload_epoch,
+    };
 
     /// Install or replace the primary resolver layer for the current host.
     ///
@@ -239,10 +294,56 @@ pub mod assets {
     ) -> Result<ResolvedAssetBytes, AssetLoadError> {
         fret_runtime::resolve_asset_locator_bytes(host, locator)
     }
+
+    /// Resolve an external file/URL reference for a logical asset request through the
+    /// host-installed resolver chain.
+    pub fn resolve_reference(
+        host: &impl fret_runtime::GlobalsHost,
+        request: &AssetRequest,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        fret_runtime::resolve_asset_reference(host, request)
+    }
+
+    /// Resolve an external file/URL reference for a single locator through the host-installed
+    /// resolver chain.
+    pub fn resolve_locator_reference(
+        host: &impl fret_runtime::GlobalsHost,
+        locator: AssetLocator,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        fret_runtime::resolve_asset_locator_reference(host, locator)
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[derive(Debug, Clone)]
+pub(crate) enum AssetMount {
+    Dir {
+        bundle: fret_assets::AssetBundleId,
+        dir: PathBuf,
+    },
+    Manifest {
+        path: PathBuf,
+    },
+    BundleEntries {
+        bundle: fret_assets::AssetBundleId,
+        entries: Vec<fret_assets::StaticAssetEntry>,
+    },
+    EmbeddedEntries {
+        owner: fret_assets::AssetBundleId,
+        entries: Vec<fret_assets::StaticAssetEntry>,
+    },
+    Startup {
+        bundle: fret_assets::AssetBundleId,
+        mode: fret_bootstrap::AssetStartupMode,
+        plan: fret_bootstrap::AssetStartupPlan,
+    },
+    ReloadPolicy {
+        policy: fret_bootstrap::AssetReloadPolicy,
+    },
 }
 
 pub mod actions;
-pub mod view;
+mod view;
 pub mod workspace_menu;
 pub mod workspace_shell;
 
@@ -366,20 +467,16 @@ impl Default for Defaults {
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod interop;
 
-/// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
-pub mod dev {
-    pub use fret_launch::dev_state::{
-        DevStateExport, DevStateHook, DevStateHooks, DevStateSnapshot, DevStateWindowKeyRegistry,
-    };
-}
-
 /// Re-export the kernel facade (desktop builds).
 #[cfg(feature = "desktop")]
 use fret_framework as kernel;
 
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
+    /// Canonical app-facing view trait on the explicit app lane.
+    pub use crate::view::View;
+    /// Explicit helper types/traits for app helper signatures that intentionally name them.
+    pub use crate::view::{LocalState, UiCxActionsExt, UiCxDataExt};
     /// Canonical app-facing runtime handle on the default `fret` surface.
     ///
     /// This is the same underlying runtime type as the raw kernel alias exposed on
@@ -394,28 +491,28 @@ pub mod app {
         pub use crate::app::App;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
-        pub use crate::view::AppActivateExt as _;
         pub use crate::view::TrackedStateExt as _;
+        pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
-        pub use crate::view::{LocalState, View};
+        pub use crate::view::View;
         pub use crate::{AppUi, Ui, UiChild, UiCx, WindowId};
-        pub use crate::{actions, workspace_menu};
-        pub use fret_core::{Px, SemanticsRole};
-        pub use fret_runtime::CommandId;
-        pub use fret_ui::ThemeSnapshot;
+        pub use fret_core::Px;
         pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::StyledExt as _;
         pub use fret_ui_kit::UiExt as _;
         pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;
         pub use fret_ui_kit::declarative::UiElementA11yExt as _;
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
-        pub use fret_ui_kit::declarative::icon;
         pub use fret_ui_kit::ui;
-        pub use fret_ui_kit::ui::UiElementSinkExt as _;
     }
 
-    /// Explicit contract for custom app-facing widgets that only expose `on_activate(...)`.
-    pub use crate::view::AppActivateSurface;
+    /// Explicit bridge for app-facing widgets that only expose `on_activate(...)`.
+    ///
+    /// This intentionally stays off `fret::app::prelude::*` so default app autocomplete remains
+    /// focused on native widget action slots. Import `use fret::app::AppActivateExt as _;`
+    /// explicitly at call sites that still need activation-only `.action(...)`, `.dispatch::<A>()`,
+    /// or `.listen(...)` sugar.
+    pub use crate::view::{AppActivateExt, AppActivateSurface};
 }
 
 /// Component-author imports for reusable, portable UI crates.
@@ -425,29 +522,21 @@ pub mod component {
         pub use crate::ComponentCx;
         pub use fret_ui_kit::IntoUiElement as _;
         pub use fret_ui_kit::command::ElementCommandGatingExt as _;
-        pub use fret_ui_kit::declarative::prelude::{
-            ActionHooksExt, AnyElementSemanticsExt, CollectionSemanticsExt, ElementContextThemeExt,
-            GlobalWatchExt, ModelWatchExt, UiElementA11yExt, UiElementKeyContextExt,
-            UiElementTestIdExt, accent_color, container_breakpoints, container_query_region,
-            container_query_region_with_id, container_width_at_least, contrast_preference,
-            forced_colors_active, forced_colors_mode, preferred_color_scheme,
-            prefers_dark_color_scheme, prefers_more_contrast, prefers_reduced_motion,
-            prefers_reduced_transparency, primary_pointer_can_hover, primary_pointer_is_coarse,
-            primary_pointer_type, safe_area_insets, safe_area_insets_or_zero, tailwind,
-            text_scale_factor, viewport_aspect_ratio, viewport_breakpoints,
-            viewport_height_at_least, viewport_height_breakpoints, viewport_is_landscape,
-            viewport_is_portrait, viewport_orientation, viewport_tailwind, viewport_width_at_least,
-            window_insets_padding_refinement_or_zero,
-        };
+        pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;
+        pub use fret_ui_kit::declarative::ElementContextThemeExt as _;
+        pub use fret_ui_kit::declarative::GlobalWatchExt as _;
+        pub use fret_ui_kit::declarative::ModelWatchExt as _;
+        pub use fret_ui_kit::declarative::UiElementA11yExt as _;
+        pub use fret_ui_kit::declarative::UiElementKeyContextExt as _;
+        pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
+        pub use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+        pub use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
         pub use fret_ui_kit::ui;
         pub use fret_ui_kit::ui::UiElementSinkExt as _;
         pub use fret_ui_kit::{
             ChromeRefinement, ColorRef, Corners4, Edges4, IntoUiElement, LayoutRefinement,
-            MetricRef, OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence,
-            OverlayRequest, OverlayStackEntryKind, Radius, ShadowPreset, Size, Space, UiBuilder,
-            UiExt, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, WindowOverlayStackEntry,
-            WindowOverlayStackSnapshot, on_activate, on_activate_notify,
-            on_activate_request_redraw, on_activate_request_redraw_notify,
+            MetricRef, OverlayController, OverlayPresence, OverlayRequest, Radius, ShadowPreset,
+            Size, Space, UiBuilder, UiExt, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
         };
 
         #[cfg(feature = "icons")]
@@ -456,7 +545,7 @@ pub mod component {
         pub use fret_ui_kit::declarative::icon;
 
         pub use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
-        pub use fret_runtime::{CommandId, Model};
+        pub use fret_runtime::Model;
         pub use fret_ui::element::{AnyElement, AnyElementIterExt as _};
         pub use fret_ui::{Invalidation, Theme, UiHost};
     }
@@ -608,6 +697,22 @@ pub mod docking {
 
 /// Explicit advanced/manual-assembly imports for power users and integration code.
 pub mod advanced {
+    /// Low-level view-runtime helpers kept off the default crate root.
+    pub mod view {
+        pub use crate::view::{
+            ViewWindowState, view_init_window, view_record_engine_frame, view_view,
+        };
+    }
+
+    /// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
+    pub mod dev {
+        pub use fret_launch::dev_state::{
+            DevStateExport, DevStateHook, DevStateHooks, DevStateSnapshot,
+            DevStateWindowKeyRegistry,
+        };
+    }
+
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     /// Low-level interop helpers kept off the default crate root.
     pub mod interop {
@@ -824,7 +929,7 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::advanced::*;
-        pub use crate::component::prelude::*;
+        pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
         pub use crate::{AppUi, Ui, UiCx};
@@ -848,6 +953,8 @@ pub enum Error {
     #[error(transparent)]
     AssetManifest(#[from] AssetManifestError),
     #[error(transparent)]
+    AssetStartup(#[from] fret_bootstrap::AssetStartupPlanError),
+    #[error(transparent)]
     Runner(#[from] RunnerError),
 }
 
@@ -865,6 +972,17 @@ pub struct AssetManifestError(#[from] fret_assets::AssetManifestLoadError);
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
 pub struct RunnerError(#[from] fret_launch::RunnerError);
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+fn map_bootstrap_asset_builder_error(err: fret_bootstrap::BootstrapError) -> Error {
+    match err {
+        fret_bootstrap::BootstrapError::AssetManifest(err) => {
+            Error::AssetManifest(AssetManifestError::from(err))
+        }
+        fret_bootstrap::BootstrapError::AssetStartup(err) => Error::AssetStartup(err),
+        other => Error::Bootstrap(BootstrapError::from(other)),
+    }
+}
 
 /// A `UiAppDriver` wrapper used by `fret` to avoid exposing `fret-bootstrap` types in signatures.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -1199,6 +1317,33 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    /// Apply one explicit development-vs-packaged startup plan on the builder path.
+    ///
+    /// This higher-level surface keeps the current startup decision on one named value while still
+    /// lowering to the same ordered builder registrations as `with_asset_dir(...)`,
+    /// `with_asset_manifest(...)`, `with_bundle_asset_entries(...)`, and
+    /// `with_embedded_asset_entries(...)`.
+    pub fn with_asset_startup(
+        self,
+        app_bundle: impl Into<crate::assets::AssetBundleId>,
+        mode: crate::assets::AssetStartupMode,
+        plan: crate::assets::AssetStartupPlan,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: self
+                .inner
+                .with_asset_startup(app_bundle.into(), mode, plan)
+                .map_err(map_bootstrap_asset_builder_error)?,
+        })
+    }
+
+    /// Enable development asset reload polling for file-backed startup mounts.
+    pub fn with_asset_reload_policy(self, policy: crate::assets::AssetReloadPolicy) -> Self {
+        Self {
+            inner: self.inner.with_asset_reload_policy(policy),
+        }
+    }
+
     #[cfg(feature = "ui-assets")]
     pub fn with_ui_assets_budgets(
         self,
@@ -1235,6 +1380,35 @@ impl<S: 'static> UiAppBuilder<S> {
         self.inner.run().map_err(RunnerError::from)?;
         Ok(())
     }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+fn apply_asset_mount<S: 'static>(
+    builder: UiAppBuilder<S>,
+    mount: AssetMount,
+) -> Result<UiAppBuilder<S>> {
+    match mount {
+        AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir),
+        AssetMount::Manifest { path } => builder.with_asset_manifest(path),
+        AssetMount::BundleEntries { bundle, entries } => {
+            Ok(builder.with_bundle_asset_entries(bundle, entries))
+        }
+        AssetMount::EmbeddedEntries { owner, entries } => {
+            Ok(builder.with_embedded_asset_entries(owner, entries))
+        }
+        AssetMount::Startup { bundle, mode, plan } => {
+            builder.with_asset_startup(bundle, mode, plan)
+        }
+        AssetMount::ReloadPolicy { policy } => Ok(builder.with_asset_reload_policy(policy)),
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+fn apply_asset_mounts<S: 'static>(
+    builder: UiAppBuilder<S>,
+    mounts: Vec<AssetMount>,
+) -> Result<UiAppBuilder<S>> {
+    mounts.into_iter().try_fold(builder, apply_asset_mount)
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -1618,6 +1792,27 @@ mod builder_surface_tests {
     }
 
     #[test]
+    fn register_file_bundle_dir_exposes_external_file_reference_on_host_path() {
+        let asset_dir = write_asset_dir_fixture("fret-register-file-bundle-dir-reference");
+        let bundle = AssetBundleId::app("builder-register-file-bundle-dir-reference");
+        let mut app = App::new();
+
+        crate::assets::register_file_bundle_dir(&mut app, bundle.clone(), &asset_dir)
+            .expect("bundle dir should register");
+
+        let resolved = crate::assets::resolve_locator_reference(
+            &app,
+            crate::assets::AssetLocator::bundle(bundle, "images/logo.png"),
+        )
+        .expect("registered bundle dir asset should expose an external reference");
+
+        assert_eq!(
+            resolved.reference.as_file_path(),
+            Some(asset_dir.join("images/logo.png").as_path())
+        );
+    }
+
+    #[test]
     fn fret_app_asset_dir_installs_on_builder_path() {
         let asset_dir = write_asset_dir_fixture("fret-builder-asset-dir");
 
@@ -1675,13 +1870,96 @@ mod builder_surface_tests {
             .expect("view should build")
             .with_embedded_asset_entries(
                 AssetBundleId::package("demo-kit"),
-                [StaticAssetEntry::new(
-                    "icons/search.svg",
-                    AssetRevision(1),
-                    br#"<svg></svg>"#,
-                )
-                .with_media_type("image/svg+xml")],
+                [
+                    StaticAssetEntry::new("icons/search.svg", AssetRevision(1), br#"<svg></svg>"#)
+                        .with_media_type("image/svg+xml"),
+                ],
             );
+    }
+
+    #[test]
+    fn fret_app_asset_startup_installs_selected_development_lane_on_builder_path() {
+        let asset_dir = write_asset_dir_fixture("fret-builder-asset-startup-dev");
+
+        let _builder = FretApp::new("builder-view-asset-startup-dev")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new()
+                    .development_dir(&asset_dir)
+                    .packaged_entries([StaticAssetEntry::new(
+                        "images/logo.png",
+                        AssetRevision(1),
+                        b"builder-bytes",
+                    )]),
+            )
+            .view::<SmokeView>()
+            .expect("development asset startup plan should load on fret app builder path");
+    }
+
+    #[test]
+    fn ui_app_builder_with_asset_startup_installs_selected_packaged_lane_on_builder_path() {
+        let _builder = FretApp::new("builder-view-ui-builder-asset-startup-packaged")
+            .view::<SmokeView>()
+            .expect("view should build")
+            .with_asset_startup(
+                AssetBundleId::app("builder-view-ui-builder-asset-startup-packaged"),
+                crate::assets::AssetStartupMode::Packaged,
+                crate::assets::AssetStartupPlan::new()
+                    .development_manifest("assets.manifest.json")
+                    .packaged_entries([StaticAssetEntry::new(
+                        "images/logo.png",
+                        AssetRevision(1),
+                        b"builder-bytes",
+                    )])
+                    .packaged_embedded_entries(
+                        AssetBundleId::package("demo-kit"),
+                        [StaticAssetEntry::new(
+                            "icons/search.svg",
+                            AssetRevision(1),
+                            br#"<svg></svg>"#,
+                        )
+                        .with_media_type("image/svg+xml")],
+                    ),
+            )
+            .expect("packaged asset startup plan should load on ui app builder path");
+    }
+
+    #[test]
+    fn asset_startup_mode_preferred_matches_current_target_defaults() {
+        #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
+        assert_eq!(
+            crate::assets::AssetStartupMode::preferred(),
+            crate::assets::AssetStartupMode::Development
+        );
+
+        #[cfg(not(all(not(target_arch = "wasm32"), debug_assertions)))]
+        assert_eq!(
+            crate::assets::AssetStartupMode::preferred(),
+            crate::assets::AssetStartupMode::Packaged
+        );
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    #[test]
+    fn asset_startup_plan_development_bundle_dir_if_native_is_available_on_fret_reexport() {
+        let asset_dir =
+            write_asset_dir_fixture("asset-startup-plan-development-bundle-dir-if-native");
+        let app_bundle = AssetBundleId::app("asset-startup-plan-development-bundle-dir-if-native");
+        let _builder = FretApp::new("asset-startup-plan-development-bundle-dir-if-native")
+            .view::<SmokeView>()
+            .expect("view should build")
+            .with_asset_startup(
+                app_bundle.clone(),
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new()
+                    .packaged_entries([StaticAssetEntry::new(
+                        "images/logo.png",
+                        AssetRevision(1),
+                        b"builder-bytes",
+                    )])
+                    .development_bundle_dir_if_native(app_bundle, &asset_dir),
+            )
+            .expect("native helper should remain available through fret::assets");
     }
 
     #[test]
@@ -1732,6 +2010,38 @@ mod builder_surface_tests {
             Err(err) => err,
         };
         assert!(matches!(ui_builder_err, Error::AssetManifest(_)));
+    }
+
+    #[test]
+    fn asset_startup_builder_methods_fail_when_selected_lane_is_missing() {
+        let fret_app_err = match FretApp::new("builder-view-missing-asset-startup-packaged")
+            .asset_startup(
+                crate::assets::AssetStartupMode::Packaged,
+                crate::assets::AssetStartupPlan::new().development_dir("assets"),
+            )
+            .view::<SmokeView>()
+        {
+            Ok(_) => panic!("missing packaged lane should fail on fret app builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(fret_app_err, Error::AssetStartup(_)));
+
+        let ui_builder_err = match FretApp::new("builder-view-missing-asset-startup-dev")
+            .view::<SmokeView>()
+            .expect("view should build")
+            .with_asset_startup(
+                AssetBundleId::app("builder-view-missing-asset-startup-dev"),
+                crate::assets::AssetStartupMode::Development,
+                crate::assets::AssetStartupPlan::new().packaged_entries([StaticAssetEntry::new(
+                    "images/logo.png",
+                    AssetRevision(1),
+                    b"builder-bytes",
+                )]),
+            ) {
+            Ok(_) => panic!("missing development lane should fail on ui app builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(ui_builder_err, Error::AssetStartup(_)));
     }
 
     #[test]
@@ -1820,17 +2130,17 @@ mod builder_surface_tests {
 mod tests {
     use std::any::TypeId;
 
-    use crate::advanced::KernelApp;
-    use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
-    use fret_ui::{Theme, UiTree};
-    use fret_ui_shadcn::shadcn_themes::{
+    use crate::shadcn::themes::{
         ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
     };
+    use crate::{advanced::KernelApp, shadcn};
+    use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
+    use fret_ui::{Theme, UiTree};
 
     #[test]
     fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
         let mut app = KernelApp::new();
-        fret_ui_shadcn::app::install(&mut app);
+        shadcn::app::install(&mut app);
 
         let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
         app.with_global_mut(WindowMetricsService::default, |svc, _app| {
@@ -1919,7 +2229,7 @@ mod tests {
     #[test]
     fn shadcn_auto_theme_middleware_reapplies_installed_editor_preset_once() {
         let mut app = KernelApp::new();
-        fret_ui_shadcn::app::install_with_theme(
+        shadcn::app::install_with_theme(
             &mut app,
             ShadcnBaseColor::Slate,
             ShadcnColorScheme::Dark,
@@ -1982,6 +2292,7 @@ mod authoring_surface_policy_tests {
         include_str!("../../../docs/examples/todo-app-golden-path.md");
     const AUTHORING_GOLDEN_PATH_V2: &str =
         include_str!("../../../docs/authoring-golden-path-v2.md");
+    const COMPONENT_AUTHOR_GUIDE: &str = include_str!("../../../docs/component-author-guide.md");
     const SHADCN_DECLARATIVE_PROGRESS: &str =
         include_str!("../../../docs/shadcn-declarative-progress.md");
     const AUTHORING_SURFACE_TARGET_INTERFACE_STATE: &str = include_str!(
@@ -1989,6 +2300,9 @@ mod authoring_surface_policy_tests {
     );
     const CRATE_README: &str = include_str!("../README.md");
     const CRATE_USAGE_GUIDE: &str = include_str!("../../../docs/crate-usage-guide.md");
+    const ECOSYSTEM_INSTALLER_COMPOSITION: &str = include_str!(
+        "../../../docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md"
+    );
     const INTEGRATING_TOKIO_AND_REQWEST: &str =
         include_str!("../../../docs/integrating-tokio-and-reqwest.md");
     const INTEGRATING_SQLITE_AND_SQLX: &str =
@@ -1999,6 +2313,16 @@ mod authoring_surface_policy_tests {
     );
     const SHADCN_SELECT_V4_USAGE: &str = include_str!(
         "../../../docs/workstreams/shadcn-part-surface-alignment-v1/SELECT_V4_USAGE.md"
+    );
+    const SHADCN_COMBOBOX_V4_USAGE: &str = include_str!(
+        "../../../docs/workstreams/shadcn-part-surface-alignment-v1/COMBOBOX_V4_USAGE.md"
+    );
+    const APP_ENTRY_BUILDER_DESIGN: &str =
+        include_str!("../../../docs/workstreams/app-entry-builder-v1/DESIGN.md");
+    const APP_ENTRY_BUILDER_TODO: &str =
+        include_str!("../../../docs/workstreams/app-entry-builder-v1/TODO.md");
+    const AUTHORING_SURFACE_MIGRATION_MATRIX: &str = include_str!(
+        "../../../docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md"
     );
     const LIB_RS: &str = include_str!("lib.rs");
     const VIEW_RS: &str = include_str!("view.rs");
@@ -2015,10 +2339,15 @@ mod authoring_surface_policy_tests {
         let app_start = LIB_RS
             .find("pub mod app {")
             .expect("app module should exist in fret facade");
-        let component_start = LIB_RS
-            .find("/// Component-author imports for reusable, portable UI crates.")
-            .expect("component module marker should exist in fret facade");
-        &LIB_RS[app_start..component_start]
+        let prelude_start = LIB_RS[app_start..]
+            .find("pub mod prelude {")
+            .map(|offset| app_start + offset)
+            .expect("app prelude should exist in fret facade");
+        let app_tail_start = LIB_RS[prelude_start..]
+            .find("/// Explicit bridge for app-facing widgets that only expose `on_activate(...)`.")
+            .map(|offset| prelude_start + offset)
+            .expect("app surface tail marker should exist in fret facade");
+        &LIB_RS[prelude_start..app_tail_start]
     }
 
     fn ui_app_builder_impl_source() -> &'static str {
@@ -2136,6 +2465,40 @@ mod authoring_surface_policy_tests {
         (exported != "_").then_some(exported)
     }
 
+    fn exported_symbol_names(source: &str) -> std::collections::BTreeSet<String> {
+        let mut exported = std::collections::BTreeSet::new();
+
+        for statement in source
+            .split(';')
+            .filter(|statement| statement.contains("pub use "))
+        {
+            let Some(pub_use_start) = statement.find("pub use ") else {
+                continue;
+            };
+            let statement = &statement[pub_use_start + "pub use ".len()..];
+
+            if let Some((_, items)) = statement.rsplit_once("::{") {
+                let items = items.trim_end_matches('}');
+                for name in items.split(',').filter_map(exported_symbol_name) {
+                    exported.insert(name.to_owned());
+                }
+                continue;
+            }
+
+            if let Some(name) = exported_symbol_name(statement) {
+                exported.insert(name.to_owned());
+            }
+        }
+
+        exported
+    }
+
+    fn markdown_table_row<'a>(doc: &'a str, label: &str) -> &'a str {
+        doc.lines()
+            .find(|line| line.starts_with('|') && line.contains(label))
+            .unwrap_or_else(|| panic!("expected markdown table row containing `{label}`"))
+    }
+
     #[test]
     fn readme_prefers_view_entry_and_omits_ui_bridge() {
         assert!(CRATE_README.contains(
@@ -2143,7 +2506,8 @@ mod authoring_surface_policy_tests {
         ));
         assert!(CRATE_README.contains("`state`: enable selector/query helpers on `AppUi`"));
         assert!(CRATE_README.contains("`fret::style::{...}`"));
-        assert!(CRATE_README.contains("`fret::icons::IconId`"));
+        assert!(CRATE_README.contains("`fret::icons::{icon, IconId}`"));
+        assert!(CRATE_README.contains("`fret::semantics::SemanticsRole`"));
         assert!(CRATE_README.contains("`fret::env::{...}`"));
         assert!(CRATE_README.contains("`fret::assets::{...}`"));
         assert!(CRATE_README.contains("`AssetBundleId::app(...)`"));
@@ -2171,6 +2535,9 @@ mod authoring_surface_policy_tests {
 
         assert!(TODO_APP_GOLDEN_PATH.contains(".view::<TodoView>()?"));
         assert!(TODO_APP_GOLDEN_PATH.contains(".run()"));
+        assert!(TODO_APP_GOLDEN_PATH.contains("fn install_todo_app(app: &mut App) {"));
+        assert!(TODO_APP_GOLDEN_PATH.contains(".setup(install_todo_app)"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("fn install_app(app: &mut App) {"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".run_view::<"));
     }
 
@@ -2325,6 +2692,8 @@ mod authoring_surface_policy_tests {
     #[test]
     fn readme_and_rustdoc_expose_explicit_assets_surface() {
         assert!(CRATE_README.contains("`fret::assets::{...}`"));
+        assert!(CRATE_README.contains("`AssetStartupPlan`"));
+        assert!(CRATE_README.contains("`AssetStartupMode`"));
         assert!(CRATE_README.contains("`AssetBundleId::app(...)`"));
         assert!(CRATE_README.contains("`AssetBundleId::package(...)`"));
         assert!(CRATE_README.contains("`AssetLocator::bundle(...)`"));
@@ -2335,12 +2704,22 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`FretApp::asset_manifest(...)`"));
         assert!(CRATE_README.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_README.contains("`fret::assets::register_file_manifest(...)`"));
+        assert!(CRATE_README.contains(
+            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
+        ));
+        assert!(
+            CRATE_README.contains(
+                "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
+            )
+        );
 
         let rustdoc = crate_rustdoc();
         let public_surface = crate_public_surface_source();
         assert!(rustdoc.contains(
             "`fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`"
         ));
+        assert!(rustdoc.contains("`AssetStartupPlan`"));
+        assert!(rustdoc.contains("`AssetStartupMode`"));
         assert!(rustdoc.contains("`AssetBundleId::app(...)`"));
         assert!(rustdoc.contains("`AssetBundleId::package(...)`"));
         assert!(rustdoc.contains("`FretApp::asset_dir(...)`"));
@@ -2351,6 +2730,14 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains("`register_file_manifest(...)`"));
         assert!(rustdoc.contains("`AssetLocator::file(...)`"));
         assert!(rustdoc.contains("`AssetLocator::url(...)`"));
+        assert!(rustdoc.contains(
+            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
+        ));
+        assert!(
+            rustdoc.contains(
+                "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
+            )
+        );
         assert!(public_surface.contains("pub mod assets {"));
         assert!(!public_surface.contains("pub use fret_runtime::register_bundle_asset_entries;"));
     }
@@ -2416,6 +2803,9 @@ mod authoring_surface_policy_tests {
         assert!(DOCS_README.contains("`use fret::app::prelude::*;`"));
         assert!(DOCS_README.contains("`FretApp::new(...).window(...).view::<MyView>()?.run()`"));
         assert!(DOCS_README.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch::<"));
+        assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch_payload::<"));
+        assert!(!DOCS_README.contains(".on_activate(cx.actions().listener("));
         assert!(!DOCS_README.contains("run_view::<"));
         assert!(!DOCS_README.contains("ViewCx::"));
 
@@ -2425,9 +2815,43 @@ mod authoring_surface_policy_tests {
         ));
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
+        assert!(FIRST_HOUR.contains("`ui::single(cx, page(...))`"));
+        assert!(FIRST_HOUR.contains("use fret::children::UiElementSinkExt as _;"));
         assert!(!FIRST_HOUR.contains("run_view::<"));
         assert!(!FIRST_HOUR.contains("ViewCx::"));
         assert!(!FIRST_HOUR.contains("`fret_ui_shadcn::prelude::*`"));
+    }
+
+    #[test]
+    fn app_entry_workstream_docs_match_the_shipped_builder_surface() {
+        assert!(
+            APP_ENTRY_BUILDER_DESIGN.contains("`fret::FretApp::new(...).window(...).view::<V>()?`")
+        );
+        assert!(
+            APP_ENTRY_BUILDER_DESIGN
+                .contains("`fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?`")
+        );
+        assert!(APP_ENTRY_BUILDER_DESIGN.contains(
+            "`run_view::<V>()` / `run_view_with_hooks::<V>(...)` were also removed from `FretApp`"
+        ));
+        assert!(
+            APP_ENTRY_BUILDER_DESIGN
+                .contains("Execution stays on the returned `UiAppBuilder` via `.run()`")
+        );
+        assert!(
+            !APP_ENTRY_BUILDER_DESIGN.contains(
+                "- `view::<V>()`\n- `view_with_hooks::<V>(configure)`\n- `run_view::<V>()` / `run_view_with_hooks::<V>(...)`"
+            )
+        );
+
+        assert!(APP_ENTRY_BUILDER_TODO.contains(
+            "- [x] Delete `run_view::<V>()` / `run_view_with_hooks::<V>(...)` from `FretApp` before release."
+        ));
+        assert!(
+            !APP_ENTRY_BUILDER_TODO
+                .contains("- [x] `run_view::<V>()` / `run_view_with_hooks::<V>(...)`")
+        );
     }
 
     #[test]
@@ -2436,10 +2860,18 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::app::LocalState`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::style::{...}`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::IconId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::style::ThemeSnapshot`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::icons::{icon, IconId}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::semantics::SemanticsRole`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::children::UiElementSinkExt as _`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::ElementCommandGatingExt as _`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupMode`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`")
@@ -2454,9 +2886,25 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiAppBuilder::with_asset_manifest(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::register_file_manifest(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>(cx)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(cx, payload)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(cx, |host, acx| { ... })`"));
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`"
+        ));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains(
+                    "`fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`"
+                )
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.action(act::Save)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.action_payload(act::Remove, payload)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(|host, acx| { ... })`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`use fret::app::AppActivateExt as _;`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().listen(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
@@ -2464,12 +2912,85 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn authoring_surface_matrix_keeps_builder_setup_and_async_docs_closed() {
+        let builder_row = markdown_table_row(
+            AUTHORING_SURFACE_MIGRATION_MATRIX,
+            "Default builder setup seam",
+        );
+        assert!(builder_row.contains("| Migrated |"));
+
+        let async_docs_row =
+            markdown_table_row(AUTHORING_SURFACE_MIGRATION_MATRIX, "async integration docs");
+        assert!(async_docs_row.contains("| Migrated |"));
+
+        let component_row =
+            markdown_table_row(AUTHORING_SURFACE_MIGRATION_MATRIX, "Component prelude");
+        assert!(component_row.contains("| Migrated |"));
+
+        let advanced_row =
+            markdown_table_row(AUTHORING_SURFACE_MIGRATION_MATRIX, "Advanced imports");
+        assert!(advanced_row.contains("| Deleted |"));
+
+        let app_activate_bridge_row = markdown_table_row(
+            AUTHORING_SURFACE_MIGRATION_MATRIX,
+            "`AppActivateExt` bridge",
+        );
+        assert!(app_activate_bridge_row.contains("| Migrated |"));
+    }
+
+    #[test]
+    fn usage_and_component_docs_keep_app_activate_surface_narrow() {
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::app::AppActivateSurface` / `AppActivateExt`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("activation-only widgets that expose the standard `OnActivate` slot")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("Typed payload/context"));
+        assert!(CRATE_USAGE_GUIDE.contains("callbacks remain component-owned surfaces"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::Button`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::SidebarMenuButton`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`WorkflowControlsButton`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`ConfirmationAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("native `.action(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`Attachment`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`QueueItemAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`Test`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FileTreeAction`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`Suggestion`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`MessageBranch`"));
+        assert!(CRATE_USAGE_GUIDE.contains("first-party default widget bridge table is"));
+        assert!(CRATE_USAGE_GUIDE.contains("intentionally empty"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE.contains("typed domain callbacks into `AppActivateSurface`")
+        );
+        assert!(
+            COMPONENT_AUTHOR_GUIDE
+                .contains("parallel `AppActionCxSurface` / `AppActionCxExt` family")
+        );
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`Attachment`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`QueueItemAction`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`Test`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`FileTreeAction`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`Suggestion`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`MessageBranch`"));
+    }
+
+    #[test]
     fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>(cx)`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(cx, payload)`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(cx, |host, acx| { ... })`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(|host, acx| { ... })`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`use fret::app::AppActivateExt as _;`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
+        assert!(
+            AUTHORING_GOLDEN_PATH_V2
+                .contains("`cx.actions().action_payload(act::RemoveTodo, todo.id)`")
+        );
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
     }
@@ -2495,6 +3016,7 @@ mod authoring_surface_policy_tests {
     fn usage_docs_link_ecosystem_trait_budget_and_anti_plugin_posture() {
         assert!(CRATE_USAGE_GUIDE.contains("## Ecosystem author checklist"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::integration::InstallIntoApp`"));
+        assert!(CRATE_USAGE_GUIDE.contains("one installer/bundle surface"));
         assert!(CRATE_USAGE_GUIDE.contains("`RouteCodec`"));
         assert!(CRATE_USAGE_GUIDE.contains("`DockPanelFactory`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret-app::Plugin`"));
@@ -2510,6 +3032,12 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(fret_icons_radix::app::install)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_lucide::app::install`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret_icons_radix::app::install`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`FretApp::setup(MyKitBundle)`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`IconRegistry` mutation plus `register_bundle_entries(...)` manually")
+        );
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret_ui_assets::app::configure_caches_with_budgets(...)`")
         );
@@ -2525,11 +3053,89 @@ mod authoring_surface_policy_tests {
         assert!(!CRATE_USAGE_GUIDE.contains("`fret::router::install_app(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_icons_radix::install_app`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_assets::install_app_with_budgets`"));
+        assert!(CRATE_USAGE_GUIDE.contains("generated `Bundle` / `install(app)` /"));
+        assert!(CRATE_USAGE_GUIDE.contains("`mount(builder)` surface is usually enough."));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("settings, theme/bootstrap wiring, or multiple generated asset modules")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("wrap those low-level"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("generated helpers in one named installer/bundle surface")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "Prefer `BundleAsset` when the bytes are part of the crate's public lookup story"
+        ));
+        assert!(CRATE_USAGE_GUIDE.contains("Use `Embedded`"));
+        assert!(CRATE_USAGE_GUIDE.contains("owner-scoped bytes"));
+        assert!(CRATE_USAGE_GUIDE.contains("public cross-package contract"));
+    }
+
+    #[test]
+    fn component_author_docs_keep_transitive_icon_and_asset_registration_on_one_bundle_surface() {
+        assert!(COMPONENT_AUTHOR_GUIDE.contains(
+            "If your crate depends on an icon pack or ships package-owned images/SVGs/fonts"
+        ));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("widget code stays on semantic `IconId`s and logical `AssetLocator::bundle(...)` lookups"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("impl InstallIntoApp for MyKitBundle"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("AssetBundleId::package(\"my-kit\")"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`FretApp::setup(MyKitBundle)`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("generated `--surface fret` asset module"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("can remain the app-facing surface"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE
+                .contains("wrap those low-level generated helpers in one hand-written named")
+        );
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("installer/bundle surface"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("Prefer `BundleAsset`"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("default public lookup story"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE.contains("Use `Embedded` for lower-level owner-scoped bytes")
+        );
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("crate's public cross-package"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("lookup contract"));
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION.contains("the app composes one installer/bundle value")
+        );
+        assert!(ECOSYSTEM_INSTALLER_COMPOSITION.contains("The app should not usually do this:"));
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION
+                .contains("### Generated module vs higher-level installer")
+        );
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION
+                .contains("generated modules own low-level byte publication")
+        );
+        assert!(ECOSYSTEM_INSTALLER_COMPOSITION.contains("### `BundleAsset` vs `Embedded`"));
+        assert!(
+            ECOSYSTEM_INSTALLER_COMPOSITION.contains("If you are unsure, choose `BundleAsset`.")
+        );
+    }
+
+    #[test]
+    fn component_author_docs_keep_secondary_lanes_explicit() {
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("use fret::component::prelude::*;"));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains(
+            "use fret::env::{container_breakpoints, safe_area_insets, viewport_breakpoints};"
+        ));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains(
+            "use fret::activate::{on_activate, on_activate_notify, on_activate_request_redraw};"
+        ));
+        assert!(COMPONENT_AUTHOR_GUIDE.contains("`fret::overlay::*`"));
+        assert!(
+            COMPONENT_AUTHOR_GUIDE
+                .contains("`OverlayController`, `OverlayRequest`, `OverlayPresence`")
+        );
     }
 
     #[test]
     fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
         assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
+        assert!(TODO_APP_GOLDEN_PATH.contains("`ui::single(cx, page(...))`"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch::<"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch_payload::<"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().listener("));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".register_icon_pack("));
         assert!(!TODO_APP_GOLDEN_PATH.contains("IconRegistry"));
     }
@@ -2555,6 +3161,11 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::component::prelude::*;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`ComponentCx`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::env::{...}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::activate::{on_activate,"));
+        assert!(CRATE_USAGE_GUIDE.contains("`use fret::advanced::prelude::*;`"));
+        assert!(CRATE_USAGE_GUIDE.contains("advanced-only"));
         assert!(
             CRATE_USAGE_GUIDE
                 .contains("without pulling in `FretApp`, `AppUi`, or runner-facing seams")
@@ -2584,16 +3195,29 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn shadcn_docs_keep_advanced_hooks_off_curated_lane() {
-        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`widget.dispatch::<A>(cx)`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`widget.action(act::Save)`"));
+        assert!(
+            SHADCN_DECLARATIVE_PROGRESS.contains("`widget.action_payload(act::Remove, payload)`")
+        );
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch::<A>()`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(
             SHADCN_DECLARATIVE_PROGRESS
                 .contains("`fret::app::AppActivateSurface` / `AppActivateExt`")
         );
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`use fret::app::AppActivateExt as _;`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`UiCxActionsExt` / `UiCxDataExt`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("first-party"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("bridge table is intentionally empty"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_shadcn::advanced::*`"));
         assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`shadcn::advanced::*`"));
         assert!(AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret_ui_shadcn::advanced`"));
         assert!(
             AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret::shadcn::raw::advanced::*`")
+        );
+        assert!(
+            AUTHORING_SURFACE_TARGET_INTERFACE_STATE
+                .contains("first-party default widget bridge table is intentionally empty")
         );
     }
 
@@ -2606,8 +3230,10 @@ mod authoring_surface_policy_tests {
         assert!(
             SHADCN_SELECT_V4_USAGE.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};")
         );
+        assert!(SHADCN_COMBOBOX_V4_USAGE.contains("use fret_ui_shadcn::facade as shadcn;"));
         assert!(!ACTION_FIRST_MIGRATION_GUIDE.contains("use fret_ui_shadcn as shadcn;"));
         assert!(!SHADCN_SELECT_V4_USAGE.contains("use fret_ui_shadcn::{self as shadcn"));
+        assert!(!SHADCN_COMBOBOX_V4_USAGE.contains("use fret_ui_shadcn::{"));
     }
 
     #[test]
@@ -2625,6 +3251,9 @@ mod authoring_surface_policy_tests {
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().models::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch::<"));
+        assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch_payload::<"));
+        assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().listener("));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_locals`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_models`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_transient`"));
@@ -2634,7 +3263,7 @@ mod authoring_surface_policy_tests {
     fn app_prelude_stays_explicit_instead_of_reexporting_legacy_surface() {
         let app_prelude = app_prelude_source();
         assert!(!app_prelude.contains("pub use crate::prelude::*;"));
-        assert!(LIB_RS.contains("pub use crate::view::AppActivateSurface;"));
+        assert!(LIB_RS.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};"));
         assert!(app_prelude.contains("pub use crate::{"));
         assert!(app_prelude.contains("pub use crate::app::App;"));
         assert!(app_prelude_exports_symbol("App"));
@@ -2642,11 +3271,17 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("KernelApp"));
         assert!(app_prelude.contains("UiChild"));
         assert!(app_prelude.contains("WindowId"));
-        assert!(app_prelude.contains("pub use fret_runtime::CommandId;"));
-        assert!(app_prelude.contains("pub use fret_ui::ThemeSnapshot;"));
-        assert!(app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
-        assert!(app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
+        assert!(app_prelude_exports_symbol("Px"));
+        assert!(!app_prelude_exports_symbol("LocalState"));
+        assert!(!app_prelude_exports_symbol("CommandId"));
+        assert!(!app_prelude_exports_symbol("ThemeSnapshot"));
+        assert!(!app_prelude_exports_symbol("actions"));
+        assert!(!app_prelude_exports_symbol("workspace_menu"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
+        assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
         assert!(
             app_prelude.contains("pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;")
         );
@@ -2654,13 +3289,16 @@ mod authoring_surface_policy_tests {
         assert!(app_prelude.contains("pub use fret_ui_kit::declarative::UiElementTestIdExt as _;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::StyledExt as _;"));
         assert!(app_prelude.contains("pub use fret_ui_kit::UiExt as _;"));
+        assert!(!app_prelude.contains("pub use fret_ui_kit::ui::UiElementSinkExt as _;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::prelude::*;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::IntoUiElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiHostBoundIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiChildIntoElement;"));
         assert!(!app_prelude_exports_symbol("AppActivateExt"));
-        assert!(app_prelude.contains("pub use crate::view::AppActivateSurface;"));
+        assert!(
+            !app_prelude.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};")
+        );
         assert!(!app_prelude_exports_symbol("TrackedStateExt"));
         assert!(!app_prelude_exports_symbol("AnyElementSemanticsExt"));
         assert!(!app_prelude_exports_symbol("ElementContextThemeExt"));
@@ -2678,6 +3316,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(!app_prelude_exports_symbol("StyledExt"));
         assert!(!app_prelude_exports_symbol("UiExt"));
+        assert!(!app_prelude_exports_symbol("icon"));
         assert!(!app_prelude_exports_symbol("IconId"));
         assert!(!app_prelude_exports_symbol("Theme"));
         assert!(!app_prelude_exports_symbol("ChromeRefinement"));
@@ -2711,6 +3350,17 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn app_module_explicitly_exports_activation_surface_and_extension() {
+        assert!(LIB_RS.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};"));
+    }
+
+    #[test]
+    fn app_and_style_modules_expose_explicit_secondary_app_nouns() {
+        assert!(LIB_RS.contains("pub use crate::view::LocalState;"));
+        assert!(LIB_RS.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
+    }
+
+    #[test]
     fn ui_child_alias_uses_unified_component_conversion_trait() {
         let tests_start = LIB_RS.find("#[cfg(test)]").unwrap_or(LIB_RS.len());
         let public_surface = &LIB_RS[..tests_start];
@@ -2736,8 +3386,17 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("ViewElements"));
         assert!(advanced_prelude_exports_symbol("ElementContext"));
         assert!(advanced_prelude_exports_symbol("UiTree"));
+        assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
+        assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
         assert!(advanced_prelude_exports_symbol("UiServices"));
         assert!(advanced_prelude_exports_symbol("TextProps"));
+        assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));
+        assert!(!advanced_prelude_exports_symbol("UiBuilder"));
+        assert!(!advanced_prelude_exports_symbol("UiPatchTarget"));
+        assert!(!advanced_prelude_exports_symbol("IntoUiElement"));
+        assert!(!advanced_prelude_exports_symbol("UiHost"));
+        assert!(!advanced_prelude_exports_symbol("AnyElement"));
+        assert!(!advanced_prelude_exports_symbol("Model"));
         assert!(!advanced_prelude_exports_symbol("ViewCx"));
         assert!(!advanced_prelude_exports_symbol("Elements"));
         assert!(
@@ -2773,13 +3432,15 @@ mod authoring_surface_policy_tests {
         assert!(!root_header.contains("ActionMeta"));
         assert!(!root_header.contains("ActionRegistry"));
         assert!(root_header.contains("pub use fret_runtime::{ActionId, CommandId, TypedAction};"));
+        assert!(ACTIONS_RS.contains("pub use fret_ui_kit::command::ElementCommandGatingExt;"));
         assert!(ACTIONS_RS.contains(
-            "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, TypedAction};"
+            "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};"
         ));
         assert!(!app_prelude_exports_symbol("ActionMeta"));
         assert!(!app_prelude_exports_symbol("ActionRegistry"));
         assert!(!app_prelude.contains("ActionMeta"));
         assert!(!app_prelude.contains("ActionRegistry"));
+        assert!(!app_prelude.contains("ElementCommandGatingExt"));
     }
 
     #[test]
@@ -2795,6 +3456,70 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol(
             "workspace_shell_model_default_menu"
         ));
+    }
+
+    #[test]
+    fn root_surface_module_budget_is_curated_and_closed() {
+        let root_header = root_surface_header_source();
+        let actual = root_header
+            .lines()
+            .filter_map(|line| {
+                let module = line.strip_prefix("pub mod ")?;
+                Some(
+                    module
+                        .trim_end_matches(';')
+                        .trim_end_matches('{')
+                        .trim()
+                        .to_owned(),
+                )
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        let expected = [
+            "activate",
+            "actions",
+            "assets",
+            "children",
+            "env",
+            "icons",
+            "integration",
+            "overlay",
+            "semantics",
+            "style",
+            "workspace_menu",
+            "workspace_shell",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual, expected,
+            "root-level public modules should stay on the curated explicit-lane budget"
+        );
+        assert!(!root_header.contains("pub mod view;"));
+        assert!(!root_header.contains("pub mod dev {"));
+    }
+
+    #[test]
+    fn root_surface_direct_pub_use_budget_is_curated_and_closed() {
+        let root_header = root_surface_header_source();
+        let actual = root_header
+            .lines()
+            .filter(|line| line.starts_with("pub use "))
+            .map(str::trim)
+            .collect::<std::collections::BTreeSet<_>>();
+        let expected = [
+            "pub use app_entry::FretApp;",
+            "pub use fret_runtime::{ActionId, CommandId, TypedAction};",
+            "pub use fret_ui_shadcn::facade as shadcn;",
+        ]
+        .into_iter()
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual, expected,
+            "root-level direct re-exports should stay on the curated budget"
+        );
     }
 
     #[test]
@@ -2815,14 +3540,40 @@ mod authoring_surface_policy_tests {
     fn root_surface_exposes_explicit_style_and_icon_modules() {
         let root_header = root_surface_header_source();
 
+        assert!(root_header.contains("pub mod activate {"));
+        assert!(root_header.contains("pub mod children {"));
         assert!(root_header.contains("pub mod icons {"));
+        assert!(root_header.contains("pub mod semantics {"));
         assert!(root_header.contains("pub mod style {"));
+        assert!(root_header.contains("pub use fret_ui_kit::{"));
+        assert!(
+            root_header.contains("on_activate, on_activate_notify, on_activate_request_redraw,")
+        );
+        assert!(root_header.contains("on_activate_request_redraw_notify,"));
+        assert!(root_header.contains("pub use fret_ui_kit::ui::UiElementSinkExt;"));
         assert!(root_header.contains("pub use fret_icons::IconId;"));
+        assert!(root_header.contains("pub use fret_ui_kit::declarative::icon;"));
+        assert!(root_header.contains("pub use fret_core::SemanticsRole;"));
         assert!(root_header.contains("pub use fret_core::{TextOverflow, TextWrap};"));
-        assert!(root_header.contains("pub use fret_ui::Theme;"));
+        assert!(root_header.contains("pub use fret_ui::{Theme, ThemeSnapshot};"));
         assert!(root_header.contains("ChromeRefinement, ColorRef, LayoutRefinement, MetricRef"));
         assert!(root_header.contains("Radius, ShadowPreset, Size,"));
         assert!(root_header.contains("Space,"));
+    }
+
+    #[test]
+    fn root_surface_exposes_explicit_overlay_module() {
+        let root_header = root_surface_header_source();
+
+        assert!(root_header.contains("pub mod overlay {"));
+        assert!(root_header.contains("pub use fret_ui_kit::overlay::*;"));
+        assert!(
+            root_header.contains("OverlayArbitrationSnapshot, OverlayController, OverlayKind,")
+        );
+        assert!(root_header.contains("OverlayPresence,"));
+        assert!(root_header.contains("OverlayRequest, OverlayStackEntryKind,"));
+        assert!(root_header.contains("WindowOverlayStackEntry,"));
+        assert!(root_header.contains("WindowOverlayStackSnapshot,"));
     }
 
     #[test]
@@ -2830,18 +3581,31 @@ mod authoring_surface_policy_tests {
         let root_header = root_surface_header_source();
 
         assert!(root_header.contains("pub mod assets {"));
+        assert!(root_header.contains("AssetStartupMode"));
+        assert!(root_header.contains("AssetStartupPlan"));
+        assert!(root_header.contains("AssetStartupPlanError"));
         assert!(root_header.contains("pub use fret_assets::{"));
-        assert!(root_header.contains(
-            "AssetBundleId, AssetBundleNamespace, AssetCapabilities, AssetKey, AssetKindHint"
-        ));
-        assert!(root_header.contains("AssetLoadError, AssetLocator,"));
-        assert!(root_header.contains("AssetManifestLoadError, AssetMediaType,"));
-        assert!(root_header.contains("AssetMemoryKey, AssetRequest, AssetResolver, AssetRevision"));
+        assert!(root_header.contains("AssetBundleId,"));
+        assert!(root_header.contains("AssetBundleNamespace,"));
+        assert!(root_header.contains("AssetCapabilities,"));
+        assert!(root_header.contains("AssetKey,"));
+        assert!(root_header.contains("AssetKindHint,"));
+        assert!(root_header.contains("AssetExternalReference,"));
+        assert!(root_header.contains("AssetLoadError,"));
+        assert!(root_header.contains("AssetLocator,"));
+        assert!(root_header.contains("AssetManifestLoadError,"));
+        assert!(root_header.contains("AssetMediaType,"));
+        assert!(root_header.contains("AssetMemoryKey,"));
         assert!(root_header.contains("AssetRequest,"));
-        assert!(root_header.contains("AssetResolver, AssetRevision, FILE_ASSET_MANIFEST_KIND_V1"));
+        assert!(root_header.contains("AssetResolver,"));
+        assert!(root_header.contains("AssetRevision,"));
+        assert!(root_header.contains("FILE_ASSET_MANIFEST_KIND_V1"));
         assert!(root_header.contains("FileAssetManifestBundleV1,"));
-        assert!(root_header.contains("FileAssetManifestEntryV1, FileAssetManifestV1"));
-        assert!(root_header.contains("ResolvedAssetBytes, StaticAssetEntry, asset_app_bundle_id,"));
+        assert!(root_header.contains("FileAssetManifestEntryV1,"));
+        assert!(root_header.contains("FileAssetManifestV1,"));
+        assert!(root_header.contains("ResolvedAssetBytes,"));
+        assert!(root_header.contains("ResolvedAssetReference,"));
+        assert!(root_header.contains("StaticAssetEntry,"));
         assert!(root_header.contains("asset_package_bundle_id,"));
         assert!(root_header.contains("pub use fret_runtime::AssetResolverService;"));
         assert!(root_header.contains("pub use fret_assets::FileAssetManifestResolver;"));
@@ -2854,6 +3618,8 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("pub fn capabilities("));
         assert!(root_header.contains("pub fn resolve_bytes("));
         assert!(root_header.contains("pub fn resolve_locator("));
+        assert!(root_header.contains("pub fn resolve_reference("));
+        assert!(root_header.contains("pub fn resolve_locator_reference("));
     }
 
     #[test]
@@ -2869,6 +3635,30 @@ mod authoring_surface_policy_tests {
         assert!(root_header.contains("viewport_breakpoints, viewport_height_at_least"));
         assert!(root_header.contains("viewport_tailwind,"));
         assert!(root_header.contains("window_insets_padding_refinement_or_zero,"));
+    }
+
+    #[test]
+    fn app_and_advanced_modules_expose_view_runtime_on_explicit_lanes_only() {
+        let root_header = root_surface_header_source();
+        let advanced_surface = advanced_prelude_source();
+
+        assert!(LIB_RS.contains("pub use crate::view::View;"));
+        assert!(!root_header.contains("pub mod view;"));
+        assert!(advanced_surface.contains("pub mod view {"));
+        assert!(advanced_surface.contains("ViewWindowState, view_init_window,"));
+        assert!(advanced_surface.contains("view_record_engine_frame, view_view,"));
+    }
+
+    #[test]
+    fn advanced_surface_quarantines_devloop_helpers_off_root() {
+        let root_header = root_surface_header_source();
+        let advanced_surface = advanced_prelude_source();
+
+        assert!(!root_header.contains("pub mod dev {"));
+        assert!(advanced_surface.contains("pub mod dev {"));
+        assert!(advanced_surface.contains("DevStateExport, DevStateHook, DevStateHooks,"));
+        assert!(advanced_surface.contains("DevStateSnapshot,"));
+        assert!(advanced_surface.contains("DevStateWindowKeyRegistry,"));
     }
 
     #[test]
@@ -2924,12 +3714,14 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("HoverRegionProps"));
         assert!(!app_prelude_exports_symbol("Length"));
         assert!(!app_prelude_exports_symbol("SemanticsProps"));
+        assert!(!app_prelude_exports_symbol("UiElementSinkExt"));
         assert!(!app_prelude_exports_symbol("ContainerQueryHysteresis"));
         assert!(!app_prelude_exports_symbol("ViewportQueryHysteresis"));
         assert!(!app_prelude_exports_symbol("ImageMetadata"));
         assert!(!app_prelude_exports_symbol("ImageMetadataStore"));
         assert!(!app_prelude_exports_symbol("ImageSamplingExt"));
         assert!(!app_prelude_exports_symbol("MarginEdge"));
+        assert!(!app_prelude_exports_symbol("SemanticsRole"));
         assert!(!app_prelude_exports_symbol("OverrideSlot"));
         assert!(!app_prelude_exports_symbol("WidgetState"));
         assert!(!app_prelude_exports_symbol("WidgetStateProperty"));
@@ -2979,6 +3771,18 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude.contains("pub use crate::ComponentCx;"));
         assert!(component_prelude.contains("pub use fret_ui_kit::ui;"));
         assert!(component_prelude.contains("pub use fret_ui_kit::{"));
+        assert!(
+            component_prelude
+                .contains("pub use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;")
+        );
+        assert!(
+            component_prelude
+                .contains("pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;")
+        );
+        assert!(
+            component_prelude
+                .contains("pub use fret_ui_kit::declarative::UiElementTestIdExt as _;")
+        );
         assert!(component_prelude_exports_symbol("UiBuilder"));
         assert!(component_prelude_exports_symbol("UiPatchTarget"));
         assert!(component_prelude_exports_symbol("IntoUiElement"));
@@ -2988,14 +3792,57 @@ mod authoring_surface_policy_tests {
         assert!(component_prelude_exports_symbol("Invalidation"));
         assert!(component_prelude_exports_symbol("Theme"));
         assert!(component_prelude_exports_symbol("Model"));
-        assert!(component_prelude_exports_symbol("CommandId"));
         assert!(component_prelude_exports_symbol("OverlayController"));
         assert!(component_prelude_exports_symbol("OverlayRequest"));
+        assert!(component_prelude_exports_symbol("OverlayPresence"));
         assert!(component_prelude_exports_symbol("SemanticsRole"));
         assert!(!component_prelude.contains("pub use fret_ui_kit::prelude::*;"));
+        assert!(!component_prelude_exports_symbol("accent_color"));
+        assert!(!component_prelude_exports_symbol("container_breakpoints"));
+        assert!(!component_prelude_exports_symbol("safe_area_insets"));
+        assert!(!component_prelude_exports_symbol("viewport_breakpoints"));
+        assert!(!component_prelude_exports_symbol("viewport_tailwind"));
+        assert!(!component_prelude_exports_symbol("ActionHooksExt"));
+        assert!(!component_prelude_exports_symbol("AnyElementSemanticsExt"));
+        assert!(!component_prelude_exports_symbol("CollectionSemanticsExt"));
+        assert!(!component_prelude_exports_symbol("ElementContextThemeExt"));
+        assert!(!component_prelude_exports_symbol("GlobalWatchExt"));
+        assert!(!component_prelude_exports_symbol("ModelWatchExt"));
+        assert!(!component_prelude_exports_symbol("UiElementA11yExt"));
+        assert!(!component_prelude_exports_symbol("UiElementKeyContextExt"));
+        assert!(!component_prelude_exports_symbol("UiElementTestIdExt"));
         assert!(!component_prelude_exports_symbol("UiIntoElement"));
         assert!(!component_prelude_exports_symbol("UiHostBoundIntoElement"));
         assert!(!component_prelude_exports_symbol("UiChildIntoElement"));
+        assert!(!component_prelude_exports_symbol(
+            "OverlayArbitrationSnapshot"
+        ));
+        assert!(!component_prelude_exports_symbol("OverlayKind"));
+        assert!(!component_prelude_exports_symbol("OverlayStackEntryKind"));
+        assert!(!component_prelude_exports_symbol("WindowOverlayStackEntry"));
+        assert!(!component_prelude_exports_symbol(
+            "WindowOverlayStackSnapshot"
+        ));
+        assert!(!component_prelude_exports_symbol("on_activate"));
+        assert!(!component_prelude_exports_symbol("on_activate_notify"));
+        assert!(!component_prelude_exports_symbol(
+            "on_activate_request_redraw"
+        ));
+        assert!(!component_prelude_exports_symbol(
+            "on_activate_request_redraw_notify"
+        ));
+    }
+
+    #[test]
+    fn app_and_component_preludes_only_overlap_on_ui_and_px() {
+        let app_symbols = exported_symbol_names(app_prelude_source());
+        let component_symbols = exported_symbol_names(component_prelude_source());
+        let overlap = app_symbols
+            .intersection(&component_symbols)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        assert_eq!(overlap, vec!["Px".to_string(), "ui".to_string()]);
     }
 
     #[test]
@@ -3014,6 +3861,7 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol("Event"));
         assert!(!component_prelude_exports_symbol("UiTree"));
         assert!(!component_prelude_exports_symbol("ActionId"));
+        assert!(!component_prelude_exports_symbol("CommandId"));
         assert!(!component_prelude_exports_symbol("TypedAction"));
         assert!(!component_prelude_exports_symbol("shadcn"));
     }
@@ -3035,6 +3883,10 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_builder_uses_setup_language_on_default_surface() {
         assert!(APP_ENTRY_RS.contains("pub fn setup<") || APP_ENTRY_RS.contains("pub fn setup("));
+        assert!(
+            APP_ENTRY_RS.contains("pub fn asset_startup(")
+                || APP_ENTRY_RS.contains("pub fn asset_startup<")
+        );
         assert!(
             APP_ENTRY_RS.contains("pub fn asset_manifest(")
                 || APP_ENTRY_RS.contains("pub fn asset_manifest<")
@@ -3059,6 +3911,7 @@ mod authoring_surface_policy_tests {
         assert!(
             ui_app_builder.contains("pub fn setup<") || ui_app_builder.contains("pub fn setup(")
         );
+        assert!(ui_app_builder.contains("pub fn with_asset_startup("));
         assert!(ui_app_builder.contains("pub fn with_asset_dir("));
         assert!(ui_app_builder.contains("pub fn with_asset_manifest("));
         assert!(!ui_app_builder.contains("pub fn init_app("));

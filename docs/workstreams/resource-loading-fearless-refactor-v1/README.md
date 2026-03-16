@@ -1,11 +1,14 @@
 # Resource Loading Fearless Refactor v1
 
-Status: In progress (audit complete; contract reset started)
+Status: In progress (audit complete; contract reset started; capability matrix published)
 
 Tracking files:
 
+- `docs/workstreams/resource-loading-fearless-refactor-v1/AUDIT.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/resource-loading-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`
+- `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`
 
 Related inputs:
 
@@ -75,19 +78,69 @@ This workstream takes a fearless posture:
     the app-facing facade,
   - `fret::assets::register_file_manifest(...)` mounts that resolver on the app-facing facade
     without teaching repo-relative paths in widget code.
+  - file-backed bundle locators can now also expose an explicit native file-reference handoff via
+    `resolve_reference(...)` / `resolve_locator_reference(...)` on the shared resolver contract,
+    so platform APIs can ask for a real file path without bypassing bundle identity.
   - `fretboard assets manifest write --dir ... --out ... --app-bundle ...` now emits an explicit
     file-backed manifest artifact from a scanned bundle directory,
   - `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` keep that generated-manifest
     convenience lane on the startup builder surface,
   - `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` now keep that
     manifest lane on the startup builder surface instead of app-local setup glue.
+  - `fret::assets::{AssetStartupPlan, AssetStartupMode}` plus
+    `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` now provide one named
+    first-party startup contract for choosing the development lane without re-teaching
+    path-first branching in app code.
+  - `fret-launch::assets::{AssetStartupPlan, AssetStartupMode}` plus
+    `WinitAppBuilder::{with_asset_manifest, with_asset_dir, with_bundle_asset_entries,
+    with_embedded_asset_entries, with_asset_startup}` now make that same contract explicit on the
+    lowest-level native startup surface.
+  - `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` now re-export the launch-owned
+    contract, and `BootstrapBuilder::{with_asset_manifest, with_asset_dir,
+    with_bundle_asset_entries, with_embedded_asset_entries, with_asset_startup}` now delegate to
+    `WinitAppBuilder`, so direct bootstrap apps no longer fork ad-hoc resolver setup logic.
+  - `fret-runtime` now also exposes one generic invalidation contract for asset-consuming code:
+    - `AssetReloadEpoch`,
+    - `AssetReloadSupport`,
+    - `AssetReloadStatus`,
+    - `AssetReloadBackendKind`,
+    - `AssetReloadFallbackReason`,
+    - `asset_reload_epoch(...)`,
+    - `asset_reload_status(...)`,
+    - `bump_asset_reload_epoch(...)`.
+  - desktop native startup now also has a first-party development reload automation lane:
+    - `fret-launch::assets::AssetReloadPolicy`,
+    - `WinitAppBuilder::with_asset_reload_policy(...)`,
+    - `BootstrapBuilder::with_asset_reload_policy(...)`,
+    - `UiAppBuilder::with_asset_reload_policy(...)`,
+    - `FretApp::asset_reload_policy(...)`.
+  - the current first-party desktop implementation uses a native watcher first and falls back to
+    metadata polling for builder-mounted manifests/directories when the watcher backend or watch
+    roots cannot be installed:
+    - it bumps the shared `AssetReloadEpoch`,
+    - publishes `AssetReloadSupport { file_watch: true }`,
+    - publishes `AssetReloadStatus` so diagnostics can see the configured backend, active backend,
+      and watcher-install fallback reason without scraping logs,
+    - exposes that asset-reload state through both typed `UiPredicateV1` script predicates and
+      `fretboard diag` post-run bundle checks, so suites can gate the effective backend/fallback
+      without custom log parsing,
+    - and requests redraws for each tracked native window.
+  - `fret-ui-assets` now consumes that shared runtime-global epoch directly, and the old
+    UI-specific reload aliases have been removed from the first-party surface.
+  - the completed M5 delete/rename scope is tracked explicitly in
+    `docs/workstreams/resource-loading-fearless-refactor-v1/M5_DEPRECATION_CLEANUP.md`, including
+    the removed shim symbols plus the dev-reload env/file rename.
   - `FretApp` now preserves asset registration call order across `asset_dir(...)` and
     `asset_manifest(...)`, so later builder calls override earlier ones consistently with the
     composable resolver stack.
   - `fretboard new todo --ui-assets` / `fretboard new simple-todo --ui-assets` now scaffold:
     - an `assets/` directory for app-owned files,
     - a checked-in `src/generated_assets.rs` stub for the portable compile-time lane,
-    - `generated_assets::mount(builder)` on the default `fret` builder path,
+    - `generated_assets::mount(builder)?` on the default `fret` builder path,
+    - generated startup helpers (`preferred_startup_plan()` / `preferred_startup_mode()`) that
+      now lower onto shared `fret` facade defaults
+      (`AssetStartupPlan::development_bundle_dir_if_native(...)` and
+      `AssetStartupMode::preferred()`) for native debug vs packaged bundle selection,
     - and an explicit regeneration command for `fretboard assets rust write ...`.
 - A first compile-time embedded artifact lane now exists for packaged/web/mobile-friendly builds:
   - `fretboard assets rust write --dir ... --out ... --app-bundle ...` emits a generated Rust
@@ -102,19 +155,73 @@ This workstream takes a fearless posture:
       `fret-assets` / `fret-runtime` integration.
   - The `--surface fret` module now exposes both:
     - `register(app)` for direct host/app registration,
-    - `mount(builder)` for `UiAppBuilder` startup-path mounting via
-      `with_bundle_asset_entries(...)`.
+    - `mount(builder)?` for `UiAppBuilder` startup-path mounting via `with_asset_startup(...)`,
+    - and startup-plan helpers that now delegate to shared `fret` facade defaults instead of
+      duplicating per-generated-module `cfg` logic.
   - `FretApp::asset_entries(...)`, `FretApp::bundle_asset_entries(...)`,
     `FretApp::embedded_asset_entries(...)`, `UiAppBuilder::with_bundle_asset_entries(...)`, and
     `UiAppBuilder::with_embedded_asset_entries(...)` now keep compile-time/static registrations on
     the same ordered builder/startup surface as `asset_dir(...)` and `asset_manifest(...)`.
-- `fret-ui-assets` can now resolve bundle/embedded assets through the host-installed resolver for
-  image and SVG bytes, while keeping the existing async image invalidation ergonomics.
-- Legacy file-path helpers still exist only as migration/dev/native compatibility shims.
+  - the same startup-plan surface now also selects this packaged lane explicitly through
+    `AssetStartupMode::Packaged`, so app/bootstrap code can name both development and packaged
+    behavior without re-encoding the low-level builder calls at every startup site.
+- `fret-ui-assets` now consumes the shared resolver contract for both bytes and explicit external
+  references:
+  - image helpers prefer target-appropriate reference handoff first (native file paths, wasm URL
+    references) and fall back to bytes when the current winning layer cannot provide a usable
+    external reference; `ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
+    now keeps the UI-facing app/widget story locator-first instead of forcing app code to resolve
+    `ImageSource` eagerly,
+  - native SVG helpers can now bridge logical bundle locators into `SvgFileSource` for reloadable
+    file-backed development ergonomics without teaching raw app paths as the primary authoring
+    story, and `fret-ui-assets::ui::SvgAssetElementContextExt` now keeps the UI-facing app/widget
+    story locator-first instead of exposing `SvgFileSource` directly in ordinary render code,
+  - byte-based SVG loading and the existing async image invalidation ergonomics remain intact.
+- The general asset contract now also models explicit external-reference handoff:
+  - `ResolvedAssetReference` / `AssetExternalReference` in `crates/fret-assets`,
+  - host-level resolution via `crates/fret-runtime/src/asset_resolver.rs`,
+  - app-facing facade helpers via `fret::assets::resolve_reference(...)` and
+    `fret::assets::resolve_locator_reference(...)`.
+- `crates/fret-fonts` now also exposes a package-scoped asset-contract surface for bundled
+  framework fonts:
+  - `bundled_asset_bundle()` returns the logical package bundle id,
+  - bundled font faces now carry stable logical keys/media types,
+  - bundled profiles now expose `asset_entries()` so the framework-owned font baseline can mount
+    through `StaticAssetEntry` instead of existing only as raw byte arrays.
+- startup publication now also has an explicit runtime-global slot for that baseline identity:
+  - `fret_runtime::BundledFontBaselineSnapshot` records which bundled profile/bundle/asset keys
+    the runner chose,
+  - startup now also mounts `fret-fonts::default_profile().asset_entries()` into the shared
+    runtime asset resolver, so the framework-owned default font baseline is backed by the same
+    package-owned `bundle + key` contract that it publishes diagnostically,
+  - web and the current non-wasm winit startup path now both publish the current
+    `fret-fonts::default_profile()` contract before startup font-environment initialization,
+  - native startup still keeps `FontFamilyDefaultsPolicy::None`, so system-font augmentation stays
+    separate from the framework-owned baseline identity,
+  - local evidence now includes `cargo check -p fret-launch --target aarch64-apple-ios`,
+    while Android target verification is currently blocked by missing NDK clang tooling in the
+    local environment.
+- Accepted ADR coverage now exists for both:
+  - icon ownership/package composition (`docs/adr/0065-icon-system-and-asset-packaging.md`),
+  - the general portable locator/resolver contract
+    (`docs/adr/0317-portable-asset-locator-and-resolver-contract-v1.md`).
+- A first capability matrix is now published in
+  `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`:
+  - it distinguishes the general asset contract from legacy UI escape hatches,
+  - it marks raw-file and URL lanes truthfully per platform,
+  - and it records the current mobile inference: generated embedded/bundle modules are the only
+    trustworthy first-party packaged story today.
+- Legacy public file-path constructors have been removed; native/dev compatibility now stays on the
+  explicit locator/reference bridge helpers plus crate-private native bridge constructors.
 - Generated directory scanning is still only a native/package-dev convenience lane today; the new
   generated Rust module is the first packaged/web/mobile-friendly lane, but it does not yet cover
   hashed web output rewriting or mobile platform-native bundle mapping.
-- Font startup still remains split across desktop/web/SVG text and is not solved by the current
+- The current first-party auto-reload lane is desktop-native only and intentionally limited:
+  - desktop development now prefers a native watcher backend and falls back to metadata polling
+    when watcher installation fails,
+  - it only tracks builder-mounted file manifests/directories,
+  - and wasm/mobile still have no first-party automatic reload story today.
+- Font startup still remains split across mobile/SVG text and is not fully solved by the current
   slice.
 
 ## Current incorrect logic (must be corrected, not preserved)
@@ -139,8 +246,8 @@ That makes it too easy for each asset class to drift into a different platform t
 
 ### 2) `path` is treated like a primary authoring surface
 
-Current resource helpers still expose file-path loading and older workstream/docs history taught it
-as a primary authoring path:
+Historically, resource helpers exposed file-path loading and older workstream/docs history taught
+it as a primary authoring path:
 
 - `ImageSource::from_file_path(...)` in `ecosystem/fret-ui-assets/src/image_source.rs`
 - `SvgFileSource::from_file_path(...)` in `ecosystem/fret-ui-assets/src/svg_file.rs`
@@ -176,20 +283,27 @@ driver:
 This is too easy to misuse. A public-looking `install()` API must either perform complete runtime
 wiring or be renamed to describe its actual effect.
 
-### 4) Font baseline semantics are inconsistent across platforms
+### 4) Font baseline semantics are still under-verified across platforms
 
-Web eagerly injects bundled default fonts as soon as the renderer is ready:
+Web and the current native winit startup path now inject the same bundled default font baseline as
+soon as the renderer is ready:
 
 - `crates/fret-launch/src/runner/web/gfx_init.rs`
-
-Desktop does not do the same thing. It starts with `FontFamilyDefaultsPolicy::None` and relies on
-desktop startup policy and optional system scanning:
-
-- `crates/fret-launch/src/runner/font_catalog.rs`
 - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
 
-That means the framework does not yet guarantee one deterministic baseline text environment before
-layering in platform-specific extras.
+The remaining gap is now narrower:
+
+- native still keeps `FontFamilyDefaultsPolicy::None` and layers optional system scanning on top,
+- mobile shell/toolchain verification is still incomplete even though the current non-wasm runner
+  path routes through the same startup helper,
+- and Android local verification currently depends on an external NDK clang toolchain that is not
+  present in this environment.
+
+- `crates/fret-launch/src/runner/font_catalog.rs`
+
+So the framework now guarantees one deterministic bundled baseline on web and on the current native
+runner path before platform-specific augmentation, but mobile-specific diagnostics and Android CI
+toolchain evidence are still missing.
 
 ### 5) SVG text does not share the text system font environment
 
@@ -311,6 +425,33 @@ Examples of what this enables:
 - web packaging can rewrite the actual emitted file name or hash without changing UI code,
 - mobile packaging can map the same logical key into APK/iOS bundle resources.
 
+Recommended ecosystem ownership rules:
+
+- app-owned resources live under `AssetBundleId::app(...)`,
+- ecosystem/package-owned images, SVGs, fonts, and similar shipped bytes live under
+  `AssetBundleId::package(...)`,
+- reusable component crates should not require app authors to understand the final packaging
+  layout in order to consume those resources,
+- app authors should compose installer/setup surfaces instead of manually reproducing each
+  ecosystem crate's internal asset mounting steps.
+
+Important current gap:
+
+- generic resources now have a package-bundle story, but icon packs still primarily install through
+  the global `IconRegistry` surface,
+- that is workable today, but the long-term story still needs one documented ownership bridge
+  between `IconRegistry` and package-owned shipped bytes.
+
+Current explicit icon-pack conflict policy:
+
+- vendor ids (`lucide.*`, `radix.*`, ...) are namespaced and do not conflict,
+- semantic ids (`ui.*`) use a stable first-successful-alias-wins rule via
+  `IconRegistry::alias_if_missing(...)`,
+- app/bootstrap code may intentionally override a semantic alias afterwards with
+  `IconRegistry::alias(...)` or `register(...)`,
+- the default first-party preference remains Lucide on the `fret` batteries lane because bootstrap
+  only enables Radix semantic aliases when Lucide semantic aliases are not already selected.
+
 This is the pattern used by mature cross-platform systems:
 
 - Flutter packages assets into an `AssetBundle` and encourages `DefaultAssetBundle` indirection
@@ -355,6 +496,20 @@ Recommended result model:
   - decode failure
 
 This is also the right place to centralize hot reload, file watching, and dev-only refresh logic.
+
+### 3.5) Define icon-pack participation explicitly
+
+Icons should remain ergonomic for component authors, but their ownership model must be documented
+instead of inferred from install order.
+
+Recommended direction:
+
+- components depend on `IconId` or semantic `ui.*` ids, not raw file paths,
+- ecosystem libraries that need non-semantic vendor ids should keep those requirements explicit,
+- icon packs should provide explicit installers/bundles so app authors compose one install surface
+  per ecosystem dependency instead of hand-registering loose resources,
+- the project should decide whether icon pack bytes eventually remain on `IconRegistry`, move onto
+  the general asset contract, or keep a hybrid model with a documented bridge.
 
 ### 4) Keep `fret-ui` handle-based
 
@@ -507,8 +662,7 @@ Recommended new ownership:
 
 These surfaces should not remain part of the “recommended Fret way”:
 
-- `ImageSource::from_file_path(...)`
-- `SvgFileSource::from_file_path(...)`
+- direct raw file-path widget loading
 - cookbook examples that teach repo-relative asset paths as the normal story
 - `install()` naming that implies complete installation while only configuring budgets
 
@@ -516,9 +670,10 @@ Acceptable transitional rule:
 
 - keep native/dev escape hatches temporarily,
 - remove them from teaching surfaces immediately,
-- deprecate or rename them while the portable bundle-based path is landing,
-- then delete the deprecated compatibility names once the unified asset contract, first-party
-  migration, and replacement authoring/docs are complete.
+- keep them behind explicit lower-level resolver/locator seams while the portable bundle-based path
+  lands,
+- and delete public compatibility names once the unified asset contract, first-party migration, and
+  replacement authoring/docs are complete.
 
 ## Recommended execution order
 

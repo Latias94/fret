@@ -203,7 +203,7 @@ pub(crate) fn sidebar_view(
                     shadcn::SidebarMenuButton::new(item.label)
                         .active(is_selected)
                         .collapsed(false)
-                        .on_click(item.command)
+                        .action(item.command)
                         .test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")))
                         .into_element(cx)
                 }));

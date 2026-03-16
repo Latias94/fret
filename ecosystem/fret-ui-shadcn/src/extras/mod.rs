@@ -2,7 +2,8 @@
 //! taxonomy parity.
 //!
 //! Design rules:
-//! - This is a module surface (`fret_ui_shadcn::extras::*`), not a new crate or taxonomy.
+//! - This is a raw escape-hatch module surface (`fret_ui_shadcn::raw::extras::*`), not a new
+//!   crate or taxonomy.
 //! - `fret-ui-shadcn` crate root must not glob re-export these items; keep autocomplete aligned with
 //!   the v4 surface.
 //! - Extras should not require expanding `crates/fret-ui` public contracts (ADR 0066).

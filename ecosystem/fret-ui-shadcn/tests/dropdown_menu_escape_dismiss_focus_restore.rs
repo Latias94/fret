@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -70,10 +71,10 @@ fn dropdown_menu_escape_closes_and_restores_focus_to_trigger() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let open: Model<bool> = app.models_mut().insert(false);
@@ -85,20 +86,20 @@ fn dropdown_menu_escape_closes_and_restores_focus_to_trigger() {
 
     let build = move |open: Model<bool>| {
         move |cx: &mut ElementContext<'_, App>| {
-            vec![fret_ui_shadcn::DropdownMenu::from_open(open).into_element(
+            vec![shadcn::DropdownMenu::from_open(open).into_element(
                 cx,
                 |cx| {
-                    fret_ui_shadcn::Button::new("Open")
+                    shadcn::Button::new("Open")
                         .test_id("menu-trigger")
                         .into_element(cx)
                 },
                 |_cx| {
                     vec![
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("My Account").value("my-account"),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("My Account").value("my-account"),
                         ),
-                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                            fret_ui_shadcn::DropdownMenuItem::new("Profile").value("profile"),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Profile").value("profile"),
                         ),
                     ]
                 },

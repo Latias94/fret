@@ -1,6 +1,7 @@
 use fret_ui::{ElementContext, UiHost};
 
-use crate::{Alert, AlertDescription, AlertTitle, AlertVariant, Badge, BadgeVariant};
+use crate::alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
+use crate::badge::{Badge, BadgeVariant};
 
 #[cfg(feature = "state-query")]
 use fret_query::{QueryState, QueryStatus};

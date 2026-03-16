@@ -9,7 +9,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
 
 use fret_markdown::BlockId;
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::facade::{Button, ButtonSize, ButtonVariant};
 
 use crate::elements::CodeBlockCopyButton;
 

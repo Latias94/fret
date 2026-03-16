@@ -1163,7 +1163,7 @@ mod tests {
         let model = app.models_mut().insert(String::new());
 
         let root = elements::with_element_cx(&mut app, window, bounds, "labelled-input", |cx| {
-            let label = crate::Label::new("Email").into_element(cx);
+            let label = crate::label::Label::new("Email").into_element(cx);
             let label_id = label.id;
 
             let input = Input::new(model.clone())

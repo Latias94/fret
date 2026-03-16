@@ -7,6 +7,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -83,11 +84,11 @@ fn pointer_move_at(
 }
 
 fn build_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let trigger = fret_ui_shadcn::Button::new("Hover me")
+    let trigger = shadcn::Button::new("Hover me")
         .test_id("tooltip-trigger")
         .into_element(cx);
-    let content = fret_ui_shadcn::TooltipContent::new([cx.text("Tooltip")]).into_element(cx);
-    let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content)
+    let content = shadcn::TooltipContent::new([cx.text("Tooltip")]).into_element(cx);
+    let tooltip = shadcn::Tooltip::new(cx, trigger, content)
         .open_delay_frames(0)
         .close_delay_frames(0)
         .panel_test_id("tooltip-panel")
@@ -104,10 +105,10 @@ fn tooltip_hover_opens_and_leave_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -211,10 +212,10 @@ fn tooltip_escape_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();

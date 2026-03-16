@@ -31,7 +31,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into(),
             shadcn::Button::new("Browse")
                 .variant(shadcn::ButtonVariant::Outline)
-                .on_click(CMD_INPUT_PICTURE_BROWSE)
+                .action(CMD_INPUT_PICTURE_BROWSE)
                 .test_id("ui-gallery-input-file-browse")
                 .into_element(cx)
                 .into(),

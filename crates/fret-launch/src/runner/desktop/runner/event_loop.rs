@@ -28,6 +28,7 @@ pub enum RunnerUserEvent {
         window: fret_core::AppWindowId,
         completion: PlatformCompletion,
     },
+    AssetReloadWake,
     #[cfg(windows)]
     WindowsMenuCommand {
         window: fret_core::AppWindowId,

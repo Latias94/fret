@@ -30,7 +30,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 })
                 // Keep the gallery deterministic: demonstrate link semantics without opening the
                 // browser during scripted runs.
-                .on_click("ui_gallery.app.open")
+                .action("ui_gallery.app.open")
                 .test_id("ui-gallery-button-render-link")
                 .into_element(cx),
         ]

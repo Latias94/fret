@@ -1,7 +1,7 @@
 //! Development-oriented SVG file helpers.
 //!
 //! The goal is to make path-based SVGs usable in UI code without re-reading the file every frame,
-//! while still allowing hot-reload via `UiAssetsReloadEpoch`.
+//! while still allowing hot-reload via the shared `AssetReloadEpoch`.
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
@@ -9,11 +9,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_assets::{AssetLoadError, AssetLocator};
+use fret_runtime::AssetReloadEpoch;
 use fret_runtime::GlobalsHost;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_runtime::TimeHost;
-
-use crate::UiAssetsReloadEpoch;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone)]
@@ -23,22 +22,17 @@ pub struct SvgFileSource {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl SvgFileSource {
-    pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
+    pub(crate) fn from_native_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
         Self { path: path.into() }
     }
 
     pub fn from_asset_locator(locator: &AssetLocator) -> Result<Self, AssetLoadError> {
         match locator {
-            AssetLocator::File(file) => Ok(Self::from_file_path(file.path.clone())),
+            AssetLocator::File(file) => Ok(Self::from_native_file_path(file.path.clone())),
             _ => Err(AssetLoadError::UnsupportedLocatorKind {
                 kind: locator.kind(),
             }),
         }
-    }
-
-    #[deprecated(note = "use from_file_path; raw file paths are a native/dev-only asset source")]
-    pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        Self::from_file_path(path)
     }
 }
 
@@ -79,10 +73,7 @@ pub fn read_svg_file_cached<H: GlobalsHost + TimeHost>(
     host: &mut H,
     source: &SvgFileSource,
 ) -> SvgFileState {
-    let epoch = host
-        .global::<UiAssetsReloadEpoch>()
-        .map(|v| v.0)
-        .unwrap_or(0);
+    let epoch = host.global::<AssetReloadEpoch>().map(|v| v.0).unwrap_or(0);
 
     let path = source.path.as_ref();
     host.with_global_mut_untracked(SvgFileCache::default, |cache, _host| {
@@ -207,7 +198,7 @@ mod tests {
     #[test]
     fn svg_file_cache_respects_epoch_bumps() {
         let mut host = TestHost::default();
-        host.set_global(UiAssetsReloadEpoch(0));
+        host.set_global(AssetReloadEpoch(0));
 
         let mut tmp = std::env::temp_dir();
         let unique = format!(
@@ -221,7 +212,7 @@ mod tests {
         tmp.push(unique);
 
         std::fs::write(&tmp, br#"<svg viewBox="0 0 1 1"></svg>"#).expect("write temp svg");
-        let src = SvgFileSource::from_file_path(Arc::new(tmp.clone()));
+        let src = SvgFileSource::from_native_file_path(Arc::new(tmp.clone()));
 
         let s0 = read_svg_file_cached(&mut host, &src);
         assert!(s0.error.is_none());
@@ -234,7 +225,7 @@ mod tests {
         assert_eq!(b0.as_ref(), b_same.as_ref());
 
         // Bump epoch => re-read and observe new bytes.
-        crate::bump_ui_assets_reload_epoch(&mut host);
+        fret_runtime::bump_asset_reload_epoch(&mut host);
         let s1 = read_svg_file_cached(&mut host, &src);
         let b1 = s1.bytes.expect("bytes");
         assert_ne!(b0.as_ref(), b1.as_ref());
@@ -245,8 +236,9 @@ mod tests {
         let locator = AssetLocator::file("assets/demo/icon-search.svg");
         let source =
             SvgFileSource::from_asset_locator(&locator).expect("file locator should bridge");
-        let expected =
-            SvgFileSource::from_file_path(std::path::PathBuf::from("assets/demo/icon-search.svg"));
+        let expected = SvgFileSource::from_native_file_path(std::path::PathBuf::from(
+            "assets/demo/icon-search.svg",
+        ));
         assert_eq!(source.path.as_ref(), expected.path.as_ref());
     }
 }

@@ -6,6 +6,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -75,8 +76,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<shadcn::CarouselApiSnapshot>,
+    opts: shadcn::CarouselOptions,
     carousel_width: Px,
     item_basis_main_px: Px,
 ) {
@@ -93,7 +94,7 @@ fn render_frame(
         "carousel-api-generations",
         move |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_snapshot_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -127,8 +128,8 @@ fn carousel_api_select_generation_increments_on_next_click() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let opts = shadcn::CarouselOptions::default();
 
     for _ in 0..3 {
         render_frame(
@@ -190,8 +191,8 @@ fn carousel_api_reinit_generation_increments_on_geometry_change() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let opts = shadcn::CarouselOptions::default();
 
     for _ in 0..3 {
         render_frame(
@@ -254,8 +255,8 @@ fn carousel_api_reinit_generation_throttles_during_continuous_geometry_changes()
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let opts = fret_ui_shadcn::CarouselOptions::default();
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let opts = shadcn::CarouselOptions::default();
 
     for _ in 0..3 {
         render_frame(
@@ -320,8 +321,8 @@ fn carousel_api_loop_enabled_keeps_controls_enabled() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let mut opts = fret_ui_shadcn::CarouselOptions::default();
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let mut opts = shadcn::CarouselOptions::default();
     opts.embla_engine = true;
     opts.loop_enabled = true;
 

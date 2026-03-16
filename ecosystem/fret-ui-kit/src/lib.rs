@@ -406,6 +406,7 @@ mod default_semantics_tests {
 #[cfg(test)]
 mod source_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
+    const README: &str = include_str!("../README.md");
     const DECLARATIVE_BLOOM_RS: &str = include_str!("declarative/bloom.rs");
     const DECLARATIVE_CACHED_SUBTREE_RS: &str = include_str!("declarative/cached_subtree.rs");
     const DECLARATIVE_CHROME_RS: &str = include_str!("declarative/chrome.rs");
@@ -836,5 +837,19 @@ mod source_policy_tests {
             !DECLARATIVE_PRELUDE_RS.contains("fret_query"),
             "declarative/prelude.rs should remain free of direct query-crate imports"
         );
+    }
+
+    #[test]
+    fn readme_keeps_icon_provider_installation_explicit_for_ui_kit() {
+        assert!(README.contains("it does not install a default icon pack"));
+        assert!(README.contains("`fret_icons_lucide::app::install`"));
+        assert!(README.contains("`fret_icons_radix::app::install`"));
+        assert!(README.contains("semantic `IconId`"));
+        assert!(README.contains("semantic `IconId` / `ui.*`"));
+        assert!(README.contains("one named installer/bundle surface"));
+        assert!(README.contains("use fret_icons::ids;"));
+        assert!(README.contains("use fret_ui_kit::prelude::*;"));
+        assert!(README.contains("fret_icons_lucide::app::install(app);"));
+        assert!(README.contains("let _icon = icon(ids::ui::SEARCH);"));
     }
 }

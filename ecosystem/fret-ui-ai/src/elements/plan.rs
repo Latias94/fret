@@ -14,7 +14,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, CardAction, CardContent, CardDescription, CardFooter,
     CardHeader, CardTitle,
 };

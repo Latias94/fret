@@ -1314,7 +1314,7 @@ mod tests {
             let mut out = Vec::new();
             out.push_ui(
                 cx,
-                HoverCardTrigger::build(crate::Card::build(|_cx, _out| {})),
+                HoverCardTrigger::build(crate::card::Card::build(|_cx, _out| {})),
             );
 
             assert_eq!(out.len(), 1);
@@ -1336,7 +1336,7 @@ mod tests {
             let mut out = Vec::new();
             out.push_ui(
                 cx,
-                HoverCardAnchor::build(crate::Card::build(|_cx, _out| {})),
+                HoverCardAnchor::build(crate::card::Card::build(|_cx, _out| {})),
             );
 
             assert_eq!(out.len(), 1);
@@ -1356,8 +1356,8 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let content = HoverCardContent::new(vec![ui::raw_text("tip").into_element(cx)]);
-            let root =
-                HoverCard::new(cx, crate::Card::build(|_cx, _out| {}), content).into_element(cx);
+            let root = HoverCard::new(cx, crate::card::Card::build(|_cx, _out| {}), content)
+                .into_element(cx);
 
             assert!(matches!(root.kind, ElementKind::HoverRegion(_)));
         });
@@ -1379,7 +1379,7 @@ mod tests {
                 cx,
                 Some(open.clone()),
                 false,
-                crate::Card::build(|_cx, _out| {}),
+                crate::card::Card::build(|_cx, _out| {}),
                 content,
             )
             .into_element(cx);

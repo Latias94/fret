@@ -11,6 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use fret_ui_shadcn::prelude::LayoutRefinement;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -482,7 +483,7 @@ fn render_tooltip_fixture(
             ..Default::default()
         },
         |cx| {
-            fret_ui_shadcn::TooltipProvider::new()
+            shadcn::TooltipProvider::new()
                 .delay_duration_frames(0)
                 .skip_delay_duration_frames(0)
                 .with_elements(cx, |cx| {
@@ -511,27 +512,27 @@ fn render_tooltip_fixture(
                     );
                     trigger_id_out.set(Some(trigger.id));
 
-                    let content = fret_ui_shadcn::TooltipContent::new(Vec::new())
+                    let content = shadcn::TooltipContent::new(Vec::new())
                         .refine_layout(
-                            fret_ui_shadcn::LayoutRefinement::default()
+                            LayoutRefinement::default()
                                 .w_px(Px(web_content_rect.w))
                                 .h_px(Px(web_content_rect.h)),
                         )
                         .into_element(cx);
 
-                    let tooltip = fret_ui_shadcn::Tooltip::new(cx, trigger, content)
+                    let tooltip = shadcn::Tooltip::new(cx, trigger, content)
                         .open_delay_frames(0)
                         .close_delay_frames(0)
                         .side(match side {
-                            Side::Top => fret_ui_shadcn::TooltipSide::Top,
-                            Side::Right => fret_ui_shadcn::TooltipSide::Right,
-                            Side::Bottom => fret_ui_shadcn::TooltipSide::Bottom,
-                            Side::Left => fret_ui_shadcn::TooltipSide::Left,
+                            Side::Top => shadcn::TooltipSide::Top,
+                            Side::Right => shadcn::TooltipSide::Right,
+                            Side::Bottom => shadcn::TooltipSide::Bottom,
+                            Side::Left => shadcn::TooltipSide::Left,
                         })
                         .align(match align {
-                            Align::Start => fret_ui_shadcn::TooltipAlign::Start,
-                            Align::Center => fret_ui_shadcn::TooltipAlign::Center,
-                            Align::End => fret_ui_shadcn::TooltipAlign::End,
+                            Align::Start => shadcn::TooltipAlign::Start,
+                            Align::Center => shadcn::TooltipAlign::Center,
+                            Align::End => shadcn::TooltipAlign::End,
                         })
                         .into_element(cx);
 
@@ -622,19 +623,19 @@ fn render_hover_card_fixture(
                 },
             );
 
-            let hover_card = fret_ui_shadcn::HoverCard::new(cx, trigger, content)
+            let hover_card = shadcn::HoverCard::new(cx, trigger, content)
                 .open_delay_frames(0)
                 .close_delay_frames(0)
                 .side(match side {
-                    Side::Top => fret_ui_shadcn::HoverCardSide::Top,
-                    Side::Right => fret_ui_shadcn::HoverCardSide::Right,
-                    Side::Bottom => fret_ui_shadcn::HoverCardSide::Bottom,
-                    Side::Left => fret_ui_shadcn::HoverCardSide::Left,
+                    Side::Top => shadcn::HoverCardSide::Top,
+                    Side::Right => shadcn::HoverCardSide::Right,
+                    Side::Bottom => shadcn::HoverCardSide::Bottom,
+                    Side::Left => shadcn::HoverCardSide::Left,
                 })
                 .align(match align {
-                    Align::Start => fret_ui_shadcn::HoverCardAlign::Start,
-                    Align::Center => fret_ui_shadcn::HoverCardAlign::Center,
-                    Align::End => fret_ui_shadcn::HoverCardAlign::End,
+                    Align::Start => shadcn::HoverCardAlign::Start,
+                    Align::Center => shadcn::HoverCardAlign::Center,
+                    Align::End => shadcn::HoverCardAlign::End,
                 })
                 .into_element(cx);
 
@@ -750,9 +751,9 @@ fn radix_web_popover_open_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        let mut cfg = fret_ui_shadcn::facade::themes::shadcn_new_york_config(
+            fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
         );
         // Radix's `radix-vega` select content uses `min-w-36` (Tailwind: 9rem).
         // Keep this test aligned to the upstream snapshots without coupling the recipe default.
@@ -797,17 +798,17 @@ fn radix_web_popover_open_geometry_matches_fret() {
                     ..Default::default()
                 },
                 |cx| {
-                    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+                    let popover = shadcn::Popover::from_open(open.clone())
                         .side(match parse_side(side_str) {
-                            Side::Top => fret_ui_shadcn::PopoverSide::Top,
-                            Side::Right => fret_ui_shadcn::PopoverSide::Right,
-                            Side::Bottom => fret_ui_shadcn::PopoverSide::Bottom,
-                            Side::Left => fret_ui_shadcn::PopoverSide::Left,
+                            Side::Top => shadcn::PopoverSide::Top,
+                            Side::Right => shadcn::PopoverSide::Right,
+                            Side::Bottom => shadcn::PopoverSide::Bottom,
+                            Side::Left => shadcn::PopoverSide::Left,
                         })
                         .align(match parse_align(align_str) {
-                            Align::Start => fret_ui_shadcn::PopoverAlign::Start,
-                            Align::Center => fret_ui_shadcn::PopoverAlign::Center,
-                            Align::End => fret_ui_shadcn::PopoverAlign::End,
+                            Align::Start => shadcn::PopoverAlign::Start,
+                            Align::Center => shadcn::PopoverAlign::Center,
+                            Align::End => shadcn::PopoverAlign::End,
                         })
                         .into_element_with(
                             cx,
@@ -824,7 +825,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
                                 trigger
                             },
                             |cx| {
-                                fret_ui_shadcn::PopoverContent::new(vec![fixed_size_container(
+                                shadcn::PopoverContent::new(vec![fixed_size_container(
                                     cx,
                                     web_content_rect.w,
                                     web_content_rect.h,
@@ -865,17 +866,17 @@ fn radix_web_popover_open_geometry_matches_fret() {
                         ..Default::default()
                     },
                     |cx| {
-                        let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+                        let popover = shadcn::Popover::from_open(open.clone())
                             .side(match parse_side(side_str) {
-                                Side::Top => fret_ui_shadcn::PopoverSide::Top,
-                                Side::Right => fret_ui_shadcn::PopoverSide::Right,
-                                Side::Bottom => fret_ui_shadcn::PopoverSide::Bottom,
-                                Side::Left => fret_ui_shadcn::PopoverSide::Left,
+                                Side::Top => shadcn::PopoverSide::Top,
+                                Side::Right => shadcn::PopoverSide::Right,
+                                Side::Bottom => shadcn::PopoverSide::Bottom,
+                                Side::Left => shadcn::PopoverSide::Left,
                             })
                             .align(match parse_align(align_str) {
-                                Align::Start => fret_ui_shadcn::PopoverAlign::Start,
-                                Align::Center => fret_ui_shadcn::PopoverAlign::Center,
-                                Align::End => fret_ui_shadcn::PopoverAlign::End,
+                                Align::Start => shadcn::PopoverAlign::Start,
+                                Align::Center => shadcn::PopoverAlign::Center,
+                                Align::End => shadcn::PopoverAlign::End,
                             })
                             .into_element_with(
                                 cx,
@@ -892,7 +893,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
                                     trigger
                                 },
                                 |cx| {
-                                    fret_ui_shadcn::PopoverContent::new(vec![fixed_size_container(
+                                    shadcn::PopoverContent::new(vec![fixed_size_container(
                                         cx,
                                         web_content_rect.w,
                                         web_content_rect.h,
@@ -1022,10 +1023,10 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(false);
     let mut ui: UiTree<App> = UiTree::new();
@@ -1043,50 +1044,46 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
         true,
         |cx| {
             let trigger = fixed_trigger(cx, "Open", 200.0, 200.0, 80.0, 36.0);
-            let menu = fret_ui_shadcn::DropdownMenu::from_open(open.clone())
+            let menu = shadcn::DropdownMenu::from_open(open.clone())
                 .side(match parse_side(side_str) {
-                    Side::Top => fret_ui_shadcn::DropdownMenuSide::Top,
-                    Side::Right => fret_ui_shadcn::DropdownMenuSide::Right,
-                    Side::Bottom => fret_ui_shadcn::DropdownMenuSide::Bottom,
-                    Side::Left => fret_ui_shadcn::DropdownMenuSide::Left,
+                    Side::Top => shadcn::DropdownMenuSide::Top,
+                    Side::Right => shadcn::DropdownMenuSide::Right,
+                    Side::Bottom => shadcn::DropdownMenuSide::Bottom,
+                    Side::Left => shadcn::DropdownMenuSide::Left,
                 })
                 .align(match parse_align(align_str) {
-                    Align::Start => fret_ui_shadcn::DropdownMenuAlign::Start,
-                    Align::Center => fret_ui_shadcn::DropdownMenuAlign::Center,
-                    Align::End => fret_ui_shadcn::DropdownMenuAlign::End,
+                    Align::Start => shadcn::DropdownMenuAlign::Start,
+                    Align::Center => shadcn::DropdownMenuAlign::Center,
+                    Align::End => shadcn::DropdownMenuAlign::End,
                 })
                 .into_element(
                     cx,
                     |_cx| trigger,
                     |_cx| {
                         vec![
-                            fret_ui_shadcn::DropdownMenuEntry::Group(
-                                fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                    fret_ui_shadcn::DropdownMenuEntry::Item(
-                                        fret_ui_shadcn::DropdownMenuItem::new("Profile"),
-                                    ),
-                                    fret_ui_shadcn::DropdownMenuEntry::Item(
-                                        fret_ui_shadcn::DropdownMenuItem::new("Billing"),
-                                    ),
-                                    fret_ui_shadcn::DropdownMenuEntry::Item(
-                                        fret_ui_shadcn::DropdownMenuItem::new("Settings"),
-                                    ),
-                                ]),
-                            ),
-                            fret_ui_shadcn::DropdownMenuEntry::Separator,
-                            fret_ui_shadcn::DropdownMenuEntry::Group(
-                                fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                    fret_ui_shadcn::DropdownMenuEntry::Item(
-                                        fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
-                                    ),
-                                    fret_ui_shadcn::DropdownMenuEntry::Item(
-                                        fret_ui_shadcn::DropdownMenuItem::new("Support"),
-                                    ),
-                                    fret_ui_shadcn::DropdownMenuEntry::Item(
-                                        fret_ui_shadcn::DropdownMenuItem::new("API"),
-                                    ),
-                                ]),
-                            ),
+                            shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(vec![
+                                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
+                                    "Profile",
+                                )),
+                                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
+                                    "Billing",
+                                )),
+                                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
+                                    "Settings",
+                                )),
+                            ])),
+                            shadcn::DropdownMenuEntry::Separator,
+                            shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(vec![
+                                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
+                                    "GitHub",
+                                )),
+                                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
+                                    "Support",
+                                )),
+                                shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
+                                    "API",
+                                )),
+                            ])),
                         ]
                     },
                 );
@@ -1110,50 +1107,50 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
             request_semantics,
             |cx| {
                 let trigger = fixed_trigger(cx, "Open", 200.0, 200.0, 80.0, 36.0);
-                let menu = fret_ui_shadcn::DropdownMenu::from_open(open.clone())
+                let menu = shadcn::DropdownMenu::from_open(open.clone())
                     .side(match parse_side(side_str) {
-                        Side::Top => fret_ui_shadcn::DropdownMenuSide::Top,
-                        Side::Right => fret_ui_shadcn::DropdownMenuSide::Right,
-                        Side::Bottom => fret_ui_shadcn::DropdownMenuSide::Bottom,
-                        Side::Left => fret_ui_shadcn::DropdownMenuSide::Left,
+                        Side::Top => shadcn::DropdownMenuSide::Top,
+                        Side::Right => shadcn::DropdownMenuSide::Right,
+                        Side::Bottom => shadcn::DropdownMenuSide::Bottom,
+                        Side::Left => shadcn::DropdownMenuSide::Left,
                     })
                     .align(match parse_align(align_str) {
-                        Align::Start => fret_ui_shadcn::DropdownMenuAlign::Start,
-                        Align::Center => fret_ui_shadcn::DropdownMenuAlign::Center,
-                        Align::End => fret_ui_shadcn::DropdownMenuAlign::End,
+                        Align::Start => shadcn::DropdownMenuAlign::Start,
+                        Align::Center => shadcn::DropdownMenuAlign::Center,
+                        Align::End => shadcn::DropdownMenuAlign::End,
                     })
                     .into_element(
                         cx,
                         |_cx| trigger,
                         |_cx| {
                             vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Profile"),
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Profile"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Billing"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Billing"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Settings"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Settings"),
                                         ),
-                                    ]),
-                                ),
-                                fret_ui_shadcn::DropdownMenuEntry::Separator,
-                                fret_ui_shadcn::DropdownMenuEntry::Group(
-                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                    ],
+                                )),
+                                shadcn::DropdownMenuEntry::Separator,
+                                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new(
+                                    vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("GitHub"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Support"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Support"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("API"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("API"),
                                         ),
-                                    ]),
-                                ),
+                                    ],
+                                )),
                             ]
                         },
                     );
@@ -1257,9 +1254,9 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        let mut cfg = fret_ui_shadcn::facade::themes::shadcn_new_york_config(
+            fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
         );
         // Radix's `radix-vega` select content uses `min-w-36` (Tailwind: 9rem).
         // Keep this geometry assertion aligned to upstream snapshots without changing the
@@ -1275,11 +1272,11 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
     let mut services = FakeServices;
 
     let items = vec![
-        fret_ui_shadcn::SelectItem::new("apple", "Apple"),
-        fret_ui_shadcn::SelectItem::new("banana", "Banana"),
-        fret_ui_shadcn::SelectItem::new("blueberry", "Blueberry"),
-        fret_ui_shadcn::SelectItem::new("grapes", "Grapes").disabled(true),
-        fret_ui_shadcn::SelectItem::new("pineapple", "Pineapple"),
+        shadcn::SelectItem::new("apple", "Apple"),
+        shadcn::SelectItem::new("banana", "Banana"),
+        shadcn::SelectItem::new("blueberry", "Blueberry"),
+        shadcn::SelectItem::new("grapes", "Grapes").disabled(true),
+        shadcn::SelectItem::new("pineapple", "Pineapple"),
     ];
 
     let trigger_origin = Point::new(Px(web_trigger_rect.x), Px(web_trigger_rect.y));
@@ -1317,13 +1314,12 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
                         },
                         |cx| {
                             vec![
-                                fret_ui_shadcn::Select::new(value.clone(), open.clone())
-                                    .value(
-                                        fret_ui_shadcn::SelectValue::new()
-                                            .placeholder("Select a fruit"),
-                                    )
+                                shadcn::Select::new(value.clone(), open.clone())
+                                    .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
                                     .a11y_label("Select a fruit")
-                                    .position(fret_ui_shadcn::select::SelectPosition::ItemAligned)
+                                    .position(
+                                        fret_ui_shadcn::raw::select::SelectPosition::ItemAligned,
+                                    )
                                     .items(items.clone())
                                     .into_element(cx),
                             ]
@@ -1398,14 +1394,14 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
                             },
                             |cx| {
                                 vec![
-                                    fret_ui_shadcn::Select::new(value.clone(), open.clone())
+                                    shadcn::Select::new(value.clone(), open.clone())
                                         .value(
-                                            fret_ui_shadcn::SelectValue::new()
+                                            shadcn::SelectValue::new()
                                                 .placeholder("Select a fruit"),
                                         )
                                         .a11y_label("Select a fruit")
                                         .position(
-                                            fret_ui_shadcn::select::SelectPosition::ItemAligned,
+                                            fret_ui_shadcn::raw::select::SelectPosition::ItemAligned,
                                         )
                                         .items(items.clone())
                                         .into_element(cx),
@@ -1569,9 +1565,9 @@ fn radix_web_tooltip_hover_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
-            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        let mut cfg = fret_ui_shadcn::facade::themes::shadcn_new_york_config(
+            fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
         );
         cfg.metrics.insert(
             "component.menubar.min_width".to_string(),
@@ -1728,10 +1724,10 @@ fn radix_web_hover_card_hover_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -1907,10 +1903,10 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(false);
     let mut ui: UiTree<App> = UiTree::new();
@@ -1972,28 +1968,22 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                     |cx, _st| vec![fixed_size_container(cx, trigger_w, trigger_h)],
                                 );
 
-                                let menu = fret_ui_shadcn::ContextMenu::from_open(open)
+                                let menu = shadcn::ContextMenu::from_open(open)
                                     .min_width(Px(web_content_rect.w))
                                     .into_element(
                                         cx,
                                         |_cx| trigger,
                                         |_cx| {
-                                            vec![fret_ui_shadcn::ContextMenuEntry::Group(
-                                                fret_ui_shadcn::ContextMenuGroup::new(vec![
-                                                    fret_ui_shadcn::ContextMenuEntry::Item(
-                                                        fret_ui_shadcn::ContextMenuItem::new(
-                                                            "Back",
-                                                        ),
+                                            vec![shadcn::ContextMenuEntry::Group(
+                                                shadcn::ContextMenuGroup::new(vec![
+                                                    shadcn::ContextMenuEntry::Item(
+                                                        shadcn::ContextMenuItem::new("Back"),
                                                     ),
-                                                    fret_ui_shadcn::ContextMenuEntry::Item(
-                                                        fret_ui_shadcn::ContextMenuItem::new(
-                                                            "Forward",
-                                                        ),
+                                                    shadcn::ContextMenuEntry::Item(
+                                                        shadcn::ContextMenuItem::new("Forward"),
                                                     ),
-                                                    fret_ui_shadcn::ContextMenuEntry::Item(
-                                                        fret_ui_shadcn::ContextMenuItem::new(
-                                                            "Reload",
-                                                        ),
+                                                    shadcn::ContextMenuEntry::Item(
+                                                        shadcn::ContextMenuItem::new("Reload"),
                                                     ),
                                                 ]),
                                             )]
@@ -2114,28 +2104,22 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                         },
                                     );
 
-                                    let menu = fret_ui_shadcn::ContextMenu::from_open(open)
+                                    let menu = shadcn::ContextMenu::from_open(open)
                                         .min_width(Px(web_content_rect.w))
                                         .into_element(
                                             cx,
                                             |_cx| trigger,
                                             |_cx| {
-                                                vec![fret_ui_shadcn::ContextMenuEntry::Group(
-                                                    fret_ui_shadcn::ContextMenuGroup::new(vec![
-                                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                                            fret_ui_shadcn::ContextMenuItem::new(
-                                                                "Back",
-                                                            ),
+                                                vec![shadcn::ContextMenuEntry::Group(
+                                                    shadcn::ContextMenuGroup::new(vec![
+                                                        shadcn::ContextMenuEntry::Item(
+                                                            shadcn::ContextMenuItem::new("Back"),
                                                         ),
-                                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                                            fret_ui_shadcn::ContextMenuItem::new(
-                                                                "Forward",
-                                                            ),
+                                                        shadcn::ContextMenuEntry::Item(
+                                                            shadcn::ContextMenuItem::new("Forward"),
                                                         ),
-                                                        fret_ui_shadcn::ContextMenuEntry::Item(
-                                                            fret_ui_shadcn::ContextMenuItem::new(
-                                                                "Reload",
-                                                            ),
+                                                        shadcn::ContextMenuEntry::Item(
+                                                            shadcn::ContextMenuItem::new("Reload"),
                                                         ),
                                                     ]),
                                                 )]
@@ -2272,10 +2256,10 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(None::<Arc<str>>);
     let mut ui: UiTree<App> = UiTree::new();
@@ -2303,7 +2287,7 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
                     ..Default::default()
                 },
                 |cx| {
-                    let items = vec![fret_ui_shadcn::NavigationMenuItem::new(
+                    let items = vec![shadcn::NavigationMenuItem::new(
                         "getting_started",
                         "Getting started",
                         vec![fixed_size_container(
@@ -2313,7 +2297,7 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
                         )],
                     )];
                     vec![
-                        fret_ui_shadcn::NavigationMenu::new(model.clone())
+                        shadcn::NavigationMenu::new(model.clone())
                             .items(items)
                             .into_element(cx),
                     ]
@@ -2352,7 +2336,7 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
                         ..Default::default()
                     },
                     |cx| {
-                        let items = vec![fret_ui_shadcn::NavigationMenuItem::new(
+                        let items = vec![shadcn::NavigationMenuItem::new(
                             "getting_started",
                             "Getting started",
                             vec![fixed_size_container(
@@ -2362,7 +2346,7 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
                             )],
                         )];
                         vec![
-                            fret_ui_shadcn::NavigationMenu::new(model.clone())
+                            shadcn::NavigationMenu::new(model.clone())
                                 .items(items)
                                 .into_element(cx),
                         ]
@@ -2516,10 +2500,10 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -2527,29 +2511,23 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
     fn render_scene(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         vec![
-            fret_ui_shadcn::Menubar::new(vec![
-                fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
-                    fret_ui_shadcn::MenubarEntry::Group(fret_ui_shadcn::MenubarGroup::new(vec![
-                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                            "New Tab ⌘T",
-                        )),
-                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                            "New Window ⌘N",
-                        )),
-                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+            shadcn::Menubar::new(vec![
+                shadcn::MenubarMenu::new("File").entries(vec![
+                    shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new(vec![
+                        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("New Tab ⌘T")),
+                        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("New Window ⌘N")),
+                        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new(
                             "New Incognito Window",
                         )),
                     ])),
-                    fret_ui_shadcn::MenubarEntry::Separator,
-                    fret_ui_shadcn::MenubarEntry::Group(fret_ui_shadcn::MenubarGroup::new(vec![
-                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                            "Print... ⌘P",
-                        )),
+                    shadcn::MenubarEntry::Separator,
+                    shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new(vec![
+                        shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Print... ⌘P")),
                     ])),
                 ]),
-                fret_ui_shadcn::MenubarMenu::new("Edit").entries(vec![
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("Undo")),
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("Redo")),
+                shadcn::MenubarMenu::new("Edit").entries(vec![
+                    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Undo")),
+                    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Redo")),
                 ]),
             ])
             .into_element(cx),
@@ -2774,10 +2752,10 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -2820,25 +2798,25 @@ fn radix_web_menubar_open_geometry_matches_fret() {
                             },
                             |cx| {
                                 vec![cx.keyed("menubar-root", |cx| {
-                                    fret_ui_shadcn::Menubar::new(vec![
-                                        fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("New Tab"),
+                                    shadcn::Menubar::new(vec![
+                                        shadcn::MenubarMenu::new("File").entries(vec![
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("New Tab"),
                                             ),
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("New Window"),
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("New Window"),
                                             ),
-                                            fret_ui_shadcn::MenubarEntry::Separator,
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("Share"),
+                                            shadcn::MenubarEntry::Separator,
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("Share"),
                                             ),
                                         ]),
-                                        fret_ui_shadcn::MenubarMenu::new("Edit").entries(vec![
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("Undo"),
+                                        shadcn::MenubarMenu::new("Edit").entries(vec![
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("Undo"),
                                             ),
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("Redo"),
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("Redo"),
                                             ),
                                         ]),
                                     ])
@@ -2898,25 +2876,25 @@ fn radix_web_menubar_open_geometry_matches_fret() {
                             },
                             |cx| {
                                 vec![cx.keyed("menubar-root", |cx| {
-                                    fret_ui_shadcn::Menubar::new(vec![
-                                        fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("New Tab"),
+                                    shadcn::Menubar::new(vec![
+                                        shadcn::MenubarMenu::new("File").entries(vec![
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("New Tab"),
                                             ),
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("New Window"),
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("New Window"),
                                             ),
-                                            fret_ui_shadcn::MenubarEntry::Separator,
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("Share"),
+                                            shadcn::MenubarEntry::Separator,
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("Share"),
                                             ),
                                         ]),
-                                        fret_ui_shadcn::MenubarMenu::new("Edit").entries(vec![
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("Undo"),
+                                        shadcn::MenubarMenu::new("Edit").entries(vec![
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("Undo"),
                                             ),
-                                            fret_ui_shadcn::MenubarEntry::Item(
-                                                fret_ui_shadcn::MenubarItem::new("Redo"),
+                                            shadcn::MenubarEntry::Item(
+                                                shadcn::MenubarItem::new("Redo"),
                                             ),
                                         ]),
                                     ])
@@ -2977,25 +2955,25 @@ fn radix_web_menubar_open_geometry_matches_fret() {
                                 },
                                 |cx| {
                                     vec![cx.keyed("menubar-root", |cx| {
-                                        fret_ui_shadcn::Menubar::new(vec![
-                                            fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
-                                                fret_ui_shadcn::MenubarEntry::Item(
-                                                    fret_ui_shadcn::MenubarItem::new("New Tab"),
+                                        shadcn::Menubar::new(vec![
+                                            shadcn::MenubarMenu::new("File").entries(vec![
+                                                shadcn::MenubarEntry::Item(
+                                                    shadcn::MenubarItem::new("New Tab"),
                                                 ),
-                                                fret_ui_shadcn::MenubarEntry::Item(
-                                                    fret_ui_shadcn::MenubarItem::new("New Window"),
+                                                shadcn::MenubarEntry::Item(
+                                                    shadcn::MenubarItem::new("New Window"),
                                                 ),
-                                                fret_ui_shadcn::MenubarEntry::Separator,
-                                                fret_ui_shadcn::MenubarEntry::Item(
-                                                    fret_ui_shadcn::MenubarItem::new("Share"),
+                                                shadcn::MenubarEntry::Separator,
+                                                shadcn::MenubarEntry::Item(
+                                                    shadcn::MenubarItem::new("Share"),
                                                 ),
                                             ]),
-                                            fret_ui_shadcn::MenubarMenu::new("Edit").entries(vec![
-                                                fret_ui_shadcn::MenubarEntry::Item(
-                                                    fret_ui_shadcn::MenubarItem::new("Undo"),
+                                            shadcn::MenubarMenu::new("Edit").entries(vec![
+                                                shadcn::MenubarEntry::Item(
+                                                    shadcn::MenubarItem::new("Undo"),
                                                 ),
-                                                fret_ui_shadcn::MenubarEntry::Item(
-                                                    fret_ui_shadcn::MenubarItem::new("Redo"),
+                                                shadcn::MenubarEntry::Item(
+                                                    shadcn::MenubarItem::new("Redo"),
                                                 ),
                                             ]),
                                         ])
@@ -3084,10 +3062,10 @@ fn radix_web_dialog_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(true);
     let mut ui: UiTree<App> = UiTree::new();
@@ -3117,7 +3095,7 @@ fn radix_web_dialog_open_geometry_matches_fret() {
                         ..Default::default()
                     },
                     |cx| {
-                        vec![fret_ui_shadcn::Dialog::new(open.clone()).into_element(
+                        vec![shadcn::Dialog::new(open.clone()).into_element(
                             cx,
                             |cx| {
                                 fixed_trigger(
@@ -3130,7 +3108,7 @@ fn radix_web_dialog_open_geometry_matches_fret() {
                                 )
                             },
                             |cx| {
-                                fret_ui_shadcn::DialogContent::new(Vec::new())
+                                shadcn::DialogContent::new(Vec::new())
                                     .refine_layout(
                                         LayoutRefinement::default()
                                             .w_px(Px(web_content_rect.w))
@@ -3200,10 +3178,10 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
     let open: Model<bool> = app.models_mut().insert(true);
     let mut ui: UiTree<App> = UiTree::new();
@@ -3233,7 +3211,7 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
                         ..Default::default()
                     },
                     |cx| {
-                        vec![fret_ui_shadcn::AlertDialog::new(open.clone()).into_element(
+                        vec![shadcn::AlertDialog::new(open.clone()).into_element(
                             cx,
                             |cx| {
                                 fixed_trigger(
@@ -3246,7 +3224,7 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
                                 )
                             },
                             |cx| {
-                                fret_ui_shadcn::AlertDialogContent::new(Vec::new())
+                                shadcn::AlertDialogContent::new(Vec::new())
                                     .refine_layout(
                                         LayoutRefinement::default()
                                             .w_px(Px(web_content_rect.w))

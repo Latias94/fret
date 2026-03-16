@@ -516,15 +516,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     .global::<fret_runtime::PlatformCapabilities>()
                     .cloned()
                     .unwrap_or_default();
-                let window = match self.create_os_window(event_loop, spec, style, None, &caps) {
-                    Ok(w) => w,
-                    Err(e) => {
-                        error!(error = ?e, "failed to create main window");
-                        return;
-                    }
-                };
+                let window =
+                    match self.create_os_window(event_loop, spec, style.clone(), None, &caps) {
+                        Ok(w) => w,
+                        Err(e) => {
+                            error!(error = ?e, "failed to create main window");
+                            return;
+                        }
+                    };
 
-                let main_window = match self.insert_window(window.0, window.1, None, style) {
+                let main_window = match self.insert_window(window.0, window.1, None, style.clone())
+                {
                     Ok(id) => id,
                     Err(e) => {
                         error!(error = ?e, "failed to insert main window runtime");
@@ -658,16 +660,15 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 let startup_async = Self::system_font_rescan_async_enabled()
                     && Self::system_font_catalog_startup_async_enabled();
-                let _ = super::super::super::font_catalog::initialize_startup_font_environment(
-                    &mut self.app,
-                    &mut renderer,
-                    self.config.text_font_families.clone(),
-                    if startup_async {
-                        super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopAsync
-                    } else {
-                        super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopSync
-                    },
-                );
+                // Desktop also starts from the framework-owned bundled baseline. System font
+                // discovery augments it later without changing the startup baseline contract.
+                let _ =
+                    super::super::super::font_catalog::initialize_desktop_startup_font_environment(
+                        &mut self.app,
+                        &mut renderer,
+                        self.config.text_font_families.clone(),
+                        startup_async,
+                    );
 
                 self.context = Some(context);
                 self.renderer = Some(renderer);
@@ -869,15 +870,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
             let startup_async = Self::system_font_rescan_async_enabled()
                 && Self::system_font_catalog_startup_async_enabled();
-            let _ = super::super::super::font_catalog::initialize_startup_font_environment(
+            // Desktop also starts from the framework-owned bundled baseline. System font
+            // discovery augments it later without changing the startup baseline contract.
+            let _ = super::super::super::font_catalog::initialize_desktop_startup_font_environment(
                 &mut self.app,
                 &mut renderer,
                 self.config.text_font_families.clone(),
-                if startup_async {
-                    super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopAsync
-                } else {
-                    super::super::super::font_catalog::StartupFontEnvironmentMode::DesktopSync
-                },
+                startup_async,
             );
 
             self.context = Some(context);
@@ -948,6 +947,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             match event {
                 RunnerUserEvent::PlatformCompletion { window, completion } => {
                     self.deliver_platform_completion_now(window, completion);
+                }
+                RunnerUserEvent::AssetReloadWake => {
+                    let windows = self.windows.keys().collect::<Vec<_>>();
+                    if let Some(asset_reload) = self.asset_reload.as_mut() {
+                        let _ = asset_reload.handle_proxy_wake(&mut self.app, &windows);
+                    }
                 }
                 #[cfg(windows)]
                 RunnerUserEvent::WindowsMenuCommand { window, command } => {

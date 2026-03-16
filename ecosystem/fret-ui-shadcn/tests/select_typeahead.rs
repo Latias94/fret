@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -71,18 +72,18 @@ fn select_typeahead_key_selects_matching_item() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let open: Model<bool> = app.models_mut().insert(false);
 
-    let items: Vec<fret_ui_shadcn::SelectItem> = ["apple", "banana", "blueberry"]
+    let items: Vec<shadcn::SelectItem> = ["apple", "banana", "blueberry"]
         .into_iter()
-        .map(|v| fret_ui_shadcn::SelectItem::new(v, v))
+        .map(|v| shadcn::SelectItem::new(v, v))
         .collect();
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -103,8 +104,8 @@ fn select_typeahead_key_selects_matching_item() {
         true,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_frame_1, open_frame_1)
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                shadcn::Select::new(value_frame_1, open_frame_1)
+                    .value(shadcn::SelectValue::new().placeholder("Select"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_1)
@@ -152,8 +153,8 @@ fn select_typeahead_key_selects_matching_item() {
             request_semantics,
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Select::new(value_frame, open_frame)
-                        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                    shadcn::Select::new(value_frame, open_frame)
+                        .value(shadcn::SelectValue::new().placeholder("Select"))
                         .a11y_label("Select")
                         .trigger_test_id("select-trigger")
                         .items(items_frame)
@@ -179,8 +180,8 @@ fn select_typeahead_key_selects_matching_item() {
         false,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_after_typeahead, open_after_typeahead)
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                shadcn::Select::new(value_after_typeahead, open_after_typeahead)
+                    .value(shadcn::SelectValue::new().placeholder("Select"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_after_typeahead)
@@ -202,8 +203,8 @@ fn select_typeahead_key_selects_matching_item() {
         false,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_after_enter, open_after_enter)
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                shadcn::Select::new(value_after_enter, open_after_enter)
+                    .value(shadcn::SelectValue::new().placeholder("Select"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_after_enter)
@@ -225,8 +226,8 @@ fn select_typeahead_key_selects_matching_item() {
         true,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_frame_3, open_frame_3)
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                shadcn::Select::new(value_frame_3, open_frame_3)
+                    .value(shadcn::SelectValue::new().placeholder("Select"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_3)

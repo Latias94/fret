@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 use serde::Deserialize;
 
@@ -31,7 +32,7 @@ fn build_date_picker_with_presets_open_overlay(
         .insert(CalendarMonth::new(2026, Month::January));
     let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
-    fret_ui_shadcn::DatePickerWithPresets::new(open.clone(), month, selected)
+    shadcn::DatePickerWithPresets::new(open.clone(), month, selected)
         .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
         .into_element(cx)
 }
@@ -52,7 +53,7 @@ fn build_date_picker_with_presets_preset_tomorrow_open_overlay(
         Date::from_calendar_date(2026, Month::January, 16).expect("selected date"),
     ));
 
-    fret_ui_shadcn::DatePickerWithPresets::new(open.clone(), month, selected)
+    shadcn::DatePickerWithPresets::new(open.clone(), month, selected)
         .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
         .into_element(cx)
 }
@@ -62,30 +63,30 @@ fn build_date_picker_with_presets_select_listbox_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_kit::{ChromeRefinement, LengthRefinement, MetricRef};
-    use fret_ui_shadcn::select::SelectPosition;
+    use fret_ui_shadcn::raw::select::SelectPosition;
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
 
-    fret_ui_shadcn::Popover::from_open(open.clone())
-        .align(fret_ui_shadcn::PopoverAlign::Start)
-        .side(fret_ui_shadcn::PopoverSide::Bottom)
+    shadcn::Popover::from_open(open.clone())
+        .align(shadcn::PopoverAlign::Start)
+        .side(shadcn::PopoverSide::Bottom)
         .into_element_with(
             cx,
             |cx| {
-                fret_ui_shadcn::Button::new("Pick a date")
-                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                shadcn::Button::new("Pick a date")
+                    .variant(shadcn::ButtonVariant::Outline)
                     .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
                     .into_element(cx)
             },
             move |cx| {
-                let select = fret_ui_shadcn::Select::new(value.clone(), open.clone())
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                let select = shadcn::Select::new(value.clone(), open.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Select"))
                     .position(SelectPosition::Popper)
                     .items([
-                        fret_ui_shadcn::SelectItem::new("0", "Today"),
-                        fret_ui_shadcn::SelectItem::new("1", "Tomorrow"),
-                        fret_ui_shadcn::SelectItem::new("3", "In 3 days"),
-                        fret_ui_shadcn::SelectItem::new("7", "In a week"),
+                        shadcn::SelectItem::new("0", "Today"),
+                        shadcn::SelectItem::new("1", "Tomorrow"),
+                        shadcn::SelectItem::new("3", "In 3 days"),
+                        shadcn::SelectItem::new("7", "In a week"),
                     ])
                     .into_element(cx);
 
@@ -94,7 +95,7 @@ fn build_date_picker_with_presets_select_listbox_overlay(
                     .items_stretch()
                     .into_element(cx);
 
-                fret_ui_shadcn::PopoverContent::new([body])
+                shadcn::PopoverContent::new([body])
                     .refine_style(ChromeRefinement::default().p(Space::N2))
                     .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
                     .into_element(cx)
@@ -119,7 +120,7 @@ fn build_date_range_picker_open_overlay(
         to: Some(Date::from_calendar_date(2022, Month::February, 9).expect("to date")),
     });
 
-    fret_ui_shadcn::DateRangePicker::new(open.clone(), month, selected)
+    shadcn::DateRangePicker::new(open.clone(), month, selected)
         .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(300.0))))
         .into_element(cx)
 }

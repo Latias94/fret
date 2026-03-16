@@ -1,9 +1,11 @@
 pub const SOURCE: &str = include_str!("portrait.rs");
 
 // region: example
+use fret::component::prelude::Model;
 use fret::{UiChild, UiCx};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn portrait_image<H: UiHost>(
@@ -11,13 +13,12 @@ fn portrait_image<H: UiHost>(
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let image = if let Some(image) = demo_image {
-        shadcn::MediaImage::model(image)
-    } else {
-        shadcn::MediaImage::maybe(None)
-    };
+    let image_id = demo_image
+        .as_ref()
+        .and_then(|model| cx.watch_model(model).layout().cloned().flatten())
+        .or_else(|| super::images::portrait_image_id(cx));
 
-    image
+    shadcn::MediaImage::maybe(image_id)
         .loading(true)
         .fit(fret_core::ViewportFit::Cover)
         .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
@@ -78,51 +79,13 @@ pub fn render_preview<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
-    let asset_image = super::images::portrait_image_id(cx);
-
-    let image = if let Some(image_id) = asset_image {
-        shadcn::MediaImage::maybe(Some(image_id))
-    } else if let Some(demo_image) = demo_image {
-        shadcn::MediaImage::model(demo_image)
-    } else {
-        return ratio_example(
-            cx,
-            9.0 / 16.0,
-            Px(160.0),
-            "ui-gallery-aspect-ratio-portrait",
-            "ui-gallery-aspect-ratio-portrait-content",
-            None,
-        )
-        .into_element(cx);
-    };
-
-    let image = image
-        .loading(true)
-        .fit(fret_core::ViewportFit::Cover)
-        .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
-        .refine_layout(LayoutRefinement::default().w_full().h_full())
-        .into_element(cx)
-        .test_id("ui-gallery-aspect-ratio-portrait-content");
-
-    let theme = Theme::global(&*cx.app);
-    let muted_bg = theme.color_token("muted");
-    let border = theme.color_token("border");
-
-    let frame = shadcn::AspectRatio::with_child(image)
-        .ratio(9.0 / 16.0)
-        .refine_style(
-            ChromeRefinement::default()
-                .rounded(Radius::Lg)
-                .border_1()
-                .bg(ColorRef::Color(muted_bg))
-                .border_color(ColorRef::Color(border)),
-        )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(160.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-aspect-ratio-portrait");
-
-    ui::h_flex(move |_cx| vec![frame])
-        .layout(LayoutRefinement::default().w_full().min_w_0())
-        .justify_center()
-        .into_element(cx)
+    ratio_example(
+        cx,
+        9.0 / 16.0,
+        Px(160.0),
+        "ui-gallery-aspect-ratio-portrait",
+        "ui-gallery-aspect-ratio-portrait-content",
+        demo_image,
+    )
+    .into_element(cx)
 }

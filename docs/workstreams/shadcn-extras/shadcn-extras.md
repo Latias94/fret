@@ -131,9 +131,9 @@ Use this template to keep extras consistent and reviewable:
    - Implementation: `ecosystem/fret-ui-shadcn/src/extras/<component>.rs`
    - Module entry: `ecosystem/fret-ui-shadcn/src/extras/mod.rs`
 2. Public surface:
-   - Expose under `fret_ui_shadcn::extras::<component>::...`
+   - Expose under `fret_ui_shadcn::raw::extras::<component>::...`
    - Re-export from `extras/mod.rs` for convenience
-   - Do not re-export from the crate root (`fret_ui_shadcn::*`)
+   - Do not teach the hidden flat crate-root compatibility lane (`fret_ui_shadcn::extras::*`)
 3. State (Radix-style controlled vs uncontrolled):
    - Prefer `fret_ui_kit::declarative::controllable_state::use_controllable_model`
    - Controlled = caller provides `Model<T>`

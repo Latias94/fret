@@ -2,7 +2,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::{IntoUiElement, UiBuilder};
 
-use crate::CommandDialog;
+use crate::command::CommandDialog;
 
 pub trait CommandDialogUiBuilderExt {
     fn into_element<H: UiHost, TTrigger>(

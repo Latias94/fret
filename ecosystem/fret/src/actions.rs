@@ -9,7 +9,8 @@
 //! - payload/parameterized actions are supported as an additive, best-effort mechanism via a
 //!   transient pending payload store keyed by `(window, ActionId)`.
 
-pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, TypedAction};
+pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};
+pub use fret_ui_kit::command::ElementCommandGatingExt;
 
 use std::any::Any;
 

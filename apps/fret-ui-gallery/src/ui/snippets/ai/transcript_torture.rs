@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("transcript_torture.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
-use fret_ui::action::OnActivate;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -55,9 +55,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .get_model_cloned(&messages_model, Invalidation::Layout)
         .unwrap_or_else(|| Arc::from([]));
 
-    let append_messages_on_activate: OnActivate = {
+    let append_messages = {
         let messages_model = messages_model.clone();
-        Arc::new(move |host, acx, _reason| {
+        move |host, acx| {
             let existing = host
                 .models_mut()
                 .get_cloned(&messages_model)
@@ -84,7 +84,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
             let _ = host.models_mut().update(&messages_model, |v| *v = out);
             host.request_redraw(acx.window);
-        })
+        }
     };
 
     let header = ui::v_flex(|cx| {
@@ -93,7 +93,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
                 shadcn::Button::new(format!("Append {append_batch} messages"))
                     .test_id("ui-gallery-ai-transcript-append")
-                    .on_activate(append_messages_on_activate)
+                    .on_activate(cx.actions().listen(append_messages))
                     .into_element(cx),
             ]
         })

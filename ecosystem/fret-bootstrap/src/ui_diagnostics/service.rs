@@ -397,6 +397,19 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockGraphSignatureIs { .. }
                 | UiPredicateV1::DockGraphSignatureContains { .. }
                 | UiPredicateV1::DockGraphSignatureFingerprint64Is { .. }
+                | UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { .. }
+                | UiPredicateV1::AssetLoadStaleManifestRequestsGe { .. }
+                | UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { .. }
+                | UiPredicateV1::AssetLoadUnsupportedUrlRequestsGe { .. }
+                | UiPredicateV1::AssetLoadExternalReferenceUnavailableRequestsGe { .. }
+                | UiPredicateV1::AssetLoadRevisionChangeRequestsGe { .. }
+                | UiPredicateV1::AssetLoadRecentOutcomeSeen { .. }
+                | UiPredicateV1::AssetLoadRecentRevisionTransitionSeen { .. }
+                | UiPredicateV1::BundledFontBaselineSourceIs { .. }
+                | UiPredicateV1::AssetReloadEpochGe { .. }
+                | UiPredicateV1::AssetReloadConfiguredBackendIs { .. }
+                | UiPredicateV1::AssetReloadActiveBackendIs { .. }
+                | UiPredicateV1::AssetReloadFallbackReasonIs { .. }
         )
     }
 

@@ -2231,7 +2231,10 @@ mod tests {
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let visual = ui::h_row(|cx| {
                 vec![
-                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
+                    fret_ui_kit::declarative::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.trash-2"),
+                    ),
                     ui::text("Delete now").into_element(cx),
                 ]
             })
@@ -2271,7 +2274,10 @@ mod tests {
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let visual = ui::h_row(|cx| {
                 vec![
-                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
+                    fret_ui_kit::declarative::icon::icon(
+                        cx,
+                        fret_icons::IconId::new_static("lucide.arrow-left"),
+                    ),
                     ui::text("Back to safety").into_element(cx),
                 ]
             })
@@ -2381,7 +2387,9 @@ mod tests {
             |cx| {
                 vec![AlertDialog::new(open.clone()).into_element_parts(
                     cx,
-                    |cx| AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx)),
+                    |cx| {
+                        AlertDialogTrigger::new(crate::button::Button::new("Open").into_element(cx))
+                    },
                     AlertDialogPortal::new(),
                     AlertDialogOverlay::new(),
                     |cx| AlertDialogContent::new([cx.text("Content")]).into_element(cx),
@@ -2452,7 +2460,8 @@ mod tests {
             bounds,
             "shadcn-alert-dialog-compose-content-with-from-scope",
             |cx| {
-                let trigger = AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx));
+                let trigger =
+                    AlertDialogTrigger::new(crate::button::Button::new("Open").into_element(cx));
 
                 vec![
                     AlertDialog::new(open.clone())

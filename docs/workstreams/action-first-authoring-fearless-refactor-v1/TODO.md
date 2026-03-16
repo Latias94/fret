@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 Related:
 
@@ -52,6 +52,32 @@ ID format:
 - `AFA-{area}-{nnn}`
 
 ---
+
+## Current post-v1 ownership correction (2026-03-16)
+
+This workstream is no longer the owner of crate-discovery curation.
+
+- `fret-ui-shadcn` discovery-lane closure and `fret` root lane budgeting belong first to
+  `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/`
+- this workstream owns the next density pass only after those lane-curation blockers are stable
+- the two active post-v1 product tasks here are:
+  - reducing happy-path ceremony on the default app path,
+  - keeping `AppActivateExt` on a shrinking bridge-only path rather than letting the bridge table
+    become a permanent growth surface
+- do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
+  this workstream until the shadcn discovery-lane and `fret` root-budget closeout items are green
+- the first density-reduction batch is now already landed on the canonical trio, generated
+  todo/simple-todo templates, and default-path docs:
+  `state.layout(cx).value_*` / `state.paint(cx).value_*` are the taught tracked-read path, and
+  `cx.actions().payload_local_update_if::<A, _>(...)` is the taught keyed-row payload write path
+- the next child-collection follow-up has now also started landing:
+  `ui::single(cx, child)` is the narrow default helper for late-landing one typed child, and the
+  first-party root/wrapper cases (`hello`, `hello_counter_demo`, `todo_demo`, generated
+  todo/simple-todo templates) now use it instead of `ui::children![cx; child].into()`
+- after those lane-curation items are stable, the execution order here is:
+  1. reduce first-hour/default-path ceremony,
+  2. continue shrinking bridge-only activation residue,
+  3. only then reconsider whether any additional sugar still earns its weight
 
 ## A. Decision + Contract Locking
 
@@ -146,6 +172,50 @@ ID format:
 
 - [x] AFA-actions-016 Add action-first binding convenience for shadcn `Button`.
   - Evidence: `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
+- [x] AFA-actions-016a Expand native action-first slots on default-lane shadcn activation widgets.
+  - Goal: app-facing shadcn widgets should prefer widget-native `.action(...)` over
+    `AppActivateExt` whenever the action slot is stable and semantically narrow.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/badge.rs` (`Badge::action`, `Badge::action_payload`)
+    - `ecosystem/fret-ui-shadcn/src/extras/banner.rs`
+      (`BannerAction::action`, `BannerClose::action`, close-first action dispatch helper)
+    - `ecosystem/fret-ui-shadcn/src/extras/ticker.rs` (`Ticker::action`, `Ticker::action_payload`)
+    - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
+  - 2026-03-16 bridge-shrink follow-up:
+    - `fret::app::AppActivateSurface` no longer forwards `Badge`, `BannerAction`,
+      `BannerClose`, or `Ticker`,
+    - those widgets now stay on their native `.action(...)` / `.action_payload(...)` surface,
+      while bridge-only `.listen(...)` remains reserved for the smaller residue that still lacks
+      native action slots.
+    - first-party UI Gallery link-badge authoring also now stays on the widget-owned
+      `Badge::on_activate(...)` hook when it needs to suppress the default URL open effect during
+      diagnostics; it does not reintroduce `AppActivateExt` just to attach a no-op override.
+- [x] AFA-actions-016b Expand native action-first slots on first-party AI wrapper buttons.
+  - Goal: `fret-ui-ai` wrappers that are structurally just button/tooltip/layout composition
+    should not require `AppActivateExt` for ordinary action dispatch.
+  - Evidence:
+    - `ecosystem/fret-ui-ai/src/elements/workflow/controls.rs`
+    - `ecosystem/fret-ui-ai/src/elements/message_actions.rs`
+    - `ecosystem/fret-ui-ai/src/elements/artifact.rs`
+    - `ecosystem/fret-ui-ai/src/elements/confirmation.rs`
+    - `ecosystem/fret-ui-ai/src/elements/prompt_input.rs`
+    - `ecosystem/fret-ui-ai/src/elements/checkpoint.rs`
+    - `ecosystem/fret-ui-ai/src/elements/conversation_download.rs`
+    - `ecosystem/fret-ui-ai/src/elements/web_preview.rs`
+    - `ecosystem/fret-ui-ai/src/surface_policy_tests.rs`
+- [x] AFA-actions-016c Expand native action-first slots on remaining default-lane Material3 wrappers.
+  - Goal: Material3 wrappers that are still app-facing click targets should offer the same native
+    `.action(...)` contract as the crate's primary buttons/icon-buttons.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/card.rs`
+    - `ecosystem/fret-ui-material3/src/dialog.rs`
+    - `ecosystem/fret-ui-material3/src/top_app_bar.rs`
+    - `ecosystem/fret-ui-material3/src/lib.rs`
+  - 2026-03-16 bridge-shrink follow-up:
+    - `fret::app::AppActivateSurface` no longer forwards `fret_ui_material3::{Card,
+      DialogAction, TopAppBarAction}`,
+    - those wrappers now stay entirely on their native `.action(...)` surface unless a caller
+      intentionally drops to raw `.on_activate(...)`.
 - [x] AFA-actions-017 Add action-first naming parity helpers in `fret-ui-kit`.
   - Evidence:
     - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
@@ -155,6 +225,31 @@ ID format:
   - Evidence:
     - `crates/fret-ui/src/tree/commands.rs` (dispatch/availability fallback to default root)
     - `crates/fret-ui/src/tree/tests/command_availability.rs` (cross-layer fallback tests)
+- [x] AFA-actions-016d Continue shrinking bridge-only residue after the grouped `UiCx` helper pass.
+  - Goal: keep `AppActivateExt` as an explicitly shrinking residue list rather than a stable
+    ecosystem integration surface.
+  - 2026-03-16 shrink batch landed:
+    - `fret::app::AppActivateSurface` no longer forwards
+      `fret_ui_ai::{WorkflowControlsButton, MessageAction, ArtifactAction, ArtifactClose, CheckpointTrigger}`,
+    - first-party UI Gallery snippets now route those widgets through `UiCxActionsExt` plus
+      widget-owned `.on_activate(...)` instead of `AppActivateExt`.
+  - 2026-03-16 button/sidebar follow-up landed:
+    - `fret::app::AppActivateSurface` no longer forwards
+      `fret_ui_shadcn::{facade::Button, facade::SidebarMenuButton}`,
+    - `SidebarMenuButton` now exposes native `.action_payload(...)`,
+    - first-party UI Gallery button/sidebar listener snippets now use `UiCxActionsExt` plus
+      widget-owned `.on_activate(...)` instead of `AppActivateExt`.
+  - Closure note (2026-03-16):
+    - the first-party default widget bridge table in `ecosystem/fret/src/view.rs` is now
+      intentionally empty,
+    - `AppActivateExt` remains only as an explicit custom/third-party activation-only seam plus
+      a maintenance gate against future bridge growth.
+  - Revalidation bundle:
+    - `cargo nextest run -p fret grouped_authoring_surfaces_replace_flat_app_ui_helpers usage_and_component_docs_keep_app_activate_surface_narrow shadcn_docs_keep_advanced_hooks_off_curated_lane app_prelude_stays_explicit_instead_of_reexporting_legacy_surface advanced_prelude_reexports_app_facing_view_aliases uicx_actions_ext_is_part_of_the_default_and_advanced_preludes app_lane_keeps_explicit_uicx_helper_traits_for_manual_imports crate_usage_guide_keeps_query_guidance_on_grouped_app_surfaces --no-fail-fast`
+    - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+  - Rule:
+    - if a widget can stay on native `.action(...)`, `.action_payload(...)`, or widget-owned
+      `.on_activate(...)`, do not add or keep it on `AppActivateSurface`.
 
 ---
 
@@ -807,6 +902,23 @@ Current sequencing note (as of 2026-03-09):
     alias debt is no longer concentrated on those secondary stable slots.
   - Source-policy update (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs` now locks those default-facing clickable surfaces on the action-first alias wording so future cleanup does not silently regress them back to command-shaped-only naming.
   - Toast follow-up (as of 2026-03-15): `ecosystem/fret-ui-shadcn/src/sonner.rs` now exposes `ToastMessageOptions::action_id(...)` / `action_command(...)` / `cancel_id(...)` / `cancel_command(...)`, and the primary Sonner gallery demo now prefers `action_id(...)` / `cancel_id(...)` while keeping the same toast dispatch internals.
+  - Button teaching-surface follow-up (as of 2026-03-15): the remaining first-party `Button`
+    demos/snippets that bind stable action IDs now also prefer `.action(...)` instead of the
+    legacy `.on_click(...)` spelling across curated cookbook/examples, `components_gallery`, and
+    the ui-gallery driver/snippet surfaces (`chrome`, `settings_sheet`, `view_cache`, code-editor
+    previews, input file browse, and the deprecated toast redirect card).
+  - Button teaching-surface gate update (as of 2026-03-15):
+    `tools/gate_button_action_default_surfaces.py` now locks that curated first-party slice to the
+    action-first builder spelling, and `tools/pre_release.py` runs the gate with the rest of the
+    default-surface policy suite.
+  - Gallery action-alias follow-up (as of 2026-03-15): the remaining ui-gallery snippets/pages for
+    widgets that already expose stable action slots now also prefer `.action(...)` across
+    `SidebarMenuButton` navigation, `NavigationMenuItem` link-component, `Button` link-render,
+    `BreadcrumbLink`, `Item`, and the `Pagination*` family.
+  - Gallery action-alias gate update (as of 2026-03-15):
+    `tools/gate_gallery_action_alias_default_surfaces.py` now keeps that curated ui-gallery slice
+    off legacy `.on_click(...)`, and `tools/pre_release.py` runs the gate alongside the other
+    default-surface policy checks.
 
 - [x] AFA-postv1-021 Land the menu-family action-first alias pass for `ContextMenu*` / `Menubar*`.
   - Goal: remove the largest remaining command-shaped builder inconsistency from the default component surface without changing menu routing internals.
@@ -1024,28 +1136,62 @@ Current sequencing note (as of 2026-03-09):
     - close v1 as successful on architecture + migration + default teaching surface,
     - track density/ergonomics work in a separate post-v1 phase,
     - do not add more tiny helpers until another round of template/demo evidence shows repeated pressure.
-- Helper visibility policy snapshot (as of 2026-03-15):
-  - Default teaching surface: `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.dispatch::<A>(cx)`, `.dispatch_payload::<A>(cx, payload)`, and `.listen(cx, |host, acx| ...)` for activation-only surfaces.
+- Helper visibility policy snapshot (as of 2026-03-16):
+  - Default teaching surface: `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.action(act::Save)`, `.action_payload(act::Remove, payload)`, and `.listen(|host, acx| ...)` for activation-only surfaces. The explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` aliases remain available, but they are no longer the shortest recommended wording.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
   - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
   - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme` and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, `embedded_viewport_demo` now uses `use_local_with(...)` + `on_action_notify_local_set(...)` for its view-local size preset while keeping viewport interop/render-time effects explicit, and `hello_counter_demo` plus both query demos remain the intentional `use_local` prototypes that still keep the default `on_action_notify_models` action surface for coordinated writes.
 - [x] AFA-postv1-022 Start event-surface unification under `cx.actions()`.
   - Goal: move default widget-side activation glue onto the same grouped action namespace as root/view action registration, without rewriting runtime dispatch.
-  - Evidence target: a design note, grouped `dispatch` / `dispatch_payload` / `listener` helpers on `AppUiActions`, and at least one docs/source-policy update that treats them as the preferred widget-local glue surface.
+  - Evidence target: a design note, grouped `action` / `action_payload` / `dispatch` / `dispatch_payload` / `listen` helpers on `AppUiActions`, and at least one docs/source-policy update that treats them as the preferred widget-local glue surface.
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVENT_SURFACE_UNIFICATION_DESIGN.md`
-    - `ecosystem/fret/src/view.rs` (`AppUiActions::{dispatch, dispatch_payload, listener}`)
+    - `ecosystem/fret/src/view.rs` (`AppUiActions::{action, action_payload, dispatch, dispatch_payload, listen, listener}`)
     - `docs/crate-usage-guide.md`
     - `docs/authoring-golden-path-v2.md`
 - [x] AFA-postv1-024 Add only thin activatable-widget sugar after the docs/template rewrite proves it is still needed.
   - Goal: if activation-only surfaces still feel materially noisier than `.action(...)`-capable widgets, add a single app-facing extension trait in `ecosystem/fret` rather than another helper family.
-  - Landed target: `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and `widget.listen(cx, |host, acx| ...)` for types that already expose `on_activate(...)`.
+  - Landed target: `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| ...)` for types that already expose `on_activate(...)`, with `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` kept as explicit aliases.
   - Guardrails: do not replace `.action(...)` / `.action_payload(...)` as the default for widgets that already have stable action slots; do not add `click` / `submit` / `listener_notify` style helper taxonomies.
   - Evidence:
     - `ecosystem/fret/src/view.rs` (`AppActivateSurface`, `AppActivateExt`)
-    - `ecosystem/fret/src/lib.rs` (`fret::app::prelude::*` imports `AppActivateExt as _`; `fret::app::AppActivateSurface`)
+    - `ecosystem/fret/src/lib.rs` (`fret::app::{AppActivateSurface, AppActivateExt}` explicit bridge lane; `fret::app::prelude::*` intentionally omits `AppActivateExt as _`)
     - `docs/first-hour.md`
+  - Follow-up evidence (as of 2026-03-15):
+    - `ecosystem/fret/src/lib.rs` now explicitly exports `fret::app::AppActivateExt` alongside
+      `fret::app::AppActivateSurface`, and the facade self-tests lock that shape
+    - `ecosystem/fret/src/view.rs` dropped the no-op `cx` marker parameter from
+      `AppActivateExt::{action, action_payload, dispatch, dispatch_payload, listen}`, so the
+      default activation sugar is now `widget.action(act::Save)`,
+      `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| ...)`, with
+      `dispatch` aliases kept as the explicit wording instead of carrying an unused context argument
+    - follow-up tightening on 2026-03-16 moved `AppActivateExt` fully off
+      `fret::app::prelude::*`; activation-only call sites now import
+      `use fret::app::AppActivateExt as _;` explicitly, while ordinary action-capable snippets
+      such as `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` stay on native
+      widget `.action(...)` slots without the bridge import
+    - follow-up shrink on 2026-03-16 also landed `UiCxActionsExt` for extracted helper functions,
+      so first-party helper-heavy snippets can stay on `cx.actions().models::<A>(...)` instead of
+      falling back to raw `on_action*` calls or bridge `.listen(...)`
+    - `ecosystem/fret/src/view.rs` no longer keeps
+      `fret_ui_shadcn::facade::Button` or `fret_ui_shadcn::facade::SidebarMenuButton` on the bridge
+      table; those shadcn widgets now stay on their native `.action(...)` / `.action_payload(...)`
+      / widget-owned `.on_activate(...)` surface, and the AI widgets that already expose native
+      `.action(...)` / widget-owned `.on_activate(...)` also stay off the bridge table
+    - `ecosystem/fret/src/view.rs` source-policy also locks the exclusion boundary: no
+      `AppActionCxSurface` family, and no `AppActivateSurface` impls for typed payload/context
+      callbacks like `fret_ui_ai::{Attachment, FileTreeAction, MessageBranch, QueueItemAction, Suggestion, Test}`.
+    - selected activation-only UI Gallery snippets (`ai/{chat_demo,persona_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture}`,
+      `drawer/demo`, `data_table/{basic_demo,default_demo,rtl_demo}`,
+      `scroll_area/nested_scroll_routing`, `sidebar/{demo,controlled,mobile,rtl}`,
+      `sonner/{demo,extras,usage,position}`) now prefer `.listen(...)`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+      (`selected_activation_snippets_prefer_app_activate_listen`) locks that default teaching lane
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+      now also passes the routed-page/copyable-root cleanup that was exposed by the sugar rewrite,
+      including `material3_overlay_snippets_prefer_uncontrolled_copyable_roots` and
+      `render_doc_page_callers_land_the_typed_doc_page_explicitly`
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 

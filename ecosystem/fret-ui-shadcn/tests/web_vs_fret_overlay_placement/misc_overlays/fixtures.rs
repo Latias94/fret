@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 use serde::Deserialize;
 
@@ -40,7 +41,7 @@ struct MiscOverlaysCase {
 }
 
 fn build_dialog_demo_overlay(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+    use shadcn::{Button, ButtonVariant, Dialog, DialogContent};
 
     Dialog::new(open.clone()).into_element(
         cx,
@@ -61,7 +62,7 @@ fn build_sidebar_13_dialog_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonSize, Dialog, DialogContent};
+    use shadcn::{Button, ButtonSize, Dialog, DialogContent};
 
     Dialog::new(open.clone()).into_element(
         cx,
@@ -88,7 +89,7 @@ fn build_command_dialog_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+    use shadcn::{Button, CommandDialog, CommandItem};
 
     let query = cx.local_model_keyed("query", String::new);
 
@@ -106,7 +107,7 @@ fn build_alert_dialog_demo_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
+    use shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
 
     AlertDialog::new(open.clone()).into_element(
         cx,
@@ -120,7 +121,7 @@ fn build_alert_dialog_demo_overlay(
 }
 
 fn build_sheet_demo_overlay(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+    use shadcn::{Button, ButtonVariant, Sheet, SheetContent};
 
     Sheet::new(open.clone()).into_element(
         cx,
@@ -136,15 +137,15 @@ fn build_sheet_demo_overlay(cx: &mut ElementContext<'_, App>, open: &Model<bool>
 fn build_sheet_side_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
-    side: fret_ui_shadcn::SheetSide,
+    side: shadcn::SheetSide,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+    use shadcn::{Button, ButtonVariant, Sheet, SheetContent};
 
     let label = match side {
-        fret_ui_shadcn::SheetSide::Top => "top",
-        fret_ui_shadcn::SheetSide::Right => "right",
-        fret_ui_shadcn::SheetSide::Bottom => "bottom",
-        fret_ui_shadcn::SheetSide::Left => "left",
+        shadcn::SheetSide::Top => "top",
+        shadcn::SheetSide::Right => "right",
+        shadcn::SheetSide::Bottom => "bottom",
+        shadcn::SheetSide::Left => "left",
     };
 
     Sheet::new(open.clone()).side(side).into_element(
@@ -159,7 +160,7 @@ fn build_sheet_side_overlay(
 }
 
 fn build_drawer_demo_overlay(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+    use shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
 
     Drawer::new(open.clone()).into_element(
         cx,
@@ -176,7 +177,7 @@ fn build_drawer_dialog_desktop_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+    use shadcn::{Button, ButtonVariant, Dialog, DialogContent};
 
     Dialog::new(open.clone()).into_element(
         cx,
@@ -200,7 +201,7 @@ fn build_drawer_dialog_mobile_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle,
     };
 
@@ -307,10 +308,10 @@ fn web_vs_fret_misc_overlays_cases_match_web_fixtures() {
                     )
                 });
                 let side = match side {
-                    SheetSideCase::Top => fret_ui_shadcn::SheetSide::Top,
-                    SheetSideCase::Right => fret_ui_shadcn::SheetSide::Right,
-                    SheetSideCase::Bottom => fret_ui_shadcn::SheetSide::Bottom,
-                    SheetSideCase::Left => fret_ui_shadcn::SheetSide::Left,
+                    SheetSideCase::Top => shadcn::SheetSide::Top,
+                    SheetSideCase::Right => shadcn::SheetSide::Right,
+                    SheetSideCase::Bottom => shadcn::SheetSide::Bottom,
+                    SheetSideCase::Left => shadcn::SheetSide::Left,
                 };
                 let build = move |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
                     build_sheet_side_overlay(cx, open, side)

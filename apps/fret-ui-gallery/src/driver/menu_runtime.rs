@@ -333,9 +333,7 @@ impl UiGalleryDriver {
                 Arc::from("platform-default")
             }
             fret_core::TextCommonFallbackInjection::None => Arc::from("none"),
-            fret_core::TextCommonFallbackInjection::CommonFallback => {
-                Arc::from("common-fallback")
-            }
+            fret_core::TextCommonFallbackInjection::CommonFallback => Arc::from("common-fallback"),
         }
     }
 
@@ -352,7 +350,10 @@ impl UiGalleryDriver {
     pub(crate) fn current_text_font_family_config(app: &App) -> fret_core::TextFontFamilyConfig {
         app.global::<fret_core::TextFontFamilyConfig>()
             .cloned()
-            .or_else(|| app.global::<SettingsFileV1>().map(|settings| settings.fonts.clone()))
+            .or_else(|| {
+                app.global::<SettingsFileV1>()
+                    .map(|settings| settings.fonts.clone())
+            })
             .unwrap_or_default()
     }
 

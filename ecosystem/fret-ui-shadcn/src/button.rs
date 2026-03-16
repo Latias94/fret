@@ -14,6 +14,7 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
@@ -417,7 +418,7 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
 }
 
 fn button_padding_refinement(
-    dir: crate::LayoutDirection,
+    dir: crate::direction::LayoutDirection,
     size: ComponentSize,
     shrink_inline_start: bool,
     shrink_inline_end: bool,
@@ -438,8 +439,8 @@ fn button_padding_refinement(
     let pad_y = MetricRef::space(pad_y);
 
     let (left, right) = match dir {
-        crate::LayoutDirection::Ltr => (pad_inline_start, pad_inline_end),
-        crate::LayoutDirection::Rtl => (pad_inline_end, pad_inline_start),
+        crate::direction::LayoutDirection::Ltr => (pad_inline_start, pad_inline_end),
+        crate::direction::LayoutDirection::Rtl => (pad_inline_end, pad_inline_start),
     };
 
     PaddingRefinement {
@@ -814,7 +815,7 @@ impl Button {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
-            let dir = crate::use_direction(cx, None);
+            let dir = crate::direction::use_direction(cx, None);
 
             let variant_style = variant_style(self.variant);
             let has_outline_shadow = self.variant == ButtonVariant::Outline;
@@ -1235,7 +1236,7 @@ impl Button {
                                 ComponentSize::Medium | ComponentSize::Large => Px(16.0),
                             });
                             if let Some(icon) = leading_icon.clone() {
-                                let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
+                                let icon = icon::icon_with(cx, icon, Some(icon_px), None);
                                 inline_start.push(crate::test_id::attach_test_id_suffix(
                                     icon,
                                     test_id.as_ref(),
@@ -1274,7 +1275,7 @@ impl Button {
 
                             inline_end.extend(trailing_children.take().unwrap_or_default());
                             if let Some(icon) = trailing_icon.clone() {
-                                let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
+                                let icon = icon::icon_with(cx, icon, Some(icon_px), None);
                                 inline_end.push(crate::test_id::attach_test_id_suffix(
                                     icon,
                                     test_id.as_ref(),
@@ -1283,7 +1284,7 @@ impl Button {
                             }
 
                             match dir {
-                                crate::LayoutDirection::Ltr => {
+                                crate::direction::LayoutDirection::Ltr => {
                                     let mut content = inline_start;
                                     if let Some(label) = label {
                                         content.push(label);
@@ -1291,7 +1292,7 @@ impl Button {
                                     content.extend(inline_end);
                                     content
                                 }
-                                crate::LayoutDirection::Rtl => {
+                                crate::direction::LayoutDirection::Rtl => {
                                     inline_end.reverse();
                                     let mut content = inline_end;
                                     if let Some(label) = label {
@@ -1345,7 +1346,7 @@ impl Button {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Spinner;
+    use crate::spinner::Spinner;
 
     use fret_app::App;
     use fret_core::{
@@ -1753,11 +1754,15 @@ mod tests {
 
         let rtl =
             elements::with_element_cx(&mut app, window, bounds, "button-leading-slot-rtl", |cx| {
-                crate::with_direction_provider(cx, crate::LayoutDirection::Rtl, |cx| {
-                    Button::new("جاري التحميل")
-                        .leading_children(vec![Spinner::new().speed(0.0).into_element(cx)])
-                        .into_element(cx)
-                })
+                crate::direction::with_direction_provider(
+                    cx,
+                    crate::direction::LayoutDirection::Rtl,
+                    |cx| {
+                        Button::new("جاري التحميل")
+                            .leading_children(vec![Spinner::new().speed(0.0).into_element(cx)])
+                            .into_element(cx)
+                    },
+                )
             });
         let rtl_chrome = rtl.children.first().expect("expected chrome container");
         let ElementKind::Container(rtl_props) = &rtl_chrome.kind else {
@@ -1835,12 +1840,16 @@ mod tests {
 
         let rtl =
             elements::with_element_cx(&mut app, window, bounds, "button-inline-slots-rtl", |cx| {
-                crate::with_direction_provider(cx, crate::LayoutDirection::Rtl, |cx| {
-                    Button::new("Main")
-                        .leading_children(vec![cx.text("start")])
-                        .trailing_children(vec![cx.text("end")])
-                        .into_element(cx)
-                })
+                crate::direction::with_direction_provider(
+                    cx,
+                    crate::direction::LayoutDirection::Rtl,
+                    |cx| {
+                        Button::new("Main")
+                            .leading_children(vec![cx.text("start")])
+                            .trailing_children(vec![cx.text("end")])
+                            .into_element(cx)
+                    },
+                )
             });
         assert_eq!(collect_row_texts(&rtl), vec!["end", "Main", "start"]);
     }

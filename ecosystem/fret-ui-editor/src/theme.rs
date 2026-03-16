@@ -342,7 +342,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Px};
     use fret_ui::Theme;
-    use fret_ui_shadcn::shadcn_themes::{
+    use fret_ui_shadcn::facade::themes::{
         ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
     };
     use std::any::TypeId;

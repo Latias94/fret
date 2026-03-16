@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_breadcrumb_separator_geometry() {
@@ -29,7 +30,7 @@ fn web_vs_fret_layout_breadcrumb_separator_geometry() {
 
     let mut services = StyleAwareServices::default();
     let (ui, _snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        use fret_ui_shadcn::breadcrumb::primitives as bc;
+        use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
 
         vec![bc::Breadcrumb::new().into_element(cx, |cx| {
             vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -132,7 +133,7 @@ fn web_vs_fret_layout_breadcrumb_link_geometry() {
     let (ui, snap, _root) = {
         let mut services = StyleAwareServices::default();
         run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
 
             vec![bc::Breadcrumb::new().into_element(cx, |cx| {
                 vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -324,7 +325,7 @@ fn web_vs_fret_layout_breadcrumb_ellipsis_geometry() {
 
     let mut services = StyleAwareServices::default();
     let (ui, _snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        use fret_ui_shadcn::breadcrumb::primitives as bc;
+        use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
 
         vec![bc::Breadcrumb::new().into_element(cx, |cx| {
             vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -452,12 +453,12 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
     let (ui, snap, _root) = {
         let mut services = StyleAwareServices::default();
         run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
 
             let open: Model<bool> = cx.app.models_mut().insert(false);
-            let dropdown = fret_ui_shadcn::DropdownMenu::from_open(open)
+            let dropdown = shadcn::DropdownMenu::from_open(open)
                 .modal(false)
-                .align(fret_ui_shadcn::DropdownMenuAlign::Start);
+                .align(shadcn::DropdownMenuAlign::Start);
 
             vec![bc::Breadcrumb::new().into_element(cx, |cx| {
                 vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -542,14 +543,14 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
                                 },
                                 |_cx| {
                                     vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Documentation"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Documentation"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Themes"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Themes"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("GitHub"),
                                         ),
                                     ]
                                 },
@@ -654,12 +655,12 @@ fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
     let (_ui, snap, _root) = {
         let mut services = StyleAwareServices::default();
         run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
 
             let open: Model<bool> = cx.app.models_mut().insert(false);
-            let dropdown = fret_ui_shadcn::DropdownMenu::from_open(open)
+            let dropdown = shadcn::DropdownMenu::from_open(open)
                 .modal(false)
-                .align(fret_ui_shadcn::DropdownMenuAlign::Start);
+                .align(shadcn::DropdownMenuAlign::Start);
 
             vec![bc::Breadcrumb::new().into_element(cx, |cx| {
                 vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -696,14 +697,14 @@ fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
                                 },
                                 |_cx| {
                                     vec![
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Documentation"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Documentation"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("Themes"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Themes"),
                                         ),
-                                        fret_ui_shadcn::DropdownMenuEntry::Item(
-                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("GitHub"),
                                         ),
                                     ]
                                 },
@@ -802,7 +803,7 @@ fn web_vs_fret_layout_breadcrumb_responsive_mobile_truncation_geometry() {
     let (_ui, snap, _root) = {
         let mut services = StyleAwareServices::default();
         run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
 
             let trunc_layout = LayoutRefinement::default().max_w(Px(80.0));
 

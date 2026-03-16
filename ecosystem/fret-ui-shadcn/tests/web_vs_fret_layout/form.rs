@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 struct LayoutBugReportFormDemoCase {
@@ -88,8 +89,8 @@ fn assert_bug_report_form_demo_geometry_matches_web(web_name: &str) {
         let title: Model<String> = cx.app.models_mut().insert(String::new());
         let description: Model<String> = cx.app.models_mut().insert(String::new());
 
-        let title_field = fret_ui_shadcn::Field::new(vec![
-            fret_ui_shadcn::FieldLabel::new("Bug Title").into_element(cx),
+        let title_field = shadcn::Field::new(vec![
+            shadcn::FieldLabel::new("Bug Title").into_element(cx),
             cx.semantics(
                 fret_ui::element::SemanticsProps {
                     role: SemanticsRole::TextField,
@@ -98,7 +99,7 @@ fn assert_bug_report_form_demo_geometry_matches_web(web_name: &str) {
                 },
                 move |cx| {
                     vec![
-                        fret_ui_shadcn::Input::new(title)
+                        shadcn::Input::new(title)
                             .a11y_label("Bug Title")
                             .placeholder("Bug title")
                             .into_element(cx),
@@ -116,44 +117,40 @@ fn assert_bug_report_form_demo_geometry_matches_web(web_name: &str) {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::InputGroup::new(description)
+                    shadcn::InputGroup::new(description)
                         .textarea()
                         .a11y_label("Description")
                         .textarea_min_height(Px(96.0))
                         .block_end(vec![
-                            fret_ui_shadcn::InputGroupText::new("0/100 characters")
-                                .into_element(cx),
+                            shadcn::InputGroupText::new("0/100 characters").into_element(cx),
                         ])
                         .into_element(cx),
                 ]
             },
         );
 
-        let description_field = fret_ui_shadcn::Field::new(vec![
-            fret_ui_shadcn::FieldLabel::new("Description").into_element(cx),
+        let description_field = shadcn::Field::new(vec![
+            shadcn::FieldLabel::new("Description").into_element(cx),
             description_group,
-            fret_ui_shadcn::FieldDescription::new(
+            shadcn::FieldDescription::new(
                 "Include steps to reproduce, expected behavior, and what actually happened.",
             )
             .into_element(cx),
         ])
         .into_element(cx);
 
-        let card = fret_ui_shadcn::Card::new(vec![
-            fret_ui_shadcn::CardHeader::new(vec![
-                fret_ui_shadcn::CardTitle::new("Bug Report").into_element(cx),
-                fret_ui_shadcn::CardDescription::new(
-                    "Help us improve by reporting bugs you encounter.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            fret_ui_shadcn::CardContent::new(vec![
-                fret_ui_shadcn::FieldGroup::new(vec![title_field, description_field])
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Bug Report").into_element(cx),
+                shadcn::CardDescription::new("Help us improve by reporting bugs you encounter.")
                     .into_element(cx),
             ])
             .into_element(cx),
-            fret_ui_shadcn::CardFooter::new(vec![
+            shadcn::CardContent::new(vec![
+                shadcn::FieldGroup::new(vec![title_field, description_field]).into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![
                 cx.row(
                     RowProps {
                         layout: LayoutStyle::default(),
@@ -166,10 +163,10 @@ fn assert_bug_report_form_demo_geometry_matches_web(web_name: &str) {
                     },
                     move |cx| {
                         vec![
-                            fret_ui_shadcn::Button::new("Reset")
-                                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                            shadcn::Button::new("Reset")
+                                .variant(shadcn::ButtonVariant::Outline)
                                 .into_element(cx),
-                            fret_ui_shadcn::Button::new("Submit").into_element(cx),
+                            shadcn::Button::new("Submit").into_element(cx),
                         ]
                     },
                 ),
@@ -290,11 +287,11 @@ fn assert_single_field_form_card_geometry_matches_web(
             },
             move |cx| {
                 vec![match control_kind {
-                    FormControlKind::Input => fret_ui_shadcn::Input::new(model)
+                    FormControlKind::Input => shadcn::Input::new(model)
                         .a11y_label(field_label)
                         .placeholder("...")
                         .into_element(cx),
-                    FormControlKind::Textarea => fret_ui_shadcn::Textarea::new(model)
+                    FormControlKind::Textarea => shadcn::Textarea::new(model)
                         .a11y_label(field_label)
                         .min_height(Px(120.0))
                         .into_element(cx),
@@ -302,24 +299,22 @@ fn assert_single_field_form_card_geometry_matches_web(
             },
         );
 
-        let field = fret_ui_shadcn::Field::new(vec![
-            fret_ui_shadcn::FieldLabel::new(field_label).into_element(cx),
+        let field = shadcn::Field::new(vec![
+            shadcn::FieldLabel::new(field_label).into_element(cx),
             control,
-            fret_ui_shadcn::FieldDescription::new(field_description).into_element(cx),
+            shadcn::FieldDescription::new(field_description).into_element(cx),
         ])
         .into_element(cx);
 
-        let card = fret_ui_shadcn::Card::new(vec![
-            fret_ui_shadcn::CardHeader::new(vec![
-                fret_ui_shadcn::CardTitle::new(title).into_element(cx),
-                fret_ui_shadcn::CardDescription::new(description).into_element(cx),
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new(title).into_element(cx),
+                shadcn::CardDescription::new(description).into_element(cx),
             ])
             .into_element(cx),
-            fret_ui_shadcn::CardContent::new(vec![
-                fret_ui_shadcn::FieldGroup::new(vec![field]).into_element(cx),
-            ])
-            .into_element(cx),
-            fret_ui_shadcn::CardFooter::new(vec![
+            shadcn::CardContent::new(vec![shadcn::FieldGroup::new(vec![field]).into_element(cx)])
+                .into_element(cx),
+            shadcn::CardFooter::new(vec![
                 cx.row(
                     RowProps {
                         layout: LayoutStyle::default(),
@@ -332,10 +327,10 @@ fn assert_single_field_form_card_geometry_matches_web(
                     },
                     move |cx| {
                         vec![
-                            fret_ui_shadcn::Button::new("Reset")
-                                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                            shadcn::Button::new("Reset")
+                                .variant(shadcn::ButtonVariant::Outline)
                                 .into_element(cx),
-                            fret_ui_shadcn::Button::new(primary_action).into_element(cx),
+                            shadcn::Button::new(primary_action).into_element(cx),
                         ]
                     },
                 ),
@@ -504,9 +499,9 @@ fn form_trailing_icon_button<H: fret_ui::UiHost>(
         move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
     );
 
-    fret_ui_shadcn::InputGroupButton::new("")
-        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
-        .size(fret_ui_shadcn::InputGroupButtonSize::IconXs)
+    shadcn::InputGroupButton::new("")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .size(shadcn::InputGroupButtonSize::IconXs)
         .a11y_label(a11y_label)
         .children(vec![icon])
         .into_element(cx)
@@ -554,7 +549,7 @@ fn assert_form_input_group_control_geometry_matches_web(
             move |cx| {
                 let trailing = form_trailing_icon_button(cx, &format!("Golden:{web_name}:trail"));
                 vec![
-                    fret_ui_shadcn::InputGroup::new(model)
+                    shadcn::InputGroup::new(model)
                         .trailing(vec![trailing])
                         .trailing_has_button(true)
                         .a11y_label("Golden:form-input-group")
@@ -563,13 +558,13 @@ fn assert_form_input_group_control_geometry_matches_web(
             },
         );
 
-        let card = fret_ui_shadcn::Card::new(vec![
-            fret_ui_shadcn::CardHeader::new(vec![
-                fret_ui_shadcn::CardTitle::new(title).into_element(cx),
-                fret_ui_shadcn::CardDescription::new(description).into_element(cx),
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new(title).into_element(cx),
+                shadcn::CardDescription::new(description).into_element(cx),
             ])
             .into_element(cx),
-            fret_ui_shadcn::CardContent::new(vec![group]).into_element(cx),
+            shadcn::CardContent::new(vec![group]).into_element(cx),
         ])
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default()
@@ -610,7 +605,7 @@ fn assert_form_checkbox_control_size_matches_web(web_name: &str, checkbox_id: &s
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Checkbox::new(checked)
+                    shadcn::Checkbox::new(checked)
                         .disabled(true)
                         .a11y_label("Golden:form-checkbox")
                         .into_element(cx),
@@ -660,7 +655,7 @@ fn assert_form_switch_control_size_matches_web(web_name: &str, switch_id: &str) 
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Switch::new(checked)
+                    shadcn::Switch::new(checked)
                         .a11y_label("Golden:form-switch")
                         .into_element(cx),
                 ]
@@ -705,12 +700,12 @@ fn assert_form_select_control_size_matches_web(web_name: &str, select_id: &str) 
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Select::new(value, open)
-                        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                    shadcn::Select::new(value, open)
+                        .value(shadcn::SelectValue::new().placeholder("Select"))
                         .items([
-                            fret_ui_shadcn::SelectItem::new("auto", "Auto"),
-                            fret_ui_shadcn::SelectItem::new("english", "English"),
-                            fret_ui_shadcn::SelectItem::new("spanish", "Spanish"),
+                            shadcn::SelectItem::new("auto", "Auto"),
+                            shadcn::SelectItem::new("english", "English"),
+                            shadcn::SelectItem::new("spanish", "Spanish"),
                         ])
                         .refine_layout(
                             LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
@@ -748,8 +743,8 @@ fn assert_form_radio_control_size_matches_web(web_name: &str, radio_id: &str) {
     );
 
     let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
-        let group = fret_ui_shadcn::RadioGroup::uncontrolled(Some("other"))
-            .item(fret_ui_shadcn::RadioGroupItem::new("starter", "Starter"))
+        let group = shadcn::RadioGroup::uncontrolled(Some("other"))
+            .item(shadcn::RadioGroupItem::new("starter", "Starter"))
             .a11y_label("Golden:form-radio-group")
             .into_element(cx);
         vec![group]

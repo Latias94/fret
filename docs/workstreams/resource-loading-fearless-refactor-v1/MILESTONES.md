@@ -8,6 +8,10 @@ Deliverables:
 - The wasm compile break is fixed.
 - The portability/capability matrix is written down in a way that matches reality.
 - The ADR/design documents for the new asset contract are ready for implementation.
+- Accepted ADR coverage now includes the icon ownership bridge (`0065`) and the general portable
+  locator/resolver contract (`0317`).
+- The current capability truth is published in
+  `docs/workstreams/resource-loading-fearless-refactor-v1/CAPABILITY_MATRIX.md`.
 
 Exit criteria:
 
@@ -65,6 +69,18 @@ Deliverables:
 - The golden-path authoring API is bundle/key based.
 - Development manifests/directories and compile-time embedded assets can all mount through the
   same builder/startup surface with one ordering model.
+- `fret-launch` owns the lowest-level asset startup contract, and higher facades reuse it instead
+  of forking separate startup-policy types.
+- The first-party startup surface can name the development-vs-packaged choice explicitly
+  (`AssetStartupPlan` + `AssetStartupMode`) instead of teaching ad-hoc branching at each app
+  entry point.
+- Desktop-native startup can also opt into explicit development reload automation through the same
+  startup family (`AssetReloadPolicy`) instead of hiding invalidation behind UI-local helper
+  globals.
+- Generated `--surface fret` asset modules can participate on both the builder lane
+  (`mount(builder)`) and the app setup lane (`Bundle` / `install(app)`).
+- Ecosystem libraries have one documented ownership rule for package resources and icon-pack
+  participation.
 - Cookbook, gallery, and bootstrap examples teach the portable path.
 - Misleading install/setup APIs are renamed, removed, or completed.
 
@@ -73,6 +89,8 @@ Exit criteria:
 - New users are no longer taught repo-relative asset paths as the default Fret story.
 - Packaged/web/mobile-friendly embedded assets do not require dropping to ad-hoc setup hooks when
   the app is otherwise using the `fret` builder surface.
+- App authors can compose ecosystem installers without having to know whether a dependency's
+  shipped bytes are mounted through icon registries, package bundles, or both.
 - Ecosystem authors can ship namespaced assets without runtime packaging knowledge.
 
 ## M5 — Cleanup, deprecation, and hardening
@@ -80,6 +98,12 @@ Exit criteria:
 Deliverables:
 
 - Legacy path-first helpers are deprecated or removed.
+- Deprecated UI-specific reload aliases are removed once first-party migration is complete.
+- The explicit M5 cleanup checklist for the former compatibility surfaces is burned down:
+  - `UiAssetsReloadEpoch`
+  - `bump_ui_assets_reload_epoch(...)`
+  - `FRET_DEV_RELOAD_UI_ASSETS_TRIGGER_PATH`
+  - `.fret/ui_assets.touch`
 - Diagnostics and regression gates cover:
   - capability mismatches,
   - startup baseline drift,

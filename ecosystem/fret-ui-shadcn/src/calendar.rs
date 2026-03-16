@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use fret_core::{Color, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -791,7 +791,7 @@ impl Calendar {
                                     && month_bounds
                                         .map_or(true, |b| month_lt(month, max_start_month(b, 1)));
 
-                                let direction = crate::use_direction(cx, None);
+                                let direction = crate::direction::use_direction(cx, None);
                                 let (prev_icon, next_icon) = if direction == LayoutDirection::Rtl {
                                     (ids::ui::CHEVRON_RIGHT, ids::ui::CHEVRON_LEFT)
                                 } else {
@@ -1277,7 +1277,7 @@ impl Calendar {
                             };
 
                             let days_grid = cx.roving_flex(roving_props, move |cx| {
-                                let direction = crate::use_direction(cx, None);
+                                let direction = crate::direction::use_direction(cx, None);
                                 let month_model = month_model_days.clone();
                                 let disabled_for_nav = Arc::clone(&disabled);
                                 cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
@@ -1517,7 +1517,7 @@ fn calendar_multi_month_view<H: UiHost>(
         let prev_enabled = nav_enabled && min_start.map_or(true, |min| month_lt(min, start_month));
         let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
 
-        let direction = crate::use_direction(cx, None);
+        let direction = crate::direction::use_direction(cx, None);
         let prev_icon = rtl::chevron_inline_start(direction);
         let next_icon = rtl::chevron_inline_end(direction);
 
@@ -1902,7 +1902,7 @@ fn calendar_month_view<H: UiHost>(
     };
 
     let days_grid = cx.roving_flex(roving_props, move |cx| {
-        let direction = crate::use_direction(cx, None);
+        let direction = crate::direction::use_direction(cx, None);
         let month_model = month_model.clone();
         let disabled_for_nav = Arc::clone(&disabled);
         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
@@ -2619,7 +2619,7 @@ mod tests {
 
     #[test]
     fn calendar_day_grid_step_matches_direction_semantics() {
-        use crate::LayoutDirection;
+        use crate::direction::LayoutDirection;
 
         assert_eq!(
             calendar_day_grid_step_for_key(LayoutDirection::Ltr, KeyCode::ArrowLeft),
@@ -2663,7 +2663,7 @@ mod tests {
 
     #[test]
     fn calendar_day_grid_home_end_follow_direction_semantics() {
-        use crate::LayoutDirection;
+        use crate::direction::LayoutDirection;
 
         let current = 10;
         let len = 42;

@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{ColumnDef, TableState};
@@ -37,15 +38,14 @@ fn render_frame(
         bounds,
         "data-table-toolbar-global-filter",
         move |cx| {
-            let toolbar =
-                fret_ui_shadcn::DataTableToolbar::new(state.clone(), columns.clone(), |col| {
-                    Arc::clone(&col.id)
-                })
-                .show_global_filter(show_global_filter)
-                .show_columns_menu(show_columns_menu)
-                .show_pinning_menu(false)
-                .show_selected_text(false)
-                .into_element(cx);
+            let toolbar = shadcn::DataTableToolbar::new(state.clone(), columns.clone(), |col| {
+                Arc::clone(&col.id)
+            })
+            .show_global_filter(show_global_filter)
+            .show_columns_menu(show_columns_menu)
+            .show_pinning_menu(false)
+            .show_selected_text(false)
+            .into_element(cx);
             vec![toolbar]
         },
     );
@@ -82,10 +82,10 @@ fn data_table_toolbar_global_filter_updates_table_state_and_resets_page_index() 
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let columns: Arc<[ColumnDef<()>]> =
@@ -156,10 +156,10 @@ fn data_table_toolbar_external_column_visibility_update_does_not_get_overwritten
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let status_col: Arc<str> = Arc::from("status");

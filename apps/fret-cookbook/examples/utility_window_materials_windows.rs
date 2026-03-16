@@ -231,22 +231,22 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
                 shadcn::Button::new("None")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_NONE))
+                    .action(CMD_TO_NONE)
                     .test_id(TEST_ID_TO_NONE),
                 shadcn::Button::new("Mica")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_MICA))
+                    .action(CMD_TO_MICA)
                     .test_id(TEST_ID_TO_MICA),
                 shadcn::Button::new("Acrylic")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_ACRYLIC))
+                    .action(CMD_TO_ACRYLIC)
                     .test_id(TEST_ID_TO_ACRYLIC),
                 shadcn::Button::new("Quit")
                     .variant(shadcn::ButtonVariant::Destructive)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_QUIT)),
+                    .action(CMD_QUIT),
             ]
         } else if is_macos {
             ui::children![
@@ -254,17 +254,17 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
                 shadcn::Button::new("None")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_NONE))
+                    .action(CMD_TO_NONE)
                     .test_id(TEST_ID_TO_NONE),
                 shadcn::Button::new("Vibrancy")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_VIBRANCY))
+                    .action(CMD_TO_VIBRANCY)
                     .test_id(TEST_ID_TO_VIBRANCY),
                 shadcn::Button::new("Quit")
                     .variant(shadcn::ButtonVariant::Destructive)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_QUIT)),
+                    .action(CMD_QUIT),
             ]
         } else {
             ui::children![
@@ -272,7 +272,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
                 shadcn::Button::new("Quit")
                     .variant(shadcn::ButtonVariant::Destructive)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_QUIT)),
+                    .action(CMD_QUIT),
             ]
         };
 
@@ -294,7 +294,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         ui::children![
             cx;
             header,
-            shadcn::card_content(|cx| ui::children![cx; content]),
+            shadcn::card_content(|cx| ui::single(cx, content)),
         ]
     })
     .ui()
@@ -306,13 +306,13 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
     // backdrop material is enabled, switch to a transparent root so the OS material can show
     // through where not covered by UI (most content lives inside the centered Card).
     ui::container(|cx| {
-        ui::children![
-            cx;
-            ui::v_flex(|cx| ui::children![cx; surface])
+        ui::single(
+            cx,
+            ui::v_flex(|cx| ui::single(cx, surface))
                 .items_center()
                 .justify_center()
                 .size_full(),
-        ]
+        )
     })
     .bg(ColorRef::Color(root_background))
     .p(Space::N6)

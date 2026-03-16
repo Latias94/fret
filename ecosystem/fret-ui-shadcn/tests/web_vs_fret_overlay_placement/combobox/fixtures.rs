@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 use serde::Deserialize;
 
@@ -24,7 +25,7 @@ fn build_combobox_popover_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide,
     };
 
@@ -54,7 +55,7 @@ fn build_combobox_responsive_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Combobox, ComboboxItem};
+    use shadcn::{Combobox, ComboboxItem};
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let items = vec![
@@ -70,8 +71,8 @@ fn build_combobox_responsive_overlay(
         .responsive(true)
         .items(items)
         .into_element_parts(cx, |_cx| {
-            vec![fret_ui_shadcn::ComboboxPart::from(
-                fret_ui_shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
+            vec![shadcn::ComboboxPart::from(
+                shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
             )]
         })
 }

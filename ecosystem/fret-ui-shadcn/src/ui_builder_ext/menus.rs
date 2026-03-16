@@ -2,7 +2,8 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::{IntoUiElement, UiBuilder};
 
-use crate::{ContextMenu, ContextMenuEntry, DropdownMenu, DropdownMenuEntry};
+use crate::context_menu::{ContextMenu, ContextMenuEntry};
+use crate::dropdown_menu::{DropdownMenu, DropdownMenuEntry};
 
 pub trait DropdownMenuUiBuilderExt {
     fn into_element<H: UiHost, I, TTrigger>(

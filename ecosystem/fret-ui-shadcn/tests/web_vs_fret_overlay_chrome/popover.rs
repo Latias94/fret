@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "popover/fixtures.rs"]
 mod fixtures;
@@ -9,9 +10,8 @@ fn build_shadcn_popover_demo_page(
 ) -> AnyElement {
     use fret_core::Px;
     use fret_ui::Theme;
-    use fret_ui_kit::ui;
     use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
-    use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
+    use shadcn::{Button, ButtonVariant, Popover, PopoverContent};
 
     Popover::from_open(open.clone()).into_element_with(
         cx,
@@ -51,7 +51,7 @@ fn build_shadcn_popover_demo_page(
                 use fret_core::Px;
                 use fret_ui_kit::ui;
                 use fret_ui_kit::{LayoutRefinement, Space};
-                use fret_ui_shadcn::{Input, Label};
+                use shadcn::{Input, Label};
 
                 let label_el = Label::new(label).into_element(cx);
                 let model = cx.app.models_mut().insert(value.to_string());

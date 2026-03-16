@@ -23,14 +23,14 @@ where
     let theme = Theme::global(&*cx.app).snapshot();
 
     ui::container(move |cx| {
-        ui::children![
-            cx;
-            ui::v_flex(move |cx| ui::children![cx; surface])
-            .gap(Space::N6)
-            .items_center()
-            .justify_center()
-            .size_full()
-        ]
+        ui::single(
+            cx,
+            ui::v_flex(move |cx| ui::single(cx, surface))
+                .gap(Space::N6)
+                .items_center()
+                .justify_center()
+                .size_full(),
+        )
     })
     .bg(ColorRef::Color(theme.color_token(background_token)))
     .p(Space::N6)

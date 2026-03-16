@@ -34,25 +34,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .expect("valid preset date");
     let month = cx.local_model_keyed("month", || CalendarMonth::from_date(preset_date));
     let selected = cx.local_model_keyed("selected", || Some(preset_date));
-
-    let preset_button =
-        |cx: &mut UiCx<'_>, label: &'static str, test_id: &'static str, days: i64| -> AnyElement {
-            let month = month.clone();
-            let selected = selected.clone();
-            shadcn::Button::new(label)
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .refine_layout(LayoutRefinement::default().flex_1().min_w(Px(72.0)))
-                .test_id(test_id)
-                .on_activate(Arc::new(move |host, _acx, _reason| {
-                    let new_date = today + time::Duration::days(days);
-                    let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
-                    let _ = host.models_mut().update(&month, |m| {
-                        *m = CalendarMonth::from_date(new_date);
-                    });
-                }))
-                .into_element(cx)
-        };
+    let preset_button = |label: &'static str, test_id: &'static str, days: i64| {
+        let month = month.clone();
+        let selected = selected.clone();
+        shadcn::Button::new(label)
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .refine_layout(LayoutRefinement::default().flex_1().min_w(Px(72.0)))
+            .test_id(test_id)
+            .on_activate(Arc::new(move |host, _acx, _reason| {
+                let new_date = today + time::Duration::days(days);
+                let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
+                let _ = host.models_mut().update(&month, |m| {
+                    *m = CalendarMonth::from_date(new_date);
+                });
+            }))
+    };
 
     let calendar = shadcn::Calendar::new(month.clone(), selected.clone())
         .test_id_prefix("ui-gallery.calendar.presets")
@@ -61,39 +58,36 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .refine_style(ChromeRefinement::default().p(Space::N0))
         .into_element(cx);
 
-    let footer_buttons = vec![
-        preset_button(cx, "Today", "ui-gallery-calendar-presets-button-today", 0),
-        preset_button(
-            cx,
-            "Tomorrow",
-            "ui-gallery-calendar-presets-button-tomorrow",
-            1,
-        ),
-        preset_button(
-            cx,
-            "In 3 days",
-            "ui-gallery-calendar-presets-button-in-3-days",
-            3,
-        ),
-        preset_button(
-            cx,
-            "In a week",
-            "ui-gallery-calendar-presets-button-in-a-week",
-            7,
-        ),
-        preset_button(
-            cx,
-            "In 2 weeks",
-            "ui-gallery-calendar-presets-button-in-2-weeks",
-            14,
-        ),
-    ];
-
     let card = shadcn::card(move |cx| {
         ui::children![
             cx;
-            shadcn::card_content(|cx| ui::children![cx; calendar]).size(shadcn::CardSize::Sm),
-            shadcn::card_footer(move |_cx| footer_buttons)
+            shadcn::card_content(move |cx| ui::children![cx; calendar]).size(shadcn::CardSize::Sm),
+            shadcn::card_footer(move |cx| {
+                ui::children![
+                    cx;
+                    preset_button("Today", "ui-gallery-calendar-presets-button-today", 0),
+                    preset_button(
+                        "Tomorrow",
+                        "ui-gallery-calendar-presets-button-tomorrow",
+                        1,
+                    ),
+                    preset_button(
+                        "In 3 days",
+                        "ui-gallery-calendar-presets-button-in-3-days",
+                        3,
+                    ),
+                    preset_button(
+                        "In a week",
+                        "ui-gallery-calendar-presets-button-in-a-week",
+                        7,
+                    ),
+                    preset_button(
+                        "In 2 weeks",
+                        "ui-gallery-calendar-presets-button-in-2-weeks",
+                        14,
+                    ),
+                ]
+            })
                 .size(shadcn::CardSize::Sm)
                 .border_top(true)
                 .wrap(true)

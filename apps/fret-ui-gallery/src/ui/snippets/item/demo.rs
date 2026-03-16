@@ -66,7 +66,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 target: None,
                 rel: None,
             })
-            .on_click(CMD_APP_OPEN)
+            .action(CMD_APP_OPEN)
             .a11y_label("Verified profile")
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)

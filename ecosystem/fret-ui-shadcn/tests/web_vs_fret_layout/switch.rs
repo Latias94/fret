@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -46,7 +47,7 @@ fn web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures() {
                 let snap = run_fret_root(bounds, |cx| {
                     let model: Model<bool> = cx.app.models_mut().insert(false);
                     vec![
-                        fret_ui_shadcn::Switch::new(model)
+                        shadcn::Switch::new(model)
                             .a11y_label("Switch")
                             .into_element(cx),
                     ]
@@ -83,7 +84,7 @@ fn web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures() {
                 let (snap, scene) = render_and_paint_in_bounds(bounds, |cx| {
                     let model: Model<bool> = cx.app.models_mut().insert(false);
                     vec![
-                        fret_ui_shadcn::Switch::new(model)
+                        shadcn::Switch::new(model)
                             .a11y_label("Switch")
                             .into_element(cx),
                     ]

@@ -488,7 +488,7 @@ impl CalendarRange {
                                             crate::calendar::max_start_month(b, 1),
                                         )
                                     });
-                                let direction = crate::use_direction(cx, None);
+                                let direction = crate::direction::use_direction(cx, None);
                                 let prev_icon = crate::rtl::chevron_inline_start(direction);
                                 let next_icon = crate::rtl::chevron_inline_end(direction);
 
@@ -627,7 +627,7 @@ impl CalendarRange {
                             };
 
                             let days_grid = cx.roving_flex(roving_props, move |cx| {
-                                let direction = crate::use_direction(cx, None);
+                                let direction = crate::direction::use_direction(cx, None);
                                 let month_model = month_model_days.clone();
                                 let disabled_for_nav = Arc::clone(&disabled);
                                 cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
@@ -892,7 +892,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
             && min_start.map_or(true, |min| crate::calendar::month_lt(min, start_month));
         let next_enabled = nav_enabled
             && max_start.map_or(true, |max| crate::calendar::month_lt(start_month, max));
-        let direction = crate::use_direction(cx, None);
+        let direction = crate::direction::use_direction(cx, None);
         let prev_icon = crate::rtl::chevron_inline_start(direction);
         let next_icon = crate::rtl::chevron_inline_end(direction);
 
@@ -1278,7 +1278,7 @@ fn calendar_range_month_view<H: UiHost>(
     };
 
     let days_grid = cx.roving_flex(roving_props, move |cx| {
-        let direction = crate::use_direction(cx, None);
+        let direction = crate::direction::use_direction(cx, None);
         let month_model = month_model.clone();
         let disabled_for_nav = Arc::clone(&disabled);
         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {

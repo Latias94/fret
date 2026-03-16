@@ -141,6 +141,8 @@ impl IconRegistry {
     ///
     /// This is useful when multiple icon packs may provide semantic `ui.*` aliases and we want a
     /// stable "first registered wins" policy without requiring compile-time feature gating.
+    /// Call [`alias`](Self::alias) or [`register`](Self::register) afterwards if app/bootstrap code
+    /// intentionally wants to override that semantic default.
     ///
     /// Returns `true` if the alias was registered.
     pub fn alias_if_missing(&mut self, id: IconId, target: IconId) -> bool {

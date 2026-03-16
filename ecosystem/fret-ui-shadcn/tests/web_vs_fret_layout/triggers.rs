@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -62,10 +63,10 @@ fn web_vs_fret_layout_trigger_heights_match_web_fixtures() {
 
         let snap = match case.recipe {
             LayoutTriggerHeightRecipe::PlainButton => run_fret_root(bounds, |cx| {
-                vec![fret_ui_shadcn::Button::new(case.label.clone()).into_element(cx)]
+                vec![shadcn::Button::new(case.label.clone()).into_element(cx)]
             }),
             LayoutTriggerHeightRecipe::DrawerTrigger => run_fret_root(bounds, |cx| {
-                use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+                use shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
 
                 let open: Model<bool> = cx.app.models_mut().insert(false);
                 vec![Drawer::new(open).into_element(
@@ -79,7 +80,7 @@ fn web_vs_fret_layout_trigger_heights_match_web_fixtures() {
                 )]
             }),
             LayoutTriggerHeightRecipe::DialogTrigger => run_fret_root(bounds, |cx| {
-                use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+                use shadcn::{Button, ButtonVariant, Dialog, DialogContent};
 
                 let open: Model<bool> = cx.app.models_mut().insert(false);
                 vec![Dialog::new(open).into_element(
@@ -157,7 +158,7 @@ fn web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures() {
                 let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
                 vec![
-                    fret_ui_shadcn::DatePicker::new(open, month, selected)
+                    shadcn::DatePicker::new(open, month, selected)
                         .refine_layout(
                             LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
                         )
@@ -176,7 +177,7 @@ fn web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures() {
                 let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
                 vec![
-                    fret_ui_shadcn::DatePickerWithPresets::new(open, month, selected)
+                    shadcn::DatePickerWithPresets::new(open, month, selected)
                         .refine_layout(
                             LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
                         )
@@ -205,7 +206,7 @@ fn web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures() {
                     });
 
                 vec![
-                    fret_ui_shadcn::DateRangePicker::new(open, month, selected)
+                    shadcn::DateRangePicker::new(open, month, selected)
                         .refine_layout(
                             LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
                         )

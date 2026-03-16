@@ -19,7 +19,11 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
-use crate::{Button, Input, InputGroup, Select, Separator, SeparatorOrientation};
+use crate::button::Button;
+use crate::input::Input;
+use crate::input_group::InputGroup;
+use crate::select::Select;
+use crate::separator::{Separator, SeparatorOrientation};
 
 #[derive(Debug, Clone, Copy, Default)]
 struct BorderWidthOverride {

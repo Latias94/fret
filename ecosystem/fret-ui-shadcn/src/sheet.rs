@@ -1082,7 +1082,7 @@ impl SheetClose {
             })
         });
 
-        crate::DialogClose::new(open)
+        crate::dialog::DialogClose::new(open)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
             .build(cx, child)
@@ -1096,7 +1096,7 @@ impl SheetClose {
             })
         });
 
-        crate::DialogClose::new(open)
+        crate::dialog::DialogClose::new(open)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
             .into_element(cx)
@@ -1629,7 +1629,10 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(cx, SheetTrigger::build(crate::Card::build(|_cx, _out| {})));
+            out.push_ui(
+                cx,
+                SheetTrigger::build(crate::card::Card::build(|_cx, _out| {})),
+            );
 
             assert_eq!(out.len(), 1);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
@@ -1651,7 +1654,7 @@ mod tests {
             out.push_ui(
                 cx,
                 SheetFooter::build(|cx, out| {
-                    out.push_ui(cx, crate::Button::new("Close"));
+                    out.push_ui(cx, crate::button::Button::new("Close"));
                 }),
             );
         })
@@ -1918,7 +1921,7 @@ mod tests {
             |cx| {
                 vec![Sheet::new(open.clone()).into_element_parts(
                     cx,
-                    |cx| SheetTrigger::new(crate::Button::new("Open").into_element(cx)),
+                    |cx| SheetTrigger::new(crate::button::Button::new("Open").into_element(cx)),
                     SheetPortal::new(),
                     SheetOverlay::new(),
                     |cx| SheetContent::new([cx.text("Content")]).into_element(cx),
@@ -1992,7 +1995,8 @@ mod tests {
                     Sheet::new(open.clone())
                         .compose()
                         .trigger(SheetTrigger::build(
-                            crate::Button::new("Open").test_id("sheet-compose-trigger-late-child"),
+                            crate::button::Button::new("Open")
+                                .test_id("sheet-compose-trigger-late-child"),
                         ))
                         .portal(SheetPortal::new())
                         .overlay(SheetOverlay::new())
@@ -2069,7 +2073,8 @@ mod tests {
             bounds,
             "shadcn-sheet-compose-content-with-from-scope",
             |cx| {
-                let trigger = SheetTrigger::new(crate::Button::new("Open").into_element(cx));
+                let trigger =
+                    SheetTrigger::new(crate::button::Button::new("Open").into_element(cx));
 
                 vec![
                     Sheet::new(open.clone())
@@ -2289,13 +2294,13 @@ mod tests {
 
                         let header = SheetHeader::new(vec![title, description]).into_element(cx);
 
-                        let cancel = crate::Button::new("Cancel")
-                            .variant(crate::ButtonVariant::Outline)
+                        let cancel = crate::button::Button::new("Cancel")
+                            .variant(crate::button::ButtonVariant::Outline)
                             .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                             .into_element(cx);
                         cancel_id_out.set(Some(cancel.id));
 
-                        let action = crate::Button::new("Save changes")
+                        let action = crate::button::Button::new("Save changes")
                             .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                             .into_element(cx);
                         action_id_out.set(Some(action.id));

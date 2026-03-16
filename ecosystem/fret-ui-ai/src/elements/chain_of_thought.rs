@@ -20,7 +20,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
     typography,
 };
-use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible};
+use fret_ui_shadcn::facade::{Badge, BadgeVariant, Collapsible};
 
 pub type OnChainOfThoughtOpenChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
 

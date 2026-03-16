@@ -36,10 +36,22 @@ surface, lock these decisions before adding public API:
 - treat `QueryAdapter` as deferred in v1 unless a second real reusable consumer appears with a
   materially shared adapter contract
 - keep reusable docs/examples aligned with the current conversion-surface target:
-  app-facing teaching helpers use `Ui` / `UiChild`, reusable generic helpers should move toward
-  the unified component conversion trait tracked in
+  app-facing teaching helpers use `Ui` / `UiChild`, pure app-facing page shells should avoid
+  carrying `UiCx` unless they really need runtime/context access, reusable generic helpers should
+  move toward the unified component conversion trait tracked in
   `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and raw
   `AnyElement` stays explicit
+- keep shipped resource ownership explicit:
+  - app-owned resources live under `AssetBundleId::app(...)`
+  - ecosystem/package-owned images, SVGs, fonts, and similar bytes live under
+    `AssetBundleId::package(...)`
+  - reusable crates should publish installer/setup surfaces instead of making apps reproduce
+    internal asset mounts by hand
+- keep icon requirements explicit:
+  - reusable component crates should prefer semantic `IconId` / `ui.*` ids over hard-wiring one
+    vendor pack into their public contract
+  - icon packs currently install through explicit `crate::app::install` seams backed by the
+    global `IconRegistry`, so apps compose installers instead of wiring loose icon bytes manually
 - for the full trait budget, target state, and migration posture, see
   `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`,
   `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and
@@ -125,32 +137,91 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For activation-only surfaces, prefer `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and `widget.listen(cx, |host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`; the explicit `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, prefer `cx.actions().action(act::Save)`, `cx.actions().action_payload(act::Remove, payload)`, and `cx.actions().listen(...)`.
+
+`fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they cover
+activation-only widgets that expose the standard `OnActivate` slot but still lack a tighter
+component-owned authoring API. Typed payload/context callbacks remain component-owned surfaces even
+when they eventually dispatch app actions. First-party controls such as `shadcn::Button`,
+`shadcn::SidebarMenuButton`, `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`,
+`ArtifactClose`, `CheckpointTrigger`, `ConversationDownload`, `PromptInputButton`,
+`WebPreviewNavigationButton`, `ConfirmationAction`, `Attachment`, `QueueItemAction`, `Test`,
+`FileTreeAction`, `Suggestion`, `MessageBranch`, and `Badge` link overrides stay on their native `.action(...)`,
+native `.action_payload(...)`, or widget-owned `.on_activate(...)` contracts instead of relying on
+the activation bridge. As of 2026-03-16, the first-party default widget bridge table is
+intentionally empty. This bridge stays off `fret::app::prelude::*`; default app authors should
+only import it for truly activation-only custom/third-party widgets that have not yet graduated to
+their own app-facing action surface.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
-them intentionally from `fret::style::{...}` and `fret::icons::IconId`.
+them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
+When app code needs explicit theme snapshot value types in extracted helper signatures, import
+`fret::style::ThemeSnapshot` instead of expecting it from `fret::app::prelude::*`.
+When app code needs explicit local state-handle types in validators or helper signatures, import
+`fret::app::LocalState` instead of expecting it from `fret::app::prelude::*`.
+When app code needs explicit command identity values, import `fret::actions::CommandId` instead of
+expecting `CommandId` from the default prelude.
+When app code needs explicit semantics nouns, import them intentionally from
+`fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 When app code needs explicit selector/query nouns, keep them off the default prelude as well and
 import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
 `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
 Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
 instead of treating breakpoint/media helpers as part of the default app vocabulary.
+When a view intentionally opts into manual sink-style `*_build(|cx, out| ...)` composition, keep
+that helper off the default prelude too and import `fret::children::UiElementSinkExt as _`
+explicitly at the call site.
+When app code needs explicit command-availability reads such as `cx.action_is_enabled(...)`, import
+`fret::actions::ElementCommandGatingExt as _` explicitly instead of expecting command-gating traits
+from `fret::app::prelude::*`.
 Do the same for logical assets: import them intentionally from `fret::assets::{...}`, prefer
 `AssetBundleId::app(...)` / `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` and
 `register_bundle_entries(...)` as the portable default story, and keep
 `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape hatches.
+For startup that needs one explicit development-vs-packaged switch, prefer
+`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`
+plus
+`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)`. Keep
+`development_dir(...)` / `development_manifest(...)` for native/package-dev file-backed inputs,
+and keep `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
+`packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes. Generated asset modules
+remain the packaged lane because they already expose `ENTRIES`, `bundle_id()`, `Bundle`,
+`install(app)`, and `mount(builder)`. Keep `FretApp::asset_dir(...)` /
+`UiAppBuilder::with_asset_dir(...)` as the lower-level native/package-dev convenience lane when
+you only need one lane or intentionally custom layering.
+When you are on `fret-bootstrap` directly instead of `fret`, use the same startup contract from
+`fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
+`BootstrapBuilder::with_asset_startup(...)`; the bootstrap crate also exposes the matching
+lower-level builder helpers `with_asset_dir(...)`, `with_asset_manifest(...)`,
+`with_bundle_asset_entries(...)`, and `with_embedded_asset_entries(...)`.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
 without teaching raw repo-relative paths in app/widget code.
+When a native/dev-only UI helper still needs real file reload ergonomics, keep the app/widget
+surface on logical bundle locators and let
+`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
+or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+consume the resolver's bundle/reference bridge instead of introducing direct raw file-path widget
+loading in app code. Keep
+`resolve_image_source_from_host_locator(...)` / `resolve_svg_file_source_from_host_locator(...)`
+as the lower-level compatibility seam when a non-UI integration truly needs the bridged source or
+native file handoff object itself.
 Use `fret::assets::register_file_manifest(...)` when tooling already emits an explicit manifest
 artifact that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use
 `fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app`.
 If you are already on the `fret` builder path, prefer `FretApp::asset_dir(...)` /
-`UiAppBuilder::with_asset_dir(...)` for the convenience lane, or
+`UiAppBuilder::with_asset_dir(...)` for one-off convenience, or
 `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have a
 manifest file, so validation fails early during startup configuration instead of being buried in
-app-local setup glue. On the builder path, asset registrations preserve call order, so later
-registrations can intentionally override earlier ones for the same logical locator.
+app-local setup glue. When startup needs one named contract for both development and packaged
+builds, prefer `FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` with
+`AssetStartupPlan` + `AssetStartupMode`. On the builder path, asset registrations preserve call
+order, so later registrations can intentionally override earlier ones for the same logical
+locator.
+For package-owned or generated compile-time bytes, the same ordered builder surface now includes
+`FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
+`UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
 On the host path, `set_primary_resolver(...)`, `register_resolver(...)`,
 `register_bundle_entries(...)`, and `register_embedded_entries(...)` now participate in the same
 ordered resolver stack, so later registrations override earlier ones for the same logical
@@ -159,11 +230,35 @@ locator.
 **Reusable component surface:** if you intentionally use the `fret` facade for reusable
 component/scaffold code, keep that code on `use fret::component::prelude::*;`. That surface now
 provides `ComponentCx`, `UiBuilder`/`UiPatchTarget`/`IntoUiElement<H>`, layout/style refinements,
-and semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams. The
-conversion surface is intentionally being collapsed to one public component conversion trait; new
-docs/examples should follow
+and semantics/overlay helpers without pulling in `FretApp`, `AppUi`, or runner-facing seams.
+Overlap-heavy helper traits remain anonymous `as _` imports on this lane so method ergonomics stay
+intact without widening autocomplete pressure. The conversion surface is intentionally being
+collapsed to one public component conversion trait; new docs/examples should follow
 `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` instead of
-teaching the legacy split conversion trait names.
+teaching the legacy split conversion trait names. When reusable component code needs explicit
+command identity values, import `fret::actions::CommandId` (or `fret-runtime` directly) instead
+of expecting `CommandId` from `fret::component::prelude::*`. When reusable component code needs
+environment/responsive helpers, import them explicitly from `fret::env::{...}` instead of
+expecting breakpoint/media helpers from `fret::component::prelude::*`. When reusable component or
+advanced code intentionally needs raw activation helper glue, import `fret::activate::{on_activate,
+on_activate_notify, on_activate_request_redraw, on_activate_request_redraw_notify}` explicitly
+instead of expecting those helper names from the component prelude.
+When reusable component code needs overlay anchoring helpers or overlay stack/introspection nouns,
+import them explicitly from `fret::overlay::*` instead of expecting those lower-level names from
+`fret::component::prelude::*`.
+
+**Advanced/manual-assembly surface:** `use fret::advanced::prelude::*;` is now intentionally
+advanced-only. It no longer forwards `fret::component::prelude::*` wholesale. If an advanced demo
+or integration also authors ordinary component/UI composition (`ui::*`, `.ui()`, `.into_element`,
+model watch helpers, overlay authoring helpers), add an explicit second import:
+
+```rust
+use fret::advanced::prelude::*;
+use fret::component::prelude::*;
+```
+
+This keeps the tier boundary visible instead of letting advanced code rediscover component
+authoring vocabulary through a hidden umbrella import.
 
 **Surface taxonomy:** for user-facing docs, keep `fret` aligned with the same repo-wide ladder:
 
@@ -405,12 +500,21 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   explicit pack through `FretApp::setup(fret_icons_lucide::app::install)` /
   `FretApp::setup(fret_icons_radix::app::install)`. For custom packs, publish the same shape on
   your own crate and call `FretApp::setup(my_icons::app::install)`.
+  Treat vendor ids such as `lucide.*` / `radix.*` as explicit pack contracts. Treat semantic
+  `ui.*` ids as the reusable default for component crates. Today semantic alias registration is
+  install-order-sensitive (`first installed pack wins`), so reusable crates should not assume more
+  than one semantic provider unless they document that requirement.
 - **Apps using `fret-bootstrap` directly:** use `BootstrapBuilder::with_lucide_icons()` /
   `BootstrapBuilder::with_radix_icons()`. For custom packs, call
   `BootstrapBuilder::register_icon_pack(...)`.
 - **Direct app wiring:** when you depend on a pack directly, use the explicit `crate::app` seam
   (`fret_icons_lucide::app::install`, `fret_icons_radix::app::install`) instead of root-level
   install helpers.
+- **Reusable ecosystem crates with transitive resources:** if a crate depends on a pack and also
+  ships images/SVGs/fonts, publish one installer/bundle surface that composes both. App code
+  should call `FretApp::setup(MyKitBundle)` (or compose named installers), not replay
+  `IconRegistry` mutation plus `register_bundle_entries(...)` manually for the dependency. See
+  `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`.
 
 ### `fret-ui-assets`
 
@@ -422,23 +526,47 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 - **Apps using `fret`:** keep logical asset identity on `fret::assets::{AssetLocator, AssetRequest, StaticAssetEntry, register_bundle_entries, register_embedded_entries, ...}` and enable
   `fret`'s `ui-assets` feature when you want the default image/SVG caches driven from the event pipeline.
+  App-owned resources should normally live under `AssetBundleId::app(...)`; ecosystem/package-owned
+  shipped resources should normally live under `AssetBundleId::package(...)`.
   On native/package-dev lanes, prefer `FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)`
   for the convenience lane or `FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)`
   for explicit manifest artifacts before dropping to `fret::assets::register_file_bundle_dir(...)`
   or `fret::assets::register_file_manifest(...)`.
+  For compile-time owned bytes, prefer generated modules that expose `mount(builder)` or the
+  builder-path helpers `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)`
+  before falling back to app-local setup glue.
+  If a crate only publishes shipped bytes, the generated `Bundle` / `install(app)` /
+  `mount(builder)` surface is usually enough. Once the crate also composes icon packs, commands,
+  settings, theme/bootstrap wiring, or multiple generated asset modules, wrap those low-level
+  generated helpers in one named installer/bundle surface and teach that wrapper instead.
   When you want to emit an explicit manifest artifact from a bundle directory, prefer
   `fretboard assets manifest write ...` over hand-authoring JSON.
   Direct host registrations preserve order across `set_primary_resolver(...)`,
   `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`,
   so later registrations intentionally override earlier ones for the same logical locator.
 - **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
-  budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`.
+  budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`. Keep logical asset identity on
+  `fret_bootstrap::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`.
+  For startup that needs one explicit development-vs-packaged switch, prefer
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
+  `BootstrapBuilder::with_asset_startup(...)`. Keep `with_asset_dir(...)` /
+  `with_asset_manifest(...)` for native/package-dev file-backed inputs and
+  `with_bundle_asset_entries(...)` / `with_embedded_asset_entries(...)` for packaged bytes.
 - **Direct app wiring:** use `fret_ui_assets::app::configure_caches(...)` or
   `fret_ui_assets::app::configure_caches_with_budgets(...)`; keep
   `fret_ui_assets::advanced::{configure_caches_with_ui_services(...), configure_caches_with_ui_services_and_budgets(...)}`
   as explicit advanced/bootstrap-only escape hatches.
 - **Component crates:** prefer receiving handles/IDs from the app; only depend on caches directly if you truly need cache APIs,
   and gate it behind an explicit feature (e.g. `app-integration`).
+  If the crate ships its own bytes, keep them package-owned and expose one installer/mount helper
+  instead of asking apps to know your internal asset bundle layout.
+  Prefer `BundleAsset` when the bytes are part of the crate's public lookup story (`AssetLocator::bundle(...)`,
+  stable docs/examples, app overrides, or cross-crate composition). Use `Embedded` for lower-level
+  owner-scoped bytes that are not the public cross-package contract.
+- **Reusable ecosystem crates that also depend on icon packs:** keep icon-pack installation plus
+  package-bundle registration inside the same installer surface so apps compose one named
+  dependency bundle rather than replaying low-level icon + asset registrations by hand. See
+  `docs/workstreams/resource-loading-fearless-refactor-v1/ECOSYSTEM_INSTALLER_COMPOSITION.md`.
 
 ### `fret-bootstrap`
 
@@ -447,6 +575,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **Use it when:** you want:
 
 - layered settings/keymap loading,
+- the same named asset startup contract as `fret`, via
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` and
+  `BootstrapBuilder::with_asset_startup(...)`,
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
 - optional command palette integration,
@@ -507,8 +638,10 @@ computations.
 grouped app data helpers (`cx.data().query*`). When app code needs explicit query nouns, import
 them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than expecting them from
 `fret::app::prelude::*`. Extracted `UiCx` helpers keep that same grouped surface through
-`UiCxDataExt`. Enable `fret-query/ui` only when you are working directly with low-level
-`ElementContext` or generic writer extensions outside the app-facing `fret` facades.
+`UiCxActionsExt` / `UiCxDataExt` (or explicit imports from `fret::app::{UiCxActionsExt,
+UiCxDataExt}` when you are intentionally not using the prelude). Enable `fret-query/ui` only when
+you are working directly with low-level `ElementContext` or generic writer extensions outside the
+app-facing `fret` facades.
 
 ### `fret-router` + `fret-router-ui`
 

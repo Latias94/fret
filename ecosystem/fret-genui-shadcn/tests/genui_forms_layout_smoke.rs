@@ -9,6 +9,7 @@ use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use fret_ui::element::{AnyElement, ElementKind, TextProps};
+use fret_ui_shadcn::facade::themes as shadcn_themes;
 use serde_json::{Value, json};
 
 fn collect_text_nodes(el: &AnyElement, out: &mut Vec<Arc<str>>) {
@@ -25,10 +26,10 @@ fn collect_text_nodes(el: &AnyElement, out: &mut Vec<Arc<str>>) {
 fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn_themes::ShadcnBaseColor::Slate,
+        shadcn_themes::ShadcnColorScheme::Light,
     );
 
     let spec: fret_genui_core::spec::SpecV1 = serde_json::from_value(json!({

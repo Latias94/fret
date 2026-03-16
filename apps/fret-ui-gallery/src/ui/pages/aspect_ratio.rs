@@ -4,12 +4,11 @@ use fret::UiCx;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::aspect_ratio as snippets;
 
-pub(super) fn preview_aspect_ratio(
-    cx: &mut UiCx<'_>,
-    wide_image: Option<Model<Option<ImageId>>>,
-    tall_image: Option<Model<Option<ImageId>>>,
-    square_image: Option<Model<Option<ImageId>>>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_aspect_ratio(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let wide_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
+    let square_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
+    let tall_image = Some(cx.local_model(|| None::<fret_core::ImageId>));
+
     let demo = snippets::demo::render_preview(cx, wide_image.clone());
     let usage = snippets::usage::render(cx);
     let square = snippets::square::render_preview(cx, square_image);
@@ -55,8 +54,6 @@ pub(super) fn preview_aspect_ratio(
         sections,
     );
 
-    vec![
-        body.test_id("ui-gallery-aspect-ratio-component")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-aspect-ratio-component");
+    vec![body.into_element(cx)]
 }

@@ -15,7 +15,9 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Space};
-use fret_ui_shadcn::{Button, ButtonVariant, HoverCard, HoverCardContent, Progress, Separator};
+use fret_ui_shadcn::facade::{
+    Button, ButtonVariant, HoverCard, HoverCardContent, Progress, Separator,
+};
 
 fn percent_used(used_tokens: u64, max_tokens: u64) -> f32 {
     if max_tokens == 0 {

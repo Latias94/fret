@@ -51,7 +51,7 @@ fn build_item_dropdown_overlay(
 ) -> AnyElement {
     use fret_ui::element::LayoutStyle;
     use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
         DropdownMenuEntry, DropdownMenuItem, Item, ItemContent, ItemDescription, ItemMedia,
         ItemSize, ItemTitle,

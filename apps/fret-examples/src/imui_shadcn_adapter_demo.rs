@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_ui_shadcn::facade as shadcn;
 
 struct ImUiShadcnAdapterView {

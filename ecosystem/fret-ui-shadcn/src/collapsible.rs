@@ -1091,7 +1091,7 @@ mod tests {
                         vec![Collapsible::new(open.clone()).into_element_with_open_model(
                             cx,
                             |cx, open, _is_open| {
-                                crate::Button::new("Toggle")
+                                crate::button::Button::new("Toggle")
                                     .toggle_model(open)
                                     .into_element(cx)
                             },

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use fret_core::{Edges, Px, SemanticsOrientation, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -185,7 +185,7 @@ impl Progress {
                     // - it is shifted with a translate so the left edge is clipped by the track's
                     //   `overflow-hidden`, keeping the right edge rounded.
                     let motion_owner = cx.root_id();
-                    let dir = crate::use_direction(cx, None);
+                    let dir = crate::direction::use_direction(cx, None);
                     let translate_x_fraction_target =
                         if mirror_in_rtl && dir == LayoutDirection::Rtl {
                             1.0 - t
@@ -267,7 +267,7 @@ pub fn progress<H: UiHost>(model: Model<f32>) -> impl IntoUiElement<H> + use<H> 
 mod tests {
     use super::*;
 
-    use crate::LayoutDirection;
+    use crate::direction::LayoutDirection;
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size, WindowFrameClockService};
     use fret_runtime::{FrameId, TickId};
@@ -353,7 +353,7 @@ mod tests {
             let tx = find_translate_x_fraction(&el).expect("translate_x_fraction");
             assert!((tx + 0.75).abs() <= 1e-6);
 
-            let el = crate::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+            let el = crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
                 Progress::new(model.clone())
                     .mirror_in_rtl(true)
                     .into_element(cx)

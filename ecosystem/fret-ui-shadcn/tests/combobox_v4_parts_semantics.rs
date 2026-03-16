@@ -8,11 +8,10 @@ use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::shadcn_themes;
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxChipsPart, ComboboxContent,
     ComboboxContentPart, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, ComboboxPart,
-    ComboboxValue,
+    ComboboxValue, themes as shadcn_themes,
 };
 use std::sync::Arc;
 

@@ -28,7 +28,9 @@ webview-wry = ["dep:fret-webview", "dep:fret-webview-wry"]
 
 [dependencies]
 fret-app = { version = "0.1.0", path = "../fret-app" }
+fret-assets = { version = "0.1.0", path = "../fret-assets" }
 fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
 fret-render = { version = "0.1.0", path = "../fret-render" }
 fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 bytemuck.workspace = true
@@ -55,6 +57,7 @@ subsecond = { version = "0.7.2", optional = true }
 tungstenite = { version = "0.27.0", optional = true }
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
+notify.workspace = true
 renderdog.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -89,7 +92,6 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = ["s
 objc2-ui-kit = { version = "0.3.2", default-features = false, features = ["std", "objc2-core-foundation", "UIApplication", "UIView", "UIWindow", "UIGeometry", "UIResponder"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
 fret-platform-web = { version = "0.1.0", path = "../fret-platform-web" }
 fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit" }
 fret-runner-web = { version = "0.1.0", path = "../fret-runner-web" }

@@ -18,13 +18,13 @@ fn window_bounds() -> Rect {
     )
 }
 
-fn seed_items(app: &mut App) -> Model<Vec<fret_ui_shadcn::extras::KanbanItem>> {
+fn seed_items(app: &mut App) -> Model<Vec<fret_ui_shadcn::raw::extras::KanbanItem>> {
     app.models_mut().insert(vec![
-        fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
-        fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
-        fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
-        fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
-        fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+        fret_ui_shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+        fret_ui_shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+        fret_ui_shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+        fret_ui_shadcn::raw::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+        fret_ui_shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
     ])
 }
 
@@ -34,7 +34,7 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    items: Model<Vec<fret_ui_shadcn::extras::KanbanItem>>,
+    items: Model<Vec<fret_ui_shadcn::raw::extras::KanbanItem>>,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -49,13 +49,13 @@ fn render_frame(
         "kanban-dnd-forwarders",
         move |cx| {
             let columns = vec![
-                fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
-                fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
-                fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+                fret_ui_shadcn::raw::extras::KanbanColumn::new("backlog", "Backlog"),
+                fret_ui_shadcn::raw::extras::KanbanColumn::new("in_progress", "In Progress"),
+                fret_ui_shadcn::raw::extras::KanbanColumn::new("done", "Done"),
             ];
 
             vec![
-                fret_ui_shadcn::extras::Kanban::new(columns, items.clone())
+                fret_ui_shadcn::raw::extras::Kanban::new(columns, items.clone())
                     .test_id("kanban-dnd-forwarders")
                     .into_element(cx),
             ]
@@ -84,7 +84,7 @@ fn point_in_rect(rect: Rect, x_factor: f32, y_factor: f32) -> Point {
     )
 }
 
-fn item_ids(app: &App, items: &Model<Vec<fret_ui_shadcn::extras::KanbanItem>>) -> Vec<String> {
+fn item_ids(app: &App, items: &Model<Vec<fret_ui_shadcn::raw::extras::KanbanItem>>) -> Vec<String> {
     app.models()
         .read(items, |items| {
             items

@@ -22,7 +22,7 @@ use fret_ui_kit::dnd::{
 use fret_ui_kit::primitives::presence;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
-use crate::ScrollArea;
+use crate::scroll_area::ScrollArea;
 use crate::test_id::attach_test_id;
 
 const DRAG_KIND_KANBAN: DragKindId = DragKindId(101);

@@ -3296,7 +3296,7 @@ fn select_impl<H: UiHost>(
                                                 .unwrap_or_else(|e| e.into_inner());
                                             state.scroll_handle.clone()
                                         };
-                                        let dir = crate::use_direction(cx, None);
+                                        let dir = crate::direction::use_direction(cx, None);
 
                         let probe = cx.container(
                             ContainerProps {
@@ -3991,7 +3991,7 @@ fn select_impl<H: UiHost>(
                                                                                         fg_muted
                                                                                     };
                                                                                     let dir =
-                                                                                        crate::use_direction(cx, None);
+                                                                                        crate::direction::use_direction(cx, None);
 
                                                                                     let icon = match item_indicator.clone() {
                                                                                         SelectItemIndicator::None => cx.container(
@@ -4590,7 +4590,7 @@ fn select_impl<H: UiHost>(
                 .clamp(0.0, 1.0);
 
             let content = move |cx: &mut ElementContext<'_, H>| {
-                let dir = crate::use_direction(cx, None);
+                let dir = crate::direction::use_direction(cx, None);
                 vec![cx.flex(
                     FlexProps {
                         layout: {

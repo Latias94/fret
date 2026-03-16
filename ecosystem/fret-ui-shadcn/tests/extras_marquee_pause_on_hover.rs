@@ -83,7 +83,7 @@ fn render_frame(
     let root =
         fret_ui::declarative::render_root(ui, app, services, window, bounds, "extras", |cx| {
             vec![
-                fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta"])
+                fret_ui_shadcn::raw::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta"])
                     .speed_px_per_frame(Px(1.0))
                     .pause_on_hover(true)
                     .into_element(cx),

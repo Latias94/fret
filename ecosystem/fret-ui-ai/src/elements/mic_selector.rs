@@ -19,7 +19,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::visually_hidden::visually_hidden;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space, ui};
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Command, CommandInput, CommandItem, CommandList, Popover,
     PopoverContent,
 };
@@ -327,7 +327,7 @@ impl MicSelectorTrigger {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
         let query = controller.query.clone();
 
@@ -479,7 +479,7 @@ impl MicSelectorInput {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let mut input = CommandInput::new(controller.query)
@@ -530,7 +530,7 @@ impl MicSelectorValue {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -922,7 +922,7 @@ impl MicSelectorList {
         entries: Vec<MicSelectorItem>,
     ) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let items = entries
@@ -953,7 +953,7 @@ impl MicSelectorList {
         I: IntoIterator<Item = MicSelectorItem>,
     {
         let Some(controller) = use_mic_selector_controller(cx) else {
-            return visually_hidden(cx, |_| Vec::new());
+            return visually_hidden(cx, |_| Vec::<AnyElement>::new());
         };
 
         let Self {
@@ -979,7 +979,7 @@ impl MicSelectorList {
         let entries = match mode {
             MicSelectorListMode::Auto => {
                 let Some(controller) = use_mic_selector_controller(cx) else {
-                    return visually_hidden(cx, |_| Vec::new());
+                    return visually_hidden(cx, |_| Vec::<AnyElement>::new());
                 };
                 Self::auto_entries(cx, controller.devices.as_ref())
             }

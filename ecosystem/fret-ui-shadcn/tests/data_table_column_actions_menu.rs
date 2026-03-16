@@ -4,6 +4,7 @@ use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, SortSpec, TableState};
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -50,7 +51,7 @@ fn render_frame(
         bounds,
         "data-table-column-actions-menu",
         move |cx| {
-            let table = fret_ui_shadcn::DataTable::new()
+            let table = shadcn::DataTable::new()
                 .column_actions_menu(true)
                 .into_element_retained(
                     cx,
@@ -320,10 +321,10 @@ fn data_table_column_actions_menu_sort_asc_updates_state_and_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let data: Arc<[RowData]> = Arc::from(
@@ -454,10 +455,10 @@ fn data_table_column_actions_menu_sort_desc_and_clear_sort_update_state() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let data: Arc<[RowData]> = Arc::from(
@@ -596,10 +597,10 @@ fn data_table_column_actions_menu_hide_sets_column_visibility_false_and_closes()
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let data: Arc<[RowData]> = Arc::from(
@@ -701,10 +702,10 @@ fn data_table_column_actions_menu_pin_left_and_unpin_update_column_pinning() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let data: Arc<[RowData]> = Arc::from(

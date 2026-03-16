@@ -757,9 +757,9 @@ impl DataTable {
                         let sort_fg = sort_fg;
                         let can_sort = col.enable_sorting;
                         let state_for_header = state_for_header.clone();
-                        let justify = match crate::use_direction(cx, None) {
-                            crate::LayoutDirection::Rtl => MainAlign::End,
-                            crate::LayoutDirection::Ltr => MainAlign::Start,
+                        let justify = match crate::direction::use_direction(cx, None) {
+                            crate::direction::LayoutDirection::Rtl => MainAlign::End,
+                            crate::direction::LayoutDirection::Ltr => MainAlign::Start,
                         };
                         return vec![cx.flex(
                             FlexProps {
@@ -872,9 +872,9 @@ impl DataTable {
                     let col_id: Arc<str> = Arc::from(col.id.as_ref());
                     let can_hide = col.enable_hiding;
                     let can_pin = col.enable_pinning;
-                    let justify = match crate::use_direction(cx, None) {
-                        crate::LayoutDirection::Rtl => MainAlign::End,
-                        crate::LayoutDirection::Ltr => MainAlign::Start,
+                    let justify = match crate::direction::use_direction(cx, None) {
+                        crate::direction::LayoutDirection::Rtl => MainAlign::End,
+                        crate::direction::LayoutDirection::Ltr => MainAlign::Start,
                     };
                     vec![cx.flex(
                         FlexProps {

@@ -4,6 +4,7 @@ use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -44,7 +45,7 @@ fn render_frame(
         bounds,
         "data-table-row-click-selection",
         move |cx| {
-            let table = fret_ui_shadcn::DataTable::new()
+            let table = shadcn::DataTable::new()
                 .row_click_selection(row_click_selection)
                 .into_element_retained(
                     cx,
@@ -107,10 +108,10 @@ fn data_table_row_click_selection_toggles_single_row_by_default() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let data: Arc<[RowData]> = Arc::from(
@@ -223,10 +224,10 @@ fn data_table_row_click_selection_can_be_disabled() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let data: Arc<[RowData]> = Arc::from(

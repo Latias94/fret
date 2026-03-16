@@ -86,8 +86,6 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-input-otp-component")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-input-otp-component");
+    vec![body.into_element(cx)]
 }

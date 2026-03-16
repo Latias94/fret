@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("web_preview_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
@@ -8,6 +9,13 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
+
+mod act {
+    fret::actions!([
+        NavigateBack = "ui-gallery.ai.web_preview.navigate_back.v1",
+        NavigateForward = "ui-gallery.ai.web_preview.navigate_forward.v1",
+    ]);
+}
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let history = cx.local_model_keyed("history", Vec::<String>::new);
@@ -29,6 +37,50 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let committed_now = cx
         .get_model_copied(&committed, Invalidation::Layout)
         .unwrap_or(false);
+    let url_model = cx.local_model_keyed("url_model", String::new);
+
+    cx.actions().models::<act::NavigateBack>({
+        let history = history.clone();
+        let history_ix = history_ix.clone();
+        let url_model = url_model.clone();
+        move |models| {
+            let ix = models.get_cloned(&history_ix).unwrap_or(0);
+            if ix == 0 {
+                return false;
+            }
+            let next_ix = ix - 1;
+            let next_url = models
+                .read(&history, |entries| entries.get(next_ix).cloned())
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+            let history_ix_updated = models.update(&history_ix, |value| *value = next_ix).is_ok();
+            let url_updated = models.update(&url_model, |value| *value = next_url).is_ok();
+            history_ix_updated && url_updated
+        }
+    });
+
+    cx.actions().models::<act::NavigateForward>({
+        let history = history.clone();
+        let history_ix = history_ix.clone();
+        let url_model = url_model.clone();
+        move |models| {
+            let ix = models.get_cloned(&history_ix).unwrap_or(0);
+            let len = models.read(&history, |entries| entries.len()).unwrap_or(0);
+            if len == 0 || ix + 1 >= len {
+                return false;
+            }
+            let next_ix = ix + 1;
+            let next_url = models
+                .read(&history, |entries| entries.get(next_ix).cloned())
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+            let history_ix_updated = models.update(&history_ix, |value| *value = next_ix).is_ok();
+            let url_updated = models.update(&url_model, |value| *value = next_url).is_ok();
+            history_ix_updated && url_updated
+        }
+    });
 
     let markers = {
         let mut out: Vec<AnyElement> = Vec::new();
@@ -80,59 +132,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let view = ui_ai::WebPreview::new()
         .on_url_change(on_url_change)
+        .url_model(url_model.clone())
         .test_id_root("ui-ai-web-preview-demo-root")
-        .into_element_with_children(cx, move |cx, controller| {
+        .into_element_with_children(cx, move |cx, _controller| {
             let back = ui_ai::WebPreviewNavigationButton::new([cx.text("←")])
                 .disabled(!can_back)
                 .test_id("ui-ai-web-preview-demo-nav-back")
-                .on_activate(Arc::new({
-                    let history = history.clone();
-                    let history_ix = history_ix.clone();
-                    let url = controller.url.clone();
-                    move |host, action_cx, _reason| {
-                        let ix = host.models_mut().get_cloned(&history_ix).unwrap_or(0);
-                        if ix == 0 {
-                            return;
-                        }
-                        let next_ix = ix - 1;
-                        let next_url = host
-                            .models_mut()
-                            .read(&history, |h| h.get(next_ix).cloned())
-                            .ok()
-                            .flatten()
-                            .unwrap_or_default();
-                        let _ = host.models_mut().update(&history_ix, |v| *v = next_ix);
-                        let _ = host.models_mut().update(&url, |v| *v = next_url);
-                        host.notify(action_cx);
-                    }
-                }))
+                .action(act::NavigateBack)
                 .into_element(cx);
 
             let forward = ui_ai::WebPreviewNavigationButton::new([cx.text("→")])
                 .disabled(!can_forward)
                 .test_id("ui-ai-web-preview-demo-nav-forward")
-                .on_activate(Arc::new({
-                    let history = history.clone();
-                    let history_ix = history_ix.clone();
-                    let url = controller.url.clone();
-                    move |host, action_cx, _reason| {
-                        let ix = host.models_mut().get_cloned(&history_ix).unwrap_or(0);
-                        let len = host.models_mut().read(&history, |h| h.len()).unwrap_or(0);
-                        if len == 0 || ix + 1 >= len {
-                            return;
-                        }
-                        let next_ix = ix + 1;
-                        let next_url = host
-                            .models_mut()
-                            .read(&history, |h| h.get(next_ix).cloned())
-                            .ok()
-                            .flatten()
-                            .unwrap_or_default();
-                        let _ = host.models_mut().update(&history_ix, |v| *v = next_ix);
-                        let _ = host.models_mut().update(&url, |v| *v = next_url);
-                        host.notify(action_cx);
-                    }
-                }))
+                .action(act::NavigateForward)
                 .into_element(cx);
 
             let url = ui_ai::WebPreviewUrl::new()

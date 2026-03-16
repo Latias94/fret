@@ -126,6 +126,13 @@ pub struct UiTreeDebugSnapshotV1 {
     /// This records when the OS accessibility stack activates the AccessKit adapter for a window.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner_accessibility: Option<UiRunnerAccessibilitySnapshotV1>,
+    /// Best-effort resource-loading diagnostics snapshot.
+    ///
+    /// This surfaces recent asset resolution outcomes plus the current startup font baseline /
+    /// catalog state so resource-loading drift can be diagnosed from the bundle without scraping
+    /// logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_loading: Option<UiResourceLoadingDiagnosticsSnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -199,6 +206,270 @@ pub struct UiRunnerAccessibilitySnapshotV1 {
     pub last_activation_unix_ms: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_activation_frame_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiResourceLoadingDiagnosticsSnapshotV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_load: Option<UiAssetLoadDiagnosticsSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_reload: Option<UiAssetReloadDiagnosticsSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_environment: Option<UiFontEnvironmentDiagnosticsSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiAssetLoadDiagnosticsSnapshotV1 {
+    pub total_requests: u64,
+    pub bytes_requests: u64,
+    pub reference_requests: u64,
+    pub missing_bundle_asset_requests: u64,
+    #[serde(default)]
+    pub stale_manifest_requests: u64,
+    pub unsupported_file_requests: u64,
+    pub unsupported_url_requests: u64,
+    pub external_reference_unavailable_requests: u64,
+    pub revision_change_requests: u64,
+    #[serde(default)]
+    pub recent: Vec<UiAssetLoadDiagnosticEventV1>,
+}
+
+impl UiAssetLoadDiagnosticsSnapshotV1 {
+    pub(super) fn from_runtime(snapshot: fret_runtime::AssetLoadDiagnosticsSnapshot) -> Self {
+        Self {
+            total_requests: snapshot.total_requests,
+            bytes_requests: snapshot.bytes_requests,
+            reference_requests: snapshot.reference_requests,
+            missing_bundle_asset_requests: snapshot.missing_bundle_asset_requests,
+            stale_manifest_requests: snapshot.stale_manifest_requests,
+            unsupported_file_requests: snapshot.unsupported_file_requests,
+            unsupported_url_requests: snapshot.unsupported_url_requests,
+            external_reference_unavailable_requests: snapshot
+                .external_reference_unavailable_requests,
+            revision_change_requests: snapshot.revision_change_requests,
+            recent: snapshot
+                .recent
+                .into_iter()
+                .map(UiAssetLoadDiagnosticEventV1::from_runtime)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiAssetLoadDiagnosticEventV1 {
+    pub access_kind: String,
+    pub locator_kind: String,
+    pub locator_debug: String,
+    pub outcome_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous_revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision_transition: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+impl UiAssetLoadDiagnosticEventV1 {
+    fn from_runtime(event: fret_runtime::AssetLoadDiagnosticEvent) -> Self {
+        Self {
+            access_kind: match event.access_kind {
+                fret_runtime::AssetLoadAccessKind::Bytes => "bytes",
+                fret_runtime::AssetLoadAccessKind::ExternalReference => "external_reference",
+            }
+            .to_string(),
+            locator_kind: match event.locator_kind {
+                fret_assets::AssetLocatorKind::Memory => "memory",
+                fret_assets::AssetLocatorKind::Embedded => "embedded",
+                fret_assets::AssetLocatorKind::BundleAsset => "bundle_asset",
+                fret_assets::AssetLocatorKind::File => "file",
+                fret_assets::AssetLocatorKind::Url => "url",
+            }
+            .to_string(),
+            locator_debug: event.locator_debug,
+            outcome_kind: match event.outcome_kind {
+                fret_runtime::AssetLoadOutcomeKind::Resolved => "resolved",
+                fret_runtime::AssetLoadOutcomeKind::Missing => "missing",
+                fret_runtime::AssetLoadOutcomeKind::StaleManifest => "stale_manifest",
+                fret_runtime::AssetLoadOutcomeKind::UnsupportedLocatorKind => {
+                    "unsupported_locator_kind"
+                }
+                fret_runtime::AssetLoadOutcomeKind::ExternalReferenceUnavailable => {
+                    "external_reference_unavailable"
+                }
+                fret_runtime::AssetLoadOutcomeKind::ResolverUnavailable => "resolver_unavailable",
+                fret_runtime::AssetLoadOutcomeKind::AccessDenied => "access_denied",
+                fret_runtime::AssetLoadOutcomeKind::Message => "message",
+            }
+            .to_string(),
+            revision: event.revision.map(|revision| revision.0),
+            previous_revision: event.previous_revision.map(|revision| revision.0),
+            revision_transition: event.revision_transition.map(|transition| {
+                match transition {
+                    fret_runtime::AssetRevisionTransitionKind::Initial => "initial",
+                    fret_runtime::AssetRevisionTransitionKind::Stable => "stable",
+                    fret_runtime::AssetRevisionTransitionKind::Changed => "changed",
+                }
+                .to_string()
+            }),
+            message: event.message,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiAssetReloadDiagnosticsSnapshotV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub epoch: Option<u64>,
+    #[serde(default)]
+    pub file_watch: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub configured_backend: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_backend: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback_message: Option<String>,
+}
+
+impl UiAssetReloadDiagnosticsSnapshotV1 {
+    pub(super) fn from_runtime(
+        epoch: Option<fret_runtime::AssetReloadEpoch>,
+        support: Option<fret_runtime::AssetReloadSupport>,
+        status: Option<fret_runtime::AssetReloadStatus>,
+    ) -> Option<Self> {
+        if epoch.is_none() && support.is_none() && status.is_none() {
+            return None;
+        }
+
+        Some(Self {
+            epoch: epoch.map(|epoch| epoch.0),
+            file_watch: support.is_some_and(|support| support.file_watch),
+            configured_backend: status
+                .as_ref()
+                .map(|status| asset_reload_backend_kind_name(status.configured_backend).to_string()),
+            active_backend: status
+                .as_ref()
+                .map(|status| asset_reload_backend_kind_name(status.active_backend).to_string()),
+            fallback_reason: status
+                .as_ref()
+                .and_then(|status| status.fallback_reason)
+                .map(|reason| asset_reload_fallback_reason_name(reason).to_string()),
+            fallback_message: status.and_then(|status| status.fallback_message),
+        })
+    }
+}
+
+fn asset_reload_backend_kind_name(kind: fret_runtime::AssetReloadBackendKind) -> &'static str {
+    match kind {
+        fret_runtime::AssetReloadBackendKind::PollMetadata => "poll_metadata",
+        fret_runtime::AssetReloadBackendKind::NativeWatcher => "native_watcher",
+    }
+}
+
+fn asset_reload_fallback_reason_name(
+    reason: fret_runtime::AssetReloadFallbackReason,
+) -> &'static str {
+    match reason {
+        fret_runtime::AssetReloadFallbackReason::WatcherInstallFailed => "watcher_install_failed",
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiFontEnvironmentDiagnosticsSnapshotV1 {
+    pub bundled_baseline_source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundled_profile_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundled_asset_bundle: Option<String>,
+    #[serde(default)]
+    pub bundled_asset_keys: Vec<String>,
+    #[serde(default)]
+    pub bundled_roles: Vec<String>,
+    #[serde(default)]
+    pub bundled_guaranteed_generic_families: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_catalog_revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_catalog_family_count: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_font_stack_key: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_font_rescan_in_flight: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_font_rescan_pending: Option<bool>,
+}
+
+impl UiFontEnvironmentDiagnosticsSnapshotV1 {
+    pub(super) fn from_runtime(
+        baseline: Option<&fret_runtime::BundledFontBaselineSnapshot>,
+        font_catalog: Option<&fret_runtime::FontCatalog>,
+        text_font_stack_key: Option<u64>,
+        system_font_rescan: Option<fret_runtime::SystemFontRescanState>,
+    ) -> Option<Self> {
+        if baseline.is_none()
+            && font_catalog.is_none()
+            && text_font_stack_key.is_none()
+            && system_font_rescan.is_none()
+        {
+            return None;
+        }
+
+        let baseline = baseline.cloned().unwrap_or_default();
+        Some(Self {
+            bundled_baseline_source: match baseline.source {
+                fret_runtime::BundledFontBaselineSource::None => "none",
+                fret_runtime::BundledFontBaselineSource::BundledProfile => "bundled_profile",
+            }
+            .to_string(),
+            bundled_profile_name: baseline.profile_name,
+            bundled_asset_bundle: baseline.asset_bundle,
+            bundled_asset_keys: baseline.asset_keys,
+            bundled_roles: baseline.provided_roles,
+            bundled_guaranteed_generic_families: baseline.guaranteed_generic_families,
+            font_catalog_revision: font_catalog.map(|catalog| catalog.revision),
+            font_catalog_family_count: font_catalog.map(|catalog| catalog.families.len() as u64),
+            text_font_stack_key,
+            system_font_rescan_in_flight: system_font_rescan.map(|state| state.in_flight),
+            system_font_rescan_pending: system_font_rescan.map(|state| state.pending),
+        })
+    }
+}
+
+#[cfg(test)]
+mod debug_snapshot_types_tests {
+    use super::UiAssetReloadDiagnosticsSnapshotV1;
+
+    #[test]
+    fn asset_reload_snapshot_from_runtime_keeps_backend_and_fallback_details() {
+        let snapshot = UiAssetReloadDiagnosticsSnapshotV1::from_runtime(
+            Some(fret_runtime::AssetReloadEpoch(7)),
+            Some(fret_runtime::AssetReloadSupport { file_watch: true }),
+            Some(fret_runtime::AssetReloadStatus {
+                configured_backend: fret_runtime::AssetReloadBackendKind::NativeWatcher,
+                active_backend: fret_runtime::AssetReloadBackendKind::PollMetadata,
+                fallback_reason: Some(fret_runtime::AssetReloadFallbackReason::WatcherInstallFailed),
+                fallback_message: Some("backend unavailable".to_string()),
+            }),
+        )
+        .expect("asset reload snapshot should be emitted when runtime state exists");
+
+        assert_eq!(snapshot.epoch, Some(7));
+        assert!(snapshot.file_watch);
+        assert_eq!(snapshot.configured_backend.as_deref(), Some("native_watcher"));
+        assert_eq!(snapshot.active_backend.as_deref(), Some("poll_metadata"));
+        assert_eq!(
+            snapshot.fallback_reason.as_deref(),
+            Some("watcher_install_failed")
+        );
+        assert_eq!(
+            snapshot.fallback_message.as_deref(),
+            Some("backend unavailable")
+        );
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

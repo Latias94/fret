@@ -23,7 +23,6 @@ icons-ui-semantic-lucide = ["icons-lucide", "fret-icons-lucide/semantic-ui"]
 icons-ui-semantic-radix = ["icons-radix", "fret-icons-radix/semantic-ui"]
 hotpatch-subsecond = ["fret-launch/hotpatch-subsecond", "dep:subsecond"]
 ui-app-driver = [
-  "dep:fret-runtime",
   "dep:fret-ui",
   "fret-ui/diagnostics",
   "dep:fret-ui-app",
@@ -47,9 +46,10 @@ slotmap.workspace = true
 blake3.workspace = true
 
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+fret-assets = { version = "0.1.0", path = "../../crates/fret-assets" }
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 fret-i18n = { version = "0.1.0", path = "../../crates/fret-i18n" }
-fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
 fret-window-style-profiles = { version = "0.1.0", path = "../fret-window-style-profiles", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-launch = { version = "0.1.0", path = "../../crates/fret-launch" }

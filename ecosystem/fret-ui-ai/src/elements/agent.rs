@@ -11,7 +11,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
 };
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Accordion, AccordionContent, AccordionItem, AccordionTrigger, Badge, BadgeVariant,
 };
 

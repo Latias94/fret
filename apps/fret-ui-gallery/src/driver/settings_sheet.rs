@@ -184,11 +184,11 @@ pub(super) fn push_settings_sheet(
                                 shadcn::Button::new("Apply (in memory)")
                                     .variant(shadcn::ButtonVariant::Secondary)
                                     .test_id("ui-gallery-settings-apply")
-                                    .on_click(CMD_APP_SETTINGS_APPLY)
+                                    .action(CMD_APP_SETTINGS_APPLY)
                                     .into_element(cx),
                                 shadcn::Button::new("Write project .fret/settings.json")
                                     .variant(shadcn::ButtonVariant::Outline)
-                                    .on_click(CMD_APP_SETTINGS_WRITE_PROJECT)
+                                    .action(CMD_APP_SETTINGS_WRITE_PROJECT)
                                     .into_element(cx),
                                 shadcn::Button::new("Close")
                                     .variant(shadcn::ButtonVariant::Ghost)

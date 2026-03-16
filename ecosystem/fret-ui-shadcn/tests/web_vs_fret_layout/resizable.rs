@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -149,27 +150,27 @@ fn assert_resizable_demo_geometry_matches_web(web_name: &str) {
         let two = mk_center(cx, &theme, two_label.clone(), "Two", None);
         let three = mk_center(cx, &theme, three_label.clone(), "Three", None);
 
-        let inner = fret_ui_shadcn::ResizablePanelGroup::new(model_inner)
+        let inner = shadcn::ResizablePanelGroup::new(model_inner)
             .axis(fret_core::Axis::Vertical)
             .entries(vec![
-                fret_ui_shadcn::ResizablePanel::new(vec![two])
+                shadcn::ResizablePanel::new(vec![two])
                     .min_px(Px(0.0))
                     .into(),
-                fret_ui_shadcn::ResizableHandle::new().into(),
-                fret_ui_shadcn::ResizablePanel::new(vec![three])
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![three])
                     .min_px(Px(0.0))
                     .into(),
             ])
             .into_element(cx);
 
-        let outer = fret_ui_shadcn::ResizablePanelGroup::new(model_outer)
+        let outer = shadcn::ResizablePanelGroup::new(model_outer)
             .axis(fret_core::Axis::Horizontal)
             .entries(vec![
-                fret_ui_shadcn::ResizablePanel::new(vec![one])
+                shadcn::ResizablePanel::new(vec![one])
                     .min_px(Px(0.0))
                     .into(),
-                fret_ui_shadcn::ResizableHandle::new().into(),
-                fret_ui_shadcn::ResizablePanel::new(vec![inner])
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![inner])
                     .min_px(Px(0.0))
                     .into(),
             ])
@@ -281,27 +282,21 @@ fn assert_resizable_demo_with_handle_geometry_matches_web(web_name: &str) {
             )
         }
 
-        let inner = fret_ui_shadcn::ResizablePanelGroup::new(model_inner)
+        let inner = shadcn::ResizablePanelGroup::new(model_inner)
             .axis(fret_core::Axis::Vertical)
             .entries(vec![
-                fret_ui_shadcn::ResizablePanel::new(vec![panel(cx, &theme, "Two", None)]).into(),
-                fret_ui_shadcn::ResizableHandle::new().into(),
-                fret_ui_shadcn::ResizablePanel::new(vec![panel(cx, &theme, "Three", None)]).into(),
+                shadcn::ResizablePanel::new(vec![panel(cx, &theme, "Two", None)]).into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![panel(cx, &theme, "Three", None)]).into(),
             ])
             .into_element(cx);
 
-        let outer = fret_ui_shadcn::ResizablePanelGroup::new(model_outer)
+        let outer = shadcn::ResizablePanelGroup::new(model_outer)
             .axis(fret_core::Axis::Horizontal)
             .entries(vec![
-                fret_ui_shadcn::ResizablePanel::new(vec![panel(
-                    cx,
-                    &theme,
-                    "One",
-                    Some(Px(200.0)),
-                )])
-                .into(),
-                fret_ui_shadcn::ResizableHandle::new().into(),
-                fret_ui_shadcn::ResizablePanel::new(vec![inner]).into(),
+                shadcn::ResizablePanel::new(vec![panel(cx, &theme, "One", Some(Px(200.0)))]).into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![inner]).into(),
             ])
             .into_element(cx);
 
@@ -411,14 +406,14 @@ fn assert_resizable_handle_geometry_matches_web(web_name: &str) {
             move |_cx| vec![right_box],
         );
 
-        let group = fret_ui_shadcn::ResizablePanelGroup::new(model)
+        let group = shadcn::ResizablePanelGroup::new(model)
             .axis(fret_core::Axis::Horizontal)
             .entries(vec![
-                fret_ui_shadcn::ResizablePanel::new(vec![left])
+                shadcn::ResizablePanel::new(vec![left])
                     .min_px(Px(0.0))
                     .into(),
-                fret_ui_shadcn::ResizableHandle::new().into(),
-                fret_ui_shadcn::ResizablePanel::new(vec![right])
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![right])
                     .min_px(Px(0.0))
                     .into(),
             ])
@@ -548,14 +543,14 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
             move |_cx| vec![bottom_box],
         );
 
-        let group = fret_ui_shadcn::ResizablePanelGroup::new(model)
+        let group = shadcn::ResizablePanelGroup::new(model)
             .axis(fret_core::Axis::Vertical)
             .entries(vec![
-                fret_ui_shadcn::ResizablePanel::new(vec![top])
+                shadcn::ResizablePanel::new(vec![top])
                     .min_px(Px(0.0))
                     .into(),
-                fret_ui_shadcn::ResizableHandle::new().into(),
-                fret_ui_shadcn::ResizablePanel::new(vec![bottom])
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![bottom])
                     .min_px(Px(0.0))
                     .into(),
             ])

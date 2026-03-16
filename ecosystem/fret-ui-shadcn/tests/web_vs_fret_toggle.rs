@@ -5,6 +5,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::Space;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/web_golden_shadcn.rs"]
@@ -116,10 +117,10 @@ fn run_fret_root_with_services(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -206,8 +207,8 @@ fn shadcn_toggle_goldens_are_targeted_gates() {
 fn assert_toggle_variant_geometry_matches(
     web_name: &str,
     aria_label: &str,
-    size: fret_ui_shadcn::ToggleSize,
-    variant: fret_ui_shadcn::ToggleVariant,
+    size: shadcn::ToggleSize,
+    variant: shadcn::ToggleVariant,
     disabled: bool,
     with_text: bool,
 ) {
@@ -223,7 +224,7 @@ fn assert_toggle_variant_geometry_matches(
     let mut services = StyleAwareServices::default();
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let model: Model<bool> = cx.app.models_mut().insert(false);
-        let mut toggle = fret_ui_shadcn::Toggle::new(model)
+        let mut toggle = shadcn::Toggle::new(model)
             .size(size)
             .variant(variant)
             .disabled(disabled)
@@ -263,8 +264,8 @@ fn web_vs_fret_toggle_sm_geometry_matches() {
     assert_toggle_variant_geometry_matches(
         "toggle-sm",
         "Toggle italic",
-        fret_ui_shadcn::ToggleSize::Sm,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleSize::Sm,
+        shadcn::ToggleVariant::Default,
         false,
         false,
     );
@@ -275,8 +276,8 @@ fn web_vs_fret_toggle_lg_geometry_matches() {
     assert_toggle_variant_geometry_matches(
         "toggle-lg",
         "Toggle italic",
-        fret_ui_shadcn::ToggleSize::Lg,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleSize::Lg,
+        shadcn::ToggleVariant::Default,
         false,
         false,
     );
@@ -287,8 +288,8 @@ fn web_vs_fret_toggle_outline_geometry_matches() {
     assert_toggle_variant_geometry_matches(
         "toggle-outline",
         "Toggle italic",
-        fret_ui_shadcn::ToggleSize::Default,
-        fret_ui_shadcn::ToggleVariant::Outline,
+        shadcn::ToggleSize::Default,
+        shadcn::ToggleVariant::Outline,
         false,
         false,
     );
@@ -299,8 +300,8 @@ fn web_vs_fret_toggle_disabled_geometry_matches() {
     assert_toggle_variant_geometry_matches(
         "toggle-disabled",
         "Toggle italic",
-        fret_ui_shadcn::ToggleSize::Default,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleSize::Default,
+        shadcn::ToggleVariant::Default,
         true,
         false,
     );
@@ -311,8 +312,8 @@ fn web_vs_fret_toggle_with_text_height_matches() {
     assert_toggle_variant_geometry_matches(
         "toggle-with-text",
         "Toggle italic",
-        fret_ui_shadcn::ToggleSize::Default,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleSize::Default,
+        shadcn::ToggleVariant::Default,
         false,
         true,
     );
@@ -327,9 +328,9 @@ struct ToggleGroupItemSpec {
 
 fn assert_toggle_group_variant_heights_match(
     web_name: &str,
-    group_kind: fret_ui_shadcn::ToggleGroupKind,
-    size: fret_ui_shadcn::ToggleSize,
-    variant: fret_ui_shadcn::ToggleVariant,
+    group_kind: shadcn::ToggleGroupKind,
+    size: shadcn::ToggleSize,
+    variant: shadcn::ToggleVariant,
     disabled: bool,
     spacing: Space,
     items: &'static [ToggleGroupItemSpec],
@@ -352,12 +353,8 @@ fn assert_toggle_group_variant_heights_match(
         let model_multi: Model<Vec<Arc<str>>> = cx.app.models_mut().insert(Vec::new());
 
         let base = match group_kind {
-            fret_ui_shadcn::ToggleGroupKind::Single => {
-                fret_ui_shadcn::ToggleGroup::single(model_single)
-            }
-            fret_ui_shadcn::ToggleGroupKind::Multiple => {
-                fret_ui_shadcn::ToggleGroup::multiple(model_multi)
-            }
+            shadcn::ToggleGroupKind::Single => shadcn::ToggleGroup::single(model_single),
+            shadcn::ToggleGroupKind::Multiple => shadcn::ToggleGroup::multiple(model_multi),
         };
 
         let group = items.iter().fold(
@@ -372,8 +369,7 @@ fn assert_toggle_group_variant_heights_match(
                     children.push(decl_text::text_sm(cx, text));
                 }
                 group.item(
-                    fret_ui_shadcn::ToggleGroupItem::new(spec.value, children)
-                        .a11y_label(spec.a11y_label),
+                    shadcn::ToggleGroupItem::new(spec.value, children).a11y_label(spec.a11y_label),
                 )
             },
         );
@@ -400,8 +396,8 @@ fn assert_toggle_group_variant_heights_match(
     );
 
     let item_role = match group_kind {
-        fret_ui_shadcn::ToggleGroupKind::Single => SemanticsRole::RadioButton,
-        fret_ui_shadcn::ToggleGroupKind::Multiple => SemanticsRole::Button,
+        shadcn::ToggleGroupKind::Single => SemanticsRole::RadioButton,
+        shadcn::ToggleGroupKind::Multiple => SemanticsRole::Button,
     };
 
     for spec in items {
@@ -439,9 +435,9 @@ fn web_vs_fret_toggle_group_sm_heights_match() {
     ];
     assert_toggle_group_variant_heights_match(
         "toggle-group-sm",
-        fret_ui_shadcn::ToggleGroupKind::Single,
-        fret_ui_shadcn::ToggleSize::Sm,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleGroupKind::Single,
+        shadcn::ToggleSize::Sm,
+        shadcn::ToggleVariant::Default,
         false,
         Space::N0,
         ITEMS,
@@ -469,9 +465,9 @@ fn web_vs_fret_toggle_group_lg_heights_match() {
     ];
     assert_toggle_group_variant_heights_match(
         "toggle-group-lg",
-        fret_ui_shadcn::ToggleGroupKind::Multiple,
-        fret_ui_shadcn::ToggleSize::Lg,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleGroupKind::Multiple,
+        shadcn::ToggleSize::Lg,
+        shadcn::ToggleVariant::Default,
         false,
         Space::N0,
         ITEMS,
@@ -499,9 +495,9 @@ fn web_vs_fret_toggle_group_outline_heights_match() {
     ];
     assert_toggle_group_variant_heights_match(
         "toggle-group-outline",
-        fret_ui_shadcn::ToggleGroupKind::Multiple,
-        fret_ui_shadcn::ToggleSize::Default,
-        fret_ui_shadcn::ToggleVariant::Outline,
+        shadcn::ToggleGroupKind::Multiple,
+        shadcn::ToggleSize::Default,
+        shadcn::ToggleVariant::Outline,
         false,
         Space::N0,
         ITEMS,
@@ -529,9 +525,9 @@ fn web_vs_fret_toggle_group_disabled_heights_match() {
     ];
     assert_toggle_group_variant_heights_match(
         "toggle-group-disabled",
-        fret_ui_shadcn::ToggleGroupKind::Multiple,
-        fret_ui_shadcn::ToggleSize::Default,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleGroupKind::Multiple,
+        shadcn::ToggleSize::Default,
+        shadcn::ToggleVariant::Default,
         true,
         Space::N0,
         ITEMS,
@@ -559,9 +555,9 @@ fn web_vs_fret_toggle_group_single_heights_match() {
     ];
     assert_toggle_group_variant_heights_match(
         "toggle-group-single",
-        fret_ui_shadcn::ToggleGroupKind::Single,
-        fret_ui_shadcn::ToggleSize::Default,
-        fret_ui_shadcn::ToggleVariant::Default,
+        shadcn::ToggleGroupKind::Single,
+        shadcn::ToggleSize::Default,
+        shadcn::ToggleVariant::Default,
         false,
         Space::N0,
         ITEMS,
@@ -589,9 +585,9 @@ fn web_vs_fret_toggle_group_spacing_heights_match() {
     ];
     assert_toggle_group_variant_heights_match(
         "toggle-group-spacing",
-        fret_ui_shadcn::ToggleGroupKind::Multiple,
-        fret_ui_shadcn::ToggleSize::Sm,
-        fret_ui_shadcn::ToggleVariant::Outline,
+        shadcn::ToggleGroupKind::Multiple,
+        shadcn::ToggleSize::Sm,
+        shadcn::ToggleVariant::Outline,
         false,
         Space::N2,
         ITEMS,

@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 struct LayoutSidebarMenuButtonHeightCase {
@@ -32,7 +33,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
 
     let snap_default = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
+            shadcn::SidebarMenuButton::new("Sidebar Menu Button")
                 .size(SidebarMenuButtonSize::Default)
                 .into_element(cx),
         ]
@@ -57,7 +58,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
         let collapsed = (web_lg.rect.h - 32.0).abs() <= 1.0;
         let snap_lg = run_fret_root(bounds, |cx| {
             vec![
-                fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
+                shadcn::SidebarMenuButton::new("Sidebar Menu Button")
                     .size(SidebarMenuButtonSize::Lg)
                     .collapsed(collapsed)
                     .into_element(cx),

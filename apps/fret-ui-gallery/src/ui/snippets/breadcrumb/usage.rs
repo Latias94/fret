@@ -17,7 +17,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             bc::BreadcrumbLink::new("Home")
                                 .href("/")
                                 // Keep the gallery deterministic while preserving link semantics.
-                                .on_click(CMD_APP_OPEN)
+                                .action(CMD_APP_OPEN)
                                 .into_element(cx)
                                 .test_id("ui-gallery-breadcrumb-usage-home-link"),
                         ]
@@ -27,7 +27,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         vec![
                             bc::BreadcrumbLink::new("Components")
                                 .href("/components")
-                                .on_click(CMD_APP_OPEN)
+                                .action(CMD_APP_OPEN)
                                 .into_element(cx)
                                 .test_id("ui-gallery-breadcrumb-usage-components-link"),
                         ]

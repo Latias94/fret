@@ -42,6 +42,23 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
             };
             fired_any = true;
 
+            let all_windows = self.windows.keys().collect::<Vec<_>>();
+            if let Some(asset_reload) = self.asset_reload.as_mut()
+                && asset_reload.handle_timer(&mut self.app, token, &all_windows)
+            {
+                match entry.repeat {
+                    Some(interval) => {
+                        if let Some(e) = self.timers.get_mut(&token) {
+                            e.deadline = now + interval;
+                        }
+                    }
+                    None => {
+                        self.timers.remove(&token);
+                    }
+                }
+                continue;
+            }
+
             let target = entry
                 .window
                 .or(self.main_window)

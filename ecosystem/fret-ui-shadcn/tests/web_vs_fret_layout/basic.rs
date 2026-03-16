@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_aspect_ratio_demo_geometry_matches() {
@@ -14,7 +15,7 @@ fn web_vs_fret_layout_aspect_ratio_demo_geometry_matches() {
 
     let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
         let child = cx.container(ContainerProps::default(), |_cx| Vec::new());
-        vec![fret_ui_shadcn::AspectRatio::new(16.0 / 9.0, child).into_element(cx)]
+        vec![shadcn::AspectRatio::new(16.0 / 9.0, child).into_element(cx)]
     });
 
     let (_node, fret_bounds) = find_node_with_bounds_close(&ui, root, web_img.rect, 2.0)
@@ -41,7 +42,7 @@ fn web_vs_fret_layout_checkbox_demo_control_size() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<bool> = cx.app.models_mut().insert(false);
         vec![
-            fret_ui_shadcn::Checkbox::new(model)
+            shadcn::Checkbox::new(model)
                 .a11y_label("Checkbox")
                 .into_element(cx),
         ]
@@ -85,10 +86,10 @@ fn web_vs_fret_layout_label_demo_geometry() {
 
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<bool> = cx.app.models_mut().insert(false);
-        let checkbox = fret_ui_shadcn::Checkbox::new(model)
+        let checkbox = shadcn::Checkbox::new(model)
             .a11y_label("Terms")
             .into_element(cx);
-        let label = fret_ui_shadcn::Label::new("Accept terms and conditions").into_element(cx);
+        let label = shadcn::Label::new("Accept terms and conditions").into_element(cx);
         let label = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
@@ -184,11 +185,11 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
         let theme = Theme::global(&*cx.app).clone();
         let model: Model<bool> = cx.app.models_mut().insert(false);
 
-        let checkbox = fret_ui_shadcn::Checkbox::new(model)
+        let checkbox = shadcn::Checkbox::new(model)
             .a11y_label("Terms")
             .into_element(cx);
 
-        let label = fret_ui_shadcn::Label::new("Accept terms and conditions").into_element(cx);
+        let label = shadcn::Label::new("Accept terms and conditions").into_element(cx);
         let label = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
@@ -346,7 +347,7 @@ fn web_vs_fret_layout_slider_demo_geometry() {
 
     let (ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
         let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![initial_value]);
-        let slider = fret_ui_shadcn::Slider::new(model)
+        let slider = shadcn::Slider::new(model)
             .range(0.0, 100.0)
             .a11y_label("Slider")
             .into_element(cx);
@@ -454,7 +455,7 @@ fn web_vs_fret_layout_checkbox_disabled_control_size_matches_web() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<bool> = cx.app.models_mut().insert(false);
         vec![
-            fret_ui_shadcn::Checkbox::new(model)
+            shadcn::Checkbox::new(model)
                 .a11y_label("Checkbox")
                 .disabled(true)
                 .into_element(cx),

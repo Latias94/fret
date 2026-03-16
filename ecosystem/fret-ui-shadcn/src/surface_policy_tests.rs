@@ -7,8 +7,10 @@ const ALERT_RS: &str = include_str!("alert.rs");
 const AVATAR_RS: &str = include_str!("avatar.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
 const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
+const BUTTON_GROUP_RS: &str = include_str!("button_group.rs");
 const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
 const CARD_RS: &str = include_str!("card.rs");
+const CAROUSEL_RS: &str = include_str!("carousel.rs");
 const EMPTY_RS: &str = include_str!("empty.rs");
 const FIELD_RS: &str = include_str!("field.rs");
 const UI_EXT_SUPPORT_RS: &str = include_str!("ui_ext/support.rs");
@@ -51,12 +53,25 @@ const RESIZABLE_RS: &str = include_str!("resizable.rs");
 const SCROLL_AREA_RS: &str = include_str!("scroll_area.rs");
 const SWITCH_RS: &str = include_str!("switch.rs");
 const TABS_RS: &str = include_str!("tabs.rs");
+const EXTRAS_BANNER_RS: &str = include_str!("extras/banner.rs");
+const EXTRAS_TICKER_RS: &str = include_str!("extras/ticker.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
 const UI_BUILDER_EXT_DATA_RS: &str = include_str!("ui_builder_ext/data.rs");
 const UI_BUILDER_EXT_MENUS_RS: &str = include_str!("ui_builder_ext/menus.rs");
 const UI_BUILDER_EXT_OVERLAY_ROOTS_RS: &str = include_str!("ui_builder_ext/overlay_roots.rs");
+const TEST_UI_BUILDER_SMOKE_RS: &str = include_str!("../tests/ui_builder_smoke.rs");
+const TEST_COMBOBOX_RESPONSIVE_BREAKPOINT_RS: &str =
+    include_str!("../tests/combobox_responsive_breakpoint.rs");
+const TEST_COMBOBOX_V4_PARTS_SEMANTICS_RS: &str =
+    include_str!("../tests/combobox_v4_parts_semantics.rs");
+const TEST_DATA_GRID_LAYOUT_RS: &str = include_str!("../tests/data_grid_layout.rs");
+const TEST_WEB_VS_FRET_SIDEBAR_RS: &str = include_str!("../tests/web_vs_fret_sidebar.rs");
+const TEST_WEB_VS_FRET_OVERLAY_PLACEMENT_RS: &str =
+    include_str!("../tests/web_vs_fret_overlay_placement.rs");
+const TEST_WEB_VS_FRET_OVERLAY_CHROME_CONTEXT_MENU_RS: &str =
+    include_str!("../tests/web_vs_fret_overlay_chrome/context_menu.rs");
 
 fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
@@ -73,17 +88,16 @@ fn normalized_reexport_block(source: &str, marker: &str) -> String {
     normalize_ws(&tail[..end])
 }
 
-fn assert_root_and_facade_reexports(module: &str, names: &[&str]) {
+fn assert_facade_only_reexports(module: &str, names: &[&str]) {
     let root_marker = format!("pub use {module}::{{");
     let facade_marker = format!("pub use crate::{module}::{{");
-    let root_block = normalized_reexport_block(LIB_RS, &root_marker);
     let facade_block = normalized_reexport_block(LIB_RS, &facade_marker);
+    assert!(
+        !LIB_RS.contains(&root_marker),
+        "{module} should not re-export component families from the flat crate root"
+    );
 
     for name in names {
-        assert!(
-            root_block.contains(name),
-            "{module} should re-export `{name}` from the crate root"
-        );
         assert!(
             facade_block.contains(name),
             "{module} should re-export `{name}` from the curated facade"
@@ -170,6 +184,9 @@ fn visit_rust_files(dir: &std::path::Path, f: &mut impl FnMut(&std::path::Path, 
 #[test]
 fn app_integration_stays_under_explicit_app_module() {
     assert!(README.contains("`fret_ui_shadcn::app::{install, install_with, ...}`"));
+    assert!(README.contains("`fret_ui_shadcn::app::install(...)` installs theme/app wiring only"));
+    assert!(README.contains("`fret_icons_lucide::app::install`"));
+    assert!(README.contains("`fret_icons_radix::app::install`"));
     assert!(LIB_RS.contains("pub mod app;"));
     assert!(APP_RS.contains("pub struct InstallConfig"));
     assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
@@ -182,13 +199,23 @@ fn app_integration_stays_under_explicit_app_module() {
 
 #[test]
 fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
+    assert!(README.contains("use fret_icons::ids;"));
     assert!(README.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
-    assert!(README.contains("let _button = shadcn::Button::new(\"Save\");"));
+    assert!(README.contains("fret_icons_lucide::app::install(app);"));
+    assert!(README.contains("`fret_ui_shadcn::facade::themes::*`"));
+    assert!(
+        README
+            .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);")
+    );
     assert!(!README.contains("recipes/components stay under `fret_ui_shadcn::*`"));
     assert!(README.contains("`fret_ui_shadcn::raw::*` access stays the escape hatch"));
+    assert!(README.contains("root component-family modules are crate-private"));
 
     assert!(LIB_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"));
-    assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` plus explicit"));
+    assert!(LIB_RS.contains("`fret_ui_shadcn::raw::*` as the raw"));
+    assert!(LIB_RS.contains(
+        "crate-private so ordinary autocomplete only sees the curated facade plus the explicit raw lane."
+    ));
     assert!(LIB_RS.contains("pub mod facade {"));
     assert!(LIB_RS.contains("pub mod themes {"));
     assert!(LIB_RS.contains("pub mod raw {"));
@@ -202,15 +229,258 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(LIB_RS.contains("UiElementTestIdExt"));
     assert!(LIB_RS.contains("UiElementA11yExt"));
     assert!(LIB_RS.contains("UiElementKeyContextExt"));
-    assert!(LIB_RS.contains("#[doc(hidden)]\npub use accordion::{"));
-    assert!(LIB_RS.contains("#[doc(hidden)]\npub use ::fret_ui_kit::declarative::icon;"));
+    assert!(!LIB_RS.contains("pub use accordion::{"));
+    assert!(!LIB_RS.contains("pub use button::{"));
+    assert!(!LIB_RS.contains("#[doc(hidden)]\npub mod shadcn_themes;"));
+    assert!(!LIB_RS.contains("pub mod shadcn_themes;"));
+    assert!(!LIB_RS.contains("pub use crate::shadcn_themes;"));
+    assert!(!LIB_RS.contains("#[doc(hidden)]\npub use ::fret_ui_kit::declarative::icon;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::declarative::icon;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::declarative::style as decl_style;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::ui;"));
+    assert!(!LIB_RS.contains("pub(crate) use ::fret_ui_kit::{"));
+    assert!(!LIB_RS.contains("pub use ui_builder_ext::*;"));
     assert!(ADVANCED_RS.contains("pub fn sync_theme_from_environment("));
     assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
 }
 
 #[test]
-fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_facade() {
-    assert_root_and_facade_reexports(
+fn root_component_modules_are_no_longer_public() {
+    let allowed_visible = ["advanced", "app", "facade", "prelude", "raw"];
+
+    for line in LIB_RS.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if let Some(module) = trimmed
+            .strip_prefix("pub mod ")
+            .and_then(|tail| tail.strip_suffix(';'))
+        {
+            assert!(
+                allowed_visible.contains(&module),
+                "root shadcn module `{module}` should stay private and only reappear through curated explicit lanes"
+            );
+        }
+    }
+}
+
+#[test]
+fn curated_prelude_and_internal_glue_do_not_depend_on_hidden_root_compatibility_exports() {
+    let normalized_lib = normalize_ws(LIB_RS);
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use crate::direction::{DirectionProvider, LayoutDirection, use_direction};"
+        )),
+        "prelude should source direction helpers from the explicit module, not the hidden root"
+    );
+    assert!(
+        !normalized_lib.contains(&normalize_ws(
+            "pub use direction::{DirectionProvider, LayoutDirection, use_direction, with_direction_provider};"
+        )),
+        "crate root should not retain hidden direction compatibility exports"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use crate::facade::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
+        )),
+        "prelude should source authoring-critical family exports from the curated facade"
+    );
+    assert!(
+        !normalized_lib.contains(&normalize_ws(
+            "pub use crate::{ Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, };"
+        )),
+        "prelude should not depend on hidden flat root compatibility exports"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws("pub use ::fret_ui_kit::declarative::icon;")),
+        "prelude should source icon glue directly from fret-ui-kit rather than the crate root"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use ::fret_ui_kit::declarative::style as decl_style;"
+        )),
+        "prelude should source declarative style glue directly from fret-ui-kit"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws("pub use ::fret_ui_kit::ui;")),
+        "prelude should source `ui` directly from fret-ui-kit rather than the crate root"
+    );
+    assert!(
+        normalized_lib.contains(&normalize_ws(
+            "pub use crate::ui_builder_ext::{ AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt, CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt, DataGridElementUiBuilderExt, DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt, DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt, SurfaceUiBuilderExt, };"
+        )),
+        "prelude should source ui-builder extension traits from the explicit module instead of the crate root"
+    );
+    assert!(
+        !normalized_lib.contains(&normalize_ws(
+            "pub use crate::{ AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt, CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt, DataGridElementUiBuilderExt, DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt, DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt, SurfaceUiBuilderExt, };"
+        )),
+        "prelude should not depend on root-exported ui-builder extension traits"
+    );
+
+    for (label, source, forbidden, required) in [
+        (
+            "button_group.rs",
+            BUTTON_GROUP_RS,
+            "use crate::{Button, Input, InputGroup, Select, Separator, SeparatorOrientation};",
+            "use crate::button::Button;",
+        ),
+        (
+            "carousel.rs",
+            CAROUSEL_RS,
+            "use crate::{Button, ButtonSize, ButtonVariant};",
+            "use crate::button::{Button, ButtonSize, ButtonVariant};",
+        ),
+        (
+            "command.rs",
+            COMMAND_RS,
+            "use crate::{Dialog, DialogContent, ScrollArea};",
+            "use crate::dialog::{Dialog, DialogContent};",
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            "use crate::{Button, ButtonSize, ButtonVariant, Input, Sheet, SheetContent, SheetSide, Skeleton};",
+            "use crate::button::{Button, ButtonSize, ButtonVariant};",
+        ),
+        (
+            "state.rs",
+            STATE_RS,
+            "use crate::{Alert, AlertDescription, AlertTitle, AlertVariant, Badge, BadgeVariant};",
+            "use crate::alert::{Alert, AlertDescription, AlertTitle, AlertVariant};",
+        ),
+        (
+            "ui_builder_ext/menus.rs",
+            UI_BUILDER_EXT_MENUS_RS,
+            "use crate::{ContextMenu, ContextMenuEntry, DropdownMenu, DropdownMenuEntry};",
+            "use crate::context_menu::{ContextMenu, ContextMenuEntry};",
+        ),
+        (
+            "ui_builder_ext/data.rs",
+            UI_BUILDER_EXT_DATA_RS,
+            "use crate::{DataGridCanvas, DataTable};",
+            "use crate::data_grid_canvas::DataGridCanvas;",
+        ),
+        (
+            "ui_builder_ext/overlay_roots.rs",
+            UI_BUILDER_EXT_OVERLAY_ROOTS_RS,
+            "use crate::{AlertDialog, Dialog, Drawer, Popover, Sheet};",
+            "use crate::alert_dialog::AlertDialog;",
+        ),
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "{label} should not import hidden flat root compatibility exports"
+        );
+        assert!(
+            source.contains(required),
+            "{label} should import explicit module/facade paths instead"
+        );
+    }
+
+    assert!(
+        TEXT_EDIT_CONTEXT_MENU_RS.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
+        "raw seam docs should still teach the curated facade import"
+    );
+    assert!(
+        !TEXT_EDIT_CONTEXT_MENU_RS
+            .contains("# use fret_ui_shadcn::{Input, text_edit_context_menu_controllable};"),
+        "raw seam docs should not teach flat root component imports"
+    );
+}
+
+#[test]
+fn overlay_chrome_first_party_tests_avoid_legacy_shadcn_themes_lane() {
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/web_vs_fret_overlay_chrome");
+
+    visit_rust_files(&dir, &mut |path, source| {
+        assert!(
+            !source.contains("fret_ui_shadcn::shadcn_themes::"),
+            "{} should use `shadcn::themes::*` or `fret_ui_shadcn::facade::themes::*`, not the legacy hidden lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("use fret_ui_shadcn::shadcn_themes"),
+            "{} should not import legacy `shadcn_themes` directly",
+            path.display()
+        );
+    });
+}
+
+#[test]
+fn first_party_integration_tests_prefer_facade_themes_lane() {
+    let tests_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    visit_rust_files(&tests_dir, &mut |path, source| {
+        assert!(
+            !source.contains("fret_ui_shadcn::shadcn_themes::"),
+            "{} should use `fret_ui_shadcn::facade::themes::*` instead of the legacy root theme lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("use fret_ui_shadcn::shadcn_themes"),
+            "{} should not import the legacy root `shadcn_themes` module",
+            path.display()
+        );
+    });
+}
+
+#[test]
+fn first_party_code_avoids_root_authoring_glue_lane() {
+    let tests_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    visit_rust_files(&tests_dir, &mut |path, source| {
+        assert!(
+            !source.contains("fret_ui_shadcn::decl_style"),
+            "{} should use prelude-imported `decl_style` or explicit kit paths instead of the root glue lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("fret_ui_shadcn::icon::"),
+            "{} should use `shadcn::raw::icon::*` or prelude-imported icon glue instead of the root glue lane",
+            path.display()
+        );
+        assert!(
+            !source.contains("fret_ui_shadcn::DialogUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::PopoverUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::SheetUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DrawerUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DropdownMenuUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::ContextMenuUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::AlertDialogUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::CommandDialogUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::CollapsibleUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DataGridCanvasUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DataGridElementUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::DataTableUiBuilderExt")
+                && !source.contains("fret_ui_shadcn::BreadcrumbPrimitivesUiBuilderExt"),
+            "{} should import ui-builder extension traits from `fret_ui_shadcn::prelude` instead of the root",
+            path.display()
+        );
+    });
+}
+
+#[test]
+fn crate_source_tree_avoids_root_icon_glue_lane() {
+    let src_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    visit_rust_files(&src_dir, &mut |path, source| {
+        let file_name = path.file_name().and_then(std::ffi::OsStr::to_str);
+        if matches!(file_name, Some("lib.rs" | "surface_policy_tests.rs")) {
+            return;
+        }
+
+        assert!(
+            !source.contains("crate::icon::"),
+            "{} should import icon helpers from `fret_ui_kit::declarative::icon` instead of the root shim",
+            path.display()
+        );
+    });
+}
+
+#[test]
+fn authoring_critical_family_exports_live_on_curated_facade_only() {
+    assert_facade_only_reexports(
         "select",
         &[
             "Select",
@@ -220,7 +490,7 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "SelectItem",
         ],
     );
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports(
         "combobox",
         &[
             "Combobox",
@@ -231,8 +501,8 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "ComboboxValue",
         ],
     );
-    assert_root_and_facade_reexports("combobox_chips", &["ComboboxChips", "ComboboxChipsPart"]);
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports("combobox_chips", &["ComboboxChips", "ComboboxChipsPart"]);
+    assert_facade_only_reexports(
         "command",
         &[
             "Command",
@@ -243,7 +513,7 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "command",
         ],
     );
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports(
         "navigation_menu",
         &[
             "NavigationMenu",
@@ -259,7 +529,7 @@ fn authoring_critical_family_exports_stay_on_hidden_compat_root_and_curated_faca
             "navigation_menu_uncontrolled",
         ],
     );
-    assert_root_and_facade_reexports(
+    assert_facade_only_reexports(
         "pagination",
         &[
             "Pagination",
@@ -375,6 +645,122 @@ fn ui_builder_ext_keep_into_element_as_explicit_landing_seam() {
             assert!(
                 normalized.contains(&marker),
                 "{label} should keep `into_element(...) -> AnyElement` as the explicit landing seam"
+            );
+        }
+    }
+}
+
+#[test]
+fn representative_first_party_tests_prefer_facade_and_raw_lanes() {
+    for (label, source, required_markers, forbidden_markers) in [
+        (
+            "tests/ui_builder_smoke.rs",
+            TEST_UI_BUILDER_SMOKE_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "use fret_ui_shadcn::raw::{",
+                "accordion::composable",
+                "breadcrumb::primitives",
+                "experimental::{DataGridElement, DataGridRowState}",
+            ][..],
+            &[
+                "use fret_ui_shadcn::{",
+                "use fret_ui_shadcn::accordion::composable;",
+                "use fret_ui_shadcn::breadcrumb::primitives;",
+                "use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};",
+            ][..],
+        ),
+        (
+            "tests/combobox_responsive_breakpoint.rs",
+            TEST_COMBOBOX_RESPONSIVE_BREAKPOINT_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "Combobox,",
+                "ComboboxItem,",
+                "themes as shadcn_themes",
+            ][..],
+            &[
+                "use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};",
+                "use fret_ui_shadcn::shadcn_themes;",
+            ][..],
+        ),
+        (
+            "tests/combobox_v4_parts_semantics.rs",
+            TEST_COMBOBOX_V4_PARTS_SEMANTICS_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "Combobox,",
+                "ComboboxChips,",
+                "themes as shadcn_themes",
+            ][..],
+            &[
+                "use fret_ui_shadcn::shadcn_themes;",
+                "use fret_ui_shadcn::{",
+            ][..],
+        ),
+        (
+            "tests/data_grid_layout.rs",
+            TEST_DATA_GRID_LAYOUT_RS,
+            &[
+                "use fret_ui_shadcn::facade as shadcn;",
+                "use fret_ui_shadcn::raw::experimental::{DataGridElement, DataGridRowState};",
+            ][..],
+            &["use fret_ui_shadcn::experimental::{DataGridElement, DataGridRowState};"][..],
+        ),
+        (
+            "tests/web_vs_fret_sidebar.rs",
+            TEST_WEB_VS_FRET_SIDEBAR_RS,
+            &[
+                "use fret_ui_shadcn::facade::{self as shadcn, themes as shadcn_themes};",
+                "use fret_ui_shadcn::raw::sidebar::SidebarMenuButtonSize;",
+            ][..],
+            &[
+                "use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;",
+                "fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(",
+            ][..],
+        ),
+        (
+            "tests/web_vs_fret_overlay_placement.rs",
+            TEST_WEB_VS_FRET_OVERLAY_PLACEMENT_RS,
+            &[
+                "use fret_ui_shadcn::facade as shadcn;",
+                "use fret_ui_shadcn::facade::{",
+                "fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive",
+                "fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive",
+                "shadcn::themes::apply_shadcn_new_york(",
+            ][..],
+            &[
+                "use fret_ui_shadcn::{",
+                "fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive",
+                "fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive",
+                "fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(",
+            ][..],
+        ),
+        (
+            "tests/web_vs_fret_overlay_chrome/context_menu.rs",
+            TEST_WEB_VS_FRET_OVERLAY_CHROME_CONTEXT_MENU_RS,
+            &[
+                "use fret_ui_shadcn::facade::{",
+                "fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive",
+                "fret_ui_shadcn::facade::themes::ShadcnColorScheme",
+            ][..],
+            &[
+                "use fret_ui_shadcn::{",
+                "fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive",
+                "fret_ui_shadcn::shadcn_themes::ShadcnColorScheme",
+            ][..],
+        ),
+    ] {
+        for marker in required_markers {
+            assert!(
+                source.contains(marker),
+                "{label} should contain `{marker}` after the authoring-surface migration"
+            );
+        }
+        for marker in forbidden_markers {
+            assert!(
+                !source.contains(marker),
+                "{label} should not fall back to `{marker}`"
             );
         }
     }
@@ -1258,9 +1644,8 @@ fn state_helpers_prefer_typed_badge_outputs_when_no_runtime_landing_seam_is_requ
 fn selector_and_query_helpers_stay_isolated_to_opt_in_state_module() {
     let normalized_lib = normalize_ws(LIB_RS);
     assert!(
-        normalized_lib.contains(
-            "#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]pubmodstate;"
-        ),
+        normalized_lib
+            .contains("#[cfg(any(feature=\"state-selector\",feature=\"state-query\"))]modstate;"),
         "lib.rs should keep the state helper module behind explicit opt-in features"
     );
     assert!(
@@ -1497,6 +1882,24 @@ fn thin_constructor_trial_modules_keep_public_anyelement_free_functions_explicit
 #[test]
 fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders() {
     for (label, source, markers) in [
+        (
+            "badge.rs",
+            BADGE_RS,
+            &["Bind a stable action ID to this badge (action-first authoring)."][..],
+        ),
+        (
+            "extras/banner.rs",
+            EXTRAS_BANNER_RS,
+            &[
+                "Bind a stable action ID to this banner action (action-first authoring).",
+                "Bind a stable action ID to this banner close affordance (action-first authoring).",
+            ][..],
+        ),
+        (
+            "extras/ticker.rs",
+            EXTRAS_TICKER_RS,
+            &["Bind a stable action ID to this ticker (action-first authoring)."][..],
+        ),
         (
             "breadcrumb.rs",
             BREADCRUMB_RS,

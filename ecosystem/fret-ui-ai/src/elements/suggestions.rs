@@ -11,7 +11,7 @@ use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, Items, LayoutRefinement, Radius, Space};
 
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::facade::{Button, ButtonSize, ButtonVariant};
 
 pub type OnSuggestionClick = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 

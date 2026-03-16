@@ -5,6 +5,12 @@ pub enum RunnerError {
     #[error(transparent)]
     EventLoop(#[from] winit::error::EventLoopError),
 
+    #[error(transparent)]
+    AssetManifest(#[from] fret_assets::AssetManifestLoadError),
+
+    #[error(transparent)]
+    AssetStartup(#[from] crate::assets::AssetStartupPlanError),
+
     #[error("wgpu context is not initialized")]
     WgpuNotInitialized,
 

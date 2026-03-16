@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -74,10 +75,10 @@ fn menubar_arrow_down_enter_dispatches_command_and_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -86,21 +87,21 @@ fn menubar_arrow_down_enter_dispatches_command_and_closes() {
     let mut timers = TimerQueue::default();
 
     let build = move |cx: &mut ElementContext<'_, App>| {
-        let file_menu = fret_ui_shadcn::MenubarMenu::new("File")
+        let file_menu = shadcn::MenubarMenu::new("File")
             .test_id("menubar-trigger")
             .entries(vec![
-                fret_ui_shadcn::MenubarEntry::Item(
-                    fret_ui_shadcn::MenubarItem::new("New")
+                shadcn::MenubarEntry::Item(
+                    shadcn::MenubarItem::new("New")
                         .test_id("menubar-item-new")
                         .on_select(CommandId::from("edit.copy")),
                 ),
-                fret_ui_shadcn::MenubarEntry::Item(
-                    fret_ui_shadcn::MenubarItem::new("Open")
+                shadcn::MenubarEntry::Item(
+                    shadcn::MenubarItem::new("Open")
                         .test_id("menubar-item-open")
                         .on_select(CommandId::from("edit.paste")),
                 ),
             ]);
-        vec![fret_ui_shadcn::Menubar::new([file_menu]).into_element(cx)]
+        vec![shadcn::Menubar::new([file_menu]).into_element(cx)]
     };
 
     // Frame 1: mount closed and click trigger.

@@ -9,7 +9,9 @@ use fret_ui::ElementContext;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, SemanticsProps};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::{Drawer, DrawerContent, DrawerSide, shadcn_themes};
+use fret_ui_shadcn::facade as shadcn;
+use fret_ui_shadcn::facade::themes as shadcn_themes;
+use shadcn::{Drawer, DrawerContent, DrawerSide};
 use std::sync::Arc;
 
 #[path = "support/shadcn_motion.rs"]

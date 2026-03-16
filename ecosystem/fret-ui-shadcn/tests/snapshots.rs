@@ -11,6 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
+use fret_ui_shadcn::facade as shadcn;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -695,7 +696,7 @@ fn snapshot_button_default() {
         CoreSize::new(Px(320.0), Px(180.0)),
     );
     snapshot_for_root("button_default", bounds, |cx| {
-        vec![fret_ui_shadcn::Button::new("Hello").into_element(cx)]
+        vec![shadcn::Button::new("Hello").into_element(cx)]
     });
 }
 
@@ -707,7 +708,7 @@ fn snapshot_toggle_pressed_semantics() {
     );
     snapshot_for_root("toggle_pressed_semantics", bounds, |cx| {
         vec![
-            fret_ui_shadcn::Toggle::uncontrolled(true)
+            shadcn::Toggle::uncontrolled(true)
                 .a11y_label("Toggle")
                 .label("Hello")
                 .into_element(cx),
@@ -723,11 +724,11 @@ fn snapshot_toggle_group_pressed_semantics() {
     );
     snapshot_for_root("toggle_group_pressed_semantics", bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::ToggleGroupItem::new("alpha", vec![cx.text("A")]).a11y_label("Alpha"),
-            fret_ui_shadcn::ToggleGroupItem::new("beta", vec![cx.text("B")]).a11y_label("Beta"),
+            shadcn::ToggleGroupItem::new("alpha", vec![cx.text("A")]).a11y_label("Alpha"),
+            shadcn::ToggleGroupItem::new("beta", vec![cx.text("B")]).a11y_label("Beta"),
         ];
         vec![
-            fret_ui_shadcn::ToggleGroup::multiple_uncontrolled(vec!["alpha"])
+            shadcn::ToggleGroup::multiple_uncontrolled(vec!["alpha"])
                 .items(items)
                 .into_element(cx),
         ]
@@ -743,7 +744,7 @@ fn snapshot_input_required_invalid_semantics() {
     snapshot_for_root("input_required_invalid_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert("Hello".to_string());
         vec![
-            fret_ui_shadcn::Input::new(model)
+            shadcn::Input::new(model)
                 .a11y_label("Email")
                 .aria_required(true)
                 .aria_invalid(true)
@@ -760,12 +761,12 @@ fn snapshot_command_list_busy_semantics() {
     );
     snapshot_for_root("command_list_busy_semantics", bounds, |cx| {
         let entries = vec![
-            fret_ui_shadcn::command::CommandLoading::new("Fetching…").into(),
-            fret_ui_shadcn::command::CommandItem::new("Alpha")
+            fret_ui_shadcn::raw::command::CommandLoading::new("Fetching…").into(),
+            fret_ui_shadcn::raw::command::CommandItem::new("Alpha")
                 .value("alpha")
                 .into(),
         ];
-        vec![fret_ui_shadcn::command::CommandList::new_entries(entries).into_element(cx)]
+        vec![fret_ui_shadcn::raw::command::CommandList::new_entries(entries).into_element(cx)]
     });
 }
 
@@ -800,8 +801,8 @@ fn snapshot_badge_link_visited_semantics() {
     );
     snapshot_for_root("badge_link_visited_semantics", bounds, |cx| {
         vec![
-            fret_ui_shadcn::Badge::new("Docs")
-                .render(fret_ui_shadcn::BadgeRender::Link {
+            shadcn::Badge::new("Docs")
+                .render(shadcn::BadgeRender::Link {
                     href: Arc::from("https://example.com"),
                     target: None,
                     rel: None,
@@ -821,15 +822,15 @@ fn snapshot_command_palette_multiselectable_semantics() {
     snapshot_for_root("command_palette_multiselectable_semantics", bounds, |cx| {
         let query = cx.app.models_mut().insert("".to_string());
         let items = vec![
-            fret_ui_shadcn::command::CommandItem::new("Alpha")
+            fret_ui_shadcn::raw::command::CommandItem::new("Alpha")
                 .value("alpha")
                 .into(),
-            fret_ui_shadcn::command::CommandItem::new("Beta")
+            fret_ui_shadcn::raw::command::CommandItem::new("Beta")
                 .value("beta")
                 .into(),
         ];
         vec![
-            fret_ui_shadcn::command::CommandPalette::new(query, [])
+            fret_ui_shadcn::raw::command::CommandPalette::new(query, [])
                 .entries(items)
                 .a11y_label("Multi-select listbox")
                 .list_multiselectable(true)
@@ -865,7 +866,7 @@ fn snapshot_heading_level_semantics() {
         CoreSize::new(Px(320.0), Px(180.0)),
     );
     snapshot_for_root("heading_level_semantics", bounds, |cx| {
-        vec![fret_ui_shadcn::DialogTitle::new("Dialog Title").into_element(cx)]
+        vec![shadcn::DialogTitle::new("Dialog Title").into_element(cx)]
     });
 }
 
@@ -877,12 +878,12 @@ fn snapshot_tabs_default() {
     );
     snapshot_for_root("tabs_default", bounds, |cx| {
         let items = vec![
-            fret_ui_shadcn::TabsItem::new("alpha", "Alpha", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("beta", "Beta", vec![cx.text("Panel")]),
-            fret_ui_shadcn::TabsItem::new("gamma", "Gamma", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("alpha", "Alpha", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("beta", "Beta", vec![cx.text("Panel")]),
+            shadcn::TabsItem::new("gamma", "Gamma", vec![cx.text("Panel")]),
         ];
         vec![
-            fret_ui_shadcn::Tabs::uncontrolled(Some("alpha"))
+            shadcn::Tabs::uncontrolled(Some("alpha"))
                 .items(items)
                 .into_element(cx),
         ]
@@ -898,7 +899,7 @@ fn snapshot_slider_numeric_semantics() {
     snapshot_for_root("slider_numeric_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert(vec![80.0f32]);
         vec![
-            fret_ui_shadcn::Slider::new(model)
+            shadcn::Slider::new(model)
                 .a11y_label("Volume")
                 .range(0.0, 100.0)
                 .step(1.0)
@@ -916,7 +917,7 @@ fn snapshot_progress_numeric_semantics() {
     snapshot_for_root("progress_numeric_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert(66.0f32);
         vec![
-            fret_ui_shadcn::Progress::new(model)
+            shadcn::Progress::new(model)
                 .a11y_label("Loading")
                 .range(0.0, 100.0)
                 .into_element(cx),
@@ -998,11 +999,11 @@ fn snapshot_resizable_splitter_semantics() {
         let model = cx.app.models_mut().insert(vec![0.5f32, 0.5f32]);
 
         vec![
-            fret_ui_shadcn::ResizablePanelGroup::new(model)
+            shadcn::ResizablePanelGroup::new(model)
                 .entries([
-                    fret_ui_shadcn::ResizablePanel::new([cx.text("Left")]).into(),
-                    fret_ui_shadcn::ResizableHandle::new().into(),
-                    fret_ui_shadcn::ResizablePanel::new([cx.text("Right")]).into(),
+                    shadcn::ResizablePanel::new([cx.text("Left")]).into(),
+                    shadcn::ResizableHandle::new().into(),
+                    shadcn::ResizablePanel::new([cx.text("Right")]).into(),
                 ])
                 .into_element(cx),
         ]
@@ -1031,7 +1032,7 @@ fn snapshot_scroll_area_scrollbar_semantics() {
         );
 
         vec![
-            fret_ui_shadcn::ScrollArea::new([content])
+            shadcn::ScrollArea::new([content])
                 .type_(ScrollAreaType::Always)
                 .into_element(cx),
         ]
@@ -1047,7 +1048,7 @@ fn snapshot_checkbox_indeterminate_semantics() {
     snapshot_for_root("checkbox_indeterminate_semantics", bounds, |cx| {
         let model = cx.app.models_mut().insert(None::<bool>);
         vec![
-            fret_ui_shadcn::Checkbox::new_optional(model)
+            shadcn::Checkbox::new_optional(model)
                 .a11y_label("Agree")
                 .into_element(cx),
         ]
@@ -1062,9 +1063,9 @@ fn snapshot_extras_announcement_default() {
     );
     snapshot_for_root("extras_announcement_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Announcement::new([
-                fret_ui_shadcn::extras::AnnouncementTag::new("New").into_element(cx),
-                fret_ui_shadcn::extras::AnnouncementTitle::new([cx.text("Announcement")])
+            fret_ui_shadcn::raw::extras::Announcement::new([
+                fret_ui_shadcn::raw::extras::AnnouncementTag::new("New").into_element(cx),
+                fret_ui_shadcn::raw::extras::AnnouncementTitle::new([cx.text("Announcement")])
                     .into_element(cx),
             ])
             .into_element(cx),
@@ -1082,12 +1083,12 @@ fn snapshot_extras_banner_default() {
         let icon =
             fret_ui_kit::declarative::icon::icon(cx, fret_icons::IconId::new_static("lucide.info"));
         vec![
-            fret_ui_shadcn::extras::Banner::new([
-                fret_ui_shadcn::extras::BannerIcon::new(icon).into_element(cx),
-                fret_ui_shadcn::extras::BannerTitle::new("A new version is available.")
+            fret_ui_shadcn::raw::extras::Banner::new([
+                fret_ui_shadcn::raw::extras::BannerIcon::new(icon).into_element(cx),
+                fret_ui_shadcn::raw::extras::BannerTitle::new("A new version is available.")
                     .into_element(cx),
-                fret_ui_shadcn::extras::BannerAction::new("Upgrade").into_element(cx),
-                fret_ui_shadcn::extras::BannerClose::new().into_element(cx),
+                fret_ui_shadcn::raw::extras::BannerAction::new("Upgrade").into_element(cx),
+                fret_ui_shadcn::raw::extras::BannerClose::new().into_element(cx),
             ])
             .inset(true)
             .into_element(cx),
@@ -1103,7 +1104,7 @@ fn snapshot_extras_tags_default() {
     );
     snapshot_for_root("extras_tags_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Tags::new([
+            fret_ui_shadcn::raw::extras::Tags::new([
                 "Alpha",
                 "Beta",
                 "Gamma",
@@ -1123,8 +1124,10 @@ fn snapshot_extras_marquee_default() {
     );
     snapshot_for_root("extras_marquee_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .into_element(cx),
         ]
     });
 }
@@ -1137,9 +1140,11 @@ fn snapshot_extras_marquee_right_default() {
     );
     snapshot_for_root("extras_marquee_right_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .direction(fret_ui_shadcn::extras::MarqueeDirection::Right)
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .direction(fret_ui_shadcn::raw::extras::MarqueeDirection::Right)
+            .into_element(cx),
         ]
     });
 }
@@ -1152,9 +1157,11 @@ fn snapshot_extras_marquee_static_default() {
     );
     snapshot_for_root("extras_marquee_static_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .speed_px_per_frame(Px(0.0))
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .speed_px_per_frame(Px(0.0))
+            .into_element(cx),
         ]
     });
 }
@@ -1167,9 +1174,11 @@ fn snapshot_extras_marquee_cycle_width_default() {
     );
     snapshot_for_root("extras_marquee_cycle_width_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
-                .cycle_width_px(Px(240.0))
-                .into_element(cx),
+            fret_ui_shadcn::raw::extras::Marquee::new([
+                "Alpha", "Beta", "Gamma", "Delta", "Epsilon",
+            ])
+            .cycle_width_px(Px(240.0))
+            .into_element(cx),
         ]
     });
 }
@@ -1182,10 +1191,10 @@ fn snapshot_extras_ticker_default() {
     );
     snapshot_for_root("extras_ticker_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Ticker::new("AAPL")
+            fret_ui_shadcn::raw::extras::Ticker::new("AAPL")
                 .price("$199.18")
                 .change("+1.01%")
-                .change_kind(fret_ui_shadcn::extras::TickerChangeKind::Up)
+                .change_kind(fret_ui_shadcn::raw::extras::TickerChangeKind::Up)
                 .into_element(cx),
         ]
     });
@@ -1199,20 +1208,20 @@ fn snapshot_extras_relative_time_default() {
     );
     snapshot_for_root("extras_relative_time_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::RelativeTime::new([
-                fret_ui_shadcn::extras::RelativeTimeZone::new(
+            fret_ui_shadcn::raw::extras::RelativeTime::new([
+                fret_ui_shadcn::raw::extras::RelativeTimeZone::new(
                     "UTC",
                     "February 9, 2026",
                     "15:04:05",
                 )
                 .into_element(cx),
-                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                fret_ui_shadcn::raw::extras::RelativeTimeZone::new(
                     "PST",
                     "February 9, 2026",
                     "07:04:05",
                 )
                 .into_element(cx),
-                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                fret_ui_shadcn::raw::extras::RelativeTimeZone::new(
                     "CET",
                     "February 9, 2026",
                     "16:04:05",
@@ -1232,7 +1241,7 @@ fn snapshot_extras_rating_default() {
     );
     snapshot_for_root("extras_rating_default", bounds, |cx| {
         vec![
-            fret_ui_shadcn::extras::Rating::uncontrolled(3)
+            fret_ui_shadcn::raw::extras::Rating::uncontrolled(3)
                 .count(5)
                 .into_element(cx),
         ]
@@ -1246,25 +1255,13 @@ fn snapshot_extras_avatar_stack_default() {
         CoreSize::new(Px(560.0), Px(180.0)),
     );
     snapshot_for_root("extras_avatar_stack_default", bounds, |cx| {
-        let a =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("A").into_element(cx)],
-            );
-        let b =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("B").into_element(cx)],
-            );
-        let c =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("C").into_element(cx)],
-            );
-        let d =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("D").into_element(cx)],
-            );
+        let a = shadcn::Avatar::new([shadcn::AvatarFallback::new("A").into_element(cx)]);
+        let b = shadcn::Avatar::new([shadcn::AvatarFallback::new("B").into_element(cx)]);
+        let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("C").into_element(cx)]);
+        let d = shadcn::Avatar::new([shadcn::AvatarFallback::new("D").into_element(cx)]);
 
         vec![
-            fret_ui_shadcn::extras::AvatarStack::new([a, b, c, d])
+            fret_ui_shadcn::raw::extras::AvatarStack::new([a, b, c, d])
                 .size_px(Px(40.0))
                 .into_element(cx),
         ]
@@ -1278,33 +1275,15 @@ fn snapshot_extras_avatar_stack_overflow_default() {
         CoreSize::new(Px(560.0), Px(180.0)),
     );
     snapshot_for_root("extras_avatar_stack_overflow_default", bounds, |cx| {
-        let a =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("A").into_element(cx)],
-            );
-        let b =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("B").into_element(cx)],
-            );
-        let c =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("C").into_element(cx)],
-            );
-        let d =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("D").into_element(cx)],
-            );
-        let e =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("E").into_element(cx)],
-            );
-        let f =
-            fret_ui_shadcn::Avatar::new(
-                [fret_ui_shadcn::AvatarFallback::new("F").into_element(cx)],
-            );
+        let a = shadcn::Avatar::new([shadcn::AvatarFallback::new("A").into_element(cx)]);
+        let b = shadcn::Avatar::new([shadcn::AvatarFallback::new("B").into_element(cx)]);
+        let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("C").into_element(cx)]);
+        let d = shadcn::Avatar::new([shadcn::AvatarFallback::new("D").into_element(cx)]);
+        let e = shadcn::Avatar::new([shadcn::AvatarFallback::new("E").into_element(cx)]);
+        let f = shadcn::Avatar::new([shadcn::AvatarFallback::new("F").into_element(cx)]);
 
         vec![
-            fret_ui_shadcn::extras::AvatarStack::new([a, b, c, d, e, f])
+            fret_ui_shadcn::raw::extras::AvatarStack::new([a, b, c, d, e, f])
                 .size_px(Px(40.0))
                 .max_visible(4)
                 .into_element(cx),
@@ -1320,20 +1299,24 @@ fn snapshot_extras_kanban_default() {
     );
     snapshot_for_root("extras_kanban_default", bounds, |cx| {
         let columns = vec![
-            fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
-            fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
-            fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+            fret_ui_shadcn::raw::extras::KanbanColumn::new("backlog", "Backlog"),
+            fret_ui_shadcn::raw::extras::KanbanColumn::new("in_progress", "In Progress"),
+            fret_ui_shadcn::raw::extras::KanbanColumn::new("done", "Done"),
         ];
 
         let items = cx.app.models_mut().insert(vec![
-            fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new(
+                "card-4",
+                "Fix regressions",
+                "in_progress",
+            ),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
         ]);
 
-        vec![fret_ui_shadcn::extras::Kanban::new(columns, items).into_element(cx)]
+        vec![fret_ui_shadcn::raw::extras::Kanban::new(columns, items).into_element(cx)]
     });
 }
 
@@ -1345,20 +1328,24 @@ fn snapshot_extras_kanban_custom_cards() {
     );
     snapshot_for_root("extras_kanban_custom_cards", bounds, |cx| {
         let columns = vec![
-            fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
-            fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
-            fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+            fret_ui_shadcn::raw::extras::KanbanColumn::new("backlog", "Backlog"),
+            fret_ui_shadcn::raw::extras::KanbanColumn::new("in_progress", "In Progress"),
+            fret_ui_shadcn::raw::extras::KanbanColumn::new("done", "Done"),
         ];
 
         let items = cx.app.models_mut().insert(vec![
-            fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
-            fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+            fret_ui_shadcn::raw::extras::KanbanItem::new(
+                "card-4",
+                "Fix regressions",
+                "in_progress",
+            ),
+            fret_ui_shadcn::raw::extras::KanbanItem::new("card-5", "Ship", "done"),
         ]);
 
-        let board = fret_ui_shadcn::extras::Kanban::new(columns, items).into_element_with(
+        let board = fret_ui_shadcn::raw::extras::Kanban::new(columns, items).into_element_with(
             cx,
             |cx, item, ctx| {
                 let title = fret_ui_kit::ui::text(item.name.clone())
@@ -1368,12 +1355,12 @@ fn snapshot_extras_kanban_custom_cards() {
                     .truncate()
                     .into_element(cx);
 
-                let badge = fret_ui_shadcn::Badge::new(item.column.clone())
-                    .variant(fret_ui_shadcn::BadgeVariant::Secondary)
+                let badge = shadcn::Badge::new(item.column.clone())
+                    .variant(shadcn::BadgeVariant::Secondary)
                     .into_element(cx);
 
                 let mut children = vec![title, badge];
-                if ctx.mode == fret_ui_shadcn::extras::KanbanCardMode::Overlay {
+                if ctx.mode == fret_ui_shadcn::raw::extras::KanbanCardMode::Overlay {
                     children.push(fret_ui_kit::ui::text("overlay").nowrap().into_element(cx));
                 }
 

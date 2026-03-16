@@ -255,7 +255,7 @@ impl Table {
             children,
         );
 
-        crate::ScrollArea::new([table])
+        crate::scroll_area::ScrollArea::new([table])
             .axis(ScrollAxis::X)
             .type_(ScrollAreaType::Auto)
             .refine_layout(LayoutRefinement::default().w_full().relative())
@@ -1527,7 +1527,10 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(cx, TableCell::build(crate::Card::build(|_cx, _out| {})));
+            out.push_ui(
+                cx,
+                TableCell::build(crate::card::Card::build(|_cx, _out| {})),
+            );
 
             assert_eq!(out.len(), 1);
             assert!(contains_inherited_foreground(&out[0]));
@@ -1544,7 +1547,7 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let cell = TableCell::build(crate::Card::build(|_cx, _out| {}))
+            let cell = TableCell::build(crate::card::Card::build(|_cx, _out| {}))
                 .ui()
                 .w_px(Px(240.0))
                 .into_element(cx);

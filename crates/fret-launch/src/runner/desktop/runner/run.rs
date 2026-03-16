@@ -25,8 +25,21 @@ pub fn run_app_with_event_loop<D: super::WinitAppDriver + 'static>(
     app: App,
     driver: D,
 ) -> Result<(), RunnerError> {
+    run_app_with_event_loop_and_asset_reload(event_loop, config, app, driver, None)
+}
+
+fn run_app_with_event_loop_and_asset_reload<D: super::WinitAppDriver + 'static>(
+    event_loop: EventLoop,
+    config: super::WinitRunnerConfig,
+    app: App,
+    driver: D,
+    asset_reload: Option<super::asset_reload::AssetReloadController>,
+) -> Result<(), RunnerError> {
     crate::stacksafe_config::configure_stacksafe_from_env();
     let mut runner = super::WinitRunner::new_app(config, app, driver);
+    if let Some(asset_reload) = asset_reload {
+        runner.set_asset_reload_controller(asset_reload);
+    }
     #[cfg(target_os = "android")]
     runner.set_android_app(event_loop.android_app().clone());
     runner.set_event_loop_proxy(event_loop.create_proxy());
@@ -60,6 +73,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             config,
             app,
             driver,
+            asset_reload: None,
             dispatcher,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
@@ -154,6 +168,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         runner.publish_system_font_rescan_state();
         runner
     }
+
+    pub(super) fn set_asset_reload_controller(
+        &mut self,
+        mut asset_reload: super::asset_reload::AssetReloadController,
+    ) {
+        asset_reload.publish_support(&mut self.app);
+        asset_reload.arm_for_startup(&mut self.app, Instant::now(), &mut self.timers);
+        self.asset_reload = Some(asset_reload);
+    }
 }
 
 pub struct WinitAppBuilder<D> {
@@ -165,6 +188,8 @@ pub struct WinitAppBuilder<D> {
     on_gpu_ready: Option<Box<OnGpuReadyHook>>,
     event_loop_builder_hook: Option<Box<EventLoopBuilderHook>>,
     event_loop: Option<EventLoop>,
+    asset_reload_policy: Option<crate::assets::AssetReloadPolicy>,
+    asset_reload_targets: Vec<crate::assets::AssetReloadTarget>,
 }
 
 impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
@@ -178,6 +203,8 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
             on_gpu_ready: None,
             event_loop_builder_hook: None,
             event_loop: None,
+            asset_reload_policy: None,
+            asset_reload_targets: Vec::new(),
         }
     }
 
@@ -225,6 +252,97 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
         self
     }
 
+    /// Enable development asset reload polling for file-backed builder mounts.
+    ///
+    /// This only applies to native file-backed assets mounted through `with_asset_manifest(...)`,
+    /// `with_asset_dir(...)`, or the development lane of `with_asset_startup(...)`.
+    pub fn with_asset_reload_policy(mut self, policy: crate::assets::AssetReloadPolicy) -> Self {
+        self.asset_reload_policy = Some(policy);
+        self
+    }
+
+    /// Register a native/package-dev asset manifest on the builder path.
+    ///
+    /// This loads the manifest eagerly so failures stay on the build/configure path instead of
+    /// surfacing later during `run()`.
+    pub fn with_asset_manifest(
+        self,
+        manifest_path: impl AsRef<std::path::Path>,
+    ) -> Result<Self, RunnerError> {
+        let manifest_path = manifest_path.as_ref().to_path_buf();
+        let resolver = std::sync::Arc::new(
+            crate::assets::FileAssetManifestResolver::from_manifest_path(&manifest_path)?,
+        );
+        let mut builder = self.init_app(move |app| {
+            crate::assets::register_resolver(app, resolver);
+        });
+        builder
+            .asset_reload_targets
+            .push(crate::assets::AssetReloadTarget::Manifest {
+                path: manifest_path,
+            });
+        Ok(builder)
+    }
+
+    /// Scan a native/package-dev directory and mount it as one logical bundle on the builder path.
+    ///
+    /// This eagerly validates the directory so failures stay on the build/configure path instead
+    /// of surfacing later during `run()`. Prefer [`with_asset_manifest`](Self::with_asset_manifest)
+    /// when you want an explicit manifest artifact that tooling can emit, review, or package.
+    pub fn with_asset_dir(
+        self,
+        bundle: impl Into<fret_assets::AssetBundleId>,
+        dir: impl AsRef<std::path::Path>,
+    ) -> Result<Self, RunnerError> {
+        let dir = dir.as_ref().to_path_buf();
+        let resolver = std::sync::Arc::new(
+            crate::assets::FileAssetManifestResolver::from_bundle_dir(bundle, &dir)?,
+        );
+        let mut builder = self.init_app(move |app| {
+            crate::assets::register_resolver(app, resolver);
+        });
+        builder
+            .asset_reload_targets
+            .push(crate::assets::AssetReloadTarget::Dir { path: dir });
+        Ok(builder)
+    }
+
+    /// Register static bundle-scoped entries on the builder path.
+    pub fn with_bundle_asset_entries(
+        self,
+        bundle: impl Into<fret_assets::AssetBundleId>,
+        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
+    ) -> Self {
+        let bundle = bundle.into();
+        let entries = entries.into_iter().collect::<Vec<_>>();
+        self.init_app(move |app| {
+            crate::assets::register_bundle_entries(app, bundle, entries);
+        })
+    }
+
+    /// Register static embedded entries on the builder path.
+    pub fn with_embedded_asset_entries(
+        self,
+        owner: impl Into<fret_assets::AssetBundleId>,
+        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
+    ) -> Self {
+        let owner = owner.into();
+        let entries = entries.into_iter().collect::<Vec<_>>();
+        self.init_app(move |app| {
+            crate::assets::register_embedded_entries(app, owner, entries);
+        })
+    }
+
+    /// Apply one explicit development-vs-packaged startup plan on the builder path.
+    pub fn with_asset_startup(
+        self,
+        app_bundle: impl Into<fret_assets::AssetBundleId>,
+        mode: crate::assets::AssetStartupMode,
+        plan: crate::assets::AssetStartupPlan,
+    ) -> Result<Self, RunnerError> {
+        apply_asset_mounts(self, plan.into_mounts(app_bundle.into(), mode)?)
+    }
+
     pub fn enable_windows_ime_msg_hook(self) -> Self {
         #[cfg(windows)]
         {
@@ -259,7 +377,14 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
             on_gpu_ready,
             event_loop_builder_hook,
             event_loop,
+            asset_reload_policy,
+            asset_reload_targets,
         } = self;
+
+        let asset_reload = super::asset_reload::AssetReloadController::new(
+            asset_reload_policy,
+            asset_reload_targets,
+        );
 
         let driver = HookedDriver {
             inner: driver,
@@ -268,7 +393,13 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
         };
 
         match event_loop {
-            Some(event_loop) => run_app_with_event_loop(event_loop, config, app, driver),
+            Some(event_loop) => run_app_with_event_loop_and_asset_reload(
+                event_loop,
+                config,
+                app,
+                driver,
+                asset_reload,
+            ),
             None => {
                 let mut builder = EventLoop::builder();
                 if let Some(hook) = event_loop_builder_hook {
@@ -285,10 +416,39 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
                 }
 
                 let event_loop = builder.build()?;
-                run_app_with_event_loop(event_loop, config, app, driver)
+                run_app_with_event_loop_and_asset_reload(
+                    event_loop,
+                    config,
+                    app,
+                    driver,
+                    asset_reload,
+                )
             }
         }
     }
+}
+
+fn apply_asset_mount<D: super::WinitAppDriver + 'static>(
+    builder: WinitAppBuilder<D>,
+    mount: crate::assets::AssetMount,
+) -> Result<WinitAppBuilder<D>, RunnerError> {
+    match mount {
+        crate::assets::AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir),
+        crate::assets::AssetMount::Manifest { path } => builder.with_asset_manifest(path),
+        crate::assets::AssetMount::BundleEntries { bundle, entries } => {
+            Ok(builder.with_bundle_asset_entries(bundle, entries))
+        }
+        crate::assets::AssetMount::EmbeddedEntries { owner, entries } => {
+            Ok(builder.with_embedded_asset_entries(owner, entries))
+        }
+    }
+}
+
+fn apply_asset_mounts<D: super::WinitAppDriver + 'static>(
+    builder: WinitAppBuilder<D>,
+    mounts: Vec<crate::assets::AssetMount>,
+) -> Result<WinitAppBuilder<D>, RunnerError> {
+    mounts.into_iter().try_fold(builder, apply_asset_mount)
 }
 
 struct HookedDriver<D> {
@@ -592,5 +752,138 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
     ) {
         self.inner
             .accessibility_replace_selected_text(app, services, window, state, target, value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use fret_app::App;
+    use fret_assets::{AssetBundleId, AssetLocator, AssetRevision, StaticAssetEntry};
+    use fret_core::AppWindowId;
+    use fret_runtime::resolve_asset_locator_bytes;
+
+    use super::WinitAppBuilder;
+    use crate::{RunnerError, WinitAppDriver};
+
+    struct TestDriver;
+    struct WindowState;
+
+    static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
+
+    impl WinitAppDriver for TestDriver {
+        type WindowState = WindowState;
+
+        fn create_window_state(
+            &mut self,
+            _app: &mut App,
+            _window: AppWindowId,
+        ) -> Self::WindowState {
+            WindowState
+        }
+
+        fn handle_event(
+            &mut self,
+            _context: crate::WinitEventContext<'_, Self::WindowState>,
+            _event: &fret_core::Event,
+        ) {
+        }
+
+        fn render(&mut self, _context: crate::WinitRenderContext<'_, Self::WindowState>) {}
+    }
+
+    fn make_temp_dir(tag: &str) -> PathBuf {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let dir =
+            std::env::temp_dir().join(format!("fret-launch-{tag}-{}-{id}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    #[test]
+    fn winit_app_builder_with_asset_startup_installs_selected_packaged_lane() {
+        let bundle = AssetBundleId::app("launch-asset-startup-packaged");
+        let builder = WinitAppBuilder::new(App::new(), TestDriver)
+            .with_asset_startup(
+                bundle.clone(),
+                crate::assets::AssetStartupMode::Packaged,
+                crate::assets::AssetStartupPlan::new()
+                    .development_manifest("assets.manifest.json")
+                    .packaged_entries([StaticAssetEntry::new(
+                        "images/logo.png",
+                        AssetRevision(1),
+                        b"builder-bytes",
+                    )]),
+            )
+            .expect("packaged asset startup plan should load on launch builder path");
+
+        let resolved = resolve_asset_locator_bytes(
+            &builder.app,
+            AssetLocator::bundle(bundle, "images/logo.png"),
+        )
+        .expect("selected packaged lane should register bundle asset entries");
+        assert_eq!(resolved.bytes.as_ref(), b"builder-bytes");
+    }
+
+    #[test]
+    fn winit_app_builder_asset_manifest_fails_early_for_missing_files() {
+        let missing =
+            std::env::temp_dir().join("definitely-missing-fret-launch-assets.manifest.json");
+        let err = match WinitAppBuilder::new(App::new(), TestDriver).with_asset_manifest(&missing) {
+            Ok(_) => panic!("missing manifest should fail on launch builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(err, RunnerError::AssetManifest(_)));
+    }
+
+    #[test]
+    fn winit_app_builder_asset_dir_fails_early_for_missing_directories() {
+        let missing = std::env::temp_dir().join("definitely-missing-fret-launch-assets-dir");
+        let err = match WinitAppBuilder::new(App::new(), TestDriver)
+            .with_asset_dir(AssetBundleId::app("launch-missing-asset-dir"), &missing)
+        {
+            Ok(_) => panic!("missing asset dir should fail on launch builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(err, RunnerError::AssetManifest(_)));
+    }
+
+    #[test]
+    fn winit_app_builder_asset_startup_fails_when_selected_lane_is_missing() {
+        let err = match WinitAppBuilder::new(App::new(), TestDriver).with_asset_startup(
+            AssetBundleId::app("launch-missing-asset-startup-packaged"),
+            crate::assets::AssetStartupMode::Packaged,
+            crate::assets::AssetStartupPlan::new().development_dir("assets"),
+        ) {
+            Ok(_) => panic!("missing packaged lane should fail on launch builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(
+            err,
+            RunnerError::AssetStartup(crate::assets::AssetStartupPlanError::MissingPackagedLane)
+        ));
+    }
+
+    #[test]
+    fn winit_app_builder_asset_dir_registers_bundle_assets() {
+        let asset_dir = make_temp_dir("winit-app-builder-asset-dir").join("assets");
+        std::fs::create_dir_all(asset_dir.join("images")).expect("create images dir");
+        std::fs::write(asset_dir.join("images/logo.png"), b"launch-asset-dir")
+            .expect("write asset");
+
+        let bundle = AssetBundleId::app("launch-asset-dir-bundle");
+        let builder = WinitAppBuilder::new(App::new(), TestDriver)
+            .with_asset_dir(bundle.clone(), &asset_dir)
+            .expect("existing asset directory should load on launch builder path");
+
+        let resolved = resolve_asset_locator_bytes(
+            &builder.app,
+            AssetLocator::bundle(bundle, "images/logo.png"),
+        )
+        .expect("asset directory should register a bundle resolver");
+        assert_eq!(resolved.bytes.as_ref(), b"launch-asset-dir");
     }
 }

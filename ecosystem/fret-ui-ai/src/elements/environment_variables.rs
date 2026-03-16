@@ -23,7 +23,7 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
-use fret_ui_shadcn::{Badge, BadgeVariant, Switch};
+use fret_ui_shadcn::facade::{Badge, BadgeVariant, Switch};
 
 pub type OnShowValuesChange =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, bool) + 'static>;

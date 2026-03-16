@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -21,8 +22,8 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
-    opts: fret_ui_shadcn::CarouselOptions,
+    api: Model<shadcn::CarouselApiSnapshot>,
+    opts: shadcn::CarouselOptions,
     slide_order: &[u8],
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
@@ -42,7 +43,7 @@ fn render_frame(
                     cx.container(Default::default(), |_cx| vec![])
                 })
             });
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .opts(opts)
                 .api_snapshot_model(api)
                 .track_start_neg_margin(Space::N0)
@@ -75,8 +76,8 @@ fn carousel_reinit_generation_increments_on_slide_reorder() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
-    let opts = fret_ui_shadcn::CarouselOptions::default().embla_engine(true);
+        .insert(shadcn::CarouselApiSnapshot::default());
+    let opts = shadcn::CarouselOptions::default().embla_engine(true);
 
     let order_a = [0u8, 1, 2, 3, 4];
     for _ in 0..3 {

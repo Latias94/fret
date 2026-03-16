@@ -52,9 +52,11 @@ pub fn text_selection_context_menu_entries() -> Vec<ContextMenuEntry> {
 /// # use fret_runtime::Model;
 /// # use fret_ui::ElementContext;
 /// # use fret_ui::UiHost;
-/// # use fret_ui_shadcn::{Input, text_edit_context_menu_controllable};
+/// # use fret_ui_shadcn::{facade as shadcn, prelude::*};
+/// # use fret_ui_shadcn::text_edit_context_menu_controllable;
 /// # fn demo<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<String>) {
-/// let trigger = |cx: &mut ElementContext<'_, H>| Input::new(model.clone()).into_element(cx);
+/// let trigger =
+///     |cx: &mut ElementContext<'_, H>| shadcn::Input::new(model.clone()).into_element(cx);
 /// let _menu = text_edit_context_menu_controllable(cx, None, false, trigger);
 /// # }
 /// ```

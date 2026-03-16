@@ -26,7 +26,7 @@ fn fret_menubar_menu_tracks_trigger_when_underlay_scrolls() {
     let file_test_id = "scroll-underlay-menubar-file";
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::menubar::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+        use fret_ui_shadcn::facade::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
 
         let scroll_handle = scroll_handle.clone();
 

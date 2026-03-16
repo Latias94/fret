@@ -2,7 +2,8 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize, TextWrap};
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
-use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
+use fret_ui_shadcn::facade::{self as shadcn, themes as shadcn_themes};
+use fret_ui_shadcn::raw::sidebar::SidebarMenuButtonSize;
 
 #[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
@@ -112,10 +113,10 @@ fn run_fret_root(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn_themes::ShadcnBaseColor::Neutral,
+        shadcn_themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -182,7 +183,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
 
     let snap_default = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
+            shadcn::SidebarMenuButton::new("Sidebar Menu Button")
                 .size(SidebarMenuButtonSize::Default)
                 .into_element(cx),
         ]
@@ -207,7 +208,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
         let collapsed = (web_lg.rect.h - 32.0).abs() <= 1.0;
         let snap_lg = run_fret_root(bounds, |cx| {
             vec![
-                fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
+                shadcn::SidebarMenuButton::new("Sidebar Menu Button")
                     .size(SidebarMenuButtonSize::Lg)
                     .collapsed(collapsed)
                     .into_element(cx),

@@ -2,13 +2,16 @@
 
 use std::sync::Arc;
 
+use fret_runtime::ActionId;
 use fret_ui::Theme;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::typography::{description_text_refinement, muted_foreground_color};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
-use fret_ui_shadcn::{Alert, Button, ButtonSize, ButtonVariant};
+use fret_ui_shadcn::facade::{Alert, Button, ButtonSize, ButtonVariant};
+
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn std::any::Any + Send + Sync> + 'static>;
 
 /// Tool UI part state aligned with AI Elements `ToolUIPart["state"]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -641,6 +644,8 @@ impl ConfirmationActions {
 pub struct ConfirmationAction {
     label: Arc<str>,
     variant: ButtonVariant,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<fret_ui::action::OnActivate>,
     disabled: bool,
     test_id: Option<Arc<str>>,
@@ -651,6 +656,8 @@ impl std::fmt::Debug for ConfirmationAction {
         f.debug_struct("ConfirmationAction")
             .field("label", &self.label)
             .field("variant", &self.variant)
+            .field("action", &self.action)
+            .field("action_payload", &self.action_payload.is_some())
             .field("has_on_activate", &self.on_activate.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id.as_deref())
@@ -663,6 +670,8 @@ impl ConfirmationAction {
         Self {
             label: label.into(),
             variant: ButtonVariant::Default,
+            action: None,
+            action_payload: None,
             on_activate: None,
             disabled: false,
             test_id: None,
@@ -671,6 +680,28 @@ impl ConfirmationAction {
 
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    /// Bind a stable action ID to this confirmation action (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized confirmation actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: std::any::Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`ConfirmationAction::action_payload`], but computes the payload lazily.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -693,6 +724,12 @@ impl ConfirmationAction {
         let mut button = Button::new(self.label)
             .variant(self.variant)
             .size(ButtonSize::Sm);
+        if let Some(action) = self.action {
+            button = button.action(action);
+        }
+        if let Some(payload) = self.action_payload {
+            button = button.action_payload_factory(payload);
+        }
         if let Some(on_activate) = self.on_activate {
             button = button.on_activate(on_activate);
         }
@@ -711,7 +748,9 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Axis, Point, Px, Rect, SemanticsRole, Size};
+    use fret_core::{
+        AppWindowId, Axis, Point, Px, Rect, SemanticsRole, Size, TextLineHeightPolicy,
+    };
     use fret_ui::element::{CrossAlign, ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {

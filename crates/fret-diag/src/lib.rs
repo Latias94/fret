@@ -480,6 +480,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_baseline_seed_preset_paths: Vec<PathBuf> = Vec::new();
     let mut perf_baseline_seed_specs: Vec<String> = Vec::new();
     let mut check_idle_no_paint_min: Option<u64> = None;
+    let mut check_asset_load_missing_bundle_assets_max: Option<u64> = None;
+    let mut check_asset_load_stale_manifest_max: Option<u64> = None;
+    let mut check_asset_load_unsupported_file_max: Option<u64> = None;
+    let mut check_asset_load_unsupported_url_max: Option<u64> = None;
+    let mut check_asset_load_external_reference_unavailable_max: Option<u64> = None;
+    let mut check_asset_load_revision_changes_max: Option<u64> = None;
+    let mut check_bundled_font_baseline_source: Option<String> = None;
+    let mut check_asset_reload_epoch_min: Option<u64> = None;
+    let mut check_asset_reload_configured_backend: Option<String> = None;
+    let mut check_asset_reload_active_backend: Option<String> = None;
+    let mut check_asset_reload_fallback_reason: Option<String> = None;
     let mut check_triage_hint_absent_codes: Vec<String> = Vec::new();
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
@@ -1746,6 +1757,132 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --check-idle-no-paint-min".to_string())?,
                 );
+                i += 1;
+            }
+            "--check-asset-load-missing-bundle-assets-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-load-missing-bundle-assets-max"
+                            .to_string(),
+                    );
+                };
+                check_asset_load_missing_bundle_assets_max =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-asset-load-missing-bundle-assets-max".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-asset-load-stale-manifest-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-load-stale-manifest-max".to_string()
+                    );
+                };
+                check_asset_load_stale_manifest_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-asset-load-stale-manifest-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-asset-load-unsupported-file-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-load-unsupported-file-max".to_string()
+                    );
+                };
+                check_asset_load_unsupported_file_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-asset-load-unsupported-file-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-asset-load-unsupported-url-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-load-unsupported-url-max".to_string()
+                    );
+                };
+                check_asset_load_unsupported_url_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-asset-load-unsupported-url-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-asset-load-external-reference-unavailable-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-load-external-reference-unavailable-max"
+                            .to_string(),
+                    );
+                };
+                check_asset_load_external_reference_unavailable_max =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-asset-load-external-reference-unavailable-max"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-asset-load-revision-changes-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-load-revision-changes-max".to_string()
+                    );
+                };
+                check_asset_load_revision_changes_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-asset-load-revision-changes-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-bundled-font-baseline-source" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-bundled-font-baseline-source".to_string()
+                    );
+                };
+                check_bundled_font_baseline_source = Some(v);
+                i += 1;
+            }
+            "--check-asset-reload-epoch-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-asset-reload-epoch-min".to_string());
+                };
+                check_asset_reload_epoch_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-asset-reload-epoch-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-asset-reload-configured-backend" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-reload-configured-backend".to_string()
+                    );
+                };
+                check_asset_reload_configured_backend = Some(v);
+                i += 1;
+            }
+            "--check-asset-reload-active-backend" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-asset-reload-active-backend".to_string());
+                };
+                check_asset_reload_active_backend = Some(v);
+                i += 1;
+            }
+            "--check-asset-reload-fallback-reason" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-asset-reload-fallback-reason".to_string()
+                    );
+                };
+                check_asset_reload_fallback_reason = Some(v);
                 i += 1;
             }
             "--check-triage-hint-absent" => {
@@ -3177,6 +3314,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_hover_layout_max: check_hover_layout_max.clone(),
         check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
         check_idle_no_paint_min: check_idle_no_paint_min.clone(),
+        check_asset_load_missing_bundle_assets_max: check_asset_load_missing_bundle_assets_max.clone(),
+        check_asset_load_stale_manifest_max: check_asset_load_stale_manifest_max.clone(),
+        check_asset_load_unsupported_file_max: check_asset_load_unsupported_file_max.clone(),
+        check_asset_load_unsupported_url_max: check_asset_load_unsupported_url_max.clone(),
+        check_asset_load_external_reference_unavailable_max: check_asset_load_external_reference_unavailable_max.clone(),
+        check_asset_load_revision_changes_max: check_asset_load_revision_changes_max.clone(),
+        check_bundled_font_baseline_source: check_bundled_font_baseline_source.clone(),
+        check_asset_reload_epoch_min: check_asset_reload_epoch_min.clone(),
+        check_asset_reload_configured_backend: check_asset_reload_configured_backend.clone(),
+        check_asset_reload_active_backend: check_asset_reload_active_backend.clone(),
+        check_asset_reload_fallback_reason: check_asset_reload_fallback_reason.clone(),
         check_layout_fast_path_min: check_layout_fast_path_min.clone(),
         check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
         check_node_graph_cull_window_shifts_min: check_node_graph_cull_window_shifts_min.clone(),
@@ -3468,6 +3616,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_hover_layout_max: check_hover_layout_max.clone(),
                 check_hello_world_compare_idle_present_max_delta: check_hello_world_compare_idle_present_max_delta.clone(),
                 check_idle_no_paint_min: check_idle_no_paint_min.clone(),
+                check_asset_load_missing_bundle_assets_max: check_asset_load_missing_bundle_assets_max.clone(),
+                check_asset_load_stale_manifest_max: check_asset_load_stale_manifest_max.clone(),
+                check_asset_load_unsupported_file_max: check_asset_load_unsupported_file_max.clone(),
+                check_asset_load_unsupported_url_max: check_asset_load_unsupported_url_max.clone(),
+                check_asset_load_external_reference_unavailable_max: check_asset_load_external_reference_unavailable_max.clone(),
+                check_asset_load_revision_changes_max: check_asset_load_revision_changes_max.clone(),
+                check_bundled_font_baseline_source: check_bundled_font_baseline_source.clone(),
+                check_asset_reload_epoch_min: check_asset_reload_epoch_min.clone(),
+                check_asset_reload_configured_backend: check_asset_reload_configured_backend.clone(),
+                check_asset_reload_active_backend: check_asset_reload_active_backend.clone(),
+                check_asset_reload_fallback_reason: check_asset_reload_fallback_reason.clone(),
                 check_layout_fast_path_min: check_layout_fast_path_min.clone(),
                 check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
                 check_node_graph_cull_window_shifts_min: check_node_graph_cull_window_shifts_min.clone(),
@@ -3645,6 +3804,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_stale_scene_test_id: check_stale_scene_test_id.clone(),
                 check_stale_scene_eps,
                 check_idle_no_paint_min,
+                check_asset_load_missing_bundle_assets_max,
+                check_asset_load_stale_manifest_max,
+                check_asset_load_unsupported_file_max,
+                check_asset_load_unsupported_url_max,
+                check_asset_load_external_reference_unavailable_max,
+                check_asset_load_revision_changes_max,
+                check_bundled_font_baseline_source: check_bundled_font_baseline_source.clone(),
+                check_asset_reload_epoch_min,
+                check_asset_reload_configured_backend: check_asset_reload_configured_backend.clone(),
+                check_asset_reload_active_backend: check_asset_reload_active_backend.clone(),
+                check_asset_reload_fallback_reason: check_asset_reload_fallback_reason.clone(),
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
                 check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
                 check_semantics_changed_repainted,

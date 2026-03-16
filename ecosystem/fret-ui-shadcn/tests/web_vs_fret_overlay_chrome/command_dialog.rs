@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "command_dialog/fixtures.rs"]
 mod fixtures;
@@ -8,7 +9,7 @@ fn build_shadcn_command_dialog_page(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+    use shadcn::{Button, CommandDialog, CommandItem};
 
     let query = cx.local_model_keyed("query", String::new);
 
@@ -47,8 +48,8 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
     let window = AppWindowId::default();
     let mut app = App::new();
     let scheme = match web_theme_name {
-        "dark" => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-        _ => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        "dark" => shadcn::themes::ShadcnColorScheme::Dark,
+        _ => shadcn::themes::ShadcnColorScheme::Light,
     };
     setup_app_with_shadcn_theme_scheme(&mut app, scheme);
 
@@ -145,10 +146,11 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
         0.03,
     );
 
-    let text = find_best_text_color_near(
+    let text = find_best_text_color_near_preferring_opaque(
         &scene,
         option.bounds,
         leftish_text_probe_point(option.bounds),
+        0.95,
     )
     .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused option text color"));
     assert_rgba_close(

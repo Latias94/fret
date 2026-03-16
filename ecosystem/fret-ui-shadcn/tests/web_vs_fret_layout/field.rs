@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -126,9 +127,9 @@ fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content()
         let content_layout =
             decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
 
-        let content = fret_ui_shadcn::FieldContent::new(vec![
-            fret_ui_shadcn::FieldLabel::new("Name").into_element(cx),
-            fret_ui_shadcn::FieldDescription::new("Provide your full name for identification")
+        let content = shadcn::FieldContent::new(vec![
+            shadcn::FieldLabel::new("Name").into_element(cx),
+            shadcn::FieldDescription::new("Provide your full name for identification")
                 .into_element(cx),
         ])
         .into_element(cx);
@@ -144,13 +145,13 @@ fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content()
         );
 
         let model: Model<String> = cx.app.models_mut().insert(String::new());
-        let input = fret_ui_shadcn::Input::new(model)
+        let input = shadcn::Input::new(model)
             .a11y_label("NameInput")
             .placeholder("Evil Rabbit")
             .into_element(cx);
 
-        let field = fret_ui_shadcn::Field::new(vec![content, input])
-            .orientation(fret_ui_shadcn::FieldOrientation::Responsive)
+        let field = shadcn::Field::new(vec![content, input])
+            .orientation(shadcn::FieldOrientation::Responsive)
             .into_element(cx);
 
         vec![cx.container(
@@ -260,7 +261,7 @@ fn web_vs_fret_layout_field_input_geometry() {
                 label: Some(Arc::from("Golden:field-input:username:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Username").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Username").into_element(cx)],
         );
         let username_input = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -270,7 +271,7 @@ fn web_vs_fret_layout_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(username)
+                    shadcn::Input::new(username)
                         .a11y_label("Username")
                         .placeholder("Max Leiter")
                         .into_element(cx),
@@ -285,16 +286,14 @@ fn web_vs_fret_layout_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new(
-                        "Choose a unique username for your account.",
-                    )
-                    .into_element(cx),
+                    shadcn::FieldDescription::new("Choose a unique username for your account.")
+                        .into_element(cx),
                 ]
             },
         );
 
         let username_field =
-            fret_ui_shadcn::Field::new(vec![username_label, username_input, username_desc])
+            shadcn::Field::new(vec![username_label, username_input, username_desc])
                 .into_element(cx);
 
         let password_label = cx.semantics(
@@ -303,7 +302,7 @@ fn web_vs_fret_layout_field_input_geometry() {
                 label: Some(Arc::from("Golden:field-input:password:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Password").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Password").into_element(cx)],
         );
         let password_input = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -313,7 +312,7 @@ fn web_vs_fret_layout_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(password)
+                    shadcn::Input::new(password)
                         .a11y_label("Password")
                         .placeholder("????????")
                         .into_element(cx),
@@ -328,19 +327,18 @@ fn web_vs_fret_layout_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new("Must be at least 8 characters long.")
+                    shadcn::FieldDescription::new("Must be at least 8 characters long.")
                         .into_element(cx),
                 ]
             },
         );
 
         let password_field =
-            fret_ui_shadcn::Field::new(vec![password_label, password_desc, password_input])
+            shadcn::Field::new(vec![password_label, password_desc, password_input])
                 .into_element(cx);
 
-        let group =
-            fret_ui_shadcn::FieldGroup::new(vec![username_field, password_field]).into_element(cx);
-        let set = fret_ui_shadcn::FieldSet::new(vec![group]).into_element(cx);
+        let group = shadcn::FieldGroup::new(vec![username_field, password_field]).into_element(cx);
+        let set = shadcn::FieldSet::new(vec![group]).into_element(cx);
 
         let root = cx.container(
             ContainerProps {
@@ -523,13 +521,12 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
         let checked_4: Model<bool> = cx.app.models_mut().insert(false);
         let checked_5: Model<bool> = cx.app.models_mut().insert(true);
 
-        let legend = fret_ui_shadcn::FieldLegend::new("Show these items on the desktop")
-            .variant(fret_ui_shadcn::FieldLegendVariant::Label)
+        let legend = shadcn::FieldLegend::new("Show these items on the desktop")
+            .variant(shadcn::FieldLegendVariant::Label)
             .into_element(cx);
-        let description = fret_ui_shadcn::FieldDescription::new(
-            "Select the items you want to show on the desktop.",
-        )
-        .into_element(cx);
+        let description =
+            shadcn::FieldDescription::new("Select the items you want to show on the desktop.")
+                .into_element(cx);
 
         let row_1 = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -538,13 +535,13 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
                 ..Default::default()
             },
             move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(checked_1)
+                let checkbox = shadcn::Checkbox::new(checked_1)
                     .a11y_label("Hard disks")
                     .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Hard disks").into_element(cx);
+                let label = shadcn::FieldLabel::new("Hard disks").into_element(cx);
                 vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                    shadcn::Field::new(vec![checkbox, label])
+                        .orientation(shadcn::FieldOrientation::Horizontal)
                         .into_element(cx),
                 ]
             },
@@ -557,13 +554,13 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
                 ..Default::default()
             },
             move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(checked_2)
+                let checkbox = shadcn::Checkbox::new(checked_2)
                     .a11y_label("External disks")
                     .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("External disks").into_element(cx);
+                let label = shadcn::FieldLabel::new("External disks").into_element(cx);
                 vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                    shadcn::Field::new(vec![checkbox, label])
+                        .orientation(shadcn::FieldOrientation::Horizontal)
                         .into_element(cx),
                 ]
             },
@@ -576,14 +573,13 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
                 ..Default::default()
             },
             move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(checked_3)
+                let checkbox = shadcn::Checkbox::new(checked_3)
                     .a11y_label("CDs, DVDs, and iPods")
                     .into_element(cx);
-                let label =
-                    fret_ui_shadcn::FieldLabel::new("CDs, DVDs, and iPods").into_element(cx);
+                let label = shadcn::FieldLabel::new("CDs, DVDs, and iPods").into_element(cx);
                 vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                    shadcn::Field::new(vec![checkbox, label])
+                        .orientation(shadcn::FieldOrientation::Horizontal)
                         .into_element(cx),
                 ]
             },
@@ -596,24 +592,24 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
                 ..Default::default()
             },
             move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(checked_4)
+                let checkbox = shadcn::Checkbox::new(checked_4)
                     .a11y_label("Connected servers")
                     .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Connected servers").into_element(cx);
+                let label = shadcn::FieldLabel::new("Connected servers").into_element(cx);
                 vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                    shadcn::Field::new(vec![checkbox, label])
+                        .orientation(shadcn::FieldOrientation::Horizontal)
                         .into_element(cx),
                 ]
             },
         );
 
-        let checkbox_group = fret_ui_shadcn::FieldGroup::new(vec![row_1, row_2, row_3, row_4])
+        let checkbox_group = shadcn::FieldGroup::new(vec![row_1, row_2, row_3, row_4])
             .gap(Space::N3)
             .into_element(cx);
 
-        let fieldset = fret_ui_shadcn::FieldSet::new(vec![legend, description, checkbox_group])
-            .into_element(cx);
+        let fieldset =
+            shadcn::FieldSet::new(vec![legend, description, checkbox_group]).into_element(cx);
 
         let sync_field = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -622,12 +618,12 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
                 ..Default::default()
             },
             move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(checked_5)
+                let checkbox = shadcn::Checkbox::new(checked_5)
                     .a11y_label("Sync")
                     .into_element(cx);
-                let content = fret_ui_shadcn::FieldContent::new(vec![
-                    fret_ui_shadcn::FieldLabel::new("Sync Desktop & Documents folders").into_element(cx),
-                    fret_ui_shadcn::FieldDescription::new(
+                let content = shadcn::FieldContent::new(vec![
+                    shadcn::FieldLabel::new("Sync Desktop & Documents folders").into_element(cx),
+                    shadcn::FieldDescription::new(
                         "Your Desktop & Documents folders are being synced with iCloud Drive. You can access them from other devices.",
                     )
                     .into_element(cx),
@@ -635,16 +631,16 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
                 .into_element(cx);
 
                 vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, content])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                    shadcn::Field::new(vec![checkbox, content])
+                        .orientation(shadcn::FieldOrientation::Horizontal)
                         .into_element(cx),
                 ]
             },
         );
 
-        let group = fret_ui_shadcn::FieldGroup::new(vec![
+        let group = shadcn::FieldGroup::new(vec![
             fieldset,
-            fret_ui_shadcn::FieldSeparator::new().into_element(cx),
+            shadcn::FieldSeparator::new().into_element(cx),
             sync_field,
         ])
         .into_element(cx);
@@ -766,9 +762,9 @@ fn web_vs_fret_layout_field_switch_geometry() {
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let checked: Model<bool> = cx.app.models_mut().insert(false);
 
-        let content = fret_ui_shadcn::FieldContent::new(vec![
-            fret_ui_shadcn::FieldLabel::new("Multi-factor authentication").into_element(cx),
-            fret_ui_shadcn::FieldDescription::new(
+        let content = shadcn::FieldContent::new(vec![
+            shadcn::FieldLabel::new("Multi-factor authentication").into_element(cx),
+            shadcn::FieldDescription::new(
                 "Enable multi-factor authentication. If you do not have a two-factor device, you can use a one-time code sent to your email.",
             )
             .into_element(cx),
@@ -783,7 +779,7 @@ fn web_vs_fret_layout_field_switch_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Switch::new(checked)
+                    shadcn::Switch::new(checked)
                         .a11y_label("2fa")
                         .refine_layout(LayoutRefinement::default().flex_shrink_0())
                         .into_element(cx),
@@ -791,8 +787,8 @@ fn web_vs_fret_layout_field_switch_geometry() {
             },
         );
 
-        let field = fret_ui_shadcn::Field::new(vec![content, switch])
-            .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+        let field = shadcn::Field::new(vec![content, switch])
+            .orientation(shadcn::FieldOrientation::Horizontal)
             .into_element(cx);
 
         let root = cx.container(
@@ -893,7 +889,7 @@ fn web_vs_fret_layout_field_select_geometry() {
                 label: Some(Arc::from("Golden:field-select:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Department").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Department").into_element(cx)],
         );
 
         let trigger = cx.semantics(
@@ -904,17 +900,17 @@ fn web_vs_fret_layout_field_select_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Select::new(value, open)
-                        .value(fret_ui_shadcn::SelectValue::new().placeholder("Choose department"))
+                    shadcn::Select::new(value, open)
+                        .value(shadcn::SelectValue::new().placeholder("Choose department"))
                         .items([
-                            fret_ui_shadcn::SelectItem::new("engineering", "Engineering"),
-                            fret_ui_shadcn::SelectItem::new("design", "Design"),
-                            fret_ui_shadcn::SelectItem::new("marketing", "Marketing"),
-                            fret_ui_shadcn::SelectItem::new("sales", "Sales"),
-                            fret_ui_shadcn::SelectItem::new("support", "Customer Support"),
-                            fret_ui_shadcn::SelectItem::new("hr", "Human Resources"),
-                            fret_ui_shadcn::SelectItem::new("finance", "Finance"),
-                            fret_ui_shadcn::SelectItem::new("operations", "Operations"),
+                            shadcn::SelectItem::new("engineering", "Engineering"),
+                            shadcn::SelectItem::new("design", "Design"),
+                            shadcn::SelectItem::new("marketing", "Marketing"),
+                            shadcn::SelectItem::new("sales", "Sales"),
+                            shadcn::SelectItem::new("support", "Customer Support"),
+                            shadcn::SelectItem::new("hr", "Human Resources"),
+                            shadcn::SelectItem::new("finance", "Finance"),
+                            shadcn::SelectItem::new("operations", "Operations"),
                         ])
                         .refine_layout(LayoutRefinement::default().w_full())
                         .into_element(cx),
@@ -930,15 +926,13 @@ fn web_vs_fret_layout_field_select_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new(
-                        "Select your department or area of work.",
-                    )
-                    .into_element(cx),
+                    shadcn::FieldDescription::new("Select your department or area of work.")
+                        .into_element(cx),
                 ]
             },
         );
 
-        let field = fret_ui_shadcn::Field::new(vec![label, trigger, desc]).into_element(cx);
+        let field = shadcn::Field::new(vec![label, trigger, desc]).into_element(cx);
 
         let root = cx.container(
             ContainerProps {
@@ -1041,7 +1035,7 @@ fn web_vs_fret_layout_field_radio_geometry() {
                 label: Some(Arc::from("Golden:field-radio:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Subscription Plan").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Subscription Plan").into_element(cx)],
         );
 
         let desc = cx.semantics(
@@ -1052,7 +1046,7 @@ fn web_vs_fret_layout_field_radio_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new(
+                    shadcn::FieldDescription::new(
                         "Yearly and lifetime plans offer significant savings.",
                     )
                     .into_element(cx),
@@ -1062,28 +1056,28 @@ fn web_vs_fret_layout_field_radio_geometry() {
 
         let radio_group = {
             let items = vec![
-                fret_ui_shadcn::RadioGroupItem::new("monthly", "Monthly ($9.99/month)").children(
-                    vec![fret_ui_shadcn::FieldLabel::new("Monthly ($9.99/month)").into_element(cx)],
-                ),
-                fret_ui_shadcn::RadioGroupItem::new("yearly", "Yearly ($99.99/year)").children(
-                    vec![fret_ui_shadcn::FieldLabel::new("Yearly ($99.99/year)").into_element(cx)],
-                ),
-                fret_ui_shadcn::RadioGroupItem::new("lifetime", "Lifetime ($299.99)").children(
-                    vec![fret_ui_shadcn::FieldLabel::new("Lifetime ($299.99)").into_element(cx)],
-                ),
+                shadcn::RadioGroupItem::new("monthly", "Monthly ($9.99/month)").children(vec![
+                    shadcn::FieldLabel::new("Monthly ($9.99/month)").into_element(cx),
+                ]),
+                shadcn::RadioGroupItem::new("yearly", "Yearly ($99.99/year)").children(vec![
+                    shadcn::FieldLabel::new("Yearly ($99.99/year)").into_element(cx),
+                ]),
+                shadcn::RadioGroupItem::new("lifetime", "Lifetime ($299.99)").children(vec![
+                    shadcn::FieldLabel::new("Lifetime ($299.99)").into_element(cx),
+                ]),
             ];
 
             items
                 .into_iter()
                 .fold(
-                    fret_ui_shadcn::RadioGroup::uncontrolled(Some("monthly")),
+                    shadcn::RadioGroup::uncontrolled(Some("monthly")),
                     |group, item| group.item(item),
                 )
                 .a11y_label("Subscription Plan")
                 .into_element(cx)
         };
 
-        let set = fret_ui_shadcn::FieldSet::new(vec![label, desc, radio_group]).into_element(cx);
+        let set = shadcn::FieldSet::new(vec![label, desc, radio_group]).into_element(cx);
 
         let root = cx.container(
             ContainerProps {
@@ -1179,7 +1173,7 @@ fn web_vs_fret_layout_field_textarea_geometry() {
                 label: Some(Arc::from("Golden:field-textarea:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Feedback").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Feedback").into_element(cx)],
         );
 
         let textarea = cx.semantics(
@@ -1190,7 +1184,7 @@ fn web_vs_fret_layout_field_textarea_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Textarea::new(model)
+                    shadcn::Textarea::new(model)
                         .a11y_label("Feedback")
                         .into_element(cx),
                 ]
@@ -1205,15 +1199,15 @@ fn web_vs_fret_layout_field_textarea_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new("Share your thoughts about our service.")
+                    shadcn::FieldDescription::new("Share your thoughts about our service.")
                         .into_element(cx),
                 ]
             },
         );
 
-        let field = fret_ui_shadcn::Field::new(vec![label, textarea, desc]).into_element(cx);
-        let group = fret_ui_shadcn::FieldGroup::new(vec![field]).into_element(cx);
-        let set = fret_ui_shadcn::FieldSet::new(vec![group]).into_element(cx);
+        let field = shadcn::Field::new(vec![label, textarea, desc]).into_element(cx);
+        let group = shadcn::FieldGroup::new(vec![field]).into_element(cx);
+        let set = shadcn::FieldSet::new(vec![group]).into_element(cx);
 
         let root = cx.container(
             ContainerProps {
@@ -1347,14 +1341,14 @@ fn web_vs_fret_layout_field_group_geometry() {
         let tasks_push: Model<bool> = cx.app.models_mut().insert(false);
         let tasks_email: Model<bool> = cx.app.models_mut().insert(false);
 
-        let responses_label = fret_ui_shadcn::FieldLabel::new("Responses")
+        let responses_label = shadcn::FieldLabel::new("Responses")
             .into_element(cx)
             .attach_semantics(fret_ui::element::SemanticsDecoration {
                 role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:responses:label")),
                 ..Default::default()
             });
-        let responses_desc = fret_ui_shadcn::FieldDescription::new(
+        let responses_desc = shadcn::FieldDescription::new(
             "Get notified when ChatGPT responds to requests that take time, like research or image generation.",
         )
         .into_element(cx)
@@ -1364,13 +1358,13 @@ fn web_vs_fret_layout_field_group_geometry() {
             ..Default::default()
         });
         let responses_row = {
-            let checkbox = fret_ui_shadcn::Checkbox::new(responses_push)
+            let checkbox = shadcn::Checkbox::new(responses_push)
                 .disabled(true)
                 .a11y_label("push")
                 .into_element(cx);
-            let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
-            fret_ui_shadcn::Field::new(vec![checkbox, label])
-                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+            let label = shadcn::FieldLabel::new("Push notifications").into_element(cx);
+            shadcn::Field::new(vec![checkbox, label])
+                .orientation(shadcn::FieldOrientation::Horizontal)
                 .into_element(cx)
         }
         .attach_semantics(fret_ui::element::SemanticsDecoration {
@@ -1378,24 +1372,24 @@ fn web_vs_fret_layout_field_group_geometry() {
             label: Some(Arc::from("Golden:field-group:responses:row")),
             ..Default::default()
         });
-        let responses_checkbox_group = fret_ui_shadcn::FieldGroup::new(vec![responses_row])
+        let responses_checkbox_group = shadcn::FieldGroup::new(vec![responses_row])
             .checkbox_group()
             .into_element(cx);
-        let responses_fieldset = fret_ui_shadcn::FieldSet::new(vec![
+        let responses_fieldset = shadcn::FieldSet::new(vec![
             responses_label,
             responses_desc,
             responses_checkbox_group,
         ])
         .into_element(cx);
 
-        let tasks_label = fret_ui_shadcn::FieldLabel::new("Tasks")
+        let tasks_label = shadcn::FieldLabel::new("Tasks")
             .into_element(cx)
             .attach_semantics(fret_ui::element::SemanticsDecoration {
                 role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:tasks:label")),
                 ..Default::default()
             });
-        let tasks_desc = fret_ui_shadcn::FieldDescription::new(
+        let tasks_desc = shadcn::FieldDescription::new(
             "Get notified when tasks you've created have updates. Manage tasks",
         )
         .into_element(cx)
@@ -1405,12 +1399,12 @@ fn web_vs_fret_layout_field_group_geometry() {
             ..Default::default()
         });
         let tasks_row_push = {
-            let checkbox = fret_ui_shadcn::Checkbox::new(tasks_push)
+            let checkbox = shadcn::Checkbox::new(tasks_push)
                 .a11y_label("push-tasks")
                 .into_element(cx);
-            let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
-            fret_ui_shadcn::Field::new(vec![checkbox, label])
-                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+            let label = shadcn::FieldLabel::new("Push notifications").into_element(cx);
+            shadcn::Field::new(vec![checkbox, label])
+                .orientation(shadcn::FieldOrientation::Horizontal)
                 .into_element(cx)
         }
         .attach_semantics(fret_ui::element::SemanticsDecoration {
@@ -1419,12 +1413,12 @@ fn web_vs_fret_layout_field_group_geometry() {
             ..Default::default()
         });
         let tasks_row_email = {
-            let checkbox = fret_ui_shadcn::Checkbox::new(tasks_email)
+            let checkbox = shadcn::Checkbox::new(tasks_email)
                 .a11y_label("email-tasks")
                 .into_element(cx);
-            let label = fret_ui_shadcn::FieldLabel::new("Email notifications").into_element(cx);
-            fret_ui_shadcn::Field::new(vec![checkbox, label])
-                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+            let label = shadcn::FieldLabel::new("Email notifications").into_element(cx);
+            shadcn::Field::new(vec![checkbox, label])
+                .orientation(shadcn::FieldOrientation::Horizontal)
                 .into_element(cx)
         }
         .attach_semantics(fret_ui::element::SemanticsDecoration {
@@ -1432,19 +1426,17 @@ fn web_vs_fret_layout_field_group_geometry() {
             label: Some(Arc::from("Golden:field-group:tasks:email-row")),
             ..Default::default()
         });
-        let tasks_checkbox_group =
-            fret_ui_shadcn::FieldGroup::new(vec![tasks_row_push, tasks_row_email])
-                .checkbox_group()
-                .into_element(cx);
+        let tasks_checkbox_group = shadcn::FieldGroup::new(vec![tasks_row_push, tasks_row_email])
+            .checkbox_group()
+            .into_element(cx);
         let tasks_fieldset =
-            fret_ui_shadcn::FieldSet::new(vec![tasks_label, tasks_desc, tasks_checkbox_group])
+            shadcn::FieldSet::new(vec![tasks_label, tasks_desc, tasks_checkbox_group])
                 .into_element(cx);
 
-        let separator = fret_ui_shadcn::FieldSeparator::new().into_element(cx);
+        let separator = shadcn::FieldSeparator::new().into_element(cx);
 
-        let group =
-            fret_ui_shadcn::FieldGroup::new(vec![responses_fieldset, separator, tasks_fieldset])
-                .into_element(cx);
+        let group = shadcn::FieldGroup::new(vec![responses_fieldset, separator, tasks_fieldset])
+            .into_element(cx);
 
         let root = cx.container(
             ContainerProps {
@@ -1627,9 +1619,7 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
                 label: Some(Arc::from("Golden:field-fieldset:legend")),
                 ..Default::default()
             },
-            move |cx| {
-                vec![fret_ui_shadcn::FieldLegend::new("Address Information").into_element(cx)]
-            },
+            move |cx| vec![shadcn::FieldLegend::new("Address Information").into_element(cx)],
         );
         let desc = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1639,10 +1629,8 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new(
-                        "We need your address to deliver your order.",
-                    )
-                    .into_element(cx),
+                    shadcn::FieldDescription::new("We need your address to deliver your order.")
+                        .into_element(cx),
                 ]
             },
         );
@@ -1653,7 +1641,7 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
                 label: Some(Arc::from("Golden:field-fieldset:street:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Street Address").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Street Address").into_element(cx)],
         );
         let street_input = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1663,15 +1651,14 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(street)
+                    shadcn::Input::new(street)
                         .a11y_label("Street Address")
                         .placeholder("123 Main St")
                         .into_element(cx),
                 ]
             },
         );
-        let street_field =
-            fret_ui_shadcn::Field::new(vec![street_label, street_input]).into_element(cx);
+        let street_field = shadcn::Field::new(vec![street_label, street_input]).into_element(cx);
 
         let city_label = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1679,7 +1666,7 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
                 label: Some(Arc::from("Golden:field-fieldset:city:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("City").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("City").into_element(cx)],
         );
         let city_input = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1689,14 +1676,14 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(city)
+                    shadcn::Input::new(city)
                         .a11y_label("City")
                         .placeholder("New York")
                         .into_element(cx),
                 ]
             },
         );
-        let city_field = fret_ui_shadcn::Field::new(vec![city_label, city_input]).into_element(cx);
+        let city_field = shadcn::Field::new(vec![city_label, city_input]).into_element(cx);
 
         let zip_label = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1704,7 +1691,7 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
                 label: Some(Arc::from("Golden:field-fieldset:zip:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Postal Code").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Postal Code").into_element(cx)],
         );
         let zip_input = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1714,14 +1701,14 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(zip)
+                    shadcn::Input::new(zip)
                         .a11y_label("Postal Code")
                         .placeholder("90502")
                         .into_element(cx),
                 ]
             },
         );
-        let zip_field = fret_ui_shadcn::Field::new(vec![zip_label, zip_input]).into_element(cx);
+        let zip_field = shadcn::Field::new(vec![zip_label, zip_input]).into_element(cx);
 
         let grid = cx.grid(
             GridProps {
@@ -1736,8 +1723,8 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
             move |_cx| vec![city_field, zip_field],
         );
 
-        let group = fret_ui_shadcn::FieldGroup::new(vec![street_field, grid]).into_element(cx);
-        let set = fret_ui_shadcn::FieldSet::new(vec![legend, desc, group]).into_element(cx);
+        let group = shadcn::FieldGroup::new(vec![street_field, grid]).into_element(cx);
+        let set = shadcn::FieldSet::new(vec![legend, desc, group]).into_element(cx);
 
         let root = cx.container(
             ContainerProps {
@@ -1952,9 +1939,9 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
                          title: &'static str,
                          desc: &'static str,
                          checked: bool| {
-            let content = fret_ui_shadcn::FieldContent::new(vec![
-                fret_ui_shadcn::FieldTitle::new(title).into_element(cx),
-                fret_ui_shadcn::FieldDescription::new(desc).into_element(cx),
+            let content = shadcn::FieldContent::new(vec![
+                shadcn::FieldTitle::new(title).into_element(cx),
+                shadcn::FieldDescription::new(desc).into_element(cx),
             ])
             .into_element(cx);
 
@@ -1973,8 +1960,8 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
                 |_cx| Vec::new(),
             );
 
-            let field = fret_ui_shadcn::Field::new(vec![content, radio_stub])
-                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+            let field = shadcn::Field::new(vec![content, radio_stub])
+                .orientation(shadcn::FieldOrientation::Horizontal)
                 .into_element(cx);
 
             let mut props = fret_ui_kit::declarative::style::container_props(
@@ -2044,12 +2031,10 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
                 vec![kubernetes, vm]
             });
 
-        let set = fret_ui_shadcn::FieldSet::new(vec![
-            fret_ui_shadcn::FieldLabel::new("Compute Environment").into_element(cx),
-            fret_ui_shadcn::FieldDescription::new(
-                "Select the compute environment for your cluster.",
-            )
-            .into_element(cx),
+        let set = shadcn::FieldSet::new(vec![
+            shadcn::FieldLabel::new("Compute Environment").into_element(cx),
+            shadcn::FieldDescription::new("Select the compute environment for your cluster.")
+                .into_element(cx),
             list,
         ])
         .into_element(cx);
@@ -2163,16 +2148,15 @@ fn web_vs_fret_layout_field_slider_track_geometry_matches_web() {
 
     let (ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
         let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![200.0, 800.0]);
-        let slider = fret_ui_shadcn::Slider::new(model)
+        let slider = shadcn::Slider::new(model)
             .range(0.0, 1000.0)
             .step(10.0)
             .a11y_label("Price Range")
             .into_element(cx);
 
-        let field = fret_ui_shadcn::Field::new(vec![
-            fret_ui_shadcn::FieldTitle::new("Price Range").into_element(cx),
-            fret_ui_shadcn::FieldDescription::new("Set your budget range ($200 - 800).")
-                .into_element(cx),
+        let field = shadcn::Field::new(vec![
+            shadcn::FieldTitle::new("Price Range").into_element(cx),
+            shadcn::FieldDescription::new("Set your budget range ($200 - 800).").into_element(cx),
             slider,
         ])
         .into_element(cx);
@@ -2251,16 +2235,15 @@ fn web_vs_fret_layout_field_slider_thumb_insets_match_web() {
 
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![200.0, 800.0]);
-        let slider = fret_ui_shadcn::Slider::new(model)
+        let slider = shadcn::Slider::new(model)
             .range(0.0, 1000.0)
             .step(10.0)
             .a11y_label("Price Range")
             .into_element(cx);
 
-        let field = fret_ui_shadcn::Field::new(vec![
-            fret_ui_shadcn::FieldTitle::new("Price Range").into_element(cx),
-            fret_ui_shadcn::FieldDescription::new("Set your budget range ($200 - 800).")
-                .into_element(cx),
+        let field = shadcn::Field::new(vec![
+            shadcn::FieldTitle::new("Price Range").into_element(cx),
+            shadcn::FieldDescription::new("Set your budget range ($200 - 800).").into_element(cx),
             slider,
         ])
         .into_element(cx);
@@ -2349,7 +2332,7 @@ fn web_vs_fret_layout_field_demo_separator_height_matches_web() {
     );
 
     let snap = run_fret_root(bounds, |cx| {
-        let sep = fret_ui_shadcn::FieldSeparator::new()
+        let sep = shadcn::FieldSeparator::new()
             .refine_layout(
                 LayoutRefinement::default()
                     .mt_neg(Space::N0)

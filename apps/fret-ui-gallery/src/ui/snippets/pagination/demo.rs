@@ -20,24 +20,24 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::pagination_item(
-                        shadcn::PaginationPrevious::new().on_click(CMD_APP_OPEN),
+                        shadcn::PaginationPrevious::new().action(CMD_APP_OPEN),
                     ),
                     shadcn::pagination_item(
                         shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "1")])
-                            .on_click(CMD_APP_OPEN),
+                            .action(CMD_APP_OPEN),
                     ),
                     shadcn::pagination_item(
                         shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "2")])
-                            .on_click(CMD_APP_SAVE)
+                            .action(CMD_APP_SAVE)
                             .active(true),
                     ),
                     shadcn::pagination_item(
                         shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "3")])
-                            .on_click(CMD_APP_SAVE),
+                            .action(CMD_APP_SAVE),
                     ),
                     shadcn::pagination_item(shadcn::PaginationEllipsis::new()),
                     shadcn::pagination_item(
-                        shadcn::PaginationNext::new().on_click(CMD_APP_SAVE),
+                        shadcn::PaginationNext::new().action(CMD_APP_SAVE),
                     ),
                 ]
             }),

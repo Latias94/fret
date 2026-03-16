@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::advanced::prelude::*;
+use fret::component::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_bootstrap::ui_app_driver;
 use fret_core::{AppWindowId, Px};

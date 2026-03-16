@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_core::scene::{
     DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
 };

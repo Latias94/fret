@@ -12,7 +12,9 @@ use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Space,
 };
-use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger};
+use fret_ui_shadcn::facade::{
+    Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger,
+};
 
 use crate::elements::CodeBlock;
 use crate::model::{ToolCallPayload, ToolCallState};

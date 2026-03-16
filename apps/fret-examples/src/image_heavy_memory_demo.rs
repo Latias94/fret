@@ -57,7 +57,7 @@ fn record_engine_frame(
     app: &mut KernelApp,
     _window: AppWindowId,
     _ui: &mut fret_ui::UiTree<KernelApp>,
-    _st: &mut fret::view::ViewWindowState<ImageHeavyMemoryView>,
+    _st: &mut fret::advanced::view::ViewWindowState<ImageHeavyMemoryView>,
     context: &WgpuContext,
     renderer: &mut Renderer,
     _dt_s: f32,

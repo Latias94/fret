@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 use std::cell::Cell;
 use std::rc::Rc;
@@ -18,10 +19,10 @@ impl WebThemeName {
         }
     }
 
-    fn scheme(&self) -> fret_ui_shadcn::shadcn_themes::ShadcnColorScheme {
+    fn scheme(&self) -> shadcn::themes::ShadcnColorScheme {
         match self {
-            WebThemeName::Light => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            WebThemeName::Dark => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            WebThemeName::Light => shadcn::themes::ShadcnColorScheme::Light,
+            WebThemeName::Dark => shadcn::themes::ShadcnColorScheme::Dark,
         }
     }
 }
@@ -48,17 +49,16 @@ fn build_tooltip_demo(
     cx: &mut ElementContext<'_, App>,
     trigger: &Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
-    let trigger_el = fret_ui_shadcn::Button::new("Hover")
-        .variant(fret_ui_shadcn::ButtonVariant::Outline)
+    let trigger_el = shadcn::Button::new("Hover")
+        .variant(shadcn::ButtonVariant::Outline)
         .into_element(cx);
     trigger.set(Some(trigger_el.id));
 
-    let content_el = fret_ui_shadcn::TooltipContent::build(cx, |_cx| {
-        [fret_ui_shadcn::TooltipContent::text("Add to library")]
-    })
-    .into_element(cx);
+    let content_el =
+        shadcn::TooltipContent::build(cx, |_cx| [shadcn::TooltipContent::text("Add to library")])
+            .into_element(cx);
 
-    fret_ui_shadcn::Tooltip::new(cx, trigger_el, content_el)
+    shadcn::Tooltip::new(cx, trigger_el, content_el)
         .open_delay_frames(0)
         .close_delay_frames(0)
         .into_element(cx)

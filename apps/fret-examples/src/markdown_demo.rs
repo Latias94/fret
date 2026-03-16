@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};

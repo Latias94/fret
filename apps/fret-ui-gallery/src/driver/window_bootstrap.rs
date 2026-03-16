@@ -227,9 +227,11 @@ impl UiGalleryDriver {
         let settings_menu_bar_in_window_open = app.models_mut().insert(false);
         let text_common_fallback_injection =
             Self::current_text_font_family_config(app).common_fallback_injection;
-        let settings_text_common_fallback_injection = app.models_mut().insert(Some(
-            Self::text_common_fallback_injection_key(text_common_fallback_injection),
-        ));
+        let settings_text_common_fallback_injection =
+            app.models_mut()
+                .insert(Some(Self::text_common_fallback_injection_key(
+                    text_common_fallback_injection,
+                )));
         let settings_text_common_fallback_injection_open = app.models_mut().insert(false);
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);
@@ -257,30 +259,6 @@ impl UiGalleryDriver {
         let accordion_value = app
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("item-1")));
-
-        let avatar_demo_image = app.models_mut().insert(None::<ImageId>);
-        let avatar_demo_image_token = app.next_image_upload_token();
-        Self::enqueue_avatar_demo_image_register(app, window, avatar_demo_image_token);
-
-        let image_fit_demo_wide_image = app.models_mut().insert(None::<ImageId>);
-        let image_fit_demo_wide_token = app.next_image_upload_token();
-        Self::enqueue_image_fit_demo_image_register(
-            app,
-            window,
-            image_fit_demo_wide_token,
-            Self::IMAGE_FIT_DEMO_WIDE_SIZE,
-            (120, 190, 255),
-        );
-
-        let image_fit_demo_tall_image = app.models_mut().insert(None::<ImageId>);
-        let image_fit_demo_tall_token = app.next_image_upload_token();
-        Self::enqueue_image_fit_demo_image_register(
-            app,
-            window,
-            image_fit_demo_tall_token,
-            Self::IMAGE_FIT_DEMO_TALL_SIZE,
-            (255, 160, 120),
-        );
 
         let progress = app.models_mut().insert(35.0f32);
         #[cfg(feature = "gallery-dev")]
@@ -445,13 +423,6 @@ impl UiGalleryDriver {
             data_grid_selected_row,
             tabs_value,
             accordion_value,
-            avatar_demo_image,
-            avatar_demo_image_token: Some(avatar_demo_image_token),
-            avatar_demo_image_retry_count: 0,
-            image_fit_demo_wide_image,
-            image_fit_demo_wide_token: Some(image_fit_demo_wide_token),
-            image_fit_demo_tall_image,
-            image_fit_demo_tall_token: Some(image_fit_demo_tall_token),
             progress,
             #[cfg(feature = "gallery-dev")]
             checkbox,

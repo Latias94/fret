@@ -10,7 +10,7 @@ fn build_shadcn_context_menu_demo(
     checked_full_urls: Model<bool>,
     radio_person: Model<Option<Arc<str>>>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonVariant, ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry,
         ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec,
         ContextMenuShortcut,
@@ -55,7 +55,7 @@ fn build_shadcn_context_menu_demo(
                             ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
                             ContextMenuEntry::Separator,
                             ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
-                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
                             )),
                         ],
                     )),
@@ -131,7 +131,7 @@ fn render_context_menu_demo_settled(
 fn assert_context_menu_highlighted_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
@@ -264,7 +264,7 @@ fn assert_context_menu_highlighted_item_chrome_matches_web(
 fn assert_context_menu_focused_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
@@ -403,7 +403,7 @@ fn assert_context_menu_focused_item_chrome_matches_web(
 fn assert_context_menu_submenu_highlighted_item_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
@@ -555,7 +555,7 @@ fn assert_context_menu_submenu_highlighted_item_chrome_matches_web(
 
 fn assert_context_menu_submenu_destructive_focused_item_chrome_matches_web(
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open("context-menu-demo.submenu-kbd-delete-focus");
     let theme = web_theme_named(&web, web_theme_name);
@@ -737,7 +737,7 @@ fn assert_context_menu_submenu_destructive_focused_item_chrome_matches_web(
 
 fn assert_context_menu_submenu_destructive_item_idle_fg_matches_web(
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open("context-menu-demo.submenu-kbd");
     let theme = web_theme_named(&web, web_theme_name);

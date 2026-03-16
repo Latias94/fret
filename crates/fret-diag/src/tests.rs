@@ -1,10 +1,21 @@
 use super::*;
 use crate::compare::compare_bundles_json;
 use crate::stats::{
-    bundle_stats_from_json_with_options, check_bundle_for_chart_sampling_window_shifts_min,
-    check_bundle_for_dock_drag_min_json, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_idle_no_paint_min, check_bundle_for_layout_fast_path_min,
-    check_bundle_for_node_graph_cull_window_shifts_max,
+    bundle_stats_from_json_with_options,
+    check_bundle_for_asset_load_external_reference_unavailable_max_json,
+    check_bundle_for_asset_load_missing_bundle_assets_max_json,
+    check_bundle_for_asset_load_revision_changes_max_json,
+    check_bundle_for_asset_load_stale_manifest_max_json,
+    check_bundle_for_asset_load_unsupported_file_max_json,
+    check_bundle_for_asset_load_unsupported_url_max_json,
+    check_bundle_for_asset_reload_active_backend_json,
+    check_bundle_for_asset_reload_configured_backend_json,
+    check_bundle_for_asset_reload_epoch_min_json,
+    check_bundle_for_asset_reload_fallback_reason_json,
+    check_bundle_for_bundled_font_baseline_source_json,
+    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min_json,
+    check_bundle_for_gc_sweep_liveness, check_bundle_for_idle_no_paint_min,
+    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
     check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min_json, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max_json,
@@ -6744,6 +6755,308 @@ fn ui_gallery_web_ime_bridge_gate_fails_when_disabled() {
     let err = check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(&bundle, &bundle_path, 0)
         .unwrap_err();
     assert!(err.contains("ui-gallery web-ime bridge gate failed"));
+}
+
+#[test]
+fn asset_load_counter_gates_pass_on_allowed_maxima() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_load": {
+                                    "missing_bundle_asset_requests": 1,
+                                    "stale_manifest_requests": 1,
+                                    "unsupported_file_requests": 2,
+                                    "unsupported_url_requests": 0,
+                                    "external_reference_unavailable_requests": 1,
+                                    "revision_change_requests": 1
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_load_counter_gates_pass");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+
+    check_bundle_for_asset_load_missing_bundle_assets_max_json(&bundle, &bundle_path, 1, 0)
+        .unwrap();
+    check_bundle_for_asset_load_stale_manifest_max_json(&bundle, &bundle_path, 1, 0).unwrap();
+    check_bundle_for_asset_load_unsupported_file_max_json(&bundle, &bundle_path, 2, 0).unwrap();
+    check_bundle_for_asset_load_unsupported_url_max_json(&bundle, &bundle_path, 0, 0).unwrap();
+    check_bundle_for_asset_load_external_reference_unavailable_max_json(
+        &bundle,
+        &bundle_path,
+        1,
+        0,
+    )
+    .unwrap();
+    check_bundle_for_asset_load_revision_changes_max_json(&bundle, &bundle_path, 1, 0).unwrap();
+}
+
+#[test]
+fn asset_load_missing_bundle_gate_fails_when_counter_exceeds_max() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_load": {
+                                    "missing_bundle_asset_requests": 2
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_load_missing_bundle_gate_fails");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    let err =
+        check_bundle_for_asset_load_missing_bundle_assets_max_json(&bundle, &bundle_path, 1, 0)
+            .unwrap_err();
+    assert!(err.contains("asset_load_missing_bundle_assets_max gate failed"));
+}
+
+#[test]
+fn asset_load_stale_manifest_gate_fails_when_counter_exceeds_max() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_load": {
+                                    "stale_manifest_requests": 2
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_load_stale_manifest_gate_fails");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    let err = check_bundle_for_asset_load_stale_manifest_max_json(&bundle, &bundle_path, 1, 0)
+        .unwrap_err();
+    assert!(err.contains("asset_load_stale_manifest_max gate failed"));
+}
+
+#[test]
+fn bundled_font_baseline_source_gate_matches_debug_snapshot() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "font_environment": {
+                                    "bundled_baseline_source": "bundled_profile",
+                                    "bundled_profile_name": "default",
+                                    "bundled_asset_bundle": "fret.fonts",
+                                    "bundled_asset_keys": ["fonts/inter-regular.ttf"]
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("bundled_font_baseline_source_gate_matches");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    check_bundle_for_bundled_font_baseline_source_json(&bundle, &bundle_path, "bundled_profile", 0)
+        .unwrap();
+}
+
+#[test]
+fn asset_reload_gates_match_debug_snapshot() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_reload": {
+                                    "epoch": 4,
+                                    "file_watch": true,
+                                    "configured_backend": "native_watcher",
+                                    "active_backend": "poll_metadata",
+                                    "fallback_reason": "watcher_install_failed",
+                                    "fallback_message": "watch root missing"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_reload_gates_match_debug_snapshot");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+
+    check_bundle_for_asset_reload_epoch_min_json(&bundle, &bundle_path, 4, 0).unwrap();
+    check_bundle_for_asset_reload_configured_backend_json(
+        &bundle,
+        &bundle_path,
+        "native_watcher",
+        0,
+    )
+    .unwrap();
+    check_bundle_for_asset_reload_active_backend_json(&bundle, &bundle_path, "poll_metadata", 0)
+        .unwrap();
+    check_bundle_for_asset_reload_fallback_reason_json(
+        &bundle,
+        &bundle_path,
+        "watcher_install_failed",
+        0,
+    )
+    .unwrap();
+}
+
+#[test]
+fn asset_reload_string_gates_accept_absent_expectation() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_load": {
+                                    "missing_bundle_asset_requests": 0
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_reload_string_gates_accept_absent_expectation");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+
+    check_bundle_for_asset_reload_configured_backend_json(&bundle, &bundle_path, "none", 0)
+        .unwrap();
+    check_bundle_for_asset_reload_active_backend_json(&bundle, &bundle_path, "none", 0).unwrap();
+    check_bundle_for_asset_reload_fallback_reason_json(&bundle, &bundle_path, "none", 0).unwrap();
+}
+
+#[test]
+fn asset_reload_epoch_gate_fails_when_epoch_never_reaches_minimum() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_reload": {
+                                    "epoch": 2
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_reload_epoch_gate_fails_when_epoch_never_reaches_minimum");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    let err =
+        check_bundle_for_asset_reload_epoch_min_json(&bundle, &bundle_path, 3, 0).unwrap_err();
+    assert!(err.contains("asset_reload_epoch_min gate failed"));
+}
+
+#[test]
+fn asset_reload_active_backend_gate_fails_when_value_does_not_match() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "debug": {
+                            "resource_loading": {
+                                "asset_reload": {
+                                    "active_backend": "poll_metadata"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let out_dir = tmp_out_dir("asset_reload_active_backend_gate_fails_when_value_does_not_match");
+    let _ = std::fs::create_dir_all(&out_dir);
+    let bundle_path = out_dir.join("bundle.json");
+    let err = check_bundle_for_asset_reload_active_backend_json(
+        &bundle,
+        &bundle_path,
+        "native_watcher",
+        0,
+    )
+    .unwrap_err();
+    assert!(err.contains("asset_reload_active_backend gate failed"));
 }
 
 #[test]

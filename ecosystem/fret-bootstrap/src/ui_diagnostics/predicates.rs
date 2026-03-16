@@ -948,6 +948,19 @@ fn eval_predicate(
         }
         UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
         UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
+        UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { .. }
+        | UiPredicateV1::AssetLoadStaleManifestRequestsGe { .. }
+        | UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { .. }
+        | UiPredicateV1::AssetLoadUnsupportedUrlRequestsGe { .. }
+        | UiPredicateV1::AssetLoadExternalReferenceUnavailableRequestsGe { .. }
+        | UiPredicateV1::AssetLoadRevisionChangeRequestsGe { .. }
+        | UiPredicateV1::AssetLoadRecentOutcomeSeen { .. }
+        | UiPredicateV1::AssetLoadRecentRevisionTransitionSeen { .. }
+        | UiPredicateV1::BundledFontBaselineSourceIs { .. }
+        | UiPredicateV1::AssetReloadEpochGe { .. }
+        | UiPredicateV1::AssetReloadConfiguredBackendIs { .. }
+        | UiPredicateV1::AssetReloadActiveBackendIs { .. }
+        | UiPredicateV1::AssetReloadFallbackReasonIs { .. } => false,
         UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_node(target) else {
@@ -1501,7 +1514,7 @@ fn eval_predicate(
 }
 
 #[cfg(test)]
-mod tests {
+mod predicate_tests {
     use super::*;
     use slotmap::KeyData;
 

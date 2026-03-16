@@ -1,8 +1,9 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::{Axis, Color, Edges, ExternalDragKind, Px};
 use fret_icons::IconId;
-use fret_runtime::{Effect, Model};
+use fret_runtime::{ActionId, Effect, Model};
 use fret_ui::action::{ActivateReason, OnActivate, OnExternalDrag, OnKeyDown};
 use fret_ui::element::{AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -21,6 +22,8 @@ use fret_ui_shadcn::facade::{
     TooltipSide,
 };
 use fret_ui_shadcn::raw::button::ButtonStyle;
+
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 
 use crate::elements::attachments::{
     Attachment, AttachmentData, AttachmentFileData, AttachmentSourceDocumentData,
@@ -1815,6 +1818,8 @@ pub struct PromptInputButton {
     tooltip: Option<PromptInputButtonTooltip>,
     children: Vec<AnyElement>,
     disabled: bool,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
     variant: ButtonVariant,
     expanded: bool,
@@ -1831,6 +1836,8 @@ impl PromptInputButton {
             tooltip: None,
             children: Vec::new(),
             disabled: false,
+            action: None,
+            action_payload: None,
             on_activate: None,
             variant: ButtonVariant::Ghost,
             expanded: false,
@@ -1861,6 +1868,28 @@ impl PromptInputButton {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Bind a stable action ID to this prompt-input button (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized prompt-input button actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`PromptInputButton::action_payload`], but computes the payload lazily.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -1993,6 +2022,12 @@ impl PromptInputButton {
                 .refine_layout(self.layout)
         };
 
+        if let Some(action) = self.action {
+            btn = btn.action(action);
+        }
+        if let Some(payload) = self.action_payload {
+            btn = btn.action_payload_factory(payload);
+        }
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
         }

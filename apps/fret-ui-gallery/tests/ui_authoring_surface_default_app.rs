@@ -130,6 +130,36 @@ fn assert_material3_snippet_prefers_copyable_root(
     }
 }
 
+fn assert_selected_snippets_prefer_grouped_uicx_listeners(
+    relative_path: &str,
+    required_markers: &[&str],
+    forbidden_markers: &[&str],
+) {
+    let path = manifest_path(relative_path);
+    let source = read_path(&path);
+    let normalized = source.split_whitespace().collect::<String>();
+
+    for marker in required_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            normalized.contains(&marker),
+            "{} is missing grouped UiCx listener marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+
+    for marker in forbidden_markers {
+        let marker = marker.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains(&marker),
+            "{} reintroduced forbidden activation import marker `{}`",
+            path.display(),
+            marker
+        );
+    }
+}
+
 fn assert_sources_absent(relative_root: &str, forbidden_markers: &[&str]) {
     for path in rust_sources(relative_root) {
         let source = read_path(&path);
@@ -140,6 +170,23 @@ fn assert_sources_absent(relative_root: &str, forbidden_markers: &[&str]) {
             assert!(
                 !normalized.contains(&marker),
                 "{} reintroduced forbidden source marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+fn assert_sources_absent_normalized(relative_root: &str, forbidden_markers: &[&str]) {
+    for path in rust_sources(relative_root) {
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced forbidden normalized source marker `{}`",
                 path.display(),
                 marker
             );
@@ -158,6 +205,7 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
 
     assert!(!action_first_view.contains("use fret::prelude::*;"));
     assert!(action_first_view.contains("use fret::advanced::prelude::*;"));
+    assert!(action_first_view.contains("use fret::component::prelude::*;"));
     assert!(action_first_view.contains("use fret::app::App;"));
     assert!(action_first_view.contains("fn init(_app: &mut App, _window: AppWindowId) -> Self"));
     assert!(!action_first_view.contains("ViewCx<'_, '_, App>"));
@@ -176,6 +224,252 @@ fn gallery_sources_do_not_depend_on_the_legacy_fret_prelude() {
     assert!(!action_first_view.contains("cx.use_local"));
     assert!(!action_first_view.contains("cx.on_action_notify_"));
     assert!(!action_first_view.contains("cx.on_action_availability"));
+}
+
+#[test]
+fn copyable_ui_gallery_snippet_lane_has_no_top_level_raw_render_roots() {
+    assert_sources_absent(
+        "src/ui/snippets",
+        &["pub fn render(cx: &mut UiCx<'_>) -> AnyElement"],
+    );
+    assert_sources_absent_normalized(
+        "src/ui/snippets",
+        &["pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn ui_gallery_diagnostics_raw_render_roots_are_explicitly_documented() {
+    let mut raw_root_count = 0usize;
+
+    for path in rust_sources("src/ui/diagnostics") {
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        let is_raw_render_root = normalized
+            .contains("pubfnrender<H:UiHost+'static>(cx:&mutElementContext<'_,H>)->AnyElement");
+        if !is_raw_render_root {
+            continue;
+        }
+
+        raw_root_count += 1;
+        assert!(
+            source.contains("Intentional diagnostics raw boundary:"),
+            "{} should explain why the diagnostics harness stays raw",
+            path.display()
+        );
+    }
+
+    assert!(
+        raw_root_count >= 1,
+        "src/ui/diagnostics should contain at least one audited diagnostics raw root"
+    );
+}
+
+#[test]
+fn selected_button_and_sidebar_snippets_prefer_grouped_uicx_listeners() {
+    for relative_path in [
+        "src/ui/snippets/ai/chat_demo.rs",
+        "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
+        "src/ui/snippets/ai/reasoning_demo.rs",
+        "src/ui/snippets/ai/transcript_torture.rs",
+        "src/ui/snippets/ai/persona_demo.rs",
+        "src/ui/snippets/ai/task_demo.rs",
+        "src/ui/snippets/drawer/demo.rs",
+        "src/ui/snippets/data_table/basic_demo.rs",
+        "src/ui/snippets/data_table/default_demo.rs",
+        "src/ui/snippets/data_table/rtl_demo.rs",
+        "src/ui/snippets/scroll_area/nested_scroll_routing.rs",
+        "src/ui/snippets/sidebar/demo.rs",
+        "src/ui/snippets/sidebar/controlled.rs",
+        "src/ui/snippets/sidebar/mobile.rs",
+        "src/ui/snippets/sidebar/rtl.rs",
+        "src/ui/snippets/sonner/demo.rs",
+        "src/ui/snippets/sonner/usage.rs",
+        "src/ui/snippets/sonner/extras.rs",
+        "src/ui/snippets/sonner/position.rs",
+    ] {
+        assert_selected_snippets_prefer_grouped_uicx_listeners(
+            relative_path,
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                ".on_activate(cx.actions().listen(",
+            ],
+            &["use fret::app::AppActivateExt as _;"],
+        );
+    }
+}
+
+#[test]
+fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_hook_slots() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/ai/workflow_controls_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::WorkflowControlsButton::new(\"Zoom in\", fret_icons::ids::ui::PLUS)",
+                ".on_activate(cx.actions().listen(",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/workflow_node_graph_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::WorkflowControlsButton::new(\"Zoom in\", IconId::new_static(\"lucide.plus\"))",
+                ".on_activate(cx.actions().listen(zoom_in))",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/message_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::MessageAction::new(\"Copy\")",
+                ".on_activate(cx.actions().listen(set_action(\"assistant.copy\")))",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/message_usage.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::MessageAction::new(\"Retry\")",
+                ".on_activate(cx.actions().listen(set_action(\"assistant.retry\")))",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/artifact_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::ArtifactClose::new()",
+                ".on_activate(cx.actions().listen(",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/artifact_code_display.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::ArtifactAction::new()",
+                ".on_activate(cx.actions().listen(status_action(",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/checkpoint_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])",
+                ".on_activate(cx.actions().listen(restore_to_checkpoint.clone()))",
+            ][..],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing grouped UiCx listener marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        assert!(
+            !normalized.contains("usefret::app::AppActivateExtas_;"),
+            "{} should no longer import AppActivateExt once the widget exposes a native hook surface",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn selected_ai_snippets_prefer_grouped_uicx_actions_when_widgets_have_native_action_slots() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/ai/confirmation_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::RequestApproval>(",
+                "shadcn::Button::new(\"Request approval\")",
+                ".action(act::RequestApproval)",
+                "ui_ai::ConfirmationAction::new(\"Reject\")",
+                ".action(act::RejectApproval)",
+                "ui_ai::ConfirmationAction::new(\"Approve\")",
+                ".action(act::ApproveApproval)",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/conversation_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::DownloadConversation>(",
+                "ui_ai::ConversationDownload::new(\"Download conversation\")",
+                ".action(act::DownloadConversation)",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/prompt_input_docs_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::ToggleSearch>(",
+                "ui_ai::PromptInputButton::new(\"Search\")",
+                ".action(act::ToggleSearch)",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/web_preview_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "cx.actions().models::<act::NavigateBack>(",
+                "cx.actions().models::<act::NavigateForward>(",
+                "ui_ai::WebPreviewNavigationButton::new([cx.text(\"←\")])",
+                ".action(act::NavigateBack)",
+                "ui_ai::WebPreviewNavigationButton::new([cx.text(\"→\")])",
+                ".action(act::NavigateForward)",
+            ][..],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing grouped UiCx action marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        assert!(
+            !normalized.contains("usefret::app::AppActivateExtas_;"),
+            "{} should no longer import AppActivateExt once the widget has a native `.action(...)` slot",
+            path.display()
+        );
+        assert!(
+            !normalized.contains(".listen("),
+            "{} should stay on grouped `UiCx` actions + widget `.action(...)` instead of AppActivate `.listen(...)`",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn action_first_view_snippet_prefers_action_alias_for_activation_only_widgets() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/command/action_first_view.rs",
+        &["shadcn::Badge::new(\"Ping via activate sugar\").action(act::Ping)"],
+    );
+
+    assert!(
+        !normalized.contains("usefret::app::AppActivateExtas_;"),
+        "action-first view snippet should stay on native widget action slots instead of importing activation bridge sugar"
+    );
+    assert!(
+        !normalized.contains(".dispatch::<act::Ping>()"),
+        "action-first view snippet should prefer the value-based activation alias over turbofish dispatch"
+    );
 }
 
 #[test]
@@ -1424,7 +1718,10 @@ fn calendar_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/calendar",
-        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+        &[
+            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
+            "-> AnyElement",
+        ],
     );
 }
 
@@ -2989,8 +3286,8 @@ fn scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Horizontal\", horizontal)",
             "DocSection::build(cx, \"Nested scroll routing\", nested_scroll_routing)",
             "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"Scrollbar drag baseline\", drag_baseline)",
-            "DocSection::build(cx, \"Expand at bottom\", expand_at_bottom)",
+            "DocSection::build_diagnostics(cx, \"Scrollbar drag baseline\", drag_baseline)",
+            "DocSection::build_diagnostics(cx, \"Expand at bottom\", expand_at_bottom)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -2998,25 +3295,40 @@ fn scroll_area_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Horizontal\", horizontal)",
             "DocSection::new(\"Nested scroll routing\", nested_scroll_routing)",
             "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"Scrollbar drag baseline\", drag_baseline)",
-            "DocSection::new(\"Expand at bottom\", expand_at_bottom)",
+            "DocSection::build(cx, \"Scrollbar drag baseline\", drag_baseline)",
+            "DocSection::build(cx, \"Expand at bottom\", expand_at_bottom)",
         ],
     );
 }
 
 #[test]
-fn scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries() {
+fn scroll_area_app_facing_snippet_lane_has_no_raw_boundaries() {
+    for path in rust_sources("src/ui/snippets/scroll_area") {
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        let is_raw_render_root = normalized
+            .contains("pubfnrender<H:UiHost+'static>(cx:&mutElementContext<'_,H>)->AnyElement");
+        assert!(
+            !is_raw_render_root,
+            "{} should stay on the copyable default app-facing lane",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn scroll_area_diagnostics_lane_keeps_intentional_raw_boundaries() {
     let expected_raw_roots = BTreeSet::from([
-        manifest_path("src/ui/snippets/scroll_area/drag_baseline.rs")
+        manifest_path("src/ui/diagnostics/scroll_area/drag_baseline.rs")
             .display()
             .to_string(),
-        manifest_path("src/ui/snippets/scroll_area/expand_at_bottom.rs")
+        manifest_path("src/ui/diagnostics/scroll_area/expand_at_bottom.rs")
             .display()
             .to_string(),
     ]);
     let mut actual_raw_roots = BTreeSet::new();
 
-    for path in rust_sources("src/ui/snippets/scroll_area") {
+    for path in rust_sources("src/ui/diagnostics/scroll_area") {
         let source = read_path(&path);
         let normalized = source.split_whitespace().collect::<String>();
         let is_raw_render_root = normalized
@@ -3035,7 +3347,7 @@ fn scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries() {
 
     assert_eq!(
         actual_raw_roots, expected_raw_roots,
-        "src/ui/snippets/scroll_area should keep exactly the two audited diagnostics harness raw roots",
+        "src/ui/diagnostics/scroll_area should keep exactly the two audited diagnostics harness raw roots",
     );
 }
 
@@ -3452,6 +3764,7 @@ fn image_object_fit_snippets_prefer_ui_cx_on_the_default_app_surface() {
         &[
             "pub fn render<H: UiHost>(",
             "pub fn render(cx: &mut ElementContext<'_, H>",
+            "-> AnyElement",
         ],
     );
 }
@@ -5679,7 +5992,7 @@ fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement()
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/snippets/scroll_area/expand_at_bottom.rs",
+        "src/ui/diagnostics/scroll_area/expand_at_bottom.rs",
         &[
             "fn toggle_button<H: UiHost>(expanded: Model<bool>, is_expanded: bool,) -> impl IntoUiElement<H> + use<H>",
             "fn empty_row<H: UiHost>(row_h: Px) -> impl IntoUiElement<H> + use<H>",
@@ -5743,6 +6056,12 @@ fn selected_data_table_snippet_helpers_prefer_into_ui_element_over_anyelement() 
             "fn align_inline_start<B>(cx: &mut UiCx<'_>, child: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
         ],
         &["fn align_inline_start(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/data_table/guide_demo.rs",
+        &["fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<>"],
+        &["fn guide_demo_content(cx: &mut UiCx<'_>) -> Vec<AnyElement>"],
     );
 }
 
@@ -6657,11 +6976,11 @@ fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/demo.rs",
         &[
-            "fn goal_adjust_button<H: UiHost>(goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn goal_adjust_button(cx: &mut UiCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> shadcn::Button",
             "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn goal_adjust_button<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> AnyElement",
+            "fn goal_adjust_button(cx: &mut UiCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> AnyElement",
             "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32) -> AnyElement",
         ],
     );
@@ -6927,10 +7246,10 @@ fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn menu_button<H: UiHost>(cx: &mut ElementContext<'_, H>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> impl IntoUiElement<H> + use<H>",
+                "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> shadcn::SidebarMenuButton",
             ],
             &[
-                "fn menu_button<H: UiHost>(cx: &mut ElementContext<'_, H>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
+                "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
             ],
         );
     }
@@ -6951,9 +7270,11 @@ fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement(
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/aspect_ratio/demo.rs",
         &[
+            "fn render_frame<H: UiHost, E>(image: E) -> impl IntoUiElement<H> + use<H, E>",
             "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
+            "fn render_frame<H: UiHost>(cx: &mut ElementContext<'_, H>, image: AnyElement,) -> impl IntoUiElement<H> + use<H>",
             "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
         ],
     );
@@ -7808,6 +8129,41 @@ fn selected_ai_snippets_follow_selects_direct_recipe_root_lane() {
 }
 
 #[test]
+fn selected_ai_snippet_helpers_prefer_typed_children_over_anyelement() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/ai/shimmer_elements_demo.rs",
+        &[
+            "fn item<B>(label: &'static str, el: B) -> impl UiChild + use<B> where B: IntoUiElement<fret_app::App>",
+        ],
+        &["let item = |cx: &mut UiCx<'_>, label: &'static str, el: AnyElement| {"],
+    );
+}
+
+#[test]
+fn selected_ai_snippets_do_not_reintroduce_anyelement_type_annotations() {
+    for relative_path in [
+        "src/ui/snippets/ai/test_results_demo.rs",
+        "src/ui/snippets/ai/test_results_errors.rs",
+        "src/ui/snippets/ai/test_results_suites.rs",
+        "src/ui/snippets/ai/conversation_demo.rs",
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+        assert!(
+            !normalized.contains("usefret_ui::element::AnyElement;"),
+            "{} reintroduced an unnecessary AnyElement import",
+            path.display()
+        );
+        assert!(
+            !normalized.contains("Vec<AnyElement>"),
+            "{} reintroduced an unnecessary Vec<AnyElement> annotation",
+            path.display()
+        );
+    }
+}
+
+#[test]
 fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
     assert_material3_snippet_prefers_copyable_root(
         "src/ui/snippets/material3/menu.rs",
@@ -7834,6 +8190,8 @@ fn material3_overlay_snippets_prefer_uncontrolled_copyable_roots() {
             "pub fn render<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, last_action: Model<Arc<str>>, ) -> AnyElement {",
             "let open = cx.local_model_keyed(\"open\", || false);",
             "let selected = cx.local_model_keyed(\"selected\", || None::<Arc<str>>);",
+            "let build_dialog = |cx: &mut UiCx<'_>, mut dialog: material3::Dialog, style: Option<material3::DialogStyle>, id_prefix: &'static str, open_action: OnActivate, close_action: OnActivate, confirm_action: OnActivate| -> AnyElement {",
+            "let build_container = |cx: &mut UiCx<'_>, dialog: AnyElement| -> AnyElement {",
         ],
     );
 
@@ -8116,6 +8474,7 @@ fn material3_composite_snippets_prefer_local_uncontrolled_value_roots() {
             "material3_switch: Model<bool>,",
             "material3_radio_value: Model<Option<Arc<str>>>,",
             "material3_tabs_value: Model<Arc<str>>,",
+            "let target_overlay = |cx: &mut UiCx<'_>, label: &'static str, chrome: Option<Size>, child: AnyElement| {",
         ],
     );
 

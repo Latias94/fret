@@ -44,7 +44,7 @@ fn web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures() {
                     &case.web_name,
                     Some("menu"),
                     |cx, open| {
-                        use fret_ui_shadcn::{
+                        use fret_ui_shadcn::facade::{
                             Button, ButtonVariant, DropdownMenu, DropdownMenuEntry,
                             DropdownMenuItem, DropdownMenuLabel, DropdownMenuShortcut,
                         };

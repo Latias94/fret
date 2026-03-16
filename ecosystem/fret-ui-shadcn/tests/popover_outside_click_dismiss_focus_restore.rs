@@ -7,6 +7,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -73,10 +74,10 @@ fn popover_outside_click_closes_and_activates_underlay() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let open: Model<bool> = app.models_mut().insert(false);
@@ -94,7 +95,7 @@ fn popover_outside_click_closes_and_activates_underlay() {
                 host.request_redraw(acx.window);
             });
 
-            let underlay = fret_ui_shadcn::Button::new("Underlay")
+            let underlay = shadcn::Button::new("Underlay")
                 .test_id("underlay")
                 .on_activate(on_underlay_activate)
                 .refine_layout(
@@ -105,17 +106,17 @@ fn popover_outside_click_closes_and_activates_underlay() {
                 )
                 .into_element(cx);
 
-            let popover = fret_ui_shadcn::Popover::from_open(open).into_element_with(
+            let popover = shadcn::Popover::from_open(open).into_element_with(
                 cx,
                 |cx| {
-                    fret_ui_shadcn::PopoverTrigger::new(
-                        fret_ui_shadcn::Button::new("Open")
+                    shadcn::PopoverTrigger::new(
+                        shadcn::Button::new("Open")
                             .test_id("popover-trigger")
                             .into_element(cx),
                     )
                     .into_element(cx)
                 },
-                |cx| fret_ui_shadcn::PopoverContent::new([cx.text("Content")]).into_element(cx),
+                |cx| shadcn::PopoverContent::new([cx.text("Content")]).into_element(cx),
             );
 
             vec![underlay, popover]

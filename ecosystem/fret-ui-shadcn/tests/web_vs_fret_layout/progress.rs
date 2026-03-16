@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
@@ -48,10 +49,10 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -75,7 +76,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
                     label: Some(Arc::from("Golden:progress-demo")),
                     ..Default::default()
                 },
-                move |cx| vec![fret_ui_shadcn::Progress::new(model).into_element(cx)],
+                move |cx| vec![shadcn::Progress::new(model).into_element(cx)],
             );
 
             vec![cx.container(
@@ -172,10 +173,10 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -199,7 +200,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
                     label: Some(Arc::from("Golden:progress-demo")),
                     ..Default::default()
                 },
-                move |cx| vec![fret_ui_shadcn::Progress::new(model).into_element(cx)],
+                move |cx| vec![shadcn::Progress::new(model).into_element(cx)],
             );
 
             vec![cx.container(

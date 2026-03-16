@@ -4,6 +4,7 @@ use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/web_golden_shadcn.rs"]
@@ -33,10 +34,10 @@ fn run_fret_root_with_services(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -171,7 +172,7 @@ fn web_vs_fret_field_input_geometry() {
                 label: Some(Arc::from("Golden:field-input:username:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Username").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Username").into_element(cx)],
         );
         let username_input = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -181,7 +182,7 @@ fn web_vs_fret_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(username)
+                    shadcn::Input::new(username)
                         .a11y_label("Username")
                         .placeholder("Max Leiter")
                         .into_element(cx),
@@ -196,16 +197,14 @@ fn web_vs_fret_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new(
-                        "Choose a unique username for your account.",
-                    )
-                    .into_element(cx),
+                    shadcn::FieldDescription::new("Choose a unique username for your account.")
+                        .into_element(cx),
                 ]
             },
         );
 
         let username_field =
-            fret_ui_shadcn::Field::new(vec![username_label, username_input, username_desc])
+            shadcn::Field::new(vec![username_label, username_input, username_desc])
                 .into_element(cx);
 
         let password_label = cx.semantics(
@@ -214,7 +213,7 @@ fn web_vs_fret_field_input_geometry() {
                 label: Some(Arc::from("Golden:field-input:password:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Password").into_element(cx)],
+            move |cx| vec![shadcn::FieldLabel::new("Password").into_element(cx)],
         );
         let password_input = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -224,7 +223,7 @@ fn web_vs_fret_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(password)
+                    shadcn::Input::new(password)
                         .a11y_label("Password")
                         .placeholder("????????")
                         .into_element(cx),
@@ -239,19 +238,18 @@ fn web_vs_fret_field_input_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::FieldDescription::new("Must be at least 8 characters long.")
+                    shadcn::FieldDescription::new("Must be at least 8 characters long.")
                         .into_element(cx),
                 ]
             },
         );
 
         let password_field =
-            fret_ui_shadcn::Field::new(vec![password_label, password_desc, password_input])
+            shadcn::Field::new(vec![password_label, password_desc, password_input])
                 .into_element(cx);
 
-        let group =
-            fret_ui_shadcn::FieldGroup::new(vec![username_field, password_field]).into_element(cx);
-        let set = fret_ui_shadcn::FieldSet::new(vec![group]).into_element(cx);
+        let group = shadcn::FieldGroup::new(vec![username_field, password_field]).into_element(cx);
+        let set = shadcn::FieldSet::new(vec![group]).into_element(cx);
 
         let root = cx.container(
             ContainerProps {

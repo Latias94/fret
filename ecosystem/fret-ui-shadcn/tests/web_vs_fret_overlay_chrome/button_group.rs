@@ -10,7 +10,7 @@ fn build_shadcn_button_group_demo_dropdown_menu(
 ) -> AnyElement {
     use fret_ui::UiHost;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length};
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
         DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
     };
@@ -83,7 +83,7 @@ fn build_shadcn_button_group_demo_dropdown_menu(
                             DropdownMenuItem::new("Trash")
                                 .leading(icon_stub(cx))
                                 .variant(
-                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                fret_ui_shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
                             ),
                         ),
                     ])),
@@ -94,7 +94,7 @@ fn build_shadcn_button_group_demo_dropdown_menu(
 
 fn assert_button_group_demo_dropdown_menu_destructive_item_idle_fg_matches_web(
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open("button-group-demo");
     let theme = web_theme_named(&web, web_theme_name);
@@ -209,7 +209,7 @@ fn assert_button_group_demo_dropdown_menu_destructive_item_idle_fg_matches_web(
 
 fn assert_button_group_demo_dropdown_menu_destructive_focused_item_chrome_matches_web(
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: fret_ui_shadcn::facade::themes::ShadcnColorScheme,
 ) {
     let web = read_web_golden_open("button-group-demo.destructive-focus");
     let theme = web_theme_named(&web, web_theme_name);

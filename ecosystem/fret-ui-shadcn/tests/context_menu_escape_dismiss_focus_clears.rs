@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -70,10 +71,10 @@ fn context_menu_escape_closes_and_clears_focus() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let open: Model<bool> = app.models_mut().insert(false);
@@ -85,21 +86,17 @@ fn context_menu_escape_closes_and_clears_focus() {
 
     let build = move |open: Model<bool>| {
         move |cx: &mut ElementContext<'_, App>| {
-            vec![fret_ui_shadcn::ContextMenu::from_open(open).into_element(
+            vec![shadcn::ContextMenu::from_open(open).into_element(
                 cx,
                 |cx| {
-                    fret_ui_shadcn::Button::new("Right click here")
+                    shadcn::Button::new("Right click here")
                         .test_id("context-trigger")
                         .into_element(cx)
                 },
                 |_cx| {
                     vec![
-                        fret_ui_shadcn::ContextMenuEntry::Item(
-                            fret_ui_shadcn::ContextMenuItem::new("Copy"),
-                        ),
-                        fret_ui_shadcn::ContextMenuEntry::Item(
-                            fret_ui_shadcn::ContextMenuItem::new("Cut"),
-                        ),
+                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Copy")),
+                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Cut")),
                     ]
                 },
             )]

@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 
 #[path = "select/fixtures.rs"]
@@ -60,7 +61,7 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
                         let items = (0..40).map(|idx| {
                             let value = Arc::from(format!("value-{idx}"));
                             let label = Arc::from(format!("Label {idx}"));
-                            fret_ui_shadcn::SelectItem::new(value, label)
+                            shadcn::SelectItem::new(value, label)
                         });
 
                         vec![cx.container(
@@ -77,10 +78,10 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
                             },
                             move |cx| {
                                 vec![
-                                    fret_ui_shadcn::Select::new(value, open)
+                                    shadcn::Select::new(value, open)
                                         .a11y_label("Select")
                                         .value(
-                                            fret_ui_shadcn::SelectValue::new()
+                                            shadcn::SelectValue::new()
                                                 .placeholder("Select an option"),
                                         )
                                         .trigger_test_id(trigger_test_id)
@@ -323,8 +324,8 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
     );
 }
 
-fn select_demo_entries() -> Vec<fret_ui_shadcn::SelectEntry> {
-    use fret_ui_shadcn::{SelectGroup, SelectItem, SelectLabel};
+fn select_demo_entries() -> Vec<shadcn::SelectEntry> {
+    use shadcn::{SelectGroup, SelectItem, SelectLabel};
 
     vec![
         SelectGroup::new(vec![
@@ -339,8 +340,8 @@ fn select_demo_entries() -> Vec<fret_ui_shadcn::SelectEntry> {
     ]
 }
 
-fn select_scrollable_entries() -> Vec<fret_ui_shadcn::SelectEntry> {
-    use fret_ui_shadcn::{SelectGroup, SelectItem, SelectLabel};
+fn select_scrollable_entries() -> Vec<shadcn::SelectEntry> {
+    use shadcn::{SelectGroup, SelectItem, SelectLabel};
 
     vec![
         SelectGroup::new(vec![
@@ -401,9 +402,9 @@ fn assert_select_demo_overlay_placement_matches_impl(web_name: &str) {
             let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
             let entries = select_demo_entries();
 
-            fret_ui_shadcn::Select::new(value, open.clone())
+            shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
-                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
+                .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
                 .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                 .entries(entries)
                 .into_element(cx)
@@ -422,9 +423,9 @@ fn assert_select_scrollable_overlay_placement_matches_impl(web_name: &str) {
             let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
             let entries = select_scrollable_entries();
 
-            fret_ui_shadcn::Select::new(value, open.clone())
+            shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
-                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
+                .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
                 .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
                 .entries(entries)
                 .into_element(cx)

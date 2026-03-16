@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-09
+Last updated: 2026-03-15
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -15,7 +15,7 @@ small, deterministic gates (tests and scripted diagnostics), not just manual QA.
 - ADR (view runtime): `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
 - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 
-### Implementation anchors (as of 2026-03-05)
+### Implementation anchors (as of 2026-03-15)
 
 Action identity + typed unit actions:
 
@@ -24,7 +24,7 @@ Action identity + typed unit actions:
 
 View runtime (v1):
 
-- `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
+- `ecosystem/fret/src/view.rs` (`View`, `AppUi`, grouped `AppUiActions::{dispatch, dispatch_payload, listener}`, `AppActivateSurface` / `AppActivateExt`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`FretApp::view`, `FretApp::view_with_hooks`)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise pointer activation handlers)
 - `ecosystem/fret-ui-kit/src/primitives/menu/checkbox_item.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/radio_group.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs` (internal primitives reuse `on_activate` helpers)
@@ -47,7 +47,15 @@ Fretboard scaffolding templates (teaching surface):
 - `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`, `todo_template_main_rs`, `simple_todo_template_main_rs`)
   - Unit tests gate that templates use `ui::children![cx; ...]`, keep explicit `.into_element(cx)` calls low, and keep first-contact templates on `on_action_notify_models` instead of single-model aliases.
 - `README.md`, `docs/README.md`, `docs/first-hour.md`, `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`, `docs/fearless-refactoring.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, `apps/fret-ui-gallery/src/ui/pages/command.rs`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
-  - These first-contact, golden-path, and ergonomics narrative surfaces now align on the same default entrypoints: root/view `cx.actions().locals/models/transient/payload(...)` plus widget-local `.on_activate(cx.actions().dispatch::<A>())`, `.on_activate(cx.actions().dispatch_payload::<A>(...))`, and `.on_activate(cx.actions().listener(...))`; raw `on_action*` / `on_activate*` helper families are documented as advanced or cookbook/reference-only seams.
+  - These first-contact, golden-path, and ergonomics narrative surfaces now align on the same default entrypoints: root/view `cx.actions().locals/models/transient/payload(...)` plus widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` on activation-only surfaces after an explicit `use fret::app::AppActivateExt as _;`; raw `on_action*` / `on_activate*` helper families are documented as advanced or cookbook/reference-only seams.
+- `apps/fret-ui-gallery/src/ui/snippets/badge/link.rs`, `ecosystem/fret/src/view.rs`
+  - The gallery's badge-link snippet now uses `.listen(...)` instead of reopening a raw
+    `OnActivate` closure, and the first-party activation-only sugar coverage now explicitly
+    includes Material 3 `Card` / `DialogAction` / `TopAppBarAction` alongside the earlier shadcn
+    activation-only surfaces.
+- `tools/gate_button_action_default_surfaces.py`, `tools/gate_gallery_action_alias_default_surfaces.py`, `tools/pre_release.py`
+  - The pre-release teaching-surface gate suite now also protects curated button and
+    action-capable ui-gallery slices from drifting back to legacy `.on_click(...)` authoring.
 - `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py`
   - Keeps the default demo surfaces on `on_action_notify_models` / `on_action_notify_transient`, while `embedded_viewport_demo` now uses local-state-specific write helpers only for its view-local size preset and still keeps runtime/interop effects explicit; `hello_counter_demo` now also uses the direct text-value bridge for its step input, and the gate continues preventing single-model helper aliases from drifting back into `fret-examples` or ui-gallery teaching pages/snippets, while scaffold templates keep equivalent unit-test assertions in `apps/fretboard/src/scaffold/templates.rs`.
 - `ecosystem/fret-ui-shadcn/src/text_value_model.rs`, `ecosystem/fret/src/view.rs`, `apps/fret-cookbook/examples/text_input_basics.rs`, `apps/fret-cookbook/examples/markdown_and_code_basics.rs`, `apps/fret-cookbook/examples/virtual_list_basics.rs`, `apps/fretboard/src/scaffold/templates.rs`

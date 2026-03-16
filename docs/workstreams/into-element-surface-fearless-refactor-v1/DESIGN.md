@@ -74,17 +74,23 @@ call syntax on `UiBuilder<T>`.
 The component surface should expose **one** public conversion concept, not a stack of bridge
 concepts.
 
-### 1.3 Evidence from the current tree
+### 1.3 Evidence from the tree
 
-Current public exports still show the split:
+The original problem was easy to see in the public surface:
 
-- `fret::app::prelude::*` anonymously imports `UiBuilderHostBoundIntoElementExt` so method syntax
-  keeps working on the app path.
-- `fret::component::prelude::*` publicly exports `UiIntoElement`, `UiHostBoundIntoElement`,
+- `fret::app::prelude::*` used to rely on a hidden `UiBuilderHostBoundIntoElementExt` bridge so
+  method syntax kept working on the app path.
+- `fret::component::prelude::*` used to expose `UiIntoElement`, `UiHostBoundIntoElement`,
   `UiChildIntoElement`, `UiBuilder`, and `AnyElement` together.
 
-Current first-party usage also shows that `AnyElement` is still the default authoring currency for
-many component/snippet surfaces:
+That split is now deleted from production code. The remaining closeout evidence is narrower:
+
+- some historical workstream/docs text still describes the old split as if it were current,
+- a few intentionally non-raw first-party helpers can still drift back to `AnyElement` even though
+  the unified `IntoUiElement<H>` / `UiChild` story is already available.
+
+First-party usage also showed that `AnyElement` used to be the default authoring currency for many
+component/snippet surfaces:
 
 - `apps/fret-cookbook/examples/**`: the official cookbook is already much closer to the target
   app-facing story.
@@ -157,7 +163,14 @@ This workstream therefore keeps:
 The app-facing teaching surface should stay:
 
 - `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`
-- `fn helper(cx: &mut UiCx<'_>) -> impl UiChild`
+- `fn helper(...) -> impl UiChild`
+
+Clarification on 2026-03-15:
+
+- spell `cx: &mut UiCx<'_>` on an app helper only when the helper body actually needs
+  runtime/context access,
+- if a page-shell helper only composes existing `UiChild` values, prefer dropping `cx` and
+  late-landing it at the render root via `ui::children![cx; helper(...)]`.
 
 App docs should not need to explain:
 

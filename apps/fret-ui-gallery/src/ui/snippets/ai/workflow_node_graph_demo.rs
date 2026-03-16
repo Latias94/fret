@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("workflow_node_graph_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
@@ -22,7 +23,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
     use fret_runtime::Model;
-    use fret_ui::action::OnActivate;
     use fret_ui::element::{LayoutStyle, SemanticsProps};
     use fret_ui::retained_bridge::RetainedSubtreeProps;
     use fret_ui_kit::declarative::style as decl_style;
@@ -305,10 +305,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .max_w(MetricRef::Px(Px(900.0)))
         .min_w_0();
 
-    let zoom_in: OnActivate = Arc::new({
+    let zoom_in = {
         let binding = binding.clone();
         let bounds = bounds.clone();
-        move |host, _cx, _reason| {
+        move |host, _cx| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
@@ -325,12 +325,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
             let _ = binding.set_viewport(host, pan, zoom);
         }
-    });
+    };
 
-    let zoom_out: OnActivate = Arc::new({
+    let zoom_out = {
         let binding = binding.clone();
         let bounds = bounds.clone();
-        move |host, _cx, _reason| {
+        move |host, _cx| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
@@ -347,42 +347,42 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
             let _ = binding.set_viewport(host, pan, zoom);
         }
-    });
+    };
 
-    let fit_view: OnActivate = Arc::new({
+    let fit_view = {
         let binding = binding.clone();
-        move |host, _cx, _reason| {
+        move |host, _cx| {
             let nodes = binding
                 .graph_snapshot(host)
                 .map(|graph| graph.nodes.keys().copied().collect::<Vec<_>>())
                 .unwrap_or_default();
             let _ = binding.fit_view_nodes(host, nodes);
         }
-    });
+    };
 
-    let reset_view: OnActivate = Arc::new({
+    let reset_view = {
         let binding = binding.clone();
-        move |host, _cx, _reason| {
+        move |host, _cx| {
             let _ = binding.set_viewport(host, CanvasPoint::default(), 1.0);
         }
-    });
+    };
 
     let controls = ui_ai::WorkflowControls::new([
         ui_ai::WorkflowControlsButton::new("Zoom in", IconId::new_static("lucide.plus"))
             .test_id("ui-ai-workflow-node-graph-demo-zoom-in")
-            .on_activate(zoom_in)
+            .on_activate(cx.actions().listen(zoom_in))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Zoom out", IconId::new_static("lucide.minus"))
             .test_id("ui-ai-workflow-node-graph-demo-zoom-out")
-            .on_activate(zoom_out)
+            .on_activate(cx.actions().listen(zoom_out))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Fit view", IconId::new_static("lucide.maximize-2"))
             .test_id("ui-ai-workflow-node-graph-demo-fit-view")
-            .on_activate(fit_view)
+            .on_activate(cx.actions().listen(fit_view))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Reset view", IconId::new_static("lucide.refresh-ccw"))
             .test_id("ui-ai-workflow-node-graph-demo-reset-view")
-            .on_activate(reset_view)
+            .on_activate(cx.actions().listen(reset_view))
             .into_element(cx),
     ])
     .test_id("ui-ai-workflow-node-graph-demo-controls")

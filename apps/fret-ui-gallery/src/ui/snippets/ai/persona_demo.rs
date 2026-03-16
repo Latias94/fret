@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("persona_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
@@ -33,7 +34,7 @@ fn state_button(
         })
         .a11y_label(label)
         .test_id(format!("ui-ai-persona-demo-state-{}", state.as_str()))
-        .on_activate(Arc::new(move |host, action_cx, _reason| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&state_model, |value| *value = state);
@@ -42,6 +43,7 @@ fn state_button(
 }
 
 fn variant_button(
+    cx: &mut UiCx<'_>,
     variant_model: Model<ui_ai::PersonaVariant>,
     current_variant: ui_ai::PersonaVariant,
     variant: ui_ai::PersonaVariant,
@@ -54,7 +56,7 @@ fn variant_button(
             shadcn::ButtonVariant::Outline
         })
         .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
-        .on_activate(Arc::new(move |host, action_cx, _reason| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&variant_model, |value| *value = variant);
@@ -126,36 +128,42 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let variant_controls = ui::h_flex(move |cx| {
         vec![
             variant_button(
+                cx,
                 variant_model.clone(),
                 current_variant,
                 ui_ai::PersonaVariant::Obsidian,
             )
             .into_element(cx),
             variant_button(
+                cx,
                 variant_model.clone(),
                 current_variant,
                 ui_ai::PersonaVariant::Mana,
             )
             .into_element(cx),
             variant_button(
+                cx,
                 variant_model.clone(),
                 current_variant,
                 ui_ai::PersonaVariant::Opal,
             )
             .into_element(cx),
             variant_button(
+                cx,
                 variant_model.clone(),
                 current_variant,
                 ui_ai::PersonaVariant::Halo,
             )
             .into_element(cx),
             variant_button(
+                cx,
                 variant_model.clone(),
                 current_variant,
                 ui_ai::PersonaVariant::Glint,
             )
             .into_element(cx),
             variant_button(
+                cx,
                 variant_model,
                 current_variant,
                 ui_ai::PersonaVariant::Command,

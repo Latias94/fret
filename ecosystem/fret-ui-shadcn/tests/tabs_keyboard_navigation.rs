@@ -5,7 +5,8 @@ use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::tabs::TabsActivationMode;
+use fret_ui_shadcn::facade::{self as shadcn, themes as shadcn_themes};
+use fret_ui_shadcn::raw::tabs::TabsActivationMode;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -97,18 +98,18 @@ fn build_tabs(
         |_cx| Vec::new(),
     );
 
-    let tabs = fret_ui_shadcn::Tabs::new(selected)
+    let tabs = shadcn::Tabs::new(selected)
         .activation_mode(activation_mode)
         .item(
-            fret_ui_shadcn::TabsItem::new("alpha", "Alpha", [alpha_panel])
+            shadcn::TabsItem::new("alpha", "Alpha", [alpha_panel])
                 .trigger_test_id("tabs-trigger-alpha"),
         )
         .item(
-            fret_ui_shadcn::TabsItem::new("beta", "Beta", [beta_panel])
+            shadcn::TabsItem::new("beta", "Beta", [beta_panel])
                 .trigger_test_id("tabs-trigger-beta"),
         )
         .item(
-            fret_ui_shadcn::TabsItem::new("gamma", "Gamma", [gamma_panel])
+            shadcn::TabsItem::new("gamma", "Gamma", [gamma_panel])
                 .trigger_test_id("tabs-trigger-gamma"),
         );
 
@@ -124,10 +125,10 @@ fn tabs_automatic_activation_arrow_keys_update_selection_and_panels() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn_themes::ShadcnBaseColor::Neutral,
+        shadcn_themes::ShadcnColorScheme::Light,
     );
     let selected: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("alpha")));
 
@@ -243,10 +244,10 @@ fn tabs_manual_activation_moves_focus_without_selecting_until_enter() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        shadcn_themes::ShadcnBaseColor::Neutral,
+        shadcn_themes::ShadcnColorScheme::Light,
     );
     let selected: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("alpha")));
 

@@ -95,10 +95,27 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
 
 - `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
 - The `fret` app-facing facade now keeps the lower-level activation glue under `cx.actions()`
-  (`dispatch`, `dispatch_payload`, `listener`) and teaches the default app lane through
-  `widget.dispatch::<A>(cx)`, `widget.dispatch_payload::<A>(cx, payload)`, and
-  `widget.listen(cx, |host, acx| { ... })` for activation-only surfaces via
+  (`action`, `action_payload`, `dispatch`, `dispatch_payload`, `listen`) and teaches the default
+  app lane through `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and
+  `widget.listen(|host, acx| { ... })` for activation-only surfaces via an explicit
+  `use fret::app::AppActivateExt as _;` import on
   `fret::app::AppActivateSurface` / `AppActivateExt`.
+  Shadcn widgets that already expose native `.action(...)` / `.action_payload(...)` slots or a
+  widget-owned `.on_activate(...)` hook (`Button`, `SidebarMenuButton`, `Badge`,
+  `extras::{BannerAction, BannerClose, Ticker}`) now stay on that native surface and are no
+  longer part of the `AppActivateSurface` bridge list.
+  The first-party `badge/link.rs` example now overrides link launching through
+  `Badge::on_activate(...)` instead of reopening the activation bridge just to keep diagnostics
+  runs side-effect free.
+  Extracted `UiCx` helper functions now get the same grouped action/data surface through
+  `UiCxActionsExt` / `UiCxDataExt`, and AI widgets such as `WorkflowControlsButton`,
+  `MessageAction`, `ArtifactAction`, `ArtifactClose`, `CheckpointTrigger`,
+  `ConversationDownload`, `PromptInputButton`, `WebPreviewNavigationButton`, and
+  `ConfirmationAction` now stay on their native `.action(...)` slots or widget-owned
+  `.on_activate(...)` hooks instead of extending the bridge table. First-party UI Gallery button
+  and sidebar snippets now also use `UiCxActionsExt` plus widget-owned `.on_activate(...)` for
+  local listeners instead of importing `AppActivateExt`. As of 2026-03-16, the first-party
+  default widget bridge table is intentionally empty.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.
@@ -155,22 +172,86 @@ Recommended imports for app code:
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 ```
 
+### Current authoring-surface closeout status (2026-03-16)
+
+The discovery-lane closure is now structurally landed. The main remaining shadcn work is
+**docs/gate hygiene on top of that closure**, not another public-surface redesign.
+
+- ordinary component/app authors should make one first-contact choice for component families:
+  `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
+- `raw::*` remains the only explicit component-family escape hatch
+- `app::*` and `themes::*` are setup lanes, not peer discovery lanes
+- `advanced::*` is an implementation/debug/source-alignment lane, not a competing default
+- component-family root modules are now crate-private instead of public/doc-hidden residue
+
+Release-blocking closeout consequences:
+
+- stale first-party docs/examples that still make any non-facade lane feel like a peer path
+  should be treated as authoring-surface debt even if the underlying component implementation is
+  correct
+- source-policy tests are guardrails, not the desired end-state; the goal is to remove the need
+  for humans to mentally sort multiple peer discovery lanes in the first place
+- broader ecosystem trait/sugar work should read from this settled discovery story rather than
+  compete with it
+
+### Extension-contract sequencing (2026-03-16)
+
+The next ecosystem-trait pass should be **sequenced after**, not during, the current authoring
+surface closeout.
+
+- start gate: do not budget new public integration traits while the canonical todo/default-path
+  docs and templates still need wording churn for the default lane
+- every new ecosystem contract should declare its tier up front:
+  - app-level install/setup/integration
+  - component-level composition/adaptor
+  - explicit advanced/raw hook
+- non-goal: do not widen `fret::app::prelude::*`, `fret::component::prelude::*`, or the flat
+  `fret_ui_shadcn` discovery surface in the name of extensibility
+- first-party UI Gallery snippets/pages remain the teaching-source checkpoint for default shadcn
+  authoring; if a proposed trait or helper does not make that surface clearer, it likely does not
+  belong on the default lane
+- when a family intentionally needs both a compact default lane and a raw/parts lane, ship both
+  exemplars and lock them with a source-policy gate instead of relying on docs prose alone
+
 Guidelines:
 
 - Prefer `ui()` for all authoring (chrome + layout + debug helpers).
 - Prefer composing shadcn components over introducing new wrapper nodes.
 - First-party app surfaces should prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`;
   `apps/fret-examples` and the curated `apps/fret-ui-gallery` snippet batches are now gated this way.
+- First-party non-demo ecosystem crates should avoid the flat `fret_ui_shadcn::{Button, ...}` root
+  lane as well; `ecosystem/fret-ui-ai/src/elements/**` now stays on explicit `facade::*` /
+  documented `raw::*` imports, with both a crate-local source test and the repo-level
+  `tools/gate_fret_ui_ai_curated_shadcn_surfaces.py` check enforcing that rule.
+- For widgets that already expose stable action slots, prefer `.action(...)` /
+  `.action_payload(...)`; curated first-party button and action-capable UI Gallery slices are now
+  policy-gated away from legacy `.on_click(...)`.
+- For activation-only surfaces rendered inside a `fret` app shell, prefer
+  `use fret::app::AppActivateExt as _;` plus `.action(act::Save)` /
+  `.action_payload(act::Remove, payload)` / `.listen(...)`; `.dispatch::<A>()` /
+  `.dispatch_payload::<A>(payload)` remain the explicit aliases. Do not reopen raw
+  `.on_activate(...)` on first-party snippet surfaces unless the example is intentionally
+  documenting a raw/advanced seam.
 - Non-curated seams should stay explicit in app code: use `fret_ui_shadcn::advanced::*` for
   environment / `UiServices` hooks, and use `shadcn::raw::*` only for the documented escape-hatch
-  lanes (`typography` prose helpers, `extras`, breadcrumb primitives, and low-level icon helpers)
-  instead of importing `fret_ui_shadcn::*` directly.
-- Treat the flat `fret_ui_shadcn::*` root exports as a hidden compatibility/implementation
-  surface, not as a peer first-contact discovery lane next to `facade as shadcn`.
+  lanes (`typography` prose helpers, `extras`, breadcrumb primitives, the experimental
+  `DataGridElement` family, low-level icon helpers, and module-local advanced enums/styles such as
+  `raw::{button, calendar, context_menu, dropdown_menu, kbd, menubar, select, switch, tabs,
+  toggle_group}::*`) instead of importing `fret_ui_shadcn::*` directly.
+- Theme presets are no longer a parallel root lane either: first-party code should use
+  `shadcn::themes::*` (or `fret_ui_shadcn::facade::themes::*` in non-aliased contexts), not the
+  historical `fret_ui_shadcn::shadcn_themes::*` path.
+- Treat the flat `fret_ui_shadcn::*` crate root as non-authoring glue only; component-family
+  exports now live on `facade as shadcn`, with `raw::*` as the explicit escape hatch.
+- The curated `prelude` and crate-internal recipe/helper glue now also source their
+  authoring-critical names from explicit module/facade paths instead of hidden flat root
+  reexports; component families, direction utilities, themes, and authoring glue now all route
+  through explicit facade/prelude/raw lanes, and internal recipe code now imports icon helpers
+  directly from `fret_ui_kit::declarative::icon` rather than relying on a flat-root shim.
 - The current first-party source-policy tests that ban root-style imports are evidence of remaining
-  public-surface duplication, not proof that the current three-lane discovery story is ideal.
-  The next cleanup step is to make the curated facade lane more self-evident, not to normalize the
-  crate root as another default authoring path.
+  public-surface duplication, not proof that the current lane budget is ideal forever.
+  The next cleanup step is to keep deleting stale teaching copy and to keep the curated
+  facade/raw/app/themes/advanced budget stable, not to normalize any new peer discovery lane.
 - `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
   ecosystem into competing patterns.
 
@@ -456,7 +537,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | carousel | `carousel` | Defer | In review | Audit: `docs/audits/shadcn-carousel.md`; gallery now mirrors the upstream Carousel docs structure first (`Demo` / `About` / `Usage` / `Examples` / `Options` / `API` / `Events` / `Plugins` / `RTL` / `API Reference`) while keeping engine/diagnostics follow-ups explicit, and the first-party split is now taught consistently (`Usage`, docs-first examples, and ordinary diagnostics demos stay on the compact builder lane; only `Parts` plus the custom-control diagnostics snippets `Events` / `RTL` remain on the upstream-shaped parts lane); no active mechanism/public-surface drift is identified, and status stays `Defer` because carousel is not currently editor-critical |
 | chart | `chart` | Defer | In review | Audit: `docs/audits/shadcn-chart.md`; chart recipe surface, tooltip/legend contracts, and existing chart gates are already partially audited; status stays `Defer` because broader chart-engine work is not currently editor-critical |
 | checkbox | `checkbox` | Present | In review | Audit: `docs/audits/shadcn-checkbox.md`; gallery now mirrors the base Checkbox docs path first with explicit `API Reference`, while `Label Association` and `With Title` stay as focused Fret follow-ups; checkbox chrome, focus ring, and indicator visuals remain recipe-owned, surrounding field layout stays caller-owned, and existing layout/focus gates continue to cover `checkbox-demo` parity |
-| collapsible | `collapsible` | Present | In review | Audit: `docs/audits/shadcn-collapsible.md`; gallery now mirrors the base Collapsible docs path first with explicit `Controlled State` / `Basic` / `Settings Panel` / `File Tree` / `RTL` / `API Reference` sections; composable children stay on `collapsible::primitives`, the compact top-level wrapper remains the Fret-first ergonomic surface, and disclosure motion/semantics remain recipe-owned while surrounding width/gap/card layout stay caller-owned |
+| collapsible | `collapsible` | Present | In review | Audit: `docs/audits/shadcn-collapsible.md`; gallery now mirrors the base Collapsible docs path first with explicit `Controlled State` / `Basic` / `Settings Panel` / `File Tree` / `RTL` / `API Reference` sections; composable children stay on `raw::collapsible::primitives`, the compact top-level wrapper remains the Fret-first ergonomic surface, and disclosure motion/semantics remain recipe-owned while surrounding width/gap/card layout stay caller-owned |
 | command | `command` | Present | In review | Classified as a direct recipe root/bridge family: `command(...)` / `CommandPalette` remain the public recipe root story, while split `CommandInput/List/Item` composition is intentionally deferred until a shared context contract is justified; first-party `apps/fret-ui-gallery/src/ui/snippets/command/*.rs` is now source-gated against `CommandInput::new(...)` / `CommandList::new(...)` drift on the default surface; cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; root chrome stays recipe-owned while width caps such as `max-w-sm` stay caller-owned; gallery page order now mirrors shadcn docs before Fret-specific extras; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` + `web_vs_fret_combobox_demo_*` |
 | context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; anchors to click position for web/Radix parity; default copyable root path is `ContextMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` while managed-open seams stay explicit on `ContextMenu::from_open(...)` / `new_controllable(...)`; trigger surface stays caller-owned while explicit panel width overrides live on `ContextMenuContent::min_width(...)`; lower-level parts bridges remain `ContextMenu::build_parts(...)` / `into_element_parts(...)`; audit: `docs/audits/shadcn-context-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`, `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` |
 | dialog | `dialog` | Present | In review | Default copyable root path is `Dialog::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`; `DialogContent` now owns the upstream-style default close affordance with `show_close_button(false)` for opt-out, while `DialogClose` remains available for explicit/custom close actions and `Parts` stays a focused follow-up for explicit root-part ownership; gallery order now mirrors shadcn docs before Fret-specific parts docs; audit: `docs/audits/shadcn-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |

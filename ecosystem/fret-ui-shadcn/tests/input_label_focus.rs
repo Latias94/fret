@@ -3,6 +3,7 @@ use fret_core::{AppWindowId, Modifiers, MouseButton, Point, Px, Rect, Size as Co
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -26,10 +27,10 @@ fn center_of(bounds: fret_core::Rect) -> Point {
 fn field_label_click_focuses_input_control() {
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -48,11 +49,11 @@ fn field_label_click_focuses_input_control() {
         |cx: &mut ElementContext<'_, App>| {
             vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                 vec![
-                    fret_ui_shadcn::FieldLabel::new("Email")
+                    shadcn::FieldLabel::new("Email")
                         .for_control(control_id.clone())
                         .test_id("input.label")
                         .into_element(cx),
-                    fret_ui_shadcn::Input::new(model.clone())
+                    shadcn::Input::new(model.clone())
                         .control_id(control_id.clone())
                         .test_id("input.control")
                         .into_element(cx),

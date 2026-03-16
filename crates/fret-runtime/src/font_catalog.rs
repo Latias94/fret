@@ -76,6 +76,54 @@ pub struct FontCatalogMetadata {
     pub revision: u64,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BundledFontBaselineSource {
+    #[default]
+    None,
+    BundledProfile,
+}
+
+/// Best-effort snapshot of the framework-owned bundled font baseline at startup.
+///
+/// This is intentionally separate from the renderer-derived live font catalog:
+/// - it records which framework profile/bundle the runner chose as the bundled baseline,
+/// - it is stable across platform capability differences,
+/// - and it lets diagnostics distinguish "no bundled baseline was installed" from
+///   "the renderer catalog later gained more families via system font scan or user injection".
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BundledFontBaselineSnapshot {
+    pub source: BundledFontBaselineSource,
+    pub profile_name: Option<String>,
+    pub asset_bundle: Option<String>,
+    pub asset_keys: Vec<String>,
+    pub provided_roles: Vec<String>,
+    pub guaranteed_generic_families: Vec<String>,
+}
+
+impl BundledFontBaselineSnapshot {
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    pub fn bundled_profile(
+        profile_name: impl Into<String>,
+        asset_bundle: impl Into<String>,
+        asset_keys: Vec<String>,
+        provided_roles: Vec<String>,
+        guaranteed_generic_families: Vec<String>,
+    ) -> Self {
+        Self {
+            source: BundledFontBaselineSource::BundledProfile,
+            profile_name: Some(profile_name.into()),
+            asset_bundle: Some(asset_bundle.into()),
+            asset_keys,
+            provided_roles,
+            guaranteed_generic_families,
+        }
+    }
+}
+
 /// Stable key representing the current effective text font stack / fallback configuration.
 ///
 /// Runners should update this whenever the renderer text backend changes in a way that can affect

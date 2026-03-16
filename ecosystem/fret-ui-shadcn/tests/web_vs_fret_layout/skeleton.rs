@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 fn assert_skeleton_rects_match_web(
     web_name: &str,
@@ -45,7 +46,7 @@ fn assert_skeleton_rects_match_web(
 #[test]
 fn web_vs_fret_layout_skeleton_demo_rects_match_web() {
     assert_skeleton_rects_match_web("skeleton-demo", |cx| {
-        let left = fret_ui_shadcn::Skeleton::new()
+        let left = shadcn::Skeleton::new()
             .refine_style(ChromeRefinement::default().rounded(Radius::Full))
             .refine_layout(
                 LayoutRefinement::default()
@@ -62,7 +63,7 @@ fn web_vs_fret_layout_skeleton_demo_rects_match_web() {
             move |_cx| vec![left],
         );
 
-        let line0 = fret_ui_shadcn::Skeleton::new()
+        let line0 = shadcn::Skeleton::new()
             .refine_layout(
                 LayoutRefinement::default()
                     .w_px(MetricRef::Px(Px(250.0)))
@@ -78,7 +79,7 @@ fn web_vs_fret_layout_skeleton_demo_rects_match_web() {
             move |_cx| vec![line0],
         );
 
-        let line1 = fret_ui_shadcn::Skeleton::new()
+        let line1 = shadcn::Skeleton::new()
             .refine_layout(
                 LayoutRefinement::default()
                     .w_px(MetricRef::Px(Px(200.0)))
@@ -135,7 +136,7 @@ fn web_vs_fret_layout_skeleton_demo_rects_match_web() {
 #[test]
 fn web_vs_fret_layout_skeleton_card_rects_match_web() {
     assert_skeleton_rects_match_web("skeleton-card", |cx| {
-        let top = fret_ui_shadcn::Skeleton::new()
+        let top = shadcn::Skeleton::new()
             .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
             .refine_layout(
                 LayoutRefinement::default()
@@ -152,7 +153,7 @@ fn web_vs_fret_layout_skeleton_card_rects_match_web() {
             move |_cx| vec![top],
         );
 
-        let line0 = fret_ui_shadcn::Skeleton::new()
+        let line0 = shadcn::Skeleton::new()
             .refine_layout(
                 LayoutRefinement::default()
                     .w_px(MetricRef::Px(Px(250.0)))
@@ -168,7 +169,7 @@ fn web_vs_fret_layout_skeleton_card_rects_match_web() {
             move |_cx| vec![line0],
         );
 
-        let line1 = fret_ui_shadcn::Skeleton::new()
+        let line1 = shadcn::Skeleton::new()
             .refine_layout(
                 LayoutRefinement::default()
                     .w_px(MetricRef::Px(Px(200.0)))

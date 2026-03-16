@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Point, Px, Rect, Size as CoreSize};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -34,12 +35,12 @@ fn render_frame(
             let slide_2 = cx.container(Default::default(), move |cx| vec![cx.text("2")]);
 
             let slides = [
-                fret_ui_shadcn::CarouselItem::new(slide_1)
+                shadcn::CarouselItem::new(slide_1)
                     .layout_breakpoint(Px(300.0), LayoutRefinement::default().basis_fraction(0.5)),
-                fret_ui_shadcn::CarouselItem::new(slide_2),
+                shadcn::CarouselItem::new(slide_2),
             ];
 
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)
                 .refine_layout(
@@ -77,14 +78,14 @@ fn render_frame_viewport_breakpoint(
             let slide_2 = cx.container(Default::default(), move |cx| vec![cx.text("2")]);
 
             let slides = [
-                fret_ui_shadcn::CarouselItem::new(slide_1).viewport_layout_breakpoint(
+                shadcn::CarouselItem::new(slide_1).viewport_layout_breakpoint(
                     Px(300.0),
                     LayoutRefinement::default().basis_fraction(0.5),
                 ),
-                fret_ui_shadcn::CarouselItem::new(slide_2),
+                shadcn::CarouselItem::new(slide_2),
             ];
 
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)
                 .refine_layout(

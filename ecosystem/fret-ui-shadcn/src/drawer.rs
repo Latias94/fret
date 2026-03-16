@@ -20,8 +20,8 @@ use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_headless::snap_points as headless_snap_points;
 
-use crate::Sheet;
 use crate::layout as shadcn_layout;
+use crate::sheet::Sheet;
 pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
@@ -1663,7 +1663,7 @@ where
 /// In Fret, drawers are backed by modal overlays, so this delegates to `DialogClose`.
 #[derive(Clone)]
 pub struct DrawerClose {
-    inner: crate::SheetClose,
+    inner: crate::sheet::SheetClose,
 }
 
 impl std::fmt::Debug for DrawerClose {
@@ -1675,14 +1675,14 @@ impl std::fmt::Debug for DrawerClose {
 impl DrawerClose {
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            inner: crate::SheetClose::new(open),
+            inner: crate::sheet::SheetClose::new(open),
         }
     }
 
     /// Creates a close affordance that resolves the current drawer/dialog scope at render time.
     pub fn from_scope() -> Self {
         Self {
-            inner: crate::SheetClose::from_scope(),
+            inner: crate::sheet::SheetClose::from_scope(),
         }
     }
 
@@ -1744,7 +1744,10 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(cx, DrawerTrigger::build(crate::Card::build(|_cx, _out| {})));
+            out.push_ui(
+                cx,
+                DrawerTrigger::build(crate::card::Card::build(|_cx, _out| {})),
+            );
 
             assert_eq!(out.len(), 1);
             assert!(matches!(
@@ -1925,7 +1928,7 @@ mod tests {
         );
 
         let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            DrawerFooter::new([crate::Button::new("Close").into_element(cx)])
+            DrawerFooter::new([crate::button::Button::new("Close").into_element(cx)])
                 .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))
                 .into_element(cx)
         });
@@ -2036,13 +2039,13 @@ mod tests {
 
                     let header = DrawerHeader::new(vec![title, description]).into_element(cx);
 
-                    let action = crate::Button::new("Submit")
+                    let action = crate::button::Button::new("Submit")
                         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element(cx);
                     action_id_out.set(Some(action.id));
 
-                    let cancel = crate::Button::new("Cancel")
-                        .variant(crate::ButtonVariant::Outline)
+                    let cancel = crate::button::Button::new("Cancel")
+                        .variant(crate::button::ButtonVariant::Outline)
                         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element(cx);
                     cancel_id_out.set(Some(cancel.id));
@@ -2219,7 +2222,7 @@ mod tests {
             |cx| {
                 vec![Drawer::new(open.clone()).into_element_parts(
                     cx,
-                    |cx| DrawerTrigger::new(crate::Button::new("Open").into_element(cx)),
+                    |cx| DrawerTrigger::new(crate::button::Button::new("Open").into_element(cx)),
                     DrawerPortal::default(),
                     DrawerOverlay::new(),
                     |cx| DrawerContent::new([cx.text("Content")]).into_element(cx),
@@ -2290,7 +2293,8 @@ mod tests {
             bounds,
             "shadcn-drawer-compose-content-with-from-scope",
             |cx| {
-                let trigger = DrawerTrigger::new(crate::Button::new("Open").into_element(cx));
+                let trigger =
+                    DrawerTrigger::new(crate::button::Button::new("Open").into_element(cx));
 
                 vec![
                     Drawer::new(open.clone())
@@ -3411,8 +3415,8 @@ mod tests {
                         move |cx| {
                             let close = DrawerClose::from_scope().build(
                                 cx,
-                                crate::Button::new("Cancel")
-                                    .variant(crate::ButtonVariant::Outline)
+                                crate::button::Button::new("Cancel")
+                                    .variant(crate::button::ButtonVariant::Outline)
                                     .refine_layout(
                                         LayoutRefinement::default()
                                             .relative()

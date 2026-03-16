@@ -1,8 +1,10 @@
 //! AI Elements-aligned `Checkpoint` surfaces.
 
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::{Px, SemanticsRole};
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -11,10 +13,12 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
-use fret_ui_shadcn::raw::button::ButtonStyle;
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Separator, Tooltip, TooltipAlign, TooltipSide,
 };
+use fret_ui_shadcn::raw::button::ButtonStyle;
+
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 
 /// Checkpoint row aligned with AI Elements `Checkpoint`.
 #[derive(Debug)]
@@ -197,6 +201,8 @@ pub struct CheckpointTrigger {
     children: Vec<AnyElement>,
     a11y_label: Arc<str>,
     tooltip: Option<Arc<str>>,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
     variant: ButtonVariant,
     size: ButtonSize,
@@ -211,6 +217,8 @@ impl std::fmt::Debug for CheckpointTrigger {
             .field("children_len", &self.children.len())
             .field("a11y_label", &self.a11y_label)
             .field("has_tooltip", &self.tooltip.is_some())
+            .field("action", &self.action)
+            .field("action_payload", &self.action_payload.is_some())
             .field("has_on_activate", &self.on_activate.is_some())
             .field("variant", &self.variant)
             .field("size", &self.size)
@@ -229,6 +237,8 @@ impl CheckpointTrigger {
             children: children.into_iter().collect(),
             a11y_label: Arc::<str>::from("Restore checkpoint"),
             tooltip: None,
+            action: None,
+            action_payload: None,
             on_activate: None,
             variant: ButtonVariant::Ghost,
             size: ButtonSize::Sm,
@@ -245,6 +255,28 @@ impl CheckpointTrigger {
 
     pub fn tooltip(mut self, tooltip: impl Into<Arc<str>>) -> Self {
         self.tooltip = Some(tooltip.into());
+        self
+    }
+
+    /// Bind a stable action ID to this checkpoint trigger (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized checkpoint-trigger actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`CheckpointTrigger::action_payload`], but computes the payload lazily.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -303,6 +335,12 @@ impl CheckpointTrigger {
                             .when(WidgetStates::ACTIVE, None),
                     ),
                 );
+            }
+            if let Some(action) = self.action {
+                b = b.action(action);
+            }
+            if let Some(payload) = self.action_payload {
+                b = b.action_payload_factory(payload);
             }
             if let Some(on_activate) = self.on_activate {
                 b = b.on_activate(on_activate);

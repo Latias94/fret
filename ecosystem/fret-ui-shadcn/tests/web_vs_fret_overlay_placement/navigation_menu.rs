@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 
 #[test]
@@ -68,18 +69,18 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls() {
                             },
                             move |cx| {
                                 let items = vec![
-                                    fret_ui_shadcn::NavigationMenuItem::new(
+                                    shadcn::NavigationMenuItem::new(
                                         "home",
                                         "Home",
                                         vec![cx.text("Home")],
                                     ),
-                                    fret_ui_shadcn::NavigationMenuItem::new(
+                                    shadcn::NavigationMenuItem::new(
                                         "components",
                                         "Components",
                                         vec![cx.text("Components Panel")],
                                     ),
                                 ];
-                                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                                let el = shadcn::NavigationMenu::new(model.clone())
                                     .viewport(false)
                                     .indicator(false)
                                     .items(items)
@@ -357,18 +358,18 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls_via_wheel_over_over
                             },
                             move |cx| {
                                 let items = vec![
-                                    fret_ui_shadcn::NavigationMenuItem::new(
+                                    shadcn::NavigationMenuItem::new(
                                         "home",
                                         "Home",
                                         vec![cx.text("Home")],
                                     ),
-                                    fret_ui_shadcn::NavigationMenuItem::new(
+                                    shadcn::NavigationMenuItem::new(
                                         "components",
                                         "Components",
                                         vec![cx.text("Components Panel")],
                                     ),
                                 ];
-                                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                                let el = shadcn::NavigationMenu::new(model.clone())
                                     .viewport(false)
                                     .indicator(false)
                                     .items(items)
@@ -628,13 +629,13 @@ fn web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web() {
             FrameId(frame as u64),
             request_semantics,
             |cx| {
-                let items = vec![fret_ui_shadcn::NavigationMenuItem::new(
+                let items = vec![shadcn::NavigationMenuItem::new(
                     "home",
                     "Home",
                     vec![shadcn_nav_menu_demo_indicator_panel(cx)],
                 )];
 
-                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                let el = shadcn::NavigationMenu::new(model.clone())
                     .viewport(true)
                     .indicator(true)
                     .items(items)

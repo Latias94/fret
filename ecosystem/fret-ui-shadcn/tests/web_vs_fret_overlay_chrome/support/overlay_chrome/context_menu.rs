@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 pub(crate) fn assert_context_menu_chrome_matches(
     web_name: &str,
@@ -98,7 +99,7 @@ pub(crate) fn assert_context_menu_shadow_insets_match(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     trigger_label: &str,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
@@ -179,7 +180,7 @@ pub(crate) fn assert_context_menu_panel_size_matches_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     fret_role: SemanticsRole,
     trigger_label: &str,
     settle_frames: u64,

@@ -1,13 +1,13 @@
 pub const SOURCE: &str = include_str!("reasoning_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let streaming = cx.local_model_keyed("streaming", || false);
@@ -20,9 +20,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-start-streaming")
-        .on_activate(Arc::new({
+        .on_activate(cx.actions().listen({
             let streaming = streaming.clone();
-            move |host, action_cx, _reason| {
+            move |host, action_cx| {
                 let _ = host.models_mut().update(&streaming, |v| *v = true);
                 host.notify(action_cx);
             }
@@ -33,9 +33,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-stop-streaming")
-        .on_activate(Arc::new({
+        .on_activate(cx.actions().listen({
             let streaming = streaming.clone();
-            move |host, action_cx, _reason| {
+            move |host, action_cx| {
                 let _ = host.models_mut().update(&streaming, |v| *v = false);
                 host.notify(action_cx);
             }

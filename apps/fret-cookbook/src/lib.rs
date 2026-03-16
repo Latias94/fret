@@ -47,6 +47,8 @@ mod authoring_surface_policy_tests {
     const SIMPLE_TODO_EXAMPLE: &str = include_str!("../examples/simple_todo.rs");
     const SIMPLE_TODO_V2_TARGET_EXAMPLE: &str =
         include_str!("../examples/simple_todo_v2_target.rs");
+    const APP_OWNED_BUNDLE_ASSETS_EXAMPLE: &str =
+        include_str!("../examples/app_owned_bundle_assets_basics.rs");
     const ASYNC_INBOX_EXAMPLE: &str = include_str!("../examples/async_inbox_basics.rs");
     const ASSETS_RELOAD_EPOCH_EXAMPLE: &str =
         include_str!("../examples/assets_reload_epoch_basics.rs");
@@ -215,18 +217,21 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(SIMPLE_TODO_EXAMPLE);
         assert_uses_app_surface(SIMPLE_TODO_V2_TARGET_EXAMPLE);
         assert!(HELLO_EXAMPLE.contains(
-            "fn hello_page(cx: &mut UiCx<'_>, render_marker: &'static str, count_value: u32) -> Ui"
+            "fn hello_page(render_marker: &'static str, count_value: u32) -> impl UiChild"
         ));
+        assert!(!HELLO_EXAMPLE.contains("fn hello_page(cx: &mut UiCx<'_>,"));
+        assert!(HELLO_EXAMPLE.contains("ui::single(cx, hello_page(render_marker, count_value))"));
         assert!(HELLO_EXAMPLE.contains("cx.state().local::<u32>()"));
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
-        assert!(SIMPLE_TODO_EXAMPLE.contains(".payload::<act::Toggle>()"));
         assert!(
-            SIMPLE_TODO_EXAMPLE
-                .contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {")
+            SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
         );
+        assert!(SIMPLE_TODO_EXAMPLE.contains(
+            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {"
+        ));
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
@@ -337,12 +342,20 @@ mod authoring_surface_policy_tests {
         assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space, Theme};"));
         assert!(SCAFFOLD.contains("&mut UiCx<'_>"));
         assert!(SCAFFOLD.contains("B: UiChild"));
+        assert!(SCAFFOLD.contains("ui::single(cx, surface)"));
+        assert!(!SCAFFOLD.contains("ui::children![cx; surface]"));
         assert!(!SCAFFOLD.contains("&mut ComponentCx<'_, H>"));
         assert!(!SCAFFOLD.contains("B: IntoUiElement<H>"));
         assert!(!SCAFFOLD.contains("use fret::prelude::*;"));
         assert!(!SCAFFOLD.contains("surface: AnyElement"));
         assert!(!SCAFFOLD.contains("surface.into_element(cx);"));
         assert!(!SCAFFOLD.contains("use fret::component::prelude::*;"));
+    }
+
+    #[test]
+    fn utility_window_example_uses_ui_single_for_single_surface_shells() {
+        assert!(UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui::single(cx, surface)"));
+        assert!(!UTILITY_WINDOW_MATERIALS_EXAMPLE.contains("ui::children![cx; surface]"));
     }
 
     #[test]
@@ -423,20 +436,85 @@ mod authoring_surface_policy_tests {
         assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().watch(&enabled_state)"));
 
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("icon::IconSvgPreloadDiagnostics"));
-
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("integration::InstallIntoApp"));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("impl InstallIntoApp for IconsAndAssetsBundle"));
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("PACKAGE_ASSET_BUNDLE_NAME: &str = \"cookbook-icons-demo\"")
+        );
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE.contains("AssetBundleId::package(PACKAGE_ASSET_BUNDLE_NAME)")
+        );
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains("assets::register_bundle_entries"));
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("the app never replays low-level icon or asset registration manually")
+        );
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("App setup bundle: composes transitive icon + asset installers")
+        );
+        assert!(
+            ICONS_AND_ASSETS_EXAMPLE
+                .contains("Low-level registration stays internal to the dependency")
+        );
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains(
+            "Hand-written bundle wrapper: use when the crate also composes icons or app defaults"
+        ));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains(
+            "This is the hand-written wrapper lane to teach when a crate composes more than raw shipped bytes"
+        ));
+        assert!(ICONS_AND_ASSETS_EXAMPLE.contains(".ui_assets_budgets("));
+        assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("UiAssets::configure("));
+        assert!(!ICONS_AND_ASSETS_EXAMPLE.contains("AssetBundleId::app(\"fret-cookbook\")"));
+        let icons_and_assets_normalized = ICONS_AND_ASSETS_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+        assert!(
+            icons_and_assets_normalized
+                .contains(".setup((IconsAndAssetsBundle,fret_cookbook::install_cookbook_defaults")
+        );
+        assert!(!icons_and_assets_normalized.contains(
+            ".setup((fret_cookbook::install_cookbook_defaults,fret_icons_lucide::app::install))"
+        ));
+        assert!(
+            !icons_and_assets_normalized
+                .contains(".setup((shadcn::app::install,fret_icons_lucide::app::install))")
+        );
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE
+                .contains("Scaffold equivalent: `generated_assets::mount(builder)`")
+        );
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE
+                .contains("Generated module is enough when the crate only publishes shipped bytes")
+        );
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE
+                .contains("`BundleAsset` is the public lookup lane; `Embedded` stays lower-level")
+        );
+        assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains(
+            "This is the generated-module lane to teach when a crate only publishes shipped bytes."
+        ));
+        assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("`FretApp::asset_startup(...)`"));
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("`AssetStartupPlan::packaged_entries(...)`")
+        );
+        assert!(APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("`FretApp::asset_entries(...)`"));
+        assert!(
+            APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("without native-only file path assumptions.")
+        );
+        assert!(!APP_OWNED_BUNDLE_ASSETS_EXAMPLE.contains("ImageSource::from_file_path"));
         assert!(
             ASSETS_RELOAD_EPOCH_EXAMPLE
                 .contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
         );
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::bump_asset_reload_epoch"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret::assets::asset_reload_epoch(&*cx.app)"));
         assert!(
-            ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::bump_ui_assets_reload_epoch")
+            !ASSETS_RELOAD_EPOCH_EXAMPLE.contains("fret_ui_assets::bump_ui_assets_reload_epoch")
         );
-        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
-        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
-        assert!(
-            ASSETS_RELOAD_EPOCH_EXAMPLE
-                .contains("cx.actions()\n            .local_update::<act::BumpReload, u64>")
-        );
+        assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("UiAssetsReloadEpoch"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
         assert!(

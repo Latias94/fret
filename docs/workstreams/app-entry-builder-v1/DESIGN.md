@@ -2,8 +2,8 @@
 
 ## Status snapshot
 
-This workstream is now **partially implemented** and is the recommended desktop-first onboarding
-surface for the `fret` facade.
+This workstream is now **implemented at the shipped-surface level** and is the recommended
+desktop-first onboarding surface for the `fret` facade.
 
 Current recommended entry paths:
 
@@ -14,6 +14,13 @@ Update (2026-03-10):
 
 - `App::{ui, ui_with_hooks, run_ui, run_ui_with_hooks}` were removed from `fret` before the first
   published release.
+
+Update (2026-03-16):
+
+- `run_view::<V>()` / `run_view_with_hooks::<V>(...)` were also removed from `FretApp`; the live
+  app-author surface is now builder-then-run only.
+- `.setup(...)` remains the named installer / tuple / bundle seam on `FretApp`, while
+  `UiAppBuilder::setup_with(...)` remains the explicit one-off inline-closure seam.
 
 Companion naming decisions:
 
@@ -100,7 +107,9 @@ The current builder surface is intentionally small but complete enough for gener
 - icon-pack app installers via `setup(...::app::install)`
 - `view::<V>()`
 - `view_with_hooks::<V>(configure)`
-- `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
+
+Execution stays on the returned `UiAppBuilder` via `.run()`. The old `run_view*` convenience
+methods are no longer part of the shipped `FretApp` surface.
 
 This is enough to keep the first-app story compact while leaving real seams available.
 
@@ -199,6 +208,8 @@ If we introduce a closure-based variant, it must be:
 
 - Historical top-level helpers such as `fret::run` / `fret::app_with_hooks` are removed from the
   current `fret` surface.
+- Historical builder conveniences such as `FretApp::run_view::<V>()` /
+  `FretApp::run_view_with_hooks::<V>(...)` are also removed from the current `fret` surface.
 - The builder chain is now the recommended author-facing app entry on `fret`.
 - When app authors need lower-level ownership, docs should teach dropping down to
   `fret-bootstrap` / `fret-framework` rather than reviving parallel `fret` helpers.

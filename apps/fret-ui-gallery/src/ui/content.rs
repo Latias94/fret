@@ -308,7 +308,6 @@ fn page_preview(
     let data_grid_selected_row = models.data_grid_selected_row.clone();
     let _tabs_value = models.tabs_value.clone();
     let accordion_value = models.accordion_value.clone();
-    let avatar_demo_image = models.avatar_demo_image.clone();
     let _progress = models.progress.clone();
     #[cfg(feature = "gallery-dev")]
     let checkbox = models.checkbox.clone();
@@ -534,12 +533,7 @@ fn page_preview(
         PAGE_SONNER => pages::preview_sonner(cx),
         PAGE_ALERT => pages::preview_alert(cx),
         PAGE_ALERT_DIALOG => pages::preview_alert_dialog(cx),
-        PAGE_ASPECT_RATIO => pages::preview_aspect_ratio(
-            cx,
-            Some(models.image_fit_demo_wide_image.clone()),
-            Some(models.image_fit_demo_tall_image.clone()),
-            Some(models.avatar_demo_image.clone()),
-        ),
+        PAGE_ASPECT_RATIO => pages::preview_aspect_ratio(cx),
         PAGE_BREADCRUMB => pages::preview_breadcrumb(cx),
         PAGE_BUTTON_GROUP => pages::preview_button_group(cx),
         PAGE_CALENDAR => pages::preview_calendar(cx, date_picker_month, date_picker_selected),
@@ -554,7 +548,7 @@ fn page_preview(
         PAGE_DROPDOWN_MENU => pages::preview_dropdown_menu(cx),
         PAGE_EMPTY => pages::preview_empty(cx),
         PAGE_FORM => pages::preview_forms(cx),
-        PAGE_HOVER_CARD => pages::preview_hover_card(cx, avatar_demo_image),
+        PAGE_HOVER_CARD => pages::preview_hover_card(cx),
         PAGE_INPUT => pages::preview_input(cx),
         PAGE_INPUT_GROUP => pages::preview_input_group(cx),
         PAGE_INPUT_OTP => pages::preview_input_otp(cx),

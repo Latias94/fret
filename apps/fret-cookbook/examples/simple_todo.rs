@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret::style::{ColorRef, Space, Theme};
+use fret::semantics::SemanticsRole;
+use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
 use fret_ui::element::SemanticsDecoration;
 
 mod act {
@@ -56,8 +57,8 @@ impl View for SimpleTodoView {
             ]
         });
 
-        let todos = cx.state().watch(&todos_state).layout().value_or_default();
-        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
+        let todos = todos_state.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
@@ -125,11 +126,12 @@ impl View for SimpleTodoView {
                     ]
                 }),
                 shadcn::card_content(|cx| {
-                    ui::children![cx;
+                    ui::single(
+                        cx,
                         ui::v_flex(|cx| ui::children![cx; input_row, rows])
                             .gap(Space::N4)
-                            .w_full()
-                    ]
+                            .w_full(),
+                    )
                 }),
             ]
         })
@@ -178,8 +180,7 @@ impl View for SimpleTodoView {
         });
 
         cx.actions()
-            .payload::<act::Toggle>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true

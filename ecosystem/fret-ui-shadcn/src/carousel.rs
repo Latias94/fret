@@ -25,7 +25,7 @@ use fret_ui_kit::headless::embla as headless_embla;
 use fret_ui_kit::headless::snap_points as headless_snap_points;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space};
 
-use crate::{Button, ButtonSize, ButtonVariant};
+use crate::button::{Button, ButtonSize, ButtonVariant};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct CarouselApiSnapshot {

@@ -205,7 +205,7 @@ impl KbdGroup {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
-        let direction = crate::use_direction(cx, None);
+        let direction = crate::direction::use_direction(cx, None);
         let children = crate::rtl::reverse_in_rtl(direction, self.children);
         let layout = decl_style::layout_style(&theme, self.layout);
 
@@ -228,7 +228,7 @@ impl KbdGroup {
 mod tests {
     use super::*;
 
-    use crate::LayoutDirection;
+    use crate::direction::LayoutDirection;
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size as CoreSize};
     use fret_ui::element::{ElementKind, Length, MarginEdge, SpacingLength};
@@ -369,7 +369,7 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                crate::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                crate::direction::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
                     KbdGroup::new([
                         Kbd::new("A").into_element(cx).test_id("a"),
                         Kbd::new("B").into_element(cx).test_id("b"),

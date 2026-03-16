@@ -34,6 +34,27 @@ Experimental learning project (not production-ready).
   `action(...)` directly; prefer that over wiring `.on_activate(cx.actions().dispatch::<A>())`
   when you only need a stable unit action on the app-facing lane.
 
+## Icons
+
+- Material 3 widgets consume semantic `IconId` / `ui.*` ids; they do not choose a vendor pack as
+  part of the component contract.
+- This crate does not install a default icon provider for you.
+- App/bootstrap code should install a pack explicitly (`fret_icons_lucide::app::install`,
+  `fret_icons_radix::app::install`, or your own bundle surface).
+- If a reusable ecosystem bundle depends on Material 3 plus a specific icon pack, keep that
+  composition on one installer/bundle surface so the app composes one named dependency bundle.
+
+Example:
+
+```rust
+use fret_icons::ids;
+
+fret_icons_lucide::app::install(app);
+
+let _button = fret_ui_material3::Button::new("Search")
+    .leading_icon(ids::ui::SEARCH);
+```
+
 ## Upstream references (non-normative)
 
 Primary references:

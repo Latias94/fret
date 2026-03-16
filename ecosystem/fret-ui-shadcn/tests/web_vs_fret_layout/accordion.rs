@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_accordion_demo_geometry_light() {
@@ -33,10 +34,10 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -45,7 +46,8 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
 
     let default_value = Some(Arc::from("item-1"));
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger, Space};
+        use fret_ui_shadcn::prelude::Space;
+        use shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
 
         let item_1 = AccordionItem::new(
             Arc::from("item-1"),
@@ -250,10 +252,10 @@ fn web_vs_fret_layout_accordion_demo_geometry_dark() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Dark,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -262,7 +264,8 @@ fn web_vs_fret_layout_accordion_demo_geometry_dark() {
 
     let default_value = Some(Arc::from("item-1"));
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger, Space};
+        use fret_ui_shadcn::prelude::Space;
+        use shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
 
         let item_1 = AccordionItem::new(
             Arc::from("item-1"),

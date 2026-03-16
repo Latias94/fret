@@ -6,32 +6,12 @@
 use std::path::PathBuf;
 
 use crate::{
-    Defaults, Result, UiAppBuilder, UiAppDriver,
+    AssetMount, Defaults, Result, UiAppBuilder, UiAppDriver,
     assets::{AssetBundleId, StaticAssetEntry},
     integration::InstallIntoApp,
 };
 
 type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
-
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-#[derive(Debug, Clone)]
-enum AssetMount {
-    Dir {
-        bundle: AssetBundleId,
-        dir: PathBuf,
-    },
-    Manifest {
-        path: PathBuf,
-    },
-    BundleEntries {
-        bundle: AssetBundleId,
-        entries: Vec<StaticAssetEntry>,
-    },
-    EmbeddedEntries {
-        owner: AssetBundleId,
-        entries: Vec<StaticAssetEntry>,
-    },
-}
 
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
 ///
@@ -177,6 +157,31 @@ impl FretApp {
         self
     }
 
+    /// Apply one explicit development-vs-packaged startup plan on the default app builder path.
+    ///
+    /// Use this when app/bootstrap code wants one named asset-publication decision instead of
+    /// manually branching between `asset_dir(...)`, `asset_manifest(...)`, and packaged static
+    /// entry registration at the call site. The lower-level methods remain available for custom
+    /// ordered layering beyond this higher-level split.
+    pub fn asset_startup(
+        mut self,
+        mode: crate::assets::AssetStartupMode,
+        plan: crate::assets::AssetStartupPlan,
+    ) -> Self {
+        self.asset_mounts.push(AssetMount::Startup {
+            bundle: AssetBundleId::app(self.root_name),
+            mode,
+            plan,
+        });
+        self
+    }
+
+    /// Enable development asset reload polling for file-backed startup mounts.
+    pub fn asset_reload_policy(mut self, policy: crate::assets::AssetReloadPolicy) -> Self {
+        self.asset_mounts.push(AssetMount::ReloadPolicy { policy });
+        self
+    }
+
     /// Enable the command palette (driver-handled command + UI) if available.
     ///
     /// This is intentionally opt-in in the `fret` facade.
@@ -311,19 +316,7 @@ fn finish_builder<S: 'static>(
         .map_err(crate::BootstrapError::from)?;
     let mut builder = UiAppBuilder::from_bootstrap(builder);
     builder = apply_main_window(root_name, main_window, builder);
-    for mount in asset_mounts {
-        builder = match mount {
-            AssetMount::Dir { bundle, dir } => builder.with_asset_dir(bundle, dir)?,
-            AssetMount::Manifest { path } => builder.with_asset_manifest(path)?,
-            AssetMount::BundleEntries { bundle, entries } => {
-                builder.with_bundle_asset_entries(bundle, entries)
-            }
-            AssetMount::EmbeddedEntries { owner, entries } => {
-                builder.with_embedded_asset_entries(owner, entries)
-            }
-        };
-    }
-    Ok(builder)
+    crate::apply_asset_mounts(builder, asset_mounts)
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -385,6 +378,74 @@ mod tests {
                 assert_eq!(dir, &PathBuf::from("assets/override"));
             }
             other => panic!("expected dir mount fourth, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn asset_startup_selects_development_lane_only() {
+        let app = FretApp::new("demo-app").asset_startup(
+            crate::assets::AssetStartupMode::Development,
+            crate::assets::AssetStartupPlan::new()
+                .development_dir("assets/dev")
+                .development_manifest("assets.manifest.json")
+                .packaged_entries([StaticAssetEntry::new(
+                    "icons/search.svg",
+                    AssetRevision(1),
+                    br#"<svg></svg>"#,
+                )]),
+        );
+
+        assert_eq!(app.asset_mounts.len(), 1);
+        match &app.asset_mounts[0] {
+            AssetMount::Startup { bundle, mode, .. } => {
+                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
+                assert_eq!(mode, &crate::assets::AssetStartupMode::Development);
+            }
+            other => panic!("expected startup mount, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn asset_startup_selects_packaged_lane_only() {
+        let app = FretApp::new("demo-app").asset_startup(
+            crate::assets::AssetStartupMode::Packaged,
+            crate::assets::AssetStartupPlan::new()
+                .development_dir("assets/dev")
+                .packaged_entries([StaticAssetEntry::new(
+                    "icons/search.svg",
+                    AssetRevision(1),
+                    br#"<svg></svg>"#,
+                )])
+                .packaged_bundle_entries(
+                    AssetBundleId::package("demo-kit"),
+                    [StaticAssetEntry::new(
+                        "images/logo.png",
+                        AssetRevision(2),
+                        b"demo-kit",
+                    )],
+                ),
+        );
+
+        assert_eq!(app.asset_mounts.len(), 1);
+        match &app.asset_mounts[0] {
+            AssetMount::Startup { bundle, mode, .. } => {
+                assert_eq!(bundle, &AssetBundleId::app("demo-app"));
+                assert_eq!(mode, &crate::assets::AssetStartupMode::Packaged);
+            }
+            other => panic!("expected startup mount, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn asset_reload_policy_mount_is_recorded_explicitly() {
+        let app = FretApp::new("demo-app")
+            .asset_dir("assets/dev")
+            .asset_reload_policy(crate::assets::AssetReloadPolicy::development_default());
+
+        assert_eq!(app.asset_mounts.len(), 2);
+        match &app.asset_mounts[1] {
+            AssetMount::ReloadPolicy { .. } => {}
+            other => panic!("expected reload policy mount second, got {other:?}"),
         }
     }
 }

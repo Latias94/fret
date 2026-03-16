@@ -53,7 +53,7 @@ The template is intentionally small:
 
 - `TodoView` keeps view-owned draft text and keyed list state in `LocalState<T>` / `LocalState<Vec<_>>`.
 - `act::*` are typed actions: unit actions for top-level intents and payload actions for per-row list interactions.
-- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals(...)`, `cx.actions().transient(...)`, plus widget-local `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` / `.listen(cx, ...)` when a control only exposes activation glue. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals(...)`, `cx.actions().transient(...)`, plus widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge; the explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
 Memorize the default app surface before you start editing:
@@ -117,7 +117,7 @@ In the onboarding path, stay on one small surface:
 - typed actions for intent
 - `cx.actions().locals(...)` for coordinated LocalState writes
 - `cx.actions().transient(...)` only for App-bound effects
-- widget-local `.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, ...)` / `.listen(cx, ...)` only when a control truly needs activation glue
+- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs activation glue, with an explicit `use fret::app::AppActivateExt as _;`
 
 This all lives on the default app import surface:
 
@@ -131,6 +131,13 @@ Key points:
 - `ui::*` constructors return `UiBuilder<T>` (a patchable builder surface).
 - Apply layout/chrome refinement via fluent methods (`px_2()`, `gap(Space::N2)`, `rounded_md()`, ...).
 - Convert into `AnyElement` at the boundary via `.into_element(cx)`.
+- If a render root or wrapper closure only needs to late-land one typed child, prefer
+  `ui::single(cx, child)` over `ui::children![cx; child].into()`.
+- If a local helper actually reads state, emits text/layout nodes, or otherwise needs runtime
+  access, give it `cx: &mut UiCx<'_>`.
+- If a local helper is only a pure page shell around already-typed children, prefer
+  `fn page(...) -> impl UiChild` and let `render(...)` late-land it through
+  `ui::single(cx, page(...))`.
 - If you have a patchable component type (implements `UiPatchTarget`), you can opt into the same fluent
   authoring style with `.ui()`.
 - Most `ui::*` layout constructors accept children through `IntoUiElement<H>`, so you can pass `UiBuilder` values
@@ -139,10 +146,12 @@ Key points:
 Minimal pattern:
 
 ```rust
-let header = ui::h_flex(|_cx| [ui::text("Hello")])
-    .gap(Space::N2)
-    .px_3()
-    .into_element(cx);
+let header = ui::single(
+    cx,
+    ui::h_flex(|_cx| [ui::text("Hello")])
+        .gap(Space::N2)
+        .px_3(),
+);
 ```
 
 ### C) Iterator helpers for child collection
@@ -167,6 +176,8 @@ If you truly need manual sink-style collection, keep `*_build(...)` as an explic
 hatch rather than the default keyed-list story:
 
 ```rust
+use fret::children::UiElementSinkExt as _;
+
 let list = ui::v_flex_build(|cx, out| {
     for it in items.iter() {
         out.push_ui(cx, expensive_manual_child(it));

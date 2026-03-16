@@ -26,7 +26,7 @@ fn generated_assets_builder_prefix(opts: ScaffoldOptions) -> &'static str {
 
 fn generated_assets_builder_suffix(opts: ScaffoldOptions) -> &'static str {
     if opts.ui_assets {
-        ";\n    generated_assets::mount(builder)\n"
+        ";\n    generated_assets::mount(builder)?\n"
     } else {
         ""
     }
@@ -273,7 +273,7 @@ use fret::{
     icons::{icon, IconId},
     query::{QueryKey, QueryPolicy, QueryState, QueryStatus},
     selector::DepsBuilder,
-    style::{ColorRef, Radius, Space, Theme},
+    style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
 __GENERATED_ASSET_MODULE__
@@ -385,12 +385,8 @@ impl View for TodoView {
             ]
         });
 
-        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
-        let filter_value = cx
-            .state()
-            .watch(&filter_state)
-            .layout()
-            .value_or(TodoFilter::All);
+        let draft_value = draft_state.layout(cx).value_or_default();
+        let filter_value = filter_state.layout(cx).value_or(TodoFilter::All);
 
         let add_enabled = !draft_value.trim().is_empty();
 
@@ -450,8 +446,7 @@ impl View for TodoView {
         );
 
         cx.actions()
-            .payload::<act::Toggle>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
@@ -501,7 +496,7 @@ impl View for TodoView {
             },
         );
 
-        let tip_nonce_value = cx.state().watch(&tip_nonce_state).paint().value_or(0);
+        let tip_nonce_value = tip_nonce_state.paint(cx).value_or(0);
         let tip_handle = cx.data().query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
                 #[cfg(not(target_arch = "wasm32"))]
                 std::thread::sleep(Duration::from_millis(150));
@@ -568,7 +563,7 @@ __ADD_BTN_DEF__
 
         let input = shadcn::Input::new(&draft_state)
             .placeholder("Add a task…")
-            .submit_command(act::Add.into());
+            .submit_action(act::Add);
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
@@ -626,7 +621,7 @@ __PALETTE_BUTTON__
                         shadcn::card_description("View runtime + typed actions + selector + query (v1)."),
                     ]
                 }),
-                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_content(|cx| ui::single(cx, content)),
             ]
         })
         .ui()
@@ -638,29 +633,26 @@ __PALETTE_BUTTON__
         .max_w(Px(520.0))
         ;
 
-        todo_page(cx, theme, card)
+        ui::single(cx, todo_page(theme, card))
     }
 }
 
 fn todo_page(
-    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> Ui {
-    ui::container(move |cx| ui::children![cx;
-        ui::v_flex(|cx| ui::children![cx; content])
+) -> impl UiChild {
+    ui::container(move |cx| ui::single(
+        cx,
+        ui::v_flex(|cx| ui::single(cx, content))
             .w_full()
             .h_full()
             .justify_center()
-            .items_center()
-            ,
-    ])
+            .items_center(),
+    ))
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .w_full()
     .h_full()
-    .into_element(cx)
-    .into()
 }
 
 fn filter_chip(
@@ -770,20 +762,21 @@ impl View for HelloView {{
             *v = v.saturating_add(1);
         }});
 
-        ui::v_flex(|cx| {{
-            ui::children![cx;
-                shadcn::Label::new("Hello, world!"),
-                cx.text(format!("Clicks: {{click_count_value}}")),
-                shadcn::Button::new("Click me").action(act::Click),
+        ui::single(
+            cx,
+            ui::v_flex(|cx| {{
+                ui::children![cx;
+                    shadcn::Label::new("Hello, world!"),
+                    cx.text(format!("Clicks: {{click_count_value}}")),
+                    shadcn::Button::new("Click me").action(act::Click),
 __PALETTE_BUTTON__
-            ]
-        }})
-        .size_full()
-        .gap(Space::N4)
-        .items_center()
-        .justify_center()
-        .into_element(cx)
-        .into()
+                ]
+            }})
+            .size_full()
+            .gap(Space::N4)
+            .items_center()
+            .justify_center(),
+        )
     }}
 }}
 
@@ -854,7 +847,7 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
 use fret::app::prelude::*;
 use fret::{
     icons::{icon, IconId},
-    style::{ColorRef, Radius, Space, Theme},
+    style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
 __GENERATED_ASSET_MODULE__
@@ -902,8 +895,8 @@ impl View for TodoView {
             ]
         });
 
-        let todos = cx.state().watch(&todos_state).layout().value_or_default();
-        let draft_value = cx.state().watch(&draft_state).layout().value_or_default();
+        let todos = todos_state.layout(cx).value_or_default();
+        let draft_value = draft_state.layout(cx).value_or_default();
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
         let add_enabled = !draft_value.trim().is_empty();
@@ -947,8 +940,7 @@ impl View for TodoView {
         });
 
         cx.actions()
-            .payload::<act::Toggle>()
-            .local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {
+            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
                 if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                     row.done = !row.done;
                     true
@@ -975,7 +967,7 @@ __ADD_BTN_DEF__
 
         let input = shadcn::Input::new(&draft_state)
             .placeholder("Add a task?")
-            .submit_command(act::Add.into());
+            .submit_action(act::Add);
 
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
@@ -1017,7 +1009,7 @@ __ADD_BTN_DEF__
                         header_actions,
                     ]
                 }),
-                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_content(|cx| ui::single(cx, content)),
             ]
         })
         .ui()
@@ -1038,22 +1030,19 @@ __PALETTE_BUTTON__
         .justify_center()
         .items_center();
 
-        todo_page(cx, theme, content)
+        ui::single(cx, todo_page(theme, content))
     }
 }
 
 fn todo_page(
-    cx: &mut UiCx<'_>,
     theme: ThemeSnapshot,
     content: impl UiChild,
-) -> Ui {
-    ui::container(|cx| ui::children![cx; content])
+) -> impl UiChild {
+    ui::container(|cx| ui::single(cx, content))
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx)
-        .into()
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
@@ -1117,8 +1106,13 @@ pub(super) fn generated_assets_stub_rs(package_name: &str) -> String {
 // Scaffolded by `fretboard new --ui-assets`.
 // Regenerate this file after editing `assets/`:
 //   fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force
+// Ecosystem/package crates can use `Bundle` or `install(app)` on the app setup surface; apps on
+// the builder lane can use `mount(builder)?`.
 
-use fret::assets::{{self, AssetBundleId, AssetKey, AssetLocator, StaticAssetEntry}};
+use fret::assets::{{
+    self, AssetBundleId, AssetKey, AssetLocator, AssetStartupMode, AssetStartupPlan,
+    StaticAssetEntry,
+}};
 
 pub fn bundle_id() -> AssetBundleId {{
     AssetBundleId::app("{package_name}")
@@ -1128,14 +1122,40 @@ pub fn locator(key: impl Into<AssetKey>) -> AssetLocator {{
     AssetLocator::bundle(bundle_id(), key)
 }}
 
+pub const DEVELOPMENT_SOURCE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");
+
 pub const ENTRIES: &[StaticAssetEntry] = &[];
+
+pub fn packaged_startup_plan() -> AssetStartupPlan {{
+    AssetStartupPlan::new().packaged_bundle_entries(bundle_id(), ENTRIES.iter().copied())
+}}
+
+pub fn preferred_startup_plan() -> AssetStartupPlan {{
+    packaged_startup_plan().development_bundle_dir_if_native(bundle_id(), DEVELOPMENT_SOURCE_DIR)
+}}
+
+pub const fn preferred_startup_mode() -> AssetStartupMode {{
+    AssetStartupMode::preferred()
+}}
 
 pub fn register(app: &mut fret::app::App) {{
     assets::register_bundle_entries(app, bundle_id(), ENTRIES.iter().copied());
 }}
 
-pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {{
-    builder.with_bundle_asset_entries(bundle_id(), ENTRIES.iter().copied())
+pub fn install(app: &mut fret::app::App) {{
+    register(app);
+}}
+
+pub struct Bundle;
+
+impl fret::integration::InstallIntoApp for Bundle {{
+    fn install_into_app(self, app: &mut fret::app::App) {{
+        register(app);
+    }}
+}}
+
+pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::UiAppBuilder<S>> {{
+    builder.with_asset_startup(bundle_id(), preferred_startup_mode(), preferred_startup_plan())
 }}
 "#
     )
@@ -1144,7 +1164,7 @@ pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S
 pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Native/package-dev escape hatch: `FretApp::asset_dir(\"assets\")` still exists, but the scaffold intentionally starts on the compile-time portable lane\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Lower-level escape hatch: `FretApp::asset_dir(\"assets\")` still exists when you intentionally want manual startup layering\n"
         )
     } else {
         "- UI assets: disabled (use `fretboard new todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
@@ -1227,7 +1247,7 @@ cargo run --release
 pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Native/package-dev escape hatch: `FretApp::asset_dir(\"assets\")` still exists, but the scaffold intentionally starts on the compile-time portable lane\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- Lower-level escape hatch: `FretApp::asset_dir(\"assets\")` still exists when you intentionally want manual startup layering\n"
         )
     } else {
         "- UI assets: disabled (use `fretboard new simple-todo --ui-assets` if you need images/SVG caches + a default app asset bundle)\n".to_string()
@@ -1279,6 +1299,7 @@ cargo run --release
 
 - Edit UI in `src/main.rs`
 - Use `ui::children![cx; ...]` to build heterogeneous child lists without call-site `.into_element(cx)` noise.
+- Use `ui::single(cx, child)` when a render root or wrapper closure only needs to late-land one typed child.
 - When rendering dynamic lists, prefer `ui::for_each_keyed(cx, items, |item| id, |item| ...)` to keep identity stable without dropping back to `v_flex_build(...)`.
 "#
     )
@@ -1354,7 +1375,7 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
-        assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
+        assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("cx: &mut UiCx<'_>,"));
@@ -1375,7 +1396,7 @@ mod tests {
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("shadcn::card(|cx| {"));
         assert!(src.contains("shadcn::card_header(|cx| {"));
-        assert!(src.contains("shadcn::card_content(|cx| ui::children![cx; content])"));
+        assert!(src.contains("shadcn::card_content(|cx| ui::single(cx, content))"));
         assert!(src.contains("shadcn::card_title(\"Todo\")"));
         assert!(src.contains(
             "shadcn::card_description(\"View runtime + typed actions + selector + query (v1).\")"
@@ -1385,12 +1406,18 @@ mod tests {
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.actions().locals::<act::Add>"));
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
+        assert!(src.contains(".submit_action(act::Add)"));
+        assert!(!src.contains(".submit_command(act::Add.into())"));
         assert!(src.contains("cx.actions()\n            .local_update::<act::RefreshTip, u64>("));
         assert!(
             src.contains("cx.actions()\n            .local_set::<act::FilterAll, TodoFilter>(")
         );
-        assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
-        assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
+        assert!(src.contains(
+            "cx.actions()\n            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>("
+        ));
+        assert!(src.contains(
+            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {"
+        ));
         assert!(src.contains("cx.data().selector("));
         assert!(src.contains("cx.data().query("));
         assert!(src.contains("query::{QueryKey, QueryPolicy, QueryState, QueryStatus},"));
@@ -1400,12 +1427,13 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("todo_page(cx, theme, card)"));
+        assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
+        assert!(src.contains("ui::v_flex(|cx| ui::single(cx, content))"));
+        assert!(!src.contains("ui::v_flex(|cx| ui::children![cx; content])"));
         assert!(!src.contains("let card = card.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains("cx: &mut UiCx<'_>,"));
-        assert!(src.contains(") -> Ui {"));
+        assert!(src.contains(") -> impl UiChild {"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
         assert!(!src.contains("Model<bool>"));
         assert!(!src.contains(".models_mut().insert("));
@@ -1429,7 +1457,7 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts_with_ui_assets());
         assert!(src.contains("mod generated_assets;"));
         assert!(src.contains("let builder = FretApp::new(\"todo-app\")"));
-        assert!(src.contains("generated_assets::mount(builder)"));
+        assert!(src.contains("generated_assets::mount(builder)?"));
         assert!(!src.contains(".asset_dir(\"assets\")"));
     }
 
@@ -1450,7 +1478,7 @@ mod tests {
         assert!(src.contains("cx.actions().local_update::<act::Click, u32>"));
         assert!(!src.contains("cx.on_action_notify_models::<act::Click>"));
         assert!(!src.contains("cx.use_state::<u32>()"));
-        assert!(src.contains(".into_element(cx)"));
+        assert!(src.contains("ui::single("));
         assert!(!src.contains("decl_style::container_props"));
     }
 
@@ -1459,7 +1487,7 @@ mod tests {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(src.contains("icons::{icon, IconId},"));
-        assert!(src.contains("style::{ColorRef, Radius, Space, Theme},"));
+        assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
         assert!(src.contains("impl UiChild"));
@@ -1476,7 +1504,7 @@ mod tests {
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains("shadcn::card(|cx| {"));
         assert!(src.contains("shadcn::card_header(|cx| {"));
-        assert!(src.contains("shadcn::card_content(|cx| ui::children![cx; content])"));
+        assert!(src.contains("shadcn::card_content(|cx| ui::single(cx, content))"));
         assert!(src.contains("shadcn::card_title(\"Simple Todo\")"));
         assert!(src.contains("shadcn::card_description("));
         assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
@@ -1484,18 +1512,24 @@ mod tests {
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.actions().locals::<act::Add>"));
         assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
-        assert!(src.contains("cx.actions()\n            .payload::<act::Toggle>()"));
-        assert!(src.contains(".local_update_if::<Vec<TodoRow>>(&todos_state, |rows, id| {"));
+        assert!(src.contains(".submit_action(act::Add)"));
+        assert!(!src.contains(".submit_command(act::Add.into())"));
+        assert!(src.contains(
+            "cx.actions()\n            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>("
+        ));
+        assert!(src.contains(
+            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {"
+        ));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
-        assert!(src.contains("todo_page(cx, theme, content)"));
+        assert!(src.contains("ui::single(cx, todo_page(theme, content))"));
         assert!(!src.contains("let content = content.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, content).into_element(cx).into()"));
         assert!(src.contains("fn todo_page("));
-        assert!(src.contains("cx: &mut UiCx<'_>,"));
-        assert!(src.contains(") -> Ui {"));
+        assert!(!src.contains("cx: &mut UiCx<'_>,"));
+        assert!(src.contains(") -> impl UiChild {"));
         assert!(src.contains("shadcn::Input::new(&draft_state)"));
         assert!(src.contains("shadcn::Checkbox::from_checked(row.done)"));
         assert!(!src.contains("Model<Vec<TodoItem>>"));
@@ -1521,7 +1555,7 @@ mod tests {
         let src = simple_todo_template_main_rs("simple-todo-app", opts_with_ui_assets());
         assert!(src.contains("mod generated_assets;"));
         assert!(src.contains("let builder = FretApp::new(\"simple-todo-app\")"));
-        assert!(src.contains("generated_assets::mount(builder)"));
+        assert!(src.contains("generated_assets::mount(builder)?"));
         assert!(!src.contains(".asset_dir(\"assets\")"));
     }
 
@@ -1554,7 +1588,7 @@ mod tests {
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains(
-            "When rendering dynamic lists, prefer `ui::for_each_keyed(cx, items, |item| id, |item| ...)`"
+            "Use `ui::single(cx, child)` when a render root or wrapper closure only needs to late-land one typed child."
         ));
         assert!(simple.contains("prefer `LocalState<Vec<_>>` + payload actions"));
         assert!(simple.contains("Read tracked state near the top of `render()`"));
@@ -1565,7 +1599,10 @@ mod tests {
 
         let simple_with_assets =
             simple_todo_template_readme_md("simple-todo-app", opts_with_ui_assets());
-        assert!(simple_with_assets.contains("`generated_assets::mount(builder)`"));
+        assert!(simple_with_assets.contains("`generated_assets::mount(builder)?`"));
+        assert!(
+            simple_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
+        );
         assert!(simple_with_assets.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle simple-todo-app --force`"
         ));
@@ -1582,7 +1619,10 @@ mod tests {
         assert!(!todo.contains("on_action_notify_transient"));
 
         let todo_with_assets = todo_template_readme_md("todo-app", opts_with_ui_assets());
-        assert!(todo_with_assets.contains("`generated_assets::mount(builder)`"));
+        assert!(todo_with_assets.contains("`generated_assets::mount(builder)?`"));
+        assert!(
+            todo_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
+        );
         assert!(todo_with_assets.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force`"
         ));
@@ -1594,8 +1634,27 @@ mod tests {
         let src = generated_assets_stub_rs("todo-app");
         assert!(src.contains("AssetBundleId::app(\"todo-app\")"));
         assert!(src.contains("pub fn locator(key: impl Into<AssetKey>) -> AssetLocator"));
+        assert!(src.contains(
+            "pub const DEVELOPMENT_SOURCE_DIR: &str = concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/assets\");"
+        ));
+        assert!(src.contains("pub fn packaged_startup_plan() -> AssetStartupPlan"));
+        assert!(src.contains("pub fn preferred_startup_plan() -> AssetStartupPlan"));
+        assert!(src.contains("pub const fn preferred_startup_mode() -> AssetStartupMode"));
+        assert!(src.contains(
+            "packaged_startup_plan().development_bundle_dir_if_native(bundle_id(), DEVELOPMENT_SOURCE_DIR)"
+        ));
+        assert!(src.contains("AssetStartupMode::preferred()"));
         assert!(src.contains("pub fn register(app: &mut fret::app::App)"));
-        assert!(src.contains("pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>)"));
+        assert!(src.contains("pub fn install(app: &mut fret::app::App)"));
+        assert!(src.contains("pub struct Bundle;"));
+        assert!(src.contains("impl fret::integration::InstallIntoApp for Bundle"));
+        assert!(src.contains(
+            "pub fn mount<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::Result<fret::UiAppBuilder<S>>"
+        ));
+        assert!(src.contains(
+            "builder.with_asset_startup(bundle_id(), preferred_startup_mode(), preferred_startup_plan())"
+        ));
+        assert!(src.contains("register(app);"));
         assert!(src.contains(
             "fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force"
         ));

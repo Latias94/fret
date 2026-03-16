@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -55,10 +56,10 @@ fn select_test_ids_survive_open_close_open() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
@@ -68,8 +69,8 @@ fn select_test_ids_survive_open_close_open() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    let items: Vec<fret_ui_shadcn::SelectItem> = (0..40)
-        .map(|i| fret_ui_shadcn::SelectItem::new(format!("item-{i}"), format!("Item {i}")))
+    let items: Vec<shadcn::SelectItem> = (0..40)
+        .map(|i| shadcn::SelectItem::new(format!("item-{i}"), format!("Item {i}")))
         .collect();
 
     // Frame 1: mount closed (stable trigger).
@@ -85,8 +86,8 @@ fn select_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_frame_1.clone(), open_frame_1.clone())
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
+                shadcn::Select::new(value_frame_1.clone(), open_frame_1.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_1.clone())
@@ -116,8 +117,8 @@ fn select_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_frame_2.clone(), open_frame_2.clone())
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
+                shadcn::Select::new(value_frame_2.clone(), open_frame_2.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_2.clone())
@@ -148,8 +149,8 @@ fn select_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_frame_3.clone(), open_frame_3.clone())
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
+                shadcn::Select::new(value_frame_3.clone(), open_frame_3.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_3.clone())
@@ -179,8 +180,8 @@ fn select_test_ids_survive_open_close_open() {
         true,
         move |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value_frame_4.clone(), open_frame_4.clone())
-                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
+                shadcn::Select::new(value_frame_4.clone(), open_frame_4.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_4.clone())

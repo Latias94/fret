@@ -438,7 +438,7 @@ impl CalendarHijri {
 
                 let header = ui::h_row(move |cx| {
                     let nav_enabled = !disable_navigation;
-                    let direction = crate::use_direction(cx, None);
+                    let direction = crate::direction::use_direction(cx, None);
                     let prev_icon = rtl::chevron_inline_start(direction);
                     let next_icon = rtl::chevron_inline_end(direction);
 

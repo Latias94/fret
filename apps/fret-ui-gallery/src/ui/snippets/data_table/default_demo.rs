@@ -1,10 +1,10 @@
 pub const SOURCE: &str = include_str!("default_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::action::OnActivate;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -50,26 +50,6 @@ fn footer(
     let prev_enabled = output_value.pagination.can_prev;
     let next_enabled = output_value.pagination.can_next;
 
-    let prev: OnActivate = {
-        let state = state.clone();
-        Arc::new(move |host, _acx, _reason| {
-            let _ = host.models_mut().update(&state, |table_state| {
-                table_state.pagination.page_index =
-                    table_state.pagination.page_index.saturating_sub(1);
-            });
-        })
-    };
-
-    let next: OnActivate = {
-        let state = state.clone();
-        Arc::new(move |host, _acx, _reason| {
-            let _ = host.models_mut().update(&state, |table_state| {
-                table_state.pagination.page_index =
-                    table_state.pagination.page_index.saturating_add(1);
-            });
-        })
-    };
-
     ui::h_flex(move |cx| {
         vec![
             ui::text(summary.clone())
@@ -82,14 +62,30 @@ fn footer(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!prev_enabled)
-                .on_activate(prev.clone())
+                .on_activate(cx.actions().listen({
+                    let state = state.clone();
+                    move |host, _action_cx| {
+                        let _ = host.models_mut().update(&state, |table_state| {
+                            table_state.pagination.page_index =
+                                table_state.pagination.page_index.saturating_sub(1);
+                        });
+                    }
+                }))
                 .test_id("ui-gallery-data-table-default-prev")
                 .into_element(cx),
             shadcn::Button::new("Next")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!next_enabled)
-                .on_activate(next.clone())
+                .on_activate(cx.actions().listen({
+                    let state = state.clone();
+                    move |host, _action_cx| {
+                        let _ = host.models_mut().update(&state, |table_state| {
+                            table_state.pagination.page_index =
+                                table_state.pagination.page_index.saturating_add(1);
+                        });
+                    }
+                }))
                 .test_id("ui-gallery-data-table-default-next")
                 .into_element(cx),
         ]

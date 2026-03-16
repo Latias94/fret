@@ -1818,6 +1818,110 @@ pub enum UiPredicateV1 {
     /// result can bump `TextFontStackKey` and trigger large relayouts; this predicate lets perf
     /// suites wait for that one-time work to complete before entering a measured window.
     SystemFontRescanIdle,
+    /// True when `debug.resource_loading.asset_load.missing_bundle_asset_requests >= min`.
+    ///
+    /// This is intended for negative-path diagnostics scripts that deliberately trigger missing
+    /// bundle assets and want a structured gate instead of grepping logs.
+    AssetLoadMissingBundleAssetRequestsGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.asset_load.stale_manifest_requests >= min`.
+    ///
+    /// This is intended for native/package-dev file-backed manifest lanes where the logical
+    /// bundle/key mapping still exists but the manifest-backed file path has gone stale.
+    AssetLoadStaleManifestRequestsGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.asset_load.unsupported_file_requests >= min`.
+    ///
+    /// This is intended to gate portable capability degradations where file locators must stay
+    /// unsupported on targets like wasm.
+    AssetLoadUnsupportedFileRequestsGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.asset_load.unsupported_url_requests >= min`.
+    AssetLoadUnsupportedUrlRequestsGe {
+        min: u64,
+    },
+    /// True when
+    /// `debug.resource_loading.asset_load.external_reference_unavailable_requests >= min`.
+    ///
+    /// This is intended for byte-only asset surfaces that should not silently claim an external
+    /// reference exists.
+    AssetLoadExternalReferenceUnavailableRequestsGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.asset_load.revision_change_requests >= min`.
+    ///
+    /// This is intended for hot-reload / invalidation flows where we want to observe that a
+    /// locator revision actually changed across snapshots.
+    AssetLoadRevisionChangeRequestsGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.asset_load.recent[*].outcome_kind` contains
+    /// `outcome_kind`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `resolved`
+    /// - `missing`
+    /// - `stale_manifest`
+    /// - `unsupported_locator_kind`
+    /// - `external_reference_unavailable`
+    /// - `resolver_unavailable`
+    /// - `access_denied`
+    /// - `message`
+    AssetLoadRecentOutcomeSeen {
+        outcome_kind: String,
+    },
+    /// True when `debug.resource_loading.asset_load.recent[*].revision_transition` contains
+    /// `transition`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `initial`
+    /// - `stable`
+    /// - `changed`
+    AssetLoadRecentRevisionTransitionSeen {
+        transition: String,
+    },
+    /// True when `debug.resource_loading.font_environment.bundled_baseline_source == source`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `none`
+    /// - `bundled_profile`
+    BundledFontBaselineSourceIs {
+        source: String,
+    },
+    /// True when `debug.resource_loading.asset_reload.epoch >= min`.
+    ///
+    /// This is intended for hot-reload / invalidation flows that want to observe the shared
+    /// runtime-global reload epoch directly instead of inferring it indirectly from asset-load
+    /// revision transitions.
+    AssetReloadEpochGe {
+        min: u64,
+    },
+    /// True when `debug.resource_loading.asset_reload.configured_backend == backend`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `poll_metadata`
+    /// - `native_watcher`
+    AssetReloadConfiguredBackendIs {
+        backend: String,
+    },
+    /// True when `debug.resource_loading.asset_reload.active_backend == backend`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `poll_metadata`
+    /// - `native_watcher`
+    AssetReloadActiveBackendIs {
+        backend: String,
+    },
+    /// True when `debug.resource_loading.asset_reload.fallback_reason == reason`.
+    ///
+    /// Supported values currently mirror the debug snapshot surface:
+    /// - `watcher_install_failed`
+    AssetReloadFallbackReasonIs {
+        reason: String,
+    },
     /// True when the runner has observed an OS accessibility activation request for the current
     /// window.
     ///

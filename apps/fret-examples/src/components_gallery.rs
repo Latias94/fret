@@ -744,9 +744,9 @@ impl ComponentsGalleryDriver {
                                                                     .variant(
                                                                         shadcn::ButtonVariant::Outline,
                                                                     )
-                                                                    .on_click(CommandId::from(
+                                                                    .action(
                                                                         "gallery.text_smoke.fonts.load",
-                                                                    ))
+                                                                    )
                                                                     .ui()
                                                                     .px_3()
                                                                     .into_element(cx),
@@ -754,17 +754,17 @@ impl ComponentsGalleryDriver {
                                                                     .variant(
                                                                         shadcn::ButtonVariant::Outline,
                                                                     )
-                                                                    .on_click(CommandId::from(
+                                                                    .action(
                                                                         "gallery.text_smoke.ui_font.reset",
-                                                                    ))
+                                                                    )
                                                                     .into_element(cx),
                                                                 shadcn::Button::new("Reset")
                                                                     .variant(
                                                                         shadcn::ButtonVariant::Outline,
                                                                     )
-                                                                    .on_click(CommandId::from(
+                                                                    .action(
                                                                         "gallery.text_smoke.emoji_font.reset",
-                                                                    ))
+                                                                    )
                                                                     .into_element(cx),
                                                             ]
                                                         },
@@ -859,15 +859,15 @@ impl ComponentsGalleryDriver {
                                         |cx| {
                                             vec![
                                                 shadcn::Button::new("Primary")
-                                                    .on_click(CommandId::from("gallery.progress.inc"))
+                                                    .action("gallery.progress.inc")
                                                     .into_element(cx),
                                                 shadcn::Button::new("Destructive")
                                                     .variant(shadcn::ButtonVariant::Destructive)
-                                                    .on_click(CommandId::from("gallery.progress.dec"))
+                                                    .action("gallery.progress.dec")
                                                     .into_element(cx),
                                                 shadcn::Button::new("Outline")
                                                     .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from("gallery.progress.reset"))
+                                                    .action("gallery.progress.reset")
                                                     .into_element(cx),
                                                 shadcn::Button::new("Disabled")
                                                     .disabled(true)

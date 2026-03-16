@@ -6,6 +6,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -24,7 +25,7 @@ fn render_frame(
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
-    api: Model<fret_ui_shadcn::CarouselApiSnapshot>,
+    api: Model<shadcn::CarouselApiSnapshot>,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -39,9 +40,9 @@ fn render_frame(
         "carousel-wheel",
         |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .api_snapshot_model(api)
-                .wheel_gestures(fret_ui_shadcn::CarouselWheelGesturesConfig::new())
+                .wheel_gestures(shadcn::CarouselWheelGesturesConfig::new())
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)
                 .item_basis_main_px(Px(200.0))
@@ -93,7 +94,7 @@ fn carousel_wheel_gestures_can_step_next_and_prev() {
 
     let api = app
         .models_mut()
-        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+        .insert(shadcn::CarouselApiSnapshot::default());
 
     for _ in 0..3 {
         render_frame(

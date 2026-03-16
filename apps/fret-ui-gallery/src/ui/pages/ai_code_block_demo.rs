@@ -27,8 +27,6 @@ pub(super) fn preview_ai_code_block_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-page-ai-code-block-demo")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-page-ai-code-block-demo");
+    vec![body.into_element(cx)]
 }

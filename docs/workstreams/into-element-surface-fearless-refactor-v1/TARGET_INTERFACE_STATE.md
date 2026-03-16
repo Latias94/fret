@@ -34,7 +34,11 @@ It answers four concrete questions:
 Default app-facing docs, templates, and examples should teach:
 
 - `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`
-- `fn helper(cx: &mut UiCx<'_>) -> impl UiChild`
+- `fn helper(...) -> impl UiChild`
+- `cx: &mut UiCx<'_>` only on helpers that actually need runtime/context access inside the helper
+  body
+- pure page-shell helpers should stay fully late-landed and let `render(...)` own the final
+  `ui::children![cx; helper(...)]` root conversion
 
 They should not teach:
 
@@ -51,6 +55,13 @@ The app prelude may anonymously import the unified conversion trait needed to ke
 `.into_element(cx)` method syntax working.
 
 That import support is not part of the taught product vocabulary.
+
+Default app root-helper clarification on 2026-03-15:
+
+- a named helper on the app-facing lane does not automatically imply `UiCx -> Ui`,
+- if the helper only wraps already-typed children, prefer `fn helper(...) -> impl UiChild`,
+- keep `UiCx` in the signature only when the helper itself reads/watches state, emits text/layout
+  nodes, or owns an intentional landing seam.
 
 Transitional note on 2026-03-12:
 
@@ -174,15 +185,17 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   `simple_todo_v2_target`) no longer teaches a redundant `.into()` after the scaffold call.
 - the remaining canonical compare-set roots now follow the same rule too:
   `apps/fret-examples/src/todo_demo.rs::todo_page(...)` and the generated helpers in
-  `apps/fretboard/src/scaffold/templates.rs` take `&mut UiCx<'_>` and return `Ui`, so
-  `todo_demo` plus both todo templates no longer teach `todo_page(...).into_element(cx).into()`
-  as the default root story.
+  `apps/fretboard/src/scaffold/templates.rs` now stay on `impl UiChild`, drop helper-local `cx`,
+  and let `render(...)` land them through `ui::single(cx, todo_page(...))`, so `todo_demo`
+  plus both todo templates no longer teach `todo_page(...).into_element(cx).into()` as the
+  default root story.
 - `apps/fret-examples/src/hello_counter_demo.rs::hello_counter_page(...)` now also follows that
-  same default-app root posture, so the first-contact counter demo does not keep inline root
-  wrapper chrome inside `render(...)`.
+  same default-app root posture: the helper itself now stays on `impl UiChild`, and `render(...)`
+  lands it through `ui::single(cx, hello_counter_page(...))`, so the first-contact counter demo
+  does not keep inline root wrapper chrome inside `render(...)`.
 - the onboarding cookbook `hello.rs` sample now follows the same posture through
-  `hello_page(cx, ...) -> Ui`, so the default first-contact example no longer keeps a root-local
-  `let root = ...; root.into_element(cx).into()` seam inside `render()`.
+  `hello_page(...) -> impl UiChild`, so the default first-contact example no longer keeps a
+  root-local `let root = ...; root.into_element(cx).into()` seam inside `render()`.
 - first-party page/snippet teaching rule:
   once a wrapper/helper family is promoted onto the default authoring path, Gallery pages and
   snippets should teach that wrapper family by default and should not silently fall back to eager
@@ -692,19 +705,27 @@ Current intentional raw internal-overlay-preview exceptions:
 
 Current intentional raw scroll-area diagnostics exceptions:
 
-- `src/ui/snippets/scroll_area/drag_baseline.rs::render(...)` remains `-> AnyElement` because the
-  harness owns timer-driven content growth, a retained `ScrollHandle`, explicit scrollbar
+- `src/ui/snippets/**` now has zero top-level raw render roots; that tree is the copyable default
+  app-facing lane and should stay on `UiCx -> impl UiChild`.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs::copyable_ui_gallery_snippet_lane_has_no_top_level_raw_render_roots`
+  is the lane-level source gate that keeps the whole copyable snippet surface off raw landed
+  `render(...) -> AnyElement` signatures.
+- `src/ui/diagnostics/scroll_area/drag_baseline.rs::render(...)` remains `-> AnyElement` because
+  the harness owns timer-driven content growth, a retained `ScrollHandle`, explicit scrollbar
   semantics, and the final landed diagnostics root consumed by `pages/scroll_area.rs` through
-  `DocSection::build(cx, ...)`.
-- `src/ui/snippets/scroll_area/expand_at_bottom.rs::render(...)` remains `-> AnyElement` because
-  the harness owns the pinned-extents regression probe, wrapper-budget stress tree, and the final
-  landed diagnostics root consumed by `pages/scroll_area.rs` through `DocSection::build(cx, ...)`.
+  `DocSection::build_diagnostics(cx, ...)`.
+- `src/ui/diagnostics/scroll_area/expand_at_bottom.rs::render(...)` remains `-> AnyElement`
+  because the harness owns the pinned-extents regression probe, wrapper-budget stress tree, and
+  the final landed diagnostics root consumed by `pages/scroll_area.rs` through
+  `DocSection::build_diagnostics(cx, ...)`.
 - those two files are now the entire audited raw-root inventory for
-  `src/ui/snippets/scroll_area/**`; do not add another `render(...) -> AnyElement` there unless
-  the snippet is genuinely a diagnostics-owned harness root.
-- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs::scroll_area_diagnostics_snippets_remain_intentional_raw_boundaries`
-  is the source gate that keeps that exact two-file raw inventory explicit while the ordinary
-  scroll-area docs surface stays on `UiCx -> impl UiChild`.
+  `src/ui/diagnostics/scroll_area/**`; do not add another `render(...) -> AnyElement` there unless
+  the module is genuinely a diagnostics-owned harness root.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs::ui_gallery_diagnostics_raw_render_roots_are_explicitly_documented`
+  is the lane-level source gate that requires every diagnostics raw root to carry an explicit
+  rationale comment.
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs::{scroll_area_app_facing_snippet_lane_has_no_raw_boundaries,scroll_area_diagnostics_lane_keeps_intentional_raw_boundaries}`
+  are the source gates that keep the default snippet lane typed and the diagnostics lane explicit.
 
 The same input rule also applies to internal shadcn menu-slot wrappers:
 

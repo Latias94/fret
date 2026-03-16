@@ -363,10 +363,13 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("KernelApp"));
         assert!(!src.contains("AppWindowId"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
-        assert!(src.contains("todo_page(cx, theme, card)"));
-        assert!(src.contains(
-            "fn todo_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, content: impl UiChild) -> Ui"
-        ));
+        assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
+        assert!(
+            src.contains(
+                "fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild"
+            )
+        );
+        assert!(!src.contains("fn todo_page(cx: &mut UiCx<'_>,"));
         assert!(!src.contains("let card = card.into_element(cx);"));
         assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
     }
@@ -614,10 +617,11 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn hello_counter_demo_prefers_root_helper_surface() {
-        assert!(HELLO_COUNTER_DEMO.contains("hello_counter_page(cx.elements(), theme, card)"));
+        assert!(HELLO_COUNTER_DEMO.contains("ui::single(cx, hello_counter_page(theme, card))"));
         assert!(HELLO_COUNTER_DEMO.contains(
-            "fn hello_counter_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: impl UiChild) -> Ui"
+            "fn hello_counter_page(theme: ThemeSnapshot, card: impl UiChild) -> impl UiChild"
         ));
+        assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut UiCx<'_>,"));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
     }
 
@@ -1486,10 +1490,12 @@ mod authoring_surface_policy_tests {
             &[
                 "let draft_state = cx.state().local::<String>();",
                 "let next_id_state = cx.state().local_init(|| 4u64);",
+                "let todos = todos_state.layout(cx).value_or_default();",
+                "let draft_value = draft_state.layout(cx).value_or_default();",
                 "cx.actions().locals::<act::Add>({",
                 "cx.actions().locals::<act::ClearDone>({",
-                "cx.actions().payload::<act::Toggle>().local_update_if::<Vec<TodoRow>>(",
-                "cx.actions().payload::<act::Remove>().local_update_if::<Vec<TodoRow>>(",
+                "cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>(",
+                "cx.actions().payload_local_update_if::<act::Remove, Vec<TodoRow>>(",
             ],
             &[
                 "cx.use_local::<String>()",

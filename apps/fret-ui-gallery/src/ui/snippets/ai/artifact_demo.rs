@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("artifact_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let present = cx.local_model_keyed("present", || true);
@@ -16,7 +16,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let present_for_reset = present.clone();
     let reset = shadcn::Button::new("Reset artifact")
         .variant(shadcn::ButtonVariant::Secondary)
-        .on_activate(Arc::new(move |host, action_cx, _reason| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host.models_mut().update(&present_for_reset, |v| *v = true);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);
@@ -27,9 +27,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let artifact = if is_present {
         let close = ui_ai::ArtifactClose::new()
             .test_id("ui-ai-artifact-close")
-            .on_activate(Arc::new({
+            .on_activate(cx.actions().listen({
                 let present = present.clone();
-                move |host, action_cx, _reason| {
+                move |host, action_cx| {
                     let _ = host.models_mut().update(&present, |v| *v = false);
                     host.notify(action_cx);
                     host.request_redraw(action_cx.window);

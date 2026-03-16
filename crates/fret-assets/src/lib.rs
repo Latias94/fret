@@ -15,7 +15,7 @@
 //! - UI invalidation,
 //! - or platform-specific resolver implementations.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -426,6 +426,64 @@ impl ResolvedAssetBytes {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AssetExternalReference {
+    FilePath(PathBuf),
+    Url(SmolStr),
+}
+
+impl AssetExternalReference {
+    pub fn file_path(path: impl Into<PathBuf>) -> Self {
+        Self::FilePath(path.into())
+    }
+
+    pub fn url(url: impl Into<SmolStr>) -> Self {
+        Self::Url(url.into())
+    }
+
+    pub fn as_file_path(&self) -> Option<&Path> {
+        match self {
+            Self::FilePath(path) => Some(path.as_path()),
+            Self::Url(_) => None,
+        }
+    }
+
+    pub fn as_url(&self) -> Option<&str> {
+        match self {
+            Self::FilePath(_) => None,
+            Self::Url(url) => Some(url.as_str()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedAssetReference {
+    pub locator: AssetLocator,
+    pub revision: AssetRevision,
+    pub media_type: Option<AssetMediaType>,
+    pub reference: AssetExternalReference,
+}
+
+impl ResolvedAssetReference {
+    pub fn new(
+        locator: AssetLocator,
+        revision: AssetRevision,
+        reference: AssetExternalReference,
+    ) -> Self {
+        Self {
+            locator,
+            revision,
+            media_type: None,
+            reference,
+        }
+    }
+
+    pub fn with_media_type(mut self, media_type: impl Into<AssetMediaType>) -> Self {
+        self.media_type = Some(media_type.into());
+        self
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StaticAssetEntry {
     pub key: &'static str,
@@ -461,6 +519,17 @@ impl StaticAssetEntry {
 pub trait AssetResolver: 'static + Send + Sync {
     fn capabilities(&self) -> AssetCapabilities;
     fn resolve_bytes(&self, request: &AssetRequest) -> Result<ResolvedAssetBytes, AssetLoadError>;
+    fn resolve_reference(
+        &self,
+        request: &AssetRequest,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        match self.resolve_bytes(request) {
+            Ok(_) => Err(AssetLoadError::ExternalReferenceUnavailable {
+                kind: request.locator.kind(),
+            }),
+            Err(err) => Err(err),
+        }
+    }
 }
 
 impl dyn AssetResolver + '_ {
@@ -473,6 +542,13 @@ impl dyn AssetResolver + '_ {
         locator: AssetLocator,
     ) -> Result<ResolvedAssetBytes, AssetLoadError> {
         self.resolve_bytes(&AssetRequest::new(locator))
+    }
+
+    pub fn resolve_locator_reference(
+        &self,
+        locator: AssetLocator,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        self.resolve_reference(&AssetRequest::new(locator))
     }
 }
 
@@ -621,8 +697,12 @@ pub enum AssetLoadError {
     ResolverUnavailable,
     #[error("asset locator kind {kind:?} is not supported on this host")]
     UnsupportedLocatorKind { kind: AssetLocatorKind },
+    #[error("asset locator kind {kind:?} cannot provide an external reference handoff")]
+    ExternalReferenceUnavailable { kind: AssetLocatorKind },
     #[error("asset not found")]
     NotFound,
+    #[error("asset manifest entry points at a missing file: {path}")]
+    StaleManifestMapping { path: SmolStr },
     #[error("asset access denied")]
     AccessDenied,
     #[error("asset load failed: {message}")]
@@ -733,6 +813,43 @@ mod tests {
     }
 
     #[test]
+    fn resolved_asset_reference_can_attach_media_type() {
+        let resolved = ResolvedAssetReference::new(
+            AssetLocator::bundle(app_bundle(), "images/logo.png"),
+            AssetRevision(11),
+            AssetExternalReference::file_path("assets/logo.png"),
+        )
+        .with_media_type("image/png");
+
+        assert_eq!(resolved.revision, AssetRevision(11));
+        assert_eq!(
+            resolved.media_type.as_ref().map(AssetMediaType::as_str),
+            Some("image/png")
+        );
+        assert_eq!(
+            resolved
+                .reference
+                .as_file_path()
+                .map(|path| path.to_string_lossy()),
+            Some("assets/logo.png".into())
+        );
+    }
+
+    #[test]
+    fn asset_external_reference_accessors_match_variant() {
+        let path = AssetExternalReference::file_path("assets/logo.png");
+        let url = AssetExternalReference::url("https://example.com/logo.png");
+
+        assert_eq!(
+            path.as_file_path().map(|value| value.to_string_lossy()),
+            Some("assets/logo.png".into())
+        );
+        assert_eq!(path.as_url(), None);
+        assert_eq!(url.as_file_path(), None);
+        assert_eq!(url.as_url(), Some("https://example.com/logo.png"));
+    }
+
+    #[test]
     fn asset_resolver_supports_capability_queries() {
         struct TestResolver;
 
@@ -801,6 +918,92 @@ mod tests {
         assert_eq!(bundle.bytes.as_ref(), &[1, 2, 3]);
         assert_eq!(embedded.revision, AssetRevision(9));
         assert_eq!(embedded.bytes.as_ref(), &[4, 5, 6]);
+    }
+
+    #[test]
+    fn in_memory_asset_resolver_reports_external_reference_unavailable_for_present_assets() {
+        let mut resolver = InMemoryAssetResolver::new();
+        resolver.insert_bundle(
+            app_bundle(),
+            "images/logo.png",
+            AssetRevision(5),
+            [1u8, 2, 3],
+        );
+
+        let err = resolver
+            .resolve_reference(&AssetRequest::new(AssetLocator::bundle(
+                app_bundle(),
+                "images/logo.png",
+            )))
+            .expect_err("in-memory bundle entry should not expose an external reference");
+
+        assert_eq!(
+            err,
+            AssetLoadError::ExternalReferenceUnavailable {
+                kind: AssetLocatorKind::BundleAsset,
+            }
+        );
+    }
+
+    #[test]
+    fn custom_resolver_can_publish_external_references() {
+        struct TestReferenceResolver;
+
+        impl AssetResolver for TestReferenceResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    memory: false,
+                    embedded: false,
+                    bundle_asset: true,
+                    file: false,
+                    url: false,
+                    file_watch: false,
+                    system_font_scan: false,
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                _request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::ExternalReferenceUnavailable {
+                    kind: AssetLocatorKind::BundleAsset,
+                })
+            }
+
+            fn resolve_reference(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Ok(ResolvedAssetReference::new(
+                    request.locator.clone(),
+                    AssetRevision(13),
+                    AssetExternalReference::file_path("assets/logo.png"),
+                )
+                .with_media_type("image/png"))
+            }
+        }
+
+        let resolver = TestReferenceResolver;
+        let resolved = resolver
+            .resolve_reference(&AssetRequest::new(AssetLocator::bundle(
+                app_bundle(),
+                "images/logo.png",
+            )))
+            .expect("custom resolver should expose an external reference");
+
+        assert_eq!(resolved.revision, AssetRevision(13));
+        assert_eq!(
+            resolved
+                .reference
+                .as_file_path()
+                .map(|path| path.to_string_lossy().into_owned()),
+            Some("assets/logo.png".to_string())
+        );
+        assert_eq!(
+            resolved.media_type.as_ref().map(AssetMediaType::as_str),
+            Some("image/png")
+        );
     }
 
     #[test]

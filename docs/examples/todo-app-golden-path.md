@@ -134,7 +134,7 @@ apps without dropping down to `fret-bootstrap`:
 ```rust,ignore
 use fret::app::prelude::*;
 
-fn install_app(app: &mut App) {
+fn install_todo_app(app: &mut App) {
     // Register app-owned globals, commands, services, etc.
     // Example:
     // app.set_global(MyService::default());
@@ -143,7 +143,7 @@ fn install_app(app: &mut App) {
  fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
-        .setup(install_app)
+        .setup(install_todo_app)
         // Disable filesystem config loading for embedding/minimal builds:
         .config_files(false)
         // If you use images/SVG in UI, tune budgets:
@@ -157,7 +157,7 @@ fn install_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.on_activate(cx.actions().dispatch::<A>())` / `.listener(...)` only when a control truly needs activation glue. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge; the explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` aliases remain available, but they are no longer the shortest recommended wording. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
@@ -220,7 +220,8 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` / `cx.actions().payload::<A>().locals(...)` over `cx.actions().models(...)`.
+  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` /
+    `cx.actions().payload_locals::<A>(...)` over `cx.actions().models(...)`.
 
 ## Actions (UI -> app logic)
 
@@ -243,10 +244,11 @@ impl View for TodoView {
         let draft = cx.state().local::<String>();
         cx.actions().local_set::<act::Add, String>(&draft, String::new());
 
-        shadcn::Button::new("Add")
-            .action(act::Add)
-            .into_element(cx)
-            .into()
+        ui::single(
+            cx,
+            shadcn::Button::new("Add")
+                .action(act::Add),
+        )
     }
 }
 ```
@@ -258,6 +260,14 @@ The view runtime renders the same declarative IR (`Ui`, backed by `Elements`) bu
 - grouped app helpers (`state()`, `actions()`, `data()`, `effects()`),
 - LocalState/query/selector helpers behind those grouped entrypoints,
 - `notify → dirty → reuse` semantics via view cache roots.
+
+Default helper rule on this path:
+
+- keep `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui` as the root signature,
+- give a helper `&mut UiCx<'_>` only when the helper body actually needs runtime/context access,
+- if a helper is only wrapping already-typed children into page chrome, prefer
+  `fn page(...) -> impl UiChild` and late-land it from `render(...)` with
+  `ui::single(cx, page(...))`.
 
 If a product intentionally needs the raw model-backed hook, keep that explicit and advanced:
 
@@ -307,7 +317,7 @@ High-level sketch:
 use fret::query::{QueryKey, QueryPolicy, QueryState};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = handle.watch(cx).layout().value_or_default();
+let state: QueryState<T> = handle.layout(cx).value_or_default();
 ```
 
 To invalidate/refetch from app logic:
@@ -384,9 +394,12 @@ If you want UI render asset conveniences (not an editor/project asset pipeline):
 
 - Enable `fret/ui-assets` (or scaffold with `cargo run -p fretboard -- new todo --ui-assets`) so the golden-path
   driver wires caches + budgets.
-- Prefer `FretApp::asset_dir("assets")` on the app-facing builder path for the native/package-dev
-  generated-manifest convenience lane; generated `fretboard` templates now wire this by default
-  when `--ui-assets` is enabled.
+- Prefer generated `src/generated_assets.rs` modules plus `generated_assets::mount(builder)` for
+  the default portable packaged lane; if startup needs one explicit development-vs-packaged
+  contract, use `fret::assets::{AssetStartupPlan, AssetStartupMode}` with
+  `FretApp::asset_startup(...)`.
+- Keep `FretApp::asset_dir("assets")` only as the lower-level native/package-dev convenience lane
+  when you intentionally want a file-backed development source on the builder path.
 - Optionally call `.ui_assets_budgets(...)` on `FretApp` to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.

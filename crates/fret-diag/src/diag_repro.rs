@@ -234,6 +234,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_windowed_rows_offset_changes_min,
         check_windowed_rows_visible_start_changes_repainted: _,
         dump_semantics_changed_repainted_json: _,
+        ..
     } = checks;
 
     if rest.is_empty() {
@@ -586,7 +587,10 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         ));
 
         if result.stage.as_deref() == Some("passed") {
-            let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
+            let wants_post_run_checks_for_script =
+                crate::registry::checks::CheckRegistry::builtin()
+                    .wants_post_run_checks(&checks_for_post_run)
+                || check_stale_paint_test_id.is_some()
                 || check_stale_scene_test_id.is_some()
                 || check_hello_world_compare_idle_present_max_delta.is_some()
                 || check_idle_no_paint_min.is_some()

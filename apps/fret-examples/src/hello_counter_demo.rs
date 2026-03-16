@@ -3,13 +3,16 @@ use std::sync::Arc;
 use fret::app::prelude::*;
 use fret::{
     FretApp,
-    icons::IconId,
+    actions::CommandId,
+    icons::{IconId, icon},
+    semantics::SemanticsRole,
     shadcn,
-    style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme},
+    style::{
+        ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme, ThemeSnapshot,
+    },
 };
 use fret_core::Corners;
 use fret_ui::element::TextProps;
-use fret_ui_kit::declarative::icon;
 
 mod act {
     fret::actions!([
@@ -307,25 +310,23 @@ impl View for HelloCounterView {
             .max_w(Px(480.0))
             .into_element(cx);
 
-        hello_counter_page(cx.elements(), theme, card)
+        ui::single(cx, hello_counter_page(theme, card))
     }
 }
 
-fn hello_counter_page(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: impl UiChild) -> Ui {
+fn hello_counter_page(theme: ThemeSnapshot, card: impl UiChild) -> impl UiChild {
     ui::container(|cx| {
-        ui::children![
-            cx;
+        ui::single(
+            cx,
             ui::v_flex(|_cx| [card])
                 .items_center()
                 .justify_center()
                 .gap(Space::N6)
-                .size_full()
-        ]
+                .size_full(),
+        )
     })
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
     .size_full()
-    .into_element(cx)
     .test_id(TEST_ID_ROOT)
-    .into()
 }

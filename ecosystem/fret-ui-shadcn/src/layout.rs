@@ -336,7 +336,7 @@ pub(crate) fn container_hstack_centered<H: UiHost>(
 mod tests {
     use super::*;
 
-    use crate::{Card, CardContent, CardHeader};
+    use crate::card::{Card, CardContent, CardHeader};
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_ui::element::ElementKind;

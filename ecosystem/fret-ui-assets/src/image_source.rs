@@ -19,7 +19,7 @@ use fret_assets::{AssetLoadError, AssetLocator, ResolvedAssetBytes};
 use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_executor::{Inbox, InboxConfig, InboxDrainer};
 use fret_runtime::{
-    DispatchPriority, DispatcherHandle, EffectSink, GlobalsHost, InboxDrainHost,
+    AssetReloadEpoch, DispatchPriority, DispatcherHandle, EffectSink, GlobalsHost, InboxDrainHost,
     InboxDrainRegistry, TimeHost,
 };
 #[cfg(feature = "ui")]
@@ -27,7 +27,6 @@ use fret_runtime::{Model, ModelHost, ModelId};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast as _;
 
-use crate::UiAssetsReloadEpoch;
 use crate::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache};
 
@@ -116,12 +115,25 @@ impl ImageSource {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn from_native_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
+        let path: Arc<PathBuf> = path.into();
+        let id = ImageSourceId(stable_hash(&(
+            b"path.v1",
+            path.as_os_str().as_encoded_bytes(),
+        )));
+        Self {
+            id,
+            kind: ImageSourceKind::Path { path },
+        }
+    }
+
     pub fn from_asset_locator(locator: &AssetLocator) -> Result<Self, AssetLoadError> {
         match locator {
             #[cfg(target_arch = "wasm32")]
             AssetLocator::Url(url) => Ok(Self::from_url(url.as_str())),
             #[cfg(not(target_arch = "wasm32"))]
-            AssetLocator::File(file) => Ok(Self::from_file_path(file.path.clone())),
+            AssetLocator::File(file) => Ok(Self::from_native_file_path(file.path.clone())),
             _ => Err(AssetLoadError::UnsupportedLocatorKind {
                 kind: locator.kind(),
             }),
@@ -185,25 +197,6 @@ impl ImageSource {
             },
         }
     }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn from_file_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        let path: Arc<PathBuf> = path.into();
-        let id = ImageSourceId(stable_hash(&(
-            b"path.v1",
-            path.as_os_str().as_encoded_bytes(),
-        )));
-        Self {
-            id,
-            kind: ImageSourceKind::Path { path },
-        }
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    #[deprecated(note = "use from_file_path; raw file paths are a native/dev-only asset source")]
-    pub fn from_path(path: impl Into<Arc<PathBuf>>) -> Self {
-        Self::from_file_path(path)
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -249,10 +242,7 @@ fn request_key_for_source_with_epoch(
 fn reload_epoch_for_source<H: GlobalsHost>(host: &H, source: &ImageSource) -> u64 {
     match &source.kind {
         #[cfg(not(target_arch = "wasm32"))]
-        ImageSourceKind::Path { .. } => host
-            .global::<UiAssetsReloadEpoch>()
-            .map(|v| v.0)
-            .unwrap_or(0),
+        ImageSourceKind::Path { .. } => host.global::<AssetReloadEpoch>().map(|v| v.0).unwrap_or(0),
         _ => 0,
     }
 }
@@ -1205,6 +1195,7 @@ mod tests {
     use std::sync::Mutex;
     use std::time::Duration;
 
+    use fret_assets::{AssetLocator, AssetRequest, AssetRevision, InMemoryAssetResolver};
     use fret_core::{
         AppWindowId, ClipboardToken, Event, FrameId, ImageColorSpace, ImageId, ImageUploadToken,
         TimerToken,
@@ -1222,6 +1213,7 @@ mod tests {
     }
 
     impl QueuedDispatcher {
+        #[cfg(all(feature = "image-decode", not(target_arch = "wasm32")))]
         fn run_background_tasks(&self) {
             let tasks = {
                 let mut tasks = self.background.lock().expect("poisoned background queue");
@@ -1363,6 +1355,64 @@ mod tests {
         fn set_frame(&mut self, frame: u64) {
             self.frame_id = FrameId(frame);
         }
+    }
+
+    fn install_bundle_image_asset(
+        host: &mut TestHost,
+        revision: AssetRevision,
+        bytes: impl Into<Arc<[u8]>>,
+    ) {
+        let mut resolver = InMemoryAssetResolver::new();
+        resolver.insert_bundle("app", "images/logo.png", revision, bytes);
+        fret_runtime::set_asset_resolver(host, Arc::new(resolver));
+    }
+
+    #[cfg(feature = "ui")]
+    fn resolve_bundle_image_request_state(
+        host: &mut TestHost,
+        window: AppWindowId,
+        request: &AssetRequest,
+    ) -> (
+        ImageSource,
+        fret_runtime::Model<ImageSourceUiSignal>,
+        ImageSourceRequestKey,
+        ImageSourceState,
+    ) {
+        let source = crate::resolve_image_source_from_host(host, request)
+            .expect("image source should resolve");
+        let reload_epoch = reload_epoch_for_source(host, &source);
+        let request_key =
+            request_key_for_source_with_epoch(&source, ImageSourceOptions::default(), reload_epoch);
+        let model = with_image_source_loader(host, |loader, host| {
+            loader.use_signal_model(host, &source, ImageSourceOptions::default())
+        })
+        .expect("dispatcher installed");
+        let state = use_image_source_state(host, window, &source);
+        (source, model, request_key, state)
+    }
+
+    fn image_source_entry_count(host: &mut TestHost) -> usize {
+        with_image_source_loader(host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .len()
+        })
+        .expect("dispatcher installed")
+    }
+
+    fn image_source_has_entry(host: &mut TestHost, request: ImageSourceRequestKey) -> bool {
+        with_image_source_loader(host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .contains_key(&request)
+        })
+        .expect("dispatcher installed")
     }
 
     #[test]
@@ -1509,12 +1559,12 @@ mod tests {
             ..Default::default()
         };
         host.set_global::<DispatcherHandle>(dispatcher.clone());
-        host.set_global(crate::UiAssetsReloadEpoch(0));
+        host.set_global(AssetReloadEpoch(0));
         let window = AppWindowId::default();
 
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../assets/textures/test.jpg");
-        let src = ImageSource::from_file_path(path);
+        let src = ImageSource::from_native_file_path(path);
 
         let _ = use_image_source_state(&mut host, window, &src);
         let request0 = ImageSourceRequestKey {
@@ -1533,7 +1583,7 @@ mod tests {
         .expect("dispatcher installed");
         assert!(has0, "expected entry for reload_epoch=0");
 
-        crate::bump_ui_assets_reload_epoch(&mut host);
+        fret_runtime::bump_asset_reload_epoch(&mut host);
         let _ = use_image_source_state(&mut host, window, &src);
         let request1 = ImageSourceRequestKey {
             source: src.id,
@@ -1668,8 +1718,9 @@ mod tests {
     fn image_source_can_bridge_from_file_asset_locator() {
         let locator = AssetLocator::file("assets/textures/test.jpg");
         let source = ImageSource::from_asset_locator(&locator).expect("file locator should bridge");
-        let expected =
-            ImageSource::from_file_path(std::path::PathBuf::from("assets/textures/test.jpg"));
+        let expected = ImageSource::from_native_file_path(std::path::PathBuf::from(
+            "assets/textures/test.jpg",
+        ));
         assert_eq!(source.id(), expected.id());
     }
 
@@ -1688,5 +1739,67 @@ mod tests {
 
         assert_eq!(src1.id(), src1_again.id());
         assert_ne!(src1.id(), src2.id());
+    }
+
+    #[cfg(feature = "ui")]
+    #[test]
+    fn bundle_asset_request_same_revision_reuses_signal_model_and_request_key() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher);
+        let window = AppWindowId::default();
+        let request = AssetRequest::new(AssetLocator::bundle("app", "images/logo.png"));
+
+        install_bundle_image_asset(&mut host, AssetRevision(1), [1u8, 2, 3, 4]);
+        let (source1, model1, request_key1, state1) =
+            resolve_bundle_image_request_state(&mut host, window, &request);
+        assert_eq!(state1.status, ImageLoadingStatus::Loading);
+        assert!(image_source_has_entry(&mut host, request_key1));
+        assert_eq!(image_source_entry_count(&mut host), 1);
+
+        install_bundle_image_asset(&mut host, AssetRevision(1), [9u8, 9, 9, 9]);
+        let (source2, model2, request_key2, state2) =
+            resolve_bundle_image_request_state(&mut host, window, &request);
+
+        assert_eq!(state2.status, ImageLoadingStatus::Loading);
+        assert_eq!(source1.id(), source2.id());
+        assert_eq!(model1.id(), model2.id());
+        assert_eq!(request_key1, request_key2);
+        assert!(image_source_has_entry(&mut host, request_key2));
+        assert_eq!(image_source_entry_count(&mut host), 1);
+    }
+
+    #[cfg(feature = "ui")]
+    #[test]
+    fn bundle_asset_request_revision_change_creates_new_signal_model_and_request_key() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher);
+        let window = AppWindowId::default();
+        let request = AssetRequest::new(AssetLocator::bundle("app", "images/logo.png"));
+
+        install_bundle_image_asset(&mut host, AssetRevision(1), [1u8, 2, 3, 4]);
+        let (source1, model1, request_key1, state1) =
+            resolve_bundle_image_request_state(&mut host, window, &request);
+        assert_eq!(state1.status, ImageLoadingStatus::Loading);
+        assert!(image_source_has_entry(&mut host, request_key1));
+
+        install_bundle_image_asset(&mut host, AssetRevision(2), [9u8, 9, 9, 9]);
+        let (source2, model2, request_key2, state2) =
+            resolve_bundle_image_request_state(&mut host, window, &request);
+
+        assert_eq!(state2.status, ImageLoadingStatus::Loading);
+        assert_ne!(source1.id(), source2.id());
+        assert_ne!(model1.id(), model2.id());
+        assert_ne!(request_key1, request_key2);
+        assert!(image_source_has_entry(&mut host, request_key1));
+        assert!(image_source_has_entry(&mut host, request_key2));
+        assert_eq!(image_source_entry_count(&mut host), 2);
     }
 }

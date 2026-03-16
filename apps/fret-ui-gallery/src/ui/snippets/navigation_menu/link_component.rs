@@ -16,7 +16,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .rel("noopener noreferrer")
                 // Keep the gallery deterministic: show the link authoring surface without actually
                 // launching the browser during scripted runs.
-                .on_click("ui_gallery.app.open")
+                .action("ui_gallery.app.open")
                 .trigger_test_id("ui-gallery-navigation-menu-link-component-docs"),
         ]
     })

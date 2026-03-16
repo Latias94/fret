@@ -1,16 +1,284 @@
+use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::{Mutex, RwLock};
 
 use fret_assets::{
-    AssetBundleId, AssetCapabilities, AssetLoadError, AssetLocator, AssetRequest, AssetResolver,
-    InMemoryAssetResolver, ResolvedAssetBytes, StaticAssetEntry,
+    AssetBundleId, AssetCapabilities, AssetLoadError, AssetLocator, AssetLocatorKind, AssetRequest,
+    AssetResolver, AssetRevision, InMemoryAssetResolver, ResolvedAssetBytes,
+    ResolvedAssetReference, StaticAssetEntry,
 };
 
 use crate::GlobalsHost;
+use crate::asset_reload::asset_reload_support;
+
+const MAX_ASSET_LOAD_RECENT_EVENTS: usize = 16;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetLoadAccessKind {
+    Bytes,
+    ExternalReference,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetLoadOutcomeKind {
+    Resolved,
+    Missing,
+    StaleManifest,
+    UnsupportedLocatorKind,
+    ExternalReferenceUnavailable,
+    ResolverUnavailable,
+    AccessDenied,
+    Message,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetRevisionTransitionKind {
+    Initial,
+    Stable,
+    Changed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AssetLoadDiagnosticEvent {
+    pub access_kind: AssetLoadAccessKind,
+    pub locator_kind: AssetLocatorKind,
+    pub locator_debug: String,
+    pub outcome_kind: AssetLoadOutcomeKind,
+    pub revision: Option<AssetRevision>,
+    pub previous_revision: Option<AssetRevision>,
+    pub revision_transition: Option<AssetRevisionTransitionKind>,
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct AssetLoadDiagnosticsSnapshot {
+    pub total_requests: u64,
+    pub bytes_requests: u64,
+    pub reference_requests: u64,
+    pub missing_bundle_asset_requests: u64,
+    pub stale_manifest_requests: u64,
+    pub unsupported_file_requests: u64,
+    pub unsupported_url_requests: u64,
+    pub external_reference_unavailable_requests: u64,
+    pub revision_change_requests: u64,
+    pub recent: Vec<AssetLoadDiagnosticEvent>,
+}
+
+#[derive(Default)]
+struct AssetLoadDiagnosticsState {
+    snapshot: AssetLoadDiagnosticsSnapshot,
+    recent: VecDeque<AssetLoadDiagnosticEvent>,
+    last_seen_revisions: HashMap<AssetLocator, AssetRevision>,
+}
+
+#[derive(Default)]
+struct AssetLoadDiagnosticsStore {
+    state: Mutex<AssetLoadDiagnosticsState>,
+}
+
+trait AssetLoadResolvedMetadata {
+    fn revision(&self) -> AssetRevision;
+}
+
+impl AssetLoadResolvedMetadata for ResolvedAssetBytes {
+    fn revision(&self) -> AssetRevision {
+        self.revision
+    }
+}
+
+impl AssetLoadResolvedMetadata for ResolvedAssetReference {
+    fn revision(&self) -> AssetRevision {
+        self.revision
+    }
+}
+
+impl AssetLoadDiagnosticsStore {
+    fn snapshot(&self) -> AssetLoadDiagnosticsSnapshot {
+        let state = self
+            .state
+            .lock()
+            .expect("poisoned AssetLoadDiagnosticsStore state lock");
+        let mut snapshot = state.snapshot.clone();
+        snapshot.recent = state.recent.iter().cloned().collect();
+        snapshot
+    }
+
+    fn record_bytes_result(
+        &self,
+        request: &AssetRequest,
+        result: &Result<ResolvedAssetBytes, AssetLoadError>,
+    ) {
+        self.record_result(AssetLoadAccessKind::Bytes, &request.locator, result);
+    }
+
+    fn record_reference_result(
+        &self,
+        request: &AssetRequest,
+        result: &Result<ResolvedAssetReference, AssetLoadError>,
+    ) {
+        self.record_result(
+            AssetLoadAccessKind::ExternalReference,
+            &request.locator,
+            result,
+        );
+    }
+
+    fn record_result<T>(
+        &self,
+        access_kind: AssetLoadAccessKind,
+        locator: &AssetLocator,
+        result: &Result<T, AssetLoadError>,
+    ) where
+        T: AssetLoadResolvedMetadata,
+    {
+        let mut state = self
+            .state
+            .lock()
+            .expect("poisoned AssetLoadDiagnosticsStore state lock");
+        state.snapshot.total_requests = state.snapshot.total_requests.saturating_add(1);
+        match access_kind {
+            AssetLoadAccessKind::Bytes => {
+                state.snapshot.bytes_requests = state.snapshot.bytes_requests.saturating_add(1);
+            }
+            AssetLoadAccessKind::ExternalReference => {
+                state.snapshot.reference_requests =
+                    state.snapshot.reference_requests.saturating_add(1);
+            }
+        }
+
+        let (outcome_kind, revision, previous_revision, revision_transition, message) = match result
+        {
+            Ok(resolved) => {
+                let revision = resolved.revision();
+                let previous_revision = state.last_seen_revisions.insert(locator.clone(), revision);
+                let revision_transition = match previous_revision {
+                    None => Some(AssetRevisionTransitionKind::Initial),
+                    Some(prev) if prev == revision => Some(AssetRevisionTransitionKind::Stable),
+                    Some(_) => {
+                        state.snapshot.revision_change_requests =
+                            state.snapshot.revision_change_requests.saturating_add(1);
+                        Some(AssetRevisionTransitionKind::Changed)
+                    }
+                };
+                (
+                    AssetLoadOutcomeKind::Resolved,
+                    Some(revision),
+                    previous_revision,
+                    revision_transition,
+                    None,
+                )
+            }
+            Err(err) => {
+                let outcome_kind = match err {
+                    AssetLoadError::NotFound => AssetLoadOutcomeKind::Missing,
+                    AssetLoadError::StaleManifestMapping { .. } => {
+                        state.snapshot.stale_manifest_requests =
+                            state.snapshot.stale_manifest_requests.saturating_add(1);
+                        AssetLoadOutcomeKind::StaleManifest
+                    }
+                    AssetLoadError::UnsupportedLocatorKind { kind } => {
+                        match kind {
+                            AssetLocatorKind::File => {
+                                state.snapshot.unsupported_file_requests =
+                                    state.snapshot.unsupported_file_requests.saturating_add(1);
+                            }
+                            AssetLocatorKind::Url => {
+                                state.snapshot.unsupported_url_requests =
+                                    state.snapshot.unsupported_url_requests.saturating_add(1);
+                            }
+                            _ => {}
+                        }
+                        AssetLoadOutcomeKind::UnsupportedLocatorKind
+                    }
+                    AssetLoadError::ExternalReferenceUnavailable { .. } => {
+                        state.snapshot.external_reference_unavailable_requests = state
+                            .snapshot
+                            .external_reference_unavailable_requests
+                            .saturating_add(1);
+                        AssetLoadOutcomeKind::ExternalReferenceUnavailable
+                    }
+                    AssetLoadError::ResolverUnavailable => {
+                        AssetLoadOutcomeKind::ResolverUnavailable
+                    }
+                    AssetLoadError::AccessDenied => AssetLoadOutcomeKind::AccessDenied,
+                    AssetLoadError::Message { .. } => AssetLoadOutcomeKind::Message,
+                };
+
+                if matches!(err, AssetLoadError::NotFound)
+                    && locator.kind() == AssetLocatorKind::BundleAsset
+                {
+                    state.snapshot.missing_bundle_asset_requests = state
+                        .snapshot
+                        .missing_bundle_asset_requests
+                        .saturating_add(1);
+                }
+
+                (
+                    outcome_kind,
+                    None,
+                    state.last_seen_revisions.get(locator).copied(),
+                    None,
+                    match err {
+                        AssetLoadError::StaleManifestMapping { path } => Some(path.to_string()),
+                        AssetLoadError::Message { message } => Some(message.to_string()),
+                        _ => None,
+                    },
+                )
+            }
+        };
+
+        push_recent_event(
+            &mut state.recent,
+            AssetLoadDiagnosticEvent {
+                access_kind,
+                locator_kind: locator.kind(),
+                locator_debug: debug_asset_locator(locator),
+                outcome_kind,
+                revision,
+                previous_revision,
+                revision_transition,
+                message,
+            },
+        );
+    }
+}
+
+fn push_recent_event(
+    recent: &mut VecDeque<AssetLoadDiagnosticEvent>,
+    event: AssetLoadDiagnosticEvent,
+) {
+    if recent.len() >= MAX_ASSET_LOAD_RECENT_EVENTS {
+        let _ = recent.pop_front();
+    }
+    recent.push_back(event);
+}
+
+fn debug_asset_locator(locator: &AssetLocator) -> String {
+    match locator {
+        AssetLocator::Memory(key) => format!("memory:{}", key.as_str()),
+        AssetLocator::Embedded(locator) => {
+            format!(
+                "embedded:{}:{}",
+                locator.owner.as_str(),
+                locator.key.as_str()
+            )
+        }
+        AssetLocator::BundleAsset(locator) => {
+            format!(
+                "bundle:{}:{}",
+                locator.bundle.as_str(),
+                locator.key.as_str()
+            )
+        }
+        AssetLocator::File(locator) => format!("file:{}", locator.path.to_string_lossy()),
+        AssetLocator::Url(locator) => format!("url:{}", locator.as_str()),
+    }
+}
 
 struct AssetResolverServiceState {
     layers: RwLock<Vec<AssetResolverLayer>>,
+    diagnostics: AssetLoadDiagnosticsStore,
 }
 
 #[derive(Clone)]
@@ -31,6 +299,7 @@ impl Default for AssetResolverServiceState {
     fn default() -> Self {
         Self {
             layers: RwLock::default(),
+            diagnostics: AssetLoadDiagnosticsStore::default(),
         }
     }
 }
@@ -137,6 +406,10 @@ impl AssetResolverService {
         self.capabilities().supports(locator)
     }
 
+    pub fn diagnostics_snapshot(&self) -> AssetLoadDiagnosticsSnapshot {
+        self.state.diagnostics.snapshot()
+    }
+
     pub fn resolve_bytes(
         &self,
         request: &AssetRequest,
@@ -146,19 +419,29 @@ impl AssetResolverService {
         for layer in self.resolver_layers().into_iter().rev() {
             let resolver = layer.resolver();
             match try_resolver_layer(resolver.as_ref(), request) {
-                Ok(Some(resolved)) => return Ok(resolved),
+                Ok(Some(resolved)) => {
+                    let result = Ok(resolved);
+                    self.state.diagnostics.record_bytes_result(request, &result);
+                    return result;
+                }
                 Ok(None) => saw_supported |= resolver.supports(&request.locator),
-                Err(err) => return Err(err),
+                Err(err) => {
+                    let result = Err(err);
+                    self.state.diagnostics.record_bytes_result(request, &result);
+                    return result;
+                }
             }
         }
 
-        if saw_supported {
+        let result = if saw_supported {
             Err(AssetLoadError::NotFound)
         } else {
             Err(AssetLoadError::UnsupportedLocatorKind {
                 kind: request.locator.kind(),
             })
-        }
+        };
+        self.state.diagnostics.record_bytes_result(request, &result);
+        result
     }
 
     pub fn resolve_locator_bytes(
@@ -166,6 +449,53 @@ impl AssetResolverService {
         locator: AssetLocator,
     ) -> Result<ResolvedAssetBytes, AssetLoadError> {
         self.resolve_bytes(&AssetRequest::new(locator))
+    }
+
+    pub fn resolve_reference(
+        &self,
+        request: &AssetRequest,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        let mut saw_supported = false;
+
+        for layer in self.resolver_layers().into_iter().rev() {
+            let resolver = layer.resolver();
+            match try_resolver_reference_layer(resolver.as_ref(), request) {
+                Ok(Some(resolved)) => {
+                    let result = Ok(resolved);
+                    self.state
+                        .diagnostics
+                        .record_reference_result(request, &result);
+                    return result;
+                }
+                Ok(None) => saw_supported |= resolver.supports(&request.locator),
+                Err(err) => {
+                    let result = Err(err);
+                    self.state
+                        .diagnostics
+                        .record_reference_result(request, &result);
+                    return result;
+                }
+            }
+        }
+
+        let result = if saw_supported {
+            Err(AssetLoadError::NotFound)
+        } else {
+            Err(AssetLoadError::UnsupportedLocatorKind {
+                kind: request.locator.kind(),
+            })
+        };
+        self.state
+            .diagnostics
+            .record_reference_result(request, &result);
+        result
+    }
+
+    pub fn resolve_locator_reference(
+        &self,
+        locator: AssetLocator,
+    ) -> Result<ResolvedAssetReference, AssetLoadError> {
+        self.resolve_reference(&AssetRequest::new(locator))
     }
 }
 
@@ -234,7 +564,17 @@ pub fn asset_resolver(host: &impl GlobalsHost) -> Option<&AssetResolverService> 
 }
 
 pub fn asset_capabilities(host: &impl GlobalsHost) -> Option<AssetCapabilities> {
-    asset_resolver(host).map(AssetResolverService::capabilities)
+    let mut caps = asset_resolver(host)
+        .map(AssetResolverService::capabilities)
+        .unwrap_or_default();
+    let mut has_any = asset_resolver(host).is_some();
+
+    if let Some(reload_support) = asset_reload_support(host) {
+        caps.file_watch |= reload_support.file_watch;
+        has_any |= reload_support.file_watch;
+    }
+
+    has_any.then_some(caps)
 }
 
 pub fn resolve_asset_bytes(
@@ -251,6 +591,22 @@ pub fn resolve_asset_locator_bytes(
     locator: AssetLocator,
 ) -> Result<ResolvedAssetBytes, AssetLoadError> {
     resolve_asset_bytes(host, &AssetRequest::new(locator))
+}
+
+pub fn resolve_asset_reference(
+    host: &impl GlobalsHost,
+    request: &AssetRequest,
+) -> Result<ResolvedAssetReference, AssetLoadError> {
+    asset_resolver(host)
+        .ok_or(AssetLoadError::ResolverUnavailable)?
+        .resolve_reference(request)
+}
+
+pub fn resolve_asset_locator_reference(
+    host: &impl GlobalsHost,
+    locator: AssetLocator,
+) -> Result<ResolvedAssetReference, AssetLoadError> {
+    resolve_asset_reference(host, &AssetRequest::new(locator))
 }
 
 fn union_capabilities(dst: &mut AssetCapabilities, src: AssetCapabilities) {
@@ -272,6 +628,22 @@ fn try_resolver_layer(
     }
 
     match resolver.resolve_bytes(request) {
+        Ok(resolved) => Ok(Some(resolved)),
+        Err(AssetLoadError::NotFound) => Ok(None),
+        Err(AssetLoadError::UnsupportedLocatorKind { .. }) => Ok(None),
+        Err(err) => Err(err),
+    }
+}
+
+fn try_resolver_reference_layer(
+    resolver: &dyn AssetResolver,
+    request: &AssetRequest,
+) -> Result<Option<ResolvedAssetReference>, AssetLoadError> {
+    if !resolver.supports(&request.locator) {
+        return Ok(None);
+    }
+
+    match resolver.resolve_reference(request) {
         Ok(resolved) => Ok(Some(resolved)),
         Err(AssetLoadError::NotFound) => Ok(None),
         Err(AssetLoadError::UnsupportedLocatorKind { .. }) => Ok(None),
@@ -346,6 +718,247 @@ mod tests {
     }
 
     #[test]
+    fn diagnostics_snapshot_records_initial_stable_and_changed_revisions() {
+        let mut host = TestHost::default();
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"v1",
+            )],
+        );
+
+        let _ = resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+            .expect("first bundle resolution should succeed");
+        let _ = resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+            .expect("second bundle resolution should succeed");
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(9),
+                b"v9",
+            )],
+        );
+        let _ = resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+            .expect("updated bundle resolution should succeed");
+
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+
+        assert_eq!(snapshot.total_requests, 3);
+        assert_eq!(snapshot.bytes_requests, 3);
+        assert_eq!(snapshot.revision_change_requests, 1);
+        assert_eq!(snapshot.recent.len(), 3);
+        assert_eq!(
+            snapshot.recent[0].revision_transition,
+            Some(AssetRevisionTransitionKind::Initial)
+        );
+        assert_eq!(
+            snapshot.recent[1].revision_transition,
+            Some(AssetRevisionTransitionKind::Stable)
+        );
+        assert_eq!(
+            snapshot.recent[2].revision_transition,
+            Some(AssetRevisionTransitionKind::Changed)
+        );
+        assert_eq!(snapshot.recent[2].previous_revision, Some(AssetRevision(1)));
+        assert_eq!(snapshot.recent[2].revision, Some(AssetRevision(9)));
+    }
+
+    #[test]
+    fn diagnostics_snapshot_counts_missing_bundle_assets() {
+        let mut host = TestHost::default();
+        let resolver = InMemoryAssetResolver::new().with_capabilities(AssetCapabilities {
+            memory: false,
+            embedded: false,
+            bundle_asset: true,
+            file: false,
+            url: false,
+            file_watch: false,
+            system_font_scan: false,
+        });
+        set_asset_resolver(&mut host, Arc::new(resolver));
+
+        let err =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/missing.png"))
+                .expect_err("missing bundle asset should fail");
+
+        assert_eq!(err, AssetLoadError::NotFound);
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+        assert_eq!(snapshot.missing_bundle_asset_requests, 1);
+        assert_eq!(snapshot.recent.len(), 1);
+        assert_eq!(
+            snapshot.recent[0].outcome_kind,
+            AssetLoadOutcomeKind::Missing
+        );
+        assert_eq!(
+            snapshot.recent[0].locator_kind,
+            AssetLocatorKind::BundleAsset
+        );
+    }
+
+    #[test]
+    fn diagnostics_snapshot_counts_unsupported_file_capability_requests() {
+        let mut host = TestHost::default();
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"png",
+            )],
+        );
+
+        let err = resolve_asset_locator_bytes(&host, AssetLocator::file("assets/logo.png"))
+            .expect_err("unsupported file locator should fail");
+
+        assert_eq!(
+            err,
+            AssetLoadError::UnsupportedLocatorKind {
+                kind: AssetLocatorKind::File,
+            }
+        );
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+        assert_eq!(snapshot.unsupported_file_requests, 1);
+        assert_eq!(
+            snapshot.recent[0].outcome_kind,
+            AssetLoadOutcomeKind::UnsupportedLocatorKind
+        );
+        assert_eq!(snapshot.recent[0].locator_kind, AssetLocatorKind::File);
+    }
+
+    #[test]
+    fn diagnostics_snapshot_counts_external_reference_unavailable_requests() {
+        let mut host = TestHost::default();
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "icons/search.svg",
+                AssetRevision(2),
+                br#"<svg viewBox="0 0 1 1"></svg>"#,
+            )],
+        );
+
+        let err =
+            resolve_asset_locator_reference(&host, AssetLocator::bundle("app", "icons/search.svg"))
+                .expect_err("byte-only bundle asset should not resolve to external reference");
+
+        assert_eq!(
+            err,
+            AssetLoadError::ExternalReferenceUnavailable {
+                kind: AssetLocatorKind::BundleAsset,
+            }
+        );
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+        assert_eq!(snapshot.reference_requests, 1);
+        assert_eq!(snapshot.external_reference_unavailable_requests, 1);
+        assert_eq!(
+            snapshot.recent[0].access_kind,
+            AssetLoadAccessKind::ExternalReference
+        );
+        assert_eq!(
+            snapshot.recent[0].outcome_kind,
+            AssetLoadOutcomeKind::ExternalReferenceUnavailable
+        );
+    }
+
+    #[test]
+    fn asset_capabilities_union_optional_escape_hatches_across_layers() {
+        let mut host = TestHost::default();
+        let primary = InMemoryAssetResolver::new().with_capabilities(AssetCapabilities {
+            memory: false,
+            embedded: false,
+            bundle_asset: false,
+            file: true,
+            url: false,
+            file_watch: true,
+            system_font_scan: false,
+        });
+        let secondary = InMemoryAssetResolver::new().with_capabilities(AssetCapabilities {
+            memory: false,
+            embedded: false,
+            bundle_asset: false,
+            file: false,
+            url: true,
+            file_watch: false,
+            system_font_scan: true,
+        });
+
+        set_asset_resolver(&mut host, Arc::new(primary));
+        register_asset_resolver(&mut host, Arc::new(secondary));
+
+        assert_eq!(
+            asset_capabilities(&host).expect("resolver caps should exist"),
+            AssetCapabilities {
+                memory: false,
+                embedded: false,
+                bundle_asset: false,
+                file: true,
+                url: true,
+                file_watch: true,
+                system_font_scan: true,
+            }
+        );
+    }
+
+    #[test]
+    fn unsupported_file_locator_kind_stays_unsupported_even_when_other_locators_exist() {
+        let mut host = TestHost::default();
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"png",
+            )],
+        );
+
+        let err = resolve_asset_locator_bytes(&host, AssetLocator::file("assets/logo.png"))
+            .expect_err("unsupported file locator should not be downgraded to not-found");
+
+        assert_eq!(
+            err,
+            AssetLoadError::UnsupportedLocatorKind {
+                kind: fret_assets::AssetLocatorKind::File,
+            }
+        );
+    }
+
+    #[test]
+    fn supported_but_missing_file_locator_returns_not_found() {
+        let mut host = TestHost::default();
+        let resolver = InMemoryAssetResolver::new().with_capabilities(AssetCapabilities {
+            memory: false,
+            embedded: false,
+            bundle_asset: false,
+            file: true,
+            url: false,
+            file_watch: true,
+            system_font_scan: false,
+        });
+        set_asset_resolver(&mut host, Arc::new(resolver));
+
+        let err = resolve_asset_locator_bytes(&host, AssetLocator::file("assets/missing.png"))
+            .expect_err("supported but missing file locator should report not-found");
+
+        assert_eq!(err, AssetLoadError::NotFound);
+    }
+
+    #[test]
     fn register_bundle_asset_entries_adds_composable_static_assets() {
         let mut host = TestHost::default();
         register_bundle_asset_entries(
@@ -396,6 +1009,15 @@ mod tests {
     }
 
     #[test]
+    fn resolve_asset_reference_requires_installed_service() {
+        let host = TestHost::default();
+        let err = resolve_asset_locator_reference(&host, AssetLocator::bundle("app", "logo.png"))
+            .expect_err("missing service should fail");
+
+        assert_eq!(err, AssetLoadError::ResolverUnavailable);
+    }
+
+    #[test]
     fn layered_resolvers_preserve_existing_sources() {
         let mut host = TestHost::default();
         register_bundle_asset_entries(
@@ -428,6 +1050,218 @@ mod tests {
 
         assert_eq!(bundle.revision, AssetRevision(1));
         assert_eq!(embedded.revision, AssetRevision(4));
+    }
+
+    #[test]
+    fn later_missing_bundle_layer_falls_back_to_earlier_bundle_asset() {
+        let mut host = TestHost::default();
+
+        let mut earlier = InMemoryAssetResolver::new();
+        earlier.insert_bundle("app", "images/logo.png", AssetRevision(1), [1u8, 2, 3]);
+        register_asset_resolver(&mut host, Arc::new(earlier));
+
+        let later = InMemoryAssetResolver::new().with_capabilities(AssetCapabilities {
+            memory: false,
+            embedded: false,
+            bundle_asset: true,
+            file: false,
+            url: false,
+            file_watch: false,
+            system_font_scan: false,
+        });
+        register_asset_resolver(&mut host, Arc::new(later));
+
+        let resolved =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("later missing layer should fall back to earlier bytes");
+
+        assert_eq!(resolved.revision, AssetRevision(1));
+        assert_eq!(resolved.bytes.as_ref(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn later_missing_reference_layer_falls_back_to_earlier_reference_handoff() {
+        let mut host = TestHost::default();
+
+        struct FileReferenceResolver;
+
+        impl AssetResolver for FileReferenceResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    memory: false,
+                    embedded: false,
+                    bundle_asset: true,
+                    file: false,
+                    url: false,
+                    file_watch: false,
+                    system_font_scan: false,
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Ok(ResolvedAssetBytes::new(
+                    request.locator.clone(),
+                    AssetRevision(1),
+                    b"earlier".as_slice(),
+                ))
+            }
+
+            fn resolve_reference(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Ok(ResolvedAssetReference::new(
+                    request.locator.clone(),
+                    AssetRevision(1),
+                    fret_assets::AssetExternalReference::file_path("assets/earlier.png"),
+                ))
+            }
+        }
+
+        register_asset_resolver(&mut host, Arc::new(FileReferenceResolver));
+        register_asset_resolver(
+            &mut host,
+            Arc::new(
+                InMemoryAssetResolver::new().with_capabilities(AssetCapabilities {
+                    memory: false,
+                    embedded: false,
+                    bundle_asset: true,
+                    file: false,
+                    url: false,
+                    file_watch: false,
+                    system_font_scan: false,
+                }),
+            ),
+        );
+
+        let resolved =
+            resolve_asset_locator_reference(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect("later missing reference layer should fall back to earlier handoff");
+
+        assert_eq!(resolved.revision, AssetRevision(1));
+        assert_eq!(
+            resolved.reference,
+            fret_assets::AssetExternalReference::file_path("assets/earlier.png")
+        );
+    }
+
+    #[test]
+    fn stale_manifest_layer_blocks_earlier_bundle_fallback_and_is_counted() {
+        let mut host = TestHost::default();
+
+        let mut earlier = InMemoryAssetResolver::new();
+        earlier.insert_bundle("app", "images/logo.png", AssetRevision(1), [1u8, 2, 3]);
+        register_asset_resolver(&mut host, Arc::new(earlier));
+
+        struct StaleManifestResolver;
+
+        impl AssetResolver for StaleManifestResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    memory: false,
+                    embedded: false,
+                    bundle_asset: true,
+                    file: false,
+                    url: false,
+                    file_watch: false,
+                    system_font_scan: false,
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Err(AssetLoadError::StaleManifestMapping {
+                    path: format!("/tmp/stale/{}", debug_asset_locator(&request.locator)).into(),
+                })
+            }
+        }
+
+        register_asset_resolver(&mut host, Arc::new(StaleManifestResolver));
+
+        let err =
+            resolve_asset_locator_bytes(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect_err("stale manifest layer should block fallback");
+
+        assert!(matches!(err, AssetLoadError::StaleManifestMapping { .. }));
+        let snapshot = asset_resolver(&host)
+            .expect("resolver service")
+            .diagnostics_snapshot();
+        assert_eq!(snapshot.stale_manifest_requests, 1);
+        assert_eq!(snapshot.missing_bundle_asset_requests, 0);
+        assert_eq!(
+            snapshot.recent[0].outcome_kind,
+            AssetLoadOutcomeKind::StaleManifest
+        );
+    }
+
+    #[test]
+    fn later_layer_without_reference_blocks_earlier_reference_handoff() {
+        let mut host = TestHost::default();
+
+        struct FileReferenceResolver;
+
+        impl AssetResolver for FileReferenceResolver {
+            fn capabilities(&self) -> AssetCapabilities {
+                AssetCapabilities {
+                    memory: false,
+                    embedded: false,
+                    bundle_asset: true,
+                    file: false,
+                    url: false,
+                    file_watch: false,
+                    system_font_scan: false,
+                }
+            }
+
+            fn resolve_bytes(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetBytes, AssetLoadError> {
+                Ok(ResolvedAssetBytes::new(
+                    request.locator.clone(),
+                    AssetRevision(1),
+                    b"earlier".as_slice(),
+                ))
+            }
+
+            fn resolve_reference(
+                &self,
+                request: &AssetRequest,
+            ) -> Result<ResolvedAssetReference, AssetLoadError> {
+                Ok(ResolvedAssetReference::new(
+                    request.locator.clone(),
+                    AssetRevision(1),
+                    fret_assets::AssetExternalReference::file_path("assets/earlier.png"),
+                ))
+            }
+        }
+
+        register_asset_resolver(&mut host, Arc::new(FileReferenceResolver));
+        register_bundle_asset_entries(
+            &mut host,
+            "app",
+            [StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(9),
+                b"override",
+            )],
+        );
+
+        let err =
+            resolve_asset_locator_reference(&host, AssetLocator::bundle("app", "images/logo.png"))
+                .expect_err("later static entry should shadow earlier file reference");
+
+        assert_eq!(
+            err,
+            AssetLoadError::ExternalReferenceUnavailable {
+                kind: fret_assets::AssetLocatorKind::BundleAsset,
+            }
+        );
     }
 
     #[test]

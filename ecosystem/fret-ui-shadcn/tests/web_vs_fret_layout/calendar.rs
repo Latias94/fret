@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -53,7 +54,7 @@ fn web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web(
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
         vec![
-            fret_ui_shadcn::Calendar::new(month, selected)
+            shadcn::Calendar::new(month, selected)
                 .week_start(Weekday::Sunday)
                 .disable_outside_days(false)
                 .into_element(cx),
@@ -269,7 +270,7 @@ fn web_vs_fret_layout_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web
         let month_model: Model<SolarHijriMonth> = cx.app.models_mut().insert(month);
         let selected: Model<Option<Date>> = cx.app.models_mut().insert(Some(selected_date));
 
-        let mut cal = fret_ui_shadcn::CalendarHijri::new(month_model, selected)
+        let mut cal = shadcn::CalendarHijri::new(month_model, selected)
             .show_outside_days(true)
             .refine_style(chrome_override.clone());
         if let Some(cell_size) = cell_size {
@@ -689,7 +690,7 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                 [] | [_] => {
                     let selected: Model<Option<time::Date>> =
                         cx.app.models_mut().insert(selected_date);
-                    let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                    let mut calendar = shadcn::Calendar::new(month_model, selected)
                         .week_start(week_start)
                         .show_outside_days(web_show_outside_days)
                         .disable_outside_days(web_disable_outside_days)
@@ -733,7 +734,7 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                             from: Some(min),
                             to: Some(max),
                         });
-                    let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                    let mut calendar = shadcn::CalendarRange::new(month_model, selected)
                         .week_start(week_start)
                         .show_outside_days(web_show_outside_days)
                         .disable_outside_days(web_disable_outside_days)
@@ -770,7 +771,7 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                 _ => {
                     let selected: Model<Vec<time::Date>> =
                         cx.app.models_mut().insert(web_selected_dates.clone());
-                    let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+                    let mut calendar = shadcn::CalendarMultiple::new(month_model, selected)
                         .week_start(week_start)
                         .show_outside_days(web_show_outside_days)
                         .disable_outside_days(web_disable_outside_days)
@@ -951,12 +952,12 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
         .and_then(|label| label.chars().next())
         .map(|c| {
             if c.is_ascii_uppercase() {
-                fret_ui_shadcn::calendar::CalendarLocale::En
+                fret_ui_shadcn::raw::calendar::CalendarLocale::En
             } else {
-                fret_ui_shadcn::calendar::CalendarLocale::Es
+                fret_ui_shadcn::raw::calendar::CalendarLocale::Es
             }
         })
-        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+        .unwrap_or(fret_ui_shadcn::raw::calendar::CalendarLocale::En);
 
     let in_view = |d: time::Date| {
         (d.month() == month_a && d.year() == year_a) || (d.month() == month_b && d.year() == year_b)
@@ -1118,7 +1119,7 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                 [] | [_] => {
                     let selected: Model<Option<time::Date>> =
                         cx.app.models_mut().insert(selected_date);
-                    let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                    let mut calendar = shadcn::Calendar::new(month_model, selected)
                         .number_of_months(2)
                         .locale(locale)
                         .disable_navigation(web_disable_navigation)
@@ -1173,7 +1174,7 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                             from: Some(min),
                             to: Some(max),
                         });
-                    let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                    let mut calendar = shadcn::CalendarRange::new(month_model, selected)
                         .number_of_months(2)
                         .locale(locale)
                         .disable_navigation(web_disable_navigation)
@@ -1221,7 +1222,7 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                 _ => {
                     let selected: Model<Vec<time::Date>> =
                         cx.app.models_mut().insert(web_selected_dates.clone());
-                    let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+                    let mut calendar = shadcn::CalendarMultiple::new(month_model, selected)
                         .number_of_months(2)
                         .locale(locale)
                         .disable_navigation(web_disable_navigation)
@@ -1519,7 +1520,7 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(selected_date);
 
-        let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        let mut calendar = shadcn::Calendar::new(month_model, selected)
             .week_start(week_start)
             .show_outside_days(web_show_outside_days)
             .disable_outside_days(web_disable_outside_days)
@@ -1685,7 +1686,7 @@ fn web_vs_fret_layout_calendar_14_selected_day_background_matches_web() {
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(selected_date));
 
-        let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        let mut calendar = shadcn::Calendar::new(month_model, selected)
             .week_start(week_start)
             .show_outside_days(web_show_outside_days)
             .disable_outside_days(web_disable_outside_days)
@@ -1861,7 +1862,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_background_matches_web(
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(selected_date));
 
-        let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        let mut calendar = shadcn::Calendar::new(month_model, selected)
             .week_start(week_start)
             .show_outside_days(web_show_outside_days)
             .disable_outside_days(web_disable_outside_days)
@@ -2043,10 +2044,10 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -2063,7 +2064,7 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(selected_date));
 
-        let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        let mut calendar = shadcn::Calendar::new(month_model, selected)
             .week_start(week_start)
             .show_outside_days(web_show_outside_days)
             .disable_outside_days(web_disable_outside_days)
@@ -2292,10 +2293,10 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -2312,7 +2313,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(selected_date));
 
-        let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        let mut calendar = shadcn::Calendar::new(month_model, selected)
             .week_start(week_start)
             .show_outside_days(web_show_outside_days)
             .disable_outside_days(web_disable_outside_days)
@@ -2544,7 +2545,7 @@ fn web_vs_fret_layout_calendar_14_selected_day_text_rect_matches_web() {
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(selected_date));
 
-        let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        let mut calendar = shadcn::Calendar::new(month_model, selected)
             .week_start(week_start)
             .show_outside_days(web_show_outside_days)
             .disable_outside_days(web_disable_outside_days)
@@ -2765,7 +2766,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_text_rect_matches_web()
             cx.app.models_mut().insert(CalendarMonth::new(year, month));
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(selected_date));
 
-        let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        let mut calendar = shadcn::Calendar::new(month_model, selected)
             .week_start(week_start)
             .show_outside_days(web_show_outside_days)
             .disable_outside_days(web_disable_outside_days)
@@ -3051,10 +3052,10 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     use fret_ui_headless::calendar::CalendarMonth;
@@ -3068,20 +3069,18 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
     let render = move |cx: &mut fret_ui::ElementContext<'_, App>| {
         use fret_ui_kit::{LengthRefinement, Space};
 
-        let popover = fret_ui_shadcn::Popover::from_open(open.clone())
-            .align(fret_ui_shadcn::PopoverAlign::Start);
+        let popover = shadcn::Popover::from_open(open.clone()).align(shadcn::PopoverAlign::Start);
         let calendar_bg = calendar_bg_for_render.clone();
         let month_model = month_model.clone();
         let selected = selected.clone();
         vec![popover.into_element_with(
             cx,
-            |cx| fret_ui_shadcn::Button::new("Select date").into_element(cx),
+            |cx| shadcn::Button::new("Select date").into_element(cx),
             move |cx| {
-                let mut calendar =
-                    fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
-                        .week_start(week_start)
-                        .show_outside_days(web_show_outside_days)
-                        .disable_outside_days(web_disable_outside_days);
+                let mut calendar = shadcn::Calendar::new(month_model.clone(), selected.clone())
+                    .week_start(week_start)
+                    .show_outside_days(web_show_outside_days)
+                    .disable_outside_days(web_disable_outside_days);
                 if let Some(cell_size) = cell_size {
                     calendar = calendar.cell_size(cell_size);
                 }
@@ -3104,7 +3103,7 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
                     .expect("calendar root background (resolved)");
                 calendar_bg.set(Some(bg));
 
-                fret_ui_shadcn::PopoverContent::new(vec![calendar])
+                shadcn::PopoverContent::new(vec![calendar])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
                     .into_element(cx)
@@ -3151,10 +3150,10 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     use fret_ui_headless::calendar::CalendarMonth;
@@ -3171,9 +3170,9 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
         let selected = selected.clone();
 
         vec![
-            fret_ui_shadcn::card::card_content(move |cx| {
-                let calendar = fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
-                    .into_element(cx);
+            fret_ui_shadcn::raw::card::card_content(move |cx| {
+                let calendar =
+                    shadcn::Calendar::new(month_model.clone(), selected.clone()).into_element(cx);
                 let container_props = match &calendar.kind {
                     fret_ui::element::ElementKind::Container(props) => props,
                     fret_ui::element::ElementKind::LayoutQueryRegion(_) => calendar

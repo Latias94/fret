@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use fret::app::prelude::*;
 use fret::{
-    icons::IconId,
+    icons::{IconId, icon},
+    semantics::SemanticsRole,
     style::{ChromeRefinement, ColorRef, Radius, Space, TextOverflow, TextWrap, Theme},
 };
 use fret_core::{Corners, FontWeight, TextAlign};

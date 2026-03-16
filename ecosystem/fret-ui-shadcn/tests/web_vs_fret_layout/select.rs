@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_select_scrollable_trigger_size() {
@@ -14,10 +15,10 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
@@ -36,11 +37,11 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
         "web-vs-fret-layout-select",
         |cx| {
             vec![
-                fret_ui_shadcn::Select::new(value.clone(), open.clone())
+                shadcn::Select::new(value.clone(), open.clone())
                     .items([
-                        fret_ui_shadcn::SelectItem::new("alpha", "Alpha"),
-                        fret_ui_shadcn::SelectItem::new("beta", "Beta"),
-                        fret_ui_shadcn::SelectItem::new("gamma", "Gamma"),
+                        shadcn::SelectItem::new("alpha", "Alpha"),
+                        shadcn::SelectItem::new("beta", "Beta"),
+                        shadcn::SelectItem::new("gamma", "Gamma"),
                     ])
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default().w_px(Px(web_trigger.rect.w)),

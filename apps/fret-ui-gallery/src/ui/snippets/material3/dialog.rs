@@ -10,7 +10,11 @@ use fret_ui_kit::{ColorRef, WidgetStateProperty};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
-pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild + use<> {
+#[rustfmt::skip]
+pub fn render(
+    cx: &mut UiCx<'_>,
+    last_action: Model<Arc<str>>,
+) -> impl UiChild + use<> {
     let default_dialog = material3::Dialog::uncontrolled(cx);
     let open = default_dialog.open_model();
     let override_open = cx.local_model_keyed("override_open", || false);
@@ -106,8 +110,7 @@ pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild +
                         id_prefix: &'static str,
                         open_action: OnActivate,
                         close_action: OnActivate,
-                        confirm_action: OnActivate|
-     -> AnyElement {
+                        confirm_action: OnActivate| {
         dialog = dialog
             .headline("Discard draft?")
             .supporting_text("This action cannot be undone.")
@@ -215,11 +218,11 @@ pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild +
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let build_container = |cx: &mut UiCx<'_>, dialog: AnyElement| -> AnyElement {
+    let build_container = |dialog| {
         let mut layout = fret_ui::element::LayoutStyle::default();
         layout.size.width = fret_ui::element::Length::Fill;
         layout.size.height = fret_ui::element::Length::Px(Px(360.0));
-        cx.container(
+        ui::container_props(
             fret_ui::element::ContainerProps {
                 layout,
                 ..Default::default()
@@ -229,10 +232,7 @@ pub fn render(cx: &mut UiCx<'_>, last_action: Model<Arc<str>>) -> impl UiChild +
     };
 
     let containers = ui::h_row(move |cx| {
-        vec![
-            build_container(cx, default_dialog),
-            build_container(cx, override_dialog),
-        ]
+        ui::children![cx; build_container(default_dialog), build_container(override_dialog)]
     })
     .gap(Space::N4)
     .items_center()

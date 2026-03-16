@@ -1222,7 +1222,7 @@ impl DropdownMenuShortcut {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let style = dropdown_menu_shortcut_text_style(&theme);
 
         shortcut_text_element(
@@ -1487,7 +1487,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
     item_ix: &mut usize,
     env: &DropdownMenuSubmenuEntriesEnv,
 ) -> Vec<AnyElement> {
-    let dir = crate::use_direction(cx, None);
+    let dir = crate::direction::use_direction(cx, None);
     let reserve_leading_slot_enabled = env.reserve_leading_slot_enabled;
     let item_count = env.item_count;
     let style = env.style.clone();
@@ -1991,10 +1991,10 @@ fn render_dropdown_submenu_entries<H: UiHost>(
 
                                     let is_close_key = matches!(
                                         (down.key, dir),
-                                        (KeyCode::ArrowLeft, crate::LayoutDirection::Ltr)
+                                        (KeyCode::ArrowLeft, crate::direction::LayoutDirection::Ltr)
                                             | (
                                                 KeyCode::ArrowRight,
-                                                crate::LayoutDirection::Rtl
+                                                crate::direction::LayoutDirection::Rtl
                                             )
                                     );
                                     if !is_close_key {
@@ -2175,14 +2175,14 @@ fn render_dropdown_submenu_entries<H: UiHost>(
 
                                         let bounds = host.bounds();
                                         let is_hit = match dir {
-                                            crate::LayoutDirection::Ltr => {
+                                            crate::direction::LayoutDirection::Ltr => {
                                                 let threshold_x =
                                                     bounds.size.width.0
                                                         - inline_end_pad.0
                                                         - hit_width.0;
                                                 down.position_local.x.0 >= threshold_x
                                             }
-                                            crate::LayoutDirection::Rtl => {
+                                            crate::direction::LayoutDirection::Rtl => {
                                                 let threshold_x =
                                                     inline_end_pad.0
                                                         + hit_width.0;
@@ -2829,7 +2829,7 @@ fn checkable_menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
 ) -> Vec<AnyElement> {
-    let dir = crate::use_direction(cx, None);
+    let dir = crate::direction::use_direction(cx, None);
     let effective_fg = if disabled {
         alpha_mul(row_fg, 0.5)
     } else {
@@ -3015,7 +3015,7 @@ fn submenu_chevron_right_text<H: UiHost>(
     _font_size: Px,
     _font_line_height: Px,
 ) -> AnyElement {
-    let dir = crate::use_direction(cx, None);
+    let dir = crate::direction::use_direction(cx, None);
     let icon = rtl::chevron_inline_end(dir);
     cx.flex(
         FlexProps {
@@ -3944,7 +3944,7 @@ impl DropdownMenu {
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
                                                     ) -> Vec<AnyElement> {
-                                                        let dir = crate::use_direction(cx, None);
+                                                        let dir = crate::direction::use_direction(cx, None);
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let scroll_id = env.scroll_id;
@@ -4662,13 +4662,13 @@ impl DropdownMenu {
                                                                                     let bounds =
                                                                                         host.bounds();
                                                                                     let is_hit = match dir {
-                                                                                        crate::LayoutDirection::Ltr => {
+                                                                                        crate::direction::LayoutDirection::Ltr => {
                                                                                             let threshold_x = bounds.size.width.0
                                                                                                 - inline_end_pad.0
                                                                                                 - hit_width.0;
                                                                                             down.position_local.x.0 >= threshold_x
                                                                                         }
-                                                                                        crate::LayoutDirection::Rtl => {
+                                                                                        crate::direction::LayoutDirection::Rtl => {
                                                                                             let threshold_x =
                                                                                                 inline_end_pad.0 + hit_width.0;
                                                                                             down.position_local.x.0 <= threshold_x
@@ -5277,7 +5277,10 @@ mod tests {
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::{Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, LayoutDirection};
+    use crate::avatar::{Avatar, AvatarFallback};
+    use crate::button::{Button, ButtonSize, ButtonVariant};
+    use crate::card::Card;
+    use crate::direction::LayoutDirection;
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButtons, PathCommand, Point, PointerEvent,
@@ -5316,10 +5319,7 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(
-                cx,
-                DropdownMenuTrigger::build(crate::Card::build(|_cx, _out| {})),
-            );
+            out.push_ui(cx, DropdownMenuTrigger::build(Card::build(|_cx, _out| {})));
 
             assert_eq!(out.len(), 1);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
@@ -6488,7 +6488,7 @@ mod tests {
             bounds,
             "dropdown-menu-dir",
             move |cx| {
-                crate::with_direction_provider(cx, dir, |cx| {
+                crate::direction::with_direction_provider(cx, dir, |cx| {
                     vec![
                         cx.container(
                             ContainerProps {

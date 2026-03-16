@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use crate::test_id::test_id_slug;
 use fret_core::time::Duration;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
@@ -1383,7 +1383,7 @@ impl ContextMenuRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -1947,7 +1947,7 @@ impl ContextMenuContentRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -2496,7 +2496,7 @@ fn menu_row_children<H: UiHost>(
     text_disabled: fret_core::Color,
     chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
-    let direction = crate::use_direction(cx, None);
+    let direction = crate::direction::use_direction(cx, None);
     let label_test_id = chrome_test_id
         .as_ref()
         .map(|id| Arc::<str>::from(format!("{id}-label")));
@@ -3789,7 +3789,6 @@ impl ContextMenu {
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
-                    let panel_pad = MetricRef::space(Space::N1).resolve(&theme);
                     let font_size = theme.metric_token("font.size");
                     let font_line_height = theme.metric_token("font.line_height");
                     let mut text_style = typography::fixed_line_box_style(
@@ -3970,7 +3969,7 @@ impl ContextMenu {
                                             for entry in entries_for_panel {
                                                 match entry {
                                                     ContextMenuEntry::Label(label) => {
-                                                        let dir = crate::use_direction(cx, None);
+                                                        let dir = crate::direction::use_direction(cx, None);
                                                         let pad_left =
                                                             if label.inset { pad_x_inset } else { pad_x };
                                                         let text = label.text.clone();
@@ -4638,56 +4637,26 @@ impl ContextMenu {
                         .ok()
                         .flatten();
                     let desired = {
-                        fn count_rows_and_separators(entries: &[ContextMenuEntry]) -> (usize, usize) {
-                            let mut rows = 0usize;
-                            let mut separators = 0usize;
-                            for entry in entries {
-                                match entry {
-                                    ContextMenuEntry::Item(_)
-                                    | ContextMenuEntry::CheckboxItem(_)
-                                    | ContextMenuEntry::RadioItem(_)
-                                    | ContextMenuEntry::Label(_) => rows += 1,
-                                    ContextMenuEntry::Separator => {
-                                        rows += 1;
-                                        separators += 1;
-                                    }
-                                    ContextMenuEntry::RadioGroup(group) => rows += group.items.len(),
-                                    ContextMenuEntry::Group(group) => {
-                                        let (group_rows, group_seps) =
-                                            count_rows_and_separators(&group.entries);
-                                        rows += group_rows;
-                                        separators += group_seps;
-                                    }
-                                }
-                            }
-                            (rows, separators)
-                        }
-
                         let submenu_max_h = submenu_max_height_metric
                             .map(|h| Px(h.0.min(outer.size.height.0)))
                             .unwrap_or(outer.size.height);
 
-                        // Align submenu collision decisions with Radix/shadcn-web: placement should
-                        // use the submenu's estimated content height (including separators and
-                        // panel padding), not the max-height cap.
+                        // Keep submenu placement sizing aligned with the shared menu panel height
+                        // estimator so context menus, dropdown menus, and tests all agree on
+                        // separator/padding/border contributions.
                         let row_height = Px(font_line_height.0 + pad_y.0 * 2.0);
-                        // new-york-v4: `Separator` uses `-mx-1 my-1 h-px` (1px rule + 4px margins).
-                        let separator_height = Px(1.0 + 4.0 * 2.0);
-
-                        let (rows, separators) = submenu_entries_for_panel_cell
+                        let desired_h = submenu_entries_for_panel_cell
                             .borrow()
                             .as_deref()
-                            .map(count_rows_and_separators)
-                            .unwrap_or((1, 0));
-                        let rows = rows.max(1);
-                        let separators = separators.min(rows);
-                        let items = rows.saturating_sub(separators);
-
-                        let content_h = Px(
-                            items as f32 * row_height.0 + separators as f32 * separator_height.0,
-                        );
-                        let total_h = Px((panel_pad.0 * 2.0 + content_h.0).min(submenu_max_h.0));
-                        Size::new(submenu_min_width, total_h)
+                            .map(|entries| {
+                                estimated_menu_panel_height_for_entries(
+                                    entries,
+                                    row_height,
+                                    submenu_max_h,
+                                )
+                            })
+                            .unwrap_or(submenu_max_h);
+                        Size::new(submenu_min_width, desired_h)
                     };
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_present = submenu_is_open;

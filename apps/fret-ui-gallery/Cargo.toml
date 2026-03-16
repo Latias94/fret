@@ -18,6 +18,7 @@ gallery-ai = ["dep:fret-ui-ai"]
 gallery-web-ime-harness = ["fret-fonts/emoji"]
 gallery-dev = [
     "gallery-ai",
+    "fret/ui-ai",
     "gallery-web-ime-harness",
     "dep:fret-ui-magic",
     "dep:fret-code-editor-view",

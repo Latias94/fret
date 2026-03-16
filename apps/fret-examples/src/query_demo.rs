@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::{FretApp, advanced::prelude::*, shadcn};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_query::{
     QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
 };

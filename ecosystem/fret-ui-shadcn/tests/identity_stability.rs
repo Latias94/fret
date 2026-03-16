@@ -2,7 +2,8 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
 use fret_ui::{ElementContext, ElementRuntime, GlobalElementId};
 use fret_ui_kit::UiExt as _;
-use fret_ui_shadcn::Button;
+use fret_ui_shadcn::facade as shadcn;
+use shadcn::Button;
 
 fn frame_button_ids(
     app: &mut App,

@@ -194,7 +194,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                             shadcn::Button::new("Load fonts…")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
-                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .action(CMD_CODE_EDITOR_LOAD_FONTS)
                                 .into_element(cx),
                             shadcn::Button::new("Reset editor stats")
                                 .variant(shadcn::ButtonVariant::Outline)

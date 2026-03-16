@@ -74,6 +74,19 @@ pub enum BootstrapError {
     Keymap(#[from] KeymapFileError),
     #[error(transparent)]
     MenuBar(#[from] MenuBarFileError),
+    #[error(transparent)]
+    AssetManifest(#[from] fret_assets::AssetManifestLoadError),
+    #[error(transparent)]
+    AssetStartup(#[from] AssetStartupPlanError),
+}
+
+pub use fret_launch::assets::{
+    AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
+};
+
+/// Explicit logical asset vocabulary and host registration helpers for `fret-bootstrap` users.
+pub mod assets {
+    pub use fret_launch::assets::*;
 }
 
 /// Apply `SettingsFileV1` to an `App` and runner config.
@@ -372,6 +385,90 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             fret_app::ConfigFilesWatcher::install(app, poll_interval, &project_root);
         });
         self
+    }
+
+    /// Register a native/package-dev asset manifest on the builder path.
+    ///
+    /// This loads the manifest eagerly so failures stay on the build/configure path instead of
+    /// surfacing later during `run()`.
+    pub fn with_asset_manifest(
+        self,
+        manifest_path: impl AsRef<Path>,
+    ) -> Result<Self, BootstrapError> {
+        Ok(Self {
+            inner: self
+                .inner
+                .with_asset_manifest(manifest_path)
+                .map_err(map_asset_runner_error)?,
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        })
+    }
+
+    /// Scan a native/package-dev directory and mount it as one logical bundle on the builder path.
+    ///
+    /// This eagerly validates the directory so failures stay on the build/configure path instead
+    /// of surfacing later during `run()`. Prefer [`with_asset_manifest`](Self::with_asset_manifest)
+    /// when you want an explicit manifest artifact that tooling can emit, review, or package.
+    pub fn with_asset_dir(
+        self,
+        bundle: impl Into<fret_assets::AssetBundleId>,
+        dir: impl AsRef<Path>,
+    ) -> Result<Self, BootstrapError> {
+        Ok(Self {
+            inner: self
+                .inner
+                .with_asset_dir(bundle, dir)
+                .map_err(map_asset_runner_error)?,
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        })
+    }
+
+    /// Register static bundle-scoped entries on the builder path.
+    pub fn with_bundle_asset_entries(
+        self,
+        bundle: impl Into<fret_assets::AssetBundleId>,
+        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
+    ) -> Self {
+        Self {
+            inner: self.inner.with_bundle_asset_entries(bundle, entries),
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        }
+    }
+
+    /// Register static embedded entries on the builder path.
+    pub fn with_embedded_asset_entries(
+        self,
+        owner: impl Into<fret_assets::AssetBundleId>,
+        entries: impl IntoIterator<Item = fret_assets::StaticAssetEntry>,
+    ) -> Self {
+        Self {
+            inner: self.inner.with_embedded_asset_entries(owner, entries),
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        }
+    }
+
+    /// Apply one explicit development-vs-packaged startup plan on the builder path.
+    pub fn with_asset_startup(
+        self,
+        app_bundle: impl Into<fret_assets::AssetBundleId>,
+        mode: AssetStartupMode,
+        plan: AssetStartupPlan,
+    ) -> Result<Self, BootstrapError> {
+        Ok(Self {
+            inner: self
+                .inner
+                .with_asset_startup(app_bundle, mode, plan)
+                .map_err(map_asset_runner_error)?,
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        })
+    }
+
+    /// Enable development asset reload polling for file-backed startup mounts.
+    pub fn with_asset_reload_policy(self, policy: fret_launch::assets::AssetReloadPolicy) -> Self {
+        Self {
+            inner: self.inner.with_asset_reload_policy(policy),
+            on_gpu_ready_hooks: self.on_gpu_ready_hooks,
+        }
     }
 
     /// Configure budgets for UI render asset caches (`ImageAssetCache` / `SvgAssetCache`).
@@ -689,6 +786,17 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+fn map_asset_runner_error(err: fret_launch::RunnerError) -> BootstrapError {
+    match err {
+        fret_launch::RunnerError::AssetManifest(source) => BootstrapError::AssetManifest(source),
+        fret_launch::RunnerError::AssetStartup(source) => BootstrapError::AssetStartup(source),
+        other => unreachable!(
+            "unexpected non-asset runner error while configuring bootstrap assets: {other}"
+        ),
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
     /// Create a bootstrap builder directly from `FnDriver` pieces.
     ///
@@ -735,16 +843,22 @@ impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod fn_driver_builder_tests {
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
     use fret_app::App;
+    use fret_assets::{AssetBundleId, AssetRevision, StaticAssetEntry};
     use fret_core::AppWindowId;
     use fret_launch::{
         FnDriverHooks, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     };
 
-    use super::BootstrapBuilder;
+    use super::{AssetStartupMode, AssetStartupPlan, BootstrapBuilder, BootstrapError};
 
     struct DriverState;
     struct WindowState;
+
+    static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
 
     fn create_window_state(
         _driver: &mut DriverState,
@@ -769,6 +883,22 @@ mod fn_driver_builder_tests {
     ) {
     }
 
+    fn make_temp_dir(tag: &str) -> PathBuf {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let dir =
+            std::env::temp_dir().join(format!("fret-bootstrap-{tag}-{}-{id}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    fn write_asset_dir_fixture(tag: &str) -> PathBuf {
+        let dir = make_temp_dir(tag).join("assets");
+        std::fs::create_dir_all(dir.join("images")).expect("create images dir");
+        std::fs::write(dir.join("images/logo.png"), b"bootstrap-bytes").expect("write asset");
+        dir
+    }
+
     #[test]
     fn new_fn_with_hooks_builds() {
         let _builder = BootstrapBuilder::new_fn_with_hooks(
@@ -782,6 +912,122 @@ mod fn_driver_builder_tests {
             },
         )
         .configure(|_config| {});
+    }
+
+    #[test]
+    fn bootstrap_builder_with_asset_startup_installs_selected_packaged_lane() {
+        let _builder = BootstrapBuilder::new_fn(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+        )
+        .with_asset_startup(
+            AssetBundleId::app("bootstrap-asset-startup-packaged"),
+            AssetStartupMode::Packaged,
+            AssetStartupPlan::new()
+                .development_manifest("assets.manifest.json")
+                .packaged_entries([StaticAssetEntry::new(
+                    "images/logo.png",
+                    AssetRevision(1),
+                    b"builder-bytes",
+                )]),
+        )
+        .expect("packaged asset startup plan should load on bootstrap builder path");
+    }
+
+    #[test]
+    fn bootstrap_builder_asset_manifest_fails_early_for_missing_files() {
+        let missing =
+            std::env::temp_dir().join("definitely-missing-fret-bootstrap-assets.manifest.json");
+        let err = match BootstrapBuilder::new_fn(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+        )
+        .with_asset_manifest(&missing)
+        {
+            Ok(_) => panic!("missing manifest should fail on bootstrap builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(err, BootstrapError::AssetManifest(_)));
+    }
+
+    #[test]
+    fn bootstrap_builder_asset_dir_fails_early_for_missing_directories() {
+        let missing = std::env::temp_dir().join("definitely-missing-fret-bootstrap-assets-dir");
+        let err = match BootstrapBuilder::new_fn(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+        )
+        .with_asset_dir(AssetBundleId::app("bootstrap-missing-asset-dir"), &missing)
+        {
+            Ok(_) => panic!("missing asset dir should fail on bootstrap builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(err, BootstrapError::AssetManifest(_)));
+    }
+
+    #[test]
+    fn bootstrap_builder_asset_startup_fails_when_selected_lane_is_missing() {
+        let err = match BootstrapBuilder::new_fn(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+        )
+        .with_asset_startup(
+            AssetBundleId::app("bootstrap-missing-asset-startup-packaged"),
+            AssetStartupMode::Packaged,
+            AssetStartupPlan::new().development_dir("assets"),
+        ) {
+            Ok(_) => panic!("missing packaged lane should fail on bootstrap builder path"),
+            Err(err) => err,
+        };
+        assert!(matches!(
+            err,
+            BootstrapError::AssetStartup(super::AssetStartupPlanError::MissingPackagedLane)
+        ));
+    }
+
+    #[test]
+    fn asset_startup_mode_preferred_matches_current_target_defaults() {
+        #[cfg(debug_assertions)]
+        assert_eq!(AssetStartupMode::preferred(), AssetStartupMode::Development);
+
+        #[cfg(not(debug_assertions))]
+        assert_eq!(AssetStartupMode::preferred(), AssetStartupMode::Packaged);
+    }
+
+    #[test]
+    fn bootstrap_builder_asset_startup_accepts_development_bundle_dir_if_native() {
+        let asset_dir =
+            write_asset_dir_fixture("asset-startup-plan-development-bundle-dir-if-native");
+        let app_bundle = AssetBundleId::app("asset-startup-plan-development-bundle-dir-if-native");
+        let plan = AssetStartupPlan::new()
+            .packaged_entries([StaticAssetEntry::new(
+                "images/logo.png",
+                AssetRevision(1),
+                b"builder-bytes",
+            )])
+            .development_bundle_dir_if_native(app_bundle.clone(), &asset_dir);
+
+        let _builder = BootstrapBuilder::new_fn(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+        )
+        .with_asset_startup(app_bundle, AssetStartupMode::Development, plan)
+        .expect("native helper should populate the development lane on bootstrap builder path");
     }
 }
 

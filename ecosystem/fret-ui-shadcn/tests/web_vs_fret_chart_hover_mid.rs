@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 
 mod chart_test_data;
@@ -164,10 +165,10 @@ fn run_fret_root(
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -233,13 +234,10 @@ fn assert_chart_hover_tooltip_size_matches_web(web_name: &str, tooltip_label: &s
     let web_w = Px(web_tooltip.rect.w);
 
     let snap = run_fret_root(bounds, move |cx| {
-        let tooltip = fret_ui_shadcn::ChartTooltipContent::new()
+        let tooltip = shadcn::ChartTooltipContent::new()
             .label(tooltip_label.clone())
             .fixed_width_border_box(web_w)
-            .items([fret_ui_shadcn::ChartTooltipItem::new(
-                "Page Views",
-                value.clone(),
-            )])
+            .items([shadcn::ChartTooltipItem::new("Page Views", value.clone())])
             .into_element(cx);
 
         let tooltip = cx.semantics(
@@ -511,11 +509,11 @@ fn web_vs_fret_chart_line_interactive_hover_mid_active_dot_rect_matches_web() {
         "{web_name}: expected the hover-mid point to match the tooltip value"
     );
 
-    let domain_max = fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(
+    let domain_max = fret_ui_shadcn::raw::recharts_geometry::nice_domain_max_for_values(
         &CHART_INTERACTIVE_DESKTOP,
         5,
     );
-    let expected = fret_ui_shadcn::recharts_geometry::line_dot_rect(
+    let expected = fret_ui_shadcn::raw::recharts_geometry::line_dot_rect(
         plot,
         &CHART_INTERACTIVE_DESKTOP,
         domain_max,
@@ -562,11 +560,11 @@ fn web_vs_fret_chart_line_interactive_hover_mid_vp1440x240_active_dot_rect_match
         "{web_name}: expected the hover-mid point to match the tooltip value"
     );
 
-    let domain_max = fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(
+    let domain_max = fret_ui_shadcn::raw::recharts_geometry::nice_domain_max_for_values(
         &CHART_INTERACTIVE_DESKTOP,
         5,
     );
-    let expected = fret_ui_shadcn::recharts_geometry::line_dot_rect(
+    let expected = fret_ui_shadcn::raw::recharts_geometry::line_dot_rect(
         plot,
         &CHART_INTERACTIVE_DESKTOP,
         domain_max,

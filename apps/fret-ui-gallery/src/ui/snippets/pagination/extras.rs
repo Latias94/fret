@@ -27,24 +27,24 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         cx;
                         shadcn::pagination_item(
                             shadcn::pagination_link(|cx| ui::children![cx; page_number("1")])
-                                .on_click(CMD_APP_OPEN),
+                                .action(CMD_APP_OPEN),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(|cx| ui::children![cx; page_number("2")])
-                                .on_click(CMD_APP_SAVE)
+                                .action(CMD_APP_SAVE)
                                 .active(true),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(|cx| ui::children![cx; page_number("3")])
-                                .on_click(CMD_APP_SAVE),
+                                .action(CMD_APP_SAVE),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(|cx| ui::children![cx; page_number("4")])
-                                .on_click(CMD_APP_SAVE),
+                                .action(CMD_APP_SAVE),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(|cx| ui::children![cx; page_number("5")])
-                                .on_click(CMD_APP_SAVE),
+                                .action(CMD_APP_SAVE),
                         ),
                     ]
                 }),
@@ -82,10 +82,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ui::children![
                         cx;
                         shadcn::pagination_item(
-                            shadcn::PaginationPrevious::new().on_click(CMD_APP_OPEN),
+                            shadcn::PaginationPrevious::new().action(CMD_APP_OPEN),
                         ),
                         shadcn::pagination_item(
-                            shadcn::PaginationNext::new().on_click(CMD_APP_SAVE),
+                            shadcn::PaginationNext::new().action(CMD_APP_SAVE),
                         ),
                     ]
                 }),

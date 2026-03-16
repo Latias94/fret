@@ -139,6 +139,8 @@ mod tests {
 
     use crate::tokens::v30::{ColorSchemeOptions, TypographyOptions, theme_config_with_colors};
 
+    const README: &str = include_str!("../README.md");
+
     fn normalize_ws(source: &str) -> String {
         source.split_whitespace().collect()
     }
@@ -253,6 +255,8 @@ mod tests {
         let action_sources = [
             include_str!("button.rs"),
             include_str!("fab.rs"),
+            include_str!("card.rs"),
+            include_str!("dialog.rs"),
             include_str!("icon_button.rs"),
             include_str!("checkbox.rs"),
             include_str!("switch.rs"),
@@ -261,6 +265,7 @@ mod tests {
             include_str!("suggestion_chip.rs"),
             include_str!("filter_chip.rs"),
             include_str!("input_chip.rs"),
+            include_str!("top_app_bar.rs"),
         ];
 
         for src in action_sources {
@@ -284,6 +289,18 @@ mod tests {
                 "expected trailing chip pressable to expose `trailing_action(...)`"
             );
         }
+    }
+
+    #[test]
+    fn readme_keeps_icon_provider_installation_explicit_for_material3() {
+        assert!(README.contains("semantic `IconId` / `ui.*` ids"));
+        assert!(README.contains("This crate does not install a default icon provider for you."));
+        assert!(README.contains("`fret_icons_lucide::app::install`"));
+        assert!(README.contains("`fret_icons_radix::app::install`"));
+        assert!(README.contains("use fret_icons::ids;"));
+        assert!(README.contains("fret_icons_lucide::app::install(app);"));
+        assert!(README.contains("fret_ui_material3::Button::new(\"Search\")"));
+        assert!(README.contains(".leading_icon(ids::ui::SEARCH);"));
     }
 
     #[test]

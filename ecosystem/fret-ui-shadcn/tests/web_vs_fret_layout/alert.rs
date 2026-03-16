@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_alert_demo_alerts_are_w_full_like_web() {
@@ -23,9 +24,9 @@ fn web_vs_fret_layout_alert_demo_alerts_are_w_full_like_web() {
 
     const ALERT_TEST_ID: &str = "Golden:alert-demo:w-full";
     let snap = run_fret_root(bounds, |cx| {
-        let alert = fret_ui_shadcn::Alert::new([
-            fret_ui_shadcn::AlertTitle::new("Success!").into_element(cx),
-            fret_ui_shadcn::AlertDescription::new("Your changes have been saved.").into_element(cx),
+        let alert = shadcn::Alert::new([
+            shadcn::AlertTitle::new("Success!").into_element(cx),
+            shadcn::AlertDescription::new("Your changes have been saved.").into_element(cx),
         ])
         .into_element(cx)
         .test_id(ALERT_TEST_ID);

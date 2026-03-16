@@ -70,11 +70,6 @@ fn drive_navigation_menu_trigger_chevron_motion<H: UiHost>(
     })
 }
 
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
 fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
     let caps = app
         .global::<PlatformCapabilities>()
@@ -259,8 +254,8 @@ fn nav_menu_trigger_bg_hover(theme: &ThemeSnapshot) -> Color {
 fn nav_menu_trigger_bg_open(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("component.navigation_menu.trigger.bg_open")
-        // Upstream: `data-open:bg-muted/50`.
-        .unwrap_or_else(|| alpha_mul(theme.color_token("muted"), 0.5))
+        // The current new-york-v4 trigger uses an opaque accent surface for the open state.
+        .unwrap_or_else(|| theme.color_token("accent"))
 }
 
 fn nav_menu_trigger_fg(theme: &ThemeSnapshot) -> Color {
@@ -1335,11 +1330,11 @@ impl NavigationMenu {
         let viewport_border = nav_menu_viewport_border(&theme);
         let viewport_radius = theme
             .metric_by_key("component.navigation_menu.viewport.radius")
-            // Upstream base-maia: popup `rounded-2xl` (16px).
-            .unwrap_or(Px(16.0));
+            // The new-york-v4 recipe uses `rounded-md` (8px) for the content/viewport surface.
+            .unwrap_or(Px(8.0));
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
         let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
-        let dir = crate::use_direction(cx, None);
+        let dir = crate::direction::use_direction(cx, None);
         // Upstream base-maia `NavigationMenuContent` uses `p-2.5 pr-3`.
         let content_pad_y = MetricRef::space(Space::N2p5).resolve(&theme);
         let content_pad_left = MetricRef::space(Space::N2p5).resolve(&theme);

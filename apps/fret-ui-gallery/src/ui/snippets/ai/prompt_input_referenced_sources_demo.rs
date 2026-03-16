@@ -1,12 +1,12 @@
 pub const SOURCE: &str = include_str!("prompt_input_referenced_sources_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sources = cx.local_model_keyed("sources", Vec::<ui_ai::AttachmentSourceDocumentData>::new);
@@ -15,9 +15,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-gallery-ai-prompt-input-referenced-sources-add")
-        .on_activate(Arc::new({
+        .on_activate(cx.actions().listen({
             let sources = sources.clone();
-            move |host, action_cx, _reason| {
+            move |host, action_cx| {
                 let src = ui_ai::AttachmentSourceDocumentData::new("src-0")
                     .title("ADR 0066: Runtime Contract Surface")
                     .filename("docs/adr/0066-fret-ui-runtime-contract-surface.md")

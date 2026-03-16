@@ -45,6 +45,12 @@ Guidance:
 - Do not reintroduce `use fret_ui_shadcn as shadcn;` or `use fret_ui_shadcn::{self as shadcn, ...};`.
 - For app-facing starter/documentation surfaces, align with the current `fret` guidance in
   `docs/crate-usage-guide.md` instead of copying direct-crate examples blindly.
+- For widgets that already expose stable action slots, prefer `.action(...)` / `.action_payload(...)`
+  over legacy `.on_click(...)` spelling on copyable first-party snippets.
+- For activation-only surfaces inside first-party snippets, prefer `fret::view::AppActivateExt`
+  (`.dispatch::<A>(cx)` / `.dispatch_payload::<A>(cx, payload)` / `.listen(cx, ...)`) rather than
+  reopening raw `.on_activate(...)`; this stays valid in both `AppUi` and extracted `UiCx`
+  helper functions.
 - Keep copyable first-party snippets aligned with the active authoring target state:
   - app-facing teaching snippets/pages prefer `Ui`, `UiChild`, and `UiCx`,
   - generic reusable snippet helpers should converge on the unified component conversion trait
@@ -118,7 +124,10 @@ Use both when a layout dispute also affects visible clipping or overflow.
 ## 6) High-signal repo anchors
 
 - Authoring policy gates: `apps/fret-ui-gallery/src/lib.rs`
+- Action-surface policy gates: `tools/gate_button_action_default_surfaces.py`,
+  `tools/gate_gallery_action_alias_default_surfaces.py`
 - Snippet source of truth: `apps/fret-ui-gallery/src/ui/snippets/`
+- Activation-only sugar owner: `ecosystem/fret/src/view.rs`
 - Geometry helpers and prepared-frame wiring: `apps/fret-ui-gallery/src/driver/render_flow.rs`
 - Diag capture implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
 - Script corpus examples: `tools/diag-scripts/ui-gallery/`

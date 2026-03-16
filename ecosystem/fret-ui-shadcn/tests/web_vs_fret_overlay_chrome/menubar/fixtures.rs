@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -16,10 +17,10 @@ impl WebThemeName {
         }
     }
 
-    fn scheme(&self) -> fret_ui_shadcn::shadcn_themes::ShadcnColorScheme {
+    fn scheme(&self) -> shadcn::themes::ShadcnColorScheme {
         match self {
-            WebThemeName::Light => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            WebThemeName::Dark => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            WebThemeName::Light => shadcn::themes::ShadcnColorScheme::Light,
+            WebThemeName::Dark => shadcn::themes::ShadcnColorScheme::Dark,
         }
     }
 }
@@ -65,7 +66,7 @@ struct MenubarOverlayChromeCase {
 }
 
 fn build_minimal_file_menu(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+    use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
 
     Menubar::new(vec![MenubarMenu::new("File").entries(vec![
         MenubarEntry::Item(MenubarItem::new("New Tab")),
@@ -77,7 +78,7 @@ fn build_minimal_file_menu(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 fn build_share_submenu(cx: &mut ElementContext<'_, App>, _open: &Model<bool>) -> AnyElement {
-    use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+    use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
 
     Menubar::new(vec![MenubarMenu::new("File").entries(vec![
         MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![

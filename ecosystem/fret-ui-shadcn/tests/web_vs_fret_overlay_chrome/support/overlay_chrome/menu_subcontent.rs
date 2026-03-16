@@ -1,10 +1,11 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 pub(crate) fn assert_menu_subcontent_surface_colors_match_by_portal_slot_theme(
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     bounds: Rect,
     root_settle_frames: u64,
     submenu_settle_frames: u64,
@@ -179,7 +180,7 @@ pub(crate) fn assert_menu_subcontent_surface_colors_match_by_portal_slot_theme_k
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     bounds: Rect,
     root_settle_frames: u64,
     submenu_settle_frames: u64,
@@ -350,7 +351,7 @@ pub(crate) fn assert_menu_subcontent_shadow_insets_match_by_portal_slot_theme_ke
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     bounds: Rect,
     root_settle_frames: u64,
     submenu_settle_frames: u64,
@@ -456,7 +457,7 @@ pub(crate) fn assert_menu_subcontent_panel_size_matches_by_portal_slot_theme_key
     web_name: &str,
     web_portal_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     bounds: Rect,
     root_settle_frames: u64,
     submenu_settle_frames: u64,
@@ -571,7 +572,7 @@ pub(crate) fn assert_menu_subtrigger_open_chrome_matches_web_by_portal_slot_them
     web_name: &str,
     web_subtrigger_slot: &str,
     web_theme_name: &str,
-    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    scheme: shadcn::themes::ShadcnColorScheme,
     bounds: Rect,
     root_settle_frames: u64,
     submenu_settle_frames: u64,

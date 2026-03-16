@@ -21,7 +21,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
     Space, ui,
 };
-use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent};
+use fret_ui_shadcn::facade::{Badge, BadgeVariant, Collapsible, CollapsibleContent};
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {

@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -210,7 +211,7 @@ fn web_vs_fret_layout_input_demo_geometry() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::Input::new(model)
+            shadcn::Input::new(model)
                 .a11y_label("Input")
                 .into_element(cx),
         ]
@@ -247,7 +248,7 @@ fn web_vs_fret_layout_input_disabled_geometry_matches() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::Input::new(model)
+            shadcn::Input::new(model)
                 .disabled(true)
                 .a11y_label("Golden:input-disabled:input")
                 .into_element(cx),
@@ -298,10 +299,10 @@ fn web_vs_fret_layout_input_file_geometry_matches() {
                 label: Some(Arc::from("Golden:input-file:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::Label::new("Picture").into_element(cx)],
+            move |cx| vec![shadcn::Label::new("Picture").into_element(cx)],
         );
 
-        let input = fret_ui_shadcn::Input::new(model)
+        let input = shadcn::Input::new(model)
             .a11y_label("Golden:input-file:input")
             .into_element(cx);
 
@@ -378,7 +379,7 @@ fn web_vs_fret_layout_input_with_button_geometry_matches() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
 
-        let input = fret_ui_shadcn::Input::new(model)
+        let input = shadcn::Input::new(model)
             .a11y_label("Golden:input-with-button:input")
             .into_element(cx);
 
@@ -390,8 +391,8 @@ fn web_vs_fret_layout_input_with_button_geometry_matches() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Button::new("Subscribe")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                    shadcn::Button::new("Subscribe")
+                        .variant(shadcn::ButtonVariant::Outline)
                         .refine_layout(
                             LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button_w))),
                         )
@@ -501,12 +502,12 @@ fn web_vs_fret_layout_input_with_text_geometry_matches() {
                         },
                         ..Default::default()
                     },
-                    move |cx| vec![fret_ui_shadcn::Label::new("Email").into_element(cx)],
+                    move |cx| vec![shadcn::Label::new("Email").into_element(cx)],
                 )]
             },
         );
 
-        let input = fret_ui_shadcn::Input::new(model)
+        let input = shadcn::Input::new(model)
             .a11y_label("Golden:input-with-text:input")
             .into_element(cx);
 
@@ -671,7 +672,7 @@ fn web_vs_fret_layout_input_group_label_geometry_matches() {
                         ..Default::default()
                     },
                     move |cx| {
-                        let label = fret_ui_shadcn::Label::new("@").into_element(cx);
+                        let label = shadcn::Label::new("@").into_element(cx);
                         vec![
                             cx.container(
                                 ContainerProps {
@@ -690,7 +691,7 @@ fn web_vs_fret_layout_input_group_label_geometry_matches() {
                 );
 
                 vec![
-                    fret_ui_shadcn::InputGroup::new(model0.clone())
+                    shadcn::InputGroup::new(model0.clone())
                         .a11y_label("Golden:input-group-label:0:input")
                         .leading(vec![addon])
                         .into_element(cx),
@@ -714,9 +715,9 @@ fn web_vs_fret_layout_input_group_label_geometry_matches() {
                     move |cx| vec![decl_icon::icon(cx, IconId::new_static("lucide.info"))],
                 );
 
-                let help_button = fret_ui_shadcn::InputGroupButton::new("")
-                    .variant(fret_ui_shadcn::ButtonVariant::Ghost)
-                    .size(fret_ui_shadcn::InputGroupButtonSize::IconXs)
+                let help_button = shadcn::InputGroupButton::new("")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::InputGroupButtonSize::IconXs)
                     .children(vec![info_icon])
                     .refine_style(ChromeRefinement::default().rounded(Radius::Full))
                     .into_element(cx);
@@ -734,16 +735,11 @@ fn web_vs_fret_layout_input_group_label_geometry_matches() {
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |cx| {
-                        vec![
-                            fret_ui_shadcn::Label::new("Email").into_element(cx),
-                            help_button,
-                        ]
-                    },
+                    move |cx| vec![shadcn::Label::new("Email").into_element(cx), help_button],
                 );
 
                 vec![
-                    fret_ui_shadcn::InputGroup::new(model1.clone())
+                    shadcn::InputGroup::new(model1.clone())
                         .a11y_label("Golden:input-group-label:1:input")
                         .block_start(vec![header_row])
                         .into_element(cx),
@@ -866,11 +862,11 @@ fn web_vs_fret_layout_input_group_button_group_geometry_matches() {
 
         let icon = decl_icon::icon(cx, IconId::new_static("lucide.link-2"));
 
-        let input_group = fret_ui_shadcn::InputGroup::new(model)
+        let input_group = shadcn::InputGroup::new(model)
             .a11y_label("Golden:input-group-button-group:input")
             .trailing(vec![icon]);
 
-        let group = fret_ui_shadcn::ButtonGroup::new(vec![
+        let group = shadcn::ButtonGroup::new(vec![
             ButtonGroupText::new("https://")
                 .refine_layout(
                     LayoutRefinement::default().w_px(MetricRef::Px(Px(web_prefix.rect.w))),
@@ -1165,7 +1161,7 @@ fn assert_input_otp_block_relative_geometry_matches_web(web_name: &str, row_toke
     let label_str: &str = &label;
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
-        let otp = fret_ui_shadcn::InputOtp::new(model)
+        let otp = shadcn::InputOtp::new(model)
             .length(web_slots.len())
             .slot_gap_px(Px(slot_gap))
             .slot_size_px(Px(slot_w), Px(slot_h));
@@ -1274,7 +1270,7 @@ fn web_vs_fret_layout_input_otp_demo_geometry_matches() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::InputOtp::new(model)
+            shadcn::InputOtp::new(model)
                 .group_size(Some(3))
                 .into_element(cx),
         ]
@@ -1301,7 +1297,7 @@ fn web_vs_fret_layout_input_otp_separator_geometry_matches() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::InputOtp::new(model)
+            shadcn::InputOtp::new(model)
                 .group_size(Some(2))
                 .into_element(cx),
         ]
@@ -1327,7 +1323,7 @@ fn web_vs_fret_layout_input_otp_pattern_geometry_matches() {
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
         vec![
-            fret_ui_shadcn::InputOtp::new(model)
+            shadcn::InputOtp::new(model)
                 .numeric_only(false)
                 .into_element(cx),
         ]
@@ -1349,7 +1345,7 @@ fn web_vs_fret_layout_input_otp_controlled_geometry_matches() {
 
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<String> = cx.app.models_mut().insert(String::new());
-        vec![fret_ui_shadcn::InputOtp::new(model).into_element(cx)]
+        vec![shadcn::InputOtp::new(model).into_element(cx)]
     });
 
     let fret_slots = fret_collect_rects_by_size(&snap, Px(36.0), Px(36.0), 1.0);
@@ -1364,7 +1360,7 @@ fn command_demo_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot
 
     let mut services = StyleAwareServices::default();
     run_fret_root_with_services(bounds, &mut services, |cx| {
-        use fret_ui_shadcn::{
+        use fret_ui_shadcn::facade::{
             CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator,
         };
 
@@ -1551,7 +1547,7 @@ fn web_vs_fret_layout_input_with_label_geometry() {
                 label: Some(Arc::from("Golden:input-with-label:label")),
                 ..Default::default()
             },
-            move |cx| vec![fret_ui_shadcn::Label::new("Email").into_element(cx)],
+            move |cx| vec![shadcn::Label::new("Email").into_element(cx)],
         );
 
         let input = cx.semantics(
@@ -1562,7 +1558,7 @@ fn web_vs_fret_layout_input_with_label_geometry() {
             },
             move |cx| {
                 vec![
-                    fret_ui_shadcn::Input::new(model)
+                    shadcn::Input::new(model)
                         .a11y_label("Email")
                         .placeholder("Email")
                         .into_element(cx),
@@ -1654,10 +1650,10 @@ fn web_vs_fret_layout_input_group_dropdown_height() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -1684,7 +1680,7 @@ fn web_vs_fret_layout_input_group_dropdown_height() {
                     ..Default::default()
                 },
                 move |cx| {
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Input group")
                         .into_element(cx);
 
@@ -1742,10 +1738,10 @@ fn web_vs_fret_layout_input_group_icon_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -1781,7 +1777,7 @@ fn web_vs_fret_layout_input_group_icon_geometry_matches() {
                         move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:input-group-icon:input")
                         .leading(vec![icon])
                         .into_element(cx);
@@ -1894,10 +1890,10 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -1924,7 +1920,7 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
                     ..Default::default()
                 },
                 move |cx| {
-                    let spinner = fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx);
+                    let spinner = shadcn::Spinner::new().speed(0.0).into_element(cx);
                     let spinner = cx.semantics(
                         fret_ui::element::SemanticsProps {
                             role: SemanticsRole::Panel,
@@ -1934,7 +1930,7 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
                         move |_cx| vec![spinner],
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:input-group-spinner:input")
                         .trailing(vec![spinner])
                         .into_element(cx);
@@ -2061,10 +2057,10 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -2100,8 +2096,8 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
                         move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
                     );
 
-                    let button = fret_ui_shadcn::Button::new("")
-                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                    let button = shadcn::Button::new("")
+                        .variant(shadcn::ButtonVariant::Ghost)
                         .children(vec![icon])
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
@@ -2111,7 +2107,7 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
                         )
                         .into_element(cx);
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:input-group-button:input")
                         .trailing_has_button(true)
                         .trailing(vec![button])
@@ -2280,10 +2276,10 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model0: Model<String> = app.models_mut().insert(String::new());
@@ -2320,8 +2316,8 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         },
                         move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
                     );
-                    let button0 = fret_ui_shadcn::Button::new("")
-                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                    let button0 = shadcn::Button::new("")
+                        .variant(shadcn::ButtonVariant::Ghost)
                         .children(vec![button_icon0])
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
@@ -2331,7 +2327,7 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         )
                         .into_element(cx);
 
-                    let group0 = fret_ui_shadcn::InputGroup::new(model0.clone())
+                    let group0 = shadcn::InputGroup::new(model0.clone())
                         .a11y_label("Golden:input-group-tooltip:0:input")
                         .trailing_has_button(true)
                         .trailing(vec![button0])
@@ -2345,8 +2341,8 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         move |_cx| vec![group0],
                     );
 
-                    let group1_button = fret_ui_shadcn::Button::new("")
-                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                    let group1_button = shadcn::Button::new("")
+                        .variant(shadcn::ButtonVariant::Ghost)
                         .children(vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)])
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
@@ -2355,7 +2351,7 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                                 .h_px(Px(24.0)),
                         )
                         .into_element(cx);
-                    let group1 = fret_ui_shadcn::InputGroup::new(model1.clone())
+                    let group1 = shadcn::InputGroup::new(model1.clone())
                         .a11y_label("Golden:input-group-tooltip:1:input")
                         .trailing_has_button(true)
                         .trailing(vec![group1_button])
@@ -2377,8 +2373,8 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         },
                         move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
                     );
-                    let button2 = fret_ui_shadcn::Button::new("")
-                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                    let button2 = shadcn::Button::new("")
+                        .variant(shadcn::ButtonVariant::Ghost)
                         .children(vec![button_icon2])
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
@@ -2388,7 +2384,7 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         )
                         .into_element(cx);
 
-                    let group2 = fret_ui_shadcn::InputGroup::new(model2.clone())
+                    let group2 = shadcn::InputGroup::new(model2.clone())
                         .a11y_label("Golden:input-group-tooltip:2:input")
                         .leading_has_button(true)
                         .leading(vec![button2])
@@ -2590,10 +2586,10 @@ fn web_vs_fret_layout_empty_input_group_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -2636,10 +2632,10 @@ fn web_vs_fret_layout_empty_input_group_geometry_matches() {
                             label: Some(Arc::from("Golden:empty-input-group:kbd")),
                             ..Default::default()
                         },
-                        move |cx| vec![fret_ui_shadcn::Kbd::new("/").into_element(cx)],
+                        move |cx| vec![shadcn::Kbd::new("/").into_element(cx)],
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:empty-input-group:input")
                         .leading(vec![icon])
                         .trailing_has_kbd(true)
@@ -2804,10 +2800,10 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -2850,7 +2846,7 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
                             label: Some(Arc::from("Golden:kbd-input-group:kbd0")),
                             ..Default::default()
                         },
-                        move |cx| vec![fret_ui_shadcn::Kbd::new("⌘").into_element(cx)],
+                        move |cx| vec![shadcn::Kbd::new("⌘").into_element(cx)],
                     );
                     let kbd1 = cx.semantics(
                         fret_ui::element::SemanticsProps {
@@ -2858,10 +2854,10 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
                             label: Some(Arc::from("Golden:kbd-input-group:kbd1")),
                             ..Default::default()
                         },
-                        move |cx| vec![fret_ui_shadcn::Kbd::new("K").into_element(cx)],
+                        move |cx| vec![shadcn::Kbd::new("K").into_element(cx)],
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:kbd-input-group:input")
                         .leading(vec![icon])
                         .trailing_has_kbd(true)
@@ -3059,10 +3055,10 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -3249,7 +3245,7 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
                         },
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .textarea()
                         .textarea_min_height(Px(web_textarea.rect.h))
                         .a11y_label("Golden:input-group-textarea:textarea")
@@ -3500,10 +3496,10 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -3531,14 +3527,14 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
                     ..Default::default()
                 },
                 move |cx| {
-                    let leading = fret_ui_shadcn::InputGroupText::new("$")
+                    let leading = shadcn::InputGroupText::new("$")
                         .refine_layout(LayoutRefinement::default().w_px(Px(web_dollar.rect.w)))
                         .into_element(cx);
-                    let trailing = fret_ui_shadcn::InputGroupText::new("USD")
+                    let trailing = shadcn::InputGroupText::new("USD")
                         .refine_layout(LayoutRefinement::default().w_px(Px(web_usd.rect.w)))
                         .into_element(cx);
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:input-group-text:currency:input")
                         .leading(vec![leading])
                         .trailing(vec![trailing])
@@ -3660,10 +3656,10 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -3699,7 +3695,7 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
                         },
                         move |cx| {
                             vec![
-                                fret_ui_shadcn::InputGroupText::new("https://")
+                                shadcn::InputGroupText::new("https://")
                                     .refine_layout(
                                         LayoutRefinement::default().w_px(Px(web_prefix.rect.w)),
                                     )
@@ -3716,7 +3712,7 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
                         },
                         move |cx| {
                             vec![
-                                fret_ui_shadcn::InputGroupText::new(".com")
+                                shadcn::InputGroupText::new(".com")
                                     .refine_layout(
                                         LayoutRefinement::default().w_px(Px(web_suffix.rect.w)),
                                     )
@@ -3725,7 +3721,7 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
                         },
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:input-group-text:url:input")
                         .leading(vec![prefix])
                         .trailing(vec![suffix])
@@ -3876,10 +3872,10 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -3915,7 +3911,7 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
                         },
                         move |cx| {
                             vec![
-                                fret_ui_shadcn::InputGroupText::new("@company.com")
+                                shadcn::InputGroupText::new("@company.com")
                                     .refine_layout(
                                         LayoutRefinement::default().w_px(Px(web_suffix.rect.w)),
                                     )
@@ -3924,7 +3920,7 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
                         },
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .a11y_label("Golden:input-group-text:email:input")
                         .trailing(vec![suffix])
                         .into_element(cx);
@@ -4056,10 +4052,10 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -4095,8 +4091,8 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
                         },
                         move |cx| {
                             vec![
-                                fret_ui_shadcn::InputGroupText::new("120 characters left")
-                                    .size(fret_ui_shadcn::InputGroupTextSize::Xs)
+                                shadcn::InputGroupText::new("120 characters left")
+                                    .size(shadcn::InputGroupTextSize::Xs)
                                     .refine_layout(
                                         LayoutRefinement::default().w_px(Px(web_count.rect.w)),
                                     )
@@ -4105,7 +4101,7 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
                         },
                     );
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .textarea()
                         .textarea_min_height(Px(web_textarea3.rect.h))
                         .a11y_label("Golden:input-group-text:count:textarea")
@@ -4233,10 +4229,10 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -4264,9 +4260,9 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
                     ..Default::default()
                 },
                 move |cx| {
-                    let submit = fret_ui_shadcn::InputGroupButton::new("Submit")
-                        .variant(fret_ui_shadcn::ButtonVariant::Default)
-                        .size(fret_ui_shadcn::InputGroupButtonSize::Sm)
+                    let submit = shadcn::InputGroupButton::new("Submit")
+                        .variant(shadcn::ButtonVariant::Default)
+                        .size(shadcn::InputGroupButtonSize::Sm)
                         .a11y_label("Golden:input-group-custom:submit")
                         .refine_layout(
                             LayoutRefinement::default()
@@ -4275,7 +4271,7 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
                         )
                         .into_element(cx);
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .textarea()
                         .textarea_min_height(Px(web_textarea.rect.h))
                         .a11y_label("Golden:input-group-custom:textarea")
@@ -4455,10 +4451,10 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let model: Model<String> = app.models_mut().insert(String::new());
@@ -4494,15 +4490,15 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
                         },
                         move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
                     );
-                    let plus_button = fret_ui_shadcn::InputGroupButton::new("")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                        .size(fret_ui_shadcn::InputGroupButtonSize::IconXs)
+                    let plus_button = shadcn::InputGroupButton::new("")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::InputGroupButtonSize::IconXs)
                         .refine_style(ChromeRefinement::default().rounded(Radius::Full))
                         .children(vec![plus_icon])
                         .into_element(cx);
 
-                    let auto = fret_ui_shadcn::InputGroupButton::new("Auto")
-                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                    let auto = shadcn::InputGroupButton::new("Auto")
+                        .variant(shadcn::ButtonVariant::Ghost)
                         .a11y_label("Golden:input-group-demo:block:auto")
                         .refine_layout(LayoutRefinement::default().w_px(expected_auto_w))
                         .into_element(cx);
@@ -4519,7 +4515,7 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
                         },
                         move |cx| {
                             vec![
-                                fret_ui_shadcn::InputGroupText::new("52% used")
+                                shadcn::InputGroupText::new("52% used")
                                     .refine_layout(
                                         LayoutRefinement::default().w_px(expected_used_w),
                                     )
@@ -4544,8 +4540,8 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
                         },
                         move |cx| {
                             vec![
-                                fret_ui_shadcn::Separator::new()
-                                    .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+                                shadcn::Separator::new()
+                                    .orientation(shadcn::SeparatorOrientation::Vertical)
                                     .into_element(cx),
                             ]
                         },
@@ -4559,16 +4555,16 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
                         },
                         move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
                     );
-                    let send_button = fret_ui_shadcn::InputGroupButton::new("")
-                        .variant(fret_ui_shadcn::ButtonVariant::Default)
-                        .size(fret_ui_shadcn::InputGroupButtonSize::IconXs)
+                    let send_button = shadcn::InputGroupButton::new("")
+                        .variant(shadcn::ButtonVariant::Default)
+                        .size(shadcn::InputGroupButtonSize::IconXs)
                         .a11y_label("Golden:input-group-demo:block:send")
                         .disabled(true)
                         .refine_style(ChromeRefinement::default().rounded(Radius::Full))
                         .children(vec![send_icon])
                         .into_element(cx);
 
-                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                    let group = shadcn::InputGroup::new(model.clone())
                         .textarea()
                         .textarea_min_height(Px(web_textarea.rect.h))
                         .a11y_label("Golden:input-group-demo:block:textarea")

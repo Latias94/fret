@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 
 #[test]
@@ -23,7 +24,7 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
     let trigger_test_id = "scroll-underlay-tooltip-trigger";
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Tooltip, TooltipContent, TooltipProvider};
+        use shadcn::{Tooltip, TooltipContent, TooltipProvider};
 
         let scroll_handle = scroll_handle.clone();
 
@@ -271,7 +272,7 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
     let trigger_test_id = "scroll-underlay-popover-trigger";
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        use fret_ui_shadcn::popover::{Popover, PopoverContent};
+        use fret_ui_shadcn::facade::{Popover, PopoverContent};
 
         let open = open.clone();
         let scroll_handle = scroll_handle.clone();
@@ -525,7 +526,7 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
     let content_test_id = "scroll-underlay-hover-card-content";
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{HoverCard, HoverCardContent, HoverCardSide};
+        use shadcn::{HoverCard, HoverCardContent, HoverCardSide};
 
         let scroll_handle = scroll_handle.clone();
 

@@ -5,6 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -70,10 +71,10 @@ fn popover_escape_closes_and_restores_focus_to_trigger() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let open: Model<bool> = app.models_mut().insert(false);
@@ -85,17 +86,17 @@ fn popover_escape_closes_and_restores_focus_to_trigger() {
 
     let build = move |open: Model<bool>| {
         move |cx: &mut ElementContext<'_, App>| {
-            vec![fret_ui_shadcn::Popover::from_open(open).into_element_with(
+            vec![shadcn::Popover::from_open(open).into_element_with(
                 cx,
                 |cx| {
-                    fret_ui_shadcn::PopoverTrigger::new(
-                        fret_ui_shadcn::Button::new("Open")
+                    shadcn::PopoverTrigger::new(
+                        shadcn::Button::new("Open")
                             .test_id("popover-trigger")
                             .into_element(cx),
                     )
                     .into_element(cx)
                 },
-                |cx| fret_ui_shadcn::PopoverContent::new([cx.text("Content")]).into_element(cx),
+                |cx| shadcn::PopoverContent::new([cx.text("Content")]).into_element(cx),
             )]
         }
     };

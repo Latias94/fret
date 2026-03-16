@@ -4,6 +4,7 @@ use fret_core::{
     Scene, SceneOp, Size as CoreSize,
 };
 use fret_ui::tree::UiTree;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -200,7 +201,7 @@ fn assert_button_styles_match_web(
     );
 }
 
-fn assert_button_variant_matches_web(golden_name: &str, variant: fret_ui_shadcn::ButtonVariant) {
+fn assert_button_variant_matches_web(golden_name: &str, variant: shadcn::ButtonVariant) {
     let web = read_web_golden(golden_name);
     let web_style = extract_web_button_style(&web);
     let fret_style = extract_fret_button_style(variant);
@@ -322,15 +323,15 @@ fn find_button_quad_style(
     panic!("failed to find button quad in scene (expected a Quad with rect == semantics bounds)");
 }
 
-fn extract_fret_button_style(variant: fret_ui_shadcn::ButtonVariant) -> FretButtonStyle {
+fn extract_fret_button_style(variant: shadcn::ButtonVariant) -> FretButtonStyle {
     let window = AppWindowId::default();
     let mut app = App::new();
 
     // Match the web golden baseline: shadcn v4 new-york-v4 base `neutral`, `light` scheme.
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -351,7 +352,7 @@ fn extract_fret_button_style(variant: fret_ui_shadcn::ButtonVariant) -> FretButt
         "web-vs-fret-button",
         |cx| {
             vec![
-                fret_ui_shadcn::Button::new("Button")
+                shadcn::Button::new("Button")
                     .variant(variant)
                     .into_element(cx),
             ]
@@ -413,14 +414,14 @@ fn extract_fret_button_style(variant: fret_ui_shadcn::ButtonVariant) -> FretButt
     }
 }
 
-fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> FretButtonStyle {
+fn extract_fret_button_style_pressed(variant: shadcn::ButtonVariant) -> FretButtonStyle {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -442,7 +443,7 @@ fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> 
             "web-vs-fret-button-pressed",
             |cx| {
                 vec![
-                    fret_ui_shadcn::Button::new("Button")
+                    shadcn::Button::new("Button")
                         .variant(variant)
                         .into_element(cx),
                 ]
@@ -538,14 +539,14 @@ fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> 
     }
 }
 
-fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> FretButtonStyle {
+fn extract_fret_button_style_hovered(variant: shadcn::ButtonVariant) -> FretButtonStyle {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -567,7 +568,7 @@ fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> 
             "web-vs-fret-button-hover",
             |cx| {
                 vec![
-                    fret_ui_shadcn::Button::new("Button")
+                    shadcn::Button::new("Button")
                         .variant(variant)
                         .into_element(cx),
                 ]
@@ -651,14 +652,14 @@ fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> 
     }
 }
 
-fn extract_fret_button_style_disabled(variant: fret_ui_shadcn::ButtonVariant) -> FretButtonStyle {
+fn extract_fret_button_style_disabled(variant: shadcn::ButtonVariant) -> FretButtonStyle {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
         &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
     );
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -679,7 +680,7 @@ fn extract_fret_button_style_disabled(variant: fret_ui_shadcn::ButtonVariant) ->
         "web-vs-fret-button-disabled",
         |cx| {
             vec![
-                fret_ui_shadcn::Button::new("Button")
+                shadcn::Button::new("Button")
                     .disabled(true)
                     .variant(variant)
                     .into_element(cx),
@@ -778,14 +779,14 @@ fn extract_web_button_style(golden: &WebGolden) -> WebButtonStyle {
 
 #[test]
 fn web_vs_fret_button_default_pipeline_smoke() {
-    assert_button_variant_matches_web("button-default", fret_ui_shadcn::ButtonVariant::Default);
+    assert_button_variant_matches_web("button-default", shadcn::ButtonVariant::Default);
 }
 
 #[test]
 fn web_vs_fret_button_default_pressed_matches_web() {
     let web = read_web_golden("button-default.pressed");
     let web_style = extract_web_button_style(&web);
-    let fret_style = extract_fret_button_style_pressed(fret_ui_shadcn::ButtonVariant::Default);
+    let fret_style = extract_fret_button_style_pressed(shadcn::ButtonVariant::Default);
     assert_button_styles_match_web("button-default.pressed", web_style, fret_style);
 }
 
@@ -793,7 +794,7 @@ fn web_vs_fret_button_default_pressed_matches_web() {
 fn web_vs_fret_button_default_hover_matches_web() {
     let web = read_web_golden("button-default.hover");
     let web_style = extract_web_button_style(&web);
-    let fret_style = extract_fret_button_style_hovered(fret_ui_shadcn::ButtonVariant::Default);
+    let fret_style = extract_fret_button_style_hovered(shadcn::ButtonVariant::Default);
     assert_button_styles_match_web("button-default.hover", web_style, fret_style);
 }
 
@@ -801,34 +802,31 @@ fn web_vs_fret_button_default_hover_matches_web() {
 fn web_vs_fret_button_default_disabled_matches_web() {
     let web = read_web_golden("button-default.disabled");
     let web_style = extract_web_button_style(&web);
-    let fret_style = extract_fret_button_style_disabled(fret_ui_shadcn::ButtonVariant::Default);
+    let fret_style = extract_fret_button_style_disabled(shadcn::ButtonVariant::Default);
     assert_button_styles_match_web("button-default.disabled", web_style, fret_style);
 }
 
 #[test]
 fn web_vs_fret_button_destructive_matches_web() {
-    assert_button_variant_matches_web(
-        "button-destructive",
-        fret_ui_shadcn::ButtonVariant::Destructive,
-    );
+    assert_button_variant_matches_web("button-destructive", shadcn::ButtonVariant::Destructive);
 }
 
 #[test]
 fn web_vs_fret_button_outline_matches_web() {
-    assert_button_variant_matches_web("button-outline", fret_ui_shadcn::ButtonVariant::Outline);
+    assert_button_variant_matches_web("button-outline", shadcn::ButtonVariant::Outline);
 }
 
 #[test]
 fn web_vs_fret_button_secondary_matches_web() {
-    assert_button_variant_matches_web("button-secondary", fret_ui_shadcn::ButtonVariant::Secondary);
+    assert_button_variant_matches_web("button-secondary", shadcn::ButtonVariant::Secondary);
 }
 
 #[test]
 fn web_vs_fret_button_ghost_matches_web() {
-    assert_button_variant_matches_web("button-ghost", fret_ui_shadcn::ButtonVariant::Ghost);
+    assert_button_variant_matches_web("button-ghost", shadcn::ButtonVariant::Ghost);
 }
 
 #[test]
 fn web_vs_fret_button_link_matches_web() {
-    assert_button_variant_matches_web("button-link", fret_ui_shadcn::ButtonVariant::Link);
+    assert_button_variant_matches_web("button-link", shadcn::ButtonVariant::Link);
 }

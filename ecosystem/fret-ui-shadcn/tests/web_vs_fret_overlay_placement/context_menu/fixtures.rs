@@ -34,7 +34,7 @@ fn build_context_menu_demo_overlay(
     let checked_full_urls = cx.local_model_keyed("checked_full_urls", || false);
     let radio_person = cx.local_model_keyed("radio_person", || Some(Arc::from("pedro")));
 
-    use fret_ui_shadcn::{
+    use fret_ui_shadcn::facade::{
         ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuItem, ContextMenuLabel,
         ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
     };
@@ -87,7 +87,7 @@ fn build_context_menu_demo_overlay(
                             ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
                             ContextMenuEntry::Separator,
                             ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
-                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                fret_ui_shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
                             )),
                         ],
                     )),

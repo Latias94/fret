@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 use serde::Deserialize;
 
@@ -29,7 +30,7 @@ fn build_calendar_22_open_overlay(
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::Month;
 
     let trigger = Button::new("Select date")
@@ -40,8 +41,8 @@ fn build_calendar_22_open_overlay(
                 .h_px(MetricRef::Px(Px(36.0))),
         );
 
-    let label = fret_ui_shadcn::Label::new("Date of birth").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let label = shadcn::Label::new("Date of birth").into_element(cx);
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
         .into_element_with(
             cx,
@@ -52,9 +53,9 @@ fn build_calendar_22_open_overlay(
                     .models_mut()
                     .insert(CalendarMonth::new(2025, Month::June));
                 let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-                let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+                let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
 
-                fret_ui_shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::new([calendar])
                     .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
                     .into_element(cx)
             },
@@ -71,7 +72,7 @@ fn build_calendar_23_open_overlay(
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::Month;
 
     let trigger = Button::new("Select date")
@@ -82,8 +83,8 @@ fn build_calendar_23_open_overlay(
                 .h_px(MetricRef::Px(Px(36.0))),
         );
 
-    let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let label = shadcn::Label::new("Select your stay").into_element(cx);
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
         .into_element_with(
             cx,
@@ -94,9 +95,9 @@ fn build_calendar_23_open_overlay(
                     .models_mut()
                     .insert(CalendarMonth::new(2025, Month::June));
                 let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-                let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+                let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
 
-                fret_ui_shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::new([calendar])
                     .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
                     .into_element(cx)
             },
@@ -113,7 +114,7 @@ fn build_calendar_24_open_overlay(
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::Month;
 
     let trigger = Button::new("Select date")
@@ -124,8 +125,8 @@ fn build_calendar_24_open_overlay(
                 .h_px(MetricRef::Px(Px(36.0))),
         );
 
-    let label = fret_ui_shadcn::Label::new("Date").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let label = shadcn::Label::new("Date").into_element(cx);
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
         .into_element_with(
             cx,
@@ -136,9 +137,9 @@ fn build_calendar_24_open_overlay(
                     .models_mut()
                     .insert(CalendarMonth::new(2025, Month::June));
                 let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-                let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+                let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
 
-                fret_ui_shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::new([calendar])
                     .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
                     .into_element(cx)
             },
@@ -155,7 +156,7 @@ fn build_calendar_25_open_overlay(
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::Month;
 
     let trigger = Button::new("Select date")
@@ -166,8 +167,8 @@ fn build_calendar_25_open_overlay(
                 .h_px(MetricRef::Px(Px(36.0))),
         );
 
-    let label = fret_ui_shadcn::Label::new("Date").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let label = shadcn::Label::new("Date").into_element(cx);
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
         .into_element_with(
             cx,
@@ -178,9 +179,9 @@ fn build_calendar_25_open_overlay(
                     .models_mut()
                     .insert(CalendarMonth::new(2025, Month::June));
                 let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-                let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+                let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
 
-                fret_ui_shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::new([calendar])
                     .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
                     .into_element(cx)
             },
@@ -197,7 +198,7 @@ fn build_calendar_26_open_overlay(
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::{Date, Month};
 
     let trigger = Button::new("Jun 01, 2025")
@@ -208,8 +209,8 @@ fn build_calendar_26_open_overlay(
                 .h_px(MetricRef::Px(Px(36.0))),
         );
 
-    let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let label = shadcn::Label::new("Select your stay").into_element(cx);
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
         .into_element_with(
             cx,
@@ -222,9 +223,9 @@ fn build_calendar_26_open_overlay(
                 let selected: Model<Option<Date>> = cx.app.models_mut().insert(Some(
                     Date::from_calendar_date(2025, Month::June, 1).expect("valid date"),
                 ));
-                let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+                let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
 
-                fret_ui_shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::new([calendar])
                     .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
                     .into_element(cx)
             },
@@ -240,11 +241,11 @@ fn build_calendar_27_open_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::{Date, Month};
 
     let trigger = Button::new("6/5/2025 - 6/20/2025").variant(ButtonVariant::Outline);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::End)
         .window_margin(Px(0.0))
         .into_element_with(
@@ -264,8 +265,8 @@ fn build_calendar_27_open_overlay(
                             Date::from_calendar_date(2025, Month::June, 20).expect("valid date"),
                         ),
                     });
-                let calendar = fret_ui_shadcn::CalendarRange::new(month, selected).into_element(cx);
-                fret_ui_shadcn::PopoverContent::new([calendar]).into_element(cx)
+                let calendar = shadcn::CalendarRange::new(month, selected).into_element(cx);
+                shadcn::PopoverContent::new([calendar]).into_element(cx)
             },
         );
 
@@ -280,13 +281,13 @@ fn build_calendar_28_open_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::{Date, Month};
 
     let trigger = Button::new("Select date")
         .variant(ButtonVariant::Ghost)
         .refine_layout(LayoutRefinement::default().mr(Space::N2));
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::End)
         .align_offset(Px(-8.0))
         .side_offset(Px(10.0))
@@ -302,8 +303,8 @@ fn build_calendar_28_open_overlay(
                 let selected: Model<Option<Date>> = cx.app.models_mut().insert(Some(
                     Date::from_calendar_date(2025, Month::June, 1).expect("valid date"),
                 ));
-                let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
-                fret_ui_shadcn::PopoverContent::new([calendar]).into_element(cx)
+                let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
+                shadcn::PopoverContent::new([calendar]).into_element(cx)
             },
         );
 
@@ -318,11 +319,11 @@ fn build_calendar_29_open_overlay(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::{Date, Month};
 
     let trigger = Button::new("Select date").variant(ButtonVariant::Ghost);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::End)
         .window_margin(Px(0.0))
         .into_element_with(
@@ -336,8 +337,8 @@ fn build_calendar_29_open_overlay(
                 let selected: Model<Option<Date>> = cx.app.models_mut().insert(Some(
                     Date::from_calendar_date(2025, Month::June, 3).expect("valid date"),
                 ));
-                let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
-                fret_ui_shadcn::PopoverContent::new([calendar]).into_element(cx)
+                let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
+                shadcn::PopoverContent::new([calendar]).into_element(cx)
             },
         );
 
@@ -353,7 +354,7 @@ fn build_calendar_30_open_overlay(
 ) -> AnyElement {
     use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
     use fret_ui_kit::{LayoutRefinement, MetricRef};
-    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::{Date, Month};
 
     let trigger = Button::new("Jun 4 - 10, 2025")
@@ -364,8 +365,8 @@ fn build_calendar_30_open_overlay(
                 .h_px(MetricRef::Px(Px(36.0))),
         );
 
-    let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
-    let popover = fret_ui_shadcn::Popover::from_open(open.clone())
+    let label = shadcn::Label::new("Select your stay").into_element(cx);
+    let popover = shadcn::Popover::from_open(open.clone())
         .align(PopoverAlign::Start)
         .into_element_with(
             cx,
@@ -384,9 +385,9 @@ fn build_calendar_30_open_overlay(
                             Date::from_calendar_date(2025, Month::June, 10).expect("valid date"),
                         ),
                     });
-                let calendar = fret_ui_shadcn::CalendarRange::new(month, selected).into_element(cx);
+                let calendar = shadcn::CalendarRange::new(month, selected).into_element(cx);
 
-                fret_ui_shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::new([calendar])
                     .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
                     .into_element(cx)
             },
@@ -399,7 +400,7 @@ fn build_calendar_30_open_overlay(
 
 fn assert_calendar_32_open_drawer_insets_match() {
     use fret_ui_headless::calendar::CalendarMonth;
-    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent, DrawerHeader};
+    use shadcn::{Button, ButtonVariant, Drawer, DrawerContent, DrawerHeader};
     use time::Month;
 
     assert_viewport_anchored_overlay_placement_matches(
@@ -420,7 +421,7 @@ fn assert_calendar_32_open_drawer_insets_match() {
                         .models_mut()
                         .insert(CalendarMonth::new(2025, Month::June));
                     let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-                    let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+                    let calendar = shadcn::Calendar::new(month, selected).into_element(cx);
 
                     DrawerContent::new(vec![DrawerHeader::new(vec![]).into_element(cx), calendar])
                         .into_element(cx)

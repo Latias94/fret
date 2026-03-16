@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("controlled.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
@@ -17,31 +18,30 @@ fn resolve_selected<H: UiHost>(
         .unwrap_or_else(|| Arc::<str>::from(fallback))
 }
 
-fn menu_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+fn menu_button(
+    cx: &mut UiCx<'_>,
     selected_model: Model<Arc<str>>,
     active_value: &Arc<str>,
     value: &'static str,
     label: &'static str,
     icon: &'static str,
     test_id: Arc<str>,
-) -> impl IntoUiElement<H> + use<H> {
+) -> shadcn::SidebarMenuButton {
     let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
     let is_active = active_value.as_ref() == value;
     let selected_for_activate = selected_model.clone();
     let value_for_activate: Arc<str> = Arc::from(value);
-    let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-        let _ = host
-            .models_mut()
-            .update(&selected_for_activate, |v| *v = value_for_activate.clone());
-        host.request_redraw(action_cx.window);
-    });
 
     shadcn::SidebarMenuButton::new(label)
         .icon(fret_icons::IconId::new_static(icon))
         .active(is_active)
         .collapsed(collapsed)
-        .on_activate(on_activate)
+        .on_activate(cx.actions().listen(move |host, action_cx| {
+            let _ = host
+                .models_mut()
+                .update(&selected_for_activate, |v| *v = value_for_activate.clone());
+            host.request_redraw(action_cx.window);
+        }))
         .test_id(test_id)
 }
 
@@ -58,11 +58,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let selected_value = resolve_selected(cx, &selected, "design-engineering");
 
             let open_for_toggle = open.clone();
-            let on_toggle_open: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    let _ = host.models_mut().update(&open_for_toggle, |v| *v = !*v);
-                    host.request_redraw(action_cx.window);
-                });
 
             let header = ui::h_flex(|cx| {
                 vec![
@@ -73,7 +68,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     })
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
-                    .on_activate(on_toggle_open.clone())
+                    .on_activate(cx.actions().listen({
+                        let open_for_toggle = open_for_toggle.clone();
+                        move |host, action_cx| {
+                            let _ = host.models_mut().update(&open_for_toggle, |v| *v = !*v);
+                            host.request_redraw(action_cx.window);
+                        }
+                    }))
                     .test_id("ui-gallery-sidebar-controlled-toggle")
                     .into_element(cx),
                     shadcn::raw::typography::muted(

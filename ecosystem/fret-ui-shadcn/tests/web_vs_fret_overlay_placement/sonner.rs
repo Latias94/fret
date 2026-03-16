@@ -1,3 +1,4 @@
+use fret_ui_shadcn::facade as shadcn;
 use super::*;
 
 #[test]
@@ -15,7 +16,7 @@ fn web_vs_fret_sonner_open_toast_rect_matches_web_fixtures() {
         eprintln!("sonner toast open case={}", case.id);
         let web = read_web_golden_open(&case.web_name);
         assert_sonner_toast_rect_matches_web(&case.web_name, &web, move |sonner, host, window| {
-            let mut opts = fret_ui_shadcn::ToastMessageOptions::new();
+            let mut opts = shadcn::ToastMessageOptions::new();
             if let Some(desc) = &case.description {
                 opts = opts.description(desc.clone());
             }

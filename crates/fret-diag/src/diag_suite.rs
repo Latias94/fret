@@ -2374,6 +2374,8 @@ fn build_suite_core_default_post_run_checks(
     let suite_view_cache_reuse_stable_min = ai_transcript_suite
         .then_some(10u64)
         .filter(|_| user_checks.check_view_cache_reuse_stable_min.is_none());
+    let suite_asset_reload_epoch_min = diag_policy::script_default_asset_reload_epoch_min(src)
+        .filter(|_| user_checks.check_asset_reload_epoch_min.is_none());
     let suite_default_pixels_changed_test_id =
         suite_profile.default_pixels_changed_test_id().filter(|_| {
             user_checks.check_pixels_changed_test_id.is_none()
@@ -2543,6 +2545,7 @@ fn build_suite_core_default_post_run_checks(
     defaults.check_view_cache_reuse_min =
         suite_view_cache_reuse_min.or(suite_components_gallery_view_cache_reuse_min);
     defaults.check_view_cache_reuse_stable_min = suite_view_cache_reuse_stable_min;
+    defaults.check_asset_reload_epoch_min = suite_asset_reload_epoch_min;
     defaults.check_layout_fast_path_min = components_gallery_suite
         .then_some(1u64)
         .filter(|_| user_checks.check_layout_fast_path_min.is_none());
@@ -2838,6 +2841,7 @@ fn wants_explicit_or_policy_post_run_checks_for_script(src: &Path, checks: &Suit
     let script_override_checks = resolve_suite_script_override_checks(src, checks);
 
     wants_registered_post_run_checks
+        || diag_policy::script_default_asset_reload_epoch_min(src).is_some()
         || checks.check_stale_paint_test_id.is_some()
         || checks.check_stale_scene_test_id.is_some()
         || checks
@@ -3160,6 +3164,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_windowed_rows_offset_changes_min: _,
         check_windowed_rows_visible_start_changes_repainted: _,
         dump_semantics_changed_repainted_json: _,
+        ..
     } = checks;
 
     // Tool-launched suites default to *not* redacting text to keep authoring/debugging ergonomic.
@@ -3793,6 +3798,19 @@ mod tests {
     }
 
     #[test]
+    fn build_suite_core_default_post_run_checks_sets_asset_reload_default_for_cookbook_script() {
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("cookbook-assets-reload-epoch-basics-smoke.json"),
+            SuiteRunProfile::default(),
+            None,
+            &SuiteChecks::default(),
+            false,
+        );
+
+        assert_eq!(defaults.check_asset_reload_epoch_min, Some(1));
+    }
+
+    #[test]
     fn build_suite_core_default_post_run_checks_skips_pixels_changed_when_unchanged_gate_exists() {
         let mut user_checks = SuiteChecks::default();
         user_checks.check_pixels_unchanged_test_id = Some("custom-static-root".to_string());
@@ -3887,6 +3905,14 @@ mod tests {
     fn wants_explicit_or_policy_post_run_checks_for_script_detects_script_policy_gate() {
         assert!(wants_explicit_or_policy_post_run_checks_for_script(
             std::path::Path::new("ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"),
+            &SuiteChecks::default(),
+        ));
+    }
+
+    #[test]
+    fn wants_explicit_or_policy_post_run_checks_for_script_detects_asset_reload_policy_gate() {
+        assert!(wants_explicit_or_policy_post_run_checks_for_script(
+            std::path::Path::new("cookbook-assets-reload-epoch-basics-smoke.json"),
             &SuiteChecks::default(),
         ));
     }

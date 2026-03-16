@@ -1,15 +1,19 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
 use fret_icons::IconId;
+use fret_runtime::ActionId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
-use fret_ui_shadcn::{
+use fret_ui_shadcn::facade::{
     Button, ButtonSize, ButtonVariant, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 };
+
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 
 use crate::model::MessageRole;
 
@@ -204,6 +208,8 @@ pub struct MessageAction {
     label: Arc<str>,
     icon: Option<IconId>,
     children: Vec<AnyElement>,
+    action: Option<ActionId>,
+    action_payload: Option<ActionPayloadFactory>,
     on_activate: Option<OnActivate>,
     disabled: bool,
     test_id: Option<Arc<str>>,
@@ -222,6 +228,8 @@ impl std::fmt::Debug for MessageAction {
             .field("label", &self.label.as_ref())
             .field("icon", &self.icon)
             .field("children_len", &self.children.len())
+            .field("action", &self.action)
+            .field("action_payload", &self.action_payload.is_some())
             .field("has_on_activate", &self.on_activate.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id.as_deref())
@@ -239,6 +247,8 @@ impl MessageAction {
             label: label.into(),
             icon: None,
             children: Vec::new(),
+            action: None,
+            action_payload: None,
             on_activate: None,
             disabled: false,
             test_id: None,
@@ -275,6 +285,28 @@ impl MessageAction {
     /// foreground provider.
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Bind a stable action ID to this message action (action-first authoring).
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.action = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized message actions (ADR 0312).
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`MessageAction::action_payload`], but computes the payload lazily.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -325,6 +357,12 @@ impl MessageAction {
                 .size(self.size)
                 .disabled(self.disabled)
         };
+        if let Some(action) = self.action {
+            btn = btn.action(action);
+        }
+        if let Some(payload) = self.action_payload {
+            btn = btn.action_payload_factory(payload);
+        }
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
         }

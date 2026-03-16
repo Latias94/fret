@@ -44,8 +44,6 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-page-ai-confirmation-demo")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-page-ai-confirmation-demo");
+    vec![body.into_element(cx)]
 }

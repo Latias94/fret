@@ -9,7 +9,9 @@ use std::sync::Arc;
 
 use fret::advanced::prelude::*;
 use fret::app::App;
+use fret::component::prelude::*;
 use fret::{UiChild, UiCx};
+use fret_runtime::Model;
 use fret_ui::CommandAvailability;
 use fret_ui_shadcn::facade as shadcn;
 
@@ -62,7 +64,11 @@ impl View for ActionFirstViewRuntimeDemo {
                 shadcn::Button::new("Ping")
                     .action(act::Ping)
                     .into_element(cx)
-                    .test_id("ui-gallery-command-action-first-view-runtime.ping"),
+                    .test_id("ui-gallery-command-action-first-view-runtime.button-ping"),
+                shadcn::Badge::new("Ping via activate sugar")
+                    .action(act::Ping)
+                    .test_id("ui-gallery-command-action-first-view-runtime.ping")
+                    .into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -77,20 +83,39 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let last_action = super::last_action_model(cx);
     cx.named("ui-gallery.command.action_first.view_runtime", move |cx| {
         let view_state_slot = cx.slot_id();
-        let view_state = cx.state_for(
-            view_state_slot,
-            || None::<Rc<RefCell<fret::view::ViewWindowState<ActionFirstViewRuntimeDemo>>>>,
-            |slot| slot.clone(),
-        );
+        let view_state =
+            cx.state_for(
+                view_state_slot,
+                || {
+                    None::<
+                        Rc<
+                            RefCell<
+                                fret::advanced::view::ViewWindowState<ActionFirstViewRuntimeDemo>,
+                            >,
+                        >,
+                    >
+                },
+                |slot| slot.clone(),
+            );
         let view_state = match view_state {
             Some(state) => state,
             None => {
-                let state = Rc::new(RefCell::new(fret::view::view_init_window::<
+                let state = Rc::new(RefCell::new(fret::advanced::view::view_init_window::<
                     ActionFirstViewRuntimeDemo,
                 >(&mut *cx.app, cx.window)));
                 cx.state_for(
                     view_state_slot,
-                    || None::<Rc<RefCell<fret::view::ViewWindowState<ActionFirstViewRuntimeDemo>>>>,
+                    || {
+                        None::<
+                            Rc<
+                                RefCell<
+                                    fret::advanced::view::ViewWindowState<
+                                        ActionFirstViewRuntimeDemo,
+                                    >,
+                                >,
+                            >,
+                        >
+                    },
                     |slot| {
                         if slot.is_none() {
                             *slot = Some(state.clone());
@@ -105,7 +130,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         let mut st = view_state.borrow_mut();
         st.view.last_action = Some(last_action.clone());
 
-        let elements = fret::view::view_view(cx, &mut *st);
+        let elements = fret::advanced::view::view_view(cx, &mut *st);
         elements
             .into_vec()
             .into_iter()

@@ -14,6 +14,7 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         "Mechanism looked healthy in this audit: the drift was in the component layer and the UI Gallery page shape, not in `fret-ui` runtime contracts.",
         "`Attachment` already supports composable parts via `into_element_with_children(...)` plus `AttachmentPreview/Info/Remove::from_context()`, which is the Rust equivalent of the upstream compound-children API.",
         "`AttachmentHoverCard*` now lives in `fret-ui-ai`, so the inline example can mirror the official AI Elements docs without reaching directly into generic shadcn hover-card wrappers.",
+        "The preview-bearing examples now resolve image thumbnails from gallery-owned logical package bundle requests so the teaching surface matches shipped asset ownership instead of inline RGBA buffers.",
     ]);
 
     let body = crate::ui::doc_layout::render_doc_page(
@@ -23,19 +24,19 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         ),
         vec![
             DocSection::build(cx, "Usage with AI SDK", usage)
-                .description("Rust/Fret analogue of the official AI Elements usage pattern.")
+                .description("Rust/Fret analogue of the official AI Elements usage pattern, with preview media resolved from logical bundle assets.")
                 .test_id_prefix("ui-gallery-ai-attachments-usage")
                 .code_rust_from_file_region(snippets::attachments_usage::SOURCE, "example"),
             DocSection::build(cx, "Grid Variant", grid)
-                .description("Best for message attachments with thumbnail-style previews.")
+                .description("Best for message attachments with thumbnail-style previews sourced from gallery-owned logical bundle assets.")
                 .test_id_prefix("ui-gallery-ai-attachments-grid")
                 .code_rust_from_file_region(snippets::attachments_grid::SOURCE, "example"),
             DocSection::build(cx, "Inline Variant", inline)
-                .description("Compact badges with hover previews and remove affordances.")
+                .description("Compact badges with hover previews and remove affordances backed by logical bundle asset requests.")
                 .test_id_prefix("ui-gallery-ai-attachments-inline")
                 .code_rust_from_file_region(snippets::attachments_inline::SOURCE, "example"),
             DocSection::build(cx, "List Variant", list)
-                .description("Row layout for filenames and metadata.")
+                .description("Row layout for filenames and metadata, including a bundle-backed preview image example.")
                 .test_id_prefix("ui-gallery-ai-attachments-list")
                 .code_rust_from_file_region(snippets::attachments_list::SOURCE, "example"),
             DocSection::build(cx, "Empty State", empty)
@@ -47,8 +48,6 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         ],
     );
 
-    vec![
-        body.test_id("ui-gallery-page-ai-attachments-demo")
-            .into_element(cx),
-    ]
+    let body = body.test_id("ui-gallery-page-ai-attachments-demo");
+    vec![body.into_element(cx)]
 }

@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-10
+Last updated: 2026-03-16
 
 Related:
 
@@ -35,7 +35,7 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-03-09)
+## Current status snapshot (as of 2026-03-16)
 
 This snapshot is intentionally evidence-based: only mark a milestone as “Met” when the in-tree code,
 teaching surfaces, and gates line up.
@@ -45,6 +45,13 @@ teaching surfaces, and gates line up.
 - **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; default onboarding has narrowed to three entrypoints; adoption in templates + cookbook/examples is ongoing).
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
 - **M4**: In progress (cookbook/examples + ui-gallery now share the same default `value_*` read suffix, default teaching/reference surfaces have moved off `use_state`, and broader builder-first cleanup continues).
+- **M4 progress correction (2026-03-16)**: the first ceremony-reduction batch is now landed on
+  the canonical trio plus the generated todo/simple-todo templates and default-path docs:
+  tracked reads teach `state.layout(cx).value_*` / `state.paint(cx).value_*`, and common keyed-row
+  payload writes teach `cx.actions().payload_local_update_if::<A, _>(...)`.
+- **M4 child-collection follow-up (2026-03-16)**: `ui::single(cx, child)` is now the narrow
+  default helper for late-landing one typed child, and the first-party root/wrapper cases now use
+  it instead of `ui::children![cx; child].into()`.
 - **M4 note**: primitive `Table` builder-first cleanup is now close to saturated; the remaining
   `DataTable` pressure is tracked separately as a post-v1 business-table authoring/productization
   audit rather than as unfinished primitive-table migration work.
@@ -56,6 +63,41 @@ teaching surfaces, and gates line up.
 - **Overall assessment**: v1 is successful as an architectural reset and teaching-surface convergence
   pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
   ergonomics work rather than unfinished migration closure.
+- **Ownership correction (2026-03-16)**: shadcn discovery-lane closure and `fret` root lane
+  budgeting are now explicitly treated as authoring-surface closeout work, not as this
+  workstream's main next milestone. The remaining action-first responsibility is default-path
+  density reduction plus bridge retirement pressure (`AppActivateExt` should keep shrinking, not
+  expanding).
+- **Execution gate (2026-03-16)**: do not widen the default app lane with new sugar, macro
+  promotion, or bridge growth until the authoring-surface closeout has first stabilized
+  `fret-ui-shadcn` discovery and the `fret` root lane budget.
+
+## Current density-reduction order (2026-03-16)
+
+1. Finish the next default-path batch on keyed/list/default child-collection ergonomics.
+   Scope rule: move the canonical trio, generated templates, first-hour docs, and source-policy
+   gates together; prefer existing helpers before adding any new public API.
+2. Keep `AppActivateExt` on a shrinking bridge-only path.
+   Scope rule: no new first-party bridge impls for widgets that can expose native
+   `.action(...)` / `.action_payload(...)` slots.
+   Native widget-owned `.on_activate(...)` also counts as bridge-free closure when the component
+   already exposes that hook directly; the first-party `badge/link.rs` example now uses
+   `Badge::on_activate(...)` rather than reopening `AppActivateExt` for a no-op diagnostics
+   override.
+   2026-03-16 AI residue follow-up: `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`,
+   `ArtifactClose`, and `CheckpointTrigger` were also removed from the bridge table; first-party
+   snippets now use `UiCxActionsExt` plus widget-owned `.on_activate(...)` for those cases.
+   2026-03-16 button/sidebar follow-up: `shadcn::Button` and `shadcn::SidebarMenuButton` now also
+   stay off the bridge table; `SidebarMenuButton` gained native `.action_payload(...)`, and the
+   remaining first-party listener call sites now use `UiCxActionsExt` plus widget-owned
+   `.on_activate(...)`.
+   Closure note: the first-party default widget bridge table is now intentionally empty, so item 2
+   is an always-on maintenance rule rather than the next active migration batch.
+   Revalidation rule: each shrink batch keeps
+   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+   green alongside the narrower `fret` surface tests.
+3. Once item 1 stabilizes, reopen any broader ecosystem trait budgeting or macro discussion while
+   keeping item 2 as a standing source-policy gate.
 
 Adoption note (as of 2026-03-07):
 
@@ -205,7 +247,7 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-cookbook/examples/date_picker_basics.rs` (extends the same bridge pattern to `DatePicker::new_controllable(...)`, proving the authoring side can still prefer `use_local*` even when the widget API remains model-centered; the selected row stays builder-first, while the current picker/card sink still lands at the widget host boundary when a concrete `AnyElement` is required)
 - `apps/fret-cookbook/examples/form_basics.rs` (extends the same local-state path to multi-field validation/reset flows while intentionally keeping cross-field coordination on `on_action_notify_models`)
 - `apps/fret-cookbook/examples/simple_todo.rs` (default cookbook keyed-list lesson now uses `LocalState<Vec<_>>`, payload row toggle, and stable keyed row identity; the older explicit-model split is no longer carried by the boring path)
-- `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs` now uses the generated starter default keyed-list path: `LocalState<Vec<_>>`, payload row actions, `Checkbox::from_checked(...)`, direct text-value bridge `Input::new(&draft_state)`, and query-tip handle-side reads for `QueryHandle<T>`)
+- `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs` now uses the generated starter default keyed-list path: `LocalState<Vec<_>>`, payload row actions, `Checkbox::from_checked(...)`, direct text-value bridge `Input::new(&draft_state)`, `submit_action(act::Add)` on the default input path, and query-tip handle-side reads for `QueryHandle<T>`)
 - `apps/fret-cookbook/examples/drop_shadow_basics.rs` (adds a pure toggle-only renderer demo to the same post-v1 path by using `use_local*` / `state.layout(cx).value_*` / `state.paint(cx).value_*` / `local.clone_model()` for the existing `Switch::new(Model<bool>)` boundary)
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (extends the same path to a mixed editor/render-options surface: `Textarea` now accepts `&LocalState<String>` directly, while `ToggleGroup::single` and `Switch` still consume models and the view itself keeps source/wrap/cap-height in local state)
 - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (extends the same path to a host/runtime escape-hatch surface: the bump counter now lives in local state, while the actual asset reload epoch bump plus redraw/RAF scheduling intentionally stay render-time)
@@ -269,7 +311,7 @@ Hardening follow-up (open):
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
-- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.on_activate(cx.actions().dispatch::<A>())` / `.dispatch_payload::<A>(...)` / `.listener(...)` as the default activation glue; advanced aliases remain available but stay off the default teaching surfaces via `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` plus scaffold template unit tests, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
+- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` as the default activation glue; advanced aliases remain available but stay off the default teaching surfaces via `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` plus scaffold template unit tests, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
 
 Post-v1 direction (recommended):
 
@@ -324,12 +366,61 @@ Post-v1 direction (recommended):
   - Dropdown-menu follow-up (as of 2026-03-09): `DropdownMenu*` now also exposes action-first aliases in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, the primary dropdown-menu snippets (`basic`, `demo`) plus overlay preview menu surfaces now prefer `action(...)`, and the remaining command-shaped dropdown residue is narrower and mostly internal/advanced.
   - Menu gate update (as of 2026-03-09): `tools/gate_menu_action_default_surfaces.py` now protects the primary ui-gallery dropdown-menu / context-menu / menubar snippets plus overlay preview menu surfaces from drifting back to `.on_select(...)`, and `tools/pre_release.py` runs that gate with the rest of the teaching-surface policy suite.
   - Curated internal menu follow-up (as of 2026-03-09): `ecosystem/fret-workspace/src/tab_strip/overflow.rs` now uses `DropdownMenuItem::action(...)` / `trailing_action(...)`, `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` now lowers stable unit action ids through `DropdownMenuItem::action(...)`, and `tools/gate_menu_action_curated_internal_surfaces.py` keeps that explicit post-v1 residue slice from drifting back to `.on_select(...)`.
+  - Button default-surface follow-up (as of 2026-03-15): curated first-party `Button` teaching
+    surfaces that bind stable action IDs now also prefer `.action(...)` instead of legacy
+    `.on_click(...)` across cookbook/examples, `components_gallery`, and the ui-gallery driver /
+    snippet slices for chrome, settings, view-cache, code-editor previews, input-file browse, and
+    the deprecated toast redirect card.
+  - Button gate update (as of 2026-03-15): `tools/gate_button_action_default_surfaces.py` now
+    keeps that curated first-party button slice on `.action(...)`, and `tools/pre_release.py`
+    runs the gate alongside the other default-surface policy checks.
+  - Gallery action-alias follow-up (as of 2026-03-15): the remaining ui-gallery surfaces for
+    already-aligned action-capable widgets now also prefer `.action(...)` across sidebar
+    navigation, the navigation-menu link-component snippet, button link-render, breadcrumb
+    link/usage snippets, the item snippet family, and the pagination snippet family.
+  - Gallery action-alias gate update (as of 2026-03-15):
+    `tools/gate_gallery_action_alias_default_surfaces.py` now protects that curated ui-gallery
+    slice from drifting back to `.on_click(...)`, and `tools/pre_release.py` runs the gate with
+    the rest of the teaching-surface policy suite.
+  - Activation-sugar follow-up (as of 2026-03-15): `fret::app` now explicitly re-exports
+    `AppActivateExt` alongside `AppActivateSurface`, and the interim selected activation-only UI
+    Gallery snippets moved from raw `.on_activate(...)` to `.listen(...)` including `sonner/demo`, the data-table pagination demos,
+    `scroll_area/nested_scroll_routing`, and
+    `ai/{chat_demo,persona_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture}`, with
+    a later 2026-03-16 follow-up moving those same first-party button/sidebar snippets again onto
+    widget-owned `.on_activate(cx.actions().listen(...))` once `UiCxActionsExt` landed and the
+    shadcn bridge table was cleared.
+    `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locking that teaching lane.
+  - Activation-sugar closure note (as of 2026-03-15): `AppActivateExt::{dispatch, dispatch_payload, listen}`
+    no longer carries a no-op `cx` marker argument, the default widget-local story is now
+    `widget.action(act::Save)` / `widget.action_payload(act::Remove, payload)` /
+    `widget.listen(|host, acx| ...)` with `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)`
+    retained as explicit aliases, and the full
+    `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
+    suite is green after the remaining copyable-root/page-landing fallout was cleaned up.
+  - Prelude-tightening follow-up (as of 2026-03-16): `AppActivateExt` is no longer imported by
+    `fret::app::prelude::*`. Activation-only bridge call sites now add
+    `use fret::app::AppActivateExt as _;` explicitly, while native action-capable teaching
+    surfaces such as `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` stay off
+    the bridge import entirely.
+  - `UiCx` grouped-actions follow-up (as of 2026-03-16): extracted helper functions on the
+    default app lane now get `UiCxActionsExt` alongside `UiCxDataExt`, and the AI snippets for
+    `confirmation_demo`, `conversation_demo`, `prompt_input_docs_demo`, and `web_preview_demo`
+    moved from `AppActivateExt` `.listen(...)` onto `cx.actions().models::<A>(...)` plus native
+    widget `.action(...)`. As part of that shrink pass,
+    `fret_ui_ai::{ConfirmationAction, ConversationDownload, PromptInputButton, WebPreviewNavigationButton}`
+    were removed from the `AppActivateSurface` bridge table.
+  - Activation-sugar boundary follow-up (as of 2026-03-15): custom callback signatures still stay
+    out of the default app lane. `ecosystem/fret/src/view.rs` now source-locks the absence of a
+    parallel `AppActionCxSurface` family and explicitly keeps typed payload/context surfaces such as
+    `fret_ui_ai::{Attachment, FileTreeAction, MessageBranch, QueueItemAction, Suggestion, Test}`
+    off `AppActivateSurface`.
   - Intentional command-surface inventory update (as of 2026-03-09): `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now marks command palette/catalog, `DataTable` business-table wiring, compat/conformance tests, and callback-style non-menu widgets as intentional retained surfaces rather than the next generic migration target, so this track is now in maintenance mode unless a new default-facing leak appears.
   - Current-vs-target v2 note (as of 2026-03-09): `V2_BEST_PRACTICE_GAP.md` now makes the next-stage framing explicit: v1 migration is effectively complete, action/menu residue is no longer the main work item, and the highest-value remaining gap is productization plus tracked-write/invalidation ergonomics.
   - `notify()` policy draft (as of 2026-03-09): `NOTIFY_POLICY_DECISION_DRAFT.md` now fixes the near-term direction for `AFA-postv1-004`: keep `notify()` as a low-level escape hatch, keep tracked writes as the boring default rerender path, and do not reopen generic invalidation helper design unless a new medium-surface contradiction appears.
   - Invalidation short-rule update (as of 2026-03-09): `INVALIDATION_DEFAULT_RULES.md` now gives the corresponding short policy card so docs/examples/templates can point to a single default-vs-escape-hatch decision table instead of re-explaining the full draft each time.
   - `notify()` default-path gate update (as of 2026-03-09): `tools/gate_no_notify_in_default_teaching_surfaces.py` now keeps the default cookbook ladder plus scaffold templates off explicit `cx.notify(...)` / `host.notify(...)`, and `tools/pre_release.py` runs that policy alongside the other teaching-surface checks.
-  - Richer `todo` template audit update (as of 2026-03-09): `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`) remains intentionally explicit because the template is still teaching selector deps across nested row models plus query invalidation/filter coordination on one tracked graph; this is now documented in `docs/examples/todo-app-golden-path.md` and the generated template README so it does not look like an accidental lagging migration.
+  - Richer `todo` template audit update (as of 2026-03-09): `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`) remains intentionally explicit because the template is still teaching selector deps across nested row models plus query invalidation/filter coordination on one tracked graph; even so, its first-contact input path now uses `submit_action(act::Add)` rather than the lower-level `submit_command(...)` spelling, and the richer posture is documented in `docs/examples/todo-app-golden-path.md` plus the generated template README so it does not look like an accidental lagging migration.
   - Productization ingress update (as of 2026-03-09): `DEFAULT_PATH_PRODUCTIZATION.md`, `README.md`, `docs/first-hour.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, `docs/examples/README.md`, `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, `apps/fret-ui-gallery/README.md`, and `ecosystem/fret/README.md` now repeat the same default/comparison/advanced framing plus the same `hello` -> `simple-todo` -> `todo` ladder, reducing the remaining post-v1 work from taxonomy drift to keeping those ingress docs stable.
   - Productization audit follow-up (as of 2026-03-10): `DEFAULT_PATH_PRODUCTIZATION_AUDIT_2026-03-10.md` now confirms that reading, and the only landed follow-up fixes in this pass were wording-level alignment in `README.md` plus making `ecosystem/fret/README.md` show `simple-todo` before `todo` in the quick-start commands.
   - North-star clarification (as of 2026-03-10): this productization lane is secondary packaging

@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_shadcn::facade as shadcn;
 
 #[path = "support/style_aware_services.rs"]
 mod style_aware_services;
@@ -45,7 +46,7 @@ fn render_frame(
         "carousel-a11y-semantics",
         move |cx| {
             let slides = (0..5).map(|_| cx.container(Default::default(), |_cx| vec![]));
-            let carousel = fret_ui_shadcn::Carousel::new(slides)
+            let carousel = shadcn::Carousel::new(slides)
                 .track_start_neg_margin(Space::N0)
                 .item_padding_start(Space::N0)
                 .item_basis_main_px(Px(200.0))

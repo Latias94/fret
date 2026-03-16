@@ -57,6 +57,7 @@ mod bundle_index;
 mod bundle_dump;
 mod bundle_dump_policy;
 mod bundle_sidecars;
+mod debug_snapshot_predicates;
 mod extensions;
 mod fs_triggers;
 mod inspect;
@@ -116,6 +117,9 @@ use selector::{
 };
 
 mod trace_helpers;
+#[cfg(test)]
+use debug_snapshot_predicates::eval_debug_snapshot_predicate;
+use debug_snapshot_predicates::eval_debug_snapshot_predicate_from_recent_snapshot;
 use trace_helpers::{
     MAX_CLICK_STABLE_TRACE_ENTRIES, MAX_FOCUS_TRACE_ENTRIES, MAX_IME_EVENT_TRACE_ENTRIES,
     MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES, MAX_SELECTOR_TRACE_CANDIDATES,
@@ -1139,6 +1143,7 @@ mod tests {
             text_input_snapshot,
             render_text,
             render_text_font_trace,
+            None,
             known_windows,
             known_windows.len().min(u32::MAX as usize) as u32,
             None,
@@ -2785,6 +2790,190 @@ mod tests {
                 &pred
             ),
             "expected canonical=false to fail when snapshot reports canonical_ok=true"
+        );
+    }
+
+    #[test]
+    fn resource_loading_predicates_read_from_debug_snapshot() {
+        let debug = UiTreeDebugSnapshotV1 {
+            resource_loading: Some(UiResourceLoadingDiagnosticsSnapshotV1 {
+                asset_load: Some(UiAssetLoadDiagnosticsSnapshotV1 {
+                    total_requests: 4,
+                    bytes_requests: 3,
+                    reference_requests: 1,
+                    missing_bundle_asset_requests: 2,
+                    stale_manifest_requests: 1,
+                    unsupported_file_requests: 1,
+                    unsupported_url_requests: 0,
+                    external_reference_unavailable_requests: 1,
+                    revision_change_requests: 1,
+                    recent: vec![
+                        UiAssetLoadDiagnosticEventV1 {
+                            access_kind: "bytes".to_string(),
+                            locator_kind: "bundle_asset".to_string(),
+                            locator_debug: "bundle:app:images/logo.png".to_string(),
+                            outcome_kind: "resolved".to_string(),
+                            revision: Some(9),
+                            previous_revision: Some(1),
+                            revision_transition: Some("changed".to_string()),
+                            message: None,
+                        },
+                        UiAssetLoadDiagnosticEventV1 {
+                            access_kind: "external_reference".to_string(),
+                            locator_kind: "bundle_asset".to_string(),
+                            locator_debug: "bundle:app:icons/search.svg".to_string(),
+                            outcome_kind: "stale_manifest".to_string(),
+                            revision: None,
+                            previous_revision: Some(2),
+                            revision_transition: None,
+                            message: Some("/tmp/dev-assets/icons/search.svg".to_string()),
+                        },
+                        UiAssetLoadDiagnosticEventV1 {
+                            access_kind: "external_reference".to_string(),
+                            locator_kind: "bundle_asset".to_string(),
+                            locator_debug: "bundle:app:icons/search.svg".to_string(),
+                            outcome_kind: "external_reference_unavailable".to_string(),
+                            revision: None,
+                            previous_revision: Some(2),
+                            revision_transition: None,
+                            message: None,
+                        },
+                    ],
+                }),
+                asset_reload: Some(UiAssetReloadDiagnosticsSnapshotV1 {
+                    epoch: Some(4),
+                    file_watch: true,
+                    configured_backend: Some("native_watcher".to_string()),
+                    active_backend: Some("poll_metadata".to_string()),
+                    fallback_reason: Some("watcher_install_failed".to_string()),
+                    fallback_message: Some("backend unavailable".to_string()),
+                }),
+                font_environment: Some(UiFontEnvironmentDiagnosticsSnapshotV1 {
+                    bundled_baseline_source: "bundled_profile".to_string(),
+                    bundled_profile_name: Some("default".to_string()),
+                    bundled_asset_bundle: Some("fret.fonts".to_string()),
+                    bundled_asset_keys: vec!["fonts/inter-regular.ttf".to_string()],
+                    bundled_roles: vec!["sans".to_string()],
+                    bundled_guaranteed_generic_families: vec!["sans-serif".to_string()],
+                    font_catalog_revision: Some(3),
+                    font_catalog_family_count: Some(12),
+                    text_font_stack_key: Some(7),
+                    system_font_rescan_in_flight: Some(false),
+                    system_font_rescan_pending: Some(false),
+                }),
+            }),
+            ..Default::default()
+        };
+
+        let asset_reload = debug
+            .resource_loading
+            .as_ref()
+            .and_then(|resource_loading| resource_loading.asset_reload.as_ref())
+            .expect("asset reload diagnostics should be present in the resource loading snapshot");
+        assert_eq!(asset_reload.epoch, Some(4));
+        assert_eq!(
+            asset_reload.active_backend.as_deref(),
+            Some("poll_metadata")
+        );
+        assert_eq!(
+            asset_reload.fallback_reason.as_deref(),
+            Some("watcher_install_failed")
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(&debug, &UiPredicateV1::AssetReloadEpochGe { min: 4 },),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetReloadConfiguredBackendIs {
+                    backend: "native_watcher".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetReloadActiveBackendIs {
+                    backend: "poll_metadata".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetReloadFallbackReasonIs {
+                    reason: "watcher_install_failed".to_string(),
+                },
+            ),
+            Some(true)
+        );
+
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadMissingBundleAssetRequestsGe { min: 2 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadUnsupportedFileRequestsGe { min: 2 },
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadStaleManifestRequestsGe { min: 1 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadRecentOutcomeSeen {
+                    outcome_kind: "stale_manifest".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadExternalReferenceUnavailableRequestsGe { min: 1 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadRecentOutcomeSeen {
+                    outcome_kind: "external_reference_unavailable".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::AssetLoadRecentRevisionTransitionSeen {
+                    transition: "changed".to_string(),
+                },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate(
+                &debug,
+                &UiPredicateV1::BundledFontBaselineSourceIs {
+                    source: "bundled_profile".to_string(),
+                },
+            ),
+            Some(true)
         );
     }
 

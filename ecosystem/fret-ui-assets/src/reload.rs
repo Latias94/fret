@@ -1,23 +1,11 @@
 //! Development-oriented reload controls for UI assets.
 //!
-//! This is intentionally small and portable: instead of using OS-specific file watchers, apps can
-//! bump a global epoch to force re-decoding path-based image sources.
+//! `fret-ui-assets` intentionally re-exports the shared runtime asset-reload vocabulary rather than
+//! inventing a UI-specific reload contract.
+//! Desktop hosts may drive that epoch from native file watchers or metadata polling depending on
+//! startup policy and platform support.
 
-use fret_runtime::GlobalsHost;
-
-/// Global epoch that can be observed by UI code (via `ElementContext::observe_global`) to safely
-/// invalidate view-cached subtrees when assets should be reloaded.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct UiAssetsReloadEpoch(pub u64);
-
-impl UiAssetsReloadEpoch {
-    pub fn bump(&mut self) {
-        self.0 = self.0.wrapping_add(1);
-    }
-}
-
-pub fn bump_ui_assets_reload_epoch<H: GlobalsHost>(host: &mut H) {
-    host.with_global_mut(UiAssetsReloadEpoch::default, |epoch, _host| {
-        epoch.bump();
-    });
-}
+pub use fret_runtime::{
+    AssetReloadBackendKind, AssetReloadEpoch, AssetReloadFallbackReason, AssetReloadStatus,
+    asset_reload_epoch, asset_reload_status, asset_reload_support, bump_asset_reload_epoch,
+};

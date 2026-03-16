@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -45,7 +46,7 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                 let snap = run_fret_root(bounds, |cx| {
                     let model: Model<String> = cx.app.models_mut().insert(String::new());
                     vec![
-                        fret_ui_shadcn::Textarea::new(model)
+                        shadcn::Textarea::new(model)
                             .a11y_label("Textarea")
                             .into_element(cx),
                     ]
@@ -74,7 +75,7 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                 let snap = run_fret_root(bounds, |cx| {
                     let model: Model<String> = cx.app.models_mut().insert(String::new());
                     vec![
-                        fret_ui_shadcn::Textarea::new(model)
+                        shadcn::Textarea::new(model)
                             .a11y_label("Textarea")
                             .disabled(true)
                             .into_element(cx),
@@ -119,10 +120,10 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
 
                 let snap = run_fret_root(bounds, |cx| {
                     let model: Model<String> = cx.app.models_mut().insert(String::new());
-                    let textarea = fret_ui_shadcn::Textarea::new(model)
+                    let textarea = shadcn::Textarea::new(model)
                         .a11y_label("Textarea")
                         .into_element(cx);
-                    let button = fret_ui_shadcn::Button::new("Send message")
+                    let button = shadcn::Button::new("Send message")
                         .refine_layout(LayoutRefinement::default().w_full())
                         .into_element(cx);
 
@@ -211,8 +212,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
 
                 let snap = run_fret_root(bounds, |cx| {
                     let model: Model<String> = cx.app.models_mut().insert(String::new());
-                    let label = fret_ui_shadcn::Label::new("Your message").into_element(cx);
-                    let textarea = fret_ui_shadcn::Textarea::new(model)
+                    let label = shadcn::Label::new("Your message").into_element(cx);
+                    let textarea = shadcn::Textarea::new(model)
                         .a11y_label("Textarea")
                         .into_element(cx);
 
@@ -274,8 +275,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                 let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
                     let theme = Theme::global(&*cx.app).clone();
                     let model: Model<String> = cx.app.models_mut().insert(String::new());
-                    let label = fret_ui_shadcn::Label::new("Your Message").into_element(cx);
-                    let textarea = fret_ui_shadcn::Textarea::new(model)
+                    let label = shadcn::Label::new("Your Message").into_element(cx);
+                    let textarea = shadcn::Textarea::new(model)
                         .a11y_label("Textarea")
                         .into_element(cx);
                     let helper = ui::text("Your message will be copied to the support team.")

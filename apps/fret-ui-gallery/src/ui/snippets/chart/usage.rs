@@ -62,7 +62,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx);
 
             let theme = cx.theme().snapshot();
-            let props = fret_ui_shadcn::decl_style::container_props(
+            let props = decl_style::container_props(
                 &theme,
                 ChromeRefinement::default().p(Space::N4),
                 LayoutRefinement::default().w_full().h_full(),

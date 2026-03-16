@@ -117,9 +117,14 @@ fn main() -> fret::Result<()> {
 }
 ```
 
-If app code needs explicit style/token nouns or icon IDs beyond the default lane, import them from
-`fret::style::{...}` and `fret::icons::IconId` instead of expecting them from
+If app code needs explicit style/token nouns or icon helpers/IDs beyond the default lane, import
+them from `fret::style::{...}` and `fret::icons::{icon, IconId}` instead of expecting them from
 `fret::app::prelude::*`.
+If app code needs explicit `ThemeSnapshot`, `LocalState`, or `CommandId` nouns for helper
+signatures / command registration, import them intentionally from `fret::style::ThemeSnapshot`,
+`fret::app::LocalState`, and `fret::actions::CommandId`.
+If app code needs explicit semantic-role nouns, import them from
+`fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story,
 import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
 `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`.
@@ -128,17 +133,42 @@ Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
 For logical assets, use `fret::assets::{...}` and prefer `AssetBundleId::app(...)` /
 `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` / `register_bundle_entries(...)`;
 keep `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches.
+For startup that needs one explicit development-vs-packaged decision, use
+`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`
+plus
+`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)`: keep native/package-dev
+inputs on `development_dir(...)` / `development_manifest(...)`, and keep packaged/web/mobile-ready
+bytes on `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
+`packaged_embedded_entries(...)`. Generated modules still fit this packaged lane because they
+already expose `ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`, and `mount(builder)`. Keep
+`FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` as the lower-level
+native/package-dev convenience lane when you only need one lane or custom ordering.
 On native/package-dev lanes, `fret::assets::register_file_bundle_dir(...)` is the convenience
 lane that scans one directory into one logical bundle without pushing repo-relative paths into
 widget code. `fret::assets::register_file_manifest(...)` is the explicit manifest-artifact lane
 when tooling already emits a reviewable/packageable mapping.
-On the app-facing builder path, prefer `FretApp::asset_dir(...)` /
-`UiAppBuilder::with_asset_dir(...)` for the generated-manifest convenience lane, or
-`FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` when you already have an
-explicit manifest file. On the host path, `set_primary_resolver(...)`,
+When native/dev-only UI helpers still need file reload ergonomics, keep app/widget code on
+logical bundle locators and let
+`fret-ui-assets::ui::ImageSourceElementContextExt::use_image_source_state_from_asset_request(...)`
+or `fret-ui-assets::ui::SvgAssetElementContextExt::svg_source_state_from_asset_request(...)`
+consume the resolver's bundle/reference bridge instead of introducing direct raw file-path widget
+loading. Keep
+`resolve_image_source_from_host_locator(...)` / `resolve_svg_file_source_from_host_locator(...)`
+as the lower-level compatibility seam when a non-UI integration truly needs the bridged source or
+native file handoff object itself.
+On the app-facing builder path, prefer `FretApp::asset_startup(...)` /
+`UiAppBuilder::with_asset_startup(...)` when startup needs one explicit
+`AssetStartupMode` switch between development and packaged lanes. Keep
+`FretApp::asset_dir(...)` / `UiAppBuilder::with_asset_dir(...)` and
+`FretApp::asset_manifest(...)` / `UiAppBuilder::with_asset_manifest(...)` as the lower-level
+ordered builder seams when you intentionally need custom layering. On the host path,
+`set_primary_resolver(...)`,
 `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`
 participate in one ordered resolver stack, so later registrations override earlier ones for the
 same logical locator.
+The same ordered builder surface now also includes compile-time/static entries through
+`FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
+`UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
 
 ## Features
 
@@ -180,15 +210,22 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - Advanced low-level interop driver path (compat seam, non-default): `fret::advanced::interop::run_native_with_compat_driver(...)`
 - Advanced low-level runtime/render/viewport seams: `fret::advanced::{kernel::*, interop::*}`
 
+If advanced/manual-assembly code also wants the ordinary component authoring vocabulary
+(`ui::*`, `.ui()`, `.into_element(...)`, model/overlay helper traits), import it explicitly with
+`use fret::component::prelude::*;`. `fret::advanced::prelude::*` intentionally stays on the
+advanced lane and no longer forwards the component prelude implicitly.
+
 ## What remains first-class on `fret`
 
 Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
 following seams first-class:
 
 - `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
+- `FretApp::asset_startup(...)` plus `fret::assets::{AssetStartupPlan, AssetStartupMode}`
 - `FretApp::asset_dir(...)` for native/package-dev generated bundle manifests
 - `FretApp::asset_manifest(...)` for native/package-dev logical bundle manifests
-- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_dir(...), with_asset_manifest(...)}`
+- `FretApp::{asset_entries(...), bundle_asset_entries(...), embedded_asset_entries(...)}`
+- `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_startup(...), with_asset_dir(...), with_asset_manifest(...), with_bundle_asset_entries(...), with_embedded_asset_entries(...)}`
 - `fret::advanced::FretAppAdvancedExt::install(...)`
 - `fret::advanced::UiAppBuilderAdvancedExt::{install(...), on_gpu_ready(...), install_custom_effects(...)}`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
@@ -220,6 +257,13 @@ implementation accept plain function items without explicit casts, `InstallIntoA
 implementation. Treat that as an internal accommodation: keep `.setup(...)` on named installer
 functions, tuples, or named bundles, and reserve `.setup_with(...)` for one-off inline closures or
 runtime-captured values.
+The same rule should apply to shipped resources: app-owned bytes normally live under
+`AssetBundleId::app(...)`, ecosystem/package-owned shipped bytes normally live under
+`AssetBundleId::package(...)`, and reusable crates should publish installer or mount helpers rather
+than asking apps to mirror internal bundle registrations. Icon packs are still installed through
+explicit `crate::app::install` seams backed by the global `IconRegistry`; reusable components
+should prefer semantic `IconId` / `ui.*` ids instead of baking one vendor pack into their public
+contract unless that dependency is intentionally explicit.
 The same explicit-lane rule applies to optional state helpers: keep grouped `cx.data().selector(...)`
 and `cx.data().query*` as the default app story, and import `DepsBuilder` / `QueryKey`-style nouns
 from `fret::selector::*` / `fret::query::*` only when app code actually needs to spell them.

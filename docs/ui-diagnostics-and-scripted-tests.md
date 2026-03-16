@@ -960,6 +960,9 @@ Recent additions:
 - `ime_cursor_area_min_size` (assert the IME cursor area has a meaningful size; catches “zero rect” bugs)
 - `wait_shortcut_routing_trace` (assert keyboard routing outcomes like `reserved_for_ime`)
 - `wait_overlay_placement_trace` (assert overlay placement decisions by geometry trace rather than screenshots)
+- `asset_reload_epoch_ge` (assert the shared runtime asset reload epoch has reached a minimum value)
+- `asset_reload_configured_backend_is` / `asset_reload_active_backend_is` (assert configured vs effective auto-reload backend such as `native_watcher` or `poll_metadata`)
+- `asset_reload_fallback_reason_is` (assert why the active backend degraded, for example `watcher_install_failed`)
 
 Notes:
 

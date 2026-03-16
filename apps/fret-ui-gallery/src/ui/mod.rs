@@ -60,6 +60,7 @@ pub(in crate::ui) use time::Date;
 use crate::spec::*;
 
 mod content;
+mod diagnostics;
 mod doc_layout;
 mod models;
 mod nav;

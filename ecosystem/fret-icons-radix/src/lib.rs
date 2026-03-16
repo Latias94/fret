@@ -113,6 +113,7 @@ mod tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
+    const README: &str = include_str!("../README.md");
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -130,5 +131,17 @@ mod tests {
         assert!(APP_RS.contains("pub fn install(app: &mut fret_app::App)"));
         assert!(!APP_RS.contains("install_with_ui_services"));
         assert!(ADVANCED_RS.contains("pub fn install_with_ui_services("));
+    }
+
+    #[test]
+    fn readme_keeps_app_installation_and_alias_policy_explicit() {
+        assert!(README.contains("`register_vendor_icons(...)` / `register_icons(...)`"));
+        assert!(README.contains("`fret_icons_radix::app::install(...)`"));
+        assert!(README.contains("`fret_icons_radix::advanced::install_with_ui_services(...)`"));
+        assert!(README.contains("semantic `IconId` / `ui.*` ids"));
+        assert!(README.contains("first-writer-wins (`alias_if_missing(...)`)"));
+        assert!(README.contains("without mutating `radix.*` vendor ids"));
+        assert!(README.contains("one installer/bundle surface"));
+        assert!(README.contains("`app-integration`"));
     }
 }

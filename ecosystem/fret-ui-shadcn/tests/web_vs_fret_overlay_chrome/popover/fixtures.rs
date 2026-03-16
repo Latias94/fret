@@ -1,4 +1,5 @@
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -16,10 +17,10 @@ impl WebThemeName {
         }
     }
 
-    fn scheme(&self) -> fret_ui_shadcn::shadcn_themes::ShadcnColorScheme {
+    fn scheme(&self) -> shadcn::themes::ShadcnColorScheme {
         match self {
-            WebThemeName::Light => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            WebThemeName::Dark => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            WebThemeName::Light => shadcn::themes::ShadcnColorScheme::Light,
+            WebThemeName::Dark => shadcn::themes::ShadcnColorScheme::Dark,
         }
     }
 }
@@ -45,7 +46,7 @@ fn build_popover_surface_colors_demo(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
+    use shadcn::{Button, ButtonVariant, Popover, PopoverContent};
 
     Popover::from_open(open.clone()).into_element_with(
         cx,
@@ -67,10 +68,10 @@ fn build_popover_surface_colors_demo(
 }
 
 fn build_popover_simple(cx: &mut ElementContext<'_, App>, open: &Model<bool>) -> AnyElement {
-    fret_ui_shadcn::Popover::from_open(open.clone()).into_element_with(
+    shadcn::Popover::from_open(open.clone()).into_element_with(
         cx,
-        |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
-        |cx| fret_ui_shadcn::PopoverContent::new(Vec::new()).into_element(cx),
+        |cx| shadcn::Button::new("Open").into_element(cx),
+        |cx| shadcn::PopoverContent::new(Vec::new()).into_element(cx),
     )
 }
 

@@ -12,9 +12,10 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
+use fret_ui_shadcn::facade::{
+    Badge, Collapsible, CollapsibleContent, CollapsibleTrigger, TabsContent, TabsList, TabsRoot,
+};
 use fret_ui_shadcn::raw::tabs::{TabsListHeightOverride, TabsListVariant, TabsStyle};
-use fret_ui_shadcn::{Badge, Collapsible, CollapsibleContent, CollapsibleTrigger};
-use fret_ui_shadcn::{TabsContent, TabsList, TabsRoot};
 
 use crate::elements::ToolStatus;
 

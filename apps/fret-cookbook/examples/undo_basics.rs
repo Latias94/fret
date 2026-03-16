@@ -1,4 +1,6 @@
+use fret::actions::CommandId;
 use fret::app::prelude::*;
+use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Space, Theme};
 use fret_app::Effect;
 use fret_app::{
@@ -326,7 +328,7 @@ impl View for UndoBasicsView {
                         ),
                     ]
                 }),
-                shadcn::card_content(|cx| ui::children![cx; content]),
+                shadcn::card_content(|cx| ui::single(cx, content)),
             ]
         })
         .ui()

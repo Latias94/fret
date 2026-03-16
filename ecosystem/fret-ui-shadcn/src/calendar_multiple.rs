@@ -437,7 +437,7 @@ fn calendar_multi_month_view<H: UiHost>(
         let max_start = month_bounds.map(|b| max_start_month(b, number_of_months));
         let prev_enabled = nav_enabled && min_start.map_or(true, |min| month_lt(min, start_month));
         let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
-        let direction = crate::use_direction(cx, None);
+        let direction = crate::direction::use_direction(cx, None);
         let prev_icon = crate::rtl::chevron_inline_start(direction);
         let next_icon = crate::rtl::chevron_inline_end(direction);
 

@@ -1,5 +1,6 @@
 use super::*;
 use fret_ui::ThemeNamedColorKey;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_layout_badge_demo_heights() {
@@ -19,15 +20,15 @@ fn web_vs_fret_layout_badge_demo_heights() {
     );
 
     let (ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
-        let badge = fret_ui_shadcn::Badge::new("Badge").into_element(cx);
-        let secondary = fret_ui_shadcn::Badge::new("Secondary")
-            .variant(fret_ui_shadcn::BadgeVariant::Secondary)
+        let badge = shadcn::Badge::new("Badge").into_element(cx);
+        let secondary = shadcn::Badge::new("Secondary")
+            .variant(shadcn::BadgeVariant::Secondary)
             .into_element(cx);
-        let destructive = fret_ui_shadcn::Badge::new("Destructive")
-            .variant(fret_ui_shadcn::BadgeVariant::Destructive)
+        let destructive = shadcn::Badge::new("Destructive")
+            .variant(shadcn::BadgeVariant::Destructive)
             .into_element(cx);
-        let outline = fret_ui_shadcn::Badge::new("Outline")
-            .variant(fret_ui_shadcn::BadgeVariant::Outline)
+        let outline = shadcn::Badge::new("Outline")
+            .variant(shadcn::BadgeVariant::Outline)
             .into_element(cx);
 
         vec![
@@ -143,8 +144,8 @@ fn fret_badge_destructive_label_color_is_white_like_shadcn() {
     let mut services = StyleAwareServices::default();
     let _snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let theme = Theme::global(&*cx.app).clone();
-        let badge = fret_ui_shadcn::Badge::new("Destructive")
-            .variant(fret_ui_shadcn::BadgeVariant::Destructive)
+        let badge = shadcn::Badge::new("Destructive")
+            .variant(shadcn::BadgeVariant::Destructive)
             .into_element(cx);
 
         let expected = theme.named_color(ThemeNamedColorKey::White);

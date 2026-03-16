@@ -22,6 +22,7 @@
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-launch/README.md`.
 
+pub mod assets;
 #[cfg(all(feature = "dev-state", not(target_arch = "wasm32")))]
 pub mod dev_state;
 mod error;

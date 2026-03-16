@@ -41,10 +41,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::pagination_item(
-                        shadcn::PaginationPrevious::new().on_click(CMD_APP_OPEN),
+                        shadcn::PaginationPrevious::new().action(CMD_APP_OPEN),
                     ),
                     shadcn::pagination_item(
-                        shadcn::PaginationNext::new().on_click(CMD_APP_SAVE),
+                        shadcn::PaginationNext::new().action(CMD_APP_SAVE),
                     ),
                 ]
             }),

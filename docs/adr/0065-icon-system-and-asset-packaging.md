@@ -81,6 +81,13 @@ The registry supports layering (app overrides component defaults) and safe fallb
 
 - If an icon is missing, components must render a deterministic fallback (e.g. a “missing icon” glyph) rather than
   failing silently.
+- Vendor icon IDs remain explicit namespaces (for example `lucide.*`, `radix.*`) and do not conflict with each other.
+- Semantic aliases (for example `ui.search`) should be registered with
+  `IconRegistry::alias_if_missing(...)`, which makes the first successfully registered provider the
+  stable default.
+- App/bootstrap code may intentionally override a semantic alias afterwards with
+  `IconRegistry::alias(...)` or `IconRegistry::register(...)`; this is the explicit escape hatch for
+  product-specific icon choices.
 
 ### 3) Asset packaging: icon sets are separate crates (and/or features)
 
@@ -105,6 +112,30 @@ Applications choose dependencies (or features) and call `register_icons` during 
 Icon packs may also register a vendor-prefixed `IconId` namespace that mirrors upstream naming (e.g. `lucide.x`,
 `radix.gear`) to make it easy for application code to use upstream icon names directly. Core component code should
 continue to rely on semantic IDs (e.g. `ui.close`) for portability.
+
+App-facing convenience wrappers may exist above this low-level registration seam (for example
+`crate::app::install(...)` helpers or named `InstallIntoApp` bundles). Reusable crates should keep
+those wrappers explicit and grep-friendly rather than requiring app authors to manually replay
+internal icon/asset registration steps.
+
+### 3.5) Relationship to the general asset contract
+
+The framework currently uses a deliberate hybrid model:
+
+- icon semantics and vendor naming resolve through `IconRegistry`,
+- generic shipped bytes (images, SVG illustrations, fonts, JSON, etc.) resolve through the general
+  asset contract (`AssetBundleId`, `AssetLocator`, resolver layers, generated asset modules).
+
+Rules:
+
+- component code consumes `IconId`; it must not hard-code raw icon file paths or bundle keys,
+- reusable crates that ship non-icon bytes alongside icons should publish those bytes as
+  package-owned assets (`AssetBundleId::package(...)`) and expose a named installer/bundle on the
+  app surface instead of asking apps to reproduce the crate's internal mounts,
+- icon-pack crates remain free to vendor SVG bytes internally; those bytes are not a public
+  app-facing locator contract unless the crate explicitly chooses to publish them as package assets,
+- future unification between icon-pack bytes and the general asset contract is allowed, but it must
+  preserve the semantic/vendor `IconId` layer as the component-facing API.
 
 ### Rendering contract (components layer)
 
@@ -133,6 +164,10 @@ emit `SvgSource::Id` directly.
 
 - Icon usage in components/app code becomes stable and comparable to “frontend semantics-first” practices.
 - Icon sets become swappable without changing app/component call sites.
+- Multiple icon packs can coexist deterministically:
+  - vendor IDs stay namespaced,
+  - semantic `ui.*` aliases default to first-writer-wins unless app/bootstrap code explicitly
+    overrides them.
 - Renderer retains authority over SVG performance (atlas/page budgeting, caching keys, eviction policies).
 - Binary size is controlled by dependencies (and/or features), not by pulling in a huge default icon set.
 

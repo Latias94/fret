@@ -1136,7 +1136,7 @@ mod tests {
                                 .action(cmd.clone())
                                 .test_id("test.switch")
                                 .into_element(cx),
-                            crate::FieldLabel::new("Toggle via label")
+                            crate::field::FieldLabel::new("Toggle via label")
                                 .for_control("test.switch")
                                 .into_element(cx)
                                 .test_id("test.switch.label"),

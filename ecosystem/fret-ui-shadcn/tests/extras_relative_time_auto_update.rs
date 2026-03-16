@@ -125,12 +125,12 @@ fn relative_time_clock_auto_update_requests_animation_frames_and_is_controllable
 
     let zones = || {
         [
-            fret_ui_shadcn::extras::RelativeTimeClockZone::new("UTC", UtcOffset::UTC),
-            fret_ui_shadcn::extras::RelativeTimeClockZone::new(
+            fret_ui_shadcn::raw::extras::RelativeTimeClockZone::new("UTC", UtcOffset::UTC),
+            fret_ui_shadcn::raw::extras::RelativeTimeClockZone::new(
                 "PST",
                 UtcOffset::from_hms(-8, 0, 0).expect("PST offset"),
             ),
-            fret_ui_shadcn::extras::RelativeTimeClockZone::new(
+            fret_ui_shadcn::raw::extras::RelativeTimeClockZone::new(
                 "CET",
                 UtcOffset::from_hms(1, 0, 0).expect("CET offset"),
             ),
@@ -146,9 +146,9 @@ fn relative_time_clock_auto_update_requests_animation_frames_and_is_controllable
         FrameId(1),
         |cx| {
             vec![
-                fret_ui_shadcn::extras::RelativeTime::uncontrolled_clock(zones())
+                fret_ui_shadcn::raw::extras::RelativeTime::uncontrolled_clock(zones())
                     .default_time_utc(default_time)
-                    .tick(fret_ui_shadcn::extras::RelativeTimeTick::Second)
+                    .tick(fret_ui_shadcn::raw::extras::RelativeTimeTick::Second)
                     .into_element(cx),
             ]
         },
@@ -175,11 +175,11 @@ fn relative_time_clock_auto_update_requests_animation_frames_and_is_controllable
         FrameId(2),
         |cx| {
             vec![
-                fret_ui_shadcn::extras::RelativeTime::controlled_clock(
+                fret_ui_shadcn::raw::extras::RelativeTime::controlled_clock(
                     controlled_time.clone(),
                     zones(),
                 )
-                .tick(fret_ui_shadcn::extras::RelativeTimeTick::Second)
+                .tick(fret_ui_shadcn::raw::extras::RelativeTimeTick::Second)
                 .into_element(cx),
             ]
         },
@@ -204,11 +204,11 @@ fn relative_time_clock_auto_update_requests_animation_frames_and_is_controllable
         FrameId(3),
         |cx| {
             vec![
-                fret_ui_shadcn::extras::RelativeTime::controlled_clock(
+                fret_ui_shadcn::raw::extras::RelativeTime::controlled_clock(
                     controlled_time.clone(),
                     zones(),
                 )
-                .tick(fret_ui_shadcn::extras::RelativeTimeTick::Second)
+                .tick(fret_ui_shadcn::raw::extras::RelativeTimeTick::Second)
                 .into_element(cx),
             ]
         },

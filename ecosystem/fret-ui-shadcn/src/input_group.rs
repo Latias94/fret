@@ -519,7 +519,7 @@ impl InputGroup {
             |cx| {
                 let has_a11y_label = a11y_label.is_some();
                 let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
-                let dir = crate::use_direction(cx, None);
+                let dir = crate::direction::use_direction(cx, None);
                 let build_inline_addon = |cx: &mut ElementContext<'_, H>,
                                           children: Vec<AnyElement>,
                                           is_start: bool,
@@ -2607,7 +2607,7 @@ mod tests {
 
                 let model: Model<String> = cx.app.models_mut().insert(String::new());
                 let el = InputGroup::new(model)
-                    .leading([crate::Spinner::new().into_element(cx)])
+                    .leading([crate::spinner::Spinner::new().into_element(cx)])
                     .into_element(cx);
 
                 assert!(

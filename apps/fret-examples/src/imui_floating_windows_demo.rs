@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*};
+use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_imui::prelude::UiWriter;
 use fret_ui_kit::on_activate_notify;

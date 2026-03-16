@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{cell::Cell, rc::Rc};
 
-use crate::LayoutDirection;
+use crate::direction::LayoutDirection;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Edges, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextWrap};
 use fret_runtime::Model;
@@ -1591,7 +1591,9 @@ impl PopoverDescription {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant};
+    use crate::avatar::{Avatar, AvatarFallback};
+    use crate::button::{Button, ButtonSize, ButtonVariant};
+    use crate::card::Card;
     use std::cell::Cell;
     use std::rc::Rc;
     use std::sync::Mutex;
@@ -1625,10 +1627,7 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(
-                cx,
-                PopoverTrigger::build(crate::Card::build(|_cx, _out| {})),
-            );
+            out.push_ui(cx, PopoverTrigger::build(Card::build(|_cx, _out| {})));
 
             assert_eq!(out.len(), 1);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
@@ -1680,7 +1679,7 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let mut out = Vec::new();
-            out.push_ui(cx, PopoverAnchor::build(crate::Card::build(|_cx, _out| {})));
+            out.push_ui(cx, PopoverAnchor::build(Card::build(|_cx, _out| {})));
 
             assert_eq!(out.len(), 1);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
@@ -1838,12 +1837,8 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let content = PopoverContent::new(vec![ui::raw_text("tip").into_element(cx)]);
-            let popover = Popover::new(
-                cx,
-                PopoverTrigger::build(crate::Button::new("trigger")),
-                content,
-            )
-            .into_element(cx);
+            let popover = Popover::new(cx, PopoverTrigger::build(Button::new("trigger")), content)
+                .into_element(cx);
 
             assert_eq!(popover.id, popover.id);
         });
@@ -2083,13 +2078,14 @@ mod tests {
                         cx,
                         |_cx| trigger,
                         move |cx| {
-                            let input = crate::CommandInput::new(query_for_content.clone())
-                                .input_test_id("popover-command-input")
-                                .into_element(cx);
-                            let list = crate::CommandList::new(vec![
-                                crate::CommandItem::new("Default Microphone (1234:abcd)")
+                            let input =
+                                crate::command::CommandInput::new(query_for_content.clone())
+                                    .input_test_id("popover-command-input")
+                                    .into_element(cx);
+                            let list = crate::command::CommandList::new(vec![
+                                crate::command::CommandItem::new("Default Microphone (1234:abcd)")
                                     .test_id("popover-command-item-default"),
-                                crate::CommandItem::new("USB Audio Device (5678:ef01)")
+                                crate::command::CommandItem::new("USB Audio Device (5678:ef01)")
                                     .test_id("popover-command-item-usb"),
                             ])
                             .query_model(query_for_content.clone())

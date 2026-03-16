@@ -1728,8 +1728,10 @@ dependencies = [
  "fret-runtime",
  "fret-selector",
  "fret-ui",
+ "fret-ui-ai",
  "fret-ui-editor",
  "fret-ui-kit",
+ "fret-ui-material3",
  "fret-ui-shadcn",
  "fret-workspace",
  "slotmap",
@@ -1792,6 +1794,7 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "fret-app",
+ "fret-assets",
  "fret-canvas",
  "fret-core",
  "fret-diag-protocol",
@@ -2210,6 +2213,7 @@ dependencies = [
 name = "fret-fonts"
 version = "0.1.0"
 dependencies = [
+ "fret-assets",
  "read-fonts",
 ]
 
@@ -2289,6 +2293,10 @@ dependencies = [
 [[package]]
 name = "fret-icons"
 version = "0.1.0"
+dependencies = [
+ "fret-icons-lucide",
+ "fret-icons-radix",
+]
 
 [[package]]
 name = "fret-icons-lucide"
@@ -2337,6 +2345,7 @@ dependencies = [
  "block2 0.6.2",
  "bytemuck",
  "fret-app",
+ "fret-assets",
  "fret-core",
  "fret-diag-protocol",
  "fret-fonts",
@@ -2353,6 +2362,7 @@ dependencies = [
  "image",
  "js-sys",
  "keyboard-types",
+ "notify",
  "objc",
  "objc2 0.6.3",
  "objc2-app-kit 0.3.2",
@@ -3066,6 +3076,15 @@ dependencies = [
  "fret-ui",
  "fret-vscode-theme",
  "serde_json",
+]
+
+[[package]]
+name = "fsevent-sys"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -4058,6 +4077,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "inotify"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd5b3eaf1a28b758ac0faa5a4254e8ab2705605496f1b1f3fbbc3988ad73d199"
+dependencies = [
+ "bitflags 2.10.0",
+ "inotify-sys",
+ "libc",
+]
+
+[[package]]
+name = "inotify-sys"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "intl-memoizer"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4202,6 +4241,26 @@ name = "khronos_api"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
+
+[[package]]
+name = "kqueue"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eac30106d7dce88daf4a3fcb4879ea939476d5074a9b7ddd0fb97fa4bed5596a"
+dependencies = [
+ "kqueue-sys",
+ "libc",
+]
+
+[[package]]
+name = "kqueue-sys"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed9625ffda8729b85e45cf04090035ac368927b8cebc34898e7c120f52e4838b"
+dependencies = [
+ "bitflags 1.3.2",
+ "libc",
+]
 
 [[package]]
 name = "kuchikiki"
@@ -4801,6 +4860,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mio"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a69bcab0ad47271a0234d9422b131806bf3968021e5dc9328caf2d4cd58557fc"
+dependencies = [
+ "libc",
+ "log",
+ "wasi 0.11.1+wasi-snapshot-preview1",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "moxcms"
 version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4926,6 +4997,33 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
+]
+
+[[package]]
+name = "notify"
+version = "8.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d3d07927151ff8575b7087f245456e549fea62edf0ec4e565a5ee50c8402bc3"
+dependencies = [
+ "bitflags 2.10.0",
+ "fsevent-sys",
+ "inotify",
+ "kqueue",
+ "libc",
+ "log",
+ "mio",
+ "notify-types",
+ "walkdir",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "notify-types"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42b8cfee0e339a0337359f3c88165702ac6e600dc01c0cc9579a92d62b08477a"
+dependencies = [
+ "bitflags 2.10.0",
 ]
 
 [[package]]
