@@ -86,6 +86,11 @@ impl UiTreeDebugSnapshotV1 {
                 .map(|service| service.diagnostics_snapshot())
                 .filter(|snapshot| snapshot.total_requests > 0)
                 .map(UiAssetLoadDiagnosticsSnapshotV1::from_runtime);
+            let asset_reload = UiAssetReloadDiagnosticsSnapshotV1::from_runtime(
+                fret_runtime::asset_reload_epoch(app),
+                fret_runtime::asset_reload_support(app),
+                fret_runtime::asset_reload_status(app),
+            );
             let font_environment = UiFontEnvironmentDiagnosticsSnapshotV1::from_runtime(
                 app.global::<fret_runtime::BundledFontBaselineSnapshot>(),
                 app.global::<fret_runtime::FontCatalog>(),
@@ -93,9 +98,10 @@ impl UiTreeDebugSnapshotV1 {
                     .map(|key| key.0),
                 app.global::<fret_runtime::SystemFontRescanState>().copied(),
             );
-            (asset_load.is_some() || font_environment.is_some()).then_some(
+            (asset_load.is_some() || asset_reload.is_some() || font_environment.is_some()).then_some(
                 UiResourceLoadingDiagnosticsSnapshotV1 {
                     asset_load,
+                    asset_reload,
                     font_environment,
                 },
             )

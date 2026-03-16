@@ -2839,6 +2839,14 @@ mod tests {
                         },
                     ],
                 }),
+                asset_reload: Some(UiAssetReloadDiagnosticsSnapshotV1 {
+                    epoch: Some(4),
+                    file_watch: true,
+                    configured_backend: Some("native_watcher".to_string()),
+                    active_backend: Some("poll_metadata".to_string()),
+                    fallback_reason: Some("watcher_install_failed".to_string()),
+                    fallback_message: Some("backend unavailable".to_string()),
+                }),
                 font_environment: Some(UiFontEnvironmentDiagnosticsSnapshotV1 {
                     bundled_baseline_source: "bundled_profile".to_string(),
                     bundled_profile_name: Some("default".to_string()),
@@ -2855,6 +2863,18 @@ mod tests {
             }),
             ..Default::default()
         };
+
+        let asset_reload = debug
+            .resource_loading
+            .as_ref()
+            .and_then(|resource_loading| resource_loading.asset_reload.as_ref())
+            .expect("asset reload diagnostics should be present in the resource loading snapshot");
+        assert_eq!(asset_reload.epoch, Some(4));
+        assert_eq!(asset_reload.active_backend.as_deref(), Some("poll_metadata"));
+        assert_eq!(
+            asset_reload.fallback_reason.as_deref(),
+            Some("watcher_install_failed")
+        );
 
         assert_eq!(
             eval_debug_snapshot_predicate(
