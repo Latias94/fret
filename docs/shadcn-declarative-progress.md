@@ -101,15 +101,21 @@ Cross-cutting interaction policies (toggle models, close overlays, selection wri
   `use fret::app::AppActivateExt as _;` import on
   `fret::app::AppActivateSurface` / `AppActivateExt`.
   Shadcn widgets that already expose native `.action(...)` / `.action_payload(...)` slots or a
-  widget-owned `.on_activate(...)` hook (`Badge`, `extras::{BannerAction, BannerClose, Ticker}`)
-  now stay on that native surface and are no longer part of the `AppActivateSurface` bridge list.
+  widget-owned `.on_activate(...)` hook (`Button`, `SidebarMenuButton`, `Badge`,
+  `extras::{BannerAction, BannerClose, Ticker}`) now stay on that native surface and are no
+  longer part of the `AppActivateSurface` bridge list.
   The first-party `badge/link.rs` example now overrides link launching through
   `Badge::on_activate(...)` instead of reopening the activation bridge just to keep diagnostics
   runs side-effect free.
   Extracted `UiCx` helper functions now get the same grouped action/data surface through
-  `UiCxActionsExt` / `UiCxDataExt`, and AI widgets such as `ConversationDownload`,
-  `PromptInputButton`, `WebPreviewNavigationButton`, and `ConfirmationAction` now stay on their
-  native `.action(...)` slots instead of extending the bridge table.
+  `UiCxActionsExt` / `UiCxDataExt`, and AI widgets such as `WorkflowControlsButton`,
+  `MessageAction`, `ArtifactAction`, `ArtifactClose`, `CheckpointTrigger`,
+  `ConversationDownload`, `PromptInputButton`, `WebPreviewNavigationButton`, and
+  `ConfirmationAction` now stay on their native `.action(...)` slots or widget-owned
+  `.on_activate(...)` hooks instead of extending the bridge table. First-party UI Gallery button
+  and sidebar snippets now also use `UiCxActionsExt` plus widget-owned `.on_activate(...)` for
+  local listeners instead of importing `AppActivateExt`. As of 2026-03-16, the first-party
+  default widget bridge table is intentionally empty.
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
 - Legacy runtime shortcuts on `PressableProps` / dismissible roots have been removed from `crates/fret-ui`.
   Use component-owned action hooks (`fret-ui-kit::declarative::action_hooks::ActionHooksExt`) instead.

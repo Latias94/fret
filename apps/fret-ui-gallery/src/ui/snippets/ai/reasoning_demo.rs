@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("reasoning_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
@@ -20,26 +20,26 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-start-streaming")
-        .listen({
+        .on_activate(cx.actions().listen({
             let streaming = streaming.clone();
             move |host, action_cx| {
                 let _ = host.models_mut().update(&streaming, |v| *v = true);
                 host.notify(action_cx);
             }
-        })
+        }))
         .into_element(cx);
 
     let stop = shadcn::Button::new("Stop streaming")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
         .test_id("ui-ai-reasoning-stop-streaming")
-        .listen({
+        .on_activate(cx.actions().listen({
             let streaming = streaming.clone();
             move |host, action_cx| {
                 let _ = host.models_mut().update(&streaming, |v| *v = false);
                 host.notify(action_cx);
             }
-        })
+        }))
         .into_element(cx);
 
     // Mirror the upstream docs pattern: consolidate multiple reasoning parts into one panel.

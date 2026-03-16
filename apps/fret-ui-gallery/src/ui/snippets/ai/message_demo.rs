@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("message_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
@@ -37,13 +37,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .tooltip("Copy message")
             .icon(fret_icons::ids::ui::COPY)
             .test_id("ui-ai-message-demo-assistant-action-copy")
-            .listen(set_action("assistant.copy"))
+            .on_activate(cx.actions().listen(set_action("assistant.copy")))
             .into_element(cx),
         ui_ai::MessageAction::new("Regenerate")
             .tooltip("Regenerate")
             .icon(fret_icons::ids::ui::LOADER)
             .test_id("ui-ai-message-demo-assistant-action-regenerate")
-            .listen(set_action("assistant.regenerate"))
+            .on_activate(cx.actions().listen(set_action("assistant.regenerate")))
             .into_element(cx),
     ])
     .justify(Justify::Start)
@@ -54,7 +54,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .tooltip("Edit message")
         .icon(fret_icons::ids::ui::FILE)
         .test_id("ui-ai-message-demo-user-action-edit")
-        .listen(set_action("user.edit"))
+        .on_activate(cx.actions().listen(set_action("user.edit")))
         .into_element(cx)])
     .justify(Justify::End)
     .test_id("ui-ai-message-demo-user-actions")

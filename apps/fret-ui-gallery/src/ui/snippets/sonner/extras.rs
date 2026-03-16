@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
 use crate::ui::snippets::sonner::{last_action_model, request};
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -26,7 +26,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let swipe = shadcn::Button::new("Swipe Dismiss Toast")
         .variant(shadcn::ButtonVariant::Outline)
-        .listen(move |host, action_cx| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             sonner.toast(
                 host,
                 action_cx.window,
@@ -40,7 +40,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 *v = Arc::<str>::from("sonner.extras.swipe_dismiss");
             });
             host.request_redraw(action_cx.window);
-        })
+        }))
         .test_id("ui-gallery-sonner-demo-show-swipe")
         .into_element(cx);
 

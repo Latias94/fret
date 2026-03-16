@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("transcript_torture.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
@@ -93,7 +93,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
                 shadcn::Button::new(format!("Append {append_batch} messages"))
                     .test_id("ui-gallery-ai-transcript-append")
-                    .listen(append_messages)
+                    .on_activate(cx.actions().listen(append_messages))
                     .into_element(cx),
             ]
         })

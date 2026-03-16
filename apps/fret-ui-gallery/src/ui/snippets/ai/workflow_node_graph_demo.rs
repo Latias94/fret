@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("workflow_node_graph_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
@@ -370,19 +370,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let controls = ui_ai::WorkflowControls::new([
         ui_ai::WorkflowControlsButton::new("Zoom in", IconId::new_static("lucide.plus"))
             .test_id("ui-ai-workflow-node-graph-demo-zoom-in")
-            .listen(zoom_in)
+            .on_activate(cx.actions().listen(zoom_in))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Zoom out", IconId::new_static("lucide.minus"))
             .test_id("ui-ai-workflow-node-graph-demo-zoom-out")
-            .listen(zoom_out)
+            .on_activate(cx.actions().listen(zoom_out))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Fit view", IconId::new_static("lucide.maximize-2"))
             .test_id("ui-ai-workflow-node-graph-demo-fit-view")
-            .listen(fit_view)
+            .on_activate(cx.actions().listen(fit_view))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Reset view", IconId::new_static("lucide.refresh-ccw"))
             .test_id("ui-ai-workflow-node-graph-demo-reset-view")
-            .listen(reset_view)
+            .on_activate(cx.actions().listen(reset_view))
             .into_element(cx),
     ])
     .test_id("ui-ai-workflow-node-graph-demo-controls")

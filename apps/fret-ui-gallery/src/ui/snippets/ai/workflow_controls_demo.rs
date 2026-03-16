@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("workflow_controls_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -24,7 +24,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let controls = ui_ai::WorkflowControls::new([
         ui_ai::WorkflowControlsButton::new("Zoom in", fret_icons::ids::ui::PLUS)
             .test_id("ui-ai-workflow-controls-demo-zoom-in")
-            .listen({
+            .on_activate(cx.actions().listen({
                 let clicks_model = clicks_model.clone();
                 move |host, acx| {
                     let _ = host
@@ -32,11 +32,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .update(&clicks_model, |v| *v = v.saturating_add(1));
                     host.request_redraw(acx.window);
                 }
-            })
+            }))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Zoom out", fret_icons::ids::ui::MINUS)
             .test_id("ui-ai-workflow-controls-demo-zoom-out")
-            .listen({
+            .on_activate(cx.actions().listen({
                 let clicks_model = clicks_model.clone();
                 move |host, acx| {
                     let _ = host
@@ -44,11 +44,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .update(&clicks_model, |v| *v = v.saturating_add(1));
                     host.request_redraw(acx.window);
                 }
-            })
+            }))
             .into_element(cx),
         ui_ai::WorkflowControlsButton::new("Fit", fret_icons::ids::ui::EYE)
             .test_id("ui-ai-workflow-controls-demo-fit")
-            .listen({
+            .on_activate(cx.actions().listen({
                 let clicks_model = clicks_model.clone();
                 move |host, acx| {
                     let _ = host
@@ -56,7 +56,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .update(&clicks_model, |v| *v = v.saturating_add(1));
                     host.request_redraw(acx.window);
                 }
-            })
+            }))
             .into_element(cx),
     ])
     .test_id("ui-ai-workflow-controls-demo-controls")

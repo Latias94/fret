@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
@@ -36,12 +36,12 @@ fn menu_button(
         .icon(fret_icons::IconId::new_static(icon))
         .active(is_active)
         .collapsed(collapsed)
-        .listen(move |host, action_cx| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&selected_for_activate, |v| *v = value_for_activate.clone());
             host.request_redraw(action_cx.window);
-        })
+        }))
         .test_id(test_id)
 }
 

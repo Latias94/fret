@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("checkpoint_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
@@ -115,7 +115,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .tooltip(checkpoint.tooltip)
                             .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
                             .test_id("ui-ai-checkpoint-trigger")
-                            .listen(restore_to_checkpoint.clone())
+                            .on_activate(cx.actions().listen(restore_to_checkpoint.clone()))
                             .into_element(cx),
                     ])
                     .test_id("ui-ai-checkpoint-row")
@@ -160,7 +160,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-ai-checkpoint-reset")
-                .listen(reset_demo.clone())
+                .on_activate(cx.actions().listen(reset_demo.clone()))
                 .into_element(cx),
         ]
     })

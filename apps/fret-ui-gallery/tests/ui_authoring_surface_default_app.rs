@@ -130,7 +130,7 @@ fn assert_material3_snippet_prefers_copyable_root(
     }
 }
 
-fn assert_selected_activation_snippets_prefer_app_activate_listen(
+fn assert_selected_snippets_prefer_grouped_uicx_listeners(
     relative_path: &str,
     required_markers: &[&str],
     forbidden_markers: &[&str],
@@ -143,7 +143,7 @@ fn assert_selected_activation_snippets_prefer_app_activate_listen(
         let marker = marker.split_whitespace().collect::<String>();
         assert!(
             normalized.contains(&marker),
-            "{} is missing app-activate marker `{}`",
+            "{} is missing grouped UiCx listener marker `{}`",
             path.display(),
             marker
         );
@@ -153,7 +153,7 @@ fn assert_selected_activation_snippets_prefer_app_activate_listen(
         let marker = marker.split_whitespace().collect::<String>();
         assert!(
             !normalized.contains(&marker),
-            "{} reintroduced raw activation marker `{}`",
+            "{} reintroduced forbidden activation import marker `{}`",
             path.display(),
             marker
         );
@@ -266,19 +266,12 @@ fn ui_gallery_diagnostics_raw_render_roots_are_explicitly_documented() {
 }
 
 #[test]
-fn selected_activation_snippets_prefer_app_activate_listen() {
+fn selected_button_and_sidebar_snippets_prefer_grouped_uicx_listeners() {
     for relative_path in [
         "src/ui/snippets/ai/chat_demo.rs",
-        "src/ui/snippets/ai/checkpoint_demo.rs",
-        "src/ui/snippets/ai/artifact_demo.rs",
-        "src/ui/snippets/ai/artifact_code_display.rs",
-        "src/ui/snippets/ai/message_usage.rs",
         "src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
         "src/ui/snippets/ai/reasoning_demo.rs",
         "src/ui/snippets/ai/transcript_torture.rs",
-        "src/ui/snippets/ai/workflow_controls_demo.rs",
-        "src/ui/snippets/ai/workflow_node_graph_demo.rs",
-        "src/ui/snippets/ai/message_demo.rs",
         "src/ui/snippets/ai/persona_demo.rs",
         "src/ui/snippets/ai/task_demo.rs",
         "src/ui/snippets/drawer/demo.rs",
@@ -295,10 +288,95 @@ fn selected_activation_snippets_prefer_app_activate_listen() {
         "src/ui/snippets/sonner/extras.rs",
         "src/ui/snippets/sonner/position.rs",
     ] {
-        assert_selected_activation_snippets_prefer_app_activate_listen(
+        assert_selected_snippets_prefer_grouped_uicx_listeners(
             relative_path,
-            &["use fret::app::AppActivateExt as _;", ".listen("],
-            &[".on_activate("],
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                ".on_activate(cx.actions().listen(",
+            ],
+            &["use fret::app::AppActivateExt as _;"],
+        );
+    }
+}
+
+#[test]
+fn selected_ai_snippets_prefer_grouped_uicx_listeners_when_widgets_have_native_hook_slots() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/ai/workflow_controls_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::WorkflowControlsButton::new(\"Zoom in\", fret_icons::ids::ui::PLUS)",
+                ".on_activate(cx.actions().listen(",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/workflow_node_graph_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::WorkflowControlsButton::new(\"Zoom in\", IconId::new_static(\"lucide.plus\"))",
+                ".on_activate(cx.actions().listen(zoom_in))",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/message_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::MessageAction::new(\"Copy\")",
+                ".on_activate(cx.actions().listen(set_action(\"assistant.copy\")))",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/message_usage.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::MessageAction::new(\"Retry\")",
+                ".on_activate(cx.actions().listen(set_action(\"assistant.retry\")))",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/artifact_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::ArtifactClose::new()",
+                ".on_activate(cx.actions().listen(",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/artifact_code_display.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::ArtifactAction::new()",
+                ".on_activate(cx.actions().listen(status_action(",
+            ][..],
+        ),
+        (
+            "src/ui/snippets/ai/checkpoint_demo.rs",
+            &[
+                "use fret::app::UiCxActionsExt as _;",
+                "ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])",
+                ".on_activate(cx.actions().listen(restore_to_checkpoint.clone()))",
+            ][..],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing grouped UiCx listener marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        assert!(
+            !normalized.contains("usefret::app::AppActivateExtas_;"),
+            "{} should no longer import AppActivateExt once the widget exposes a native hook surface",
+            path.display()
         );
     }
 }
@@ -6898,11 +6976,11 @@ fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/demo.rs",
         &[
-            "fn goal_adjust_button<H: UiHost>(goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn goal_adjust_button(cx: &mut UiCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> shadcn::Button",
             "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn goal_adjust_button<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> AnyElement",
+            "fn goal_adjust_button(cx: &mut UiCx<'_>, goal: Model<i32>, adjustment: i32, icon: &'static str, a11y_label: &'static str, disabled: bool, test_id: &'static str,) -> AnyElement",
             "fn goal_chart<H: UiHost>(cx: &mut ElementContext<'_, H>, goal: i32) -> AnyElement",
         ],
     );
@@ -7168,10 +7246,10 @@ fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn menu_button<H: UiHost>(cx: &mut ElementContext<'_, H>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> impl IntoUiElement<H> + use<H>",
+                "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> shadcn::SidebarMenuButton",
             ],
             &[
-                "fn menu_button<H: UiHost>(cx: &mut ElementContext<'_, H>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
+                "fn menu_button(cx: &mut UiCx<'_>, selected_model: Model<Arc<str>>, active_value: &Arc<str>, value: &'static str, label: &'static str, icon: &'static str, test_id: Arc<str>,) -> AnyElement",
             ],
         );
     }

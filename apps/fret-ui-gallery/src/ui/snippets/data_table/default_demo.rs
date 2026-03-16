@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("default_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::Model;
@@ -62,7 +62,7 @@ fn footer(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!prev_enabled)
-                .listen({
+                .on_activate(cx.actions().listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |table_state| {
@@ -70,14 +70,14 @@ fn footer(
                                 table_state.pagination.page_index.saturating_sub(1);
                         });
                     }
-                })
+                }))
                 .test_id("ui-gallery-data-table-default-prev")
                 .into_element(cx),
             shadcn::Button::new("Next")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!next_enabled)
-                .listen({
+                .on_activate(cx.actions().listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |table_state| {
@@ -85,7 +85,7 @@ fn footer(
                                 table_state.pagination.page_index.saturating_add(1);
                         });
                     }
-                })
+                }))
                 .test_id("ui-gallery-data-table-default-next")
                 .into_element(cx),
         ]

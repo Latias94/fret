@@ -83,7 +83,8 @@ Closeout note on 2026-03-16:
   - reduce `fret-ui-shadcn` discovery pressure to one taught lane,
   - keep the `fret` root from reading like a second prelude,
   - hand the remaining density/ceremony reductions to the action-first and conversion follow-ons,
-  - and keep `AppActivateExt` on a shrinking bridge-only trajectory.
+  - and keep `AppActivateExt` on a shrinking bridge-only trajectory, now represented by an empty
+    first-party default widget bridge table plus source-policy gates.
 - `fret-ui-shadcn` discovery-lane closure is now also code-complete at the crate surface level:
   component-family root modules are crate-private, `raw::*` is the explicit wrapper lane, and the
   first-party shadcn/gallery source-policy gates now pass against that posture.
@@ -144,16 +145,20 @@ reopening this one.
    as bridge-free closure when a widget already exposes that hook directly; the first-party
    `badge/link.rs` example now stays on `Badge::on_activate(...)` rather than reopening
    `AppActivateExt` for a diagnostics-only override.
-   Immediate residue shortlist before item 3:
-   - `WorkflowControlsButton`
-   - `MessageAction`
-   - `ArtifactAction`
-   - `ArtifactClose`
-   - `CheckpointTrigger`
+   2026-03-16 AI residue follow-up: `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`,
+   `ArtifactClose`, and `CheckpointTrigger` also moved off the bridge table; first-party snippets
+   now stay on `UiCxActionsExt` plus widget-owned `.on_activate(...)` for those cases.
+   2026-03-16 button/sidebar follow-up: `shadcn::Button` and `shadcn::SidebarMenuButton` also
+   moved off the bridge table, `SidebarMenuButton` gained native `.action_payload(...)`, and the
+   remaining first-party listener snippets now stay on `UiCxActionsExt` plus widget-owned
+   `.on_activate(...)`.
+   Closure note: the first-party default widget bridge table is now intentionally empty, so item 2
+   is a maintenance gate against regression rather than the next active closeout batch.
    Revalidation rule: each shrink batch keeps
    `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
    green alongside the narrower `fret` surface tests.
-3. Resume ecosystem integration-trait budgeting only after items 1-2 are stable.
+3. Resume ecosystem integration-trait budgeting once item 1 is stable, while keeping item 2 as a
+   standing gate.
    Exit criteria: install/router/query/docking/catalog trait seams are reviewed against the final
    `fret` / `fret-ui-shadcn` lane story instead of an interim pre-closeout discovery posture.
    Start gate: do not begin this audit while the canonical trio/templates/docs still need default

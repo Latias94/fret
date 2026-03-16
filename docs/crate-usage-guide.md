@@ -139,17 +139,19 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`; the explicit `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, prefer `cx.actions().action(act::Save)`, `cx.actions().action_payload(act::Remove, payload)`, and `cx.actions().listen(...)`.
 
-`fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they only cover
-activation-only widgets that expose the standard `OnActivate` slot and still lack a tighter
+`fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they cover
+activation-only widgets that expose the standard `OnActivate` slot but still lack a tighter
 component-owned authoring API. Typed payload/context callbacks remain component-owned surfaces even
-when they eventually dispatch app actions. Treat controls such as `WorkflowControlsButton`,
-`MessageAction`, `ArtifactAction`, `ArtifactClose`, and `CheckpointTrigger` as good fits for this
-lane; keep controls such as `ConversationDownload`, `PromptInputButton`,
+when they eventually dispatch app actions. First-party controls such as `shadcn::Button`,
+`shadcn::SidebarMenuButton`, `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`,
+`ArtifactClose`, `CheckpointTrigger`, `ConversationDownload`, `PromptInputButton`,
 `WebPreviewNavigationButton`, `ConfirmationAction`, `Attachment`, `QueueItemAction`, `Test`,
-`FileTreeAction`, `Suggestion`, `MessageBranch`, and `Badge` link overrides on their native
-`.action(...)`, `.action_payload(...)`, or widget-owned `.on_activate(...)` contracts. This bridge
-stays off `fret::app::prelude::*`; ordinary button-like widgets should graduate to native
-`.action(...)` slots instead of depending on the activation bridge for first-contact authoring.
+`FileTreeAction`, `Suggestion`, `MessageBranch`, and `Badge` link overrides stay on their native `.action(...)`,
+native `.action_payload(...)`, or widget-owned `.on_activate(...)` contracts instead of relying on
+the activation bridge. As of 2026-03-16, the first-party default widget bridge table is
+intentionally empty. This bridge stays off `fret::app::prelude::*`; default app authors should
+only import it for truly activation-only custom/third-party widgets that have not yet graduated to
+their own app-facing action surface.
 
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.

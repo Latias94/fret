@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("chat_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
@@ -515,7 +515,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ButtonVariant::Secondary)
                 .size(shadcn::ButtonSize::Sm)
                 .test_id("ui-gallery-ai-chat-start-stream")
-                .listen(start_streaming)
+                .on_activate(cx.actions().listen(start_streaming))
                 .into_element(cx),
         ]
     })

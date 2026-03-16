@@ -83,7 +83,7 @@ Closeout note on 2026-03-16:
 Release-blocking closeout order on 2026-03-16:
 
 1. reduce happy-path ceremony on the default app lane
-2. keep `AppActivateExt` on a shrinking bridge-only path
+2. keep the `AppActivateExt` bridge-empty rule source-gated as maintenance
 3. resume ecosystem integration-trait budgeting against the frozen public lane story
 
 Discovery-lane closeout note on 2026-03-16:
@@ -197,7 +197,7 @@ Audit reconciliation note on 2026-03-16:
     - this batch intentionally stops at typed-child wrapper closures and does not treat shared
       scaffold page roots (`centered_page*`) as eligible `ui::single(...)` sites, because those
       helpers still return `Elements` rather than a typed child.
-- [ ] Keep `AppActivateExt` on a shrinking bridge-only path: no new first-party bridge impls for
+- [x] Keep `AppActivateExt` on a shrinking bridge-only path: no new first-party bridge impls for
   widgets that can instead ship native `.action(...)` / `.action_payload(...)` slots.
   - Exit pressure to remove:
     - facade-level bridge growth for widgets that already have a stable action meaning,
@@ -225,24 +225,37 @@ Audit reconciliation note on 2026-03-16:
       `Badge::on_activate(...)` to suppress link launch during diagnostics instead of importing
       `AppActivateExt` for a no-op listener.
   - 2026-03-16 next residue shortlist:
-    - `WorkflowControlsButton`
-    - `MessageAction`
-    - `ArtifactAction`
-    - `ArtifactClose`
-    - `CheckpointTrigger`
+    - closed in the current batch:
+      `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`, `ArtifactClose`, and
+      `CheckpointTrigger` were removed from the bridge table,
+    - first-party UI Gallery snippets now use `UiCxActionsExt` plus widget-owned
+      `.on_activate(...)` for those cases instead of importing `AppActivateExt`.
+  - 2026-03-16 button/sidebar follow-up:
+    - `fret_ui_shadcn::{facade::Button, facade::SidebarMenuButton}` were removed from the bridge
+      table,
+    - `SidebarMenuButton` now exposes native `.action_payload(...)`,
+    - the remaining first-party button/sidebar listener snippets now stay on `UiCxActionsExt`
+      plus widget-owned `.on_activate(...)` instead of importing `AppActivateExt`.
+  - Closure note (2026-03-16):
+    - the first-party default widget bridge table is now intentionally empty in
+      `ecosystem/fret/src/view.rs`,
+    - remaining bridge usage is the explicit custom/third-party activation-only seam, not an open
+      first-party migration backlog.
   - Revalidation rule:
     - keep `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
-      green for each bridge-shrink batch before updating this tracker to claim closure.
-  - 2026-03-16 sequencing rule:
-    - do not resume ecosystem integration-trait budgeting, macro work, or other new public sugar
-      until the next ceremony batch and the remaining bridge-table shrink both stop moving.
+      green so future first-party bridge growth is caught immediately.
+  - 2026-03-16 maintenance rule:
+    - if a new first-party widget wants `AppActivateSurface`, treat that as a regression to
+      justify against native `.action(...)` / `.action_payload(...)` or widget-owned
+      `.on_activate(...)` first.
 
 Post-closeout handoff order on 2026-03-16:
 
 1. run the next happy-path ceremony pass across action-first and conversion follow-ons
-2. continue shrinking the remaining `AppActivateExt` bridge table
-3. resume ecosystem integration-trait budgeting only after the two items above are stable
-   and the canonical trio/templates/docs no longer need wording churn for the default path
+2. resume ecosystem integration-trait budgeting once item 1 is stable and the canonical
+   trio/templates/docs no longer need wording churn for the default path
+3. keep the `AppActivateExt` bridge-empty rule green as a standing gate; reopen it only if a new
+   first-party widget truly lacks a native action slot
 
 ## M0 — Freeze the target product surface
 

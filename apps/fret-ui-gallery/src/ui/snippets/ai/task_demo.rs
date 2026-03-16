@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("task_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
@@ -16,21 +16,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let preset_for_react = preset.clone();
     let react_dev = shadcn::Button::new("React Development")
         .variant(shadcn::ButtonVariant::Outline)
-        .listen(move |host, action_cx| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host.models_mut().update(&preset_for_react, |v| *v = 0);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);
-        })
+        }))
         .into_element(cx);
 
     let preset_for_api = preset.clone();
     let api_integration = shadcn::Button::new("API Integration")
         .variant(shadcn::ButtonVariant::Outline)
-        .listen(move |host, action_cx| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host.models_mut().update(&preset_for_api, |v| *v = 1);
             host.notify(action_cx);
             host.request_redraw(action_cx.window);
-        })
+        }))
         .into_element(cx);
 
     let tasks: Vec<(

@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("message_usage.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
@@ -155,13 +155,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .tooltip("Retry")
                                 .icon(fret_icons::ids::ui::LOADER)
                                 .test_id("ui-ai-message-usage-action-retry")
-                                .listen(set_action("assistant.retry"))
+                                .on_activate(cx.actions().listen(set_action("assistant.retry")))
                                 .into_element(cx),
                             ui_ai::MessageAction::new("Copy")
                                 .tooltip("Copy")
                                 .icon(fret_icons::ids::ui::COPY)
                                 .test_id("ui-ai-message-usage-action-copy")
-                                .listen(set_action("assistant.copy"))
+                                .on_activate(cx.actions().listen(set_action("assistant.copy")))
                                 .into_element(cx),
                         ])
                         .justify(Justify::Start)

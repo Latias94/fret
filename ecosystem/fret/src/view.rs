@@ -608,56 +608,8 @@ pub trait AppActivateExt: AppActivateSurface {
 
 impl<T> AppActivateExt for T where T: AppActivateSurface {}
 
-// Keep this bridge list intentionally narrow: widgets that already ship native `.action(...)` /
-// `.action_payload(...)` stay off `AppActivateSurface` so the bridge table keeps shrinking.
-#[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::facade::Button {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::facade::Button::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "shadcn")]
-impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_shadcn::facade::SidebarMenuButton::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::WorkflowControlsButton {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::WorkflowControlsButton::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::MessageAction {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::MessageAction::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::ArtifactClose {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::ArtifactClose::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::CheckpointTrigger {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::CheckpointTrigger::on_activate(self, on_activate)
-    }
-}
-
-#[cfg(feature = "ui-ai")]
-impl AppActivateSurface for fret_ui_ai::ArtifactAction {
-    fn on_activate(self, on_activate: OnActivate) -> Self {
-        fret_ui_ai::ArtifactAction::on_activate(self, on_activate)
-    }
-}
+// Keep the default bridge table empty: first-party widgets should prefer native
+// `.action(...)` / `.action_payload(...)` / widget-owned `.on_activate(...)` surfaces.
 
 fn dispatch_action_listener<A>() -> OnActivate
 where
@@ -2179,34 +2131,23 @@ mod tests {
         );
         assert!(api_source.contains("pub fn listen("));
         assert!(api_source.contains("pub fn listener("));
-        #[cfg(feature = "shadcn")]
-        {
-            assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Button")
-            );
-            assert!(
-                api_source.contains(
-                    "impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton"
-                )
-            );
-            assert!(
-                !api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Badge")
-            );
-            assert!(
-                !api_source.contains(
-                    "impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerAction"
-                )
-            );
-            assert!(
-                !api_source.contains(
-                    "impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerClose"
-                )
-            );
-            assert!(
-                !api_source
-                    .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::Ticker")
-            );
-        }
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Button"));
+        assert!(
+            !api_source
+                .contains("impl AppActivateSurface for fret_ui_shadcn::facade::SidebarMenuButton")
+        );
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Badge"));
+        assert!(
+            !api_source
+                .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerAction")
+        );
+        assert!(
+            !api_source
+                .contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::BannerClose")
+        );
+        assert!(
+            !api_source.contains("impl AppActivateSurface for fret_ui_shadcn::raw::extras::Ticker")
+        );
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_material3::Card"));
         assert!(
             !api_source.contains("impl AppActivateSurface for fret_ui_material3::DialogAction")
@@ -2214,23 +2155,17 @@ mod tests {
         assert!(
             !api_source.contains("impl AppActivateSurface for fret_ui_material3::TopAppBarAction")
         );
-        #[cfg(feature = "ui-ai")]
-        {
-            assert!(
-                api_source
-                    .contains("impl AppActivateSurface for fret_ui_ai::WorkflowControlsButton")
-            );
-            assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::MessageAction"));
-            assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactClose"));
-            assert!(
-                api_source.contains("impl AppActivateSurface for fret_ui_ai::CheckpointTrigger")
-            );
-            assert!(api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactAction"));
-        }
         assert!(api_source.contains("pub fn data(&mut self) -> AppUiData"));
         assert!(api_source.contains("pub fn effects(&mut self) -> AppUiEffects"));
         assert!(!api_source.contains("pub trait AppActionCxSurface"));
         assert!(!api_source.contains("pub trait AppActionCxExt"));
+        assert!(
+            !api_source.contains("impl AppActivateSurface for fret_ui_ai::WorkflowControlsButton")
+        );
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::MessageAction"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactClose"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::CheckpointTrigger"));
+        assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::ArtifactAction"));
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_ai::ConfirmationAction"));
         assert!(
             !api_source.contains("impl AppActivateSurface for fret_ui_ai::ConversationDownload")

@@ -84,17 +84,20 @@ teaching surfaces, and gates line up.
    already exposes that hook directly; the first-party `badge/link.rs` example now uses
    `Badge::on_activate(...)` rather than reopening `AppActivateExt` for a no-op diagnostics
    override.
-   Immediate residue shortlist before item 3:
-   - `WorkflowControlsButton`
-   - `MessageAction`
-   - `ArtifactAction`
-   - `ArtifactClose`
-   - `CheckpointTrigger`
+   2026-03-16 AI residue follow-up: `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`,
+   `ArtifactClose`, and `CheckpointTrigger` were also removed from the bridge table; first-party
+   snippets now use `UiCxActionsExt` plus widget-owned `.on_activate(...)` for those cases.
+   2026-03-16 button/sidebar follow-up: `shadcn::Button` and `shadcn::SidebarMenuButton` now also
+   stay off the bridge table; `SidebarMenuButton` gained native `.action_payload(...)`, and the
+   remaining first-party listener call sites now use `UiCxActionsExt` plus widget-owned
+   `.on_activate(...)`.
+   Closure note: the first-party default widget bridge table is now intentionally empty, so item 2
+   is an always-on maintenance rule rather than the next active migration batch.
    Revalidation rule: each shrink batch keeps
    `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --no-fail-fast`
    green alongside the narrower `fret` surface tests.
-3. Only after items 1-2 stabilize, reopen any broader ecosystem trait budgeting or macro
-   discussion.
+3. Once item 1 stabilizes, reopen any broader ecosystem trait budgeting or macro discussion while
+   keeping item 2 as a standing source-policy gate.
 
 Adoption note (as of 2026-03-07):
 
@@ -380,13 +383,13 @@ Post-v1 direction (recommended):
     slice from drifting back to `.on_click(...)`, and `tools/pre_release.py` runs the gate with
     the rest of the teaching-surface policy suite.
   - Activation-sugar follow-up (as of 2026-03-15): `fret::app` now explicitly re-exports
-    `AppActivateExt` alongside `AppActivateSurface`, first-party coverage now includes
-    `shadcn::Button`, `shadcn::SidebarMenuButton`, and optional
-    `fret-ui-ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, MessageAction, WorkflowControlsButton}`,
-    and selected activation-only UI Gallery snippets moved from raw `.on_activate(...)` to
-    `.listen(...)` including `sonner/demo`, the data-table pagination demos,
+    `AppActivateExt` alongside `AppActivateSurface`, and the interim selected activation-only UI
+    Gallery snippets moved from raw `.on_activate(...)` to `.listen(...)` including `sonner/demo`, the data-table pagination demos,
     `scroll_area/nested_scroll_routing`, and
-    `ai/{artifact_code_display,artifact_demo,chat_demo,checkpoint_demo,message_usage,message_demo,persona_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture,workflow_controls_demo,workflow_node_graph_demo}`, with
+    `ai/{chat_demo,persona_demo,prompt_input_referenced_sources_demo,reasoning_demo,task_demo,transcript_torture}`, with
+    a later 2026-03-16 follow-up moving those same first-party button/sidebar snippets again onto
+    widget-owned `.on_activate(cx.actions().listen(...))` once `UiCxActionsExt` landed and the
+    shadcn bridge table was cleared.
     `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` locking that teaching lane.
   - Activation-sugar closure note (as of 2026-03-15): `AppActivateExt::{dispatch, dispatch_payload, listen}`
     no longer carries a no-op `cx` marker argument, the default widget-local story is now

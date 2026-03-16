@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("nested_scroll_routing.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::{Point, Px};
 use fret_ui::element::SemanticsDecoration;
@@ -54,11 +54,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let inner_handle = inner_handle.clone();
             shadcn::Button::new("Reset")
                 .variant(shadcn::ButtonVariant::Secondary)
-                .listen(move |host, action_cx| {
+                .on_activate(cx.actions().listen(move |host, action_cx| {
                     outer_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
                     inner_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
                     host.request_redraw(action_cx.window);
-                })
+                }))
                 .test_id("ui-gallery-scroll-area-nested-reset")
                 .into_element(cx)
         };

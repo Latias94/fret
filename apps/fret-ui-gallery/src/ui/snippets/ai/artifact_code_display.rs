@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("artifact_code_display.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
@@ -58,33 +58,39 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .tooltip("Run code")
             .icon(fret_icons::IconId::new_static("lucide.play"))
             .test_id("ui-ai-artifact-docs-run")
-            .listen(status_action(status.clone(), "Run action triggered."))
+            .on_activate(
+                cx.actions()
+                    .listen(status_action(status.clone(), "Run action triggered.")),
+            )
             .into_element(cx),
         ui_ai::ArtifactAction::new()
             .label("Copy")
             .tooltip("Copy to clipboard")
             .icon(fret_icons::IconId::new_static("lucide.copy"))
             .test_id("ui-ai-artifact-docs-copy")
-            .listen(status_action(status.clone(), "Copy action triggered."))
+            .on_activate(
+                cx.actions()
+                    .listen(status_action(status.clone(), "Copy action triggered.")),
+            )
             .into_element(cx),
         ui_ai::ArtifactAction::new()
             .label("Regenerate")
             .tooltip("Regenerate content")
             .icon(fret_icons::IconId::new_static("lucide.refresh-cw"))
             .test_id("ui-ai-artifact-docs-regenerate")
-            .listen(
-                cx,
-                status_action(status.clone(), "Regenerate action triggered."),
-            )
+            .on_activate(cx.actions().listen(status_action(
+                status.clone(),
+                "Regenerate action triggered.",
+            )))
             .into_element(cx),
         ui_ai::ArtifactAction::new()
             .label("Download")
             .tooltip("Download file")
             .icon(fret_icons::IconId::new_static("lucide.download"))
             .test_id("ui-ai-artifact-docs-download")
-            .listen(
-                cx,
-                status_action(status.clone(), "Download action triggered."),
+            .on_activate(
+                cx.actions()
+                    .listen(status_action(status.clone(), "Download action triggered.")),
             )
             .into_element(cx),
         ui_ai::ArtifactAction::new()
@@ -92,7 +98,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .tooltip("Share artifact")
             .icon(fret_icons::IconId::new_static("lucide.share"))
             .test_id("ui-ai-artifact-docs-share")
-            .listen(status_action(status.clone(), "Share action triggered."))
+            .on_activate(
+                cx.actions()
+                    .listen(status_action(status.clone(), "Share action triggered.")),
+            )
             .into_element(cx),
     ])
     .test_id("ui-ai-artifact-docs-actions")

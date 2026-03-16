@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("persona_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_icons::IconId;
@@ -34,12 +34,12 @@ fn state_button(
         })
         .a11y_label(label)
         .test_id(format!("ui-ai-persona-demo-state-{}", state.as_str()))
-        .listen(move |host, action_cx| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&state_model, |value| *value = state);
             host.notify(action_cx);
-        })
+        }))
 }
 
 fn variant_button(
@@ -56,12 +56,12 @@ fn variant_button(
             shadcn::ButtonVariant::Outline
         })
         .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
-        .listen(move |host, action_cx| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host
                 .models_mut()
                 .update(&variant_model, |value| *value = variant);
             host.notify(action_cx);
-        })
+        }))
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {

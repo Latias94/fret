@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 
 use fret_core::{Corners, Edges, Px};
@@ -19,26 +19,27 @@ const GOAL_SERIES: [i32; 13] = [
     400, 300, 200, 300, 200, 278, 189, 239, 300, 200, 278, 189, 349,
 ];
 
-fn goal_adjust_button<H: UiHost>(
+fn goal_adjust_button(
+    cx: &mut UiCx<'_>,
     goal: Model<i32>,
     adjustment: i32,
     icon: &'static str,
     a11y_label: &'static str,
     disabled: bool,
     test_id: &'static str,
-) -> impl IntoUiElement<H> + use<H> {
+) -> shadcn::Button {
     shadcn::Button::new("")
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::IconSm)
         .icon(IconId::new_static(icon))
         .a11y_label(a11y_label)
         .disabled(disabled)
-        .listen(move |host, action_cx| {
+        .on_activate(cx.actions().listen(move |host, action_cx| {
             let _ = host.models_mut().update(&goal, |value| {
                 *value = (*value + adjustment).clamp(GOAL_MIN, GOAL_MAX);
             });
             host.request_redraw(action_cx.window);
-        })
+        }))
         .test_id(test_id)
 }
 
@@ -120,6 +121,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             ui::h_flex(|cx| {
                                 vec![
                                     goal_adjust_button(
+                                        cx,
                                         goal_for_decrease.clone(),
                                         -GOAL_STEP,
                                         "lucide.minus",
@@ -147,6 +149,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                     .layout(LayoutRefinement::default().flex_1().min_w_0())
                                     .into_element(cx),
                                     goal_adjust_button(
+                                        cx,
                                         goal_for_increase.clone(),
                                         GOAL_STEP,
                                         "lucide.plus",

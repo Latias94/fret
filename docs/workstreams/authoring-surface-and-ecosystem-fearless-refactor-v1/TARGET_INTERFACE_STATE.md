@@ -84,6 +84,10 @@ Fresh-audit reading rule on 2026-03-16:
 4. `AppActivateExt` bridge retirement path
    - `AppActivateExt` is now intentionally off `fret::app::prelude::*`, but it still exists as a
      facade-level bridge table
+   - As of 2026-03-16, that first-party default widget bridge table is intentionally empty:
+     ordinary first-party buttons/wrappers stay on native `.action(...)` /
+     `.action_payload(...)` or widget-owned `.on_activate(...)` hooks instead of reopening the
+     bridge
    - The bridge remains acceptable only for truly activation-only legacy/default-path surfaces
    - New first-party widgets should not add fresh `AppActivateSurface` impls when they can expose
      native `.action(...)` / `.action_payload(...)` slots directly
@@ -287,6 +291,9 @@ Target rule:
 - first-party ecosystem widgets with stable activation semantics should keep graduating to native
   `.action(...)` / `.action_payload(...)` slots so `AppActivateExt` increasingly reads as a bridge
   for activation-only legacy surfaces rather than the default way to wire ordinary buttons/wrappers.
+- the first-party default widget bridge table is intentionally empty; if a future first-party
+  widget proposes a new `AppActivateSurface` impl, that should be treated as a regression to
+  justify rather than normal growth of the app surface.
 - the remaining anonymous semantics/a11y/test-id helpers are intentionally retained on the app
   lane: `.role(...)`, `.a11y_role(...)`, and `.test_id(...)` are treated as app-justified
   diagnostics/accessibility affordances even though the underlying trait names stay hidden.

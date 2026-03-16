@@ -2889,6 +2889,12 @@ mod authoring_surface_policy_tests {
         let advanced_row =
             markdown_table_row(AUTHORING_SURFACE_MIGRATION_MATRIX, "Advanced imports");
         assert!(advanced_row.contains("| Deleted |"));
+
+        let app_activate_bridge_row = markdown_table_row(
+            AUTHORING_SURFACE_MIGRATION_MATRIX,
+            "`AppActivateExt` bridge",
+        );
+        assert!(app_activate_bridge_row.contains("| Migrated |"));
     }
 
     #[test]
@@ -2900,11 +2906,9 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("Typed payload/context"));
         assert!(CRATE_USAGE_GUIDE.contains("callbacks remain component-owned surfaces"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::Button`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`shadcn::SidebarMenuButton`"));
         assert!(CRATE_USAGE_GUIDE.contains("`WorkflowControlsButton`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`MessageAction`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`ArtifactAction`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`ArtifactClose`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`CheckpointTrigger`"));
         assert!(CRATE_USAGE_GUIDE.contains("`ConfirmationAction`"));
         assert!(CRATE_USAGE_GUIDE.contains("native `.action(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`Attachment`"));
@@ -2913,6 +2917,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`FileTreeAction`"));
         assert!(CRATE_USAGE_GUIDE.contains("`Suggestion`"));
         assert!(CRATE_USAGE_GUIDE.contains("`MessageBranch`"));
+        assert!(CRATE_USAGE_GUIDE.contains("first-party default widget bridge table is"));
+        assert!(CRATE_USAGE_GUIDE.contains("intentionally empty"));
         assert!(
             COMPONENT_AUTHOR_GUIDE.contains("typed domain callbacks into `AppActivateSurface`")
         );
@@ -3160,11 +3166,17 @@ mod authoring_surface_policy_tests {
         );
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`use fret::app::AppActivateExt as _;`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`UiCxActionsExt` / `UiCxDataExt`"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("first-party"));
+        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("bridge table is intentionally empty"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_shadcn::advanced::*`"));
         assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`shadcn::advanced::*`"));
         assert!(AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret_ui_shadcn::advanced`"));
         assert!(
             AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret::shadcn::raw::advanced::*`")
+        );
+        assert!(
+            AUTHORING_SURFACE_TARGET_INTERFACE_STATE
+                .contains("first-party default widget bridge table is intentionally empty")
         );
     }
 

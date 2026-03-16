@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("basic_demo.rs");
 
 // region: example
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
@@ -126,27 +126,27 @@ fn bottom_controls(
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!prev_enabled)
-                .listen({
+                .on_activate(cx.actions().listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |st| {
                             st.pagination.page_index = st.pagination.page_index.saturating_sub(1);
                         });
                     }
-                })
+                }))
                 .into_element(cx),
             shadcn::Button::new("Next")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .disabled(!next_enabled)
-                .listen({
+                .on_activate(cx.actions().listen({
                     let state = state.clone();
                     move |host, _action_cx| {
                         let _ = host.models_mut().update(&state, |st| {
                             st.pagination.page_index = st.pagination.page_index.saturating_add(1);
                         });
                     }
-                })
+                }))
                 .into_element(cx),
         ]
     })

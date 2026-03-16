@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use crate::ui::snippets::sonner::{last_action_model, message_request, request};
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -31,7 +31,7 @@ fn action_button(
 ) -> AnyElement {
     shadcn::Button::new(label)
         .variant(variant)
-        .listen(on_activate)
+        .on_activate(cx.actions().listen(on_activate))
         .test_id(test_id)
         .into_element(cx)
 }
@@ -45,7 +45,7 @@ fn type_button(
 ) -> AnyElement {
     let mut button = shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Ghost)
-        .listen(on_activate)
+        .on_activate(cx.actions().listen(on_activate))
         .test_id(test_id);
 
     if active {

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("position.rs");
 
 // region: example
 use crate::ui::snippets::sonner::{last_action_model, position_model, request};
-use fret::app::AppActivateExt as _;
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
@@ -50,7 +50,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
-            .listen(move |host, action_cx| {
+            .on_activate(cx.actions().listen(move |host, action_cx| {
                 let _ = host.models_mut().update(&position_model, |v| *v = target);
                 sonner.toast(
                     host,
@@ -64,7 +64,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         Arc::<str>::from(format!("sonner.position.{}", toast_position_key(target)));
                 });
                 host.request_redraw(action_cx.window);
-            })
+            }))
             .test_id(test_id)
             .into_element(cx)
     };

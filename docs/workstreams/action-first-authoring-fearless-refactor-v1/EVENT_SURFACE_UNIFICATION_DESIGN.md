@@ -184,13 +184,15 @@ Trait boundary:
 - the authoring surface intentionally does **not** carry an unused `cx` marker argument anymore;
   widget-local activation sugar is now pure widget syntax (`dispatch`, `dispatch_payload`,
   `listen`) because the context value was never part of the runtime behavior,
-- current first-party bridge coverage intentionally stays narrow and real: `shadcn::Button`,
-  `shadcn::SidebarMenuButton`,
-  optional `fret_ui_ai::{ArtifactAction, ArtifactClose, CheckpointTrigger, MessageAction, WorkflowControlsButton}`,
-  with Material 3 wrappers no longer kept on the bridge table,
+- current first-party bridge coverage intentionally stays empty: `shadcn::Button`,
+  `shadcn::SidebarMenuButton`, Material 3 wrappers, and the audited AI widgets now all stay on
+  native `.action(...)` / `.action_payload(...)` / widget-owned `.on_activate(...)` surfaces,
 - shadcn widgets that already ship native `.action(...)` / `.action_payload(...)` such as
   `Badge` and `extras::{BannerAction, BannerClose, Ticker}` stay off the bridge table so
   `AppActivateExt` keeps shrinking instead of becoming a permanent integration list,
+- AI widgets that already ship native `.action(...)` or widget-owned `.on_activate(...)` such as
+  `WorkflowControlsButton`, `MessageAction`, `ArtifactAction`, `ArtifactClose`, and
+  `CheckpointTrigger` also stay off the bridge table for the same reason,
 - Material 3 wrappers that already ship native `.action(...)` such as `Card`, `DialogAction`,
   and `TopAppBarAction` also stay off the bridge table for the same reason,
 - powered internally by `cx.actions().action(...)` / `action_payload(...)` / `listen(...)`,
@@ -206,8 +208,8 @@ Trait boundary:
 
 Current first-party teaching evidence (as of 2026-03-16):
 
-- selected UI Gallery activation-only snippets now import `fret::app::AppActivateExt as _;`,
-- those snippets prefer `.listen(|host, acx| { ... })` over reopening raw `.on_activate(...)`,
+- selected UI Gallery button/sidebar listener snippets now import `fret::app::UiCxActionsExt as _;`,
+- those snippets prefer widget-owned `.on_activate(cx.actions().listen(...))` over bridge imports,
 - extracted `UiCx` helper functions now get the same grouped action surface through
   `fret::app::UiCxActionsExt`, so UI Gallery snippets with native widget `.action(...)` slots can
   stay on `cx.actions().models::<A>(...)` instead of reaching for the bridge,
