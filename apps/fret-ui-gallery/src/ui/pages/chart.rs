@@ -22,20 +22,24 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`ChartLegendContent::new()` can derive labels, icons, and colors from `ChartConfig` when explicit legend items are omitted, and `name_key(...)` can remap legend labels through item metadata.",
         "`ChartTooltipContent::new()` can now auto-derive label, items, colors, and icons from a shared `ChartCanvasOutput` model plus `ChartConfig`.",
         "`ChartTooltipContent` now exposes recipe-level `label_formatter(...)`, `formatter(...)`, `label_key(...)`, and `name_key(...)` hooks, with Fret-native item key/metadata remapping.",
-        "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)` and `ChartTooltipContent::into_element_parts(cx, ...)` are the advanced adapter seams for arbitrary children composition.",
+        "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)`, `ChartTooltipContent::into_element_parts(cx, ...)`, and `ChartTooltipContent::into_element_parts_with_label(cx, ...)` cover header-only, row-only, or fully combined children composition.",
+        "Unlike the Recharts docs path, `Add Grid` and `Add Axis` stay inside the retained chart spec today instead of surfacing as separate child widgets on the gallery page.",
         "The remaining parity gaps are full Recharts `payload.payload[...]` field lookup on engine-derived payloads and DOM-native overlay composition details.",
         "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
         "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
     ]);
-    let notes_stack =
-        DocSection::build(cx, "Notes", notes_stack).description("API surface and parity notes.");
-    let demo_cards = DocSection::build(cx, "Demo", demo_cards)
+    let notes_stack = DocSection::build(cx, "Notes", notes_stack)
+        .description("Fret-specific API surface and parity notes.");
+    let component = DocSection::build(cx, "Component", demo_cards)
+        .description(
+            "Composition-first chart recipe surface: build the chart body inside `chart_container(config, |cx| ...)`, then opt into `ChartTooltip` and `ChartLegend` only where needed.",
+        )
         .no_shell()
         .max_w(Px(1100.0))
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let first_chart = DocSection::build(cx, "First Chart", first_chart)
         .description(
-            "Fret-native equivalent of shadcn's first-chart walkthrough: build the chart, then add legend and tooltip on the same assembled example, with tooltip payloads auto-derived from a shared chart output model.",
+            "Fret-native equivalent of shadcn's first-chart walkthrough: build the chart, then add legend and tooltip on the same assembled example, with tooltip payloads auto-derived from a shared chart output model. Grid and axis stay in the retained chart spec instead of separate child widgets.",
         )
         .test_id_prefix("ui-gallery-chart-first-chart")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
@@ -48,7 +52,9 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-chart-theming")
         .code_rust_from_file_region(snippets::theming::SOURCE, "example");
     let contracts_overview = DocSection::build(cx, "Contracts", contracts_overview)
-        .description("Fret-specific chart recipe contracts that still matter once payload auto-wiring is enabled.")
+        .description(
+            "Fret-specific follow-up contracts once the shadcn docs path is covered: payload auto wiring, formatter hooks, and advanced adapter seams.",
+        )
         .code_rust_from_file_region(snippets::contracts::SOURCE, "example");
     let tooltip_content = DocSection::build(cx, "Tooltip", tooltip_content)
         .description("Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter and custom children seams.")
@@ -72,18 +78,18 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Chart docs shape more closely: first-chart composition, config, theming, tooltip/legend, accessibility, and RTL. Fret-specific chart-engine constraints still stay explicit, but the tooltip section now also reads in a props, colors, then custom order.",
+            "Preview mirrors the shadcn Chart docs path first: `Component`, `First Chart`, `Chart Config`, `Theming`, `Tooltip`, `Legend`, `Accessibility`, and `RTL`. After that, Gallery keeps Fret-specific follow-ups explicit: `Contracts` and `Notes`.",
         ),
         vec![
-            demo_cards,
+            component,
             first_chart,
             config,
             theming,
-            contracts_overview,
             tooltip_content,
             legend_content,
             accessibility,
             rtl,
+            contracts_overview,
             notes_stack,
         ],
     );

@@ -3476,20 +3476,28 @@ fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/chart.rs",
         &[
-            "DocSection::build(cx, \"Demo\", demo_cards)",
+            "DocSection::build(cx, \"Component\", demo_cards)",
             "DocSection::build(cx, \"First Chart\", first_chart)",
+            "DocSection::build(cx, \"Chart Config\", config)",
+            "DocSection::build(cx, \"Theming\", theming)",
             "DocSection::build(cx, \"Contracts\", contracts_overview)",
             "DocSection::build(cx, \"Tooltip\", tooltip_content)",
             "DocSection::build(cx, \"Legend\", legend_content)",
+            "DocSection::build(cx, \"Accessibility\", accessibility)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Notes\", notes_stack)",
         ],
         &[
-            "DocSection::new(\"Demo\", demo_cards)",
+            "DocSection::new(\"Component\", demo_cards)",
             "DocSection::new(\"First Chart\", first_chart)",
+            "DocSection::new(\"Chart Config\", config)",
+            "DocSection::new(\"Theming\", theming)",
             "DocSection::new(\"Contracts\", contracts_overview)",
             "DocSection::new(\"Tooltip\", tooltip_content)",
             "DocSection::new(\"Legend\", legend_content)",
+            "DocSection::new(\"Accessibility\", accessibility)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Notes\", notes_stack)",
         ],
     );
 }
@@ -3509,23 +3517,64 @@ fn chart_tooltip_docs_keep_custom_children_seam_explicit() {
     let contracts = read("src/ui/snippets/chart/contracts.rs");
     assert!(
         contracts.contains(
-            "custom header/row composition via into_element_label_parts(...) and into_element_parts(...)"
+            "custom header/row composition via into_element_label_parts(...), into_element_parts(...), and into_element_parts_with_label(...)"
         ),
-        "src/ui/snippets/chart/contracts.rs should document both custom header and custom row tooltip composition seams"
+        "src/ui/snippets/chart/contracts.rs should document the header-only, row-only, and combined tooltip composition seams"
     );
 
     let page = read("src/ui/pages/chart.rs");
     assert!(
         page.contains(
-            "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)` and `ChartTooltipContent::into_element_parts(cx, ...)` are the advanced adapter seams for arbitrary children composition."
+            "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)`, `ChartTooltipContent::into_element_parts(cx, ...)`, and `ChartTooltipContent::into_element_parts_with_label(cx, ...)` cover header-only, row-only, or fully combined children composition."
         ),
         "src/ui/pages/chart.rs should explain the advanced custom header/row tooltip seams"
     );
     assert!(
         page.contains(
-            "Recipe-level tooltip variants, label/item format hooks, and advanced custom header/row children seams aligned to the shadcn tooltip teaching surface."
+            "Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter and custom children seams."
         ),
         "src/ui/pages/chart.rs should keep the Tooltip section description aligned with the custom header/row seams"
+    );
+}
+
+#[test]
+fn chart_page_keeps_shadcn_docs_path_before_fret_follow_ups() {
+    let page = read("src/ui/pages/chart.rs");
+    let normalized = page.split_whitespace().collect::<String>();
+
+    assert!(
+        page.contains(
+            "Composition-first chart recipe surface: build the chart body inside `chart_container(config, |cx| ...)`, then opt into `ChartTooltip` and `ChartLegend` only where needed."
+        ),
+        "src/ui/pages/chart.rs should keep the Component section on the composition-first child-authoring lane"
+    );
+    assert!(
+        page.contains(
+            "Preview mirrors the shadcn Chart docs path first: `Component`, `First Chart`, `Chart Config`, `Theming`, `Tooltip`, `Legend`, `Accessibility`, and `RTL`. After that, Gallery keeps Fret-specific follow-ups explicit: `Contracts` and `Notes`."
+        ),
+        "src/ui/pages/chart.rs should explain the shadcn docs path before the Fret-specific follow-ups"
+    );
+    assert!(
+        page.contains(
+            "Grid and axis stay in the retained chart spec instead of separate child widgets."
+        ),
+        "src/ui/pages/chart.rs should explain why the shadcn `Add Grid` and `Add Axis` steps stay inside the retained chart spec on Fret"
+    );
+    assert!(
+        normalized.contains(
+            "vec![component,first_chart,config,theming,tooltip_content,legend_content,accessibility,rtl,contracts_overview,notes_stack,]"
+        ),
+        "src/ui/pages/chart.rs should place `Contracts` and `Notes` after the shadcn docs-path sections"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![component,first_chart,config,theming,contracts_overview,tooltip_content,legend_content,accessibility,rtl,notes_stack,]"
+        ),
+        "src/ui/pages/chart.rs should not reinsert `Contracts` into the middle of the shadcn docs path"
+    );
+    assert!(
+        !page.contains("DocSection::build(cx, \"Demo\", demo_cards)"),
+        "src/ui/pages/chart.rs should keep the top section aligned to shadcn's `Component` naming instead of `Demo`"
     );
 }
 
