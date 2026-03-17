@@ -479,8 +479,6 @@ use fret_framework as kernel;
 
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
-    #[cfg(feature = "state-query")]
-    pub use crate::view::QueryHandleReadExt;
     /// Canonical app-facing view trait on the explicit app lane.
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
