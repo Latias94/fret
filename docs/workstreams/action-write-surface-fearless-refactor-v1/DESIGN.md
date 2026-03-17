@@ -26,6 +26,12 @@ Closeout reading rule on 2026-03-17:
 - reopen this lane only if fresh cross-surface evidence shows a new default write-side problem
   that is not already covered by the current docs/templates/examples/gates
 
+Post-closeout cleanup on 2026-03-17:
+
+- duplicated multi-local payload helpers `payload_locals::<A>(...)` and
+  `payload::<A>().locals(...)` are now deleted from production code
+- read `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md` for the surviving retained-seam question
+
 ## Why this workstream exists
 
 Two adjacent authoring lanes are already closed enough to stop using them as catch-all buckets:

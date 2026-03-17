@@ -1,6 +1,6 @@
 # Payload Row-Write Audit — 2026-03-17
 
-Status: M2 audit note (decision landed)
+Status: M2 audit note (decision landed; multi-local helper delete landed)
 Last updated: 2026-03-17
 
 Related:
@@ -90,17 +90,24 @@ What is already solid:
 
 What is now landed:
 
-- `payload_locals::<A>(...)` is demoted out of first-contact docs/templates and retained only in
-  explicit advanced/reference/workstream notes until a real first-party proof surface exists
+- `payload_locals::<A>(...)` is demoted out of first-contact docs/templates
+- post-closeout cleanup on 2026-03-17 then deletes `payload_locals::<A>(...)` and its duplicate
+  chain form `payload::<A>().locals(...)` from production code because no first-party proof
+  appeared and the duplicate LocalTxn story did not earn permanent public surface
 
 ## Landed route
 
 Do **not** invent a narrower replacement helper from this evidence.
 
-Instead, route 2 is now the active posture:
+Instead, route 2 is the first landed posture:
 
 - demote `payload_locals::<A>(...)` out of first-contact docs/templates
 - keep it only in explicit advanced/workstream notes until a real proving surface exists
+
+Post-closeout cleanup result:
+
+- because no proving surface appeared, the repo then deleted `payload_locals::<A>(...)` and
+  `payload::<A>().locals(...)` rather than carrying them indefinitely as duplicate advanced seams
 
 Reason:
 

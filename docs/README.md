@@ -146,6 +146,8 @@ now taught as `LocalState` + view runtime + typed actions.
   - Target state: `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
   - Closeout: `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
   - Scope note: the default app-lane `cx.actions()` write budget is now frozen there; selector/query/router stay out unless a new narrower follow-on reopens them separately
+  - Post-closeout retained-seam audit: `docs/workstreams/action-write-surface-fearless-refactor-v1/RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`
+  - Scope note: keep payload retained-seam dedup/delete-ready notes inside the original action-write folder unless the question expands beyond payload-surface residue
 - Local-state architecture (closed contract-decision lane):
   - Workstream: `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
   - Closeout: `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
@@ -173,7 +175,7 @@ now taught as `LocalState` + view runtime + typed actions.
   - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - use this only when a control exposes activation glue rather than a narrower widget-owned app-facing helper. Import `use fret::app::AppActivateExt as _;` explicitly for that bridge; raw `on_activate*` helper families stay component/advanced-oriented.
-  - Treat raw `on_action` / `on_action_notify`, single-model aliases, and the lower-level `cx.actions().payload::<A>()` chain as advanced shorthands; keep first-contact docs and templates focused on the default entrypoints above plus keyed-row payload binding. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
+  - Treat raw `on_action` / `on_action_notify` / `on_payload_action_notify`, single-model aliases, and the lower-level `cx.actions().payload::<A>()` chain as advanced shorthands; keep first-contact docs and templates focused on the default entrypoints above plus keyed-row payload binding. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
 - Surface taxonomy:
   - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons
   - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples

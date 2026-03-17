@@ -2779,6 +2779,7 @@ mod authoring_surface_policy_tests {
     fn repo_docs_prefer_app_ui_language_for_golden_path() {
         assert!(DOCS_README.contains("`ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)"));
         assert!(DOCS_README.contains("`cx.actions().payload::<A>()`"));
+        assert!(!DOCS_README.contains("`payload_locals::<A>(...)`"));
         assert!(!DOCS_README.contains("`ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)"));
         assert!(!DOCS_README.contains("ViewCx::on_payload_action*"));
     }
@@ -3281,6 +3282,7 @@ mod authoring_surface_policy_tests {
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().listener("));
+        assert!(!FEARLESS_REFACTORING.contains("`payload_locals::<A>(...)`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_locals`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_models`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_transient`"));

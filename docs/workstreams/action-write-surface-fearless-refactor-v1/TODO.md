@@ -11,6 +11,7 @@ Companion docs:
 - `CLOSEOUT_AUDIT_2026-03-17.md`
 - `ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
 - `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`
+- `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 
@@ -76,8 +77,9 @@ Closeout note on 2026-03-17:
   - delete-ready
 - [x] Re-check non-Todo/runtime/default-facing evidence before changing any shared row-write helper.
   - Current M2 conclusion: `payload_local_update_if::<A>(...)` is proven, `payload::<A>()` is
-    quarantined, and `payload_locals::<A>(...)` is demoted out of first-contact docs/templates
-    until proof exists; see `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`.
+    quarantined, and `payload_locals::<A>(...)` is deleted after first-contact demotion and
+    zero-proof review; see `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md` plus
+    `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`.
 - [x] Audit reusable ecosystem impact:
   - `ecosystem/fret`
   - direct reusable ecosystem crates that should stay facade-free
@@ -109,8 +111,9 @@ Closeout note on 2026-03-17:
 - [x] Confirm whether `payload::<A>()` remains quarantined off the default path.
 - [x] Decide whether the current row-write posture is frozen or needs a narrower follow-on.
   - Decision: freeze the default row-write path at `payload_local_update_if::<A>(...)`, keep
-    `payload::<A>()` quarantined, and demote `payload_locals::<A>(...)` out of first-contact
-    docs/templates until a first-party proof surface exists.
+    `payload::<A>()` quarantined, and delete `payload_locals::<A>(...)` /
+    `payload::<A>().locals(...)` after first-contact demotion because no first-party proof surface
+    exists.
 - [x] Update the default docs/templates/gates if the decision changes the teaching surface.
 
 ## M3 — Closeout
@@ -121,8 +124,10 @@ Closeout note on 2026-03-17:
     `payload_local_update_if::<A>(...)` as the only default row-write path; retained cookbook
     payload surfaces stay explicitly advanced/reference.
 - [x] Record any intentionally retained advanced/reference seams explicitly.
-  - Current result: `payload_locals::<A>(...)` and `payload::<A>()` are now recorded only as
-    advanced/reference/workstream seams rather than as first-contact defaults.
+  - Current result: surviving lower-level payload seams are recorded explicitly rather than taught
+    as first-contact defaults.
+  - Post-closeout cleanup: `payload_locals::<A>(...)` / `payload::<A>().locals(...)` are no
+    longer retained; see `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`.
 - [x] Close this lane only after docs/templates/examples/gates are aligned.
   - 2026-03-17 result:
     - `CLOSEOUT_AUDIT_2026-03-17.md` closes the lane,

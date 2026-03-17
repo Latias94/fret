@@ -1092,21 +1092,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
             });
     }
 
-    pub fn payload_locals<A>(
-        self,
-        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-    {
-        self.cx
-            .on_payload_action_notify::<A>(move |host, _action_cx, payload| {
-                let mut tx = LocalTxn {
-                    models: host.models_mut(),
-                };
-                f(&mut tx, payload)
-            });
-    }
-
     pub fn availability<A>(
         self,
         f: impl Fn(
@@ -1146,15 +1131,6 @@ where
             });
     }
 
-    pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static) {
-        self.cx
-            .on_payload_action_notify::<A>(move |host, _action_cx, payload| {
-                let mut tx = LocalTxn {
-                    models: host.models_mut(),
-                };
-                f(&mut tx, payload)
-            });
-    }
 }
 
 impl<'cx, 'a> UiCxActions<'cx, 'a> {
@@ -1267,20 +1243,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         });
     }
 
-    pub fn payload_locals<A>(
-        self,
-        f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-    {
-        uicx_on_payload_action_notify::<A>(self.cx, move |host, _action_cx, payload| {
-            let mut tx = LocalTxn {
-                models: host.models_mut(),
-            };
-            f(&mut tx, payload)
-        });
-    }
-
     pub fn availability<A>(
         self,
         f: impl Fn(
@@ -1318,14 +1280,6 @@ where
         });
     }
 
-    pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static) {
-        uicx_on_payload_action_notify::<A>(self.cx, move |host, _action_cx, payload| {
-            let mut tx = LocalTxn {
-                models: host.models_mut(),
-            };
-            f(&mut tx, payload)
-        });
-    }
 }
 
 /// Grouped selector/query helpers for the default app authoring surface.
@@ -2350,6 +2304,10 @@ mod tests {
         assert!(!api_source.contains("pub fn on_action_notify_transient<"));
         assert!(!api_source.contains("pub fn on_payload_action_notify_local_update_if<"));
         assert!(!api_source.contains("pub fn on_payload_action_notify_locals<"));
+        assert!(!api_source.contains("pub fn payload_locals<"));
+        assert!(!api_source.contains(
+            "pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static)"
+        ));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));

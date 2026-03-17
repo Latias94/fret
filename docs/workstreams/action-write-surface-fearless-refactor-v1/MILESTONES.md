@@ -104,6 +104,9 @@ Current M2 decision on 2026-03-17:
 - route 2 landed:
   `payload_locals::<A>(...)` is demoted out of first-contact docs/templates and retained only as
   an explicit advanced/reference seam until a real first-party proof surface exists
+- post-closeout cleanup on 2026-03-17:
+  `payload_locals::<A>(...)` and `payload::<A>().locals(...)` are deleted from production code
+  because they had no first-party runtime proof and only duplicated the same LocalTxn story
 
 ## Milestone 3 — Closeout and gate alignment
 
@@ -135,4 +138,5 @@ Closeout note on 2026-03-17:
   - one-slot trio frozen,
   - `locals::<A>(...)` remains the primary transaction story,
   - `payload_local_update_if::<A>(...)` is the only taught default keyed row-write path,
-  - `payload_locals::<A>(...)` and `payload::<A>()` remain explicit advanced/reference seams.
+  - duplicate multi-local payload helpers are deleted,
+  - the remaining lower-level payload chain stays explicit rather than default.

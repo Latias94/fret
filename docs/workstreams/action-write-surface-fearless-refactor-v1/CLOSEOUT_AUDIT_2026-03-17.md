@@ -19,6 +19,7 @@ Core workstream docs:
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`
+- `docs/workstreams/action-write-surface-fearless-refactor-v1/RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`
 
 Default teaching surfaces:
 
@@ -76,8 +77,9 @@ At the same time:
 - `payload::<A>()` remains intentionally lower-level/reference-only in
   `apps/fret-cookbook/examples/payload_actions_basics.rs` and
   `apps/fret-examples/src/markdown_demo.rs`,
-- `payload_locals::<A>(...)` remains implemented but is now classified only as an explicit
-  advanced/reference seam until first-party proof exists.
+- post-closeout cleanup then deletes `payload_locals::<A>(...)` and `payload::<A>().locals(...)`
+  from production code because they had no first-party runtime proof and only duplicated the same
+  LocalTxn story.
 
 Conclusion:
 
@@ -90,7 +92,7 @@ The first-contact/default teaching surfaces now align on the same posture:
 - teach `locals::<A>(...)` as the primary coordinated local transaction path,
 - teach the one-slot trio as a semantics-driven companion family,
 - teach `payload_local_update_if::<A>(...)` as the only default keyed row-write helper,
-- keep `models::<A>(...)`, `transient::<A>(...)`, `payload::<A>()`, and `payload_locals::<A>(...)`
+- keep `models::<A>(...)`, `transient::<A>(...)`, and the surviving lower-level payload chain
   explicit rather than default.
 
 This is not only prose alignment:
@@ -108,14 +110,24 @@ Conclusion:
 What remains after closeout does not justify keeping this lane active:
 
 1. Re-promotion question
-   - if a real first-party proof surface eventually needs `payload_locals::<A>(...)`, that is a
-     future re-promotion decision, not unfinished v1 work.
+   - if a real first-party proof surface eventually needs a dedicated multi-local payload helper
+     again, that is a future re-promotion decision, not unfinished v1 work.
 2. Delete-ready question
-   - if future evidence shows that `payload_locals::<A>(...)` or `payload::<A>()` should be
-     removed entirely, that is a narrower hard-delete follow-on, not default-path migration debt.
+   - the first hard-delete cleanup is now landed for `payload_locals::<A>(...)` and
+     `payload::<A>().locals(...)`;
+   - any future question is narrower still:
+     whether `payload::<A>().local_update_if(...)` remains worth keeping beside the shipped
+     default helper.
 3. Broader runtime or dataflow questions
    - selector/query, router, and `LocalState<T>` architecture already live on other closed or
      separate lanes.
+
+For the retained payload-seam residue specifically:
+
+- keep the inventory in
+  `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`
+  inside this same folder rather than opening a parallel workstream unless the question grows
+  materially beyond payload-surface dedup.
 
 Conclusion:
 
@@ -135,6 +147,6 @@ From this point forward:
 
 1. keep the shipped default write-side budget stable,
 2. keep `payload_local_update_if::<A>(...)` as the only taught default keyed row-write path,
-3. keep `payload_locals::<A>(...)` and `payload::<A>()` explicitly advanced/reference unless new
-   proof justifies change,
+3. keep only the surviving lower-level payload chain explicitly advanced/reference unless new proof
+   justifies further change,
 4. do not reopen this lane just to explore helper growth from Todo-shaped pressure alone.
