@@ -18,6 +18,11 @@ const TEST_ID_INPUT: &str = "cookbook.text_input_basics.input";
 const TEST_ID_LEN: &str = "cookbook.text_input_basics.len";
 const TEST_ID_SUBMITTED_COUNT: &str = "cookbook.text_input_basics.submitted_count";
 
+struct TextInputStats {
+    text_len_chars: u32,
+    submitted_count: u32,
+}
+
 fn install_commands(app: &mut App) {
     let submit: CommandId = act::Submit.into();
     let submit_meta = CommandMeta::new("Submit input")
@@ -58,23 +63,17 @@ impl View for TextInputBasicsView {
         let text_state = cx.state().local::<String>();
         let submitted_count_state = cx.state().local::<u32>();
 
-        let text = cx
-            .state()
-            .watch(&text_state)
-            .layout()
-            .value_or_else(String::new);
-        let submitted_count = cx
-            .state()
-            .watch(&submitted_count_state)
-            .layout()
-            .value_or(0);
+        let stats: TextInputStats = cx.data().selector_layout(
+            (&text_state, &submitted_count_state),
+            |(text, submitted_count)| TextInputStats {
+                text_len_chars: text.chars().count() as u32,
+                submitted_count,
+            },
+        );
+        let text_len = stats.text_len_chars as f64;
+        let submitted_count = stats.submitted_count as f64;
 
-        let text_len_chars = text.chars().count() as u32;
-        let text_len = text_len_chars as f64;
-        let submitted_count_u32 = submitted_count;
-        let submitted_count = submitted_count_u32 as f64;
-
-        let len_badge = shadcn::Badge::new(format!("Length: {text_len_chars} chars"))
+        let len_badge = shadcn::Badge::new(format!("Length: {} chars", stats.text_len_chars))
             .variant(shadcn::BadgeVariant::Secondary)
             .a11y(
                 SemanticsDecoration::default()
@@ -84,7 +83,7 @@ impl View for TextInputBasicsView {
                     .numeric_range(0.0, 1024.0),
             );
 
-        let submitted_badge = shadcn::Badge::new(format!("Submitted: {submitted_count_u32}"))
+        let submitted_badge = shadcn::Badge::new(format!("Submitted: {}", stats.submitted_count))
             .variant(shadcn::BadgeVariant::Secondary)
             .a11y(
                 SemanticsDecoration::default()

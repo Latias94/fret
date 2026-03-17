@@ -145,6 +145,23 @@ pub struct CustomEffectV2WebWindowState {
     controls: DemoControls,
 }
 
+#[derive(Clone)]
+struct CustomEffectV2WebViewSettings {
+    enabled: bool,
+    mode_value: String,
+    quality_value: String,
+    sampling_value: String,
+    uv_span: f32,
+    strength_px: f32,
+    max_sample_offset_px: f32,
+    tint_strength: f32,
+    blur_radius_px: f32,
+    blur_downsample: u32,
+    lens_corner_radius_px: f32,
+    tile_corner_radius_px: f32,
+    debug_input: bool,
+}
+
 #[derive(Default)]
 pub struct CustomEffectV2WebDriver;
 
@@ -195,29 +212,156 @@ impl CustomEffectV2WebDriver {
         }
     }
 
-    fn watch_first_f32(
+    fn view_settings(
         cx: &mut ElementContext<'_, App>,
-        model: &Model<Vec<f32>>,
-        default: f32,
-    ) -> f32 {
-        model
-            .paint_in(cx)
-            .read_ref(|v| v.first().copied().unwrap_or(default))
-            .ok()
-            .unwrap_or(default)
-    }
-
-    fn watch_opt_string(
-        cx: &mut ElementContext<'_, App>,
-        model: &Model<Option<Arc<str>>>,
-        default: &str,
-    ) -> String {
-        model
-            .paint_in(cx)
-            .read_ref(|v| v.as_ref().map(|s| s.to_string()))
-            .ok()
-            .flatten()
-            .unwrap_or_else(|| default.to_string())
+        controls: &DemoControls,
+    ) -> CustomEffectV2WebViewSettings {
+        let enabled = controls.enabled.clone();
+        let mode = controls.mode.clone();
+        let quality = controls.quality.clone();
+        let sampling = controls.sampling.clone();
+        let uv_span = controls.uv_span.clone();
+        let strength_px = controls.strength_px.clone();
+        let max_sample_offset_px = controls.max_sample_offset_px.clone();
+        let tint_strength = controls.tint_strength.clone();
+        let blur_radius_px = controls.blur_radius_px.clone();
+        let blur_downsample = controls.blur_downsample.clone();
+        let lens_corner_radius_px = controls.lens_corner_radius_px.clone();
+        let tile_corner_radius_px = controls.tile_corner_radius_px.clone();
+        let debug_input = controls.debug_input.clone();
+        let enabled_deps = enabled.clone();
+        let mode_deps = mode.clone();
+        let quality_deps = quality.clone();
+        let sampling_deps = sampling.clone();
+        let uv_span_deps = uv_span.clone();
+        let strength_px_deps = strength_px.clone();
+        let max_sample_offset_px_deps = max_sample_offset_px.clone();
+        let tint_strength_deps = tint_strength.clone();
+        let blur_radius_px_deps = blur_radius_px.clone();
+        let blur_downsample_deps = blur_downsample.clone();
+        let lens_corner_radius_px_deps = lens_corner_radius_px.clone();
+        let tile_corner_radius_px_deps = tile_corner_radius_px.clone();
+        let debug_input_deps = debug_input.clone();
+        cx.data().selector(
+            move |cx| {
+                cx.observe_model(&enabled_deps, Invalidation::Paint);
+                cx.observe_model(&mode_deps, Invalidation::Paint);
+                cx.observe_model(&quality_deps, Invalidation::Paint);
+                cx.observe_model(&sampling_deps, Invalidation::Paint);
+                cx.observe_model(&uv_span_deps, Invalidation::Paint);
+                cx.observe_model(&strength_px_deps, Invalidation::Paint);
+                cx.observe_model(&max_sample_offset_px_deps, Invalidation::Paint);
+                cx.observe_model(&tint_strength_deps, Invalidation::Paint);
+                cx.observe_model(&blur_radius_px_deps, Invalidation::Paint);
+                cx.observe_model(&blur_downsample_deps, Invalidation::Paint);
+                cx.observe_model(&lens_corner_radius_px_deps, Invalidation::Paint);
+                cx.observe_model(&tile_corner_radius_px_deps, Invalidation::Paint);
+                cx.observe_model(&debug_input_deps, Invalidation::Paint);
+                [
+                    cx.app.models().revision(&enabled_deps).unwrap_or(0),
+                    cx.app.models().revision(&mode_deps).unwrap_or(0),
+                    cx.app.models().revision(&quality_deps).unwrap_or(0),
+                    cx.app.models().revision(&sampling_deps).unwrap_or(0),
+                    cx.app.models().revision(&uv_span_deps).unwrap_or(0),
+                    cx.app.models().revision(&strength_px_deps).unwrap_or(0),
+                    cx.app
+                        .models()
+                        .revision(&max_sample_offset_px_deps)
+                        .unwrap_or(0),
+                    cx.app.models().revision(&tint_strength_deps).unwrap_or(0),
+                    cx.app.models().revision(&blur_radius_px_deps).unwrap_or(0),
+                    cx.app.models().revision(&blur_downsample_deps).unwrap_or(0),
+                    cx.app
+                        .models()
+                        .revision(&lens_corner_radius_px_deps)
+                        .unwrap_or(0),
+                    cx.app
+                        .models()
+                        .revision(&tile_corner_radius_px_deps)
+                        .unwrap_or(0),
+                    cx.app.models().revision(&debug_input_deps).unwrap_or(0),
+                ]
+            },
+            move |cx| CustomEffectV2WebViewSettings {
+                enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
+                mode_value: cx
+                    .app
+                    .models()
+                    .get_cloned(&mode)
+                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
+                    .unwrap_or_else(|| "backdrop".to_string()),
+                quality_value: cx
+                    .app
+                    .models()
+                    .get_cloned(&quality)
+                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
+                    .unwrap_or_else(|| "high".to_string()),
+                sampling_value: cx
+                    .app
+                    .models()
+                    .get_cloned(&sampling)
+                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
+                    .unwrap_or_else(|| "linear".to_string()),
+                uv_span: cx
+                    .app
+                    .models()
+                    .get_cloned(&uv_span)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(1.0)
+                    .clamp(0.05, 1.0),
+                strength_px: cx
+                    .app
+                    .models()
+                    .get_cloned(&strength_px)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(14.0)
+                    .clamp(0.0, 24.0),
+                max_sample_offset_px: cx
+                    .app
+                    .models()
+                    .get_cloned(&max_sample_offset_px)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(18.0)
+                    .clamp(0.0, 96.0),
+                tint_strength: cx
+                    .app
+                    .models()
+                    .get_cloned(&tint_strength)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(0.8)
+                    .clamp(0.0, 1.0),
+                blur_radius_px: cx
+                    .app
+                    .models()
+                    .get_cloned(&blur_radius_px)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(12.0)
+                    .clamp(0.0, 48.0),
+                blur_downsample: cx
+                    .app
+                    .models()
+                    .get_cloned(&blur_downsample)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(1.0)
+                    .round()
+                    .clamp(1.0, 4.0) as u32,
+                lens_corner_radius_px: cx
+                    .app
+                    .models()
+                    .get_cloned(&lens_corner_radius_px)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(24.0)
+                    .clamp(0.0, 64.0),
+                tile_corner_radius_px: cx
+                    .app
+                    .models()
+                    .get_cloned(&tile_corner_radius_px)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(18.0)
+                    .clamp(0.0, 64.0),
+                debug_input: cx.app.models().get_cloned(&debug_input).unwrap_or(false),
+            },
+        )
     }
 
     fn sampling_hint(value: &str) -> ImageSamplingHint {
@@ -390,7 +534,7 @@ impl CustomEffectV2WebDriver {
 
     fn lens(
         cx: &mut ElementContext<'_, App>,
-        controls: &DemoControls,
+        view_settings: &CustomEffectV2WebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -401,25 +545,7 @@ impl CustomEffectV2WebDriver {
         let effect = pack.and_then(|p| p.program.id());
         let input_image = pack.and_then(|p| p.input_image);
 
-        let enabled = controls.enabled.paint_in(cx).value_or(true);
-        let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
-        let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
-        let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
-        let uv_span = Self::watch_first_f32(cx, &controls.uv_span, 1.0).clamp(0.05, 1.0);
-        let strength_px = Self::watch_first_f32(cx, &controls.strength_px, 14.0).clamp(0.0, 24.0);
-        let max_sample_offset_px =
-            Self::watch_first_f32(cx, &controls.max_sample_offset_px, 18.0).clamp(0.0, 96.0);
-        let tint_strength = Self::watch_first_f32(cx, &controls.tint_strength, 0.8).clamp(0.0, 1.0);
-        let blur_radius_px =
-            Self::watch_first_f32(cx, &controls.blur_radius_px, 12.0).clamp(0.0, 48.0);
-        let blur_downsample = Self::watch_first_f32(cx, &controls.blur_downsample, 1.0)
-            .round()
-            .clamp(1.0, 4.0) as u32;
-        let lens_corner_radius_px =
-            Self::watch_first_f32(cx, &controls.lens_corner_radius_px, 24.0).clamp(0.0, 64.0);
-        let debug_input = controls.debug_input.paint_in(cx).value_or(false);
-
-        let radius = Px(lens_corner_radius_px);
+        let radius = Px(view_settings.lens_corner_radius_px);
 
         let mut outer_layout = LayoutStyle::default();
         outer_layout.size.width = Length::Px(Px(420.0));
@@ -430,7 +556,7 @@ impl CustomEffectV2WebDriver {
         body_layout.size.width = Length::Fill;
         body_layout.size.height = Length::Fill;
 
-        let body = if !enabled {
+        let body = if !view_settings.enabled {
             cx.container(
                 ContainerProps {
                     layout: body_layout,
@@ -443,9 +569,9 @@ impl CustomEffectV2WebDriver {
             let params = EffectParamsV1 {
                 vec4s: [
                     [
-                        strength_px,
-                        tint_strength,
-                        if debug_input { 1.0 } else { 0.0 },
+                        view_settings.strength_px,
+                        view_settings.tint_strength,
+                        if view_settings.debug_input { 1.0 } else { 0.0 },
                         0.0,
                     ],
                     [0.0; 4],
@@ -454,24 +580,24 @@ impl CustomEffectV2WebDriver {
                 ],
             };
 
-            let half = uv_span * 0.5;
+            let half = view_settings.uv_span * 0.5;
             let uv = UvRect {
                 u0: 0.5 - half,
                 v0: 0.5 - half,
                 u1: 0.5 + half,
                 v1: 0.5 + half,
             };
-            let sampling = Self::sampling_hint(&sampling_value);
+            let sampling = Self::sampling_hint(&view_settings.sampling_value);
 
             let chain = EffectChain::from_steps(&[
                 EffectStep::GaussianBlur {
-                    radius_px: Px(blur_radius_px),
-                    downsample: blur_downsample,
+                    radius_px: Px(view_settings.blur_radius_px),
+                    downsample: view_settings.blur_downsample,
                 },
                 EffectStep::CustomV2 {
                     id: effect,
                     params,
-                    max_sample_offset_px: Px(max_sample_offset_px),
+                    max_sample_offset_px: Px(view_settings.max_sample_offset_px),
                     input_image: input_image.map(|image| CustomEffectImageInputV1 {
                         image,
                         uv,
@@ -484,9 +610,9 @@ impl CustomEffectV2WebDriver {
             cx.effect_layer_props(
                 EffectLayerProps {
                     layout: body_layout,
-                    mode: Self::effect_mode(&mode_value),
+                    mode: Self::effect_mode(&view_settings.mode_value),
                     chain,
-                    quality: Self::effect_quality(&quality_value),
+                    quality: Self::effect_quality(&view_settings.quality_value),
                 },
                 |_cx| Vec::<AnyElement>::new(),
             )
@@ -575,27 +701,21 @@ impl CustomEffectV2WebDriver {
     fn inspector(
         cx: &mut ElementContext<'_, App>,
         controls: &DemoControls,
+        view_settings: &CustomEffectV2WebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
-        let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
-        let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
-
-        let uv_span = Self::watch_first_f32(cx, &controls.uv_span, 1.0).clamp(0.05, 1.0);
-        let strength_px = Self::watch_first_f32(cx, &controls.strength_px, 14.0).clamp(0.0, 24.0);
-        let max_sample_offset_px =
-            Self::watch_first_f32(cx, &controls.max_sample_offset_px, 18.0).clamp(0.0, 96.0);
-        let tint_strength = Self::watch_first_f32(cx, &controls.tint_strength, 0.8).clamp(0.0, 1.0);
-        let blur_radius_px =
-            Self::watch_first_f32(cx, &controls.blur_radius_px, 12.0).clamp(0.0, 48.0);
-        let blur_downsample = Self::watch_first_f32(cx, &controls.blur_downsample, 1.0)
-            .round()
-            .clamp(1.0, 4.0) as u32;
-        let lens_corner_radius_px =
-            Self::watch_first_f32(cx, &controls.lens_corner_radius_px, 24.0).clamp(0.0, 64.0);
-        let tile_corner_radius_px =
-            Self::watch_first_f32(cx, &controls.tile_corner_radius_px, 18.0).clamp(0.0, 64.0);
+        let mode_value = view_settings.mode_value.clone();
+        let quality_value = view_settings.quality_value.clone();
+        let sampling_value = view_settings.sampling_value.clone();
+        let uv_span = view_settings.uv_span;
+        let strength_px = view_settings.strength_px;
+        let max_sample_offset_px = view_settings.max_sample_offset_px;
+        let tint_strength = view_settings.tint_strength;
+        let blur_radius_px = view_settings.blur_radius_px;
+        let blur_downsample = view_settings.blur_downsample;
+        let lens_corner_radius_px = view_settings.lens_corner_radius_px;
+        let tile_corner_radius_px = view_settings.tile_corner_radius_px;
 
         let reset_controls = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
@@ -931,14 +1051,16 @@ impl CustomEffectV2WebDriver {
         row.layout.size.height = Length::Fill;
 
         vec![cx.flex(row, move |cx| {
-            let inspector = Self::inspector(cx, &controls).into_element(cx);
+            let view_settings = Self::view_settings(cx, &controls);
+            let inspector_settings = view_settings.clone();
+            let stage_settings = view_settings.clone();
+            let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);
 
             let mut stage_layout = LayoutStyle::default();
             stage_layout.size.width = Length::Fill;
             stage_layout.size.height = Length::Fill;
             stage_layout.overflow = Overflow::Clip;
 
-            let controls_for_stage = controls.clone();
             let stage = cx.container(
                 ContainerProps {
                     layout: stage_layout,
@@ -948,11 +1070,7 @@ impl CustomEffectV2WebDriver {
                 move |cx| {
                     let mut items: Vec<AnyElement> = Vec::new();
 
-                    let tile_corner_radius_px = Px(Self::watch_first_f32(
-                        cx,
-                        &controls_for_stage.tile_corner_radius_px,
-                        18.0,
-                    ));
+                    let tile_corner_radius_px = Px(stage_settings.tile_corner_radius_px);
 
                     items.push(
                         Self::stage_tile(
@@ -1054,7 +1172,6 @@ impl CustomEffectV2WebDriver {
                     center.layout.size.width = Length::Fill;
                     center.layout.size.height = Length::Fill;
 
-                    let controls_for_lens = controls_for_stage.clone();
                     let overlay = cx.container(
                         ContainerProps {
                             layout: overlay_fill_container,
@@ -1062,7 +1179,7 @@ impl CustomEffectV2WebDriver {
                         },
                         move |cx| {
                             vec![cx.flex(center, move |cx| {
-                                vec![Self::lens(cx, &controls_for_lens).into_element(cx)]
+                                vec![Self::lens(cx, &stage_settings).into_element(cx)]
                             })]
                         },
                     );

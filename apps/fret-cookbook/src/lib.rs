@@ -262,6 +262,10 @@ mod authoring_surface_policy_tests {
 
         assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().locals::<act::Submit>"));
         assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().availability::<act::Submit>"));
+        assert!(TEXT_INPUT_EXAMPLE.contains(".selector_layout("));
+        assert!(TEXT_INPUT_EXAMPLE.contains("(&text_state, &submitted_count_state),"));
+        assert!(!TEXT_INPUT_EXAMPLE.contains("watch(&text_state)"));
+        assert!(!TEXT_INPUT_EXAMPLE.contains("watch(&submitted_count_state)"));
 
         assert!(TOGGLE_EXAMPLE.contains("toggle_local_bool::<act::ToggleBookmark>"));
 

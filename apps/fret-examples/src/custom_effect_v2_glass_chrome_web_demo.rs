@@ -119,33 +119,119 @@ pub struct CustomEffectV2GlassChromeWebWindowState {
     controls: DemoControls,
 }
 
+#[derive(Clone)]
+struct CustomEffectV2GlassChromeWebViewSettings {
+    enabled: bool,
+    mode_value: String,
+    quality_value: String,
+    sampling_value: String,
+    uv_span: f32,
+    strength: f32,
+    shininess: f32,
+    mix01: f32,
+    debug_input: bool,
+}
+
 #[derive(Default)]
 pub struct CustomEffectV2GlassChromeWebDriver;
 
 impl CustomEffectV2GlassChromeWebDriver {
-    fn watch_first_f32(
+    fn view_settings(
         cx: &mut ElementContext<'_, App>,
-        model: &Model<Vec<f32>>,
-        default: f32,
-    ) -> f32 {
-        model
-            .paint_in(cx)
-            .read_ref(|v| v.first().copied().unwrap_or(default))
-            .ok()
-            .unwrap_or(default)
-    }
-
-    fn watch_opt_string(
-        cx: &mut ElementContext<'_, App>,
-        model: &Model<Option<Arc<str>>>,
-        default: &str,
-    ) -> String {
-        model
-            .paint_in(cx)
-            .read_ref(|v| v.as_ref().map(|s| s.to_string()))
-            .ok()
-            .flatten()
-            .unwrap_or_else(|| default.to_string())
+        controls: &DemoControls,
+    ) -> CustomEffectV2GlassChromeWebViewSettings {
+        let enabled = controls.enabled.clone();
+        let mode = controls.mode.clone();
+        let quality = controls.quality.clone();
+        let sampling = controls.sampling.clone();
+        let uv_span = controls.uv_span.clone();
+        let strength = controls.strength.clone();
+        let shininess = controls.shininess.clone();
+        let mix01 = controls.mix01.clone();
+        let debug_input = controls.debug_input.clone();
+        let enabled_deps = enabled.clone();
+        let mode_deps = mode.clone();
+        let quality_deps = quality.clone();
+        let sampling_deps = sampling.clone();
+        let uv_span_deps = uv_span.clone();
+        let strength_deps = strength.clone();
+        let shininess_deps = shininess.clone();
+        let mix01_deps = mix01.clone();
+        let debug_input_deps = debug_input.clone();
+        cx.data().selector(
+            move |cx| {
+                cx.observe_model(&enabled_deps, Invalidation::Paint);
+                cx.observe_model(&mode_deps, Invalidation::Paint);
+                cx.observe_model(&quality_deps, Invalidation::Paint);
+                cx.observe_model(&sampling_deps, Invalidation::Paint);
+                cx.observe_model(&uv_span_deps, Invalidation::Paint);
+                cx.observe_model(&strength_deps, Invalidation::Paint);
+                cx.observe_model(&shininess_deps, Invalidation::Paint);
+                cx.observe_model(&mix01_deps, Invalidation::Paint);
+                cx.observe_model(&debug_input_deps, Invalidation::Paint);
+                [
+                    cx.app.models().revision(&enabled_deps).unwrap_or(0),
+                    cx.app.models().revision(&mode_deps).unwrap_or(0),
+                    cx.app.models().revision(&quality_deps).unwrap_or(0),
+                    cx.app.models().revision(&sampling_deps).unwrap_or(0),
+                    cx.app.models().revision(&uv_span_deps).unwrap_or(0),
+                    cx.app.models().revision(&strength_deps).unwrap_or(0),
+                    cx.app.models().revision(&shininess_deps).unwrap_or(0),
+                    cx.app.models().revision(&mix01_deps).unwrap_or(0),
+                    cx.app.models().revision(&debug_input_deps).unwrap_or(0),
+                ]
+            },
+            move |cx| CustomEffectV2GlassChromeWebViewSettings {
+                enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
+                mode_value: cx
+                    .app
+                    .models()
+                    .get_cloned(&mode)
+                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
+                    .unwrap_or_else(|| "backdrop".to_string()),
+                quality_value: cx
+                    .app
+                    .models()
+                    .get_cloned(&quality)
+                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
+                    .unwrap_or_else(|| "high".to_string()),
+                sampling_value: cx
+                    .app
+                    .models()
+                    .get_cloned(&sampling)
+                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
+                    .unwrap_or_else(|| "linear".to_string()),
+                uv_span: cx
+                    .app
+                    .models()
+                    .get_cloned(&uv_span)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(1.0)
+                    .clamp(0.05, 1.0),
+                strength: cx
+                    .app
+                    .models()
+                    .get_cloned(&strength)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(0.95)
+                    .clamp(0.0, 2.0),
+                shininess: cx
+                    .app
+                    .models()
+                    .get_cloned(&shininess)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(36.0)
+                    .clamp(1.0, 128.0),
+                mix01: cx
+                    .app
+                    .models()
+                    .get_cloned(&mix01)
+                    .and_then(|value| value.first().copied())
+                    .unwrap_or(1.0)
+                    .clamp(0.0, 1.0),
+                debug_input: cx.app.models().get_cloned(&debug_input).unwrap_or(false),
+            },
+        )
     }
 
     fn effect_mode(value: &str) -> EffectMode {
@@ -327,7 +413,7 @@ impl CustomEffectV2GlassChromeWebDriver {
 
     fn lens(
         cx: &mut ElementContext<'_, App>,
-        controls: &DemoControls,
+        view_settings: &CustomEffectV2GlassChromeWebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -337,16 +423,6 @@ impl CustomEffectV2GlassChromeWebDriver {
         let pack = cx.app.global::<DemoEffectPack>();
         let effect = pack.and_then(|p| p.program.id());
         let input_image = pack.and_then(|p| p.input_image);
-
-        let enabled = controls.enabled.paint_in(cx).value_or(true);
-        let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
-        let quality_value = Self::watch_opt_string(cx, &controls.quality, "high");
-        let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
-        let uv_span = Self::watch_first_f32(cx, &controls.uv_span, 1.0).clamp(0.05, 1.0);
-        let strength = Self::watch_first_f32(cx, &controls.strength, 0.95).clamp(0.0, 2.0);
-        let shininess = Self::watch_first_f32(cx, &controls.shininess, 36.0).clamp(1.0, 128.0);
-        let mix01 = Self::watch_first_f32(cx, &controls.mix01, 1.0).clamp(0.0, 1.0);
-        let debug_input = controls.debug_input.paint_in(cx).value_or(false);
 
         let radius = Px(24.0);
 
@@ -359,7 +435,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         body_layout.size.width = Length::Fill;
         body_layout.size.height = Length::Fill;
 
-        let body = if !enabled {
+        let body = if !view_settings.enabled {
             cx.container(
                 ContainerProps {
                     layout: body_layout,
@@ -372,10 +448,10 @@ impl CustomEffectV2GlassChromeWebDriver {
             let params = EffectParamsV1 {
                 vec4s: [
                     [
-                        strength,
-                        shininess,
-                        mix01,
-                        if debug_input { 1.0 } else { 0.0 },
+                        view_settings.strength,
+                        view_settings.shininess,
+                        view_settings.mix01,
+                        if view_settings.debug_input { 1.0 } else { 0.0 },
                     ],
                     [0.0; 4],
                     [0.0; 4],
@@ -383,14 +459,14 @@ impl CustomEffectV2GlassChromeWebDriver {
                 ],
             };
 
-            let half = uv_span * 0.5;
+            let half = view_settings.uv_span * 0.5;
             let uv = UvRect {
                 u0: 0.5 - half,
                 v0: 0.5 - half,
                 u1: 0.5 + half,
                 v1: 0.5 + half,
             };
-            let sampling = Self::sampling_hint(&sampling_value);
+            let sampling = Self::sampling_hint(&view_settings.sampling_value);
 
             let chain = EffectChain::from_steps(&[EffectStep::CustomV2 {
                 id: effect,
@@ -407,9 +483,9 @@ impl CustomEffectV2GlassChromeWebDriver {
             cx.effect_layer_props(
                 EffectLayerProps {
                     layout: body_layout,
-                    mode: Self::effect_mode(&mode_value),
+                    mode: Self::effect_mode(&view_settings.mode_value),
                     chain,
-                    quality: Self::effect_quality(&quality_value),
+                    quality: Self::effect_quality(&view_settings.quality_value),
                 },
                 |_cx| Vec::<AnyElement>::new(),
             )
@@ -489,6 +565,7 @@ impl CustomEffectV2GlassChromeWebDriver {
     fn controls_panel(
         cx: &mut ElementContext<'_, App>,
         controls: &DemoControls,
+        view_settings: &CustomEffectV2GlassChromeWebViewSettings,
     ) -> impl IntoUiElement<App> + use<> {
         let enabled_model = controls.enabled.clone();
         let mode_model = controls.mode.clone();
@@ -503,11 +580,11 @@ impl CustomEffectV2GlassChromeWebDriver {
         let mix01_model = controls.mix01.clone();
         let debug_input_model = controls.debug_input.clone();
 
-        let uv_span = Self::watch_first_f32(cx, &controls.uv_span, 1.0).clamp(0.05, 1.0);
-        let strength = Self::watch_first_f32(cx, &controls.strength, 0.95).clamp(0.0, 2.0);
-        let shininess = Self::watch_first_f32(cx, &controls.shininess, 36.0).clamp(1.0, 128.0);
-        let mix01 = Self::watch_first_f32(cx, &controls.mix01, 1.0).clamp(0.0, 1.0);
-        let debug_input = controls.debug_input.paint_in(cx).value_or(false);
+        let uv_span = view_settings.uv_span;
+        let strength = view_settings.strength;
+        let shininess = view_settings.shininess;
+        let mix01 = view_settings.mix01;
+        let debug_input = view_settings.debug_input;
 
         let header = shadcn::CardHeader::new([
             shadcn::CardTitle::new("CustomV2 (Glass/Chrome)").into_element(cx),
@@ -711,14 +788,17 @@ impl CustomEffectV2GlassChromeWebDriver {
         row.layout.size.height = Length::Fill;
 
         vec![cx.flex(row, move |cx| {
-            let inspector = Self::controls_panel(cx, &controls).into_element(cx);
+            let view_settings = Self::view_settings(cx, &controls);
+            let inspector_settings = view_settings.clone();
+            let stage_settings = view_settings.clone();
+            let inspector =
+                Self::controls_panel(cx, &controls, &inspector_settings).into_element(cx);
 
             let mut stage_layout = LayoutStyle::default();
             stage_layout.size.width = Length::Fill;
             stage_layout.size.height = Length::Fill;
             stage_layout.overflow = Overflow::Clip;
 
-            let controls_for_stage = controls.clone();
             let stage = cx.container(
                 ContainerProps {
                     layout: stage_layout,
@@ -767,7 +847,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                     );
 
                     if visible {
-                        items.push(Self::lens(cx, &controls_for_stage).into_element(cx));
+                        items.push(Self::lens(cx, &stage_settings).into_element(cx));
                     }
 
                     items

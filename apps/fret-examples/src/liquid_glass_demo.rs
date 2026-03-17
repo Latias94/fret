@@ -402,6 +402,25 @@ struct LiquidGlassView {
     st: LiquidGlassState,
 }
 
+#[derive(Clone)]
+struct LiquidGlassVisibilitySettings {
+    show_fake: bool,
+    show_warp: bool,
+    show_warp_v2: bool,
+    show_custom_v2: bool,
+    show_custom_v3: bool,
+    custom_v3_pair: bool,
+}
+
+#[derive(Clone)]
+struct LiquidGlassModeSettings {
+    custom_v3_source_group: bool,
+    show_inspector: bool,
+    animate: bool,
+    use_backdrop: bool,
+    use_dither: bool,
+}
+
 fn install_demo_theme(app: &mut KernelApp) {
     shadcn::themes::apply_shadcn_new_york(
         app,
@@ -636,15 +655,84 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
     let use_backdrop_model = st.use_backdrop.clone();
     let use_dither_model = st.use_dither.clone();
 
-    let show_fake = st.show_fake.layout_in(cx).value_or(true);
-    let show_warp = st.show_warp.layout_in(cx).value_or(true);
-    let show_warp_v2 = st.show_warp_v2.layout_in(cx).value_or(false);
-    let show_custom_v2 = st.show_custom_v2.layout_in(cx).value_or(false);
-    let show_custom_v3 = st.show_custom_v3.layout_in(cx).value_or(false);
-    let custom_v3_pair = st.custom_v3_pair.layout_in(cx).value_or(false);
-    let custom_v3_source_group = st.custom_v3_source_group.layout_in(cx).value_or(false);
-    let show_inspector = st.show_inspector.layout_in(cx).value_or(true);
-    let animate = st.animate.layout_in(cx).value_or(true);
+    let show_fake = st.show_fake.clone();
+    let show_warp = st.show_warp.clone();
+    let show_warp_v2 = st.show_warp_v2.clone();
+    let show_custom_v2 = st.show_custom_v2.clone();
+    let show_custom_v3 = st.show_custom_v3.clone();
+    let custom_v3_pair = st.custom_v3_pair.clone();
+    let show_fake_switch_model = show_fake_model.clone();
+    let show_warp_switch_model = show_warp_model.clone();
+    let show_warp_v2_switch_model = show_warp_v2_model.clone();
+    let show_custom_v2_switch_model = show_custom_v2_model.clone();
+    let show_custom_v3_switch_model = show_custom_v3_model.clone();
+    let custom_v3_pair_switch_model = custom_v3_pair_model.clone();
+    let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector(
+        move |cx| {
+            cx.observe_model(&show_fake_model, Invalidation::Layout);
+            cx.observe_model(&show_warp_model, Invalidation::Layout);
+            cx.observe_model(&show_warp_v2_model, Invalidation::Layout);
+            cx.observe_model(&show_custom_v2_model, Invalidation::Layout);
+            cx.observe_model(&show_custom_v3_model, Invalidation::Layout);
+            cx.observe_model(&custom_v3_pair_model, Invalidation::Layout);
+            (
+                cx.app.models().revision(&show_fake_model).unwrap_or(0),
+                cx.app.models().revision(&show_warp_model).unwrap_or(0),
+                cx.app.models().revision(&show_warp_v2_model).unwrap_or(0),
+                cx.app.models().revision(&show_custom_v2_model).unwrap_or(0),
+                cx.app.models().revision(&show_custom_v3_model).unwrap_or(0),
+                cx.app.models().revision(&custom_v3_pair_model).unwrap_or(0),
+            )
+        },
+        move |cx| LiquidGlassVisibilitySettings {
+            show_fake: cx.app.models().get_cloned(&show_fake).unwrap_or(true),
+            show_warp: cx.app.models().get_cloned(&show_warp).unwrap_or(true),
+            show_warp_v2: cx.app.models().get_cloned(&show_warp_v2).unwrap_or(false),
+            show_custom_v2: cx.app.models().get_cloned(&show_custom_v2).unwrap_or(false),
+            show_custom_v3: cx.app.models().get_cloned(&show_custom_v3).unwrap_or(false),
+            custom_v3_pair: cx.app.models().get_cloned(&custom_v3_pair).unwrap_or(false),
+        },
+    );
+    let custom_v3_source_group = st.custom_v3_source_group.clone();
+    let show_inspector = st.show_inspector.clone();
+    let animate = st.animate.clone();
+    let use_backdrop = st.use_backdrop.clone();
+    let use_dither = st.use_dither.clone();
+    let custom_v3_source_group_switch_model = custom_v3_source_group_model.clone();
+    let show_inspector_switch_model = show_inspector_model.clone();
+    let animate_switch_model = animate_model.clone();
+    let use_backdrop_switch_model = use_backdrop_model.clone();
+    let use_dither_switch_model = use_dither_model.clone();
+    let mode_settings: LiquidGlassModeSettings = cx.data().selector(
+        move |cx| {
+            cx.observe_model(&custom_v3_source_group_model, Invalidation::Layout);
+            cx.observe_model(&show_inspector_model, Invalidation::Layout);
+            cx.observe_model(&animate_model, Invalidation::Layout);
+            cx.observe_model(&use_backdrop_model, Invalidation::Layout);
+            cx.observe_model(&use_dither_model, Invalidation::Layout);
+            (
+                cx.app
+                    .models()
+                    .revision(&custom_v3_source_group_model)
+                    .unwrap_or(0),
+                cx.app.models().revision(&show_inspector_model).unwrap_or(0),
+                cx.app.models().revision(&animate_model).unwrap_or(0),
+                cx.app.models().revision(&use_backdrop_model).unwrap_or(0),
+                cx.app.models().revision(&use_dither_model).unwrap_or(0),
+            )
+        },
+        move |cx| LiquidGlassModeSettings {
+            custom_v3_source_group: cx
+                .app
+                .models()
+                .get_cloned(&custom_v3_source_group)
+                .unwrap_or(false),
+            show_inspector: cx.app.models().get_cloned(&show_inspector).unwrap_or(true),
+            animate: cx.app.models().get_cloned(&animate).unwrap_or(true),
+            use_backdrop: cx.app.models().get_cloned(&use_backdrop).unwrap_or(true),
+            use_dither: cx.app.models().get_cloned(&use_dither).unwrap_or(true),
+        },
+    );
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
 
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 16.0);
@@ -673,9 +761,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
     let custom_v3_bevel_angle_deg = watch_first_f32(cx, &st.custom_v3_bevel_angle_deg, 45.0);
     let custom_v3_bevel_secondary = watch_first_f32(cx, &st.custom_v3_bevel_secondary, 1.0);
 
-    let use_backdrop = st.use_backdrop.layout_in(cx).value_or(true);
-    let use_dither = st.use_dither.layout_in(cx).value_or(true);
-    let mode = if use_backdrop {
+    let mode = if mode_settings.use_backdrop {
         EffectMode::Backdrop
     } else {
         EffectMode::FilterContent
@@ -683,8 +769,12 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
 
     let frame = cx.app.frame_id().0 as f32;
     let t = frame / 60.0;
-    let phase = if animate { t * phase_speed } else { warp_phase };
-    if animate {
+    let phase = if mode_settings.animate {
+        t * phase_speed
+    } else {
+        warp_phase
+    };
+    if mode_settings.animate {
         cx.request_animation_frame();
     }
 
@@ -738,7 +828,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
         saturation,
         brightness,
         contrast,
-        use_dither,
+        mode_settings.use_dither,
     );
     let warp_chain = build_chain(
         Some(EffectStep::BackdropWarpV1(warp_base)),
@@ -747,7 +837,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
         saturation,
         brightness,
         contrast,
-        use_dither,
+        mode_settings.use_dither,
     );
 
     let warp_v2_field = match warp_image {
@@ -769,7 +859,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
         saturation,
         brightness,
         contrast,
-        use_dither,
+        mode_settings.use_dither,
     );
 
     let custom_v2_chain = {
@@ -865,7 +955,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
             saturation,
             brightness,
             contrast,
-            use_dither,
+            mode_settings.use_dither,
         )
     };
 
@@ -933,7 +1023,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                 contrast: contrast.clamp(0.0, 3.0),
             });
         }
-        if use_dither && steps.len() < EffectChain::MAX_STEPS {
+        if mode_settings.use_dither && steps.len() < EffectChain::MAX_STEPS {
             steps.push(EffectStep::Dither {
                 mode: DitherMode::Bayer4x4,
             });
@@ -1166,7 +1256,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                show_fake_model.clone(),
+                                                                show_fake_switch_model.clone(),
                                                             )
                                                             .a11y_label("Show fake lens")
                                                             .test_id("liquid-glass-switch-show-fake")
@@ -1174,7 +1264,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                             shadcn::Label::new("Fake")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                show_warp_model.clone(),
+                                                                show_warp_switch_model.clone(),
                                                             )
                                                             .a11y_label("Show warp v1 lens")
                                                             .test_id(
@@ -1184,7 +1274,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                             shadcn::Label::new("Warp v1")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                show_warp_v2_model.clone(),
+                                                                show_warp_v2_switch_model.clone(),
                                                             )
                                                             .a11y_label("Show warp v2 lens")
                                                             .test_id(
@@ -1201,7 +1291,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                show_custom_v2_model.clone(),
+                                                                show_custom_v2_switch_model.clone(),
                                                             )
                                                             .a11y_label("Show custom v2 lens")
                                                             .test_id(
@@ -1211,7 +1301,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                             shadcn::Label::new("Custom v2")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                show_custom_v3_model.clone(),
+                                                                show_custom_v3_switch_model.clone(),
                                                             )
                                                             .a11y_label("Show custom v3 lens")
                                                             .test_id(
@@ -1228,7 +1318,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                custom_v3_pair_model.clone(),
+                                                                custom_v3_pair_switch_model.clone(),
                                                             )
                                                             .a11y_label(
                                                                 "Show two custom v3 lenses",
@@ -1240,7 +1330,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                             shadcn::Label::new("V3 pair")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                custom_v3_source_group_model
+                                                                custom_v3_source_group_switch_model
                                                                     .clone(),
                                                             )
                                                             .a11y_label(
@@ -1260,7 +1350,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                use_backdrop_model.clone(),
+                                                                use_backdrop_switch_model.clone(),
                                                             )
                                                             .a11y_label("Backdrop mode")
                                                             .test_id(
@@ -1270,7 +1360,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                             shadcn::Label::new("Backdrop")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                use_dither_model.clone(),
+                                                                use_dither_switch_model.clone(),
                                                             )
                                                             .a11y_label("Dither")
                                                             .test_id(
@@ -1280,7 +1370,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                             shadcn::Label::new("Dither")
                                                                 .into_element(cx),
                                                             shadcn::Switch::new(
-                                                                animate_model.clone(),
+                                                                animate_switch_model.clone(),
                                                             )
                                                             .a11y_label("Animate phase")
                                                             .test_id("liquid-glass-switch-animate")
@@ -1295,7 +1385,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
-                                                                show_inspector_model.clone(),
+                                                                show_inspector_switch_model.clone(),
                                                             )
                                                             .a11y_label("Show inspector")
                                                             .test_id(
@@ -1305,7 +1395,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                             shadcn::Label::new("Inspector")
                                                                 .into_element(cx),
                                                             cx.spacer(SpacerProps::default()),
-                                                            shadcn::Button::new(if show_inspector {
+                                                            shadcn::Button::new(if mode_settings.show_inspector {
                                                                 "Hide"
                                                             } else {
                                                                 "Show"
@@ -1353,7 +1443,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 },
                                 move |cx| {
                                     let mut out: Vec<AnyElement> = Vec::new();
-                                    if show_fake {
+                                    if visibility_settings.show_fake {
                                         let lens = lens_panel(
                                             cx,
                                             Arc::from("Fake glass (blur + adjust)"),
@@ -1363,7 +1453,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                         );
                                         out.push(lens.into_element(cx).test_id("liquid-glass-lens-fake"));
                                     }
-                                    if show_warp {
+                                    if visibility_settings.show_warp {
                                         let lens = lens_panel(
                                             cx,
                                             Arc::from("Warp v1 (procedural)"),
@@ -1375,7 +1465,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             lens.into_element(cx).test_id("liquid-glass-lens-warp-v1"),
                                         );
                                     }
-                                    if show_warp_v2 {
+                                    if visibility_settings.show_warp_v2 {
                                         let lens = lens_panel(
                                             cx,
                                             Arc::from("Warp v2 (image field)"),
@@ -1387,7 +1477,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             lens.into_element(cx).test_id("liquid-glass-lens-warp-v2"),
                                         );
                                     }
-                                    if show_custom_v2 {
+                                    if visibility_settings.show_custom_v2 {
                                         let label = if !custom_v2_supported {
                                             if !custom_v2_capable {
                                                 Arc::from("CustomV2 (unsupported backend)")
@@ -1406,7 +1496,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 .test_id("liquid-glass-lens-custom-v2"),
                                         );
                                     }
-                                    if show_custom_v3 {
+                                    if visibility_settings.show_custom_v3 {
                                         let label: Arc<str> = if !custom_v3_supported {
                                             if !custom_v3_capable {
                                                 Arc::from("CustomV3 (unsupported backend)")
@@ -1417,7 +1507,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             Arc::from("CustomV3 (lens refraction; raw+pyramid)")
                                         };
                                         let chain = custom_v3_chain.unwrap_or(fake_chain.clone());
-                                        if custom_v3_pair {
+                                        if visibility_settings.custom_v3_pair {
                                             let lens_a = lens_panel(
                                                 cx,
                                                 label.clone(),
@@ -1450,7 +1540,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                                 move |_cx| vec![lens_a, lens_b],
                                             );
 
-                                            let wants_group = custom_v3_source_group
+                                            let wants_group = mode_settings.custom_v3_source_group
                                                 && custom_v3_supported
                                                 && mode == EffectMode::Backdrop;
                                             if wants_group {
@@ -1482,7 +1572,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                     )
                 });
 
-                let inspector = show_inspector.then(|| {
+                let inspector = mode_settings.show_inspector.then(|| {
                     cx.keyed("liquid_glass.inspector", |cx| {
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
@@ -1914,7 +2004,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                     })
                 });
 
-                let mut out = Vec::with_capacity(if show_inspector { 2 } else { 1 });
+                let mut out =
+                    Vec::with_capacity(if mode_settings.show_inspector { 2 } else { 1 });
                 out.push(stage);
                 if let Some(inspector) = inspector {
                     out.push(inspector);

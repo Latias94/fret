@@ -1369,17 +1369,18 @@ mod authoring_surface_policy_tests {
             &[
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2IdentityWebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2IdentityWebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::inspector(cx, &controls).into_element(cx);",
-                "Self::lens(cx, &controls_for_lens).into_element(cx)",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);",
+                "Self::lens(cx, &stage_settings).into_element(cx)",
             ],
             &[
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2IdentityWebViewSettings) -> AnyElement",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2IdentityWebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1388,17 +1389,18 @@ mod authoring_surface_policy_tests {
             &[
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2WebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2WebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::inspector(cx, &controls).into_element(cx);",
-                "Self::lens(cx, &controls_for_lens).into_element(cx)",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);",
+                "Self::lens(cx, &stage_settings).into_element(cx)",
             ],
             &[
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2WebViewSettings) -> AnyElement",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2WebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1407,17 +1409,18 @@ mod authoring_surface_policy_tests {
             &[
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2LutWebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2LutWebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::inspector(cx, &controls).into_element(cx);",
-                "Self::lens(cx, &controls_for_lens).into_element(cx)",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);",
+                "Self::lens(cx, &stage_settings).into_element(cx)",
             ],
             &[
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2LutWebViewSettings) -> AnyElement",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2LutWebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1427,19 +1430,20 @@ mod authoring_surface_policy_tests {
                 "fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String,) -> impl IntoUiElement<App> + use<>",
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2GlassChromeWebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2GlassChromeWebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "Self::label_row(cx, \"Uv span\", format!(\"{uv_span:.2}\")).into_element(cx)",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::controls_panel(cx, &controls).into_element(cx);",
-                "items.push(Self::lens(cx, &controls_for_stage).into_element(cx));",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::controls_panel(cx, &controls, &inspector_settings).into_element(cx);",
+                "items.push(Self::lens(cx, &stage_settings).into_element(cx));",
             ],
             &[
                 "fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String) -> AnyElement",
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
+                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1465,7 +1469,8 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0i64);",
                 "let step_state = cx.state().local_init(|| \"1\".to_string());",
-                "cx.data().selector_layout(&step_state, |step_text| {",
+                "selector_layout(&step_state,",
+                "parse_step(step_text.as_str())",
                 "cx.actions().locals::<act::Inc>({",
                 "cx.actions().locals::<act::Dec>({",
                 "cx.actions().local_set::<act::Reset, i64>(&count_state, 0);",
@@ -1682,10 +1687,10 @@ mod authoring_surface_policy_tests {
             &[
                 "let selected = self.st.selected.layout_in(cx).value_or_default();",
                 "let dark = self.st.dark.layout_in(cx).value_or_default();",
-                "let search = st.search_input.layout_in(cx).value_or_default();",
-                "let symbol = st.stock_symbol.layout_in(cx).value_or_default();",
+                "fn tracked_query_inputs(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> QueryKeyInputs {",
+                "let query_inputs = tracked_query_inputs(cx, st);",
                 "let tab = st.tabs.layout_in(cx).value_or_default();",
-                "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
+                "let policy_settings: QueryPolicySettings = cx.data().selector(",
                 "config.fail_mode.layout_in(cx).value_or_default()",
             ],
             &[
@@ -1696,6 +1701,11 @@ mod authoring_surface_policy_tests {
                 "let tab = cx.watch_model(&st.tabs).layout().value_or_default();",
                 "let stale_s = cx.watch_model(&config.stale_time_s).layout().value_or_default();",
                 "cx.watch_model(&config.fail_mode)",
+                "let search = st.search_input.layout_in(cx).value_or_default();",
+                "let symbol = st.stock_symbol.layout_in(cx).value_or_default();",
+                "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
+                "let cache_s = config.cache_time_s.layout_in(cx).value_or_default();",
+                "let keep_prev = config.keep_prev.layout_in(cx).value_or_default();",
             ],
         );
 
@@ -1725,89 +1735,104 @@ mod authoring_surface_policy_tests {
             CUSTOM_EFFECT_V2_DEMO,
             &[
                 "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let enabled = st.enabled.layout_in(cx).value_or(true);",
-                "let use_non_filterable_input = st.use_non_filterable_input.layout_in(cx).value_or(false);",
-                "let debug_input = st.debug_input.layout_in(cx).value_or(false);",
+                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector(",
             ],
             &[
                 "cx.watch_model(model)",
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let use_non_filterable_input = cx.watch_model(&st.use_non_filterable_input)",
                 "let debug_input = cx.watch_model(&st.debug_input).layout().value_or(false);",
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "let use_non_filterable_input = st.use_non_filterable_input.layout_in(cx).value_or(false);",
+                "let sampling_value = st",
+                "let debug_input = st.debug_input.layout_in(cx).value_or(false);",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_WEB_DEMO,
             &[
+                "fn view_settings(",
+                "-> CustomEffectV2WebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
-            ],
-            &[
-                "cx.watch_model(model)",
-                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
-                "cx.watch_model(&controls.debug_input)",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
             &[
+                "fn view_settings(",
+                "-> CustomEffectV2GlassChromeWebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
-            ],
-            &[
-                "cx.watch_model(model)",
-                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
-                "cx.watch_model(&controls.debug_input)",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
             &[
+                "fn view_settings(",
+                "-> CustomEffectV2IdentityWebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
-            ],
-            &[
-                "cx.watch_model(model)",
-                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
-                "cx.watch_model(&controls.debug_input)",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
             &[
+                "fn view_settings(",
+                "-> CustomEffectV2LutWebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
             ],
-            &[
-                "cx.watch_model(model)",
-                "let enabled = cx.watch_model(&controls.enabled).paint().value_or(true);",
-                "cx.watch_model(&controls.debug_input)",
-            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
-            &[
-                "let enabled = st.enabled.layout_in(cx).value_or(true);",
-                "let show_user0_probe = st.show_user0_probe.layout_in(cx).value_or(false);",
-                "let use_non_filterable_user1 = st.use_non_filterable_user1.layout_in(cx).value_or(false);",
-            ],
+            &["let view_settings: CustomEffectV3ViewSettings = cx.data().selector("],
             &[
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let show_user0_probe = cx.watch_model(&st.show_user0_probe)",
                 "let use_non_filterable_user1 = cx.watch_model(&st.use_non_filterable_user1)",
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "let show_user0_probe = st.show_user0_probe.layout_in(cx).value_or(false);",
+                "let show_user1_probe = st.show_user1_probe.layout_in(cx).value_or(false);",
+                "let use_non_filterable_user0 = st.use_non_filterable_user0.layout_in(cx).value_or(false);",
+                "let use_non_filterable_user1 = st.use_non_filterable_user1.layout_in(cx).value_or(false);",
             ],
         );
 
@@ -1825,17 +1850,16 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             POSTPROCESS_THEME_DEMO,
-            &[
-                "let enabled = self.st.enabled.layout_in(cx).value_or(true);",
-                "let compare = self.st.compare.layout_in(cx).value_or(true);",
-                "let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);",
-                "let retro_dither = self.st.retro_dither.layout_in(cx).value_or(true);",
-            ],
+            &["let view_settings: ThemePostprocessViewSettings = cx.data().selector("],
             &[
                 "let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);",
                 "let compare = cx.watch_model(&self.st.compare).layout().value_or(true);",
                 "let theme = cx.watch_model(&self.st.theme).layout().value_or(Option::<Arc<str>>::None);",
                 "let retro_dither = cx.watch_model(&self.st.retro_dither).layout().value_or(true);",
+                "let enabled = self.st.enabled.layout_in(cx).value_or(true);",
+                "let compare = self.st.compare.layout_in(cx).value_or(true);",
+                "let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);",
+                "let retro_dither = self.st.retro_dither.layout_in(cx).value_or(true);",
             ],
         );
 
@@ -1843,27 +1867,37 @@ mod authoring_surface_policy_tests {
             LIQUID_GLASS_DEMO,
             &[
                 "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let show_fake = st.show_fake.layout_in(cx).value_or(true);",
-                "let custom_v3_source_group = st.custom_v3_source_group.layout_in(cx).value_or(false);",
-                "let use_backdrop = st.use_backdrop.layout_in(cx).value_or(true);",
+                "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector(",
+                "let mode_settings: LiquidGlassModeSettings = cx.data().selector(",
+                "cx.observe_model(&show_fake_model, Invalidation::Layout);",
             ],
             &[
                 "cx.watch_model(model)",
                 "let show_fake = cx.watch_model(&st.show_fake).layout().value_or(true);",
                 "let custom_v3_source_group = cx",
                 "let use_backdrop = cx.watch_model(&st.use_backdrop).layout().value_or(true);",
+                "let show_fake = st.show_fake.layout_in(cx).value_or(true);",
+                "let show_warp = st.show_warp.layout_in(cx).value_or(true);",
+                "let show_warp_v2 = st.show_warp_v2.layout_in(cx).value_or(false);",
+                "let show_custom_v2 = st.show_custom_v2.layout_in(cx).value_or(false);",
+                "let show_custom_v3 = st.show_custom_v3.layout_in(cx).value_or(false);",
+                "let custom_v3_pair = st.custom_v3_pair.layout_in(cx).value_or(false);",
+                "let custom_v3_source_group = st.custom_v3_source_group.layout_in(cx).value_or(false);",
+                "let show_inspector = st.show_inspector.layout_in(cx).value_or(true);",
+                "let animate = st.animate.layout_in(cx).value_or(true);",
+                "let use_backdrop = st.use_backdrop.layout_in(cx).value_or(true);",
+                "let use_dither = st.use_dither.layout_in(cx).value_or(true);",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LAUNCHER_UTILITY_WINDOW_DEMO,
-            &[
-                "let always_on_top = st.always_on_top.layout_in(cx).value_or(false);",
-                "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
-            ],
+            &["let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector("],
             &[
                 "let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);",
                 "cx.watch_model(&st.status)",
+                "let always_on_top = st.always_on_top.layout_in(cx).value_or(false);",
+                "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
             ],
         );
 
