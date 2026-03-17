@@ -14,11 +14,18 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, Corners4, LayoutRefinement, MetricRef, Radius, Space, ui,
+};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::calendar::{
-    CalendarLocale, calendar_day_grid_row_edge_target_for_key, calendar_day_grid_step_for_key,
+    CalendarCaptionLayout, CalendarDayButton, CalendarDayButtonInfo, CalendarLocale,
+    CalendarMultiMonthNavProps, CalendarSingleMonthHeaderProps, calendar_caption_value_models,
+    calendar_day_button_children, calendar_day_button_supporting_text,
+    calendar_day_grid_row_edge_target_for_key, calendar_day_grid_step_for_key,
+    calendar_month_caption, calendar_multi_month_nav_overlay, calendar_single_month_header,
+    calendar_weekday_row,
 };
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
@@ -34,6 +41,7 @@ pub struct CalendarRange {
     selected: Model<DateRangeSelection>,
     number_of_months: usize,
     locale: CalendarLocale,
+    caption_layout: CalendarCaptionLayout,
     test_id_prefix: Option<Arc<str>>,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     disable_navigation: bool,
@@ -51,6 +59,7 @@ pub struct CalendarRange {
     modifiers: DayPickerModifiers,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
+    day_button: CalendarDayButton,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -62,6 +71,7 @@ impl std::fmt::Debug for CalendarRange {
             .field("selected", &"<model>")
             .field("number_of_months", &self.number_of_months)
             .field("locale", &self.locale)
+            .field("caption_layout", &self.caption_layout)
             .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .field("month_bounds", &self.month_bounds)
             .field("disable_navigation", &self.disable_navigation)
@@ -77,6 +87,7 @@ impl std::fmt::Debug for CalendarRange {
             .field("hidden_matchers", &self.modifiers.hidden.len())
             .field("close_on_select", &self.close_on_select.is_some())
             .field("initial_focus_out", &self.initial_focus_out.is_some())
+            .field("day_button", &self.day_button)
             .finish()
     }
 }
@@ -88,6 +99,7 @@ impl CalendarRange {
             selected,
             number_of_months: 1,
             locale: CalendarLocale::default(),
+            caption_layout: CalendarCaptionLayout::default(),
             test_id_prefix: None,
             month_bounds: None,
             disable_navigation: false,
@@ -105,6 +117,7 @@ impl CalendarRange {
             modifiers: DayPickerModifiers::default(),
             close_on_select: None,
             initial_focus_out: None,
+            day_button: CalendarDayButton::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -130,6 +143,11 @@ impl CalendarRange {
 
     pub fn locale(mut self, locale: CalendarLocale) -> Self {
         self.locale = locale;
+        self
+    }
+
+    pub fn caption_layout(mut self, caption_layout: CalendarCaptionLayout) -> Self {
+        self.caption_layout = caption_layout;
         self
     }
 
@@ -232,6 +250,11 @@ impl CalendarRange {
         self
     }
 
+    pub fn day_button(mut self, day_button: CalendarDayButton) -> Self {
+        self.day_button = day_button;
+        self
+    }
+
     pub(crate) fn initial_focus_out(
         mut self,
         out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
@@ -258,6 +281,7 @@ impl CalendarRange {
         let selected_model = self.selected.clone();
         let number_of_months = self.number_of_months.max(1);
         let locale = self.locale;
+        let caption_layout = self.caption_layout;
         let test_id_prefix = self.test_id_prefix.clone();
         let month_bounds = self.month_bounds;
         let disable_navigation = self.disable_navigation;
@@ -273,6 +297,7 @@ impl CalendarRange {
         let modifiers: Arc<DayPickerModifiers> = Arc::new(self.modifiers);
         let close_on_select = self.close_on_select.clone();
         let initial_focus_out = self.initial_focus_out.clone();
+        let day_button = self.day_button.clone();
 
         let month = cx
             .watch_model(&month_model)
@@ -424,6 +449,9 @@ impl CalendarRange {
                 let root = LayoutRefinement::default().merge(layout_override);
                 let container_props = decl_style::container_props(&theme, chrome, root);
 
+                let (caption_month_value, caption_year_value) =
+                    calendar_caption_value_models(cx, caption_layout, month);
+
                 vec![cx.container(container_props, move |cx| {
                     if number_of_months > 1 {
                         return calendar_range_multi_month_view(
@@ -458,6 +486,7 @@ impl CalendarRange {
                             close_on_select.clone(),
                             initial_focus_out.clone(),
                             grid_text_style.clone(),
+                            day_button.clone(),
                         );
                     }
                     vec![
@@ -475,85 +504,31 @@ impl CalendarRange {
                             let selected_model = selected_model.clone();
                             let close_on_select = close_on_select.clone();
                             let modifiers = modifiers.clone();
+                            let day_button = day_button.clone();
+                            let test_id_prefix_for_header = test_id_prefix.clone();
 
-                            let header = ui::h_row(move |cx| {
-                                let nav_enabled = !disable_navigation;
-                                let prev_enabled = nav_enabled
-                                    && month_bounds
-                                        .map_or(true, |b| crate::calendar::month_lt(b.0, month));
-                                let next_enabled = nav_enabled
-                                    && month_bounds.map_or(true, |b| {
-                                        crate::calendar::month_lt(
-                                            month,
-                                            crate::calendar::max_start_month(b, 1),
-                                        )
-                                    });
-                                let direction = crate::direction::use_direction(cx, None);
-                                let prev_icon = crate::rtl::chevron_inline_start(direction);
-                                let next_icon = crate::rtl::chevron_inline_end(direction);
-
-                                let month_model_prev = month_model_header.clone();
-                                let prev = crate::calendar::calendar_nav_icon_button(
-                                    cx,
-                                    "Go to the Previous Month",
+                            let header = calendar_single_month_header(
+                                cx,
+                                "shadcn.calendar_range.header",
+                                CalendarSingleMonthHeaderProps {
+                                    theme: theme_header,
+                                    locale,
+                                    title: title.clone(),
+                                    month,
+                                    month_model: month_model_header,
+                                    caption_layout,
+                                    caption_values: (
+                                        caption_month_value.clone(),
+                                        caption_year_value.clone(),
+                                    ),
+                                    test_id_prefix: test_id_prefix_for_header,
                                     day_size,
-                                    prev_icon,
-                                    None,
-                                    prev_enabled,
-                                    move |host| {
-                                        if disable_navigation {
-                                            return;
-                                        }
-                                        let _ = host.models_mut().update(&month_model_prev, |m| {
-                                            let cand = m.prev_month();
-                                            *m = month_bounds.map_or(cand, |b| {
-                                                crate::calendar::clamp_start_month(cand, b, 1)
-                                            });
-                                        });
-                                    },
-                                );
-                                let month_model_next = month_model_header.clone();
-                                let next = crate::calendar::calendar_nav_icon_button(
-                                    cx,
-                                    "Go to the Next Month",
-                                    day_size,
-                                    next_icon,
-                                    None,
-                                    next_enabled,
-                                    move |host| {
-                                        if disable_navigation {
-                                            return;
-                                        }
-                                        let _ = host.models_mut().update(&month_model_next, |m| {
-                                            let cand = m.next_month();
-                                            *m = month_bounds.map_or(cand, |b| {
-                                                crate::calendar::clamp_start_month(cand, b, 1)
-                                            });
-                                        });
-                                    },
-                                );
-
-                                let mut title_props = TextProps::new(title.clone());
-                                let size = theme_header.metric_token("font.size");
-                                let line_height = theme_header.metric_token("font.line_height");
-                                let mut style = typography::fixed_line_box_style(
-                                    fret_core::FontId::ui(),
-                                    size,
-                                    line_height,
-                                );
-                                style.weight = FontWeight::MEDIUM;
-                                title_props.style = Some(style);
-                                title_props.wrap = TextWrap::None;
-                                title_props.overflow = TextOverflow::Clip;
-                                let title = cx.text_props(title_props);
-
-                                vec![prev, title, next]
-                            })
-                            .gap(Space::N2)
-                            .layout(LayoutRefinement::default().w_px(MetricRef::Px(month_width)))
-                            .items_center()
-                            .justify_between()
-                            .into_element(cx);
+                                    month_width,
+                                    month_bounds,
+                                    disable_navigation,
+                                    today,
+                                },
+                            );
 
                             let weekday_row = ui::h_row(move |cx| {
                                 let mut out = Vec::with_capacity(8);
@@ -746,6 +721,7 @@ impl CalendarRange {
                                             close_on_select.clone(),
                                             modifiers.clone(),
                                             initial_focus_out.clone(),
+                                            &day_button,
                                         )
                                     })
                                     .collect::<Vec<_>>()
@@ -869,6 +845,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
+    day_button: CalendarDayButton,
 ) -> Vec<AnyElement> {
     let gap_px = decl_style::space(theme, Space::N4);
     let months_span = if is_row {
@@ -884,78 +861,20 @@ fn calendar_range_multi_month_view<H: UiHost>(
         it = it.next_month();
     }
 
-    let nav = {
-        let nav_enabled = !disable_navigation;
-        let min_start = month_bounds.map(|b| b.0);
-        let max_start = month_bounds.map(|b| crate::calendar::max_start_month(b, number_of_months));
-        let prev_enabled = nav_enabled
-            && min_start.map_or(true, |min| crate::calendar::month_lt(min, start_month));
-        let next_enabled = nav_enabled
-            && max_start.map_or(true, |max| crate::calendar::month_lt(start_month, max));
-        let direction = crate::direction::use_direction(cx, None);
-        let prev_icon = crate::rtl::chevron_inline_start(direction);
-        let next_icon = crate::rtl::chevron_inline_end(direction);
-
-        let month_model_prev = month_model.clone();
-        let prev = crate::calendar::calendar_nav_icon_button(
-            cx,
-            "Go to the Previous Month",
+    let nav = calendar_multi_month_nav_overlay(
+        cx,
+        CalendarMultiMonthNavProps {
+            theme: theme.clone(),
+            start_month,
+            month_model: month_model.clone(),
+            number_of_months,
+            month_bounds,
+            disable_navigation,
             day_size,
-            prev_icon,
-            None,
-            prev_enabled,
-            move |host| {
-                if disable_navigation {
-                    return;
-                }
-                let _ = host.models_mut().update(&month_model_prev, |m| {
-                    let cand = m.prev_month();
-                    *m = month_bounds.map_or(cand, |b| {
-                        crate::calendar::clamp_start_month(cand, b, number_of_months)
-                    });
-                });
-            },
-        );
-        let month_model_next = month_model.clone();
-        let next = crate::calendar::calendar_nav_icon_button(
-            cx,
-            "Go to the Next Month",
-            day_size,
-            next_icon,
-            None,
-            next_enabled,
-            move |host| {
-                if disable_navigation {
-                    return;
-                }
-                let _ = host.models_mut().update(&month_model_next, |m| {
-                    let cand = m.next_month();
-                    *m = month_bounds.map_or(cand, |b| {
-                        crate::calendar::clamp_start_month(cand, b, number_of_months)
-                    });
-                });
-            },
-        );
-
-        let mut layout = LayoutStyle::default();
-        layout.size.width = Length::Px(months_span);
-        layout.position = fret_ui::element::PositionStyle::Absolute;
-        layout.inset.top = Some(Px(0.0)).into();
-        layout.inset.left = Some(Px(0.0)).into();
-
-        cx.flex(
-            FlexProps {
-                layout,
-                direction: fret_core::Axis::Horizontal,
-                gap: decl_style::space(theme, Space::N1).into(),
-                padding: fret_core::Edges::all(Px(0.0)).into(),
-                justify: MainAlign::SpaceBetween,
-                align: fret_ui::element::CrossAlign::Center,
-                wrap: false,
-            },
-            move |_cx| vec![prev, next],
-        )
-    };
+            months_span,
+            test_id_prefix: None,
+        },
+    );
 
     let months_el = if is_row {
         ui::h_flex(move |cx| {
@@ -992,6 +911,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
+                        day_button.clone(),
                     );
 
                     let month_test_id = test_id_prefix
@@ -1045,6 +965,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
+                        day_button.clone(),
                     );
 
                     let month_test_id = test_id_prefix
@@ -1103,6 +1024,7 @@ fn calendar_range_month_view<H: UiHost>(
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
+    day_button: CalendarDayButton,
 ) -> AnyElement {
     let grid = if fixed_weeks {
         month_grid(month, week_start).to_vec()
@@ -1155,7 +1077,6 @@ fn calendar_range_month_view<H: UiHost>(
 
     let title = locale.month_title(month.month, month.year);
 
-    let theme_weekdays = theme.clone();
     let theme_days_for_days = theme.clone();
     let theme_days_for_week_numbers = theme.clone();
 
@@ -1163,85 +1084,22 @@ fn calendar_range_month_view<H: UiHost>(
     let grid_text_style_weekdays = grid_text_style.clone();
     let grid_text_style_week_numbers = grid_text_style.clone();
 
-    let month_caption = cx.flex(
-        FlexProps {
-            layout: LayoutStyle {
-                size: fret_ui::element::SizeStyle {
-                    width: Length::Px(month_width),
-                    height: Length::Px(day_size),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0).into(),
-            padding: fret_core::Edges {
-                left: day_size,
-                right: day_size,
-                top: Px(0.0),
-                bottom: Px(0.0),
-            }
-            .into(),
-            justify: MainAlign::Center,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: false,
-        },
-        move |cx| {
-            let mut props = TextProps::new(title.clone());
-            props.style = Some(grid_text_style_caption.clone());
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
-            vec![cx.text_props(props)]
-        },
+    let month_caption = calendar_month_caption(
+        cx,
+        title.clone(),
+        grid_text_style_caption,
+        day_size,
+        month_width,
     );
 
-    let weekday_row = cx.flex(
-        FlexProps {
-            layout: LayoutStyle {
-                size: fret_ui::element::SizeStyle {
-                    width: Length::Px(month_width),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0).into(),
-            padding: fret_core::Edges::all(Px(0.0)).into(),
-            justify: MainAlign::Start,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: false,
-        },
-        move |cx| {
-            let mut out = Vec::with_capacity(8);
-            if show_week_number {
-                let mut props = TextProps::new(Arc::from("Wk"));
-                props.style = Some(grid_text_style_weekdays.clone());
-                props.color = theme_weekdays.color_by_key("muted-foreground");
-                props.wrap = TextWrap::None;
-                props.overflow = TextOverflow::Clip;
-
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Px(day_size);
-                layout.size.height = Length::Auto;
-                props.layout = layout;
-                out.push(cx.text_props(props));
-            }
-
-            out.extend(weekday_labels.iter().map(|label| {
-                let mut props = TextProps::new(Arc::clone(label));
-                props.style = Some(grid_text_style_weekdays.clone());
-                props.color = theme_weekdays.color_by_key("muted-foreground");
-                props.wrap = TextWrap::None;
-                props.overflow = TextOverflow::Clip;
-
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Px(day_size);
-                layout.size.height = Length::Auto;
-                props.layout = layout;
-                cx.text_props(props)
-            }));
-            out
-        },
+    let weekday_row = calendar_weekday_row(
+        cx,
+        theme,
+        weekday_labels.clone(),
+        grid_text_style_weekdays,
+        show_week_number,
+        day_size,
+        month_width,
     );
 
     let roving_props = RovingFlexProps {
@@ -1392,6 +1250,7 @@ fn calendar_range_month_view<H: UiHost>(
                     close_on_select.clone(),
                     modifiers.clone(),
                     initial_focus_out.clone(),
+                    &day_button,
                 )
             })
             .collect::<Vec<_>>()
@@ -1551,6 +1410,7 @@ fn calendar_range_day_cell<H: UiHost>(
     close_on_select: Option<Model<bool>>,
     modifiers: Arc<DayPickerModifiers>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
+    day_button: &CalendarDayButton,
 ) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(size);
@@ -1600,6 +1460,23 @@ fn calendar_range_day_cell<H: UiHost>(
     let text_sm_line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let supporting_text = calendar_day_button_supporting_text(
+        day_button,
+        CalendarDayButtonInfo {
+            date,
+            in_month,
+            selected,
+            today,
+            disabled,
+            range_start: is_from,
+            range_end: is_to,
+            range_middle: selected && !is_from && !is_to,
+        },
+    );
+    let supporting_test_id = supporting_text
+        .as_ref()
+        .map(|_| Arc::from(format!("{test_id}:supporting-text")));
+    let day_button = day_button.clone();
 
     control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
         if focus_candidate
@@ -1667,21 +1544,31 @@ fn calendar_range_day_cell<H: UiHost>(
             Color::TRANSPARENT
         };
 
-        let mut chrome = ChromeRefinement::default().bg(ColorRef::Color(bg));
+        let mut chrome = day_button
+            .chrome
+            .clone()
+            .merge(ChromeRefinement::default().bg(ColorRef::Color(bg)));
         if selected {
             // Match shadcn-web: range selection rounds only the visible row edges.
+            let row_edge_radius = day_button
+                .chrome
+                .radius
+                .clone()
+                .unwrap_or_else(|| MetricRef::radius(Radius::Md));
+            let mut radii = Corners4::all(MetricRef::Px(Px(0.0)));
             if !left_selected {
-                chrome = chrome.rounded_tl(Radius::Md).rounded_bl(Radius::Md);
+                radii.top_left = row_edge_radius.clone();
+                radii.bottom_left = row_edge_radius.clone();
             }
             if !right_selected {
-                chrome = chrome.rounded_tr(Radius::Md).rounded_br(Radius::Md);
+                radii.top_right = row_edge_radius.clone();
+                radii.bottom_right = row_edge_radius.clone();
             }
-        } else {
-            chrome = chrome.rounded(Radius::Md);
+            chrome = chrome.merge(ChromeRefinement::default().corner_radii(radii));
         }
 
         let mut chrome_props =
-            decl_style::container_props(theme, chrome, LayoutRefinement::default());
+            decl_style::container_props(theme, chrome, day_button.layout.clone());
         // Keep margins on the pressable node so row gaps don't inflate the chrome/background quad.
         chrome_props.layout.margin = Default::default();
 
@@ -1703,42 +1590,20 @@ fn calendar_range_day_cell<H: UiHost>(
         };
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![cx.flex(
-                FlexProps {
-                    layout: LayoutStyle {
-                        size: fret_ui::element::SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    direction: fret_core::Axis::Vertical,
-                    gap: Px(0.0).into(),
-                    padding: fret_core::Edges::all(Px(0.0)).into(),
-                    justify: MainAlign::Center,
-                    align: fret_ui::element::CrossAlign::Center,
-                    wrap: false,
-                },
-                move |cx| {
-                    let label = ui::label(day_text.clone())
-                        .text_size_px(text_sm_px)
-                        .line_height_px(text_sm_line_height)
-                        .font_medium()
-                        .w_full()
-                        .text_align(fret_core::TextAlign::Center)
-                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
-                        .nowrap();
-
-                    let label = if disabled {
-                        cx.opacity(0.5, |cx| vec![label.into_element(cx)])
-                    } else {
-                        label.into_element(cx)
-                    };
-
-                    vec![label]
-                },
-            )]
+            calendar_day_button_children(
+                cx,
+                theme,
+                day_text.clone(),
+                supporting_text.clone(),
+                supporting_test_id.clone(),
+                text_sm_px,
+                text_sm_line_height,
+                muted_fg,
+                fg,
+                disabled,
+                today,
+                selected,
+            )
         };
 
         (pressable, chrome_props, children)
@@ -1777,6 +1642,27 @@ mod tests {
         None
     }
 
+    fn find_element_by_test_id<'a>(node: &'a AnyElement, test_id: &str) -> Option<&'a AnyElement> {
+        if node
+            .semantics_decoration
+            .as_ref()
+            .and_then(|semantics| semantics.test_id.as_deref())
+            == Some(test_id)
+        {
+            return Some(node);
+        }
+
+        if let ElementKind::Pressable(props) = &node.kind
+            && props.a11y.test_id.as_deref() == Some(test_id)
+        {
+            return Some(node);
+        }
+
+        node.children
+            .iter()
+            .find_map(|child| find_element_by_test_id(child, test_id))
+    }
+
     #[test]
     fn range_exclude_disabled_uses_modifiers_disabled_matchers() {
         let d1 = Date::from_calendar_date(2026, Month::January, 1).unwrap();
@@ -1800,6 +1686,85 @@ mod tests {
                 to: None,
             }
         );
+    }
+
+    #[test]
+    fn calendar_range_day_button_supporting_text_renders_only_for_in_month_days() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::December));
+            let selected = cx.app.models_mut().insert(DateRangeSelection {
+                from: Some(Date::from_calendar_date(2026, Month::December, 8).unwrap()),
+                to: Some(Date::from_calendar_date(2026, Month::December, 18).unwrap()),
+            });
+
+            let el = CalendarRange::new(month, selected)
+                .test_id_prefix("calendar.range.test")
+                .day_button(CalendarDayButton::new().supporting_text_by(|info| {
+                    (info.in_month && info.range_middle).then(|| Arc::<str>::from("$100"))
+                }))
+                .into_element(cx);
+
+            assert!(
+                find_element_by_test_id(&el, "calendar.range.test:2026-12-12:supporting-text")
+                    .is_some(),
+                "expected in-month range-middle supporting text test id to render"
+            );
+            assert!(
+                find_element_by_test_id(
+                    &el,
+                    "calendar.range.test:2026-11-29:outside:supporting-text"
+                )
+                .is_none(),
+                "expected outside-day supporting text to remain absent"
+            );
+        });
+    }
+
+    #[test]
+    fn calendar_range_dropdown_caption_layout_renders_month_and_year_triggers() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(280.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::December));
+            let selected = cx.app.models_mut().insert(DateRangeSelection {
+                from: Some(Date::from_calendar_date(2026, Month::December, 8).unwrap()),
+                to: Some(Date::from_calendar_date(2026, Month::December, 18).unwrap()),
+            });
+
+            let el = CalendarRange::new(month, selected)
+                .test_id_prefix("calendar.range.caption")
+                .caption_layout(CalendarCaptionLayout::Dropdown)
+                .into_element(cx);
+
+            assert!(
+                find_element_by_test_id(&el, "calendar.range.caption.caption-month-trigger")
+                    .is_some(),
+                "expected range dropdown caption month trigger to render"
+            );
+            assert!(
+                find_element_by_test_id(&el, "calendar.range.caption.caption-year-trigger")
+                    .is_some(),
+                "expected range dropdown caption year trigger to render"
+            );
+        });
     }
 
     #[test]

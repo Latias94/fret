@@ -48,7 +48,7 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-05-12" },
+      "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-12-12" },
       "delta_y": -240.0,
       "require_fully_within_window": true,
       "padding_px": 16.0,
@@ -58,7 +58,7 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-05-12" },
+        "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-12-12" },
         "min_w_px": 43.0,
         "min_h_px": 43.0,
         "eps_px": 1.0
@@ -68,10 +68,30 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_max_size",
-        "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-05-12" },
+        "target": { "kind": "test_id", "id": "ui-gallery.calendar.custom-cell:2026-12-12" },
         "max_w_px": 45.0,
         "max_h_px": 45.0,
         "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery.calendar.custom-cell:2026-12-12:supporting-text"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery.calendar.custom-cell:2026-11-29:outside:supporting-text"
+        }
       }
     },
 
@@ -80,4 +100,3 @@
     { "type": "capture_screenshot", "label": "ui-gallery-calendar-custom-cell-size-screenshot" }
   ]
 }
-

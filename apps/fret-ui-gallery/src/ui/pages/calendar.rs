@@ -44,16 +44,25 @@ pub(super) fn preview_calendar(
         "If an app needs time-of-day or instant semantics, keep timezone conversion at the surrounding form / date-picker boundary rather than inside the base calendar recipe.",
     ]);
 
+    let api_reference = doc_layout::notes_block([
+        "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (`Calendar`, `CalendarDayButton`) and `ecosystem/fret-ui-shadcn/src/calendar_range.rs` (`CalendarRange`).",
+        "`Calendar::new(month, selected)` is the explicit controlled path; `Calendar::new_controllable(cx, selected, default_selected)` is the copyable docs/gallery path that keeps only selection externally owned when desired.",
+        "`caption_layout(...)` now stays shared across `Calendar` and single-month `CalendarRange`, so the range custom-days/gallery lane can follow the same dropdown-caption docs shape.",
+        "`CalendarDayButton::supporting_text_by(...)` is the landed day-cell composition seam for the upstream `components.DayButton` custom-days example, and the same seam now flows through both `Calendar` and `CalendarRange`.",
+        "This stays intentionally narrower than a generic root-level `children` API: custom content belongs to the day-button slot, while the calendar frame remains recipe-owned.",
+        "`CalendarRange` and `CalendarMultiple` remain explicit typed variants instead of reintroducing a single `mode` enum builder at the root surface.",
+        "Caller-owned styling remains `rounded-lg border`, `p-0`, outer width, and `cell_size(...)`; the recipe still owns inner calendar chrome, caption/nav layout, and slot-aware backgrounds.",
+    ]);
+
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
         "Calendar exposes both `new(...)` for externally owned month state and `new_controllable(...)` for copyable docs/gallery-style authoring.",
         "For the closest source-aligned equivalent to upstream `selected/onSelect`, pass your selected model into `Calendar::new_controllable(cx, Some(selected), default_selected)` and let the calendar own only the visible month state.",
-        "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL. Fret-only extensions stay after that path.",
+        "Gallery sections now mirror the upstream docs path first: Demo, Usage, About, Date Picker, Persian / Hijri / Jalali Calendar, Selected Date (With TimeZone), core examples, RTL, API Reference. Fret-only extensions stay after that path.",
         "Default-style ownership follows shadcn upstream: recipe defaults own the inner calendar chrome (`bg-background`, padding, day-cell styling), while example-level `rounded-lg border`, `p-0`, and custom `--cell-size` tweaks stay caller-owned.",
         "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
         "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
         "Diagnostics use inner `ui-gallery.calendar.*` test_id prefixes from snippets, while page sections keep `ui-gallery-calendar-*` doc IDs.",
-        "Upstream uses a DayPicker-style `components.DayButton` escape hatch; in Fret the equivalent customization surface is `CalendarDayButton` plus refinements, so a generic children API is not currently warranted.",
+        "Upstream uses a DayPicker-style `components.DayButton` escape hatch; in Fret the equivalent customization surface is `CalendarDayButton` plus refinements and `supporting_text_by(...)`, including the typed `CalendarRange` lane, so a generic root-level children API is not currently warranted.",
     ]);
 
     let about = DocSection::build(cx, "About", about)
@@ -66,6 +75,9 @@ pub(super) fn preview_calendar(
         DocSection::build(cx, "Selected Date (With TimeZone)", selected_date_timezone)
             .no_shell()
             .test_id_prefix("ui-gallery-calendar-selected-date-timezone");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-calendar-api-reference");
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
         .test_id_prefix("ui-gallery-calendar-notes");
@@ -142,7 +154,7 @@ pub(super) fn preview_calendar(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn docs order first (`Demo`, `Usage`, `About`, `Date Picker`, `Persian / Hijri / Jalali Calendar`, `Selected Date (With TimeZone)`, examples, `RTL`), then appends Fret-only regression surfaces.",
+            "Preview mirrors the shadcn docs order first (`Demo`, `Usage`, `About`, `Date Picker`, `Persian / Hijri / Jalali Calendar`, `Selected Date (With TimeZone)`, examples, `RTL`, `API Reference`), then appends Fret-only regression surfaces.",
         ),
         vec![
             demo,
@@ -160,6 +172,7 @@ pub(super) fn preview_calendar(
             custom_cell_size,
             week_numbers,
             rtl,
+            api_reference,
             date_of_birth_picker,
             natural_language_picker,
             locale,
