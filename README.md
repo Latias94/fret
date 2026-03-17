@@ -65,7 +65,7 @@ For new app authors, keep the default authoring model small and explicit:
 - `cx.actions().transient(...)` when an action must trigger an `App`-only effect in `render()`,
 - `cx.actions().models(...)` only when you intentionally coordinate shared `Model<T>` graphs,
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
-- Everything else (`on_action_notify`, single-model aliases, lower-level `cx.actions().payload::<A>()`, redraw-oriented raw `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it.
+- Everything else (`on_action_notify`, lower-level `cx.actions().payload::<A>()`, redraw-oriented raw `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it; the former single-model raw aliases are deleted.
 - The remaining raw `on_action_notify` examples are cookbook/reference-only host-side integrations (toasts, router availability sync, background scheduling, RAF effects).
 
 Use the onboarding ladder on purpose:

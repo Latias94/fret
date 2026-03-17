@@ -741,7 +741,9 @@ impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
 /// `fret::advanced::prelude::*`.
 ///
 /// Import it explicitly when advanced/manual-assembly code intentionally wants raw typed handler
-/// registration rather than the grouped `cx.actions()` helpers.
+/// registration rather than the grouped `cx.actions()` helpers. Model/local mutation shorthands
+/// stay on the grouped default lane or on explicit store transactions; this trait keeps only the
+/// raw host-facing registration hooks.
 pub trait AppUiRawActionExt {
     /// Register a typed unit action handler (v1: adapter over `OnCommand`).
     fn on_action<A: crate::TypedAction>(
@@ -759,26 +761,6 @@ pub trait AppUiRawActionExt {
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
         + 'static,
     );
-
-    /// Register a typed unit action handler that updates a model and participates in the
-    /// view-cache closure (`request_redraw` + `notify`) when the update succeeds.
-    fn on_action_notify_model_update<A, T>(
-        &mut self,
-        model: Model<T>,
-        update: impl Fn(&mut T) + 'static,
-    ) where
-        A: crate::TypedAction,
-        T: Any;
-
-    /// Register a typed unit action handler that sets a model to a fixed value and participates in
-    /// the view-cache closure (`request_redraw` + `notify`) when the update succeeds.
-    fn on_action_notify_model_set<A, T>(&mut self, model: Model<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone;
-
-    /// Convenience helper: register a typed unit action handler that toggles a `Model<bool>`.
-    fn on_action_notify_toggle_bool<A: crate::TypedAction>(&mut self, model: Model<bool>);
 
     /// Register a typed payload action handler (v2 prototype; ADR 0312).
     ///
@@ -841,31 +823,6 @@ impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
             }
             handled
         });
-    }
-
-    fn on_action_notify_model_update<A, T>(
-        &mut self,
-        model: Model<T>,
-        update: impl Fn(&mut T) + 'static,
-    ) where
-        A: crate::TypedAction,
-        T: Any,
-    {
-        self.on_action_notify::<A>(move |host, _action_cx| {
-            host.models_mut().update(&model, |v| update(v)).is_ok()
-        });
-    }
-
-    fn on_action_notify_model_set<A, T>(&mut self, model: Model<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        self.on_action_notify_model_update::<A, T>(model, move |v| *v = value.clone());
-    }
-
-    fn on_action_notify_toggle_bool<A: crate::TypedAction>(&mut self, model: Model<bool>) {
-        self.on_action_notify_model_update::<A, bool>(model, |v| *v = !*v);
     }
 
     fn on_payload_action<A: crate::actions::TypedPayloadAction>(
@@ -2346,6 +2303,9 @@ mod tests {
         assert!(!api_source.contains("pub fn on_action_notify_models<"));
         assert!(!api_source.contains("pub fn on_action_notify_locals<"));
         assert!(!api_source.contains("pub fn on_action_notify_transient<"));
+        assert!(!api_source.contains("fn on_action_notify_model_update<"));
+        assert!(!api_source.contains("fn on_action_notify_model_set<"));
+        assert!(!api_source.contains("fn on_action_notify_toggle_bool<"));
         assert!(!api_source.contains("pub fn on_payload_action_notify_local_update_if<"));
         assert!(!api_source.contains("pub fn on_payload_action_notify_locals<"));
         assert!(!api_source.contains("pub struct AppUiPayloadActions<"));

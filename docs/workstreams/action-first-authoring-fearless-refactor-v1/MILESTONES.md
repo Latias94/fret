@@ -322,7 +322,7 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
 - `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the approved advanced `on_action_notify` teaching-surface exceptions and keeps `fret-examples` plus ui-gallery pages/snippets on the zero-exception path)
-- `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` (keeps `fret-examples` and ui-gallery teaching pages/snippets on the default helper surface without single-model aliases; scaffold templates keep equivalent unit-test assertions)
+- `ecosystem/fret/src/view.rs` source-policy tests (keep the former single-model raw action aliases deleted; scaffold templates keep equivalent unit-test assertions)
 - `tools/gate_no_mvu_in_tree.py` / `tools/gate_no_mvu_in_cookbook.py` (prevent MVU surfaces from reappearing in code after the M9 hard delete)
 
 Hardening follow-up (open):
@@ -331,7 +331,7 @@ Hardening follow-up (open):
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
-- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` as the default activation glue; advanced aliases remain available but stay off the default teaching surfaces via `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` plus scaffold template unit tests, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
+- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` as the default activation glue; the former single-model raw aliases are now deleted outright, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` plus scaffold template and source-policy tests.
 
 Post-v1 direction (recommended):
 
