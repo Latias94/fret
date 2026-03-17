@@ -318,6 +318,11 @@ impl<'a> LocalTxn<'a> {
     }
 }
 
+/// Explicit tracked-read builder returned by `watch(...)` / `layout(...)` / `paint(...)`.
+///
+/// Unlike the grouped namespace carrier types, this stays visible on purpose: it owns the
+/// user-facing tracked-read chain (`paint/layout/hit_test`, `value_*`, `observe`, `revision`,
+/// `read_ref`, `read`) rather than acting as a purely structural callback or namespace wrapper.
 #[must_use]
 pub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any> {
     cx: &'cx mut ElementContext<'a, H>,
@@ -449,6 +454,11 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
 }
 
 /// Shared read-side ergonomics for both `LocalState<T>` and explicit `Model<T>` handles.
+///
+/// Prefer the shorter tracked-read chains such as `state.layout(cx).value_*` or
+/// `state.paint(cx).value_*` for ordinary reads. Keep raw `watch(cx)` when you intentionally need
+/// custom invalidation, `observe()`, `revision()`, or direct `read*()` access on the tracked-read
+/// builder.
 pub trait TrackedStateExt<T: Any> {
     fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
@@ -2487,6 +2497,23 @@ mod tests {
         assert!(!api_source.contains("#[doc(hidden)]\npub struct LocalState<T>"));
         assert!(!api_source.contains("#[doc(hidden)]\npub trait TrackedStateExt<T: Any>"));
         assert!(!api_source.contains("#[doc(hidden)]\npub trait AppActivateExt"));
+    }
+
+    #[test]
+    fn tracked_read_builder_stays_visible_while_structural_carriers_hide() {
+        let api_source = VIEW_RS_SOURCE
+            .split("\nmod tests {")
+            .next()
+            .expect("view.rs test module marker should exist");
+
+        assert!(
+            api_source
+                .contains("#[must_use]\npub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any>")
+        );
+        assert!(!api_source.contains(
+            "#[doc(hidden)]\n#[must_use]\npub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any>"
+        ));
+        assert!(api_source.contains("Prefer the shorter tracked-read chains such as"));
     }
 
     #[test]
