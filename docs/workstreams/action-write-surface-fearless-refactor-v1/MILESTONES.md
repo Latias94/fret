@@ -139,4 +139,4 @@ Closeout note on 2026-03-17:
   - `locals::<A>(...)` remains the primary transaction story,
   - `payload_local_update_if::<A>(...)` is the only taught default keyed row-write path,
   - duplicate multi-local payload helpers are deleted,
-  - the remaining lower-level payload chain stays explicit rather than default.
+  - the remaining `payload::<A>().models(...)` seam stays explicit rather than default.

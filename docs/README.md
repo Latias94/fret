@@ -175,7 +175,7 @@ now taught as `LocalState` + view runtime + typed actions.
   - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - use this only when a control exposes activation glue rather than a narrower widget-owned app-facing helper. Import `use fret::app::AppActivateExt as _;` explicitly for that bridge; raw `on_activate*` helper families stay component/advanced-oriented.
-  - Treat raw `on_action` / `on_action_notify` / `on_payload_action_notify`, single-model aliases, and the lower-level `cx.actions().payload::<A>()` chain as advanced shorthands; keep first-contact docs and templates focused on the default entrypoints above plus keyed-row payload binding. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
+  - Treat raw `on_action` / `on_action_notify` / `on_payload_action_notify`, single-model aliases, and the surviving lower-level `cx.actions().payload::<A>().models(...)` seam as advanced shorthands; keep first-contact docs and templates focused on the default entrypoints above plus keyed-row payload binding. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
 - Surface taxonomy:
   - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons
   - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples

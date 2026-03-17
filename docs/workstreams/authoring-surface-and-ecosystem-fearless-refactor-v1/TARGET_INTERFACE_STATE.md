@@ -320,7 +320,7 @@ Target rule:
   diagnostics/accessibility affordances even though the underlying trait names stay hidden.
 - `AppUi` is taught through grouped helper families:
   `cx.state().local*`, `cx.actions().models/locals/transient`,
-  `cx.actions().payload::<A>().models/locals/local_update_if`, `cx.data().selector/query*`, and
+  `cx.actions().payload::<A>().models`, `cx.data().selector/query*`, and
   `cx.effects().take_transient(...)`.
 
 App-level ecosystem integration seam:

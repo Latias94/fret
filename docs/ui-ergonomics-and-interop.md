@@ -52,9 +52,9 @@ When users say “the API feels complex”, it usually comes from these layers b
    `.action_payload(...)` / `.listen(...)`) for activation-only surfaces after an explicit
    `use fret::app::AppActivateExt as _;`; `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` stay
    available as explicit aliases. Drop down to `cx.actions().models::<A>(...)` only for shared
-   graphs. Treat raw `on_action_notify`, raw `on_payload_action_notify`, lower-level
-   `cx.actions().payload::<A>()`, and low-level `.on_activate(cx.actions()....)` helpers as
-   cookbook/reference-only advanced seams.
+   graphs. Treat raw `on_action_notify`, raw `on_payload_action_notify`, the lower-level
+   `cx.actions().payload::<A>().models(...)` seam, and low-level `.on_activate(cx.actions()....)`
+   helpers as cookbook/reference-only advanced seams.
 3. **Embedding surfaces** (viewport panels, retained-widget bridge): how to host “foreign” systems.
 
 To keep the core contract stable, the ergonomics work should focus on (2) while (1) stays minimal.

@@ -61,14 +61,14 @@ Default-lane gates already lock these constraints:
   - generated `simple-todo` / `todo` README guidance must not teach `cx.actions().payload::<A>()`
   - generated `todo` README guidance must not teach `payload_locals::<A>(...)`
 
-Current advanced-doc posture still mentions the generic lower-level chain:
+Current advanced-doc posture now names the surviving seam explicitly:
 
 - `docs/README.md`
 - `docs/fearless-refactoring.md`
 - `docs/ui-ergonomics-and-interop.md`
 - `ecosystem/fret/src/lib.rs`
-  - current source-policy assertions still expect `docs/README.md` to mention
-    `cx.actions().payload::<A>()`
+  - current source-policy assertions now expect `docs/README.md` to mention
+    `cx.actions().payload::<A>().models(...)`
 
 ## Post-closeout read
 

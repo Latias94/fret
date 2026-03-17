@@ -74,7 +74,7 @@ The shipped default row-write proof is now consistent:
 
 At the same time:
 
-- `payload::<A>()` remains intentionally lower-level/reference-only in
+- `payload::<A>().models(...)` remains intentionally lower-level/reference-only in
   `apps/fret-examples/src/markdown_demo.rs`,
 - `apps/fret-cookbook/examples/payload_actions_basics.rs` is now migrated back onto
   `payload_local_update_if::<A>(...)` because its old chained spelling had no distinct ownership
@@ -119,8 +119,8 @@ What remains after closeout does not justify keeping this lane active:
    - the duplicate helper cleanup is now landed for `payload_locals::<A>(...)`,
      `payload::<A>().locals(...)`, and `payload::<A>().local_update_if(...)`;
    - any future question is narrower still:
-     whether advanced docs should keep referring to the generic `payload::<A>()` chain or name
-     `payload::<A>().models(...)` more explicitly.
+     whether any remaining historical docs that still talk about a generic `payload::<A>()` chain
+     should be rewritten to name `payload::<A>().models(...)` directly.
 3. Broader runtime or dataflow questions
    - selector/query, router, and `LocalState<T>` architecture already live on other closed or
      separate lanes.
