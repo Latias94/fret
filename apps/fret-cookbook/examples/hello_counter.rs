@@ -79,7 +79,7 @@ impl View for HelloCounterView {
             let count_state = count_state.clone();
             let step_state = step_state.clone();
             move |tx| {
-                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let step_text = tx.value(&step_state);
                 let (step, _) = parse_step(&step_text);
                 tx.update(&count_state, |value| *value = value.saturating_add(step))
             }
@@ -89,7 +89,7 @@ impl View for HelloCounterView {
             let count_state = count_state.clone();
             let step_state = step_state.clone();
             move |tx| {
-                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let step_text = tx.value(&step_state);
                 let (step, _) = parse_step(&step_text);
                 tx.update(&count_state, |value| *value = value.saturating_sub(step))
             }

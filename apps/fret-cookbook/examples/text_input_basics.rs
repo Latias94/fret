@@ -104,7 +104,7 @@ impl View for TextInputBasicsView {
             let text_state = text_state.clone();
             let submitted_count_state = submitted_count_state.clone();
             move |tx| {
-                let text = tx.value_or_else(&text_state, String::new);
+                let text = tx.value(&text_state);
                 if text.trim().is_empty() {
                     return false;
                 }
@@ -119,7 +119,7 @@ impl View for TextInputBasicsView {
         cx.actions().locals::<act::Clear>({
             let text_state = text_state.clone();
             move |tx| {
-                let text = tx.value_or_else(&text_state, String::new);
+                let text = tx.value(&text_state);
                 if text.trim().is_empty() {
                     return false;
                 }

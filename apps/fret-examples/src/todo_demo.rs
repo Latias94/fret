@@ -187,15 +187,12 @@ fn bind_todo_actions(
         let next_id_state = LocalState::clone(next_id_state);
         let todos_state = LocalState::clone(todos_state);
         move |tx| {
-            let text = tx
-                .value_or_else(&draft_state, String::new)
-                .trim()
-                .to_string();
+            let text = tx.value(&draft_state).trim().to_string();
             if text.is_empty() {
                 return false;
             }
 
-            let id = tx.value_or(&next_id_state, 1);
+            let id = tx.value(&next_id_state);
             let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
 
             if !tx.update(&todos_state, |rows| {

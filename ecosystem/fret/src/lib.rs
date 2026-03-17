@@ -2907,6 +2907,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().listen(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`tx.value(&local)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch::<A>()`"));

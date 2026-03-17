@@ -293,6 +293,17 @@ pub struct LocalStateTxn<'a> {
 }
 
 impl<'a> LocalStateTxn<'a> {
+    /// Read the current value from an initialized local slot.
+    ///
+    /// `LocalState<T>` on the app lane always owns an inserted model slot, so ordinary
+    /// `locals::<A>(...)` transactions can read with `tx.value(&local)` instead of reopening
+    /// fallback noise at every call site.
+    pub fn value<T: Any + Clone>(&self, local: &LocalState<T>) -> T {
+        local
+            .value_in(self.models)
+            .expect("LocalState-first action transactions should always read initialized locals")
+    }
+
     pub fn value_or<T: Any + Clone>(&self, local: &LocalState<T>, default: T) -> T {
         local.value_in_or(self.models, default)
     }
@@ -1105,9 +1116,10 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
 
     /// Coordinate multiple `LocalState<T>` slots through one store transaction.
     ///
-    /// Inside the callback, use `tx.value_or(...)`, `tx.value_or_else(...)`, `tx.set(...)`,
-    /// `tx.update(...)`, and `tx.update_if(...)` rather than naming the transaction carrier type
-    /// directly.
+    /// Inside the callback, prefer `tx.value(...)` for ordinary initialized locals, keep
+    /// `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases, and use
+    /// `tx.set(...)`, `tx.update(...)`, and `tx.update_if(...)` for writes rather than naming the
+    /// transaction carrier type directly.
     pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)
     where
         A: crate::TypedAction,
@@ -1225,9 +1237,10 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
 
     /// Coordinate multiple `LocalState<T>` slots through one store transaction.
     ///
-    /// Inside the callback, use `tx.value_or(...)`, `tx.value_or_else(...)`, `tx.set(...)`,
-    /// `tx.update(...)`, and `tx.update_if(...)` rather than naming the transaction carrier type
-    /// directly.
+    /// Inside the callback, prefer `tx.value(...)` for ordinary initialized locals, keep
+    /// `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases, and use
+    /// `tx.set(...)`, `tx.update(...)`, and `tx.update_if(...)` for writes rather than naming the
+    /// transaction carrier type directly.
     pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)
     where
         A: crate::TypedAction,
@@ -1902,7 +1915,7 @@ pub fn view_record_engine_frame<V: View>(
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateExt, AppActivateSurface, LocalState, OnActivate, action_listener,
+        AppActivateExt, AppActivateSurface, LocalState, LocalStateTxn, OnActivate, action_listener,
         dispatch_action_listener, dispatch_payload_action_listener,
     };
     use std::any::Any;
@@ -2024,6 +2037,24 @@ mod tests {
             .value_in_or_default(&host.models),
             String::new()
         );
+    }
+
+    #[test]
+    fn local_state_txn_value_reads_initialized_locals_without_fallback_noise() {
+        let mut host = FakeHost::default();
+        let draft = LocalState {
+            model: host.models.insert(String::from("draft")),
+        };
+        let next_id = LocalState {
+            model: host.models.insert(7u64),
+        };
+
+        let tx = LocalStateTxn {
+            models: &mut host.models,
+        };
+
+        assert_eq!(tx.value(&draft), String::from("draft"));
+        assert_eq!(tx.value(&next_id), 7u64);
     }
 
     #[test]
@@ -2295,6 +2326,9 @@ mod tests {
         assert!(!api_source.contains(
             "pub fn locals(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, A::Payload) -> bool + 'static)"
         ));
+        assert!(
+            api_source.contains("pub fn value<T: Any + Clone>(&self, local: &LocalState<T>) -> T")
+        );
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));

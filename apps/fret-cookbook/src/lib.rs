@@ -227,11 +227,24 @@ mod authoring_surface_policy_tests {
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
         assert!(
+            SIMPLE_TODO_EXAMPLE.contains("let text = tx.value(&draft_state).trim().to_string();")
+        );
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let id = tx.value(&next_id_state);"));
+        assert!(!SIMPLE_TODO_EXAMPLE.contains("tx.value_or_else(&draft_state, String::new)"));
+        assert!(
             SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
         );
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert!(
+            SIMPLE_TODO_V2_TARGET_EXAMPLE
+                .contains("let text = tx.value(&draft_state).trim().to_string();")
+        );
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let id = tx.value(&next_id_state);"));
+        assert!(
+            !SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("tx.value_or_else(&draft_state, String::new)")
+        );
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_V2_TARGET_EXAMPLE);
     }
 
@@ -278,6 +291,9 @@ mod authoring_surface_policy_tests {
 
         assert!(FORM_EXAMPLE.contains("locals::<act::Submit>"));
         assert!(FORM_EXAMPLE.contains("availability::<act::Submit>"));
+        assert!(FORM_EXAMPLE.contains("let name = tx.value(&name_state);"));
+        assert!(FORM_EXAMPLE.contains("let email = tx.value(&email_state);"));
+        assert!(!FORM_EXAMPLE.contains("tx.value_or_else(&name_state, String::new)"));
 
         assert!(DATE_PICKER_EXAMPLE.contains("cx.state().local_init(|| false)"));
         assert!(DATE_PICKER_EXAMPLE.contains("watch(&selected_state)"));

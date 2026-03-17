@@ -69,8 +69,8 @@ impl View for FormBasicsView {
             let email_state = email_state.clone();
             let error_state = error_state.clone();
             move |tx| {
-                let name = tx.value_or_else(&name_state, String::new);
-                let email = tx.value_or_else(&email_state, String::new);
+                let name = tx.value(&name_state);
+                let email = tx.value(&email_state);
                 let err = FormBasicsView::validate(&name, &email);
                 tx.set(&error_state, err)
             }

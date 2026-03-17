@@ -219,7 +219,7 @@ impl View for CommandsKeymapBasicsView {
             let panel_open_state = panel_open_state.clone();
             let allow_command_state = allow_command_state.clone();
             move |tx| {
-                let allowed = tx.value_or(&allow_command_state, true);
+                let allowed = tx.value(&allow_command_state);
                 if !allowed {
                     return false;
                 }
