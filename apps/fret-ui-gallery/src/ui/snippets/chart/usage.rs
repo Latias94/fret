@@ -169,6 +169,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let output = cx.local_model_keyed("output", fret_chart::ChartCanvasOutput::default);
     let output_for_container = output.clone();
     let output_for_canvas = output.clone();
+    let section_intro = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str| {
+        ui::v_flex(|cx| {
+            vec![
+                shadcn::raw::typography::small(title).into_element(cx),
+                shadcn::raw::typography::muted(description).into_element(cx),
+            ]
+        })
+        .gap(Space::N1)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+    };
     let config: shadcn::ChartConfig = [
         (
             Arc::<str>::from("desktop"),
@@ -202,11 +214,26 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
         ui::v_flex(|cx| {
             vec![
+                section_intro(
+                    cx,
+                    "Build",
+                    "Start with `chart_container(config, |cx| ...)`, render the retained chart canvas, and keep the example on the same assembled path as shadcn's first chart walkthrough.",
+                ),
                 canvas,
+                section_intro(
+                    cx,
+                    "Add Legend",
+                    "Attach `ChartLegend` with the default `ChartLegendContent` so labels, icons, and colors derive from `ChartConfig`.",
+                ),
                 legend,
+                section_intro(
+                    cx,
+                    "Add Tooltip",
+                    "Attach `ChartTooltip` and share `ChartCanvasOutput` through `ChartContainer::output_model(...)` so the active payload auto-derives tooltip label, items, colors, and icons.",
+                ),
                 tooltip,
                 shadcn::raw::typography::muted(
-                    "Use `chart_container(config, |cx| ...)` for Fret's composable child surface. Share a `ChartCanvasOutput` model with `ChartContainer::output_model(...)` to auto-derive tooltip label, items, colors, and icons from the active chart payload plus `ChartConfig`.",
+                    "This assembled example is the Fret-native end state of shadcn's `Your First Chart`, `Add Tooltip`, and `Add Legend` steps.",
                 )
                 .into_element(cx),
             ]

@@ -35,7 +35,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let first_chart = DocSection::build(cx, "First Chart", first_chart)
         .description(
-            "Fret-native equivalent of shadcn's composition flow: chart container, chart canvas, legend defaults from config, and tooltip content auto-derived from a shared chart output model.",
+            "Fret-native equivalent of shadcn's first-chart walkthrough: build the chart, then add legend and tooltip on the same assembled example, with tooltip payloads auto-derived from a shared chart output model.",
         )
         .test_id_prefix("ui-gallery-chart-first-chart")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
