@@ -1,6 +1,6 @@
 # App Composition Density Follow-on v1
 
-Status: active planning lane
+Status: closeout / maintenance lane
 Last updated: 2026-03-17
 
 Related:
@@ -16,6 +16,13 @@ Related:
 - `apps/fret-examples/src/query_demo.rs`
 - `apps/fret-examples/src/query_async_tokio_demo.rs`
 - `ecosystem/fret-authoring/src/query.rs`
+
+Closeout reading rule on 2026-03-17:
+
+- M1 is now closed on a no-new-shared-API composition verdict
+- M2 is now closed on grouped app-lane query invalidation
+- read this document as the historical design record for a narrow closeout lane, not as an open
+  invitation to reopen broad authoring redesign
 
 ## Why this workstream exists
 

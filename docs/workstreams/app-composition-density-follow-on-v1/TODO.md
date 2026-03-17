@@ -1,6 +1,6 @@
 # App Composition Density Follow-on v1 — TODO
 
-Status: active tracker
+Status: closeout tracker
 
 Companion docs:
 
@@ -12,7 +12,7 @@ Companion docs:
 
 ## Execution checklist
 
-- [ ] Freeze the evidence set for this lane.
+- [x] Freeze the evidence set for this lane.
   - Primary detection surface:
     - `apps/fret-examples/src/todo_demo.rs`
     - `apps/fret-cookbook/examples/simple_todo.rs`
@@ -25,7 +25,7 @@ Companion docs:
     - `docs/integrating-tokio-and-reqwest.md`
     - `apps/fret-examples/src/async_playground_demo.rs`
     - `ecosystem/fret-authoring/src/query.rs`
-- [ ] Keep the lane budget frozen.
+- [x] Keep the lane budget frozen.
   - Do not reopen selector/query read surfaces.
   - Do not reopen `cx.actions()` helper growth.
   - Do not widen `fret::app::prelude::*`.

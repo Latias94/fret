@@ -1,6 +1,6 @@
 # App Composition Density Follow-on v1 — Milestones
 
-Status: active planning tracker
+Status: closeout tracker
 Last updated: 2026-03-17
 
 Related:
@@ -32,8 +32,8 @@ Related:
 
 Overall reading:
 
-- this is intentionally the only open authoring follow-on after the read/write closeout lanes,
-- it is narrower than the earlier density lane,
+- this started as the only open authoring follow-on after the read/write closeout lanes,
+- it stayed narrower than the earlier density lane,
 - M1 is now closed on a no-new-API verdict,
 - M2 is now closed on the grouped query invalidation shell,
 - and the remaining open question is only the final M3 delete/lock discipline.
