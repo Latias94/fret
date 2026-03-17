@@ -1,6 +1,6 @@
 # Local-State Facade Boundary Hardening — Surface Inventory
 
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 Related:
 
@@ -41,6 +41,7 @@ The remaining work is boundary clarity, not storage-model invention.
 | internalized `LocalState::update_action*` / `set_action(...)` | No longer public; runtime substrate only | Internal action-write substrate | The grouped `cx.actions()` helpers own the public rerendering-write story; the direct action-aware `LocalState<T>` seam never earned first-party proof as a separate lane | Keep internal unless a real advanced proving surface reappears |
 | `LocalState::watch_in(...)` / `layout_in(...)` / `paint_in(...)` / `hit_test_in(...)` | Public methods on `LocalState<T>` | Explicit bridge lane | Helper-heavy `ElementContext` surfaces should be able to observe locals without dropping to `local.model()` manually | Keep, but classify as helper/interop bridge vocabulary |
 | `use_local*`, `LocalState::watch(...)`, `AppUiState::watch(...)`, `TrackedStateExt`, `cx.actions().locals::<A>(...)` | Public and already taught in docs/templates/examples | Default app lane | This is the shipped default local-state contract | Keep as the only default story; keep `AppUi::watch_local(...)` crate-private as implementation substrate |
+| `AppUiState` / `AppUiActions` / `AppUiData` / `AppUiEffects` / `UiCxActions` / `UiCxData` / `LocalTxn` | Public only because grouped namespace methods and callbacks need structural carrier types | Structural carrier lane | App authors should discover these APIs from `cx.state()` / `cx.actions()` / `cx.data()` / `cx.effects()` and callback-local autocomplete, not by importing the carrier nouns | Keep public for signature reasons, but keep them rustdoc-hidden and protect that posture with source-policy tests |
 | `fret::app::prelude::*` | Curated default prelude; omits `AppUiRawStateExt` and other low-level seams | Default app lane | Keeps first-contact autocomplete and docs narrow | Keep the omission policy and protect it with source-policy tests |
 | `fret::advanced::prelude::*` | Reexports `AppUiRawStateExt` and other advanced runtime nouns | Advanced lane | Keeps low-level or host-owned seams explicit without polluting the app prelude | Keep as the discoverability home for explicit raw-model hooks |
 | `tools/gate_no_use_state_in_default_teaching_surfaces.py` | Existing source-policy gate | Default-path protection | Prevents starter/reference surfaces from regressing back to `use_state` | Keep running it and widen only if a new default surface is added |

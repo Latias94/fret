@@ -287,6 +287,7 @@ impl<T> LocalState<T> {
 ///
 /// This is intentionally *not* a general-purpose model transaction API. If you need to coordinate
 /// across shared `Model<T>` graphs, use `cx.actions().models::<A>(...)` directly.
+#[doc(hidden)]
 pub struct LocalTxn<'a> {
     models: &'a mut ModelStore,
 }
@@ -905,6 +906,7 @@ impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
 }
 
 /// Grouped LocalState-first helpers for the default app authoring surface.
+#[doc(hidden)]
 pub struct AppUiState<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
@@ -943,12 +945,14 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
 }
 
 /// Grouped action/effect registration helpers for the default app authoring surface.
+#[doc(hidden)]
 pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
 /// Grouped action/effect registration helpers for extracted `UiCx` child builders on the default
 /// app surface.
+#[doc(hidden)]
 pub struct UiCxActions<'cx, 'a> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
 }
@@ -1196,6 +1200,11 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
             .on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()));
     }
 
+    /// Coordinate multiple `LocalState<T>` slots through one store transaction.
+    ///
+    /// Inside the callback, use `tx.value_or(...)`, `tx.value_or_else(...)`, `tx.set(...)`,
+    /// `tx.update(...)`, and `tx.update_if(...)` rather than naming the transaction carrier type
+    /// directly.
     pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static)
     where
         A: crate::TypedAction,
@@ -1311,6 +1320,11 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| f(host.models_mut()));
     }
 
+    /// Coordinate multiple `LocalState<T>` slots through one store transaction.
+    ///
+    /// Inside the callback, use `tx.value_or(...)`, `tx.value_or_else(...)`, `tx.set(...)`,
+    /// `tx.update(...)`, and `tx.update_if(...)` rather than naming the transaction carrier type
+    /// directly.
     pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static)
     where
         A: crate::TypedAction,
@@ -1362,6 +1376,7 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
 }
 
 /// Grouped selector/query helpers for the default app authoring surface.
+#[doc(hidden)]
 pub struct AppUiData<'view, 'cx, 'a, H: UiHost> {
     #[allow(dead_code)]
     cx: &'view mut AppUi<'cx, 'a, H>,
@@ -1507,6 +1522,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
 }
 
 /// Grouped selector/query helpers for extracted `UiCx` child builders on the default app surface.
+#[doc(hidden)]
 pub struct UiCxData<'cx, 'a> {
     #[allow(dead_code)]
     cx: &'cx mut ElementContext<'a, crate::app::App>,
@@ -1645,6 +1661,8 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
 
 /// Brings the grouped `data()` namespace to extracted `UiCx` helper functions.
 pub trait UiCxDataExt<'a> {
+    /// Discover selector/query helpers through `cx.data()` rather than naming the carrier type
+    /// directly.
     fn data(&mut self) -> UiCxData<'_, 'a>;
 }
 
@@ -1656,6 +1674,8 @@ impl<'a> UiCxDataExt<'a> for ElementContext<'a, crate::app::App> {
 
 /// Brings the grouped `actions()` namespace to extracted `UiCx` helper functions.
 pub trait UiCxActionsExt<'a> {
+    /// Discover grouped action helpers through `cx.actions()` rather than naming the carrier type
+    /// directly.
     fn actions(&mut self) -> UiCxActions<'_, 'a>;
 }
 
@@ -1666,6 +1686,7 @@ impl<'a> UiCxActionsExt<'a> for ElementContext<'a, crate::app::App> {
 }
 
 /// Grouped render-time effect helpers for the default app authoring surface.
+#[doc(hidden)]
 pub struct AppUiEffects<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
@@ -1695,21 +1716,35 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     }
 
     /// Grouped state/local helpers for the default app authoring surface.
+    ///
+    /// Discover this namespace through `cx.state()` rather than naming the returned carrier type
+    /// directly. The grouped surface owns `local`, `local_keyed`, `local_init`, and `watch`.
     pub fn state(&mut self) -> AppUiState<'_, 'cx, 'a, H> {
         AppUiState { cx: self }
     }
 
     /// Grouped typed action registration helpers for the default app authoring surface.
+    ///
+    /// Discover this namespace through `cx.actions()` rather than naming the returned carrier
+    /// type directly. The grouped surface owns widget-local action glue, one-slot local writes,
+    /// coordinated `locals::<A>(...)`, keyed payload writes, transients, and availability hooks.
     pub fn actions(&mut self) -> AppUiActions<'_, 'cx, 'a, H> {
         AppUiActions { cx: self }
     }
 
     /// Grouped selector/query helpers for the default app authoring surface.
+    ///
+    /// Discover this namespace through `cx.data()` rather than naming the returned carrier type
+    /// directly. The grouped surface owns selector helpers, query creation, and query
+    /// invalidation with the redraw shell included.
     pub fn data(&mut self) -> AppUiData<'_, 'cx, 'a, H> {
         AppUiData { cx: self }
     }
 
     /// Grouped render-time effect helpers for the default app authoring surface.
+    ///
+    /// Discover this namespace through `cx.effects()` rather than naming the returned carrier type
+    /// directly. The grouped surface currently owns transient consumption.
     pub fn effects(&mut self) -> AppUiEffects<'_, 'cx, 'a, H> {
         AppUiEffects { cx: self }
     }
@@ -2423,6 +2458,35 @@ mod tests {
         assert!(
             !api_source.contains("impl AppActivateSurface for fret_ui_ai::TerminalClearButton")
         );
+    }
+
+    #[test]
+    fn structural_grouped_carriers_stay_hidden_from_first_contact_rustdoc() {
+        let api_source = VIEW_RS_SOURCE
+            .split("\nmod tests {")
+            .next()
+            .expect("view.rs test module marker should exist");
+
+        assert!(api_source.contains("#[doc(hidden)]\npub struct LocalTxn<'a>"));
+        assert!(
+            api_source.contains("#[doc(hidden)]\npub struct AppUiState<'view, 'cx, 'a, H: UiHost>")
+        );
+        assert!(
+            api_source
+                .contains("#[doc(hidden)]\npub struct AppUiActions<'view, 'cx, 'a, H: UiHost>")
+        );
+        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxActions<'cx, 'a>"));
+        assert!(
+            api_source.contains("#[doc(hidden)]\npub struct AppUiData<'view, 'cx, 'a, H: UiHost>")
+        );
+        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxData<'cx, 'a>"));
+        assert!(
+            api_source
+                .contains("#[doc(hidden)]\npub struct AppUiEffects<'view, 'cx, 'a, H: UiHost>")
+        );
+        assert!(!api_source.contains("#[doc(hidden)]\npub struct LocalState<T>"));
+        assert!(!api_source.contains("#[doc(hidden)]\npub trait TrackedStateExt<T: Any>"));
+        assert!(!api_source.contains("#[doc(hidden)]\npub trait AppActivateExt"));
     }
 
     #[test]
