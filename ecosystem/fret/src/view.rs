@@ -1493,18 +1493,16 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiEffects<'view, 'cx, 'a, H> {
 }
 
 impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
-    pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self {
+    pub(crate) fn new(
+        cx: &'cx mut ElementContext<'a, H>,
+        action_root: fret_ui::GlobalElementId,
+    ) -> Self {
         Self {
             cx,
             action_root,
             action_handlers: crate::actions::ActionHandlerTable::new(),
             action_handlers_used: false,
         }
-    }
-
-    /// The element that owns view-level action handlers for this render pass.
-    pub fn action_root(&self) -> fret_ui::GlobalElementId {
-        self.action_root
     }
 
     /// Access the underlying element context.
@@ -2259,6 +2257,9 @@ mod tests {
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
+        assert!(!api_source.contains("pub fn action_root(&self) -> fret_ui::GlobalElementId"));
+        assert!(!api_source.contains("pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self"));
+        assert!(api_source.contains("pub(crate) fn new("));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
         assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
