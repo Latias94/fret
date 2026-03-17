@@ -328,7 +328,7 @@ cx.actions()
     });
 
 // then include the nonce in the query key:
-let tip_nonce_value = tip_nonce_state.paint(cx).value_or(0);
+let tip_nonce_value = tip_nonce_state.paint_value(cx);
 let handle = cx.data().query(tip_key(tip_nonce_value), policy, move |token| fetch(token));
 ```
 

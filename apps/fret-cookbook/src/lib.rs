@@ -226,6 +226,8 @@ mod authoring_surface_policy_tests {
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let todos = todos_state.layout_value(cx);"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let draft_value = draft_state.layout_value(cx);"));
         assert!(
             SIMPLE_TODO_EXAMPLE.contains("let text = tx.value(&draft_state).trim().to_string();")
         );
@@ -237,6 +239,13 @@ mod authoring_surface_policy_tests {
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert!(
+            SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let todos = todos_state.layout_value(cx);")
+        );
+        assert!(
+            SIMPLE_TODO_V2_TARGET_EXAMPLE
+                .contains("let draft_value = draft_state.layout_value(cx);")
+        );
         assert!(
             SIMPLE_TODO_V2_TARGET_EXAMPLE
                 .contains("let text = tx.value(&draft_state).trim().to_string();")
@@ -272,6 +281,8 @@ mod authoring_surface_policy_tests {
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().locals::<act::Inc>"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().local_set::<act::Reset, i64>"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains("let count = count_state.layout_value(cx);"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains("let step_text = step_state.layout_value(cx);"));
 
         assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().locals::<act::Submit>"));
         assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().availability::<act::Submit>"));
@@ -291,6 +302,9 @@ mod authoring_surface_policy_tests {
 
         assert!(FORM_EXAMPLE.contains("locals::<act::Submit>"));
         assert!(FORM_EXAMPLE.contains("availability::<act::Submit>"));
+        assert!(FORM_EXAMPLE.contains("let name = name_state.layout_value(cx);"));
+        assert!(FORM_EXAMPLE.contains("let email = email_state.layout_value(cx);"));
+        assert!(FORM_EXAMPLE.contains("let error = error_state.layout_value(cx);"));
         assert!(FORM_EXAMPLE.contains("let name = tx.value(&name_state);"));
         assert!(FORM_EXAMPLE.contains("let email = tx.value(&email_state);"));
         assert!(!FORM_EXAMPLE.contains("tx.value_or_else(&name_state, String::new)"));
@@ -299,6 +313,13 @@ mod authoring_surface_policy_tests {
         assert!(DATE_PICKER_EXAMPLE.contains("watch(&selected_state)"));
 
         assert!(COMMANDS_KEYMAP_EXAMPLE.contains("locals::<act::TogglePanel>"));
+        assert!(
+            COMMANDS_KEYMAP_EXAMPLE.contains("let panel_open = panel_open_state.layout_value(cx);")
+        );
+        assert!(
+            COMMANDS_KEYMAP_EXAMPLE
+                .contains("let allow_command = allow_command_state.layout_value(cx);")
+        );
         assert!(COMMANDS_KEYMAP_EXAMPLE.contains("toggle_local_bool::<act::ToggleAllowCommand>"));
 
         assert!(OVERLAY_EXAMPLE.contains("local_set::<act::OpenDialog, bool>"));

@@ -21,6 +21,7 @@ missing default guideline).
 | Need | Default entrypoint | Notes |
 | --- | --- | --- |
 | View-owned state | `cx.state().local::<T>()` / `cx.state().local_init(|| ...)` | Prefer `LocalState<Vec<_>>` for view-owned keyed lists. |
+| LocalState tracked reads | `local.layout_value(cx)` / `local.paint_value(cx)` | Default LocalState-only read path; keeps invalidation phase explicit without fallback noise. Raw `local.layout(cx).value_*` / `local.paint(cx).value_*` remain available when you want the explicit builder. |
 | 1-slot action write | `cx.actions().local_set/update` | Keeps the notify/dirty closure correct. |
 | Multi-slot LocalState transaction | `cx.actions().locals::<A>(|tx| ...)` | Hides `ModelStore` for LocalState-only coordination; inside the closure prefer `tx.value(&local)` for ordinary initialized locals. |
 | Widget action binding | `.action(...)` / `.action_payload(...)` | Prefer this whenever the widget already exposes a stable action slot. |

@@ -58,9 +58,9 @@ impl View for FormBasicsView {
         let email_state = cx.state().local::<String>();
         let error_state = cx.state().local::<Option<String>>();
 
-        let name = name_state.layout(cx).value_or_else(String::new);
-        let email = email_state.layout(cx).value_or_else(String::new);
-        let error = error_state.layout(cx).value_or_default();
+        let name = name_state.layout_value(cx);
+        let email = email_state.layout_value(cx);
+        let error = error_state.layout_value(cx);
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 

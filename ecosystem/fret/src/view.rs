@@ -40,7 +40,8 @@ pub trait View: 'static {
 /// The explicit raw-model and bridge helpers that still live on this type are intentionally
 /// non-default:
 ///
-/// - use `cx.state().local*` plus tracked reads for the default app-authoring path,
+/// - use `cx.state().local*` plus `layout_value(...)` / `paint_value(...)` for the default
+///   app-authoring path,
 /// - use [`AppUiRawStateExt::use_state`] when code intentionally wants a raw `Model<T>` handle,
 /// - use the bridge helpers below only when ownership or helper-context boundaries still require
 ///   direct `ModelStore`, `ElementContext`, or `Model<T>` access.
@@ -221,6 +222,34 @@ impl<T> LocalState<T> {
         T: Any,
     {
         self.update_action(host, action_cx, move |slot| *slot = value)
+    }
+
+    /// Read the current local value through a layout invalidation tracked read on the default app
+    /// surface.
+    ///
+    /// `LocalState<T>` on the app lane always owns an inserted slot, so this keeps the invalidation
+    /// phase explicit without repeating fallback noise at the call site.
+    pub fn layout_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T
+    where
+        T: Any + Clone,
+    {
+        self.layout(cx)
+            .value()
+            .expect("LocalState-first app code should always read initialized locals")
+    }
+
+    /// Read the current local value through a paint invalidation tracked read on the default app
+    /// surface.
+    ///
+    /// Keep raw `watch(...).paint().value_*` when you intentionally want the explicit builder; use
+    /// this for ordinary initialized app locals that only need the paint-phase value.
+    pub fn paint_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T
+    where
+        T: Any + Clone,
+    {
+        self.paint(cx)
+            .value()
+            .expect("LocalState-first app code should always read initialized locals")
     }
 
     pub fn watch<'watch, 'view_cx, 'a, H: UiHost>(
@@ -466,10 +495,11 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
 
 /// Shared read-side ergonomics for both `LocalState<T>` and explicit `Model<T>` handles.
 ///
-/// Prefer the shorter tracked-read chains such as `state.layout(cx).value_*` or
-/// `state.paint(cx).value_*` for ordinary reads. Keep raw `watch(cx)` when you intentionally need
-/// custom invalidation, `observe()`, `revision()`, or direct `read*()` access on the tracked-read
-/// builder.
+/// Prefer `LocalState::layout_value(...)` / `paint_value(...)` for ordinary initialized app-lane
+/// locals, or the shorter tracked-read chains such as `state.layout(cx).value_*` /
+/// `state.paint(cx).value_*` when you intentionally want the explicit builder. Keep raw
+/// `watch(cx)` when you need custom invalidation, `observe()`, `revision()`, or direct `read*()`
+/// access on the tracked-read builder.
 pub trait TrackedStateExt<T: Any> {
     fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
@@ -2329,6 +2359,12 @@ mod tests {
         assert!(
             api_source.contains("pub fn value<T: Any + Clone>(&self, local: &LocalState<T>) -> T")
         );
+        assert!(api_source.contains(
+            "pub fn layout_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T"
+        ));
+        assert!(api_source.contains(
+            "pub fn paint_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T"
+        ));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));
@@ -2485,7 +2521,9 @@ mod tests {
         assert!(!api_source.contains(
             "#[doc(hidden)]\n#[must_use]\npub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any>"
         ));
-        assert!(api_source.contains("Prefer the shorter tracked-read chains such as"));
+        assert!(api_source.contains(
+            "Prefer `LocalState::layout_value(...)` / `paint_value(...)` for ordinary initialized app-lane"
+        ));
     }
 
     #[test]
@@ -2498,6 +2536,12 @@ mod tests {
         assert!(api_source.contains("Expose the underlying `Model<T>` as an explicit bridge."));
         assert!(api_source.contains("Clone the underlying `Model<T>` as an explicit bridge."));
         assert!(api_source.contains("Read this local through an explicit `ModelStore` bridge."));
+        assert!(api_source.contains(
+            "Read the current local value through a layout invalidation tracked read on the default app"
+        ));
+        assert!(api_source.contains(
+            "Read the current local value through a paint invalidation tracked read on the default app"
+        ));
         assert!(
             api_source
                 .contains("Observe/read this local from helper-heavy `ElementContext` surfaces.")

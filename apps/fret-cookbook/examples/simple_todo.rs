@@ -60,8 +60,8 @@ impl View for SimpleTodoView {
 
         bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);
 
-        let todos = todos_state.layout(cx).value_or_default();
-        let draft_value = draft_state.layout(cx).value_or_default();
+        let todos = todos_state.layout_value(cx);
+        let draft_value = draft_state.layout_value(cx);
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();

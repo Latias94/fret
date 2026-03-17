@@ -394,8 +394,8 @@ impl View for TodoView {
             &todos_state,
         );
 
-        let draft_value = draft_state.layout(cx).value_or_default();
-        let filter_value = filter_state.layout(cx).value_or(TodoFilter::All);
+        let draft_value = draft_state.layout_value(cx);
+        let filter_value = filter_state.layout_value(cx);
 
         let add_enabled = !draft_value.trim().is_empty();
 
@@ -426,7 +426,7 @@ impl View for TodoView {
                 }
             });
 
-        let tip_nonce_value = tip_nonce_state.paint(cx).value_or(0);
+        let tip_nonce_value = tip_nonce_state.paint_value(cx);
         let tip_handle = cx.data().query(tip_key(tip_nonce_value), tip_policy(), move |_token| {
                 #[cfg(not(target_arch = "wasm32"))]
                 std::thread::sleep(Duration::from_millis(150));
@@ -752,7 +752,7 @@ impl View for HelloView {{
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {{
         let click_count_state = cx.state().local::<u32>();
-        let click_count_value = click_count_state.layout(cx).value_or(0);
+        let click_count_value = click_count_state.layout_value(cx);
 
         cx.actions().local_update::<act::Click, u32>(&click_count_state, |v| {{
             *v = v.saturating_add(1);
@@ -894,8 +894,8 @@ impl View for TodoView {
 
         bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);
 
-        let todos = todos_state.layout(cx).value_or_default();
-        let draft_value = draft_state.layout(cx).value_or_default();
+        let todos = todos_state.layout_value(cx);
+        let draft_value = draft_state.layout_value(cx);
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
         let add_enabled = !draft_value.trim().is_empty();
@@ -1450,6 +1450,11 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let filter_state = cx.state().local_init(|| TodoFilter::All);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
+        assert!(src.contains("let draft_value = draft_state.layout_value(cx);"));
+        assert!(src.contains("let filter_value = filter_state.layout_value(cx);"));
+        assert!(src.contains("let tip_nonce_value = tip_nonce_state.paint_value(cx);"));
+        assert!(!src.contains("draft_state.layout(cx).value_or_default()"));
+        assert!(!src.contains("filter_state.layout(cx).value_or(TodoFilter::All)"));
         assert!(src.contains("bind_todo_actions("));
         assert!(src.contains("fn bind_todo_actions("));
         assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
@@ -1500,7 +1505,8 @@ mod tests {
         assert!(src.contains(".run()"));
         assert!(!src.contains(".run_view::<HelloView>()"));
         assert!(src.contains("let click_count_state = cx.state().local::<u32>();"));
-        assert!(src.contains("let click_count_value = click_count_state.layout(cx).value_or(0);"));
+        assert!(src.contains("let click_count_value = click_count_state.layout_value(cx);"));
+        assert!(!src.contains("click_count_state.layout(cx).value_or(0)"));
         assert!(src.contains("cx.actions().local_update::<act::Click, u32>"));
         assert!(!src.contains("cx.on_action_notify_models::<act::Click>"));
         assert!(!src.contains("cx.use_state::<u32>()"));
@@ -1551,6 +1557,10 @@ mod tests {
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
         assert!(src.contains("let todos_state = cx.state().local_init(|| {"));
+        assert!(src.contains("let todos = todos_state.layout_value(cx);"));
+        assert!(src.contains("let draft_value = draft_state.layout_value(cx);"));
+        assert!(!src.contains("todos_state.layout(cx).value_or_default()"));
+        assert!(!src.contains("draft_state.layout(cx).value_or_default()"));
         assert!(src.contains("bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);"));
         assert!(src.contains("fn bind_todo_actions("));
         assert!(src.contains("ui::single(cx, todo_page(theme, content))"));
