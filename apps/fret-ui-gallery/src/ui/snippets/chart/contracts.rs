@@ -50,7 +50,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(|cx| {
         vec![
-            shadcn::raw::typography::muted("Chart UI contracts: Tooltip + Legend content recipes.")
+            shadcn::raw::typography::muted(
+                "Chart UI contracts: static tooltip recipes, output-model auto wiring, label/item format hooks, config-key remapping via label_key/name_key, metadata-backed item formatting, and legend defaults from ChartConfig.",
+            )
                 .into_element(cx),
             tooltip(
                 cx,

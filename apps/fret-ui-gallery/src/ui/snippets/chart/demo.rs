@@ -3,20 +3,78 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum DemoChartKind {
-        Area,
-        BarMultiple,
-        BarMixed,
-        LineMultiple,
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DemoChartKind {
+    Area,
+    BarMultiple,
+    BarMixed,
+    LineMultiple,
+}
 
+fn trending_footer(
+    cx: &mut UiCx<'_>,
+    secondary: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
+    ui::v_flex(move |cx| {
+        vec![
+            ui::h_row(|cx| {
+                vec![
+                    ui::text("Trending up by 5.2% this month")
+                        .font_medium()
+                        .into_element(cx),
+                    icon,
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+            shadcn::raw::typography::muted(secondary).into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+}
+
+fn chart_card(
+    title: &'static str,
+    description: &'static str,
+    canvas: AnyElement,
+    footer_secondary: &'static str,
+    test_id: &'static str,
+) -> impl IntoUiElement<fret_app::App> + use<> {
+    shadcn::card(move |cx| {
+        ui::children![
+            cx;
+            shadcn::card_header(|cx| {
+                ui::children![
+                    cx;
+                    shadcn::card_title(title),
+                    shadcn::card_description(description),
+                ]
+            }),
+            shadcn::card_content(|cx| ui::children![cx; canvas]),
+            shadcn::card_footer(|cx| ui::children![cx; trending_footer(cx, footer_secondary)]),
+        ]
+    })
+    .refine_layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .max_w(Px(520.0)),
+    )
+    .ui()
+    .test_id(test_id)
+}
+
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let chart_canvas = |cx: &mut UiCx<'_>, kind: DemoChartKind, test_id: Arc<str>| {
         use delinea::data::{Column, DataTable};
         use delinea::{
@@ -286,104 +344,57 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
     };
 
-    let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| -> AnyElement {
-            let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
-            ui::v_flex(|cx| {
-                vec![
-                    ui::h_row(|cx| {
-                        vec![
-                            ui::text("Trending up by 5.2% this month")
-                                .font_medium()
-                                .into_element(cx),
-                            icon,
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                    shadcn::raw::typography::muted(secondary).into_element(cx),
-                ]
-            })
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .into_element(cx)
-        };
-
-    let chart_card = |cx: &mut UiCx<'_>,
-                      title: &'static str,
-                      description: &'static str,
-                      kind: DemoChartKind,
-                      footer_secondary: &'static str,
-                      test_id: &'static str| -> AnyElement {
-        let canvas = chart_canvas(cx, kind, Arc::<str>::from(format!("{test_id}-canvas")));
-
-        shadcn::card(|cx| {
-            ui::children![
-                cx;
-                shadcn::card_header(|cx| {
-                    ui::children![
-                        cx;
-                        shadcn::card_title(title),
-                        shadcn::card_description(description),
-                    ]
-                }),
-                shadcn::card_content(|cx| ui::children![cx; canvas]),
-                shadcn::card_footer(|cx| ui::children![cx; trending_footer(cx, footer_secondary)]),
-            ]
-        })
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .min_w_0()
-                .max_w(Px(520.0)),
-        )
-        .ui()
-        .test_id(test_id)
-        .into_element(cx)
-    };
-
     let area = chart_card(
-        cx,
         "Area Chart",
         "Showing total visitors for the last 6 months",
-        DemoChartKind::Area,
+        chart_canvas(
+            cx,
+            DemoChartKind::Area,
+            Arc::<str>::from("ui-gallery-chart-demo-area-canvas"),
+        ),
         "January - June 2024",
         "ui-gallery-chart-demo-area",
     );
     let bar = chart_card(
-        cx,
         "Bar Chart - Multiple",
         "January - June 2024",
-        DemoChartKind::BarMultiple,
+        chart_canvas(
+            cx,
+            DemoChartKind::BarMultiple,
+            Arc::<str>::from("ui-gallery-chart-demo-bar-canvas"),
+        ),
         "Showing total visitors for the last 6 months",
         "ui-gallery-chart-demo-bar",
     );
     let mixed = chart_card(
-        cx,
         "Bar Chart - Mixed",
         "January - June 2024",
-        DemoChartKind::BarMixed,
+        chart_canvas(
+            cx,
+            DemoChartKind::BarMixed,
+            Arc::<str>::from("ui-gallery-chart-demo-mixed-canvas"),
+        ),
         "Showing total visitors for the last 6 months",
         "ui-gallery-chart-demo-mixed",
     );
     let line = chart_card(
-        cx,
         "Line Chart - Multiple",
         "January - June 2024",
-        DemoChartKind::LineMultiple,
+        chart_canvas(
+            cx,
+            DemoChartKind::LineMultiple,
+            Arc::<str>::from("ui-gallery-chart-demo-line-canvas"),
+        ),
         "Showing total visitors for the last 6 months",
         "ui-gallery-chart-demo-line",
     );
 
-    fret_ui_kit::ui::h_flex(|_cx| {
-        vec![area, bar, mixed, line]
-    })
-    .gap(Space::N4)
-    .wrap()
-    .w_full()
-    .items_start()
-    .into_element(cx)
-    .test_id("ui-gallery-chart-demo")
+    fret_ui_kit::ui::h_flex(|_cx| vec![area, bar, mixed, line])
+        .gap(Space::N4)
+        .wrap()
+        .w_full()
+        .items_start()
+        .into_element(cx)
+        .test_id("ui-gallery-chart-demo")
 }
 // endregion: example

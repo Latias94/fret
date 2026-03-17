@@ -3444,7 +3444,7 @@ fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/chart.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo_cards)",
-            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"First Chart\", first_chart)",
             "DocSection::build(cx, \"Contracts\", contracts_overview)",
             "DocSection::build(cx, \"Tooltip\", tooltip_content)",
             "DocSection::build(cx, \"Legend\", legend_content)",
@@ -3452,7 +3452,7 @@ fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
         ],
         &[
             "DocSection::new(\"Demo\", demo_cards)",
-            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"First Chart\", first_chart)",
             "DocSection::new(\"Contracts\", contracts_overview)",
             "DocSection::new(\"Tooltip\", tooltip_content)",
             "DocSection::new(\"Legend\", legend_content)",
@@ -7724,16 +7724,16 @@ fn selected_chart_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/chart/demo.rs",
         &[
-            "let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| -> impl IntoUiElement<fret_app::App> + use<>",
-            "let chart_card = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str, kind: DemoChartKind, footer_secondary: &'static str, test_id: &'static str| -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn trending_footer(cx: &mut UiCx<'_>, secondary: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn chart_card(title: &'static str, description: &'static str, canvas: AnyElement, footer_secondary: &'static str, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
             "shadcn::card(",
             "shadcn::card_header(",
             "shadcn::card_content(",
             "shadcn::card_footer(",
         ],
         &[
-            "let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| {",
-            "let chart_card = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str, kind: DemoChartKind, footer_secondary: &'static str, test_id: &'static str| {",
+            "fn trending_footer(cx: &mut UiCx<'_>, secondary: &'static str,) -> AnyElement",
+            "fn chart_card(title: &'static str, description: &'static str, canvas: AnyElement, footer_secondary: &'static str, test_id: &'static str,) -> AnyElement",
             "shadcn::Card::new(",
             "shadcn::CardHeader::new(",
             "shadcn::CardContent::new(",

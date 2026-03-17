@@ -20,7 +20,9 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Chart now exposes both `ChartContainer::new(...).into_element(cx, |cx| ...)` and the more shadcn-like `chart_container(config, |cx| ...)` builder surface for composable child authoring.",
         "Demo cards are rendered with `delinea` + `fret-chart` (not Recharts); this is a stand-in to keep chart layout real in native builds.",
         "`ChartLegendContent::new()` can derive labels, icons, and colors from `ChartConfig` when explicit legend items are omitted.",
-        "The remaining parity gap is tooltip/runtime payload wiring: `ChartTooltipContent` is still a recipe surface and does not yet auto-bind to native chart payloads the way shadcn does with Recharts.",
+        "`ChartTooltipContent::new()` can now auto-derive label, items, colors, and icons from a shared `ChartCanvasOutput` model plus `ChartConfig`.",
+        "`ChartTooltipContent` now exposes recipe-level `label_formatter(...)`, `formatter(...)`, `label_key(...)`, and `name_key(...)` hooks, with Fret-native item key/metadata remapping.",
+        "The remaining parity gaps are full Recharts `payload.payload[...]` field lookup on engine-derived payloads and DOM-native overlay composition details.",
         "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
         "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
     ]);
@@ -32,7 +34,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let first_chart = DocSection::build(cx, "First Chart", first_chart)
         .description(
-            "Fret-native equivalent of shadcn's composition flow: chart container, chart canvas, legend defaults from config, and explicit tooltip recipe content.",
+            "Fret-native equivalent of shadcn's composition flow: chart container, chart canvas, legend defaults from config, and tooltip content auto-derived from a shared chart output model.",
         )
         .test_id_prefix("ui-gallery-chart-first-chart")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
@@ -45,10 +47,10 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-chart-theming")
         .code_rust_from_file_region(snippets::theming::SOURCE, "example");
     let contracts_overview = DocSection::build(cx, "Contracts", contracts_overview)
-        .description("Fret-specific chart recipe contracts that still matter even before full payload wiring lands.")
+        .description("Fret-specific chart recipe contracts that still matter once payload auto-wiring is enabled.")
         .code_rust_from_file_region(snippets::contracts::SOURCE, "example");
     let tooltip_content = DocSection::build(cx, "Tooltip", tooltip_content)
-        .description("Recipe-level tooltip variants aligned to the shadcn tooltip surface that Fret can already render deterministically.")
+        .description("Recipe-level tooltip variants plus label/item format hooks aligned to the shadcn tooltip teaching surface.")
         .test_id_prefix("ui-gallery-chart-tooltip")
         .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
     let legend_content = DocSection::build(cx, "Legend", legend_content)
@@ -69,7 +71,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Chart docs shape more closely: first-chart composition, config, theming, tooltip/legend, accessibility, and RTL. Fret-specific chart-engine gaps stay explicit instead of being hidden by the docs surface.",
+            "Preview follows the shadcn Chart docs shape more closely: first-chart composition, config, theming, tooltip/legend, accessibility, and RTL. Fret-specific chart-engine constraints still stay explicit, but the first-chart path now includes output-model-driven tooltip payload binding.",
         ),
         vec![
             demo_cards,

@@ -438,6 +438,8 @@ mod tests {
         PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType,
         Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    use fret_core::{KeyCode, Scene};
     use fret_launch::WinitAppDriver;
     use fret_runtime::{FrameId, TickId};
 
@@ -617,6 +619,24 @@ mod tests {
         );
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    fn paint_gallery_frame(rendered: &mut RenderedGalleryPage) {
+        let mut scene = Scene::default();
+        rendered.state.ui.paint_all(
+            &mut rendered.app,
+            &mut rendered.services,
+            rendered.bounds,
+            &mut scene,
+            1.0,
+        );
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    fn render_gallery_frame_with_paint(rendered: &mut RenderedGalleryPage) {
+        render_gallery_frame(rendered);
+        paint_gallery_frame(rendered);
+    }
+
     fn dispatch_command(rendered: &mut RenderedGalleryPage, command: impl Into<CommandId>) {
         UiGalleryDriver::default().handle_command(
             fret_launch::WinitCommandContext {
@@ -629,6 +649,7 @@ mod tests {
         );
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
     fn node_id_by_test_id(rendered: &RenderedGalleryPage, test_id: &str) -> fret_core::NodeId {
         let snapshot = rendered
             .state
@@ -1602,6 +1623,53 @@ mod tests {
             node = rendered.state.ui.node_parent(id);
         }
         out
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_first_chart_keyboard_navigation_shows_auto_wired_tooltip_under_default_cache_policy() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-chart-first-chart-canvas");
+
+        let canvas_node = node_id_by_test_id(&rendered, "ui-gallery-chart-first-chart-canvas");
+        rendered.state.ui.set_focus(Some(canvas_node));
+        render_gallery_frame_with_paint(&mut rendered);
+
+        rendered.state.ui.dispatch_event(
+            &mut rendered.app,
+            &mut rendered.services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        render_gallery_frame_with_paint(&mut rendered);
+        render_gallery_frame_with_paint(&mut rendered);
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after chart keyboard navigation");
+        let canvas = node_by_test_id(snapshot, "ui-gallery-chart-first-chart-canvas");
+
+        assert_eq!(
+            canvas.pos_in_set,
+            Some(2),
+            "expected ArrowRight to advance the chart accessibility index"
+        );
+        assert!(
+            canvas
+                .value
+                .as_deref()
+                .is_some_and(|value| !value.is_empty()),
+            "expected chart keyboard navigation to publish an accessibility value once tooltip wiring is active"
+        );
+        assert!(
+            find_node_by_test_id(snapshot, "ui-gallery-chart-first-chart-tooltip").is_some(),
+            "expected the auto-wired chart tooltip to appear on the First Chart gallery section"
+        );
     }
 
     fn assert_inner_viewport_vertical_touch_pan_is_owned_by_editor(

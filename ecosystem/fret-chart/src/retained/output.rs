@@ -4,12 +4,14 @@ use delinea::engine::window::DataWindow;
 use delinea::{BrushSelection2D, LinkEvent, RowRange, SeriesId};
 
 use crate::LinkAxisKey;
+use crate::retained::TooltipTextLine;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct ChartCanvasOutputSnapshot {
     pub brush_selection_2d: Option<BrushSelection2D>,
     pub brush_x_row_ranges_by_series: BTreeMap<SeriesId, RowRange>,
     pub link_events: Vec<LinkEvent>,
+    pub tooltip_lines: Vec<TooltipTextLine>,
     /// The current effective domain windows keyed in `LinkAxisKey` space.
     ///
     /// This is used by `LinkedChartGroup` to propagate domain window changes even when link

@@ -3,12 +3,18 @@ pub const SOURCE: &str = include_str!("usage.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
+use fret_icons::IconId;
+use fret_runtime::Model;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-fn sample_chart_canvas(cx: &mut UiCx<'_>, test_id: impl Into<Arc<str>>) -> AnyElement {
+fn sample_chart_canvas(
+    cx: &mut UiCx<'_>,
+    test_id: impl Into<Arc<str>>,
+    output: Model<fret_chart::ChartCanvasOutput>,
+) -> AnyElement {
     use delinea::data::{Column, DataTable};
     use delinea::{
         AxisKind, AxisScale, CategoryAxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
@@ -88,7 +94,7 @@ fn sample_chart_canvas(cx: &mut UiCx<'_>, test_id: impl Into<Arc<str>>) -> AnyEl
             data_zoom_x: vec![],
             data_zoom_y: vec![],
             tooltip: None,
-            axis_pointer: None,
+            axis_pointer: Some(delinea::AxisPointerSpec::default()),
             visual_maps: vec![],
             series: vec![
                 SeriesSpec {
@@ -135,11 +141,13 @@ fn sample_chart_canvas(cx: &mut UiCx<'_>, test_id: impl Into<Arc<str>>) -> AnyEl
         layout.size.height = Length::Px(Px(208.0));
 
         let canvas_test_id = test_id.to_string();
+        let output = output.clone();
         let props = RetainedSubtreeProps::new::<fret::app::App>(move |ui| {
             let mut canvas = ChartCanvas::new(spec.clone()).expect("chart spec should be valid");
             canvas.set_accessibility_layer(true);
             canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
             canvas = canvas.test_id(canvas_test_id.clone());
+            canvas = canvas.output_model(output.clone());
 
             let mut table = DataTable::default();
             table.push_column(Column::F64(x.clone()));
@@ -158,33 +166,37 @@ fn sample_chart_canvas(cx: &mut UiCx<'_>, test_id: impl Into<Arc<str>>) -> AnyEl
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let output = cx.local_model_keyed("output", fret_chart::ChartCanvasOutput::default);
+    let output_for_container = output.clone();
+    let output_for_canvas = output.clone();
     let config: shadcn::ChartConfig = [
         (
             Arc::<str>::from("desktop"),
             shadcn::ChartConfigItem::new()
                 .label("Desktop")
+                .icon(IconId::new_static("lucide.monitor"))
                 .color(ColorRef::Color(cx.theme().color_token("chart-1"))),
         ),
         (
             Arc::<str>::from("mobile"),
             shadcn::ChartConfigItem::new()
                 .label("Mobile")
+                .icon(IconId::new_static("lucide.smartphone"))
                 .color(ColorRef::Color(cx.theme().color_token("chart-2"))),
         ),
     ]
     .into_iter()
     .collect();
 
-    shadcn::chart_container(config, |cx| {
-        let canvas = sample_chart_canvas(cx, "ui-gallery-chart-first-chart-canvas");
+    shadcn::chart_container(config, move |cx| {
+        let canvas = sample_chart_canvas(
+            cx,
+            "ui-gallery-chart-first-chart-canvas",
+            output_for_canvas.clone(),
+        );
         let legend = shadcn::ChartLegend::new(shadcn::ChartLegendContent::new()).into_element(cx);
         let tooltip = shadcn::ChartTooltip::new(
-            shadcn::ChartTooltipContent::new().label("January").items([
-                shadcn::ChartTooltipItem::new("Desktop", "186")
-                    .color(ColorRef::Color(cx.theme().color_token("chart-1"))),
-                shadcn::ChartTooltipItem::new("Mobile", "80")
-                    .color(ColorRef::Color(cx.theme().color_token("chart-2"))),
-            ]),
+            shadcn::ChartTooltipContent::new().test_id_prefix("ui-gallery-chart-first-chart-tooltip"),
         )
         .into_element(cx);
 
@@ -194,7 +206,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 legend,
                 tooltip,
                 shadcn::raw::typography::muted(
-                    "Use `chart_container(config, |cx| ...)` for Fret's composable child surface. Legend defaults can come from ChartConfig; tooltip payload wiring is still app-owned today.",
+                    "Use `chart_container(config, |cx| ...)` for Fret's composable child surface. Share a `ChartCanvasOutput` model with `ChartContainer::output_model(...)` to auto-derive tooltip label, items, colors, and icons from the active chart payload plus `ChartConfig`.",
                 )
                 .into_element(cx),
             ]
@@ -205,6 +217,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)
     })
     .id("traffic")
+    .output_model(output_for_container)
     .test_id("ui-gallery-chart-first-chart")
     .refine_layout(
         LayoutRefinement::default()
