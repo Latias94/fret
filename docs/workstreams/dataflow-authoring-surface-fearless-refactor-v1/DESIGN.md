@@ -1,6 +1,6 @@
 # Dataflow Authoring Surface (Fearless Refactor v1)
 
-Status: active planning lane (pre-release fearless refactor)
+Status: active closeout lane (pre-release fearless refactor)
 Last updated: 2026-03-17
 
 Related:
@@ -11,6 +11,8 @@ Related:
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`
+- `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
+- `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
 - `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`
 - `docs/workstreams/router-v1/router-v1.md`
 - `docs/workstreams/router-ui-v1/router-ui-v1.md`
@@ -164,6 +166,13 @@ Compatibility rule:
 - any new default dataflow helper surface must remain composable with route snapshot models,
   route-keyed query invalidation, and typed navigation actions,
 - but route authoring itself should continue to evolve in the router workstreams.
+
+Current audit outcome (2026-03-17):
+
+- first-party reusable ecosystem crates already stay on direct `fret-selector` / `fret-query` /
+  router surfaces or thin authoring bridges,
+- editor-grade proof surfaces remain explicit rather than being rewritten into the default app lane,
+- router compatibility is confirmed without creating new requirements for this workstream.
 
 ## Design rules
 

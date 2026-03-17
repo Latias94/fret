@@ -10,6 +10,8 @@ Companion docs:
 - `MILESTONES.md`
 - `TODO.md`
 - `MIGRATION_MATRIX.md`
+- `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
+- `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
 
 Most names do not need to be frozen too early.
 This file exists to freeze:
@@ -33,6 +35,13 @@ Current concrete query posture (2026-03-17):
   `QueryState::<T>::default()` fallback case
 - explicit tracked reads such as `handle.layout(cx).value_or_default()` and component/advanced
   `handle.layout_query(cx).value_or_default()` remain available outside that narrowed default path
+
+Current closeout audit outcome (2026-03-17):
+
+- reusable ecosystem crates remain on direct `fret-selector` / `fret-query` / router surfaces or
+  thin authoring bridges rather than being pushed onto `fret`
+- editor-grade proof surfaces remain explicit and are not being rewritten into the default app lane
+- router compatibility is confirmed, but routing stays adjacent and explicit under `fret::router::*`
 
 ## Target matrix
 

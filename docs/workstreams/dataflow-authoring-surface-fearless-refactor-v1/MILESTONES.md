@@ -10,6 +10,7 @@ Related:
 - `TODO.md`
 - `MIGRATION_MATRIX.md`
 - `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
+- `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
 
 ## Current execution stance (2026-03-16)
 
@@ -32,6 +33,8 @@ Read it as:
 - Milestone 3 is now landed: `handle.read_layout(cx)` is the default app-lane query read posture
   for the common `QueryState::<T>::default()` fallback case while keeping `QueryStatus` ownership
   explicit.
+- Milestone 4 audit is now landed: reusable ecosystem crates remain on direct selector/query/router
+  surfaces and router compatibility is confirmed without widening this lane's scope.
 
 ## Milestone 0 — Freeze the lane
 
@@ -130,6 +133,13 @@ Outcome:
 
 - the chosen dataflow dialect works across generic apps, editor-grade apps, and reusable ecosystem
   adapters.
+
+Status:
+
+- M4 audit landed on 2026-03-17 via
+  `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`.
+- Remaining closeout is about docs/source-gate alignment and unresolved proof surfaces from
+  earlier milestones, not about inventing more ecosystem/router-specific helper APIs.
 
 Deliverables:
 

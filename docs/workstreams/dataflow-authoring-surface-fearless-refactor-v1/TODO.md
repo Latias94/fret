@@ -10,6 +10,7 @@ Companion docs:
 - `MILESTONES.md`
 - `MIGRATION_MATRIX.md`
 - `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
+- `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
 
 Execution note on 2026-03-16:
 
@@ -29,6 +30,8 @@ Execution note on 2026-03-17:
 - component/advanced `layout_query(cx)` remains intentionally explicit
 - the remaining query pressure is lifecycle/status branching, not proof that another default
   read-side helper family should be added here
+- M4 audit is now landed:
+  reusable ecosystem crates stay on direct engine/authoring bridges and router remains adjacent
 
 ## Evidence set
 
@@ -54,13 +57,13 @@ Execution note on 2026-03-17:
 - [x] `docs/crate-usage-guide.md`
 - [x] `docs/authoring-golden-path-v2.md`
 - [x] `docs/examples/todo-app-golden-path.md`
-- [ ] first-party ecosystem adapter touchpoints under `ecosystem/*` once the target surfaces are chosen
+- [x] first-party ecosystem adapter touchpoints under `ecosystem/*` once the target surfaces are chosen
 
 ### Router compatibility checks
 
-- [ ] `docs/workstreams/router-v1/router-v1.md`
-- [ ] `docs/workstreams/router-ui-v1/router-ui-v1.md`
-- [ ] `apps/fret-cookbook/examples/router_basics.rs`
+- [x] `docs/workstreams/router-v1/router-v1.md`
+- [x] `docs/workstreams/router-ui-v1/router-ui-v1.md`
+- [x] `apps/fret-cookbook/examples/router_basics.rs`
 
 Rule:
 
@@ -88,13 +91,13 @@ Rule:
   - Conclusion: this lane stops at `handle.read_layout(cx)`.
   - Remaining loading/error/success branching stays explicit and is not evidence for
     `query_result(...)`, `map_status(...)`, or similar default-path helpers here.
-- [ ] Audit ecosystem adapter impact:
+- [x] Audit ecosystem adapter impact:
   - `ecosystem/fret`
   - `fret-selector`
   - `fret-query`
   - optional reusable-kit adapters
-- [ ] Audit editor-grade compatibility impact on shared-model surfaces.
-- [ ] Audit router compatibility after the default surface is chosen.
+- [x] Audit editor-grade compatibility impact on shared-model surfaces.
+- [x] Audit router compatibility after the default surface is chosen.
 - [ ] Update docs/templates/examples/gates together for each landed batch.
 
 ## M0 — Freeze the lane
@@ -132,8 +135,8 @@ Rule:
 
 - [ ] Update docs/templates/examples to the chosen posture.
 - [ ] Update source-policy tests or other gates.
-- [ ] Record which direct-crate ecosystem surfaces stay intentionally lower-level.
-- [ ] Record router compatibility outcomes without widening the lane scope.
+- [x] Record which direct-crate ecosystem surfaces stay intentionally lower-level.
+- [x] Record router compatibility outcomes without widening the lane scope.
 
 ## Standing rules
 
