@@ -608,7 +608,8 @@ fn aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Square\", square)",
             "DocSection::build(cx, \"Portrait\", portrait)",
             "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"Notes\", notes)",
+            "let api_reference = doc_layout::notes_block([",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -616,7 +617,8 @@ fn aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Square\", square)",
             "DocSection::new(\"Portrait\", portrait)",
             "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"Notes\", notes)",
+            "let api_reference = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
         ],
     );
 }
@@ -4764,20 +4766,24 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             "let about = doc_layout::notes_block([",
             "let date_picker = doc_layout::notes_block([",
             "let selected_date_timezone = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
             "let about = DocSection::build(cx, \"About\", about)",
             "let date_picker = DocSection::build(cx, \"Date Picker\", date_picker)",
             "let selected_date_timezone = DocSection::build(cx, \"Selected Date (With TimeZone)\", selected_date_timezone)",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "let about = doc_layout::notes(",
             "let date_picker = doc_layout::notes(",
             "let selected_date_timezone = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
             "let notes = doc_layout::notes(",
             "DocSection::new(\"About\", about)",
             "DocSection::new(\"Date Picker\", date_picker)",
             "DocSection::new(\"Selected Date (With TimeZone)\", selected_date_timezone)",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -4910,6 +4916,7 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
     }
 
     for relative_path in [
+        "src/ui/pages/card.rs",
         "src/ui/pages/switch.rs",
         "src/ui/pages/toggle.rs",
         "src/ui/pages/toggle_group.rs",
@@ -4965,12 +4972,7 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
         ],
     );
 
-    for relative_path in [
-        "src/ui/pages/card.rs",
-        "src/ui/pages/input_otp.rs",
-        "src/ui/pages/sidebar.rs",
-        "src/ui/pages/aspect_ratio.rs",
-    ] {
+    for relative_path in ["src/ui/pages/input_otp.rs", "src/ui/pages/sidebar.rs"] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
@@ -4983,6 +4985,18 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             ],
         );
     }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/aspect_ratio.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+        ],
+    );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/card.rs",
@@ -7482,17 +7496,27 @@ fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement(
         } else {
             "fn rtl_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> AnyElement"
         };
+        let ratio_helper = if relative_path.ends_with("rtl.rs") {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
+        } else {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
+        };
+        let ratio_helper_old = if relative_path.ends_with("rtl.rs") {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement"
+        } else {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement"
+        };
 
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
                 image_helper,
-                "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+                ratio_helper,
                 "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
             ],
             &[
                 image_helper_old,
-                "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
+                ratio_helper_old,
                 "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
             ],
         );
