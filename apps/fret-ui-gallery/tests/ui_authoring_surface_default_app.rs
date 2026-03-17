@@ -5950,6 +5950,45 @@ fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
 }
 
 #[test]
+fn carousel_page_keeps_docs_width_lane_distinct_from_fixed_width_diagnostics_harnesses() {
+    for relative_path in [
+        "src/ui/snippets/carousel/basic.rs",
+        "src/ui/snippets/carousel/options.rs",
+        "src/ui/snippets/carousel/loop_carousel.rs",
+        "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/events.rs",
+        "src/ui/snippets/carousel/plugin_autoplay.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_delays.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(relative_path, &[".max_w(max_w_xs)"]);
+        assert!(
+            !normalized.contains(".w_px(max_w_xs)"),
+            "{} should keep the upstream docs width lane (`w_full + max_w`) instead of a fixed-width harness",
+            manifest_path(relative_path).display()
+        );
+    }
+
+    let duration_normalized = assert_normalized_markers_present(
+        "src/ui/snippets/carousel/duration_embla.rs",
+        &["LayoutRefinement::default().w_px(max_w_xs)"],
+    );
+    assert!(
+        !duration_normalized.contains("LayoutRefinement::default().w_full().max_w(max_w_xs)"),
+        "{} should keep the fixed-width harness lane for deterministic engine evidence",
+        manifest_path("src/ui/snippets/carousel/duration_embla.rs").display()
+    );
+
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    assert!(
+        carousel_page.contains(
+            "Docs-path snippets keep the upstream `w_full().max_w(...)` width lane on the carousel root itself; diagnostics follow-ups may switch to fixed-width shells (`w_px(...)`) when deterministic control geometry matters more than copyable docs parity."
+        ),
+        "src/ui/pages/carousel.rs should explain why docs snippets keep the upstream root width lane while diagnostics harnesses may use fixed-width shells"
+    );
+}
+
+#[test]
 fn carousel_parts_lane_is_limited_to_explicit_parts_and_diagnostics_snippets() {
     let expected = BTreeSet::from([
         "src/ui/snippets/carousel/events.rs".to_string(),
