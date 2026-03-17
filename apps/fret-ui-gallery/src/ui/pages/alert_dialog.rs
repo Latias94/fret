@@ -37,7 +37,8 @@ pub(super) fn preview_alert_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Example copy now follows the docs-page examples (`Show Dialog`, `Share Project`, dual-example RTL) rather than the registry-base example labels such as `Default (Media)`.",
         "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
         "Modal semantics follow Radix/Base UI outcomes: outside press does not dismiss, `role=alertdialog` is preserved, and initial focus prefers `AlertDialogCancel` when present.",
-        "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `Parts` remains the explicit adapter lane for portal/overlay ownership.",
+        "`Usage` is the default copyable path; `Parts` remains an advanced adapter lane for explicit root-part ownership.",
+        "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `Parts` keeps the explicit adapter lane for portal/overlay ownership.",
         "Current remaining differences are mostly advanced authoring-surface follow-ups, not layout or dismissal-policy drift.",
     ]);
 
