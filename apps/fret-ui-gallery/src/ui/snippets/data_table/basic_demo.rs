@@ -13,6 +13,13 @@ use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
+mod act {
+    fret::actions!([ToggleAllPageRows = "ui-gallery.data_table.basic.toggle_all_page_rows.v1"]);
+    fret::payload_actions!([
+        ToggleRowSelected(u64) = "ui-gallery.data_table.basic.toggle_row_selected.v1"
+    ]);
+}
+
 #[derive(Debug, Clone)]
 struct PaymentRow {
     key: u64,
@@ -22,62 +29,54 @@ struct PaymentRow {
     email: Arc<str>,
 }
 
-const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.basic.select_all_page";
-const TOGGLE_ROW_SELECTED_ROUTE_PREFIX: &str = "ui_gallery.data_table.basic.toggle_row_selected.";
-
-fn toggle_row_selected_command(row_key: RowKey) -> CommandId {
-    CommandId::new(Arc::<str>::from(format!(
-        "{TOGGLE_ROW_SELECTED_ROUTE_PREFIX}{}",
-        row_key.0
-    )))
-}
-
-fn try_parse_toggle_row_selected(cmd: &CommandId) -> Option<RowKey> {
-    cmd.as_str()
-        .strip_prefix(TOGGLE_ROW_SELECTED_ROUTE_PREFIX)
-        .and_then(|suffix| suffix.parse::<u64>().ok())
-        .map(RowKey)
-}
-
-fn wire_selection_commands<H: UiHost + 'static>(
-    cx: &mut ElementContext<'_, H>,
+fn bind_selection_actions(
+    cx: &mut UiCx<'_>,
     state: Model<TableState>,
     data: Arc<[PaymentRow]>,
     columns: Arc<[ColumnDef<PaymentRow>]>,
 ) {
-    cx.command_on_command_for(
-        cx.root_id(),
-        Arc::new(move |host, action_cx, command| {
-            let cmd = command.as_str();
-
-            let current = host
-                .models_mut()
+    cx.actions().models::<act::ToggleAllPageRows>({
+        let state = state.clone();
+        let data = data.clone();
+        let columns = columns.clone();
+        move |models| {
+            let current = models
                 .read(&state, |st| st.clone())
                 .ok()
                 .unwrap_or_default();
-
-            let table = Table::builder(data.as_ref())
+            let next = Table::builder(data.as_ref())
                 .columns(columns.as_ref().to_vec())
                 .get_row_key(|row, _index, _parent| RowKey(row.key))
                 .state(current)
-                .build();
+                .build()
+                .toggled_all_page_rows_selected(None);
 
-            let next = if cmd == CMD_SELECT_ALL_PAGE {
-                table.toggled_all_page_rows_selected(None)
-            } else if let Some(row_key) = try_parse_toggle_row_selected(&command) {
-                table.toggled_row_selected(row_key, None, true)
-            } else {
-                return false;
-            };
-
-            let _ = host.models_mut().update(&state, |st| {
+            let _ = models.update(&state, |st| {
                 st.row_selection = next;
             });
-
-            host.request_redraw(action_cx.window);
             true
-        }),
-    );
+        }
+    });
+
+    cx.actions().payload_models::<act::ToggleRowSelected>({
+        move |models, row_key| {
+            let current = models
+                .read(&state, |st| st.clone())
+                .ok()
+                .unwrap_or_default();
+            let next = Table::builder(data.as_ref())
+                .columns(columns.as_ref().to_vec())
+                .get_row_key(|row, _index, _parent| RowKey(row.key))
+                .state(current)
+                .build()
+                .toggled_row_selected(RowKey(row_key), None, true);
+
+            let _ = models.update(&state, |st| {
+                st.row_selection = next;
+            });
+            true
+        }
+    });
 }
 
 fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>
@@ -242,7 +241,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let state = cx.local_model_keyed("state", TableState::default);
     let output = cx.local_model_keyed("output", TableViewOutput::default);
 
-    wire_selection_commands(cx, state.clone(), assets.0.clone(), assets.1.clone());
+    bind_selection_actions(cx, state.clone(), assets.0.clone(), assets.1.clone());
 
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
@@ -350,7 +349,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::Checkbox::new_optional(model)
                         .a11y_label("Select all")
                         .test_id("ui-gallery-data-table-basic-select-all")
-                        .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
+                        .action(act::ToggleAllPageRows)
                         .into_element(cx),
                 ])
             },
@@ -370,7 +369,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                     "ui-gallery-data-table-basic-select-row-{}",
                                     row_key.0
                                 )))
-                                .on_click(toggle_row_selected_command(row_key))
+                                .action(act::ToggleRowSelected)
+                                .action_payload(row_key.0)
                                 .into_element(cx)
                         },
                     )

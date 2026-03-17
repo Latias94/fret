@@ -2863,6 +2863,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("start with `View` + `AppUi` + typed actions"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().payload_models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::LocalState`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
@@ -3293,6 +3294,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().models::<A>(...)`"));
+        assert!(FEARLESS_REFACTORING.contains("`cx.actions().payload_models::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().transient::<A>(...)`"));
         assert!(!FEARLESS_REFACTORING.contains("`.dispatch::<A>()`"));
         assert!(!FEARLESS_REFACTORING.contains("`.dispatch_payload::<A>(payload)`"));

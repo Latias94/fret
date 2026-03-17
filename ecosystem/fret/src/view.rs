@@ -1147,6 +1147,24 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
             .on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()));
     }
 
+    /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
+    /// raw payload-carrier namespace.
+    ///
+    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
+    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
+    /// lives in `ModelStore`.
+    pub fn payload_models<A>(
+        self,
+        f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+    {
+        self.cx
+            .on_payload_action_notify::<A>(move |host, _action_cx, payload| {
+                f(host.models_mut(), payload)
+            });
+    }
+
     /// Coordinate multiple `LocalState<T>` slots through one store transaction.
     ///
     /// Inside the callback, prefer `tx.value(...)` for ordinary initialized locals, keep
@@ -1266,6 +1284,28 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         A: crate::TypedAction,
     {
         uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| f(host.models_mut()));
+    }
+
+    /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
+    /// raw payload-carrier namespace.
+    ///
+    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
+    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
+    /// lives in `ModelStore`.
+    pub fn payload_models<A>(
+        self,
+        f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
+    ) where
+        A: crate::actions::TypedPayloadAction,
+    {
+        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+            let handled = f(host.models_mut(), payload);
+            if handled {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            handled
+        });
     }
 
     /// Coordinate multiple `LocalState<T>` slots through one store transaction.
@@ -2445,6 +2485,9 @@ mod tests {
                 .contains("pub fn dispatch_payload<A>(self, payload: A::Payload) -> OnActivate")
         );
         assert!(api_source.contains("pub fn listen("));
+        assert!(api_source.contains(
+            "pub fn payload_models<A>(\n        self,\n        f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,"
+        ));
         assert!(!api_source.contains("pub fn listener("));
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Button"));
         assert!(

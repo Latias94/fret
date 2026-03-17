@@ -40,6 +40,7 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 ### Gallery / docs parity
 
 - Pass: the gallery now presents the guide as `Basic Table`, `Guide Demo`, `RTL`, `Guide Outline`, and `API Reference`, making the compression of the upstream multi-chapter guide explicit.
+- Pass: the selection column examples now stay on typed `.action(...)` / `.action_payload(...)` plus grouped `cx.actions().models::<A>(...)` / `payload_models::<A>(...)` instead of teaching root command routing for select-all and row toggles.
 - Pass: `Guide Outline` remains a compact Fret follow-up that points to reusable pieces instead of copying every upstream chapter verbatim.
 - Pass: this work is docs/public-surface parity for an extension surface, not a mechanism-layer fix.
 

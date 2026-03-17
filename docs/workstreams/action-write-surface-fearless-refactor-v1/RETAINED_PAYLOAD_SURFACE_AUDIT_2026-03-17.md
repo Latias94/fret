@@ -35,7 +35,8 @@ It is a post-closeout retained-seam inventory attached to the original lane.
 | deleted: `payload::<A>().local_update_if(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; same underlying LocalState-owned write shape as `payload_local_update_if::<A>(...)` | its one cookbook/reference use in `apps/fret-cookbook/examples/payload_actions_basics.rs` is now migrated to the canonical direct helper | not taught on default docs; deleted from production code on 2026-03-17 | Deleted |
 | deleted: `payload_locals::<A>(...)` | former direct helper on `AppUiActions` / `UiCxActions`; opened `LocalStateTxn` from payload dispatch | no in-tree runtime use was ever found | removed from first-contact docs/templates, then deleted from production code on 2026-03-17 | Deleted |
 | deleted: `payload::<A>().locals(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; same underlying `LocalStateTxn` shape | no in-tree runtime use was ever found | not taught on default docs; deleted from production code on 2026-03-17 | Deleted |
-| deleted: `payload::<A>().models(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; opened `ModelStore` from payload dispatch | its last advanced/runtime proof in `apps/fret-examples/src/markdown_demo.rs` now uses raw `on_payload_action_notify::<A>(...)` instead | no longer taught; deleted from production code on 2026-03-17 | Deleted |
+| `payload_models::<A>(...)` | direct helper on `AppUiActions` / `UiCxActions`; opens `ModelStore` from payload dispatch without reintroducing a payload carrier namespace | real first-party proof in `apps/fret-ui-gallery/src/ui/snippets/data_table/basic_demo.rs` and `apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs` | not a default row-write helper; kept as the narrow shared-model payload seam | Keep intentionally |
+| deleted: `payload::<A>().models(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; opened `ModelStore` from payload dispatch | superseded by the direct `payload_models::<A>(...)` helper when a grouped payload+models seam is still warranted | no longer taught; deleted from production code on 2026-03-17 | Deleted |
 
 ## Key implementation fact
 
@@ -51,7 +52,9 @@ Important duplication before the cleanup:
 Those duplicate pairs are now deleted from production code.
 
 So there is no remaining grouped payload chain in production code.
-Payload-side advanced coordination now drops directly to raw `on_payload_action_notify::<A>(...)`.
+Payload-side advanced coordination now prefers direct `payload_models::<A>(...)` when the write
+still belongs on the grouped `actions()` surface, and otherwise drops to raw
+`on_payload_action_notify::<A>(...)`.
 
 ## Current gate posture
 
@@ -87,10 +90,12 @@ Reason:
 - no default teaching role,
 - duplicate LocalState-owned write story.
 
-There is no longer a retained grouped payload-chain candidate.
+There is still no retained grouped payload-chain candidate.
+The only retained grouped payload+models seam is the direct `payload_models::<A>(...)` helper.
 
 The explicit fallback is now:
 
+- direct `cx.actions().payload_models::<A>(...)` for grouped shared-model payload writes,
 - raw `AppUi::on_payload_action_notify::<A>(...)`
 
 ## Recommended use of this note

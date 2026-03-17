@@ -17,6 +17,7 @@ pub(super) fn preview_data_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Everything below Default Recipe should be read as advanced reference material, not as the baseline authoring path.",
         "Prefer small, explicit recipe surfaces (toolbar/pagination/column header) that can be reused by apps and gated by diag scripts.",
         "Ownership: recipe owns chrome/row heights/selection/pagination/column-action menus; callers own data shape, filtering rules, and page width/height negotiation.",
+        "Selection-column examples now keep typed `.action(...)` / `.action_payload(...)` on the checkbox surface and grouped `cx.actions().models::<A>(...)` / `payload_models::<A>(...)` at the view layer instead of routing through root command ids.",
         "`DataGrid` remains the canvas-first option for dense editor surfaces; use `experimental::DataGridElement` when you need richer per-cell UI than the guide-style table surface.",
     ]);
     let notes = doc_layout::notes_block([
