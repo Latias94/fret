@@ -359,10 +359,11 @@ mod gallery_dev_recipe_page_ids {
     pub(crate) const PAGE_FORMS: &str = "forms";
     pub(crate) const PAGE_DATA_GRID: &str = "data_grid";
     pub(crate) const PAGE_MENUS: &str = "menus";
-    pub(crate) const PAGE_CHART: &str = "chart";
 }
 #[cfg(feature = "gallery-dev")]
 pub(crate) use gallery_dev_recipe_page_ids::*;
+#[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+pub(crate) const PAGE_CHART: &str = "chart";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
@@ -630,11 +631,12 @@ mod gallery_dev_recipe_nav_commands {
     pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
     pub(crate) const CMD_NAV_DATA_GRID: &str = "ui_gallery.nav.select.data_grid";
     pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
-    pub(crate) const CMD_NAV_CHART: &str = "ui_gallery.nav.select.chart";
     pub(crate) const CMD_NAV_FORM: &str = "ui_gallery.nav.select.form";
 }
 #[cfg(feature = "gallery-dev")]
 pub(crate) use gallery_dev_recipe_nav_commands::*;
+#[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+pub(crate) const CMD_NAV_CHART: &str = "ui_gallery.nav.select.chart";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
@@ -2428,6 +2430,18 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    PageGroupSpec {
+        title: "Shadcn (Chart)",
+        items: &[PageSpec::new(
+            PAGE_CHART,
+            "Chart",
+            "Chart",
+            "fret-ui-shadcn",
+            CMD_NAV_CHART,
+            &["chart", "data_viz"],
+        )],
+    },
     #[cfg(feature = "gallery-dev")]
     PageGroupSpec {
         title: "Shadcn (Extras)",
@@ -2439,14 +2453,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn extras",
                 CMD_NAV_SHADCN_EXTRAS,
                 &["extras", "blocks", "recipes", "kibo"],
-            ),
-            PageSpec::new(
-                PAGE_CHART,
-                "Chart",
-                "Chart",
-                "fret-ui-shadcn",
-                CMD_NAV_CHART,
-                &["chart", "data_viz"],
             ),
             PageSpec::new(
                 PAGE_DATA_GRID,

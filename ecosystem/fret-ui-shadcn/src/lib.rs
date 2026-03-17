@@ -318,10 +318,10 @@ pub mod facade {
         CarouselSlidesToScroll, CarouselWheelGesturesConfig, carousel_context, use_carousel,
     };
     pub use crate::chart::{
-        ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend,
-        ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartStyle, ChartTooltip,
-        ChartTooltipContent, ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,
-        chart_context, use_chart,
+        ChartConfig, ChartConfigItem, ChartContainer, ChartContainerBuild, ChartContext,
+        ChartLegend, ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartStyle,
+        ChartTooltip, ChartTooltipContent, ChartTooltipContentKind, ChartTooltipIndicator,
+        ChartTooltipItem, chart_container, chart_context, use_chart,
     };
     pub use crate::checkbox::{Checkbox, checkbox};
     pub use crate::collapsible::{

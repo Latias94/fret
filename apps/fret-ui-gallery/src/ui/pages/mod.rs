@@ -132,7 +132,7 @@ mod calendar;
 mod card;
 pub(crate) use card::card_doc_scaffold_metrics_json;
 mod carousel;
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
 mod chart;
 mod checkbox;
 mod collapsible;
@@ -704,7 +704,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     carousel::preview_carousel(cx)
 }
 
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
 pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     chart::preview_chart(cx)
 }

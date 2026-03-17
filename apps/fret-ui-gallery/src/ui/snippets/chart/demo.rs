@@ -286,8 +286,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
     };
 
-    let trending_footer =
-        |cx: &mut UiCx<'_>, secondary: &'static str| -> impl IntoUiElement<fret_app::App> + use<> {
+    let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| -> AnyElement {
             let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
             ui::v_flex(|cx| {
                 vec![
@@ -308,6 +307,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .gap(Space::N2)
             .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
         };
 
     let chart_card = |cx: &mut UiCx<'_>,
@@ -315,8 +315,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                       description: &'static str,
                       kind: DemoChartKind,
                       footer_secondary: &'static str,
-                      test_id: &'static str|
-     -> impl IntoUiElement<fret_app::App> + use<> {
+                      test_id: &'static str| -> AnyElement {
         let canvas = chart_canvas(cx, kind, Arc::<str>::from(format!("{test_id}-canvas")));
 
         shadcn::card(|cx| {
@@ -341,6 +340,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         )
         .ui()
         .test_id(test_id)
+        .into_element(cx)
     };
 
     let area = chart_card(
@@ -376,13 +376,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         "ui-gallery-chart-demo-line",
     );
 
-    fret_ui_kit::ui::h_flex(|cx| {
-        vec![
-            area.into_element(cx),
-            bar.into_element(cx),
-            mixed.into_element(cx),
-            line.into_element(cx),
-        ]
+    fret_ui_kit::ui::h_flex(|_cx| {
+        vec![area, bar, mixed, line]
     })
     .gap(Space::N4)
     .wrap()

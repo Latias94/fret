@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px, SemanticsRole};
@@ -163,6 +164,52 @@ pub struct ChartContainer {
     test_id: Option<Arc<str>>,
 }
 
+pub struct ChartContainerBuild<H, B> {
+    container: ChartContainer,
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> ChartContainerBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+{
+    pub fn id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.container = self.container.id(id);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.container = self.container.refine_layout(layout);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.container = self.container.test_id(id);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(mut self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let build = self
+            .build
+            .take()
+            .expect("chart container builder already consumed");
+        self.container.into_element(cx, build)
+    }
+}
+
+pub fn chart_container<H: UiHost, F>(config: ChartConfig, f: F) -> ChartContainerBuild<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+{
+    ChartContainerBuild {
+        container: ChartContainer::new(config),
+        build: Some(f),
+        _phantom: PhantomData,
+    }
+}
+
 impl ChartContainer {
     pub fn new(config: ChartConfig) -> Self {
         Self {
@@ -275,8 +322,18 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{ElementKind, TextProps};
     use std::sync::Mutex;
+
+    fn find_text<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a TextProps> {
+        match &element.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => element
+                .children
+                .iter()
+                .find_map(|child| find_text(child, needle)),
+        }
+    }
 
     #[test]
     fn chart_panel_semantics_stamps_role_without_layout_wrapper() {
@@ -342,6 +399,75 @@ mod tests {
         assert!(
             ctx.config.contains_key("sales"),
             "expected chart config to be visible through `use_chart`"
+        );
+    }
+
+    #[test]
+    fn chart_container_builder_installs_context_for_use_chart() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let captured: Arc<Mutex<Option<ChartContext>>> = Arc::new(Mutex::new(None));
+        let captured_for_child = captured.clone();
+
+        let mut config = ChartConfig::default();
+        config.insert(Arc::from("sales"), ChartConfigItem::new().label("Sales"));
+
+        let _ = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            chart_container(config, move |cx| {
+                let ctx = use_chart(cx);
+                *captured_for_child.lock().expect("lock") = Some(ctx);
+                cx.text("chart")
+            })
+            .id("builder")
+            .test_id("chart-container-builder")
+            .into_element(cx)
+        });
+
+        let ctx = captured.lock().expect("lock").clone().expect("context");
+        assert_eq!(ctx.chart_id.as_ref(), "chart-builder");
+        assert!(
+            ctx.config.contains_key("sales"),
+            "expected chart config to be visible through `chart_container` builder"
+        );
+    }
+
+    #[test]
+    fn chart_legend_uses_chart_config_items_when_items_are_omitted() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let mut config = ChartConfig::default();
+        config.insert(
+            Arc::from("desktop"),
+            ChartConfigItem::new()
+                .label("Desktop")
+                .icon(IconId::new_static("lucide.monitor")),
+        );
+        config.insert(Arc::from("mobile"), ChartConfigItem::new().label("Mobile"));
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ChartContainer::new(config)
+                .into_element(cx, |cx| ChartLegendContent::new().into_element(cx))
+        });
+
+        assert!(
+            find_text(&element, "Desktop").is_some(),
+            "expected legend fallback to render config label `Desktop`"
+        );
+        assert!(
+            find_text(&element, "Mobile").is_some(),
+            "expected legend fallback to render config label `Mobile`"
         );
     }
 }
@@ -889,6 +1015,7 @@ impl Default for ChartLegendVerticalAlign {
 pub struct ChartLegendItem {
     pub label: Arc<str>,
     pub color: Option<ColorRef>,
+    pub icon: Option<IconId>,
 }
 
 impl ChartLegendItem {
@@ -896,11 +1023,17 @@ impl ChartLegendItem {
         Self {
             label: label.into(),
             color: None,
+            icon: None,
         }
     }
 
     pub fn color(mut self, color: ColorRef) -> Self {
         self.color = Some(color);
+        self
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
         self
     }
 }
@@ -1006,8 +1139,30 @@ impl ChartLegendContent {
         let item_gap = decl_style::space(&theme, Space::N1p5);
         let legend_gap = decl_style::space(&theme, self.gap);
 
-        let items = self
-            .items
+        let legend_items = if self.items.is_empty() {
+            chart_context(cx)
+                .map(|ctx| {
+                    ctx.config
+                        .iter()
+                        .map(|(key, item)| {
+                            let label = item.label.clone().unwrap_or_else(|| key.clone());
+                            let mut legend_item = ChartLegendItem::new(label);
+                            if let Some(color) = item.color.clone() {
+                                legend_item = legend_item.color(color);
+                            }
+                            if let Some(icon) = item.icon.clone() {
+                                legend_item = legend_item.icon(icon);
+                            }
+                            legend_item
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default()
+        } else {
+            self.items
+        };
+
+        let items = legend_items
             .into_iter()
             .map(|item| {
                 let color = item
@@ -1040,7 +1195,15 @@ impl ChartLegendContent {
                     .into_element(cx);
 
                 let mut row = Vec::new();
-                row.push(indicator);
+                if !self.hide_icon {
+                    if let Some(icon_id) = item.icon {
+                        row.push(crate::raw::icon::icon(cx, icon_id));
+                    } else {
+                        row.push(indicator);
+                    }
+                } else {
+                    row.push(indicator);
+                }
                 row.push(label);
 
                 cx.flex(

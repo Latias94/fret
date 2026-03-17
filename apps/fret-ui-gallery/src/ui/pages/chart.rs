@@ -6,17 +6,21 @@ use crate::ui::snippets::chart as snippets;
 
 pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo_cards = snippets::demo::render(cx);
-    let usage = snippets::usage::render(cx);
+    let first_chart = snippets::usage::render(cx);
+    let config = snippets::config::render(cx);
+    let theming = snippets::theming::render(cx);
     let contracts_overview = snippets::contracts::render(cx);
     let tooltip_content = snippets::tooltip::render(cx);
     let legend_content = snippets::legend::render(cx);
+    let accessibility = snippets::accessibility::render(cx);
     let rtl = snippets::rtl::render(cx);
 
     let notes_stack = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/chart.rs`.",
-        "Chart already exposes the important authoring surface (`ChartConfig`, `ChartContainer`, `ChartTooltip`, `ChartTooltipContent`, `ChartLegend`, `ChartLegendContent`), so the main parity gap here was usage clarity rather than missing mechanism work in the shadcn-facing layer.",
+        "Chart now exposes both `ChartContainer::new(...).into_element(cx, |cx| ...)` and the more shadcn-like `chart_container(config, |cx| ...)` builder surface for composable child authoring.",
         "Demo cards are rendered with `delinea` + `fret-chart` (not Recharts); this is a stand-in to keep chart layout real in native builds.",
-        "The shadcn `ChartTooltipContent` / `ChartLegendContent` recipes are validated independently (no runtime wire-up yet).",
+        "`ChartLegendContent::new()` can derive labels, icons, and colors from `ChartConfig` when explicit legend items are omitted.",
+        "The remaining parity gap is tooltip/runtime payload wiring: `ChartTooltipContent` is still a recipe surface and does not yet auto-bind to native chart payloads the way shadcn does with Recharts.",
         "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
         "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
     ]);
@@ -26,35 +30,56 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .max_w(Px(1100.0))
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
-    let usage = DocSection::build(cx, "Usage", usage)
+    let first_chart = DocSection::build(cx, "First Chart", first_chart)
         .description(
-            "Copyable minimal usage for the chart container + tooltip/legend recipe surface.",
+            "Fret-native equivalent of shadcn's composition flow: chart container, chart canvas, legend defaults from config, and explicit tooltip recipe content.",
         )
-        .test_id_prefix("ui-gallery-chart-usage")
+        .test_id_prefix("ui-gallery-chart-first-chart")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let config = DocSection::build(cx, "Chart Config", config)
+        .description("Labels, icons, and colors live in `ChartConfig` and should stay decoupled from chart data.")
+        .test_id_prefix("ui-gallery-chart-config")
+        .code_rust_from_file_region(snippets::config::SOURCE, "example");
+    let theming = DocSection::build(cx, "Theming", theming)
+        .description("Use `chart-*` theme tokens as the stable color source across charts, legends, and tooltip recipes.")
+        .test_id_prefix("ui-gallery-chart-theming")
+        .code_rust_from_file_region(snippets::theming::SOURCE, "example");
     let contracts_overview = DocSection::build(cx, "Contracts", contracts_overview)
+        .description("Fret-specific chart recipe contracts that still matter even before full payload wiring lands.")
         .code_rust_from_file_region(snippets::contracts::SOURCE, "example");
     let tooltip_content = DocSection::build(cx, "Tooltip", tooltip_content)
+        .description("Recipe-level tooltip variants aligned to the shadcn tooltip surface that Fret can already render deterministically.")
         .test_id_prefix("ui-gallery-chart-tooltip")
         .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
     let legend_content = DocSection::build(cx, "Legend", legend_content)
+        .description(
+            "Legend recipes can be explicit or derive their items from `ChartConfig` by default.",
+        )
         .test_id_prefix("ui-gallery-chart-legend")
         .code_rust_from_file_region(snippets::legend::SOURCE, "example");
+    let accessibility = DocSection::build(cx, "Accessibility", accessibility)
+        .description("Native chart accessibility lives on `fret-chart::ChartCanvas`, with a reusable helper for the common defaults.")
+        .test_id_prefix("ui-gallery-chart-accessibility")
+        .code_rust_from_file_region(snippets::accessibility::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
+        .description("Direction provider coverage for tooltip and legend recipes.")
         .test_id_prefix("ui-gallery-chart-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Chart docs flow: Demo -> Usage -> Tooltip/Legend contracts. Fret-specific chart-engine notes stay explicit so parity gaps remain visible.",
+            "Preview follows the shadcn Chart docs shape more closely: first-chart composition, config, theming, tooltip/legend, accessibility, and RTL. Fret-specific chart-engine gaps stay explicit instead of being hidden by the docs surface.",
         ),
         vec![
             demo_cards,
-            usage,
+            first_chart,
+            config,
+            theming,
             contracts_overview,
             tooltip_content,
             legend_content,
+            accessibility,
             rtl,
             notes_stack,
         ],

@@ -21,7 +21,7 @@ pub mod button_group;
 pub mod calendar;
 pub mod card;
 pub mod carousel;
-#[cfg(feature = "gallery-dev")]
+#[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
 pub mod chart;
 pub mod checkbox;
 pub mod collapsible;
