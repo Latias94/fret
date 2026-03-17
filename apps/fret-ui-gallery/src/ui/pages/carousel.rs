@@ -40,6 +40,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             ]);
         let fret_follow_ups = doc_layout::notes_block([
                 "The upstream shadcn docs stop after `RTL`; the sections below stay on the page to document Fret-specific authoring shortcuts and regression harnesses without diluting that docs path.",
+                "`Plugin (Autoplay, Controlled)`, `Plugin (Autoplay, stopOnInteraction via focus)`, `Plugin (Autoplay, stopOnLastSnap)`, `Plugin (Autoplay, per-snap delays)`, and `Plugin (Wheel gestures)` remain follow-ups because the upstream docs only show the base autoplay plugin example.",
                 "`Compact Builder` keeps `Carousel::new(items)` visible for app code, `Parts` keeps the explicit adapter/diagnostics seam visible, and `Loop` is a dedicated `loop=true` preview that the upstream docs only imply through `Options`.",
                 "`Loop downgrade`, `Focus`, `Duration`, and `Expandable` remain gallery follow-ups because they primarily exist to keep Embla-style engine and motion regressions reviewable.",
             ]);
@@ -49,7 +50,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 "`CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` keep the upstream-shaped copyable surface that matches the shadcn docs `Usage` story, while `Carousel::new/items` stays as the compact Fret shorthand for app call sites.",
                 "When the parts are already assembled eagerly, prefer `Carousel::into_element_parts_content(...)`; keep `into_element_parts(...)` for seams that genuinely need `cx` before landing.",
                 "`Usage` now mirrors the upstream docs-shaped parts lane, `Compact Builder` keeps the ergonomic Fret shorthand visible, and `Parts` remains the explicit adapter/diagnostics seam on that same copyable lane rather than an advanced escape hatch.",
-                "The docs-path examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`) and the ordinary preview/demos (`Demo`, `API`, autoplay/wheel examples, dedicated `Loop`) still stay on the compact builder lane unless a snippet explicitly needs control-level parts or diagnostics-specific control IDs.",
+                "The docs-path examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`) and the docs-aligned previews (`Demo`, `API`, base autoplay plugin, `RTL`) still stay on the compact builder lane unless a snippet explicitly needs control-level parts or diagnostics-specific control IDs.",
                 "Docs-path snippets keep the upstream `w_full().max_w(...)` width lane on the carousel root itself; diagnostics follow-ups may switch to fixed-width shells (`w_px(...)`) when deterministic control geometry matters more than copyable docs parity.",
                 "For the common `setApi` docs outcome (slide counter / can-prev / can-next status), prefer `api_snapshot_model(...)`; reserve `api_handle_model(...)` + `CarouselEventCursor` for explicit event-stream examples such as `Events`.",
                 "Carousel chrome, buttons, and the Embla-style headless behaviors stay recipe-owned; surrounding width/height negotiation and breakpoint choices remain caller-owned.",
@@ -224,7 +225,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let body = doc_layout::render_doc_page(
             cx,
             Some(
-                "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Basic/Sizes/Spacing/Orientation), Options, API, Events, Plugins, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`.",
+                "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Basic/Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`.",
             ),
             vec![
                 demo,
@@ -240,13 +241,13 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 api,
                 events,
                 plugin,
+                rtl,
+                fret_follow_ups,
                 plugin_controlled,
                 plugin_stop_on_focus,
                 plugin_stop_on_last_snap,
                 plugin_delays,
                 plugin_wheel,
-                rtl,
-                fret_follow_ups,
                 compact_builder,
                 parts,
                 loop_carousel,

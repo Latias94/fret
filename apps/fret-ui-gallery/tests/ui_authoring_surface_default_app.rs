@@ -5989,6 +5989,37 @@ fn carousel_page_keeps_docs_width_lane_distinct_from_fixed_width_diagnostics_har
 }
 
 #[test]
+fn carousel_page_keeps_extra_plugin_variants_out_of_the_upstream_docs_path() {
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    let normalized = carousel_page.split_whitespace().collect::<String>();
+
+    assert!(
+        carousel_page.contains(
+            "`Plugin (Autoplay, Controlled)`, `Plugin (Autoplay, stopOnInteraction via focus)`, `Plugin (Autoplay, stopOnLastSnap)`, `Plugin (Autoplay, per-snap delays)`, and `Plugin (Wheel gestures)` remain follow-ups because the upstream docs only show the base autoplay plugin example."
+        ),
+        "src/ui/pages/carousel.rs should explain why the extra plugin variants stay after the upstream docs path"
+    );
+    assert!(
+        carousel_page.contains(
+            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Basic/Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
+        ),
+        "src/ui/pages/carousel.rs should describe the narrowed docs path before the follow-up plugin variants"
+    );
+    assert!(
+        normalized.contains(
+            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
+        ),
+        "src/ui/pages/carousel.rs should place the extra plugin variants after `Fret Follow-ups` instead of inside the upstream docs path"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,rtl,"
+        ),
+        "src/ui/pages/carousel.rs should not place the extra plugin variants before `RTL`"
+    );
+}
+
+#[test]
 fn carousel_parts_lane_is_limited_to_explicit_parts_and_diagnostics_snippets() {
     let expected = BTreeSet::from([
         "src/ui/snippets/carousel/events.rs".to_string(),
