@@ -19,7 +19,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/chart.rs`.",
         "Chart now exposes both `ChartContainer::new(...).into_element(cx, |cx| ...)` and the more shadcn-like `chart_container(config, |cx| ...)` builder surface for composable child authoring.",
         "Demo cards are rendered with `delinea` + `fret-chart` (not Recharts); this is a stand-in to keep chart layout real in native builds.",
-        "`ChartLegendContent::new()` can derive labels, icons, and colors from `ChartConfig` when explicit legend items are omitted.",
+        "`ChartLegendContent::new()` can derive labels, icons, and colors from `ChartConfig` when explicit legend items are omitted, and `name_key(...)` can remap legend labels through item metadata.",
         "`ChartTooltipContent::new()` can now auto-derive label, items, colors, and icons from a shared `ChartCanvasOutput` model plus `ChartConfig`.",
         "`ChartTooltipContent` now exposes recipe-level `label_formatter(...)`, `formatter(...)`, `label_key(...)`, and `name_key(...)` hooks, with Fret-native item key/metadata remapping.",
         "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)` and `ChartTooltipContent::into_element_parts(cx, ...)` are the advanced adapter seams for arbitrary children composition.",
@@ -56,7 +56,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
     let legend_content = DocSection::build(cx, "Legend", legend_content)
         .description(
-            "Legend recipes can be explicit or derive their items from `ChartConfig` by default.",
+            "Legend examples now track the shadcn docs flow more directly: config-driven colors first, then `name_key` remapping for custom names.",
         )
         .test_id_prefix("ui-gallery-chart-legend")
         .code_rust_from_file_region(snippets::legend::SOURCE, "example");

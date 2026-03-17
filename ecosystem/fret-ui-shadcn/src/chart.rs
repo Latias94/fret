@@ -558,6 +558,46 @@ mod tests {
     }
 
     #[test]
+    fn chart_legend_name_key_resolves_config_labels() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let mut config = ChartConfig::default();
+        config.insert(Arc::from("chrome"), ChartConfigItem::new().label("Chrome"));
+        config.insert(Arc::from("safari"), ChartConfigItem::new().label("Safari"));
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ChartContainer::new(config).into_element(cx, |cx| {
+                ChartLegendContent::new()
+                    .name_key("browser")
+                    .items([
+                        ChartLegendItem::new("ignored").meta("browser", "chrome"),
+                        ChartLegendItem::new("ignored").meta("browser", "safari"),
+                    ])
+                    .into_element(cx)
+            })
+        });
+
+        assert!(
+            find_text(&element, "Chrome").is_some(),
+            "expected legend name_key metadata lookup to resolve the first config label"
+        );
+        assert!(
+            find_text(&element, "Safari").is_some(),
+            "expected legend name_key metadata lookup to resolve the second config label"
+        );
+        assert!(
+            find_text(&element, "ignored").is_none(),
+            "expected metadata-backed config labels to replace the raw legend labels"
+        );
+    }
+
+    #[test]
     fn chart_tooltip_uses_output_model_when_label_and_items_are_omitted() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2112,6 +2152,8 @@ impl Default for ChartLegendVerticalAlign {
 #[derive(Debug, Clone)]
 pub struct ChartLegendItem {
     pub label: Arc<str>,
+    pub key: Option<Arc<str>>,
+    pub metadata: BTreeMap<Arc<str>, Arc<str>>,
     pub color: Option<ColorRef>,
     pub icon: Option<IconId>,
 }
@@ -2120,9 +2162,21 @@ impl ChartLegendItem {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
+            key: None,
+            metadata: BTreeMap::default(),
             color: None,
             icon: None,
         }
+    }
+
+    pub fn key(mut self, key: impl Into<Arc<str>>) -> Self {
+        self.key = Some(key.into());
+        self
+    }
+
+    pub fn meta(mut self, key: impl Into<Arc<str>>, value: impl Into<Arc<str>>) -> Self {
+        self.metadata.insert(key.into(), value.into());
+        self
     }
 
     pub fn color(mut self, color: ColorRef) -> Self {
@@ -2142,6 +2196,7 @@ impl ChartLegendItem {
 #[derive(Debug, Clone)]
 pub struct ChartLegendContent {
     items: Vec<ChartLegendItem>,
+    name_key: Option<Arc<str>>,
     vertical_align: ChartLegendVerticalAlign,
     hide_icon: bool,
     wrap: bool,
@@ -2162,6 +2217,7 @@ impl ChartLegendContent {
     pub fn new() -> Self {
         Self {
             items: Vec::new(),
+            name_key: None,
             vertical_align: ChartLegendVerticalAlign::Bottom,
             hide_icon: false,
             wrap: false,
@@ -2175,6 +2231,11 @@ impl ChartLegendContent {
 
     pub fn items(mut self, items: impl IntoIterator<Item = ChartLegendItem>) -> Self {
         self.items = items.into_iter().collect();
+        self
+    }
+
+    pub fn name_key(mut self, name_key: impl Into<Arc<str>>) -> Self {
+        self.name_key = Some(name_key.into());
         self
     }
 
@@ -2257,7 +2318,15 @@ impl ChartLegendContent {
                 })
                 .unwrap_or_default()
         } else {
-            self.items
+            let config = chart_context(cx).map(|ctx| ctx.config.clone());
+            match self.name_key.as_deref() {
+                Some(name_key) => self
+                    .items
+                    .into_iter()
+                    .map(|item| chart_legend_apply_name_key(item, name_key, config.as_deref()))
+                    .collect(),
+                None => self.items,
+            }
         };
 
         let items = legend_items
@@ -2344,4 +2413,40 @@ impl ChartLegendContent {
             )]
         })
     }
+}
+
+fn chart_legend_apply_name_key(
+    mut item: ChartLegendItem,
+    name_key: &str,
+    config: Option<&ChartConfig>,
+) -> ChartLegendItem {
+    let resolved_key = if name_key == "key" {
+        item.key.clone()
+    } else {
+        item.metadata.get(name_key).cloned()
+    };
+
+    let Some(resolved_key) = resolved_key else {
+        return item;
+    };
+
+    item.key = Some(resolved_key.clone());
+    item.metadata
+        .insert(Arc::from("config_key"), resolved_key.clone());
+
+    if let Some(config) = config
+        && let Some((config_key, config_item)) = chart_config_entry_for_key(config, &resolved_key)
+    {
+        item.label = config_item.label.clone().unwrap_or(config_key);
+        if item.color.is_none() {
+            item.color = config_item.color.clone();
+        }
+        if item.icon.is_none() {
+            item.icon = config_item.icon.clone();
+        }
+        return item;
+    }
+
+    item.label = resolved_key;
+    item
 }
