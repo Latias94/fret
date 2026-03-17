@@ -2,6 +2,7 @@ pub mod accessibility;
 pub mod config;
 pub mod contracts;
 pub mod demo;
+pub mod grid_axis;
 pub mod legend;
 pub mod rtl;
 pub mod theming;

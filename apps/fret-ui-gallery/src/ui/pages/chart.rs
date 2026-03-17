@@ -9,6 +9,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let first_chart = snippets::usage::render(cx);
     let config = snippets::config::render(cx);
     let theming = snippets::theming::render(cx);
+    let grid_axis = snippets::grid_axis::render(cx);
     let contracts_overview = snippets::contracts::render(cx);
     let tooltip_content = snippets::tooltip::render(cx);
     let legend_content = snippets::legend::render(cx);
@@ -51,6 +52,12 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Use `chart-*` theme tokens as the stable color source across charts, legends, and tooltip recipes.")
         .test_id_prefix("ui-gallery-chart-theming")
         .code_rust_from_file_region(snippets::theming::SOURCE, "example");
+    let grid_axis = DocSection::build(cx, "Grid / Axis (Fret)", grid_axis)
+        .description(
+            "Focused Fret follow-up: grid and axis remain spec-owned on `delinea::ChartSpec` today, so the copyable setup lives beside the retained chart engine instead of the `ChartContainer` child lane.",
+        )
+        .test_id_prefix("ui-gallery-chart-grid-axis")
+        .code_rust_from_file_region(snippets::grid_axis::SOURCE, "example");
     let contracts_overview = DocSection::build(cx, "Contracts", contracts_overview)
         .description(
             "Fret-specific follow-up contracts once the shadcn docs path is covered: payload auto wiring, formatter hooks, and advanced adapter seams.",
@@ -78,7 +85,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Chart docs path first: `Component`, `First Chart`, `Chart Config`, `Theming`, `Tooltip`, `Legend`, `Accessibility`, and `RTL`. After that, Gallery keeps Fret-specific follow-ups explicit: `Contracts` and `Notes`.",
+            "Preview mirrors the shadcn Chart docs path first: `Component`, `First Chart`, `Chart Config`, `Theming`, `Tooltip`, `Legend`, `Accessibility`, and `RTL`. After that, Gallery keeps Fret-specific follow-ups explicit: `Grid / Axis (Fret)`, `Contracts`, and `Notes`.",
         ),
         vec![
             component,
@@ -89,6 +96,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             legend_content,
             accessibility,
             rtl,
+            grid_axis,
             contracts_overview,
             notes_stack,
         ],

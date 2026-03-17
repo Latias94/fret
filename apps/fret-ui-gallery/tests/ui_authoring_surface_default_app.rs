@@ -3453,6 +3453,7 @@ fn chart_snippets_prefer_ui_cx_on_the_default_app_surface() {
         &[
             "src/ui/snippets/chart/contracts.rs",
             "src/ui/snippets/chart/demo.rs",
+            "src/ui/snippets/chart/grid_axis.rs",
             "src/ui/snippets/chart/legend.rs",
             "src/ui/snippets/chart/rtl.rs",
             "src/ui/snippets/chart/tooltip.rs",
@@ -3480,6 +3481,7 @@ fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"First Chart\", first_chart)",
             "DocSection::build(cx, \"Chart Config\", config)",
             "DocSection::build(cx, \"Theming\", theming)",
+            "DocSection::build(cx, \"Grid / Axis (Fret)\", grid_axis)",
             "DocSection::build(cx, \"Contracts\", contracts_overview)",
             "DocSection::build(cx, \"Tooltip\", tooltip_content)",
             "DocSection::build(cx, \"Legend\", legend_content)",
@@ -3492,6 +3494,7 @@ fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"First Chart\", first_chart)",
             "DocSection::new(\"Chart Config\", config)",
             "DocSection::new(\"Theming\", theming)",
+            "DocSection::new(\"Grid / Axis (Fret)\", grid_axis)",
             "DocSection::new(\"Contracts\", contracts_overview)",
             "DocSection::new(\"Tooltip\", tooltip_content)",
             "DocSection::new(\"Legend\", legend_content)",
@@ -3554,9 +3557,15 @@ fn chart_page_keeps_shadcn_docs_path_before_fret_follow_ups() {
     );
     assert!(
         page.contains(
-            "Preview mirrors the shadcn Chart docs path first: `Component`, `First Chart`, `Chart Config`, `Theming`, `Tooltip`, `Legend`, `Accessibility`, and `RTL`. After that, Gallery keeps Fret-specific follow-ups explicit: `Contracts` and `Notes`."
+            "Preview mirrors the shadcn Chart docs path first: `Component`, `First Chart`, `Chart Config`, `Theming`, `Tooltip`, `Legend`, `Accessibility`, and `RTL`. After that, Gallery keeps Fret-specific follow-ups explicit: `Grid / Axis (Fret)`, `Contracts`, and `Notes`."
         ),
         "src/ui/pages/chart.rs should explain the shadcn docs path before the Fret-specific follow-ups"
+    );
+    assert!(
+        page.contains(
+            "Focused Fret follow-up: grid and axis remain spec-owned on `delinea::ChartSpec` today, so the copyable setup lives beside the retained chart engine instead of the `ChartContainer` child lane."
+        ),
+        "src/ui/pages/chart.rs should keep the spec-owned grid/axis follow-up explicit on the page surface"
     );
     assert!(
         page.contains(
@@ -3566,15 +3575,21 @@ fn chart_page_keeps_shadcn_docs_path_before_fret_follow_ups() {
     );
     assert!(
         normalized.contains(
-            "vec![component,first_chart,config,theming,tooltip_content,legend_content,accessibility,rtl,contracts_overview,notes_stack,]"
+            "vec![component,first_chart,config,theming,tooltip_content,legend_content,accessibility,rtl,grid_axis,contracts_overview,notes_stack,]"
         ),
-        "src/ui/pages/chart.rs should place `Contracts` and `Notes` after the shadcn docs-path sections"
+        "src/ui/pages/chart.rs should place the grid/axis follow-up ahead of `Contracts` and `Notes`"
     );
     assert!(
         !normalized.contains(
             "vec![component,first_chart,config,theming,contracts_overview,tooltip_content,legend_content,accessibility,rtl,notes_stack,]"
         ),
         "src/ui/pages/chart.rs should not reinsert `Contracts` into the middle of the shadcn docs path"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![component,first_chart,config,theming,tooltip_content,legend_content,accessibility,grid_axis,rtl,contracts_overview,notes_stack,]"
+        ),
+        "src/ui/pages/chart.rs should keep `Grid / Axis (Fret)` after `RTL`, not inside the shadcn docs path"
     );
     assert!(
         !page.contains("DocSection::build(cx, \"Demo\", demo_cards)"),
