@@ -92,8 +92,10 @@
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
 //!   passing named installer functions to `.setup(...)` and keeps inline one-off closures or
 //!   runtime-captured config on `UiAppBuilder::setup_with(...)`
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 use std::path::PathBuf;
 
+#[cfg(feature = "desktop")]
 use crate::advanced::KernelApp;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
@@ -700,9 +702,10 @@ pub mod docking {
 pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
     pub mod view {
-        pub use crate::view::{
-            ViewWindowState, view_init_window, view_record_engine_frame, view_view,
-        };
+        pub use crate::view::{ViewWindowState, view_init_window, view_view};
+
+        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+        pub use crate::view::view_record_engine_frame;
     }
 
     /// Dev-only helpers (hotpatch/dev-state) for iteration workflows.

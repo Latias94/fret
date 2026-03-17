@@ -22,6 +22,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Mutex, OnceLock};
 
 use fret_core::time::Instant;
@@ -1271,6 +1272,7 @@ fn ui_app_create_window_state<S>(
     app: &mut App,
     window: AppWindowId,
 ) -> UiAppWindowState<S> {
+    #[cfg(not(target_arch = "wasm32"))]
     crate::dev_reload::DevReloadWatcher::install_if_enabled(app);
 
     let mut ui: UiTree<App> = UiTree::new();
@@ -1352,6 +1354,7 @@ fn ui_app_handle_event<S>(
         return;
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     if let Event::Timer { token } = event
         && let Some(tick) = crate::dev_reload::handle_dev_reload_timer(app, window, *token)
     {

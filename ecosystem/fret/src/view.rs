@@ -1909,14 +1909,12 @@ impl<'cx, 'a, H: UiHost> std::ops::DerefMut for AppUi<'cx, 'a, H> {
     }
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[doc(hidden)]
 pub struct ViewWindowState<V: View> {
     pub view: V,
     pub(crate) cached_handlers: Option<(OnCommand, OnCommandAvailability)>,
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[doc(hidden)]
 pub fn view_init_window<V: View>(
     app: &mut fret_app::App,
@@ -1928,7 +1926,6 @@ pub fn view_init_window<V: View>(
     }
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[doc(hidden)]
 pub fn view_view<'a, V: View>(
     cx: &mut ElementContext<'a, fret_app::App>,

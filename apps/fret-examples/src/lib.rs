@@ -614,15 +614,25 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn simple_todo_demo_prefers_typed_row_helper_surface() {
-        assert!(SIMPLE_TODO_DEMO.contains("ui::for_each_keyed_with_cx("));
-        assert!(SIMPLE_TODO_DEMO.contains("fn todo_row("));
-        assert!(SIMPLE_TODO_DEMO.contains(") -> impl fret_ui_kit::IntoUiElement<App> + use<> {"));
-        assert!(SIMPLE_TODO_DEMO.contains("shadcn::CardContent::new(ui::single(cx, content))"));
-        assert!(SIMPLE_TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, card))"));
-        assert!(!SIMPLE_TODO_DEMO.contains(") -> fret_ui::element::AnyElement {"));
-        assert!(!SIMPLE_TODO_DEMO.contains("shadcn::CardContent::new(ui::children![cx; content])"));
-        assert!(!SIMPLE_TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; card])"));
+    fn simple_todo_demo_prefers_default_app_surface() {
+        assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
+        assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
+        assert!(SIMPLE_TODO_DEMO.contains("fn bind_todo_actions("));
+        assert!(SIMPLE_TODO_DEMO.contains(
+            "payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
+        ));
+        assert!(SIMPLE_TODO_DEMO.contains(
+            "payload_local_update_if::<act::Remove, Vec<TodoRow>>(todos_state, |rows, id| {"
+        ));
+        assert!(SIMPLE_TODO_DEMO.contains("ui_app_driver::UiAppDriver::new("));
+        assert!(
+            SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_init_window::<SimpleTodoView>,")
+        );
+        assert!(SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_view::<SimpleTodoView>,"));
+        assert!(!SIMPLE_TODO_DEMO.contains("declarative::RenderRootContext"));
+        assert!(!SIMPLE_TODO_DEMO.contains("CommandId"));
+        assert!(!SIMPLE_TODO_DEMO.contains("UiTree<App>"));
+        assert!(!SIMPLE_TODO_DEMO.contains("Model<"));
     }
 
     #[test]
@@ -698,20 +708,6 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn manual_ui_tree_examples_keep_root_wrappers_on_local_typed_helpers() {
-        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
-            SIMPLE_TODO_DEMO,
-            &[
-                "fn simple_todo_page<C>(",
-                "cx: &mut fret_ui::ElementContext<'_, App>,",
-                "theme: fret_ui::ThemeSnapshot,",
-                "card: C,",
-                ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
-                "C: fret_ui_kit::IntoUiElement<App>,",
-                "ui::children![cx; simple_todo_page(cx, theme, card)]",
-            ],
-            &["let page = ui::container(|cx| {"],
-        );
-
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             CJK_CONFORMANCE_DEMO,
             &[

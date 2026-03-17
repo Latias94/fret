@@ -49,6 +49,7 @@
 //! ```
 
 use std::rc::Rc;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -1041,7 +1042,7 @@ impl<D> From<fret_launch::WinitAppBuilder<D>> for BootstrapBuilder<D> {
     }
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+#[cfg(feature = "ui-app-driver")]
 pub mod ui_app_driver;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
