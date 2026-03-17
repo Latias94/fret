@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -42,6 +43,8 @@ use crate::overlay_motion;
 use crate::rtl;
 use crate::shortcut_display::{command_shortcut_label, shortcut_text_element};
 use crate::test_id::test_id_slug;
+
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -198,7 +201,6 @@ pub enum MenubarItemVariant {
     Destructive,
 }
 
-#[derive(Debug)]
 pub struct MenubarItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -208,10 +210,31 @@ pub struct MenubarItem {
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
+    pub action_payload: Option<ActionPayloadFactory>,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub variant: MenubarItemVariant,
+}
+
+impl std::fmt::Debug for MenubarItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MenubarItem")
+            .field("label", &self.label)
+            .field("value", &self.value)
+            .field("inset", &self.inset)
+            .field("leading", &self.leading)
+            .field("leading_icon", &self.leading_icon)
+            .field("disabled", &self.disabled)
+            .field("close_on_select", &self.close_on_select)
+            .field("command", &self.command)
+            .field("action_payload", &self.action_payload.is_some())
+            .field("a11y_label", &self.a11y_label)
+            .field("test_id", &self.test_id)
+            .field("trailing", &self.trailing)
+            .field("variant", &self.variant)
+            .finish()
+    }
 }
 
 impl MenubarItem {
@@ -226,6 +249,7 @@ impl MenubarItem {
             disabled: false,
             close_on_select: true,
             command: None,
+            action_payload: None,
             a11y_label: None,
             test_id: None,
             trailing: None,
@@ -291,6 +315,23 @@ impl MenubarItem {
     /// through the existing command pipeline.
     pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
         self.command = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized actions while staying on the native menubar item
+    /// surface.
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`MenubarItem::action_payload`], but computes the payload lazily on selection.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -2817,6 +2858,7 @@ impl MenubarMenuEntries {
                                                                 disabled,
                                                                 close_on_select,
                                                                 command,
+                                                                action_payload,
                                                                 a11y_label,
                                                                 test_id,
                                                                 trailing,
@@ -2939,7 +2981,16 @@ impl MenubarMenuEntries {
                                                                     );
 
                                                                      if !has_submenu {
-                                                                         cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                                                                         if let Some(payload) =
+                                                                             action_payload.clone()
+                                                                         {
+                                                                             cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                                                                                 command.clone(),
+                                                                                 payload,
+                                                                             );
+                                                                         } else {
+                                                                             cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                                                                         }
                                                                         if item_enabled && close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
 
@@ -3946,6 +3997,7 @@ impl MenubarMenuEntries {
                                                                             disabled,
                                                                             close_on_select,
                                                                             command,
+                                                                            action_payload,
                                                                             a11y_label,
                                                                             test_id,
                                                                             trailing,
@@ -3990,7 +4042,16 @@ impl MenubarMenuEntries {
                                                                                     trigger_registry.clone(),
                                                                                 );
 
-                                                                                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                                                                                if let Some(payload) =
+                                                                                    action_payload.clone()
+                                                                                {
+                                                                                    cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                                                                                        command.clone(),
+                                                                                        payload,
+                                                                                    );
+                                                                                } else {
+                                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                                                                                }
                                                                                 if item_enabled && close_on_select {
                                                                                     cx.pressable_set_bool(&open, false);
 
@@ -4266,7 +4327,7 @@ mod tests {
     };
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_runtime::FrameId;
+    use fret_runtime::{Effect, FrameId, WindowPendingActionPayloadService};
     use fret_ui::action::OnOpenAutoFocus;
     use fret_ui::tree::UiTree;
     use std::sync::Arc;
@@ -4567,6 +4628,280 @@ mod tests {
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    #[test]
+    fn menubar_item_action_payload_records_pending_payload() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(240.0)),
+        );
+        let cmd = CommandId::new("menubar.tests.item_payload.v1");
+        let build_entries = || {
+            vec![MenubarEntry::Item(
+                MenubarItem::new("Payload Item")
+                    .action(cmd.clone())
+                    .action_payload(41_u32),
+            )]
+        };
+
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = center(menu_trigger_bounds(snap0, "View"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        let item = snap1
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItem
+                    && node.label.as_deref() == Some("Payload Item")
+            })
+            .expect("payload item");
+        let position = center(item.bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(
+                |effect| matches!(effect, Effect::Command { command, .. } if command.as_str() == cmd.as_str())
+            ),
+            "expected click to dispatch {cmd:?}, got {effects:?}"
+        );
+        let payload = app
+            .with_global_mut(WindowPendingActionPayloadService::default, |svc, app| {
+                svc.consume(window, app.tick_id(), &cmd)
+            })
+            .expect("expected pending payload for menubar item action");
+        let payload = payload
+            .downcast::<u32>()
+            .ok()
+            .expect("payload type must match");
+        assert_eq!(*payload, 41);
+    }
+
+    #[test]
+    fn menubar_submenu_item_action_payload_records_pending_payload() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(260.0)),
+        );
+        let cmd = CommandId::new("menubar.tests.submenu_item_payload.v1");
+        let build_entries = || {
+            vec![MenubarEntry::Submenu(MenubarItem::new("More").submenu(
+                vec![MenubarEntry::Item(
+                    MenubarItem::new("Payload Sub Item")
+                        .action(cmd.clone())
+                        .action_payload(57_u32),
+                )],
+            ))]
+        };
+
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = center(menu_trigger_bounds(snap0, "View"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap1
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItem && node.label.as_deref() == Some("More")
+            })
+            .expect("More submenu trigger");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        let item = snap2
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItem
+                    && node.label.as_deref() == Some("Payload Sub Item")
+            })
+            .expect("payload submenu item");
+        let position = center(item.bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(
+                |effect| matches!(effect, Effect::Command { command, .. } if command.as_str() == cmd.as_str())
+            ),
+            "expected submenu click to dispatch {cmd:?}, got {effects:?}"
+        );
+        let payload = app
+            .with_global_mut(WindowPendingActionPayloadService::default, |svc, app| {
+                svc.consume(window, app.tick_id(), &cmd)
+            })
+            .expect("expected pending payload for menubar submenu item action");
+        let payload = payload
+            .downcast::<u32>()
+            .ok()
+            .expect("payload type must match");
+        assert_eq!(*payload, 57);
     }
 
     fn render_frame_with_test_id_prefix(

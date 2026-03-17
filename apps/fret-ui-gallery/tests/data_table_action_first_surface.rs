@@ -34,3 +34,60 @@ fn data_table_selection_snippets_keep_action_first_surface() {
         );
     }
 }
+
+#[test]
+fn data_table_row_action_menus_keep_action_first_surface() {
+    let basic = include_str!("../src/ui/snippets/data_table/basic_demo.rs");
+    assert!(
+        basic.contains(".action(act::CopyPaymentId)"),
+        "basic data_table row actions should bind copy through `.action(...)`"
+    );
+    assert!(
+        basic.contains(".action(act::ViewCustomer)"),
+        "basic data_table row actions should bind customer view through `.action(...)`"
+    );
+    assert!(
+        basic.contains(".action(act::ViewPaymentDetails)"),
+        "basic data_table row actions should bind payment details through `.action(...)`"
+    );
+    assert!(
+        !basic.contains(".on_select(CommandId::new("),
+        "basic data_table row actions should not fall back to command-id menu handlers"
+    );
+
+    let guide = include_str!("../src/ui/snippets/data_table/guide_demo.rs");
+    assert!(
+        guide.contains(".action(act::EditRow)"),
+        "guide data_table row actions should bind edit through `.action(...)`"
+    );
+    assert!(
+        guide.contains(".action(act::CopyRow)"),
+        "guide data_table row actions should bind copy through `.action(...)`"
+    );
+    assert!(
+        guide.contains(".action(act::DeleteRow)"),
+        "guide data_table row actions should bind delete through `.action(...)`"
+    );
+    assert!(
+        !guide.contains(".on_select(CommandId::new("),
+        "guide data_table row actions should not fall back to command-id menu handlers"
+    );
+
+    let rtl = include_str!("../src/ui/snippets/data_table/rtl_demo.rs");
+    assert!(
+        rtl.contains(".action(act::CopyPaymentId)"),
+        "rtl data_table row actions should bind copy through `.action(...)`"
+    );
+    assert!(
+        rtl.contains(".action(act::ViewCustomer)"),
+        "rtl data_table row actions should bind customer view through `.action(...)`"
+    );
+    assert!(
+        rtl.contains(".action(act::ViewPaymentDetails)"),
+        "rtl data_table row actions should bind payment details through `.action(...)`"
+    );
+    assert!(
+        !rtl.contains(".on_select(CommandId::new("),
+        "rtl data_table row actions should not fall back to command-id menu handlers"
+    );
+}

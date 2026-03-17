@@ -1893,6 +1893,22 @@ fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders
             &["Bind a stable action ID to this badge (action-first authoring)."][..],
         ),
         (
+            "context_menu.rs",
+            CONTEXT_MENU_RS,
+            &[
+                "Bind a stable action ID to this context-menu item (action-first authoring).",
+                "Attach a payload for parameterized actions while staying on the native context-menu item surface.",
+            ][..],
+        ),
+        (
+            "dropdown_menu.rs",
+            DROPDOWN_MENU_RS,
+            &[
+                "Bind a stable action ID to this dropdown-menu item (action-first authoring).",
+                "Attach a payload for parameterized actions while staying on the native dropdown-menu item surface.",
+            ][..],
+        ),
+        (
             "extras/banner.rs",
             EXTRAS_BANNER_RS,
             &[
@@ -1922,6 +1938,14 @@ fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders
             "item.rs",
             ITEM_RS,
             &["Bind a stable action ID to this item (action-first authoring)."][..],
+        ),
+        (
+            "menubar.rs",
+            MENUBAR_RS,
+            &[
+                "Bind a stable action ID to this menubar item (action-first authoring).",
+                "Attach a payload for parameterized actions while staying on the native menubar item surface.",
+            ][..],
         ),
         (
             "pagination.rs",
@@ -1966,6 +1990,45 @@ fn default_facing_clickable_widgets_keep_action_first_aliases_on_public_builders
             ),
             "{label} should expose an action-first builder alias"
         );
+    }
+}
+
+#[test]
+fn dropdown_menu_item_keeps_native_action_payload_builder() {
+    let normalized = normalize_ws(DROPDOWN_MENU_RS);
+    let required_markers = [
+        "pub fn action_payload<T>(mut self, payload: T) -> Self where T: Any + Send + Sync + Clone + 'static,",
+        "pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {",
+    ];
+
+    for marker in required_markers {
+        let marker = normalize_ws(marker);
+        assert!(
+            normalized.contains(&marker),
+            "dropdown_menu.rs should keep the native payload-aware builder surface on DropdownMenuItem"
+        );
+    }
+}
+
+#[test]
+fn context_menu_and_menubar_items_keep_native_action_payload_builders() {
+    for (label, source) in [
+        ("context_menu.rs", CONTEXT_MENU_RS),
+        ("menubar.rs", MENUBAR_RS),
+    ] {
+        let normalized = normalize_ws(source);
+        let required_markers = [
+            "pub fn action_payload<T>(mut self, payload: T) -> Self where T: Any + Send + Sync + Clone + 'static,",
+            "pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {",
+        ];
+
+        for marker in required_markers {
+            let marker = normalize_ws(marker);
+            assert!(
+                normalized.contains(&marker),
+                "{label} should keep the native payload-aware builder surface on menu items"
+            );
+        }
     }
 }
 

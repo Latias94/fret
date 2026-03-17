@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::cell::{Cell, RefCell};
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -85,6 +86,7 @@ pub enum DropdownMenuSide {
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnCheckedChange = menu_authoring::OnCheckedChange;
 type OnValueChange = menu_authoring::OnValueChange;
+type ActionPayloadFactory = Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>;
 pub type DropdownMenuCheckboxChecked = MenuCheckboxChecked;
 pub type DropdownMenuRadioValue = MenuRadioValue;
 
@@ -475,6 +477,7 @@ pub struct DropdownMenuItem {
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
+    pub action_payload: Option<ActionPayloadFactory>,
     pub trailing_command: Option<CommandId>,
     pub trailing_hit_width: Option<Px>,
     pub trailing_close_on_select: bool,
@@ -501,6 +504,7 @@ impl std::fmt::Debug for DropdownMenuItem {
             .field("disabled", &self.disabled)
             .field("close_on_select", &self.close_on_select)
             .field("command", &self.command)
+            .field("action_payload", &self.action_payload.is_some())
             .field("trailing_command", &self.trailing_command)
             .field("trailing_hit_width", &self.trailing_hit_width)
             .field("trailing_close_on_select", &self.trailing_close_on_select)
@@ -530,6 +534,7 @@ impl DropdownMenuItem {
             disabled: false,
             close_on_select: true,
             command: None,
+            action_payload: None,
             trailing_command: None,
             trailing_hit_width: None,
             trailing_close_on_select: true,
@@ -620,6 +625,23 @@ impl DropdownMenuItem {
     /// through the existing command pipeline.
     pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
         self.command = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized actions while staying on the native dropdown-menu item
+    /// surface.
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`DropdownMenuItem::action_payload`], but computes the payload lazily on selection.
+    pub fn action_payload_factory(mut self, payload: ActionPayloadFactory) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -1904,6 +1926,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                     .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                 let close_on_select = item.close_on_select;
                 let command = item.command;
+                let action_payload = item.action_payload;
                 let trailing_command = item.trailing_command;
                 let trailing_hit_width = item.trailing_hit_width;
                 let trailing_close_on_select = item.trailing_close_on_select;
@@ -2066,7 +2089,14 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                             if let Some(on_activate) = on_activate.clone() {
                                 cx.pressable_add_on_activate(on_activate);
                             }
-                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                            if let Some(payload) = action_payload.clone() {
+                                cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                                    command.clone(),
+                                    payload,
+                                );
+                            } else {
+                                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                            }
                             if close_on_select {
                                 cx.pressable_set_bool(&open, false);
                             }
@@ -4419,6 +4449,7 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let action_payload = item.action_payload;
                                                         let trailing_command = item.trailing_command;
                                                         let trailing_hit_width = item.trailing_hit_width;
                                                         let trailing_close_on_select =
@@ -4543,7 +4574,16 @@ impl DropdownMenu {
                                                                             on_activate,
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                                                                    if let Some(payload) =
+                                                                        action_payload.clone()
+                                                                    {
+                                                                        cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                                                                            command.clone(),
+                                                                            payload,
+                                                                        );
+                                                                    } else {
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                                                                    }
                                                                     if close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -5839,6 +5879,246 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn dropdown_menu_item_action_payload_records_pending_payload() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+        let cmd = CommandId::new("dropdown_menu.tests.item_payload.v1");
+
+        let build_entries = || {
+            vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("Payload Item")
+                    .action(cmd.clone())
+                    .action_payload(41_u32)
+                    .test_id("payload-item"),
+            )]
+        };
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+        let _ = app.models_mut().update(&open, |value| *value = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let item = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItem
+                    && node.label.as_deref() == Some("Payload Item")
+            })
+            .expect("payload item");
+        let position = Point::new(
+            Px(item.bounds.origin.x.0 + 2.0),
+            Px(item.bounds.origin.y.0 + 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(
+                |effect| matches!(effect, Effect::Command { command, .. } if command.as_str() == cmd.as_str())
+            ),
+            "expected click to dispatch {cmd:?}, got {effects:?}"
+        );
+        let payload = app
+            .with_global_mut(
+                fret_runtime::WindowPendingActionPayloadService::default,
+                |svc, app| svc.consume(window, app.tick_id(), &cmd),
+            )
+            .expect("expected pending payload for dropdown-menu item action");
+        let payload = payload
+            .downcast::<u32>()
+            .ok()
+            .expect("payload type must match");
+        assert_eq!(*payload, 41);
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_item_action_payload_records_pending_payload() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(260.0)),
+        );
+        let mut services = FakeServices::default();
+        let cmd = CommandId::new("dropdown_menu.tests.submenu_item_payload.v1");
+
+        let build_entries = || {
+            vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("More").submenu(vec![DropdownMenuEntry::Item(
+                    DropdownMenuItem::new("Payload Sub Item")
+                        .action(cmd.clone())
+                        .action_payload(57_u32)
+                        .test_id("submenu-payload-item"),
+                )]),
+            )]
+        };
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+        let _ = app.models_mut().update(&open, |value| *value = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItem && node.label.as_deref() == Some("More")
+            })
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let item = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItem
+                    && node.label.as_deref() == Some("Payload Sub Item")
+            })
+            .expect("payload submenu item");
+        let position = Point::new(
+            Px(item.bounds.origin.x.0 + 2.0),
+            Px(item.bounds.origin.y.0 + 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(
+                |effect| matches!(effect, Effect::Command { command, .. } if command.as_str() == cmd.as_str())
+            ),
+            "expected submenu click to dispatch {cmd:?}, got {effects:?}"
+        );
+        let payload = app
+            .with_global_mut(
+                fret_runtime::WindowPendingActionPayloadService::default,
+                |svc, app| svc.consume(window, app.tick_id(), &cmd),
+            )
+            .expect("expected pending payload for dropdown-menu submenu item action");
+        let payload = payload
+            .downcast::<u32>()
+            .ok()
+            .expect("payload type must match");
+        assert_eq!(*payload, 57);
     }
 
     #[test]

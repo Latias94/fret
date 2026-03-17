@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("guide_demo.rs");
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::Model;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -16,7 +16,10 @@ use std::sync::Arc;
 mod act {
     fret::actions!([ToggleAllPageRows = "ui-gallery.data_table.guide.toggle_all_page_rows.v1"]);
     fret::payload_actions!([
-        ToggleRowSelected(u64) = "ui-gallery.data_table.guide.toggle_row_selected.v1"
+        ToggleRowSelected(u64) = "ui-gallery.data_table.guide.toggle_row_selected.v1",
+        EditRow(u64) = "ui-gallery.data_table.guide.edit_row.v1",
+        CopyRow(u64) = "ui-gallery.data_table.guide.copy_row.v1",
+        DeleteRow(u64) = "ui-gallery.data_table.guide.delete_row.v1"
     ]);
 }
 
@@ -403,9 +406,8 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 "ui-gallery-data-table-row-actions-item-edit-{}",
                                                 row.id
                                             )))
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.row_actions.edit",
-                                            )),
+                                            .action(act::EditRow)
+                                            .action_payload(row.id),
                                     ),
                                     shadcn::DropdownMenuEntry::Item(
                                         shadcn::DropdownMenuItem::new("Make a copy")
@@ -413,9 +415,8 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 "ui-gallery-data-table-row-actions-item-copy-{}",
                                                 row.id
                                             )))
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.row_actions.copy",
-                                            )),
+                                            .action(act::CopyRow)
+                                            .action_payload(row.id),
                                     ),
                                     shadcn::DropdownMenuEntry::Separator,
                                     shadcn::DropdownMenuEntry::Item(
@@ -424,9 +425,8 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 "ui-gallery-data-table-row-actions-item-delete-{}",
                                                 row.id
                                             )))
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.row_actions.delete",
-                                            )),
+                                            .action(act::DeleteRow)
+                                            .action_payload(row.id),
                                     ),
                                 ]
                             });
