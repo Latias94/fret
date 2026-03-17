@@ -765,16 +765,6 @@ pub trait AppUiRawActionExt {
         ) -> bool
         + 'static,
     );
-
-    /// Register a typed unit action availability handler.
-    fn on_action_availability<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-            fret_ui::action::CommandAvailabilityActionCx,
-        ) -> fret_ui::CommandAvailability
-        + 'static,
-    );
 }
 
 impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
@@ -810,19 +800,6 @@ impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
             }
             handled
         });
-    }
-
-    fn on_action_availability<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-            fret_ui::action::CommandAvailabilityActionCx,
-        ) -> fret_ui::CommandAvailability
-        + 'static,
-    ) {
-        self.action_handlers_used = true;
-        let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);
-        self.action_handlers = next;
     }
 }
 
@@ -1176,7 +1153,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     ) where
         A: crate::TypedAction,
     {
-        self.cx.on_action_availability::<A>(f);
+        self.cx.register_action_availability_handler::<A>(f);
     }
 }
 
@@ -1723,6 +1700,19 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
+        self.action_handlers = next;
+    }
+
+    fn register_action_availability_handler<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
+    ) {
+        self.action_handlers_used = true;
+        let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);
         self.action_handlers = next;
     }
 
@@ -2288,6 +2278,7 @@ mod tests {
         assert!(
             !api_source.contains("fn on_payload_action<A: crate::actions::TypedPayloadAction>(")
         );
+        assert!(!api_source.contains("fn on_action_availability<A: crate::TypedAction>("));
         assert!(!api_source.contains("fn on_action_notify_model_update<"));
         assert!(!api_source.contains("fn on_action_notify_model_set<"));
         assert!(!api_source.contains("fn on_action_notify_toggle_bool<"));

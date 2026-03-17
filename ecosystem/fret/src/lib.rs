@@ -731,8 +731,8 @@ pub mod advanced {
     }
     /// Explicit raw action-registration hooks kept on the advanced lane.
     ///
-    /// This keeps raw notify/payload-notify/availability registration discoverable for
-    /// advanced/manual assembly and host-owned integrations while leaving
+    /// This keeps raw notify/payload-notify registration discoverable for advanced/manual assembly
+    /// and host-owned integrations while leaving
     /// `fret::app::prelude::*` focused on `cx.actions()`.
     pub use crate::view::AppUiRawActionExt;
     /// Explicit raw-model local-state hooks kept on the advanced lane.
