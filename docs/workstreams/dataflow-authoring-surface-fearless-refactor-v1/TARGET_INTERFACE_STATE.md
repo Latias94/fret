@@ -12,6 +12,14 @@ Companion docs:
 - `MIGRATION_MATRIX.md`
 - `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
 - `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
+- `../action-write-surface-fearless-refactor-v1/DESIGN.md`
+
+Closeout note on 2026-03-17:
+
+- this file now remains the authority for the narrowed selector/query posture and the ecosystem
+  boundary conclusions from the dataflow lane
+- the remaining default app-lane write-side follow-on now lives under
+  `docs/workstreams/action-write-surface-fearless-refactor-v1/`
 
 Most names do not need to be frozen too early.
 This file exists to freeze:

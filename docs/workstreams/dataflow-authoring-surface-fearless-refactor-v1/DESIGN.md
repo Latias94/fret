@@ -1,12 +1,13 @@
 # Dataflow Authoring Surface (Fearless Refactor v1)
 
-Status: active closeout lane (pre-release fearless refactor)
+Status: closed closeout note (selector/query locked; action write follow-on split out)
 Last updated: 2026-03-17
 
 Related:
 
 - `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
@@ -20,6 +21,19 @@ Related:
 - `docs/authoring-golden-path-v2.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/crate-usage-guide.md`
+
+## Closeout note on 2026-03-17
+
+This workstream now remains authoritative for:
+
+- selector default authoring closeout,
+- query read-side closeout,
+- ecosystem/router boundary conclusions for the narrowed dataflow lane.
+
+It no longer owns the remaining default app-lane write-side productization question.
+That follow-on now lives in:
+
+- `docs/workstreams/action-write-surface-fearless-refactor-v1/`
 
 ## Why this workstream exists
 
@@ -177,9 +191,10 @@ Current audit outcome (2026-03-17):
 
 Current proof outcome (2026-03-17):
 
-- action/query are now materially proven on the current in-tree proof surfaces,
-- the remaining open question is narrower: whether `selector_layout(...)` gets a non-Todo runtime
-  app proof surface or is consciously frozen as a docs/template/Todo-first posture for now.
+- selector/query are now materially proven on the current in-tree proof surfaces,
+- the non-Todo runtime selector proof gap is closed via `apps/fret-examples/src/hello_counter_demo.rs`,
+- the remaining default write-side question is now tracked separately in
+  `docs/workstreams/action-write-surface-fearless-refactor-v1/`.
 
 ## Design rules
 

@@ -1,6 +1,6 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — TODO
 
-Status: Active closeout tracker
+Status: Closed closeout tracker (selector/query closed; action write follow-on handed off)
 Last updated: 2026-03-17
 
 Companion docs:
@@ -36,6 +36,8 @@ Execution note on 2026-03-17:
 - proof-surface audit is now landed:
   action/query are effectively proven on the current in-tree surfaces, and selector proof is now
   also closed on a non-Todo runtime example via `apps/fret-examples/src/hello_counter_demo.rs`
+- the remaining default app-lane write-side follow-on now lives in
+  `docs/workstreams/action-write-surface-fearless-refactor-v1/`
 
 ## Evidence set
 
@@ -119,6 +121,11 @@ Rule:
 - [x] Record the reusable-ecosystem adaptation rules explicitly.
 
 ## M1 — Action surface
+
+Follow-on note:
+
+- remaining write-side productization work is now tracked in
+  `docs/workstreams/action-write-surface-fearless-refactor-v1/`
 
 - [x] Inventory current default action spellings.
 - [x] Classify each current spelling as:

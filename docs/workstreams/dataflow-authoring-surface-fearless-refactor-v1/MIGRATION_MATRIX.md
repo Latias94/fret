@@ -12,6 +12,12 @@ This file is the execution-oriented companion to:
 - `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
 - `PROOF_SURFACE_AUDIT_2026-03-17.md`
 
+Closeout note on 2026-03-17:
+
+- selector/query rows in this file remain authoritative for the dataflow lane
+- action-related rows now act as the historical handoff snapshot to
+  `docs/workstreams/action-write-surface-fearless-refactor-v1/`
+
 Its purpose is to keep this lane concrete:
 
 - which surfaces are under review,
@@ -35,6 +41,7 @@ documented as an equal alternative.
 | Deleted | old path is gone |
 | Kept intentionally | explicit advanced/reference surface that should remain public |
 | Quarantined | still exists, but only as a lower-level/reference surface rather than a default teaching path |
+| Handed off | active execution moved to a narrower follow-on lane; this file remains the historical handoff snapshot |
 
 ## Global Delete Rule
 
@@ -84,9 +91,9 @@ Use these rules while executing the lane:
 
 | Lane | Current surface | Target surface | Migration tactic | Delete trigger | Status | Evidence anchors |
 | --- | --- | --- | --- | --- | --- | --- |
-| One-slot LocalState writes | small family split across `local_update`, `local_set`, and `toggle_local_bool` | one clearly chosen default one-slot write posture | inventory first, then either freeze this family as the intentional default budget or replace it with one narrower authoring shape on `ecosystem/fret` only | first-contact docs/templates/examples no longer teach several near-equal one-slot helpers | In progress | `ecosystem/fret/src/view.rs`, `apps/fret-cookbook/examples/hello.rs`, `apps/fret-cookbook/examples/toggle_basics.rs`, `apps/fretboard/src/scaffold/templates.rs` |
+| One-slot LocalState writes | small family split across `local_update`, `local_set`, and `toggle_local_bool` | one clearly chosen default one-slot write posture | inventory first, then either freeze this family as the intentional default budget or replace it with one narrower authoring shape on `ecosystem/fret` only | first-contact docs/templates/examples no longer teach several near-equal one-slot helpers | Handed off | `ecosystem/fret/src/view.rs`, `apps/fret-cookbook/examples/hello.rs`, `apps/fret-cookbook/examples/toggle_basics.rs`, `apps/fretboard/src/scaffold/templates.rs`, `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md` |
 | Multi-slot LocalState transactions | `cx.actions().locals::<A>(...)` | one canonical LocalState transaction story | treat `locals::<A>(...)` as the baseline until a better default is proven on non-Todo surfaces; do not grow parallel transaction families | no first-party default surface teaches a competing LocalState transaction helper for the same common case | Migrated | `apps/fret-examples/src/todo_demo.rs`, `apps/fret-cookbook/examples/form_basics.rs`, `docs/authoring-golden-path-v2.md` |
-| Keyed payload row writes | `payload_local_update_if::<A>(...)` as default, `payload_locals::<A>(...)` as rarer companion, plus the lower-level `payload::<A>()` chain | one canonical row-write happy path, one explicit multi-local fallback, lower-level payload chain kept out of first-contact docs | keep the happy path on keyed row writes, quarantine `payload::<A>()`, and prove any shortening on Todo plus at least one non-list surface | templates/docs/examples stop teaching `payload::<A>()` as a co-equal choice | In progress | `apps/fret-examples/src/todo_demo.rs`, `apps/fretboard/src/scaffold/templates.rs`, `docs/examples/todo-app-golden-path.md`, `apps/fret-cookbook/examples/payload_actions_basics.rs` |
+| Keyed payload row writes | `payload_local_update_if::<A>(...)` as default, `payload_locals::<A>(...)` as rarer companion, plus the lower-level `payload::<A>()` chain | one canonical row-write happy path, one explicit multi-local fallback, lower-level payload chain kept out of first-contact docs | keep the happy path on keyed row writes, quarantine `payload::<A>()`, and prove any shortening on Todo plus at least one non-list surface | templates/docs/examples stop teaching `payload::<A>()` as a co-equal choice | Handed off | `apps/fret-examples/src/todo_demo.rs`, `apps/fretboard/src/scaffold/templates.rs`, `docs/examples/todo-app-golden-path.md`, `apps/fret-cookbook/examples/payload_actions_basics.rs`, `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md` |
 | Shared-model coordination | `cx.actions().models::<A>(...)` | explicit advanced/editor-grade lane | keep explicit and do not fold into LocalState-first sugar | docs/templates keep it off the default happy path while preserving advanced/editor-grade examples | Migrated | `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`, `apps/fret-cookbook/examples/router_basics.rs`, `docs/crate-usage-guide.md` |
 | Activation glue aliases | `action/action_payload/listen` plus former `dispatch/dispatch_payload` aliases | keep `action/action_payload/listen`; keep the deleted aliases from reappearing | remove the aliases from code, docs, and source gates together | no first-party docs/examples/tests teach or depend on `dispatch*` | Deleted | `ecosystem/fret/src/view.rs`, `docs/authoring-golden-path-v2.md`, `docs/crate-usage-guide.md`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` |
 | LocalState-first selector deps/reads | app-facing `selector_layout(...)` helper is landed in `ecosystem/fret`; raw `DepsBuilder` choreography remains for explicit shared-model/global signatures | one app-facing LocalState-first selector surface that does not teach dependency-builder internals on first contact | keep the shortening only in `ecosystem/fret`; keep `fret-selector` narrow and raw; reopen only if new evidence shows first-contact default surfaces drifting again | first-contact docs/templates/examples no longer require `DepsBuilder::new(cx)` as the default selector story, and a non-Todo runtime proof exists | Migrated | `apps/fretboard/src/scaffold/templates.rs`, `docs/examples/todo-app-golden-path.md`, `docs/authoring-golden-path-v2.md`, `docs/crate-usage-guide.md`, `ecosystem/fret/src/view.rs`, `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/lib.rs`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/PROOF_SURFACE_AUDIT_2026-03-17.md` |

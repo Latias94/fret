@@ -1,6 +1,6 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — Milestones
 
-Status: Active closeout lane
+Status: Closed closeout lane (selector/query locked; action write follow-on split out)
 Last updated: 2026-03-17
 
 Related:
@@ -37,9 +37,8 @@ Read it as:
   explicit.
 - Milestone 4 audit is now landed: reusable ecosystem crates remain on direct selector/query/router
   surfaces and router compatibility is confirmed without widening this lane's scope.
-- The remaining work for this lane is now closeout-oriented:
-  legacy default-looking spellings still need final classification/delete-ready decisions where
-  applicable, but selector proof is no longer an open blocker.
+- The remaining default write-side productization work is now handed off to
+  `docs/workstreams/action-write-surface-fearless-refactor-v1/`.
 
 ## Milestone 0 — Freeze the lane
 
@@ -64,6 +63,11 @@ Exit criteria:
   - and domain-engine work in `fret-selector` / `fret-query`.
 
 ## Milestone 1 — Collapse the action surface
+
+Closeout note on 2026-03-17:
+
+- the remaining action write-side questions now continue in
+  `docs/workstreams/action-write-surface-fearless-refactor-v1/`
 
 Outcome:
 
@@ -167,5 +171,4 @@ Exit criteria:
 Current remaining closeout gap:
 
 - first-contact docs/templates/gates are aligned for the landed batches,
-- and the remaining work is now about final closeout posture for still-classified legacy spellings,
-  not missing selector proof.
+- and this lane no longer owns the remaining default write-side follow-on.
