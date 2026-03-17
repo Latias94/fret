@@ -51,7 +51,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Fret-specific chart recipe contracts that still matter once payload auto-wiring is enabled.")
         .code_rust_from_file_region(snippets::contracts::SOURCE, "example");
     let tooltip_content = DocSection::build(cx, "Tooltip", tooltip_content)
-        .description("Recipe-level tooltip variants, label/item format hooks, and advanced custom header/row children seams aligned to the shadcn tooltip teaching surface.")
+        .description("Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter and custom children seams.")
         .test_id_prefix("ui-gallery-chart-tooltip")
         .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
     let legend_content = DocSection::build(cx, "Legend", legend_content)
@@ -72,7 +72,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Chart docs shape more closely: first-chart composition, config, theming, tooltip/legend, accessibility, and RTL. Fret-specific chart-engine constraints still stay explicit, but the first-chart path now includes output-model-driven tooltip payload binding.",
+            "Preview follows the shadcn Chart docs shape more closely: first-chart composition, config, theming, tooltip/legend, accessibility, and RTL. Fret-specific chart-engine constraints still stay explicit, but the tooltip section now also reads in a props, colors, then custom order.",
         ),
         vec![
             demo_cards,

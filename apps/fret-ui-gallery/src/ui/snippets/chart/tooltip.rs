@@ -10,6 +10,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let chart_2 = cx.theme().color_token("chart-2");
     let chart_3 = cx.theme().color_token("chart-3");
 
+    let section_intro = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str| {
+        ui::v_flex(|cx| {
+            vec![
+                shadcn::raw::typography::small(title).into_element(cx),
+                shadcn::raw::typography::muted(description).into_element(cx),
+            ]
+        })
+        .gap(Space::N1)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+    };
+
     let tooltip = |cx: &mut UiCx<'_>,
                    label: &'static str,
                    indicator: shadcn::ChartTooltipIndicator,
@@ -171,7 +184,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .test_id_prefix("ui-gallery-chart-tooltip-custom-keys")
                     .into_element(cx),
                 shadcn::raw::typography::muted(
-                    "`label_key` resolves the header through `ChartConfig`; `name_key` remaps row labels from item metadata into config entries.",
+                    "Colors and labels are resolved from `ChartConfig`; `label_key` and `name_key` map the engine output into those config entries.",
                 )
                 .into_element(cx),
             ]
@@ -194,6 +207,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(|cx| {
         vec![
+            section_intro(
+                cx,
+                "Props",
+                "Indicator style plus `hide_label` and `hide_indicator` mirror the first shadcn tooltip teaching surface.",
+            ),
             tooltip(
                 cx,
                 "January",
@@ -218,11 +236,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 false,
                 "ui-gallery-chart-tooltip-dashed",
             ),
-            label_formatter,
-            custom_label_children,
-            formatter,
-            custom_children,
+            section_intro(
+                cx,
+                "Colors",
+                "Like shadcn, tooltip chrome should derive color and display labels from `ChartConfig` whenever possible.",
+            ),
             custom_keys,
+            section_intro(
+                cx,
+                "Custom",
+                "Formatter hooks stay on the default recipe lane; custom header and row children stay on the explicit adapter seams.",
+            ),
+            label_formatter,
+            formatter,
+            custom_label_children,
+            custom_children,
         ]
     })
     .gap(Space::N3)
