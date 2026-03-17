@@ -3513,6 +3513,10 @@ fn chart_tooltip_docs_keep_custom_children_seam_explicit() {
         tooltip.contains(".into_element_parts(cx, |cx, context|"),
         "src/ui/snippets/chart/tooltip.rs should keep the custom children adapter seam visible"
     );
+    assert!(
+        tooltip.contains(".into_element_parts_with_label("),
+        "src/ui/snippets/chart/tooltip.rs should keep the combined custom label + row adapter seam visible"
+    );
 
     let contracts = read("src/ui/snippets/chart/contracts.rs");
     assert!(
@@ -3531,7 +3535,7 @@ fn chart_tooltip_docs_keep_custom_children_seam_explicit() {
     );
     assert!(
         page.contains(
-            "Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter and custom children seams."
+            "Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter plus header-only, row-only, and combined custom children seams."
         ),
         "src/ui/pages/chart.rs should keep the Tooltip section description aligned with the custom header/row seams"
     );

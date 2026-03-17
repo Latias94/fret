@@ -57,7 +57,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         )
         .code_rust_from_file_region(snippets::contracts::SOURCE, "example");
     let tooltip_content = DocSection::build(cx, "Tooltip", tooltip_content)
-        .description("Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter and custom children seams.")
+        .description("Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter plus header-only, row-only, and combined custom children seams.")
         .test_id_prefix("ui-gallery-chart-tooltip")
         .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
     let legend_content = DocSection::build(cx, "Legend", legend_content)

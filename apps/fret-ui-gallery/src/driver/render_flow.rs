@@ -1686,6 +1686,12 @@ mod tests {
 
     #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
     #[test]
+    fn chart_tooltip_custom_parts_with_label_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-parts-with-label");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
     fn chart_tooltip_custom_keys_gallery_example_is_present() {
         assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-keys");
     }

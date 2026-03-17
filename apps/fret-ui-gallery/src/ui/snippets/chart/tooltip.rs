@@ -149,6 +149,60 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
         .test_id("ui-gallery-chart-tooltip-custom-children");
 
+    let custom_parts_with_label = shadcn::ChartTooltipContent::new()
+        .label("2024-07-16")
+        .items([
+            shadcn::ChartTooltipItem::new("Running", "380").meta("unit", "kcal"),
+            shadcn::ChartTooltipItem::new("Swimming", "420").meta("unit", "kcal"),
+        ])
+        .test_id_prefix("ui-gallery-chart-tooltip-custom-parts-with-label")
+        .into_element_parts_with_label(
+            cx,
+            |cx, context| {
+                ui::v_flex(|cx| {
+                    vec![
+                        ui::text("Workout Summary")
+                            .text_xs()
+                            .font_medium()
+                            .into_element(cx),
+                        ui::text(context.label.clone().unwrap_or_default())
+                            .text_xs()
+                            .text_color(ColorRef::Color(cx.theme().color_token("muted-foreground")))
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N1)
+                .items_start()
+                .into_element(cx)
+            },
+            |cx, context| {
+                let unit = context
+                    .item
+                    .metadata
+                    .get("unit")
+                    .cloned()
+                    .unwrap_or_default();
+
+                ui::h_row(|cx| {
+                    vec![
+                        ui::text(context.item.label.clone())
+                            .text_xs()
+                            .into_element(cx),
+                        ui::text(format!("{} {unit}", context.item.value))
+                            .text_xs()
+                            .font_medium()
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .justify_between()
+                .items_center()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+            },
+        )
+        .test_id("ui-gallery-chart-tooltip-custom-parts-with-label");
+
     let custom_keys_config: shadcn::ChartConfig = [
         (
             Arc::<str>::from("visitors"),
@@ -245,12 +299,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             section_intro(
                 cx,
                 "Custom",
-                "Formatter hooks stay on the default recipe lane; custom header and row children stay on the explicit adapter seams.",
+                "Formatter hooks stay on the default recipe lane; custom header-only, row-only, and combined label-plus-row children stay on the explicit adapter seams.",
             ),
             label_formatter,
             formatter,
             custom_label_children,
             custom_children,
+            custom_parts_with_label,
         ]
     })
     .gap(Space::N3)
