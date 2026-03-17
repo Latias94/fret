@@ -11,6 +11,7 @@ Companion docs:
 - `MIGRATION_MATRIX.md`
 - `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
 - `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
+- `PROOF_SURFACE_AUDIT_2026-03-17.md`
 
 Execution note on 2026-03-16:
 
@@ -32,25 +33,33 @@ Execution note on 2026-03-17:
   read-side helper family should be added here
 - M4 audit is now landed:
   reusable ecosystem crates stay on direct engine/authoring bridges and router remains adjacent
+- proof-surface audit is now landed:
+  action/query are effectively proven on the current in-tree surfaces, and the remaining open proof
+  item is now specifically non-Todo `selector_layout(...)` adoption
 
 ## Evidence set
 
 ### Generic app proof surfaces
 
-- [ ] `apps/fret-cookbook/examples/simple_todo.rs`
-- [ ] `apps/fret-examples/src/todo_demo.rs`
+- [x] `apps/fret-cookbook/examples/simple_todo.rs`
+- [x] `apps/fret-examples/src/todo_demo.rs`
 - [x] `apps/fret-cookbook/examples/query_basics.rs`
-- [ ] `apps/fret-cookbook/examples/form_basics.rs`
-- [ ] `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+- [x] `apps/fret-cookbook/examples/form_basics.rs`
+- [x] `apps/fret-cookbook/examples/commands_keymap_basics.rs`
 - [x] `apps/fretboard/src/scaffold/templates.rs`
 
 ### Editor-grade proof surfaces
 
-- [ ] `apps/fret-examples/src/genui_demo.rs`
-- [ ] `apps/fret-examples/src/imui_editor_proof_demo.rs`
-- [ ] `apps/fret-examples/src/workspace_shell_demo.rs`
-- [ ] `apps/fret-examples/src/launcher_utility_window_demo.rs`
+- [x] `apps/fret-examples/src/genui_demo.rs`
+- [x] `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- [x] `apps/fret-examples/src/workspace_shell_demo.rs`
+- [x] `apps/fret-examples/src/launcher_utility_window_demo.rs`
 - [x] `apps/fret-examples/src/query_async_tokio_demo.rs`
+
+Selector-specific note:
+
+- these proofs close action/query/default-lane compatibility
+- they do **not** close the remaining non-Todo `selector_layout(...)` runtime adoption gap
 
 ### Ecosystem / teaching proof surfaces
 
@@ -98,7 +107,8 @@ Rule:
   - optional reusable-kit adapters
 - [x] Audit editor-grade compatibility impact on shared-model surfaces.
 - [x] Audit router compatibility after the default surface is chosen.
-- [ ] Update docs/templates/examples/gates together for each landed batch.
+- [x] Update docs/templates/examples/gates together for each landed batch.
+  - Current remaining gap is proof coverage, not first-contact docs drift.
 
 ## M0 — Freeze the lane
 
@@ -115,7 +125,7 @@ Rule:
   - advanced/editor-grade
   - history-only/delete-ready
 - [x] Choose the compact target posture for default app writes.
-- [ ] Prove it on both generic-app and editor-grade surfaces.
+- [x] Prove it on both generic-app and editor-grade surfaces.
 
 ## M2 — Selector surface
 
@@ -123,6 +133,7 @@ Rule:
 - [x] Decide the target default selector posture.
 - [x] Keep raw shared-model dependency signatures explicit.
 - [ ] Prove the result outside Todo.
+  - Remaining blocker on 2026-03-17: no non-Todo runtime `selector_layout(...)` app surface yet.
 
 ## M3 — Query read surface
 
@@ -133,8 +144,8 @@ Rule:
 
 ## M4 — Ecosystem adaptation and closeout
 
-- [ ] Update docs/templates/examples to the chosen posture.
-- [ ] Update source-policy tests or other gates.
+- [x] Update docs/templates/examples to the chosen posture.
+- [x] Update source-policy tests or other gates.
 - [x] Record which direct-crate ecosystem surfaces stay intentionally lower-level.
 - [x] Record router compatibility outcomes without widening the lane scope.
 

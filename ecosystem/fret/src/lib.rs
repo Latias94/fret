@@ -2615,6 +2615,9 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn readme_and_rustdoc_expose_selector_and_query_as_explicit_optional_surfaces() {
+        assert!(CRATE_README.contains("`cx.data().selector_layout(...)`"));
+        assert!(CRATE_README.contains("raw `cx.data().selector(...)`"));
+        assert!(CRATE_README.contains("`handle.read_layout(cx)`"));
         assert!(CRATE_README.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
         assert!(
             CRATE_README

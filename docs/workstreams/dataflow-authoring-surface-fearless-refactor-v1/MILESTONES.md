@@ -11,6 +11,7 @@ Related:
 - `MIGRATION_MATRIX.md`
 - `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
 - `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
+- `PROOF_SURFACE_AUDIT_2026-03-17.md`
 
 ## Current execution stance (2026-03-16)
 
@@ -35,6 +36,8 @@ Read it as:
   explicit.
 - Milestone 4 audit is now landed: reusable ecosystem crates remain on direct selector/query/router
   surfaces and router compatibility is confirmed without widening this lane's scope.
+- The remaining open item for this lane is now narrower than Milestones 1/3/4:
+  Milestone 2 still lacks a non-Todo runtime proof for `selector_layout(...)`.
 
 ## Milestone 0 — Freeze the lane
 
@@ -101,6 +104,10 @@ Exit criteria:
   first-contact selector story and teach `selector_layout(...)` for LocalState-first inputs,
 - reusable ecosystem crates can still use `fret-selector` directly without app-facade coupling.
 
+Current blocker on 2026-03-17:
+
+- no non-Todo runtime app surface has adopted `selector_layout(...)` yet
+
 ## Milestone 3 — Collapse the query read-side surface
 
 Outcome:
@@ -153,3 +160,8 @@ Exit criteria:
   surfaces, and first-party demos,
 - reusable ecosystem crates are not forced onto the wrong dependency tier,
 - router remains compatible but separate.
+
+Current remaining closeout gap:
+
+- first-contact docs/templates/gates are aligned for the landed batches,
+- but selector proof still lacks a non-Todo runtime surface.

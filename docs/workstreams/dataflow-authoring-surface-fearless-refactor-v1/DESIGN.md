@@ -13,6 +13,7 @@ Related:
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
+- `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/PROOF_SURFACE_AUDIT_2026-03-17.md`
 - `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`
 - `docs/workstreams/router-v1/router-v1.md`
 - `docs/workstreams/router-ui-v1/router-ui-v1.md`
@@ -173,6 +174,12 @@ Current audit outcome (2026-03-17):
   router surfaces or thin authoring bridges,
 - editor-grade proof surfaces remain explicit rather than being rewritten into the default app lane,
 - router compatibility is confirmed without creating new requirements for this workstream.
+
+Current proof outcome (2026-03-17):
+
+- action/query are now materially proven on the current in-tree proof surfaces,
+- the remaining open question is narrower: whether `selector_layout(...)` gets a non-Todo runtime
+  app proof surface or is consciously frozen as a docs/template/Todo-first posture for now.
 
 ## Design rules
 

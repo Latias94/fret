@@ -188,7 +188,11 @@ The same ordered builder surface now also includes compile-time/static entries t
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
-- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface, plus the explicit `fret::selector::*` / `fret::query::*` secondary lanes when app code needs state helper nouns.
+- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector_layout(...)` for
+  LocalState-first derived values, raw `cx.data().selector(...)` for explicit signatures, and
+  `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path), plus the
+  explicit `fret::selector::*` / `fret::query::*` secondary lanes when app code needs state helper
+  nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
 - `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets.
@@ -279,9 +283,12 @@ than asking apps to mirror internal bundle registrations. Icon packs are still i
 explicit `crate::app::install` seams backed by the global `IconRegistry`; reusable components
 should prefer semantic `IconId` / `ui.*` ids instead of baking one vendor pack into their public
 contract unless that dependency is intentionally explicit.
-The same explicit-lane rule applies to optional state helpers: keep grouped `cx.data().selector(...)`
-and `cx.data().query*` as the default app story, and import `DepsBuilder` / `QueryKey`-style nouns
-from `fret::selector::*` / `fret::query::*` only when app code actually needs to spell them.
+The same explicit-lane rule applies to optional state helpers: keep grouped
+`cx.data().selector_layout(...)` as the default LocalState-first selector story, keep raw
+`cx.data().selector(...)` for explicit shared `Model<T>` / global signatures, and keep
+`cx.data().query*` plus `handle.read_layout(cx)` as the default query story. Import
+`DepsBuilder` / `QueryKey`-style nouns from `fret::selector::*` / `fret::query::*` only when app
+code actually needs to spell them.
 Editor-themed apps can also opt into `fret`'s `editor` feature to make
 installed `fret-ui-editor` presets survive the default `FretApp` shadcn auto-theme replay; the
 actual editor widgets and presets still live in `fret-ui-editor`.
