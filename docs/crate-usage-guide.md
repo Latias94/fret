@@ -683,8 +683,10 @@ Notes:
 - `fret-router-ui` provides `RouterUiStore` (router + snapshot model), pressable-based link/outlet
   helpers, and history action helpers (`back_on_action()`, `forward_on_action()`,
   `navigate_history_on_action(...)`).
-- Prefer wiring router history actions through `cx.on_action_notify::<...>(store.back_on_action())`
-  / `store.forward_on_action()` instead of hand-rolling window/host availability glue in app code.
+- Prefer wiring router history actions through
+  `use fret::advanced::AppUiRawActionExt as _;` plus
+  `cx.on_action_notify::<...>(store.back_on_action())` / `store.forward_on_action()` instead of
+  hand-rolling window/host availability glue in app code.
 - Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or
   explicit view state) rather than treating router crates as a second default app runtime.
 - Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).

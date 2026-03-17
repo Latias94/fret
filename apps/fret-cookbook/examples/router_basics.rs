@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::advanced::AppUiRawActionExt as _;
 use fret::app::prelude::*;
 use fret::router::{
     MemoryHistory, NavigationAction, PathPattern, RouteCodec, RouteHooks, RouteLocation, RouteNode,

@@ -720,6 +720,187 @@ impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
     }
 }
 
+/// Explicit raw action-registration hooks that intentionally stay off the default app authoring
+/// surface.
+///
+/// This trait is intentionally omitted from `fret::app::prelude::*` and reexported from
+/// `fret::advanced::prelude::*`.
+///
+/// Import it explicitly when advanced/manual-assembly code intentionally wants raw typed handler
+/// registration rather than the grouped `cx.actions()` helpers.
+pub trait AppUiRawActionExt {
+    /// Register a typed unit action handler (v1: adapter over `OnCommand`).
+    fn on_action<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    );
+
+    /// Register a typed unit action handler that requests redraw + notifies on `handled=true`.
+    ///
+    /// This is a small ergonomics helper: most action handlers that mutate models/state need both
+    /// `request_redraw(window)` and `notify(action_cx)` to participate in the view-cache closure.
+    fn on_action_notify<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    );
+
+    /// Register a typed unit action handler that updates a model and participates in the
+    /// view-cache closure (`request_redraw` + `notify`) when the update succeeds.
+    fn on_action_notify_model_update<A, T>(
+        &mut self,
+        model: Model<T>,
+        update: impl Fn(&mut T) + 'static,
+    ) where
+        A: crate::TypedAction,
+        T: Any;
+
+    /// Register a typed unit action handler that sets a model to a fixed value and participates in
+    /// the view-cache closure (`request_redraw` + `notify`) when the update succeeds.
+    fn on_action_notify_model_set<A, T>(&mut self, model: Model<T>, value: T)
+    where
+        A: crate::TypedAction,
+        T: Any + Clone;
+
+    /// Convenience helper: register a typed unit action handler that toggles a `Model<bool>`.
+    fn on_action_notify_toggle_bool<A: crate::TypedAction>(&mut self, model: Model<bool>);
+
+    /// Register a typed payload action handler (v2 prototype; ADR 0312).
+    ///
+    /// Notes:
+    /// - Payload is pointer/programmatic-only in v2 (keymap/palette/menus remain unit actions).
+    /// - Missing/invalid payload should be treated as “not handled” by default.
+    fn on_payload_action<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    );
+
+    /// Register a typed payload action handler that requests redraw + notifies on `handled=true`.
+    fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    );
+
+    /// Register a typed unit action availability handler.
+    fn on_action_availability<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
+    );
+}
+
+impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
+    fn on_action<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    ) {
+        self.action_handlers_used = true;
+        let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
+        self.action_handlers = next;
+    }
+
+    fn on_action_notify<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    ) {
+        self.on_action::<A>(move |host, action_cx| {
+            let handled = f(host, action_cx);
+            if handled {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            handled
+        });
+    }
+
+    fn on_action_notify_model_update<A, T>(
+        &mut self,
+        model: Model<T>,
+        update: impl Fn(&mut T) + 'static,
+    ) where
+        A: crate::TypedAction,
+        T: Any,
+    {
+        self.on_action_notify::<A>(move |host, _action_cx| {
+            host.models_mut().update(&model, |v| update(v)).is_ok()
+        });
+    }
+
+    fn on_action_notify_model_set<A, T>(&mut self, model: Model<T>, value: T)
+    where
+        A: crate::TypedAction,
+        T: Any + Clone,
+    {
+        self.on_action_notify_model_update::<A, T>(model, move |v| *v = value.clone());
+    }
+
+    fn on_action_notify_toggle_bool<A: crate::TypedAction>(&mut self, model: Model<bool>) {
+        self.on_action_notify_model_update::<A, bool>(model, |v| *v = !*v);
+    }
+
+    fn on_payload_action<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    ) {
+        self.action_handlers_used = true;
+        let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
+        self.action_handlers = next;
+    }
+
+    fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    ) {
+        self.on_payload_action::<A>(move |host, action_cx, payload| {
+            let handled = f(host, action_cx, payload);
+            if handled {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            handled
+        });
+    }
+
+    fn on_action_availability<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
+    ) {
+        self.action_handlers_used = true;
+        let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);
+        self.action_handlers = next;
+    }
+}
+
 /// Grouped LocalState-first helpers for the default app authoring surface.
 pub struct AppUiState<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
@@ -1642,122 +1823,6 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         WatchedState::new(self.cx, local.model())
     }
 
-    /// Register a typed unit action handler (v1: adapter over `OnCommand`).
-    pub fn on_action<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
-    ) {
-        self.action_handlers_used = true;
-        let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
-        self.action_handlers = next;
-    }
-
-    /// Register a typed unit action handler that requests redraw + notifies on `handled=true`.
-    ///
-    /// This is a small ergonomics helper: most action handlers that mutate models/state need both
-    /// `request_redraw(window)` and `notify(action_cx)` to participate in the view-cache closure.
-    pub fn on_action_notify<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
-    ) {
-        self.on_action::<A>(move |host, action_cx| {
-            let handled = f(host, action_cx);
-            if handled {
-                host.request_redraw(action_cx.window);
-                host.notify(action_cx);
-            }
-            handled
-        });
-    }
-
-    /// Register a typed unit action handler that updates a model and participates in the view-cache
-    /// closure (`request_redraw` + `notify`) when the update succeeds.
-    ///
-    /// This is the recommended helper for simple state mutations (counter increments, toggles,
-    /// flags, and small structs).
-    pub fn on_action_notify_model_update<A, T>(
-        &mut self,
-        model: Model<T>,
-        update: impl Fn(&mut T) + 'static,
-    ) where
-        A: crate::TypedAction,
-        T: Any,
-    {
-        self.on_action_notify::<A>(move |host, _action_cx| {
-            host.models_mut().update(&model, |v| update(v)).is_ok()
-        });
-    }
-
-    /// Register a typed unit action handler that sets a model to a fixed value and participates in
-    /// the view-cache closure (`request_redraw` + `notify`) when the update succeeds.
-    pub fn on_action_notify_model_set<A, T>(&mut self, model: Model<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        self.on_action_notify_model_update::<A, T>(model, move |v| *v = value.clone());
-    }
-
-    /// Convenience helper: register a typed unit action handler that toggles a `Model<bool>`.
-    pub fn on_action_notify_toggle_bool<A: crate::TypedAction>(&mut self, model: Model<bool>) {
-        self.on_action_notify_model_update::<A, bool>(model, |v| *v = !*v);
-    }
-
-    /// Register a typed payload action handler (v2 prototype; ADR 0312).
-    ///
-    /// Notes:
-    /// - Payload is pointer/programmatic-only in v2 (keymap/palette/menus remain unit actions).
-    /// - Missing/invalid payload should be treated as “not handled” by default.
-    pub fn on_payload_action<A: crate::actions::TypedPayloadAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
-    ) {
-        self.action_handlers_used = true;
-        let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
-        self.action_handlers = next;
-    }
-
-    /// Register a typed payload action handler that requests redraw + notifies on `handled=true`.
-    pub fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
-    ) {
-        self.on_payload_action::<A>(move |host, action_cx, payload| {
-            let handled = f(host, action_cx, payload);
-            if handled {
-                host.request_redraw(action_cx.window);
-                host.notify(action_cx);
-            }
-            handled
-        });
-    }
-
-    /// Register a typed unit action availability handler.
-    pub fn on_action_availability<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
-            fret_ui::action::CommandAvailabilityActionCx,
-        ) -> fret_ui::CommandAvailability
-        + 'static,
-    ) {
-        self.action_handlers_used = true;
-        let next = std::mem::take(&mut self.action_handlers).availability::<A>(f);
-        self.action_handlers = next;
-    }
-
     pub(crate) fn take_action_handlers(self) -> Option<(OnCommand, OnCommandAvailability)> {
         if !self.action_handlers_used {
             return None;
@@ -2255,6 +2320,7 @@ mod tests {
         assert!(api_source.contains("pub trait LocalSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
+        assert!(api_source.contains("pub trait AppUiRawActionExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
         assert!(!api_source.contains("pub fn action_root(&self) -> fret_ui::GlobalElementId"));

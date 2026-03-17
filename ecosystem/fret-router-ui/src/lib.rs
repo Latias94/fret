@@ -387,6 +387,8 @@ where
     /// Intended usage:
     ///
     /// ```rust,ignore
+    /// use fret::advanced::AppUiRawActionExt as _;
+    ///
     /// cx.on_action_notify::<act::RouterBack>(store.back_on_action());
     /// cx.on_action_notify::<act::RouterForward>(store.forward_on_action());
     /// ```

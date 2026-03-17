@@ -1,3 +1,4 @@
+use fret::advanced::AppUiRawActionExt as _;
 use fret::app::prelude::*;
 use fret::style::Space;
 use fret_ui::CommandAvailability;
