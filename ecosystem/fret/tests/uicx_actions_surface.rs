@@ -41,6 +41,6 @@ fn uicx_actions_ext_is_part_of_the_default_and_advanced_preludes() {
 fn app_lane_keeps_explicit_uicx_helper_traits_for_manual_imports() {
     let app_slice = app_module_slice();
     assert!(app_slice.contains("pub use crate::view::{LocalState, UiCxActionsExt, UiCxDataExt};"));
-    assert!(!app_slice.contains("pub use crate::view::QueryHandleReadExt;"));
-    assert!(app_prelude_slice().contains("pub use crate::view::QueryHandleReadExt as _;"));
+    assert!(!app_slice.contains("pub use crate::view::QueryHandleReadLayoutExt;"));
+    assert!(app_prelude_slice().contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
 }

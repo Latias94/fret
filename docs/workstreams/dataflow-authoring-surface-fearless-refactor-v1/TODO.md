@@ -29,6 +29,9 @@ Execution note on 2026-03-17:
   and direct advanced/component `ElementContext` work
 - `query` read-side is now landed on the default app lane as `handle.read_layout(cx)`
 - component/advanced `layout_query(cx)` remains intentionally explicit
+- the hidden prelude import backing that app-lane read now stays name-honest as
+  `QueryHandleReadLayoutExt`; the surface promise is the layout-phase fallback only, not a broad
+  future query-read family
 - the remaining query pressure is lifecycle/status branching, not proof that another default
   read-side helper family should be added here
 - M4 audit is now landed:

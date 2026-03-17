@@ -529,13 +529,13 @@ impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::Quer
     }
 }
 
-/// App-facing convenience reads for query handles on the default `fret` lane.
+/// App-facing layout-phase convenience reads for query handles on the default `fret` lane.
 ///
 /// This intentionally collapses only the repeated `layout(...).value_or_default()` fallback for the
 /// ordinary app path. Query creation (`key`, `policy`, `fetch`) and lifecycle branching
 /// (`status` / `data` / `error`) stay explicit.
 #[cfg(feature = "state-query")]
-pub trait QueryHandleReadExt<T: 'static> {
+pub trait QueryHandleReadLayoutExt<T: 'static> {
     fn read_layout<'view_cx, 'a, H: UiHost>(
         &self,
         cx: &mut AppUi<'view_cx, 'a, H>,
@@ -543,7 +543,7 @@ pub trait QueryHandleReadExt<T: 'static> {
 }
 
 #[cfg(feature = "state-query")]
-impl<T: 'static> QueryHandleReadExt<T> for fret_query::QueryHandle<T> {
+impl<T: 'static> QueryHandleReadLayoutExt<T> for fret_query::QueryHandle<T> {
     fn read_layout<'view_cx, 'a, H: UiHost>(
         &self,
         cx: &mut AppUi<'view_cx, 'a, H>,
@@ -2307,7 +2307,7 @@ mod tests {
         assert!(!api_source.contains("pub trait LocalDepsBuilderExt"));
         assert!(api_source.contains("pub(crate) trait LocalDepsBuilderExt"));
         assert!(api_source.contains("pub trait LocalSelectorInputs"));
-        assert!(api_source.contains("pub trait QueryHandleReadExt<T: 'static>"));
+        assert!(api_source.contains("pub trait QueryHandleReadLayoutExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait AppUiRawActionNotifyExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));

@@ -498,7 +498,7 @@ pub mod app {
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
         #[cfg(feature = "state-query")]
-        pub use crate::view::QueryHandleReadExt as _;
+        pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::TrackedStateExt as _;
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
@@ -942,7 +942,7 @@ pub mod advanced {
         };
         pub use crate::advanced::*;
         #[cfg(feature = "state-query")]
-        pub use crate::view::QueryHandleReadExt as _;
+        pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
@@ -3323,7 +3323,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("workspace_menu"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
-        assert!(app_prelude.contains("pub use crate::view::QueryHandleReadExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
@@ -3341,7 +3341,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiHostBoundIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiChildIntoElement;"));
         assert!(!app_prelude_exports_symbol("AppActivateExt"));
-        assert!(!app_prelude_exports_symbol("QueryHandleReadExt"));
+        assert!(!app_prelude_exports_symbol("QueryHandleReadLayoutExt"));
         assert!(
             !app_prelude.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};")
         );
@@ -3433,7 +3433,7 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("ViewElements"));
         assert!(advanced_prelude_exports_symbol("ElementContext"));
         assert!(advanced_prelude_exports_symbol("UiTree"));
-        assert!(advanced_prelude.contains("pub use crate::view::QueryHandleReadExt as _;"));
+        assert!(advanced_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
         assert!(
