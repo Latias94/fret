@@ -745,13 +745,6 @@ impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
 /// stay on the grouped default lane or on explicit store transactions; this trait keeps only the
 /// raw host-facing registration hooks.
 pub trait AppUiRawActionExt {
-    /// Register a typed unit action handler (v1: adapter over `OnCommand`).
-    fn on_action<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
-    );
-
     /// Register a typed unit action handler that requests redraw + notifies on `handled=true`.
     ///
     /// This is a small ergonomics helper: most action handlers that mutate models/state need both
@@ -800,22 +793,12 @@ pub trait AppUiRawActionExt {
 }
 
 impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
-    fn on_action<A: crate::TypedAction>(
-        &mut self,
-        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
-        + 'static,
-    ) {
-        self.action_handlers_used = true;
-        let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
-        self.action_handlers = next;
-    }
-
     fn on_action_notify<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
         + 'static,
     ) {
-        self.on_action::<A>(move |host, action_cx| {
+        self.register_action_handler::<A>(move |host, action_cx| {
             let handled = f(host, action_cx);
             if handled {
                 host.request_redraw(action_cx.window);
@@ -1133,9 +1116,10 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         T: Any,
     {
         let local = LocalState::clone(local);
-        self.cx.on_action::<A>(move |host, action_cx| {
-            local.update_action(host, action_cx, |value| update(value))
-        });
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| update(value))
+            });
     }
 
     pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
@@ -1144,9 +1128,10 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         T: Any + Clone,
     {
         let local = LocalState::clone(local);
-        self.cx.on_action::<A>(move |host, action_cx| {
-            local.set_action(host, action_cx, value.clone())
-        });
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.set_action(host, action_cx, value.clone())
+            });
     }
 
     pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
@@ -1154,9 +1139,10 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         A: crate::TypedAction,
     {
         let local = LocalState::clone(local);
-        self.cx.on_action::<A>(move |host, action_cx| {
-            local.update_action(host, action_cx, |value| *value = !*value)
-        });
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| *value = !*value)
+            });
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
@@ -1745,6 +1731,16 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         out
     }
 
+    fn register_action_handler<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    ) {
+        self.action_handlers_used = true;
+        let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
+        self.action_handlers = next;
+    }
+
     #[track_caller]
     fn use_state_with<T>(&mut self, init: impl FnOnce() -> T) -> Model<T>
     where
@@ -2303,6 +2299,7 @@ mod tests {
         assert!(!api_source.contains("pub fn on_action_notify_models<"));
         assert!(!api_source.contains("pub fn on_action_notify_locals<"));
         assert!(!api_source.contains("pub fn on_action_notify_transient<"));
+        assert!(!api_source.contains("fn on_action<A: crate::TypedAction>("));
         assert!(!api_source.contains("fn on_action_notify_model_update<"));
         assert!(!api_source.contains("fn on_action_notify_model_set<"));
         assert!(!api_source.contains("fn on_action_notify_toggle_bool<"));

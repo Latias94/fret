@@ -264,7 +264,7 @@ shadcn::Dialog::new(open.clone())
 ### Helper visibility policy (docs/templates)
 
 - Default onboarding material should teach only the three entrypoints above.
-- Keep raw `on_action` / `on_action_notify`, payload hooks, and redraw-oriented
+- Keep raw `on_action_notify`, payload hooks, availability hooks, and redraw-oriented
   `on_activate_request_redraw*` helpers in advanced/reference material unless the example truly
   needs them.
 - A helper should graduate into first-contact docs/templates only after it solves repeated noise
@@ -306,8 +306,8 @@ Choosing the helper:
 - If the handler mutates only one model, still start with `on_action_notify_models` unless you
   truly need raw host access from `on_action_notify`.
 - Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
-- Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
-  custom effects) where the built-in shorthands do not fit.
+- Use `on_action_notify` for advanced host-only cases (focus, timers, clipboard, custom effects)
+  where the built-in shorthands do not fit.
   - Current intentional cookbook cases fall into four host-side categories:
     - `toast_basics`: imperative host integration (`Sonner` toast dispatch needs `UiActionHost` + window).
     - `router_basics` back/forward: router command availability sync on the host path.

@@ -204,7 +204,7 @@ The next post-v1 pass should stay disciplined:
 
 These remain valid, but they are not the default golden path:
 
-- raw `cx.on_action(...)`
+- raw `cx.on_action_notify(...)`
 - broader keyed-list / payload-row-specific handler sugar beyond
   `on_payload_action_notify_local_update_if::<...>(...)`
 - another default transaction helper beyond `on_action_notify_models::<A>(...)`
