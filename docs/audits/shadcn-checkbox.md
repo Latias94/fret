@@ -33,7 +33,8 @@ base implementation in `repo-ref/ui`.
 
 - Pass: Click toggles the bound `Model<bool>`.
 - Pass: Source-aligned snapshot/action authoring exists via `Checkbox::from_checked(...)` /
-  `from_checked_state(...)` plus `.action(...)` / `.on_click(...)`, so the recipe is not forced into
+  `from_checked_state(...)` plus `.action(...)`, while `.on_click(...)` remains the lower-level
+  command bridge when explicit command routing is actually desired, so the recipe is not forced into
   per-row `Model<bool>` ownership for every copyable example.
 - Note: `Checkbox` is a leaf control surface, so Fret intentionally does not add a generic
   `compose()` builder here; the direct control API already matches the important contract.
@@ -55,8 +56,9 @@ base implementation in `repo-ref/ui`.
   instead of teaching a reversed layout.
 - Pass: `Group` now restores the upstream `FieldSet` / `FieldLegend` / `FieldDescription` framing
   before the checkbox list instead of collapsing the example into an unrelated list layout.
-- Pass: `Table` now teaches a derived select-all checkbox with mixed-state behavior, which is the
-  important source-aligned authoring story for checkbox collections.
+- Pass: `Table` now teaches a derived select-all checkbox with mixed-state behavior on the same
+  action-first snapshot path, which is the important source-aligned authoring story for checkbox
+  collections.
 - Pass: `Label Association` and `With Title` remain as explicit Fret-only follow-ups after the upstream path because they document field/label composition rather than the base checkbox recipe itself.
 - Pass: the remaining parity work for this component is page/docs clarity; no extra generic children or `compose()` API is warranted.
 

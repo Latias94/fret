@@ -16,13 +16,14 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError, TimerToken
 
 use crate::action::OnHoverChange;
 use crate::action::{
-    CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks, KeyActionHooks,
-    OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest, OnDismissiblePointerMove,
-    OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp,
-    OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange,
-    OnRovingNavigate, OnRovingTypeahead, OnSelectableTextActivateSpan, OnTimer, OnWheel,
-    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult,
-    RovingActionHooks, SelectableTextActionHooks, TimerActionHooks,
+    ActionRouteHooks, CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks,
+    KeyActionHooks, OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest,
+    OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown,
+    OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
+    OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead,
+    OnSelectableTextActivateSpan, OnTimer, OnWheel, PointerActionHooks, PressableActionHooks,
+    PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
+    SelectableTextActionHooks, TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -2851,6 +2852,35 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn action_on_command_for_owner<Owner: Any>(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommand,
+    ) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.set_on_command(owner, handler);
+        });
+    }
+
+    pub fn action_add_on_command_for_owner<Owner: Any>(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommand,
+    ) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.add_on_command(owner, handler);
+        });
+    }
+
+    pub fn action_clear_on_command_for_owner<Owner: Any>(&mut self, element: GlobalElementId) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.clear_on_command(owner);
+        });
+    }
+
     pub fn command_add_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
         self.state_for(element, CommandActionHooks::default, |hooks| {
             hooks.on_command = match hooks.on_command.clone() {
@@ -2892,6 +2922,38 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) {
         self.state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
             hooks.on_command_availability = Some(handler);
+        });
+    }
+
+    pub fn action_on_command_availability_for_owner<Owner: Any>(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.set_on_command_availability(owner, handler);
+        });
+    }
+
+    pub fn action_add_on_command_availability_for_owner<Owner: Any>(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.add_on_command_availability(owner, handler);
+        });
+    }
+
+    pub fn action_clear_on_command_availability_for_owner<Owner: Any>(
+        &mut self,
+        element: GlobalElementId,
+    ) {
+        let owner = TypeId::of::<Owner>();
+        self.state_for(element, ActionRouteHooks::default, |hooks| {
+            hooks.clear_on_command_availability(owner);
         });
     }
 

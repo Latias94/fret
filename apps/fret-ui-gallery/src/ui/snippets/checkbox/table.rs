@@ -1,41 +1,14 @@
 pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
-use std::sync::Arc;
-
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
-use fret_runtime::CommandId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::primitives::checkbox::CheckedState;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-const CMD_TOGGLE_ALL_ROWS: &str = "ui_gallery.checkbox.table.toggle_all_rows";
-
-fn wire_toggle_all_rows(cx: &mut UiCx<'_>, rows: [Model<bool>; 3]) {
-    cx.command_on_command_for(
-        cx.root_id(),
-        Arc::new(move |host, action_cx, command| {
-            if command.as_str() != CMD_TOGGLE_ALL_ROWS {
-                return false;
-            }
-
-            let should_select_all = rows.iter().any(|row| {
-                host.models_mut()
-                    .read(row, |value| !*value)
-                    .ok()
-                    .unwrap_or(true)
-            });
-
-            for row in &rows {
-                let _ = host.models_mut().update(row, |value| {
-                    *value = should_select_all;
-                });
-            }
-
-            host.request_redraw(action_cx.window);
-            true
-        }),
-    );
+mod act {
+    fret::actions!([ToggleAllRows = "ui-gallery.checkbox.table.toggle_all_rows.v1"]);
 }
 
 fn table_row<H: UiHost>(
@@ -63,6 +36,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let table_row_1 = cx.local_model_keyed("table_row_1", || true);
     let table_row_2 = cx.local_model_keyed("table_row_2", || false);
     let table_row_3 = cx.local_model_keyed("table_row_3", || false);
+    let rows = [
+        table_row_1.clone(),
+        table_row_2.clone(),
+        table_row_3.clone(),
+    ];
     let row_values = [
         cx.get_model_copied(&table_row_1, Invalidation::Layout)
             .unwrap_or(false),
@@ -78,63 +56,76 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         _ => CheckedState::Indeterminate,
     };
 
-    wire_toggle_all_rows(
-        cx,
-        [
-            table_row_1.clone(),
-            table_row_2.clone(),
-            table_row_3.clone(),
-        ],
-    );
+    ui::v_stack(|cx| {
+        cx.actions().models::<act::ToggleAllRows>({
+            let rows = rows.clone();
+            move |models| {
+                let should_select_all = rows
+                    .iter()
+                    .any(|row| models.read(row, |value| !*value).ok().unwrap_or(true));
 
-    shadcn::table(|cx| {
-        ui::children![
-            cx;
-            shadcn::table_header(|cx| {
+                rows.iter().fold(false, |updated, row| {
+                    models
+                        .update(row, |value| *value = should_select_all)
+                        .is_ok()
+                        || updated
+                })
+            }
+        });
+
+        vec![
+            shadcn::table(|cx| {
                 ui::children![
                     cx;
-                    shadcn::table_row(3, |cx| {
+                    shadcn::table_header(|cx| {
                         ui::children![
                             cx;
-                            shadcn::table_cell(
-                                shadcn::Checkbox::from_checked_state(select_all_state)
-                                    .a11y_label("Select all rows")
-                                    .on_click(CommandId::new(CMD_TOGGLE_ALL_ROWS))
-                                    .test_id("ui-gallery-checkbox-table-all"),
-                            ),
-                            shadcn::table_head("Member"),
-                            shadcn::table_head("Role"),
+                            shadcn::table_row(3, |cx| {
+                                ui::children![
+                                    cx;
+                                    shadcn::table_cell(
+                                        shadcn::Checkbox::from_checked_state(select_all_state)
+                                            .a11y_label("Select all rows")
+                                            .action(act::ToggleAllRows)
+                                            .test_id("ui-gallery-checkbox-table-all"),
+                                    ),
+                                    shadcn::table_head("Member"),
+                                    shadcn::table_head("Role"),
+                                ]
+                            })
+                            .border_bottom(true),
                         ]
-                    })
-                    .border_bottom(true),
+                    }),
+                    shadcn::table_body(|_cx| {
+                        vec![
+                            table_row(
+                                "Alex Johnson",
+                                "Owner",
+                                table_row_1,
+                                "ui-gallery-checkbox-table-row-1",
+                            ),
+                            table_row(
+                                "Riley Chen",
+                                "Editor",
+                                table_row_2,
+                                "ui-gallery-checkbox-table-row-2",
+                            ),
+                            table_row(
+                                "Morgan Lee",
+                                "Viewer",
+                                table_row_3,
+                                "ui-gallery-checkbox-table-row-3",
+                            ),
+                        ]
+                    }),
                 ]
-            }),
-            shadcn::table_body(|_cx| {
-                vec![
-                    table_row(
-                        "Alex Johnson",
-                        "Owner",
-                        table_row_1,
-                        "ui-gallery-checkbox-table-row-1",
-                    ),
-                    table_row(
-                        "Riley Chen",
-                        "Editor",
-                        table_row_2,
-                        "ui-gallery-checkbox-table-row-2",
-                    ),
-                    table_row(
-                        "Morgan Lee",
-                        "Viewer",
-                        table_row_3,
-                        "ui-gallery-checkbox-table-row-3",
-                    ),
-                ]
-            }),
+            })
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+            .test_id("ui-gallery-checkbox-table"),
         ]
     })
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+    .layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
-    .test_id("ui-gallery-checkbox-table")
 }
 // endregion: example

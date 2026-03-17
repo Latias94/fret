@@ -47,13 +47,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let avatar_image = demo_image(cx);
 
     ui::v_flex(move |cx| {
-        vec![group(
-            cx,
-            avatar_image,
-            shadcn::AvatarSize::Default,
-            "ui-gallery-avatar-group-default",
-        )
-        .into_element(cx)]
+        vec![
+            group(
+                cx,
+                avatar_image,
+                shadcn::AvatarSize::Default,
+                "ui-gallery-avatar-group-default",
+            )
+            .into_element(cx),
+        ]
     })
     .items_start()
     .layout(LayoutRefinement::default().w_full().min_w_0())

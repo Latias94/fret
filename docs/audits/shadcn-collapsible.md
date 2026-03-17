@@ -29,10 +29,11 @@ base examples, and the current gallery/docs surface.
 ### Composition surface
 
 - Pass: Provides `Collapsible`, `CollapsibleTrigger`, and `CollapsibleContent` wrappers.
+- Pass: The curated facade now also exposes `CollapsibleRoot`, `CollapsibleTriggerPart`, and `CollapsibleContentPart` aliases so the copyable gallery usage lane can stay on `use fret_ui_shadcn::{facade as shadcn, prelude::*};`.
 - Pass: A source-aligned children surface is available via
   `fret_ui_shadcn::raw::collapsible::primitives`.
 - Pass: The legacy flat module path `fret_ui_shadcn::collapsible_primitives` remains available for compatibility.
-- Pass: No extra generic `compose()` API is needed here because the primitives surface already covers the free-form shadcn/Base UI composition model, while the top-level wrapper stays a compact Fret-first builder.
+- Pass: No extra generic `compose()` API is needed here because the parts/primitives surfaces already cover the free-form shadcn/Base UI composition model, while the top-level wrapper stays a compact Fret-first builder.
 - Pass: Supports a controlled open state (`Model<bool>`).
 - Pass: Supports uncontrolled `default_open` via `Collapsible::uncontrolled(...)`.
 
@@ -45,12 +46,12 @@ base examples, and the current gallery/docs surface.
 ### Gallery / docs parity
 
 - Pass: The gallery now mirrors the upstream base Collapsible docs path first: `Demo`, `Usage`, `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference`.
-- Pass: The `Demo` section now matches the current shadcn/base docs order-details card rather than the older repository-list example.
-- Pass: The `RTL` section now mirrors the current upstream order-details composition as an Arabic RTL card instead of a simplified English-only disclosure layout.
+- Pass: The `Demo` section now matches the official shadcn repository-list example rather than the older order-details card.
+- Pass: The `RTL` section now mirrors the current upstream repository-list composition as an Arabic RTL disclosure layout instead of the earlier simplified example.
 - Pass: The `Basic` section now matches the upstream `data-open:bg-muted` surface, `Learn More` CTA copy, and `xs` button size while still teaching the compact top-level wrapper lane.
 - Pass: The `Settings Panel` section now keeps the extra inputs nested inside the left field column, uses the right-aligned outline icon trigger shape, and restores the upstream `0` default values for all four inputs.
 - Pass: The `File Tree` section now mirrors the upstream explorer shell with `Explorer` / `Outline` tabs, the current shadcn docs data set, default-closed folders, and non-link-colored file rows.
-- Pass: The `Usage` section keeps the source-aligned children/parts composition model explicit through `fret_ui_shadcn::raw::collapsible::primitives`, so no extra top-level `compose()` API is required.
+- Pass: The `Usage` section keeps the source-aligned children/parts composition model explicit on the curated facade through `CollapsibleRoot` / `CollapsibleTriggerPart` / `CollapsibleContentPart`, while `fret_ui_shadcn::raw::collapsible::primitives` remains the explicit escape hatch.
 - Pass: The raw `Collapsible` root now forwards caller-owned width into its internal stack, so `children` compositions that use `.w_full()` behave like the upstream flex-column root instead of collapsing to intrinsic content width.
 - Pass: This work is docs/public-surface parity, not a mechanism-layer fix.
 
@@ -59,7 +60,7 @@ base examples, and the current gallery/docs surface.
 - `CARGO_TARGET_DIR=target-codex-collapsible cargo check -p fret-ui-gallery --message-format short`
 - `CARGO_TARGET_DIR=target-codex-collapsible cargo nextest run -p fret-ui-shadcn --lib -- collapsible`
 - `CARGO_TARGET_DIR=target-codex-collapsible cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-basic-double-click-close.json --dir target/diag-collapsible-codex --session-auto --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-demo-order-details-shows-sections.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-demo-repository-list-shows-items.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
 - `CARGO_TARGET_DIR=target-codex-collapsible cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-settings-open-shows-inputs.json --dir target/diag-collapsible-codex --session-auto --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
 - `CARGO_TARGET_DIR=target-codex-collapsible cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-file-tree-open-components-ui-shows-button.json --dir target/diag-collapsible-codex --session-auto --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-collapsible-rtl-open-scrolls-to-content.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`

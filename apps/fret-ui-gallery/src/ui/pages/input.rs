@@ -33,6 +33,7 @@ pub(super) fn preview_input(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "This page follows the upstream Input docs examples first, then keeps `Label Association` and `API Reference` as focused Fret follow-ups.",
         "Use plain `Input` when you only need an editable value; compose with `Field` parts or `InputGroup` once labels, descriptions, validation copy, or inline addons become part of the authoring surface.",
+        "Copyable gallery snippets standardize on `use fret_ui_shadcn::{facade as shadcn, prelude::*};` for the curated shadcn lane.",
         "Most regressions here come from IME routing, label/control wiring, or width negotiation, so keep `ui-gallery-input-*` ids stable when extending the page or adding diag scripts.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)

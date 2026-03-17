@@ -973,6 +973,9 @@ struct UiCxActionHooksFrameSlot {
     frame_id: Option<fret_runtime::FrameId>,
 }
 
+struct UiCxActionHooksOwner;
+struct ViewRuntimeActionHooksOwner;
+
 fn prepare_uicx_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
     let frame_id = cx.frame_id;
     let action_root = cx.root_id();
@@ -984,8 +987,8 @@ fn prepare_uicx_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
         true
     });
     if needs_reset {
-        cx.command_clear_on_command_for(action_root);
-        cx.command_clear_on_command_availability_for(action_root);
+        cx.action_clear_on_command_for_owner::<UiCxActionHooksOwner>(action_root);
+        cx.action_clear_on_command_availability_for_owner::<UiCxActionHooksOwner>(action_root);
     }
 }
 
@@ -998,7 +1001,7 @@ fn uicx_on_action<A>(
     prepare_uicx_action_hooks(cx);
     let action_root = cx.root_id();
     let action = A::action_id();
-    cx.command_add_on_command_for(
+    cx.action_add_on_command_for_owner::<UiCxActionHooksOwner>(
         action_root,
         Arc::new(move |host, action_cx, command| {
             if command != action {
@@ -1034,7 +1037,7 @@ fn uicx_on_payload_action<A>(
     prepare_uicx_action_hooks(cx);
     let action_root = cx.root_id();
     let action = A::action_id();
-    cx.command_add_on_command_for(
+    cx.action_add_on_command_for_owner::<UiCxActionHooksOwner>(
         action_root,
         Arc::new(move |host, action_cx, command| {
             if command != action {
@@ -1065,7 +1068,7 @@ fn uicx_on_action_availability<A>(
     prepare_uicx_action_hooks(cx);
     let action_root = cx.root_id();
     let action = A::action_id();
-    cx.command_add_on_command_availability_for(
+    cx.action_add_on_command_availability_for_owner::<UiCxActionHooksOwner>(
         action_root,
         Arc::new(move |host, action_cx, command| {
             if command != action {
@@ -1891,36 +1894,56 @@ pub fn view_view<'a, V: View>(
     cx: &mut ElementContext<'a, fret_app::App>,
     st: &mut ViewWindowState<V>,
 ) -> crate::Ui {
-    let action_root = cx.root_id();
+    cx.named("__fret.view.action_root", |cx| {
+        let action_root = cx.root_id();
 
-    // Ensure handlers remain installed even when the view-cache root is reused (render skipped).
-    if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
-        cx.command_on_command_for(action_root, on_command);
-        cx.command_on_command_availability_for(action_root, on_command_availability);
-    }
+        cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
+        cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
+            action_root,
+        );
 
-    let root = cx.view_cache(
-        fret_ui::element::ViewCacheProps {
-            contained_layout: true,
-            cache_key: 0,
-            ..fret_ui::element::ViewCacheProps::default()
-        },
-        |cx| {
-            let mut app_ui = AppUi::new(cx, action_root);
-            st.cached_handlers = None;
-            let out = st.view.render(&mut app_ui);
+        // Ensure handlers remain installed even when the view-cache root is reused (render
+        // skipped).
+        if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
+            cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root, on_command);
+            cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
+                action_root,
+                on_command_availability,
+            );
+        }
 
-            if let Some((on_command, on_command_availability)) = app_ui.take_action_handlers() {
-                st.cached_handlers = Some((on_command.clone(), on_command_availability.clone()));
-                cx.command_on_command_for(action_root, on_command);
-                cx.command_on_command_availability_for(action_root, on_command_availability);
-            }
+        cx.view_cache(
+            fret_ui::element::ViewCacheProps {
+                contained_layout: true,
+                cache_key: 0,
+                ..fret_ui::element::ViewCacheProps::default()
+            },
+            |cx| {
+                cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
+                cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
+                    action_root,
+                );
 
-            out
-        },
-    );
+                let mut app_ui = AppUi::new(cx, action_root);
+                let out = st.view.render(&mut app_ui);
+                st.cached_handlers = app_ui.take_action_handlers();
 
-    root.into()
+                if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
+                    cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(
+                        action_root,
+                        on_command,
+                    );
+                    cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
+                        action_root,
+                        on_command_availability,
+                    );
+                }
+
+                out
+            },
+        )
+        .into()
+    })
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]

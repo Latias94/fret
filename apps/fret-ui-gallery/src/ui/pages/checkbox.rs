@@ -20,7 +20,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/checkbox.mdx`.",
-        "`Checkbox::new(Model<bool>)`, `Checkbox::new_optional(Model<Option<bool>>)` and `Checkbox::new_tristate(...)` cover the model-backed checked and mixed-state paths, while `Checkbox::from_checked(...)` / `from_checked_state(...)` plus `.action(...)` / `.on_click(...)` cover the source-aligned snapshot/action path.",
+        "`Checkbox::new(Model<bool>)`, `Checkbox::new_optional(Model<Option<bool>>)` and `Checkbox::new_tristate(...)` cover the model-backed checked and mixed-state paths, while `Checkbox::from_checked(...)` / `from_checked_state(...)` plus `.action(...)` cover the default source-aligned snapshot/action path; `.on_click(...)` remains the lower-level command bridge when explicit command routing is genuinely needed.",
         "Checkbox remains a leaf control surface: labels, descriptions, and larger click targets are composed through `Field`, `FieldContent`, `FieldLabel::for_control(...)`, and `FieldLabel::wrap(...)` rather than a generic children/`compose()` API on the checkbox itself.",
         "Visual defaults such as control size, border, focus ring, and indicator chrome stay recipe-owned, while row width and form layout remain caller-owned.",
         "The docs-aligned `Description`, `Group`, and `Table` sections now keep the upstream row order, fieldset framing, and mixed select-all teaching surface visible on the page instead of hiding them behind unrelated composition shortcuts.",
@@ -63,7 +63,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Fieldset + legend + checkbox list pattern from the upstream docs.")
         .code_rust_from_file_region(snippets::group::SOURCE, "example");
     let table = DocSection::build(cx, "Table", table)
-        .description("Table selection pattern with a derived select-all checkbox and mixed state.")
+        .description("Table selection pattern with a derived mixed-state select-all checkbox on the action-first path.")
         .code_rust_from_file_region(snippets::table::SOURCE, "example");
     let rtl_section = DocSection::build(cx, "RTL", rtl_section)
         .description("Checkbox and label alignment under an RTL direction provider.")

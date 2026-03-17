@@ -15,20 +15,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let checked_optional = cx.local_model_keyed("checked_optional", || None::<bool>);
     let checked_snapshot = cx.local_model_keyed("checked_snapshot", || false);
 
-    cx.actions().models::<act::ToggleSnapshot>({
-        let checked_snapshot = checked_snapshot.clone();
-        move |models| {
-            models
-                .update(&checked_snapshot, |value| *value = !*value)
-                .is_ok()
-        }
-    });
-
     let checked_snapshot_now = cx
         .get_model_copied(&checked_snapshot, Invalidation::Layout)
         .unwrap_or(false);
 
     ui::v_flex(|cx| {
+        cx.actions().models::<act::ToggleSnapshot>({
+            let checked_snapshot = checked_snapshot.clone();
+            move |models| {
+                models
+                    .update(&checked_snapshot, |value| *value = !*value)
+                    .is_ok()
+            }
+        });
+
         vec![
             ui::h_flex(|cx| {
                 vec![

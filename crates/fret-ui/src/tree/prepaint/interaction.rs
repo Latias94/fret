@@ -34,17 +34,29 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.prepaint_nodes_visited.saturating_add(1);
         }
 
-        let (bounds, invalidation, is_view_cache_root, prev_cache, is_manual_cache_root) =
-            match self.nodes.get(node) {
-                Some(n) => (
-                    n.bounds,
-                    n.invalidation,
-                    self.view_cache_active() && n.view_cache.enabled,
-                    n.interaction_cache,
-                    n.view_cache.enabled && n.element.is_none(),
-                ),
-                None => return,
-            };
+        let (
+            bounds,
+            invalidation,
+            is_view_cache_root,
+            prev_cache,
+            is_manual_cache_root,
+            runs_widget_prepaint,
+        ) = match self.nodes.get(node) {
+            Some(n) => (
+                n.bounds,
+                n.invalidation,
+                self.view_cache_active() && n.view_cache.enabled,
+                n.interaction_cache,
+                n.view_cache.enabled && n.element.is_none(),
+                // Retained/manual cache roots use the same cache-boundary flag to opt into
+                // per-frame prepaint work even when global view-cache reuse is disabled.
+                // Their prepaint hooks drive live runtime state (for example chart engine
+                // stepping, dock drag routes, or cull-window updates), so gating them behind
+                // `view_cache_active()` breaks correctness in the default no-cache mode.
+                n.view_cache.enabled && (self.view_cache_active() || n.element.is_none()),
+            ),
+            None => return,
+        };
 
         let child_transform = self
             .node_children_render_transform(node)
@@ -72,7 +84,7 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
-        if is_view_cache_root {
+        if runs_widget_prepaint {
             let window = self.window;
             let sf = scale_factor;
             self.begin_prepaint_outputs_for_node(node, key);

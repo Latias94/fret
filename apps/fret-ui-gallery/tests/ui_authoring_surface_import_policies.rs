@@ -36,6 +36,7 @@ fn assert_only_documented_raw_shadcn_modules(path: &std::path::Path, source: &st
         }
 
         let allowed = trimmed.contains("shadcn::raw::typography::")
+            || trimmed.contains("shadcn::raw::accordion::")
             || trimmed.contains("shadcn::raw::extras::")
             || trimmed.contains("shadcn::raw::breadcrumb::")
             || trimmed.contains("shadcn::raw::collapsible::")
@@ -282,11 +283,30 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
         "src/ui/snippets/breadcrumb/usage.rs",
     ];
 
-    assert_curated_facade_only(&relative_paths);
-
     for relative_path in relative_paths {
         let path = manifest_path(relative_path);
         let source = read_path(&path);
+        assert!(
+            source.contains("use fret_ui_shadcn::facade as shadcn;")
+                || source.contains("use fret_ui_shadcn::{facade as shadcn, prelude::*};"),
+            "{} should import the curated shadcn facade before reopening raw breadcrumb primitives",
+            path.display()
+        );
+
+        for line in source.lines() {
+            if !line.contains("fret_ui_shadcn::") {
+                continue;
+            }
+
+            let trimmed = line.trim();
+            assert!(
+                trimmed == "use fret_ui_shadcn::facade as shadcn;"
+                    || trimmed == "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
+                "{} reintroduced a direct fret_ui_shadcn root path: {}",
+                path.display(),
+                trimmed
+            );
+        }
         assert!(
             source.contains("use shadcn::raw::breadcrumb::primitives as bc;"),
             "{} should use the explicit raw breadcrumb primitive escape hatch",
