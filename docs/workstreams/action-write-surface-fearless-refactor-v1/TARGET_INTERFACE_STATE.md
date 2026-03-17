@@ -7,8 +7,9 @@ Companion docs:
 - `DESIGN.md`
 - `MILESTONES.md`
 - `TODO.md`
+- `CLOSEOUT_AUDIT_2026-03-17.md`
 
-This file records the intended target posture for the remaining default write-side authoring lane.
+This file records the shipped target posture for this now-closed default write-side authoring lane.
 
 Important constraint:
 

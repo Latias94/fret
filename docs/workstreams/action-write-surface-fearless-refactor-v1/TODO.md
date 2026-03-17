@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1) — TODO
 
-Status: active closeout tracker
+Status: Closed closeout tracker (write budget locked; maintenance only)
 Last updated: 2026-03-17
 
 Companion docs:
@@ -8,6 +8,7 @@ Companion docs:
 - `DESIGN.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
+- `CLOSEOUT_AUDIT_2026-03-17.md`
 - `ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
 - `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
@@ -21,6 +22,12 @@ Execution note on 2026-03-17:
 - this lane exists only to decide the final default write-side budget on `cx.actions()`
 - router, selector/query, widget activation slots, and `LocalState<T>` storage design stay out of
   scope here
+
+Closeout note on 2026-03-17:
+
+- `CLOSEOUT_AUDIT_2026-03-17.md` closes this lane on the shipped default write budget
+- read any unchecked proof-surface or standing-rule rows below as archived scope guards, not as
+  pending work orders
 
 ## Evidence set
 
@@ -116,7 +123,11 @@ Execution note on 2026-03-17:
 - [x] Record any intentionally retained advanced/reference seams explicitly.
   - Current result: `payload_locals::<A>(...)` and `payload::<A>()` are now recorded only as
     advanced/reference/workstream seams rather than as first-contact defaults.
-- [ ] Close this lane only after docs/templates/examples/gates are aligned.
+- [x] Close this lane only after docs/templates/examples/gates are aligned.
+  - 2026-03-17 result:
+    - `CLOSEOUT_AUDIT_2026-03-17.md` closes the lane,
+    - the shipped default write budget is frozen,
+    - and future work must reopen through a narrower follow-on if needed.
 
 ## Standing rules
 

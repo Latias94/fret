@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1)
 
-Status: active closeout lane (pre-release fearless refactor)
+Status: closed closeout lane (write budget locked; maintenance only)
 Last updated: 2026-03-17
 
 Related:
@@ -10,11 +10,21 @@ Related:
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/PROOF_SURFACE_AUDIT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
+- `CLOSEOUT_AUDIT_2026-03-17.md`
 - `ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
 - `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`
 - `docs/authoring-golden-path-v2.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/crate-usage-guide.md`
+
+Closeout reading rule on 2026-03-17:
+
+- treat this document as the historical design record for a closed default write-budget lane, not
+  as an active roadmap
+- read the shipped result from `CLOSEOUT_AUDIT_2026-03-17.md` plus the companion audits in this
+  directory
+- reopen this lane only if fresh cross-surface evidence shows a new default write-side problem
+  that is not already covered by the current docs/templates/examples/gates
 
 ## Why this workstream exists
 
@@ -235,5 +245,9 @@ This workstream is complete when one of these two outcomes is true:
 2. a narrower replacement lands with generic-app evidence, non-Todo runtime evidence, editor-grade
    compatibility review, and doc/template/gate alignment.
 
-Anything less should be treated as an active planning lane, not as an already-closed authoring
-story.
+Closeout update on 2026-03-17:
+
+- outcome 1 is landed,
+- `CLOSEOUT_AUDIT_2026-03-17.md` closes this lane on that shipped posture,
+- and future re-promotion or delete-ready questions should reopen as narrower follow-ons rather
+  than keeping this lane active.

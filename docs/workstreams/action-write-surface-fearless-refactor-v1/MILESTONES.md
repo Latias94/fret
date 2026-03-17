@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1) — Milestones
 
-Status: active closeout lane
+Status: Closed closeout lane (write budget locked; maintenance only)
 Last updated: 2026-03-17
 
 Related:
@@ -8,6 +8,7 @@ Related:
 - `DESIGN.md`
 - `TARGET_INTERFACE_STATE.md`
 - `TODO.md`
+- `CLOSEOUT_AUDIT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 
@@ -18,6 +19,8 @@ Related:
 - this lane owns only the remaining default app-lane write-surface questions on `cx.actions()`
 - router, selector, query, widget activation slots, and `LocalState<T>` architecture remain out of
   scope unless fresh evidence reopens them separately
+- Milestone 3 is now landed:
+  `CLOSEOUT_AUDIT_2026-03-17.md` closes the lane on the shipped default write budget.
 
 ## Milestone 0 — Freeze scope and evidence
 
@@ -124,3 +127,12 @@ Exit criteria:
   - `docs/crate-usage-guide.md`
   - `apps/fretboard/src/scaffold/templates.rs`
   - first-party demo/cookbook examples that teach the default lane
+
+Closeout note on 2026-03-17:
+
+- M3 is closed.
+- The shipped default posture is:
+  - one-slot trio frozen,
+  - `locals::<A>(...)` remains the primary transaction story,
+  - `payload_local_update_if::<A>(...)` is the only taught default keyed row-write path,
+  - `payload_locals::<A>(...)` and `payload::<A>()` remain explicit advanced/reference seams.
