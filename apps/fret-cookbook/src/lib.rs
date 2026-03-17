@@ -292,6 +292,9 @@ mod authoring_surface_policy_tests {
         assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".watch(cx)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains(".selector_layout("));
+        assert!(!VIRTUAL_LIST_EXAMPLE.contains("watch(&mode_state)"));
+        assert!(!VIRTUAL_LIST_EXAMPLE.contains("watch(&visible_only_keys_state)"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains("models::<act::RotateItems>"));
 
         assert!(ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::Model;"));
