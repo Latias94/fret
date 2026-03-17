@@ -755,21 +755,6 @@ pub trait AppUiRawActionExt {
         + 'static,
     );
 
-    /// Register a typed payload action handler (v2 prototype; ADR 0312).
-    ///
-    /// Notes:
-    /// - Payload is pointer/programmatic-only in v2 (keymap/palette/menus remain unit actions).
-    /// - Missing/invalid payload should be treated as “not handled” by default.
-    fn on_payload_action<A: crate::actions::TypedPayloadAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
-    );
-
     /// Register a typed payload action handler that requests redraw + notifies on `handled=true`.
     fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
         &mut self,
@@ -808,20 +793,6 @@ impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
         });
     }
 
-    fn on_payload_action<A: crate::actions::TypedPayloadAction>(
-        &mut self,
-        f: impl Fn(
-            &mut dyn fret_ui::action::UiFocusActionHost,
-            fret_ui::action::ActionCx,
-            A::Payload,
-        ) -> bool
-        + 'static,
-    ) {
-        self.action_handlers_used = true;
-        let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
-        self.action_handlers = next;
-    }
-
     fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
         &mut self,
         f: impl Fn(
@@ -831,7 +802,7 @@ impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
         ) -> bool
         + 'static,
     ) {
-        self.on_payload_action::<A>(move |host, action_cx, payload| {
+        self.register_payload_action_handler::<A>(move |host, action_cx, payload| {
             let handled = f(host, action_cx, payload);
             if handled {
                 host.request_redraw(action_cx.window);
@@ -1190,7 +1161,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     {
         let local = LocalState::clone(local);
         self.cx
-            .on_payload_action::<A>(move |host, action_cx, payload| {
+            .register_payload_action_handler::<A>(move |host, action_cx, payload| {
                 local.update_action_if(host, action_cx, |value| update(value, payload))
             });
     }
@@ -1738,6 +1709,20 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     ) {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on::<A>(f);
+        self.action_handlers = next;
+    }
+
+    fn register_payload_action_handler<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    ) {
+        self.action_handlers_used = true;
+        let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
         self.action_handlers = next;
     }
 
@@ -2300,6 +2285,9 @@ mod tests {
         assert!(!api_source.contains("pub fn on_action_notify_locals<"));
         assert!(!api_source.contains("pub fn on_action_notify_transient<"));
         assert!(!api_source.contains("fn on_action<A: crate::TypedAction>("));
+        assert!(
+            !api_source.contains("fn on_payload_action<A: crate::actions::TypedPayloadAction>(")
+        );
         assert!(!api_source.contains("fn on_action_notify_model_update<"));
         assert!(!api_source.contains("fn on_action_notify_model_set<"));
         assert!(!api_source.contains("fn on_action_notify_toggle_bool<"));

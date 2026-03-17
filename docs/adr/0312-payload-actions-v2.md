@@ -127,9 +127,9 @@ pressable
 // v2: handler consumes the pending payload
 use fret::advanced::AppUiRawActionExt as _;
 
-cx.on_payload_action::<act::WorkspaceTabClose>(|host, acx, tab_id: TabId| {
+cx.on_payload_action_notify::<act::WorkspaceTabClose>(|host, _acx, tab_id: TabId| {
     // close the tab
-    host.notify(acx);
+    close_tab(host, tab_id);
     true
 });
 ```

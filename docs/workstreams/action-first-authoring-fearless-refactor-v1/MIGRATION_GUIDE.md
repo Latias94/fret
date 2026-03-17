@@ -264,9 +264,9 @@ shadcn::Dialog::new(open.clone())
 ### Helper visibility policy (docs/templates)
 
 - Default onboarding material should teach only the three entrypoints above.
-- Keep raw `on_action_notify`, payload hooks, availability hooks, and redraw-oriented
-  `on_activate_request_redraw*` helpers in advanced/reference material unless the example truly
-  needs them.
+- Keep raw `on_action_notify`, raw `on_payload_action_notify`, availability hooks, and
+  redraw-oriented `on_activate_request_redraw*` helpers in advanced/reference material unless the
+  example truly needs them.
 - A helper should graduate into first-contact docs/templates only after it solves repeated noise
   across multiple real demos/templates, not a single local call site.
 
