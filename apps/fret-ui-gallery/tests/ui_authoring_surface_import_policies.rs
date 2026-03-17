@@ -296,20 +296,30 @@ fn gallery_breadcrumb_primitive_batch_uses_explicit_raw_escape_hatch() {
 }
 
 #[test]
-fn gallery_collapsible_usage_snippet_uses_explicit_raw_escape_hatch() {
+fn gallery_collapsible_usage_snippet_prefers_curated_parts_aliases() {
     let relative_path = "src/ui/snippets/collapsible/usage.rs";
     assert_curated_facade_only(&[relative_path]);
 
     let path = manifest_path(relative_path);
     let source = read_path(&path);
     assert!(
-        source.contains("use shadcn::raw::collapsible::primitives::{"),
-        "{} should use the explicit raw collapsible primitives lane",
+        source.contains("shadcn::CollapsibleRoot::new()"),
+        "{} should teach the curated collapsible root alias",
         path.display()
     );
     assert!(
-        !source.contains("fret_ui_shadcn::collapsible::primitives::"),
-        "{} should not teach the doc-hidden flat root collapsible primitives lane",
+        source.contains("shadcn::CollapsibleTriggerPart::new("),
+        "{} should teach the curated collapsible trigger alias",
+        path.display()
+    );
+    assert!(
+        source.contains("shadcn::CollapsibleContentPart::new("),
+        "{} should teach the curated collapsible content alias",
+        path.display()
+    );
+    assert!(
+        !source.contains("shadcn::raw::collapsible::primitives::{"),
+        "{} should not require the raw collapsible escape hatch for the copyable usage lane",
         path.display()
     );
 }

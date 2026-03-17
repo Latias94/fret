@@ -325,6 +325,10 @@ pub mod facade {
         ChartTooltipLabelContext, chart_container, chart_context, use_chart,
     };
     pub use crate::checkbox::{Checkbox, checkbox};
+    pub use crate::collapsible::primitives::{
+        Collapsible as CollapsibleRoot, CollapsibleContent as CollapsibleContentPart,
+        CollapsibleTrigger as CollapsibleTriggerPart,
+    };
     pub use crate::collapsible::{
         Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
     };

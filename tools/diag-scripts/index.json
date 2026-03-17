@@ -3613,6 +3613,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-doc-sections-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-doc-sections-non-overlap.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity"
+      ],
+      "tags": [
+        "carousel",
+        "docs",
+        "gate",
+        "layout",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Carousel page and scroll to the diagnostics follow-up sections.",
+        "Expected behavior: Focus, Duration, and Expandable sections remain vertically separated."
+      ]
+    },
+    {
       "id": "ui-gallery-carousel-events-reinit-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
       "required_capabilities": [
@@ -4442,8 +4463,8 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-collapsible-demo-order-details-shows-sections",
-      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-order-details-shows-sections.json",
+      "id": "ui-gallery-collapsible-demo-repository-list-shows-items",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-repository-list-shows-items.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
