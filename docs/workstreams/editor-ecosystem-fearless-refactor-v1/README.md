@@ -99,6 +99,10 @@ Current checkpoint:
   color-edit popovers (`ColorEdit`). Those surfaces now share one editor popup-surface resolver,
   and editor-owned `editor.popup.*` tokens keep them on the dark review baseline instead of
   inheriting a host theme's bright `popover` card,
+- that semantic cleanup is now centralized one layer lower as well: `InspectorPanel`,
+  `PropertyGroup`, shared popup shells, and `TransformEdit` section badges resolve their
+  panel/header/popup/subtle tones through shared editor color helpers instead of keeping
+  per-composite fallback ladders,
 - popup-shell geometry is now editor-owned too: `editor.popup.radius` plus
   `editor.popup.shadow_*` let the dense preset keep a tighter popup silhouette/elevation without
   reintroducing widget-local popup tuning in each control,
@@ -107,8 +111,9 @@ Current checkpoint:
   editor fields than generic app forms, `DragValue` / `Slider` double-click typing now routes
   focus through a shared delayed handoff so the nested text input becomes reliably focusable
   before the first edit, `AxisDragValue` no longer lags behind on validation affordances while
-  typing, and formatter-owned unit text now suppresses duplicate joined chrome affixes so percent
-  and currency-like editor readouts stay single-sourced,
+  typing and now keeps the same row-height line box in typed-edit mode as it does while scrubbing,
+  and formatter-owned unit text now suppresses duplicate joined chrome affixes so percent and
+  currency-like editor readouts stay single-sourced,
 - editor text-like controls now also have an explicit lightweight policy split: general
   `TextField`s preserve caret/selection by default but can opt into select-all-on-focus, while
   `MiniSearchBox` defaults to select-all-on-focus plus Escape-to-clear and exposes a dedicated

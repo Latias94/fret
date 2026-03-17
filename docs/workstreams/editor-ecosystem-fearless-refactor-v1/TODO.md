@@ -53,7 +53,9 @@ Interaction contract:
       calibration pass then pushed that split a bit further in both default and dense presets:
       panel header background/border tokens are now slightly stronger while repeated group headers
       are slightly quieter, so the top band reads more clearly as panel-owned chrome instead of one
-      more repeated section bar.
+      more repeated section bar. The same hierarchy split now also routes through shared editor
+      semantic color helpers, so `InspectorPanel`, `PropertyGroup`, popup shells, and the
+      `TransformEdit` section badges stop carrying bespoke panel/header/subtle fallback chains.
       Remaining work: keep that hierarchy stable while adjacent proof surfaces evolve and only do a
       further tonal pass if a new proof surface shows the panel/group boundary collapsing again.
 - [~] `EER-BASE-111` Finish `EditorWidgetVisuals` convergence for the existing starter-set controls
@@ -79,8 +81,10 @@ Interaction contract:
       The follow-up decision is now landed as well: popup radius and shadow geometry are editor-owned
       metric tokens (`editor.popup.radius`, `editor.popup.shadow_*`), so the dense preset can keep a
       tighter popup silhouette/elevation than the default preset without reopening per-control local
-      tuning. Remaining work: keep pruning residual per-control chrome heuristics and only widen the
-      popup token set again if a real second geometry family appears.
+      tuning. Shared popup/property surface fallback order now also lives in
+      `primitives::colors`, so composite surfaces stop duplicating their own editor-vs-shared token
+      ladders. Remaining work: keep pruning residual per-control chrome heuristics and only widen
+      the popup token set again if a real second geometry family appears.
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:
       shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
@@ -186,14 +190,16 @@ Interaction contract:
       the same shared setting instead of hand-rolling their own draft replacement behavior,
       double-click typing now uses a shared delayed focus handoff so nested numeric text inputs are
       reliably focusable before the first edit, and `AxisDragValue` typing now clears stale
-      validation state while the user edits and exposes the same trailing error affordance class as
-      the other joined numeric editors. Text-like controls now also expose a lightweight shared
-      policy split: `TextField` can opt into select-all-on-focus without inheriting search-box
-      Escape behavior, while `MiniSearchBox` defaults to select-all-on-focus and still routes
-      Escape-clear through the runtime text-input cancel command instead of a widget-local key
-      hook. Buffered `TextField` now also runs as an editor session baseline on both single-line
-      and multiline surfaces: typing stays in a local draft, blur commits by default, Escape
-      restores the pre-edit value, single-line Enter commits explicitly, and multiline
+      validation state while the user edits, exposes the same trailing error affordance class as
+      the other joined numeric editors, and keeps its typed-edit line box on the same
+      density-owned row-height baseline as scrub mode so the row does not jump when edit mode
+      flips. Text-like controls now also expose a lightweight shared policy split: `TextField` can
+      opt into select-all-on-focus without inheriting search-box Escape behavior, while
+      `MiniSearchBox` defaults to select-all-on-focus and still routes Escape-clear through the
+      runtime text-input cancel command instead of a widget-local key hook. Buffered `TextField`
+      now also runs as an editor session baseline on both single-line and multiline surfaces:
+      typing stays in a local draft, blur commits by default, Escape restores the pre-edit value,
+      single-line Enter commits explicitly, and multiline
       `Ctrl/Cmd+Enter` commits explicitly while plain Enter stays newline insertion. The proof
       surface now exposes stable committed-value / committed-line-count / outcome readouts so diag
       can prove draft-vs-committed behavior directly without conflating it with search-box
@@ -456,6 +462,9 @@ Interaction contract:
       the default overview surface. The follow-up reruns on both the default review surface and the
       authoring-affordance surface also confirmed that populated `%` value readouts plus
       committed/outcome proof labels can stay visible without reading like primary editable text.
+      The 2026-03-16 authoring-affordance rerun also confirmed that the clear-affordance `X` can
+      step down slightly in optical size without drifting out of its shared row-height-square hit
+      target, while the paired `%` readout remains vertically stable on the same proof surface.
       The dense preset proof was rerun too, confirming the same muted readout treatment still fits
       after pulling its trailing gap/status slot slightly tighter.
       Their next job is to drive token/layout cleanup, not just exist, and to stay aligned with the

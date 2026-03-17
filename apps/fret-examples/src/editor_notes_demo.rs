@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use fret::app::prelude::*;
-use fret::{Defaults, FretApp, shadcn};
-use fret_app::Model;
+use fret::{shadcn, Defaults, FretApp};
+use fret_app::{CommandId, Model};
 use fret_core::Px;
-use fret_ui::Theme;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextProps};
+use fret_ui::Theme;
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
     PropertyRow,
@@ -324,25 +324,24 @@ fn render_inspector_panel(
                 vec![subtitle_text]
             },
             move |cx, _panel_cx| {
-                vec![
-                    PropertyGroup::new("Metadata")
-                        .options(PropertyGroupOptions {
-                            test_id: Some(Arc::from("editor-notes-demo.inspector.group.metadata")),
-                            ..Default::default()
-                        })
-                        .into_element(
-                            cx,
-                            |_cx| None,
-                            move |cx| {
-                                vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
-                                    let mut rows = Vec::new();
+                vec![PropertyGroup::new("Metadata")
+                    .options(PropertyGroupOptions {
+                        test_id: Some(Arc::from("editor-notes-demo.inspector.group.metadata")),
+                        ..Default::default()
+                    })
+                    .into_element(
+                        cx,
+                        |_cx| None,
+                        move |cx| {
+                            vec![PropertyGrid::new().into_element(cx, move |cx, row_cx| {
+                                let mut rows = Vec::new();
 
-                                    rows.push(row_cx.row_with(
-                                        cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
-                                        |cx| cx.text("Name"),
-                                        |cx| {
-                                            TextField::new(asset.name_model.clone())
+                                rows.push(row_cx.row_with(
+                                    cx,
+                                    PropertyRow::new().options(row_cx.row_options.clone()),
+                                    |cx| cx.text("Name"),
+                                    |cx| {
+                                        TextField::new(asset.name_model.clone())
                                             .options(TextFieldOptions {
                                                 id_source: Some(asset.name_id_source.clone()),
                                                 selection_behavior:
@@ -352,19 +351,19 @@ fn render_inspector_panel(
                                                 ..Default::default()
                                             })
                                             .into_element(cx)
-                                        },
-                                        |_cx| None,
-                                    ));
+                                    },
+                                    |_cx| None,
+                                ));
 
-                                    rows.push(row_cx.row_with(
-                                        cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
-                                        |cx| cx.text("Notes"),
-                                        |cx| {
-                                            TextField::new(asset.notes_model.clone())
+                                rows.push(row_cx.row_with(
+                                    cx,
+                                    PropertyRow::new().options(row_cx.row_options.clone()),
+                                    |cx| cx.text("Notes"),
+                                    |cx| {
+                                        TextField::new(asset.notes_model.clone())
                                             .on_outcome(Some(Arc::new({
-                                                let notes_outcome_model = notes_outcome_model
-                                                    .clone();
+                                                let notes_outcome_model =
+                                                    notes_outcome_model.clone();
                                                 move |host, action_cx, outcome: TextFieldOutcome| {
                                                     let next = match outcome {
                                                         TextFieldOutcome::Committed => "Committed",
@@ -390,37 +389,36 @@ fn render_inspector_panel(
                                                 ..Default::default()
                                             })
                                             .into_element(cx)
-                                        },
-                                        |_cx| None,
-                                    ));
+                                    },
+                                    |_cx| None,
+                                ));
 
-                                    rows.push(row_cx.row_with(
-                                        cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
-                                        |cx| cx.text("Committed"),
-                                        |cx| {
-                                            cx.text(committed_label.clone())
-                                                .test_id(TEST_ID_NOTES_COMMITTED)
-                                        },
-                                        |_cx| None,
-                                    ));
+                                rows.push(row_cx.row_with(
+                                    cx,
+                                    PropertyRow::new().options(row_cx.row_options.clone()),
+                                    |cx| cx.text("Committed"),
+                                    |cx| {
+                                        cx.text(committed_label.clone())
+                                            .test_id(TEST_ID_NOTES_COMMITTED)
+                                    },
+                                    |_cx| None,
+                                ));
 
-                                    rows.push(row_cx.row_with(
-                                        cx,
-                                        PropertyRow::new().options(row_cx.row_options.clone()),
-                                        |cx| cx.text("Last action"),
-                                        |cx| {
-                                            cx.text(outcome_label.clone())
-                                                .test_id(TEST_ID_NOTES_OUTCOME)
-                                        },
-                                        |_cx| None,
-                                    ));
+                                rows.push(row_cx.row_with(
+                                    cx,
+                                    PropertyRow::new().options(row_cx.row_options.clone()),
+                                    |cx| cx.text("Last action"),
+                                    |cx| {
+                                        cx.text(outcome_label.clone())
+                                            .test_id(TEST_ID_NOTES_OUTCOME)
+                                    },
+                                    |_cx| None,
+                                ));
 
-                                    rows
-                                })]
-                            },
-                        ),
-                ]
+                                rows
+                            })]
+                        },
+                    )]
             },
         )
 }

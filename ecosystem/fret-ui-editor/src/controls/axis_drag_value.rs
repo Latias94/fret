@@ -28,24 +28,31 @@ use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
-    editor_icon_button_segment, editor_icon_segment, editor_input_group_divider,
-    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
-    editor_input_group_row, editor_text_segment,
+    derived_test_id, editor_axis_segment, editor_icon_button_segment, editor_icon_segment,
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
+    editor_input_group_inset, editor_input_group_row, editor_text_segment,
+    EditorInputGroupFrameOverrides,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
-    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
-    clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
-    numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
-    sync_numeric_text_entry_focus_handoff,
+    arm_numeric_text_entry_focus_handoff, clear_numeric_error_when_draft_changes,
+    handle_numeric_text_entry_replace_key, numeric_text_entry_focus_state,
+    sync_numeric_text_entry_focus, sync_numeric_text_entry_focus_handoff,
+    NumericTextEntryFocusHandoffState,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{
-    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
-    NumericValueConstraints, constrain_numeric_value,
+    constrain_numeric_value, DragValueCore, DragValueCoreOptions, EditSessionOutcome,
+    NumericPresentation, NumericValueConstraints,
 };
+
+fn axis_drag_value_input_text_style(base: TextStyle, row_height: Px) -> TextStyle {
+    typography::as_control_text(TextStyle {
+        line_height: Some(row_height),
+        ..base
+    })
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisDragValueMode {
@@ -287,6 +294,7 @@ where
                 self.options.size,
                 &ChromeRefinement::default(),
             );
+            let text_style = axis_drag_value_input_text_style(text_style, style.density.row_height);
 
             (style.density, frame_chrome, (text_style, input_chrome))
         };
@@ -869,11 +877,25 @@ fn emit_axis_drag_value_outcome(
 
 #[cfg(test)]
 mod tests {
-    use super::AxisDragValue;
+    use super::{axis_drag_value_input_text_style, AxisDragValue};
     use crate::primitives::NumericPresentation;
     use fret_app::App;
-    use fret_core::Color;
+    use fret_core::{Color, Px, TextStyle};
     use std::sync::Arc;
+
+    #[test]
+    fn axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box() {
+        let style = axis_drag_value_input_text_style(
+            TextStyle {
+                size: Px(12.0),
+                line_height: Some(Px(16.0)),
+                ..Default::default()
+            },
+            Px(24.0),
+        );
+
+        assert_eq!(style.line_height, Some(Px(24.0)));
+    }
 
     #[test]
     fn axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes() {
