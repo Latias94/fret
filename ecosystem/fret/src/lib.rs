@@ -566,8 +566,9 @@ pub mod component {
 /// - grouped default app data stays on `cx.data().selector_layout(...)` for LocalState-first
 ///   inputs, with raw `cx.data().selector(...)` kept explicit,
 /// - `fret-selector` remains the portable derived-state crate,
-/// - `fret::selector` keeps selector-core nouns on the explicit lane, while UI dependency builders
-///   stay under `fret::selector::ui::*` instead of widening `fret::app::prelude::*`.
+/// - `fret::selector` keeps selector-core nouns on the explicit lane, while the one app-facing UI
+///   dependency builder stays under `fret::selector::ui::DepsBuilder` instead of widening
+///   `fret::app::prelude::*`.
 #[cfg(feature = "state-selector")]
 pub mod selector {
     /// Raw selector-core exports for advanced or fully explicit use.
@@ -577,7 +578,7 @@ pub mod selector {
 
     /// Raw selector-UI adoption exports for advanced or fully explicit use.
     pub mod ui {
-        pub use fret_selector::ui::*;
+        pub use fret_selector::ui::DepsBuilder;
     }
 
     pub use fret_selector::{DepsSignature, Selector};
@@ -596,11 +597,6 @@ pub mod query {
     /// Raw query-core exports for advanced or fully explicit use.
     pub mod core {
         pub use fret_query::*;
-    }
-
-    /// Raw query-UI adoption exports for advanced or fully explicit use.
-    pub mod ui {
-        pub use fret_query::ui::*;
     }
 
     pub use fret_query::{
@@ -624,11 +620,6 @@ pub mod router {
     /// Raw router-core exports for advanced or fully explicit use.
     pub mod core {
         pub use fret_router::*;
-    }
-
-    /// Raw router-UI adoption exports for advanced or fully explicit use.
-    pub mod ui {
-        pub use fret_router_ui::*;
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -2618,6 +2609,7 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub fn install(app: &mut crate::app::App) {"));
         assert!(!public_surface.contains("register_router_commands"));
         assert!(!public_surface.contains("pub fn install_app(app: &mut crate::app::App) {"));
+        assert!(!public_surface.contains("pub use fret_router_ui::*;"));
     }
 
     #[test]
@@ -2647,11 +2639,11 @@ mod authoring_surface_policy_tests {
         assert!(selector_surface.contains("pub mod ui {"));
         assert!(!selector_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(selector_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
-        assert!(!selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
-        assert!(selector_surface.contains("pub use fret_selector::ui::*;"));
+        assert!(selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(!selector_surface.contains("pub use fret_selector::ui::*;"));
         assert!(query_surface.contains("pub mod query {"));
         assert!(query_surface.contains("pub mod core {"));
-        assert!(query_surface.contains("pub mod ui {"));
+        assert!(!query_surface.contains("pub mod ui {"));
         assert!(query_surface.contains("pub use fret_query::{"));
         assert!(query_surface.contains("QueryKey, QueryPolicy"));
         assert!(query_surface.contains("QueryState,"));
@@ -3734,8 +3726,8 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub mod query {"));
         assert!(!public_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(public_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
-        assert!(!public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
-        assert!(public_surface.contains("pub use fret_selector::ui::*;"));
+        assert!(public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(!public_surface.contains("pub use fret_selector::ui::*;"));
         assert!(public_surface.contains("pub use fret_query::{"));
         assert!(public_surface.contains("CancellationToken, FutureSpawner, FutureSpawnerHandle"));
         assert!(
@@ -3745,6 +3737,8 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("QueryRetryOn, QueryRetryPolicy, QueryRetryState"));
         assert!(public_surface.contains("QuerySnapshotEntry, QueryState,"));
         assert!(public_surface.contains("QueryStatus, with_query_client,"));
+        assert!(!public_surface.contains("pub use fret_query::ui::*;"));
+        assert!(!public_surface.contains("pub use fret_router_ui::*;"));
     }
 
     #[test]

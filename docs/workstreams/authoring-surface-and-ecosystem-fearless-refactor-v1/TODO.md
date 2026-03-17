@@ -643,6 +643,11 @@ Post-closeout handoff order on 2026-03-16:
   - [x] 2026-03-12: removed root `fret::kernel::*` / `fret::interop::*` module exports; low-level
     runtime/render/viewport seams now stay on the explicit `fret::advanced::{kernel, interop}`
     lane.
+  - [x] 2026-03-17: removed the raw `fret::query::ui` and `fret::router::ui` passthrough lanes
+    from the `fret` facade and narrowed `fret::selector::ui` to the explicitly documented
+    `DepsBuilder` export; reusable/advanced code that needs raw UI adoption traits keeps using the
+    direct crates (`fret-query`, `fret-selector`, `fret-router-ui`) instead of routing those seams
+    back through `fret`.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
   - 2026-03-16 bounded remainder: default-facing docs/examples are now largely aligned; the main
     remaining stale guidance is historical workstream prose and closeout bookkeeping, not the
