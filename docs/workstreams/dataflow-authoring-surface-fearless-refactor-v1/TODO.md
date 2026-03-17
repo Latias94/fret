@@ -25,6 +25,9 @@ Execution note on 2026-03-17:
   are narrower default-write/query follow-ons rather than alias cleanup
 - `selector` now has a chosen LocalState-first default spelling:
   `cx.data().selector_layout(inputs, compute)`
+- the hidden selector-layout substrate now stays name-honest as `LocalSelectorLayoutInputs` plus
+  `LocalSelectorDepsBuilderExt`; these are implementation-facing support seams, not a second
+  public selector teaching lane
 - raw `cx.data().selector(...)` remains explicit for shared `Model<T>` signatures, global tokens,
   and direct advanced/component `ElementContext` work
 - `query` read-side is now landed on the default app lane as `handle.read_layout(cx)`

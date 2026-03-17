@@ -2637,7 +2637,7 @@ mod authoring_surface_policy_tests {
         assert!(selector_surface.contains("pub mod selector {"));
         assert!(selector_surface.contains("pub mod core {"));
         assert!(selector_surface.contains("pub mod ui {"));
-        assert!(!selector_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
+        assert!(!selector_surface.contains("pub use crate::view::LocalSelectorDepsBuilderExt;"));
         assert!(selector_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
         assert!(!selector_surface.contains("pub use fret_selector::ui::*;"));
@@ -2649,7 +2649,7 @@ mod authoring_surface_policy_tests {
         assert!(query_surface.contains("QueryState,"));
         assert!(!app_prelude_exports_symbol("DepsBuilder"));
         assert!(!app_prelude_exports_symbol("DepsSignature"));
-        assert!(!app_prelude_exports_symbol("LocalDepsBuilderExt"));
+        assert!(!app_prelude_exports_symbol("LocalSelectorDepsBuilderExt"));
         assert!(!app_prelude_exports_symbol("QueryKey"));
         assert!(!app_prelude_exports_symbol("QueryPolicy"));
         assert!(!app_prelude_exports_symbol("QueryHandle"));
@@ -3724,7 +3724,7 @@ mod authoring_surface_policy_tests {
 
         assert!(public_surface.contains("pub mod selector {"));
         assert!(public_surface.contains("pub mod query {"));
-        assert!(!public_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
+        assert!(!public_surface.contains("pub use crate::view::LocalSelectorDepsBuilderExt;"));
         assert!(public_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
         assert!(!public_surface.contains("pub use fret_selector::ui::*;"));
@@ -3825,7 +3825,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("QueryPolicy"));
         assert!(!app_prelude_exports_symbol("DepsBuilder"));
         assert!(!app_prelude_exports_symbol("DepsSignature"));
-        assert!(!app_prelude_exports_symbol("LocalDepsBuilderExt"));
+        assert!(!app_prelude_exports_symbol("LocalSelectorDepsBuilderExt"));
     }
 
     #[test]

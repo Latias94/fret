@@ -557,7 +557,7 @@ impl<T: 'static> QueryHandleReadLayoutExt<T> for fret_query::QueryHandle<T> {
 /// This keeps `fret-selector` portable while still letting LocalState-first app code build
 /// dependency signatures without bouncing through `clone_model()` or `local.model()`.
 #[cfg(feature = "state-selector")]
-pub(crate) trait LocalDepsBuilderExt {
+pub(crate) trait LocalSelectorDepsBuilderExt {
     fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self;
 
     fn local_rev_invalidation<T: Any>(
@@ -580,7 +580,9 @@ pub(crate) trait LocalDepsBuilderExt {
 }
 
 #[cfg(feature = "state-selector")]
-impl<'cx, 'a, H: UiHost> LocalDepsBuilderExt for fret_selector::ui::DepsBuilder<'cx, 'a, H> {
+impl<'cx, 'a, H: UiHost> LocalSelectorDepsBuilderExt
+    for fret_selector::ui::DepsBuilder<'cx, 'a, H>
+{
     fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
         self.local_rev_invalidation(local, Invalidation::Paint)
     }
@@ -614,7 +616,7 @@ fn local_selector_value_in<T: Any + Clone, H: UiHost>(
 /// `cx.data()` rather than naming the trait directly.
 #[cfg(feature = "state-selector")]
 #[doc(hidden)]
-pub trait LocalSelectorInputs<'a, H: UiHost>: Copy {
+pub trait LocalSelectorLayoutInputs<'a, H: UiHost>: Copy {
     type Values;
 
     fn deps_in(
@@ -627,7 +629,7 @@ pub trait LocalSelectorInputs<'a, H: UiHost>: Copy {
 }
 
 #[cfg(feature = "state-selector")]
-impl<'a, H: UiHost, T: Any + Clone> LocalSelectorInputs<'a, H> for &LocalState<T> {
+impl<'a, H: UiHost, T: Any + Clone> LocalSelectorLayoutInputs<'a, H> for &LocalState<T> {
     type Values = T;
 
     fn deps_in(
@@ -649,7 +651,7 @@ impl<'a, H: UiHost, T: Any + Clone> LocalSelectorInputs<'a, H> for &LocalState<T
 macro_rules! impl_local_selector_inputs_tuple {
     ($(($($name:ident:$idx:tt),+)),+ $(,)?) => {
         $(
-            impl<'a, H: UiHost, $($name: Any + Clone),+> LocalSelectorInputs<'a, H>
+            impl<'a, H: UiHost, $($name: Any + Clone),+> LocalSelectorLayoutInputs<'a, H>
                 for ($(&LocalState<$name>,)+)
             {
                 type Values = ($($name,)+);
@@ -1296,7 +1298,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         compute: impl FnOnce(Inputs::Values) -> TValue,
     ) -> TValue
     where
-        Inputs: LocalSelectorInputs<'a, H>,
+        Inputs: LocalSelectorLayoutInputs<'a, H>,
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector(
@@ -1317,7 +1319,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         compute: impl FnOnce(Inputs::Values) -> TValue,
     ) -> TValue
     where
-        Inputs: LocalSelectorInputs<'a, H>,
+        Inputs: LocalSelectorLayoutInputs<'a, H>,
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
@@ -1439,7 +1441,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         compute: impl FnOnce(Inputs::Values) -> TValue,
     ) -> TValue
     where
-        Inputs: LocalSelectorInputs<'a, crate::app::App>,
+        Inputs: LocalSelectorLayoutInputs<'a, crate::app::App>,
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector(
@@ -1459,7 +1461,7 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         compute: impl FnOnce(Inputs::Values) -> TValue,
     ) -> TValue
     where
-        Inputs: LocalSelectorInputs<'a, crate::app::App>,
+        Inputs: LocalSelectorLayoutInputs<'a, crate::app::App>,
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
@@ -2304,9 +2306,9 @@ mod tests {
         assert!(!api_source.contains("pub fn update_action("));
         assert!(!api_source.contains("pub fn update_action_if("));
         assert!(!api_source.contains("pub fn set_action("));
-        assert!(!api_source.contains("pub trait LocalDepsBuilderExt"));
-        assert!(api_source.contains("pub(crate) trait LocalDepsBuilderExt"));
-        assert!(api_source.contains("pub trait LocalSelectorInputs"));
+        assert!(!api_source.contains("pub trait LocalSelectorDepsBuilderExt"));
+        assert!(api_source.contains("pub(crate) trait LocalSelectorDepsBuilderExt"));
+        assert!(api_source.contains("pub trait LocalSelectorLayoutInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadLayoutExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait AppUiRawActionNotifyExt"));
