@@ -11,6 +11,7 @@ Companion docs:
 - `MILESTONES.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
+- `REMAINING_SURFACE_SHRINK_AUDIT_2026-03-17.md`
 
 Execution note on 2026-03-12:
 
@@ -104,6 +105,16 @@ Root-budget freeze note on 2026-03-16:
 - devloop helpers now live on `fret::advanced::dev::*` instead of `fret::dev::*`,
 - remaining work in this folder is therefore no longer "what should still be on the root?", but
   "how much ceremony remains on the default app lane after the root is already closed".
+
+Surface-shrink closeout note on 2026-03-17:
+
+- the generic rename/delete tail is now audited in
+  `REMAINING_SURFACE_SHRINK_AUDIT_2026-03-17.md`,
+- maintainers should now treat the remaining `view.rs` carrier nouns as either intentional seams,
+  rustdoc-hidden structural carriers, or internal substrate rather than as open-ended rename
+  backlog,
+- future work in this folder should reopen only for genuinely misleading public-looking residue,
+  not because density pressure still exists on write/read/list authoring.
 
 Verification note on 2026-03-16:
 
