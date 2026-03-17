@@ -1,7 +1,7 @@
 # Target Interface State
 
 Status: target state for the pre-release surface reset
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 This document is the single place that records the **intended public interface state** for the
 authoring-surface reset.
@@ -450,9 +450,8 @@ Target operations:
 - `toggle_local_bool::<A>(&state)`
 - `models::<A>(|models| ...)`
 - `locals::<A>(|tx| ...)`
+- `payload_local_update_if::<A>(&state, |value, payload| ...)`
 - `payload::<A>().models(|models, payload| ...)`
-- `payload::<A>().locals(|tx, payload| ...)`
-- `payload::<A>().local_update_if(&state, |value, payload| ...)`
 - `transient::<A>(...)`
 - `availability::<A>(...)`
 

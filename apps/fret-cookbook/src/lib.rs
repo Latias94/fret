@@ -229,9 +229,6 @@ mod authoring_surface_policy_tests {
         assert!(
             SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
         );
-        assert!(SIMPLE_TODO_EXAMPLE.contains(
-            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {"
-        ));
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
@@ -269,8 +266,11 @@ mod authoring_surface_policy_tests {
         assert!(TOGGLE_EXAMPLE.contains("toggle_local_bool::<act::ToggleBookmark>"));
 
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("cx.state().local_init(|| {"));
-        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("payload::<act::Remove>()"));
-        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("local_update_if::<Vec<Row>>(&rows_state"));
+        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains(
+            ".payload_local_update_if::<act::Remove, Vec<Row>>(&rows_state, |rows, id| {"
+        ));
+        assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("payload::<act::Remove>()"));
+        assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("local_update_if::<Vec<Row>>(&rows_state"));
 
         assert!(FORM_EXAMPLE.contains("locals::<act::Submit>"));
         assert!(FORM_EXAMPLE.contains("availability::<act::Submit>"));

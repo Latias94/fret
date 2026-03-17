@@ -38,8 +38,8 @@
 //!         Self
 //!     }
 //!
-//!     fn render(&mut self, _ui: &mut AppUi<'_, '_>) -> Ui {
-//!         shadcn::Label::new("Fret!").into()
+//!     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+//!         ui::single(cx, shadcn::Label::new("Fret!"))
 //!     }
 //! }
 //!

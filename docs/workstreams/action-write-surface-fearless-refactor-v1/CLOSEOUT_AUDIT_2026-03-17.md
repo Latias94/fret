@@ -75,11 +75,14 @@ The shipped default row-write proof is now consistent:
 At the same time:
 
 - `payload::<A>()` remains intentionally lower-level/reference-only in
-  `apps/fret-cookbook/examples/payload_actions_basics.rs` and
   `apps/fret-examples/src/markdown_demo.rs`,
-- post-closeout cleanup then deletes `payload_locals::<A>(...)` and `payload::<A>().locals(...)`
-  from production code because they had no first-party runtime proof and only duplicated the same
-  LocalTxn story.
+- `apps/fret-cookbook/examples/payload_actions_basics.rs` is now migrated back onto
+  `payload_local_update_if::<A>(...)` because its old chained spelling had no distinct ownership
+  story,
+- post-closeout cleanup then deletes `payload_locals::<A>(...)`,
+  `payload::<A>().locals(...)`, and `payload::<A>().local_update_if(...)` from production code
+  because they either had no first-party runtime proof or only duplicated the same LocalState /
+  LocalTxn stories.
 
 Conclusion:
 
@@ -92,8 +95,8 @@ The first-contact/default teaching surfaces now align on the same posture:
 - teach `locals::<A>(...)` as the primary coordinated local transaction path,
 - teach the one-slot trio as a semantics-driven companion family,
 - teach `payload_local_update_if::<A>(...)` as the only default keyed row-write helper,
-- keep `models::<A>(...)`, `transient::<A>(...)`, and the surviving lower-level payload chain
-  explicit rather than default.
+- keep `models::<A>(...)`, `transient::<A>(...)`, and the surviving
+  `payload::<A>().models(...)` seam explicit rather than default.
 
 This is not only prose alignment:
 
@@ -113,11 +116,11 @@ What remains after closeout does not justify keeping this lane active:
    - if a real first-party proof surface eventually needs a dedicated multi-local payload helper
      again, that is a future re-promotion decision, not unfinished v1 work.
 2. Delete-ready question
-   - the first hard-delete cleanup is now landed for `payload_locals::<A>(...)` and
-     `payload::<A>().locals(...)`;
+   - the duplicate helper cleanup is now landed for `payload_locals::<A>(...)`,
+     `payload::<A>().locals(...)`, and `payload::<A>().local_update_if(...)`;
    - any future question is narrower still:
-     whether `payload::<A>().local_update_if(...)` remains worth keeping beside the shipped
-     default helper.
+     whether advanced docs should keep referring to the generic `payload::<A>()` chain or name
+     `payload::<A>().models(...)` more explicitly.
 3. Broader runtime or dataflow questions
    - selector/query, router, and `LocalState<T>` architecture already live on other closed or
      separate lanes.
@@ -147,6 +150,6 @@ From this point forward:
 
 1. keep the shipped default write-side budget stable,
 2. keep `payload_local_update_if::<A>(...)` as the only taught default keyed row-write path,
-3. keep only the surviving lower-level payload chain explicitly advanced/reference unless new proof
-   justifies further change,
+3. keep only the surviving `payload::<A>().models(...)` seam explicitly
+   advanced/reference unless new proof justifies further change,
 4. do not reopen this lane just to explore helper growth from Todo-shaped pressure alone.

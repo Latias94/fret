@@ -1116,21 +1116,6 @@ where
                 f(host.models_mut(), payload)
             });
     }
-
-    pub fn local_update_if<T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .on_payload_action::<A>(move |host, action_cx, payload| {
-                local.update_action_if(host, action_cx, |value| update(value, payload))
-            });
-    }
-
 }
 
 impl<'cx, 'a> UiCxActions<'cx, 'a> {
@@ -1266,20 +1251,6 @@ where
             f(host.models_mut(), payload)
         });
     }
-
-    pub fn local_update_if<T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
-            local.update_action_if(host, action_cx, |value| update(value, payload))
-        });
-    }
-
 }
 
 /// Grouped selector/query helpers for the default app authoring surface.
@@ -2305,6 +2276,7 @@ mod tests {
         assert!(!api_source.contains("pub fn on_payload_action_notify_local_update_if<"));
         assert!(!api_source.contains("pub fn on_payload_action_notify_locals<"));
         assert!(!api_source.contains("pub fn payload_locals<"));
+        assert!(!api_source.contains("pub fn local_update_if<T>("));
         assert!(!api_source.contains(
             "pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static)"
         ));
