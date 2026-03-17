@@ -755,7 +755,7 @@ impl View for HelloView {{
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {{
         let click_count_state = cx.state().local::<u32>();
-        let click_count_value = cx.state().watch(&click_count_state).layout().value_or(0);
+        let click_count_value = click_count_state.layout(cx).value_or(0);
 
         cx.actions().local_update::<act::Click, u32>(&click_count_state, |v| {{
             *v = v.saturating_add(1);
@@ -1500,6 +1500,7 @@ mod tests {
         assert!(src.contains(".run()"));
         assert!(!src.contains(".run_view::<HelloView>()"));
         assert!(src.contains("let click_count_state = cx.state().local::<u32>();"));
+        assert!(src.contains("let click_count_value = click_count_state.layout(cx).value_or(0);"));
         assert!(src.contains("cx.actions().local_update::<act::Click, u32>"));
         assert!(!src.contains("cx.on_action_notify_models::<act::Click>"));
         assert!(!src.contains("cx.use_state::<u32>()"));

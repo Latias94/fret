@@ -438,7 +438,7 @@ mod authoring_surface_policy_tests {
         assert!(DROP_SHADOW_EXAMPLE.contains("UiCx<'_>"));
         assert!(DROP_SHADOW_EXAMPLE.contains("DropShadowV1"));
         assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().local_init(|| true)"));
-        assert!(DROP_SHADOW_EXAMPLE.contains("cx.state().watch(&enabled_state)"));
+        assert!(DROP_SHADOW_EXAMPLE.contains("enabled_state.layout(cx)"));
 
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("icon::IconSvgPreloadDiagnostics"));
         assert!(ICONS_AND_ASSETS_EXAMPLE.contains("integration::InstallIntoApp"));

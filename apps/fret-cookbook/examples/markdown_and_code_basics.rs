@@ -58,14 +58,14 @@ impl View for MarkdownAndCodeBasicsView {
         let wrap_state = cx.state().local_init(|| Some(Arc::from(WRAP_SCROLL_X)));
         let cap_height_state = cx.state().local_init(|| true);
 
-        let source = cx.state().watch(&source_state).layout().value_or_default();
+        let source = source_state.layout(cx).value_or_default();
         let wrap: Arc<str> = cx
             .state()
             .watch(&wrap_state)
             .layout()
             .value_or_else(|| Some(Arc::from(WRAP_SCROLL_X)))
             .unwrap_or_else(|| Arc::from(WRAP_SCROLL_X));
-        let cap_height = cx.state().watch(&cap_height_state).layout().value_or(true);
+        let cap_height = cap_height_state.layout(cx).value_or(true);
 
         let wrap_mode = match wrap.as_ref() {
             WRAP_WORD => CodeBlockWrap::Word,

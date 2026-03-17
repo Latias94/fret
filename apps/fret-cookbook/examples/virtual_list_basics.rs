@@ -107,9 +107,9 @@ impl View for VirtualListBasicsView {
             .layout()
             .value_or_else(|| Some(Arc::from(MODE_MEASURED)))
             .unwrap_or_else(|| Arc::from(MODE_MEASURED));
-        let tall_rows = cx.state().watch(&tall_rows_state).layout().value_or(false);
-        let reversed = cx.state().watch(&reversed_state).layout().value_or(false);
-        let index_keys = cx.state().watch(&index_keys_state).layout().value_or(false);
+        let tall_rows = tall_rows_state.layout(cx).value_or(false);
+        let reversed = reversed_state.layout(cx).value_or(false);
+        let index_keys = index_keys_state.layout(cx).value_or(false);
         let visible_only_keys = cx
             .state()
             .watch(&visible_only_keys_state)
