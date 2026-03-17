@@ -1675,9 +1675,23 @@ mod tests {
     #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
     #[test]
     fn chart_tooltip_custom_label_children_gallery_example_is_present() {
-        let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
-        let target_test_id = "ui-gallery-chart-tooltip-custom-label-children";
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-label-children");
+    }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_tooltip_custom_children_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-children");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_tooltip_custom_keys_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-keys");
+    }
+
+    fn assert_chart_gallery_example_is_present(target_test_id: &str) {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
         scroll_test_id_into_gallery_viewport(&mut rendered, target_test_id);
         wait_until_test_id_exists(&mut rendered, target_test_id, 12);
 
