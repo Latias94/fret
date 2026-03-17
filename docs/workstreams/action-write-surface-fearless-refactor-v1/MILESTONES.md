@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1) — Milestones
 
-Status: active planning lane
+Status: active closeout lane
 Last updated: 2026-03-17
 
 Related:
@@ -45,8 +45,8 @@ Exit criteria:
 
 Outcome:
 
-- the repo either freezes the current one-slot helper family as intentional or replaces it with a
-  clearly narrower default budget
+- the repo freezes the current one-slot helper family as intentional unless fresh cross-surface
+  evidence justifies reopening it
 
 Deliverables:
 
@@ -63,12 +63,22 @@ Exit criteria:
   flux
 - no new parallel one-slot helper family is needed to explain ordinary app writes
 
+Current decision on 2026-03-17:
+
+- M1 audit lands on "freeze the current trio":
+  - `local_update::<A>(...)`
+  - `local_set::<A, T>(...)`
+  - `toggle_local_bool::<A>(...)`
+- `locals::<A>(...)` remains the primary transaction story for coordinated writes
+
 ## Milestone 2 — Decide the payload row-write budget
 
 Outcome:
 
-- the repo either freezes the current payload row-write posture as intentional or narrows it with
-  evidence beyond the canonical trio
+- the repo freezes the current payload row-write posture as intentional:
+  `payload_local_update_if::<A>(...)` is the default row-write path,
+  `payload_locals::<A>(...)` stays off the first-contact lane until proven,
+  and `payload::<A>()` remains quarantined
 
 Deliverables:
 
@@ -83,6 +93,14 @@ Exit criteria:
 
 - first-contact docs/templates/examples teach one obvious row-write story
 - Todo pressure alone is not the only justification for the shipped surface
+
+Current M2 decision on 2026-03-17:
+
+- `payload_local_update_if::<A>(...)` is strongly proven as the default row-write path
+- `payload::<A>()` remains successfully quarantined
+- route 2 landed:
+  `payload_locals::<A>(...)` is demoted out of first-contact docs/templates and retained only as
+  an explicit advanced/reference seam until a real first-party proof surface exists
 
 ## Milestone 3 — Closeout and gate alignment
 

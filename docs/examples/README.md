@@ -22,7 +22,6 @@ These are intentionally stable and should be your default onboarding path:
 They all teach the same small authoring model first: `LocalState` for view-owned state,
 `cx.actions().locals(...)` for coordinated LocalState writes, keyed-row payload binding via
 `.action_payload(...)`, `payload_local_update_if::<A>(...)` as the default row-write path,
-`payload_locals::<A>(...)` only when one payload action must coordinate multiple locals,
 `cx.actions().transient(...)` for App-bound effects, and widget-local `.action(...)` /
 `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
 Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.

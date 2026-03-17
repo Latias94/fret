@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1)
 
-Status: active planning lane (pre-release fearless refactor)
+Status: active closeout lane (pre-release fearless refactor)
 Last updated: 2026-03-17
 
 Related:
@@ -10,6 +10,8 @@ Related:
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/PROOF_SURFACE_AUDIT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
+- `ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
+- `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`
 - `docs/authoring-golden-path-v2.md`
 - `docs/examples/todo-app-golden-path.md`
 - `docs/crate-usage-guide.md`
@@ -170,16 +172,15 @@ This lane intentionally freezes the decision categories before freezing final na
 
 ### 1. Single-local writes
 
-Possible acceptable outcomes:
+Current M1 conclusion (2026-03-17):
 
 - keep `local_update`, `local_set`, and `toggle_local_bool` as the entire intentional one-slot
-  default budget, or
-- replace them with a narrower family only if that replacement proves materially better across more
-  than one default-facing surface.
+  default budget
+- treat the trio as a companion family for obvious one-slot writes rather than as a replacement
+  for `locals::<A>(...)`
 
-Unacceptable outcome:
-
-- adding more one-slot helper aliases while keeping the old family equally visible.
+Reopen only if fresh non-Todo/default-facing evidence shows that the current trio still creates
+real first-contact confusion.
 
 ### 2. Coordinated LocalState transactions
 
@@ -200,8 +201,10 @@ Current baseline:
 
 Working assumption:
 
-- keep this as the default row-write path unless repeated non-Todo/default-facing evidence shows
-  that the current shape is still too noisy.
+- keep this as the default row-write path
+- do not invent a narrower replacement from canonical-trio pressure alone
+- demote `payload_locals::<A>(...)` out of first-contact docs/templates until it has first-party
+  proof
 
 ### 4. Multi-local payload transactions
 
@@ -211,7 +214,8 @@ Current baseline:
 
 Working assumption:
 
-- keep it explicit and secondary; it is not the first-contact keyed-row teaching path.
+- retain it as an explicit advanced/reference seam; it is not part of the first-contact keyed-row
+  teaching path until first-party proof exists.
 
 ### 5. Shared-model and app-only fallbacks
 

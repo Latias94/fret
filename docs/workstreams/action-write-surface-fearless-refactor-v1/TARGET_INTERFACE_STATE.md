@@ -20,10 +20,10 @@ Important constraint:
 
 | Need | Default app lane | Explicit / advanced lane | Reusable ecosystem lane | Owner |
 | --- | --- | --- | --- | --- |
-| Single-local write | one intentionally small helper family on `cx.actions()`; current default budget under review is `local_update`, `local_set`, and `toggle_local_bool` only | raw model writes remain explicit | no forced `fret` dependency | `ecosystem/fret` |
+| Single-local write | one intentionally small companion family on `cx.actions()`: `local_update`, `local_set`, and `toggle_local_bool` | raw model writes remain explicit | no forced `fret` dependency | `ecosystem/fret` |
 | Coordinated LocalState transaction | `locals::<A>(...)` unless a clearly better non-Todo replacement is proven | shared-model coordination remains explicit | no forced `fret` dependency | `ecosystem/fret` |
-| Keyed payload row write | one canonical row-write helper; current baseline under review is `payload_local_update_if::<A>(...)` | collection/model orchestration remains explicit | no forced `fret` dependency | `ecosystem/fret` |
-| Multi-local payload transaction | explicit secondary companion; current baseline is `payload_locals::<A>(...)` | shared-model coordination remains explicit | no forced `fret` dependency | `ecosystem/fret` |
+| Keyed payload row write | one canonical row-write helper: `payload_local_update_if::<A>(...)` | collection/model orchestration remains explicit | no forced `fret` dependency | `ecosystem/fret` |
+| Multi-local payload transaction | not taught on the default path | `payload_locals::<A>(...)` remains an explicit advanced/reference seam until first-party proof exists | no forced `fret` dependency | `ecosystem/fret` |
 | App-only effect handoff | `transient::<A>(...)` stays explicit | host/runtime seams remain explicit | generally app-only | `ecosystem/fret` + existing runtime semantics |
 | Shared model graph coordination | not default | `models::<A>(...)` remains explicit | direct-crate usage remains supported | existing runtime/app semantics |
 | Widget activation glue | adjacent only; widget-native `.action(...)` / `.action_payload(...)` / `.listen(...)` stay on their own lane | raw `.on_activate(...)` remains available | direct widget contracts remain supported | widget/component surfaces, not this lane |
@@ -36,7 +36,7 @@ Important constraint:
 
 The default app lane should teach:
 
-- one obvious one-slot write story
+- one obvious one-slot companion family for semantically distinct writes
 - one obvious coordinated transaction story
 - one obvious keyed payload row-write story
 - explicit `transient::<A>(...)` when the real work belongs in `&mut App`
@@ -45,9 +45,16 @@ The default app lane should teach:
 It should not teach by default:
 
 - multiple co-equal one-slot helper families beyond the chosen budget
+- `payload_locals::<A>(...)` as a co-equal or reserve default row-write path
 - `payload::<A>()` as a first-contact row-write path
 - widget activation glue as a substitute for root write ownership
 - shared-model coordination as the ordinary view-owned write path
+
+Additional rule:
+
+- `locals::<A>(...)` remains the primary explicit transaction story
+- the one-slot trio is an intentional companion family, not a second transaction dialect
+- keyed payload row writes teach `payload_local_update_if::<A>(...)` alone on the default path
 
 ### Advanced / editor-grade lane
 

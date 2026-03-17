@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1) — TODO
 
-Status: active planning tracker
+Status: active closeout tracker
 Last updated: 2026-03-17
 
 Companion docs:
@@ -8,6 +8,8 @@ Companion docs:
 - `DESIGN.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
+- `ONE_SLOT_WRITE_AUDIT_2026-03-17.md`
+- `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 
@@ -42,61 +44,78 @@ Execution note on 2026-03-17:
 
 ### Ecosystem / teaching proof surfaces
 
-- [ ] `docs/crate-usage-guide.md`
-- [ ] `docs/authoring-golden-path-v2.md`
-- [ ] `docs/examples/todo-app-golden-path.md`
-- [ ] `docs/first-hour.md`
+- [x] `docs/crate-usage-guide.md`
+- [x] `docs/authoring-golden-path-v2.md`
+- [x] `docs/examples/todo-app-golden-path.md`
+- [x] `docs/first-hour.md`
 
 ## Current priority checklist
 
-- [ ] Freeze the ownership rules for this lane.
-- [ ] Inventory the current one-slot write family on the default app path.
-- [ ] Classify each one-slot helper as:
+- [x] Freeze the ownership rules for this lane.
+- [x] Inventory the current one-slot write family on the default app path.
+- [x] Classify each one-slot helper as:
   - default budget
   - advanced/reference only
   - delete-ready
-- [ ] Decide whether `local_update` / `local_set` / `toggle_local_bool` are the intentional final
+- [x] Decide whether `local_update` / `local_set` / `toggle_local_bool` are the intentional final
   one-slot budget or whether the family should narrow further.
-- [ ] Inventory the current keyed payload row-write family on the default app path.
-- [ ] Classify each payload helper as:
+  - Current conclusion: freeze the trio as the intentional one-slot companion family; see
+    `ONE_SLOT_WRITE_AUDIT_2026-03-17.md`.
+- [x] Inventory the current keyed payload row-write family on the default app path.
+- [x] Classify each payload helper as:
   - default
   - secondary explicit companion
   - advanced/reference only
   - delete-ready
-- [ ] Re-check non-Todo runtime evidence before changing any shared row-write helper.
-- [ ] Audit reusable ecosystem impact:
+- [x] Re-check non-Todo/runtime/default-facing evidence before changing any shared row-write helper.
+  - Current M2 conclusion: `payload_local_update_if::<A>(...)` is proven, `payload::<A>()` is
+    quarantined, and `payload_locals::<A>(...)` is demoted out of first-contact docs/templates
+    until proof exists; see `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md`.
+- [x] Audit reusable ecosystem impact:
   - `ecosystem/fret`
   - direct reusable ecosystem crates that should stay facade-free
-- [ ] Update docs/templates/examples/gates together for each landed batch.
+  - Current result: `ecosystem/fret` aligns via doc-only changes; no reusable crate picks up a new
+    dependency or API burden from this decision.
+- [x] Update docs/templates/examples/gates together for each landed batch.
 
 ## M0 — Freeze the lane
 
-- [ ] Connect this workstream from `docs/README.md`, `docs/roadmap.md`, and
+- [x] Connect this workstream from `docs/README.md`, `docs/roadmap.md`, and
   `docs/workstreams/README.md`.
-- [ ] Record the handoff from dataflow closeout explicitly.
-- [ ] Record the boundary against the closed action-first lane explicitly.
+- [x] Record the handoff from dataflow closeout explicitly.
+- [x] Record the boundary against the closed action-first lane explicitly.
 
 ## M1 — Single-local write budget
 
-- [ ] Audit where `local_update::<A>(...)` is still taught.
-- [ ] Audit where `local_set::<A, T>(...)` is still taught.
-- [ ] Audit where `toggle_local_bool::<A>(...)` is still taught.
-- [ ] Decide keep-vs-replace for the one-slot family.
-- [ ] Update the default docs/templates/gates if the decision changes the teaching surface.
+- [x] Audit where `local_update::<A>(...)` is still taught.
+- [x] Audit where `local_set::<A, T>(...)` is still taught.
+- [x] Audit where `toggle_local_bool::<A>(...)` is still taught.
+- [x] Decide keep-vs-replace for the one-slot family.
+- [x] Update the default docs/templates/gates if the decision changes the teaching surface.
+  - Result: no default-surface wording drift required for M1; current docs already teach the trio
+    as a small semantics-driven companion family rather than as competing transaction dialects.
 
 ## M2 — Payload row-write budget
 
-- [ ] Audit where `payload_local_update_if::<A>(...)` is still the taught default.
-- [ ] Audit where `payload_locals::<A>(...)` is still visible.
-- [ ] Confirm whether `payload::<A>()` remains quarantined off the default path.
-- [ ] Decide whether the current row-write posture is frozen or needs a narrower follow-on.
-- [ ] Update the default docs/templates/gates if the decision changes the teaching surface.
+- [x] Audit where `payload_local_update_if::<A>(...)` is still the taught default.
+- [x] Audit where `payload_locals::<A>(...)` is still visible.
+- [x] Confirm whether `payload::<A>()` remains quarantined off the default path.
+- [x] Decide whether the current row-write posture is frozen or needs a narrower follow-on.
+  - Decision: freeze the default row-write path at `payload_local_update_if::<A>(...)`, keep
+    `payload::<A>()` quarantined, and demote `payload_locals::<A>(...)` out of first-contact
+    docs/templates until a first-party proof surface exists.
+- [x] Update the default docs/templates/gates if the decision changes the teaching surface.
 
 ## M3 — Closeout
 
-- [ ] Ensure first-contact docs, scaffold templates, cookbook examples, and demo gates agree on one
+- [x] Ensure first-contact docs, scaffold templates, cookbook examples, and demo gates agree on one
   write-side story.
-- [ ] Record any intentionally retained advanced/reference seams explicitly.
+  - Current result: first-contact docs and scaffold/template tests now teach
+    `payload_local_update_if::<A>(...)` as the only default row-write path; retained cookbook
+    payload surfaces stay explicitly advanced/reference.
+- [x] Record any intentionally retained advanced/reference seams explicitly.
+  - Current result: `payload_locals::<A>(...)` and `payload::<A>()` are now recorded only as
+    advanced/reference/workstream seams rather than as first-contact defaults.
 - [ ] Close this lane only after docs/templates/examples/gates are aligned.
 
 ## Standing rules
