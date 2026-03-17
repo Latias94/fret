@@ -1672,6 +1672,29 @@ mod tests {
         );
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_tooltip_custom_label_children_gallery_example_is_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
+        let target_test_id = "ui-gallery-chart-tooltip-custom-label-children";
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, target_test_id);
+        wait_until_test_id_exists(&mut rendered, target_test_id, 12);
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after scrolling the custom label children chart tooltip example into view");
+        let _target = node_by_test_id(snapshot, target_test_id);
+        let bounds = visual_bounds_by_test_id(&rendered, target_test_id);
+
+        assert!(
+            bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+            "expected the custom label children chart tooltip example to render with non-zero bounds: target={target_test_id} bounds={bounds:?}"
+        );
+    }
+
     fn assert_inner_viewport_vertical_touch_pan_is_owned_by_editor(
         page: &str,
         viewport_test_id: &str,
