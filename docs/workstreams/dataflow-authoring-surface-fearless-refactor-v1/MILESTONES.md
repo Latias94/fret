@@ -1,6 +1,6 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — Milestones
 
-Status: Active implementation lane
+Status: Active closeout lane
 Last updated: 2026-03-17
 
 Related:
@@ -9,6 +9,7 @@ Related:
 - `TARGET_INTERFACE_STATE.md`
 - `TODO.md`
 - `MIGRATION_MATRIX.md`
+- `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
 
 ## Current execution stance (2026-03-16)
 
@@ -28,8 +29,8 @@ Read it as:
 - Milestone 2 is in implementation: `cx.data().selector_layout(inputs, compute)` is the chosen
   LocalState-first default selector spelling, while raw `cx.data().selector(...)` remains the
   explicit shared-model/global-signature lane.
-- Milestone 3 is now in implementation: `handle.read_layout(cx)` is the current default app-lane
-  candidate for collapsing query read-side fallback noise while keeping `QueryStatus` ownership
+- Milestone 3 is now landed: `handle.read_layout(cx)` is the default app-lane query read posture
+  for the common `QueryState::<T>::default()` fallback case while keeping `QueryStatus` ownership
   explicit.
 
 ## Milestone 0 — Freeze the lane
@@ -102,6 +103,12 @@ Exit criteria:
 Outcome:
 
 - query remains explicit but the default read side is materially lower-noise.
+
+Status:
+
+- Landed on 2026-03-17.
+- Remaining work now belongs to Milestone 4 closeout and compatibility audit, not to more query
+  read-side sugar design.
 
 Deliverables:
 

@@ -302,13 +302,25 @@ Current app-facing candidate (2026-03-17):
 Illustrative shape only:
 
 ```rust
-let tip = cx.data().query(key, policy, fetch).read_layout(cx);
-let label = tip.map_status(
-    || "Loading...",
-    |err| format!("Error: {err}"),
-    |data| data.text.clone(),
-);
+let tip_handle = cx.data().query(key, policy, fetch);
+let tip = tip_handle.read_layout(cx);
+
+let label = match tip.status {
+    QueryStatus::Idle | QueryStatus::Loading => "Loading...".into(),
+    QueryStatus::Error => format!("Error: {}", tip.error.as_deref().unwrap_or("unknown")),
+    QueryStatus::Success => tip
+        .data
+        .as_ref()
+        .map(|data| data.text.clone())
+        .unwrap_or_default(),
+};
 ```
+
+Non-direction:
+
+- do not introduce `query_result(...)`, `query_state(...)`, `map_status(...)`, or similar
+  lifecycle-hiding helpers in this lane,
+- do not change the `fret-query` engine to solve default app-lane authoring density.
 
 ### 4. Ecosystem adaptation
 

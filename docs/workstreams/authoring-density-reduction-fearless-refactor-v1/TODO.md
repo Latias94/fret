@@ -78,16 +78,16 @@ Closeout reading rule on 2026-03-16:
     - this is now the first likely real M2 shared-surface gap,
     - the helper should live at the `ecosystem/fret` app-facing layer,
     - and `fret-selector` should remain unaware of `LocalState<T>`.
-- [ ] Audit query observe/read ceremony.
+- [x] Audit query observe/read ceremony.
   - Goal: keep query lifecycle explicit while reducing repeated watch/read/default plumbing on the
     default app path.
-  - 2026-03-16 direction:
+  - 2026-03-16 first direction:
     - treat current `value_or_else(QueryState::<T>::default)` repetition primarily as adoption/docs
-      drift,
-    - normalize taught app-path reads to `handle.layout(cx).value_or_default()`,
-    - normalize taught declarative/component-path reads to
-      `handle.layout_query(cx).value_or_default()`,
-    - do not add new shared query sugar until the post-cleanup surface is re-measured.
+      drift.
+  - 2026-03-17 supersession:
+    - the shipped default `fret` app-lane read posture is now `handle.read_layout(cx)`,
+    - declarative/component paths keep `handle.layout_query(cx).value_or_default()`,
+    - no broader shared query sugar was justified by this lane.
 - [x] Re-evaluate keyed/list/default child-collection pressure after the read-side reductions.
   - Decision rule:
     - prefer existing helpers and tighter docs first,

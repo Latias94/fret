@@ -1,6 +1,6 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — TODO
 
-Status: Active implementation tracker
+Status: Active closeout tracker
 Last updated: 2026-03-17
 
 Companion docs:
@@ -9,6 +9,7 @@ Companion docs:
 - `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
 - `MIGRATION_MATRIX.md`
+- `QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
 
 Execution note on 2026-03-16:
 
@@ -24,8 +25,10 @@ Execution note on 2026-03-17:
   `cx.data().selector_layout(inputs, compute)`
 - raw `cx.data().selector(...)` remains explicit for shared `Model<T>` signatures, global tokens,
   and direct advanced/component `ElementContext` work
-- `query` read-side is now in implementation around `handle.read_layout(cx)` on the default app
-  lane, with component/advanced `layout_query(cx)` intentionally left explicit
+- `query` read-side is now landed on the default app lane as `handle.read_layout(cx)`
+- component/advanced `layout_query(cx)` remains intentionally explicit
+- the remaining query pressure is lifecycle/status branching, not proof that another default
+  read-side helper family should be added here
 
 ## Evidence set
 
@@ -81,6 +84,10 @@ Rule:
 - [x] Decide the target collapse for default selector deps/reads.
 - [x] Inventory current query read-side ceremony.
 - [x] Decide the target collapse for default query reads without hiding key/policy/fetch.
+- [x] Re-measure post-landing query pressure.
+  - Conclusion: this lane stops at `handle.read_layout(cx)`.
+  - Remaining loading/error/success branching stays explicit and is not evidence for
+    `query_result(...)`, `map_status(...)`, or similar default-path helpers here.
 - [ ] Audit ecosystem adapter impact:
   - `ecosystem/fret`
   - `fret-selector`
@@ -119,7 +126,7 @@ Rule:
 - [x] Inventory query read-side patterns on default app surfaces.
 - [x] Decide the compact default read posture.
 - [x] Keep full query engine semantics explicit.
-- [ ] Prove the result on both generic-app and editor-grade surfaces.
+- [x] Prove the result on both generic-app and editor-grade surfaces.
 
 ## M4 — Ecosystem adaptation and closeout
 

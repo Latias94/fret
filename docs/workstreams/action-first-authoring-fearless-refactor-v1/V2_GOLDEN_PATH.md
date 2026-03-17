@@ -130,7 +130,7 @@ For post-v1 best-practice authoring, the intended direction is:
   cross-field form ownership
 - `count.update_in(models, |value| { ... })` / `count.set_in(models, value)` are store-only transaction helpers; `count.update_in_if(models, |value| -> bool { ... })` is the handled-aware variant for collection-style writes. They become rerendering writes when used under `on_action_notify_models::<A>(...)`, while `on_action_notify_local_*` / `update_action(...)` / `update_action_if(...)` are the direct tracked-write path
 - `count.value_in_or_default(models)` / `count.value_in_or(models, fallback)` for the common store-side read path, and `count.read_in(models, |value| ...)` / `count.revision_in(models)` when the closure needs a custom projection or revision check
-- `let query_state = query_handle.layout(cx).value_or_default();` for query results, instead of reopening `query_handle.model()` at the teaching surface
+- `let query_state = query_handle.read_layout(cx);` for the default app-facing query result read, instead of reopening `query_handle.model()` at the teaching surface
 - `cx.on_payload_action_notify_local_update_if::<act::ToggleRow, Vec<Row>>(&rows, |rows, id| { ... })` as the narrow keyed-list / payload-row helper when the remaining noise is just local collection mutation boilerplate
 
 Keep explicit `notify()` for:

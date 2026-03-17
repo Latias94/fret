@@ -1,7 +1,7 @@
 # Selector / Query Direction — 2026-03-16
 
-Status: M2 direction note
-Last updated: 2026-03-16
+Status: Historical direction note; query portion superseded on 2026-03-17
+Last updated: 2026-03-17
 
 Related:
 
@@ -10,6 +10,14 @@ Related:
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_AUDIT_2026-03-16.md`
+- `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
+
+## Supersession note (2026-03-17)
+
+- The query portion of this note is historical only.
+- The current shipped default app-lane query read posture is `handle.read_layout(cx)`.
+- Keep this file for the original M2 audit context and for the selector ownership rationale, not as
+  the current query API direction.
 
 ## Why this note exists
 
@@ -26,7 +34,8 @@ This note records the narrower split:
 
 ## Decision summary
 
-- Query read-side pressure starts as **adoption/docs cleanup**, not as a new shared API request.
+- Historical starting point: query read-side pressure first looked like **adoption/docs cleanup**,
+  not a new shared API request.
 - LocalState-first selector dependency choreography is the first likely **real shared-surface gap**
   in M2.
 - M2 should therefore start by:
@@ -56,8 +65,9 @@ Observed pattern:
 
 What this means:
 
-- the app-facing handle-first read path already exists through `TrackedStateExt` on
-  `QueryHandle<T>` (`handle.layout(cx)` on the `fret` app surface),
+- the app-facing handle-first read path already existed through `TrackedStateExt` on
+  `QueryHandle<T>` (`handle.layout(cx)` on the `fret` app surface at the time of this note),
+- the shipped default app posture later narrowed that teaching surface to `handle.read_layout(cx)`,
 - the declarative/component path already has the equivalent `layout_query(cx)` helper,
 - the repo still teaches or uses older/staler spellings in multiple places.
 
@@ -69,9 +79,11 @@ What this does **not** prove yet:
 
 Immediate rule for M2:
 
-- teach `handle.layout(cx).value_or_default()` on the app path when the default fallback is
-  `QueryState::<T>::default()`,
-- teach `handle.layout_query(cx).value_or_default()` on declarative/component paths,
+- historical 2026-03-16 cleanup target: shorten default fallback reads before inventing more
+  shared query sugar,
+- superseded 2026-03-17 shipped posture: teach `handle.read_layout(cx)` on the app path when the
+  default fallback is `QueryState::<T>::default()`,
+- keep `handle.layout_query(cx).value_or_default()` on declarative/component paths,
 - only revisit shared query sugar after the repo has re-measured the post-cleanup surface.
 
 ## Evidence cluster B — Selector dependency choreography is a real surface gap
