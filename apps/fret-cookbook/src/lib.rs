@@ -299,6 +299,8 @@ mod authoring_surface_policy_tests {
         assert!(ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
+        assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
+        assert!(!QUERY_EXAMPLE.contains("handle.layout(cx).value_or_default()"));
         assert!(!QUERY_EXAMPLE.contains("cx.use_query("));
         assert!(!QUERY_EXAMPLE.contains("fret_query::ui::QueryElementContextExt"));
         assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));

@@ -439,9 +439,7 @@ impl View for TodoView {
                 })
             });
 
-        let tip_state = tip_handle
-            .layout(cx)
-            .value_or_default();
+        let tip_state = tip_handle.read_layout(cx);
 
         let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
             QueryStatus::Idle | QueryStatus::Loading => (Arc::from("Tip: loading…"), "muted-foreground"),
@@ -1431,6 +1429,8 @@ mod tests {
             src.contains(".selector_layout((&todos_state, &filter_state), |(todos, filter)| {")
         );
         assert!(src.contains("cx.data().query("));
+        assert!(src.contains("let tip_state = tip_handle.read_layout(cx);"));
+        assert!(!src.contains("tip_handle.layout(cx).value_or_default()"));
         assert!(src.contains("query::{QueryKey, QueryPolicy, QueryStatus},"));
         assert!(!src.contains("selector::{DepsBuilder, LocalDepsBuilderExt as _},"));
         assert!(!src.contains("deps.local_layout_rev(&todos_state);"));

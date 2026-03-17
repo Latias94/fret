@@ -645,6 +645,11 @@ computations.
 **Async fetch:** install a `FutureSpawnerHandle` global and use `cx.data().query_async(...)` /
 `cx.data().query_async_local(...)` on `AppUi`. See `docs/integrating-tokio-and-reqwest.md`.
 
+**Default app read note:** after creating a handle on the `fret` app path, prefer
+`handle.read_layout(cx)` for the common `QueryState::<T>::default()` fallback case. Keep
+`handle.layout(cx).value_or_default()` or declarative/component `handle.layout_query(cx)` when you
+are intentionally staying on the lower-level tracked-read surface.
+
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
 grouped app data helpers (`cx.data().query*`). When app code needs explicit query nouns, import
 them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than expecting them from

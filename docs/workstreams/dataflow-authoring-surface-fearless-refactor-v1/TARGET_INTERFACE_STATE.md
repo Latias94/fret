@@ -26,6 +26,14 @@ Current concrete selector posture (2026-03-17):
 - raw `cx.data().selector(deps, compute)` remains the explicit lane for shared `Model<T>`
   signatures, global tokens, and direct advanced/component `ElementContext` work
 
+Current concrete query posture (2026-03-17):
+
+- query creation stays on explicit `cx.data().query*` entry points
+- `handle.read_layout(cx)` is the chosen default app-lane read spelling for the common
+  `QueryState::<T>::default()` fallback case
+- explicit tracked reads such as `handle.layout(cx).value_or_default()` and component/advanced
+  `handle.layout_query(cx).value_or_default()` remain available outside that narrowed default path
+
 ## Target matrix
 
 | Need | Default app lane | Advanced / editor-grade lane | Reusable ecosystem lane | Owner |
@@ -38,7 +46,7 @@ Current concrete selector posture (2026-03-17):
 | LocalState-first derived values | `cx.data().selector_layout(inputs, compute)` on view-owned `LocalState<T>` inputs | raw dependency signatures remain explicit | direct `fret-selector` usage stays valid | app-facing sugar in `ecosystem/fret`; engine in `fret-selector` |
 | Shared-model derived values | not default | explicit raw selector dependency path | direct `fret-selector` usage stays valid | `fret-selector` |
 | Async resource creation | explicit key + policy + fetch stay visible | full handle/state machine remains available | direct `fret-query` usage stays valid | `fret-query` engine, optional facade sugar |
-| Async resource reads | one shorter default read-side posture | full handle/status/value surface remains available | direct `fret-query` usage stays valid | app-facing sugar in `ecosystem/fret`; engine in `fret-query` |
+| Async resource reads | `handle.read_layout(cx)` on the default app lane | full handle/status/value surface remains available | direct `fret-query` usage stays valid | app-facing sugar in `ecosystem/fret`; engine in `fret-query` |
 | Router state / navigation | adjacent only; not part of the default dataflow lane | explicit route/history/store semantics remain in router workstreams | direct `fret-router` / `fret-router-ui` usage | router workstreams, not this lane |
 
 ## Teaching posture
@@ -51,13 +59,14 @@ The default app lane should teach:
 - `LocalState<T>` for view-owned state
 - one compact action dialect
 - one compact LocalState-first selector dialect (`cx.data().selector_layout(inputs, compute)`)
-- one explicit but lower-noise query dialect
+- one explicit but lower-noise query dialect (`cx.data().query*` + `handle.read_layout(cx)`)
 
 It should not teach by default:
 
 - raw `Model<T>` handles,
 - raw `DepsBuilder` choreography,
 - raw `cx.data().selector(...)` for ordinary LocalState-first derived values,
+- raw `handle.layout(cx).value_or_default()` as the taught default app query read path,
 - router/history/link policy,
 - multiple co-equal write helper families for the same common use case.
 

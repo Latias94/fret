@@ -30,7 +30,7 @@ missing default guideline).
 | Single typed child landing | `ui::single(cx, child)` | Prefer this when `render()` or a wrapper closure only needs to return one already-typed child. |
 | Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper, then prefer `payload_local_update_if::<A>(...)` for the common row-write path. |
 | Derived values | `cx.data().selector_layout(inputs, compute)` | Default LocalState-first selector path. Keep raw `cx.data().selector(deps, compute)` plus `fret::selector::{DepsBuilder, ...}` for explicit shared `Model<T>` / global signatures. |
-| Async resources | `cx.data().query(key, policy, fetch)` | Put invalidation inputs into the key; import explicit query nouns from `fret::query::{...}` when needed. |
+| Async resources | `cx.data().query(key, policy, fetch)` + `handle.read_layout(cx)` | Keep create-side semantics explicit, then use `read_layout(cx)` for the default app-path read when `QueryState::<T>::default()` is the fallback. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
 | Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawStateExt;` + `cx.use_state::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
 

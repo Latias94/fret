@@ -24,7 +24,8 @@ Execution note on 2026-03-17:
   `cx.data().selector_layout(inputs, compute)`
 - raw `cx.data().selector(...)` remains explicit for shared `Model<T>` signatures, global tokens,
   and direct advanced/component `ElementContext` work
-- the next major open default-path lane is query read-side density
+- `query` read-side is now in implementation around `handle.read_layout(cx)` on the default app
+  lane, with component/advanced `layout_query(cx)` intentionally left explicit
 
 ## Evidence set
 
@@ -32,7 +33,7 @@ Execution note on 2026-03-17:
 
 - [ ] `apps/fret-cookbook/examples/simple_todo.rs`
 - [ ] `apps/fret-examples/src/todo_demo.rs`
-- [ ] `apps/fret-cookbook/examples/query_basics.rs`
+- [x] `apps/fret-cookbook/examples/query_basics.rs`
 - [ ] `apps/fret-cookbook/examples/form_basics.rs`
 - [ ] `apps/fret-cookbook/examples/commands_keymap_basics.rs`
 - [x] `apps/fretboard/src/scaffold/templates.rs`
@@ -43,7 +44,7 @@ Execution note on 2026-03-17:
 - [ ] `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - [ ] `apps/fret-examples/src/workspace_shell_demo.rs`
 - [ ] `apps/fret-examples/src/launcher_utility_window_demo.rs`
-- [ ] `apps/fret-examples/src/query_async_tokio_demo.rs`
+- [x] `apps/fret-examples/src/query_async_tokio_demo.rs`
 
 ### Ecosystem / teaching proof surfaces
 
@@ -78,8 +79,8 @@ Rule:
   - explicit shared-model fallback
 - [x] Inventory current LocalState-first selector choreography.
 - [x] Decide the target collapse for default selector deps/reads.
-- [ ] Inventory current query read-side ceremony.
-- [ ] Decide the target collapse for default query reads without hiding key/policy/fetch.
+- [x] Inventory current query read-side ceremony.
+- [x] Decide the target collapse for default query reads without hiding key/policy/fetch.
 - [ ] Audit ecosystem adapter impact:
   - `ecosystem/fret`
   - `fret-selector`
@@ -115,9 +116,9 @@ Rule:
 
 ## M3 — Query read surface
 
-- [ ] Inventory query read-side patterns on default app surfaces.
-- [ ] Decide the compact default read posture.
-- [ ] Keep full query engine semantics explicit.
+- [x] Inventory query read-side patterns on default app surfaces.
+- [x] Decide the compact default read posture.
+- [x] Keep full query engine semantics explicit.
 - [ ] Prove the result on both generic-app and editor-grade surfaces.
 
 ## M4 — Ecosystem adaptation and closeout

@@ -476,6 +476,8 @@ use fret_framework as kernel;
 
 /// App-facing imports for ordinary Fret application code.
 pub mod app {
+    #[cfg(feature = "state-query")]
+    pub use crate::view::QueryHandleReadExt;
     /// Canonical app-facing view trait on the explicit app lane.
     pub use crate::view::View;
     /// Explicit helper types/traits for app helper signatures that intentionally name them.
@@ -494,6 +496,8 @@ pub mod app {
         pub use crate::app::App;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
+        #[cfg(feature = "state-query")]
+        pub use crate::view::QueryHandleReadExt as _;
         pub use crate::view::TrackedStateExt as _;
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
@@ -940,6 +944,8 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::advanced::*;
+        #[cfg(feature = "state-query")]
+        pub use crate::view::QueryHandleReadExt as _;
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
@@ -2900,6 +2906,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector_layout(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("raw `cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`handle.read_layout(cx)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
     }
@@ -2973,6 +2980,7 @@ mod authoring_surface_policy_tests {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector_layout(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(deps, compute)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`handle.read_layout(cx)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
@@ -2993,6 +3001,7 @@ mod authoring_surface_policy_tests {
     fn integration_docs_prefer_grouped_query_helpers_for_app_surface() {
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async(...)`"));
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async_local(...)`"));
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("let state = handle.read_layout(cx);"));
         assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().query_async(...)`"));
     }
 
@@ -3294,6 +3303,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("workspace_menu"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::QueryHandleReadExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
@@ -3311,6 +3321,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiHostBoundIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiChildIntoElement;"));
         assert!(!app_prelude_exports_symbol("AppActivateExt"));
+        assert!(!app_prelude_exports_symbol("QueryHandleReadExt"));
         assert!(
             !app_prelude.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};")
         );
@@ -3401,6 +3412,7 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("ViewElements"));
         assert!(advanced_prelude_exports_symbol("ElementContext"));
         assert!(advanced_prelude_exports_symbol("UiTree"));
+        assert!(advanced_prelude.contains("pub use crate::view::QueryHandleReadExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
         assert!(

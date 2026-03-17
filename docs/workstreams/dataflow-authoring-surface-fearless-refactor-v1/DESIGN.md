@@ -1,7 +1,7 @@
 # Dataflow Authoring Surface (Fearless Refactor v1)
 
 Status: active planning lane (pre-release fearless refactor)
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 Related:
 
@@ -291,6 +291,13 @@ Target reading:
 - common read-side patterns should not require as much repeated handle/status/default plumbing on
   the default app path,
 - advanced consumers can still drop to the full handle/state model when they need exact control.
+
+Current app-facing candidate (2026-03-17):
+
+- keep creation explicit on `cx.data().query*`,
+- collapse the common app-path fallback to `handle.read_layout(cx)`,
+- keep component/advanced `ElementContext` surfaces on explicit `layout_query(cx)` reads unless a
+  later cross-lane proof says otherwise.
 
 Illustrative shape only:
 

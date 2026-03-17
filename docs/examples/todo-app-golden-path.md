@@ -309,7 +309,7 @@ High-level sketch:
 use fret::query::{QueryKey, QueryPolicy};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
-let state = handle.layout(cx).value_or_default();
+let state = handle.read_layout(cx);
 ```
 
 To invalidate/refetch from app logic:

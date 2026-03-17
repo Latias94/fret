@@ -119,7 +119,7 @@ impl View for QueryAsyncTokioDemoView {
             },
         );
 
-        let query_state = query_handle.layout(cx).value_or_default();
+        let query_state = query_handle.read_layout(cx);
 
         let status_label = match query_state.status {
             QueryStatus::Idle => "Idle",

@@ -28,7 +28,9 @@ Read it as:
 - Milestone 2 is in implementation: `cx.data().selector_layout(inputs, compute)` is the chosen
   LocalState-first default selector spelling, while raw `cx.data().selector(...)` remains the
   explicit shared-model/global-signature lane.
-- Milestone 3 is now the clearest remaining default-path density gap.
+- Milestone 3 is now in implementation: `handle.read_layout(cx)` is the current default app-lane
+  candidate for collapsing query read-side fallback noise while keeping `QueryStatus` ownership
+  explicit.
 
 ## Milestone 0 — Freeze the lane
 
@@ -105,12 +107,14 @@ Deliverables:
 
 - query read-pattern inventory
 - chosen default read-side posture
+  - current chosen spelling: `handle.read_layout(cx)` on the default `fret` app lane
 - explicit advanced handle/state-machine fallback posture
 
 Exit criteria:
 
 - key/policy/fetch remain visible,
-- common loading/error/success reads on the default app path are shorter,
+- common loading/error/success reads on the default app path are shorter and the default docs teach
+  `read_layout(cx)` for the ordinary fallback case,
 - reusable ecosystem crates can still consume `fret-query` directly.
 
 ## Milestone 4 — Ecosystem adaptation and closeout

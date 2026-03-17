@@ -1,7 +1,7 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — Migration Matrix
 
 Status: execution tracker
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 This file is the execution-oriented companion to:
 
@@ -76,7 +76,7 @@ Use these rules while executing the lane:
 | `cx.data().selector_keyed(...)` | explicit keyed selector escape hatch | keep explicit for keyed/looped call sites | Kept intentionally |
 | `cx.data().query(...)` / `query_async(...)` | current explicit create-side query surface | keep key/policy/fetch visible | Kept intentionally |
 | `cx.data().query_async_local(...)` | explicit `!Send`/wasm query path | keep explicit and non-default | Kept intentionally |
-| `handle.layout(cx).value_or_default()` on `QueryHandle<T>` | current default read-side query posture | may collapse to a shorter default read surface if it stays explicit about query-state ownership | Not started |
+| `handle.layout(cx).value_or_default()` on `QueryHandle<T>` | no longer the intended default app spelling; `ecosystem/fret` is moving default app reads to `handle.read_layout(cx)` while keeping raw tracked reads available | may collapse to a shorter default read surface if it stays explicit about query-state ownership | In progress |
 
 ## Surface Lanes
 
@@ -90,7 +90,7 @@ Use these rules while executing the lane:
 | LocalState-first selector deps/reads | app-facing `selector_layout(...)` helper is being introduced in `ecosystem/fret`; raw `DepsBuilder` choreography remains for explicit shared-model/global signatures | one app-facing LocalState-first selector surface that does not teach dependency-builder internals on first contact | add the shortening only in `ecosystem/fret`; keep `fret-selector` narrow and raw | Todo/template/docs no longer require `DepsBuilder::new(cx)` as the default selector story | In progress | `apps/fretboard/src/scaffold/templates.rs`, `docs/examples/todo-app-golden-path.md`, `docs/authoring-golden-path-v2.md`, `docs/crate-usage-guide.md`, `ecosystem/fret/src/view.rs` |
 | Keyed/advanced selector path | `selector_keyed(...)` plus raw selector-engine dependency signatures | explicit advanced/reference lane | keep explicit and separate from the default selector sugar | direct `fret-selector` consumers remain unaffected | Kept intentionally | `ecosystem/fret/src/view.rs`, `ecosystem/fret-selector/src/ui.rs` |
 | Query create side | `query(...)`, `query_async(...)`, `query_async_local(...)` | keep explicit key + policy + fetch | keep create-side semantics visible and avoid hiding policy/fetch behind app sugar | first-party docs continue to show explicit create-side semantics | Migrated | `ecosystem/fret/src/view.rs`, `docs/integrating-tokio-and-reqwest.md`, `docs/integrating-sqlite-and-sqlx.md` |
-| Query read side | `handle.layout(cx).value_or_default()` + explicit `QueryStatus` branching | one lower-noise default read posture that still exposes state-machine ownership | only add read-side sugar if it proves out on generic-app and editor-grade surfaces; keep the raw handle/state path available | Todo/query docs/templates no longer need the raw handle-read choreography as the default story | Not started | `apps/fretboard/src/scaffold/templates.rs`, `apps/fret-cookbook/examples/query_basics.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs` |
+| Query read side | app-facing `handle.read_layout(cx)` helper is being introduced in `ecosystem/fret`; explicit `QueryStatus` branching remains unchanged | one lower-noise default read posture that still exposes state-machine ownership | only add read-side sugar if it proves out on generic-app and editor-grade surfaces; keep the raw handle/state path available | Todo/query docs/templates no longer need the raw handle-read choreography as the default story | In progress | `apps/fretboard/src/scaffold/templates.rs`, `apps/fret-cookbook/examples/query_basics.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `ecosystem/fret/src/view.rs` |
 | Docs/templates/examples/gates | templates and core docs are moving to `selector_layout(...)`, but some source gates and secondary docs still mention the older grouped selector spelling as the default | one fully aligned default story | migrate in lockstep: code, templates, docs, source gates, then hard delete | first-hour, golden-path, Todo docs, scaffold templates, cookbook, and UI Gallery gates all tell the same story | In progress | `docs/authoring-golden-path-v2.md`, `docs/examples/todo-app-golden-path.md`, `docs/crate-usage-guide.md`, `apps/fretboard/src/scaffold/templates.rs`, `ecosystem/fret/src/lib.rs` |
 | Router compatibility | route-aware demos currently consume action/query/state surfaces separately | compatibility check only, not a source of new requirements | audit after target surfaces are chosen; keep route/history/link work in router lanes | router examples still compile/read correctly without expanding this lane scope | Not started | `docs/workstreams/router-v1/router-v1.md`, `docs/workstreams/router-ui-v1/router-ui-v1.md`, `apps/fret-cookbook/examples/router_basics.rs` |
 
@@ -103,7 +103,7 @@ Use these rules while executing the lane:
 | host-side `cx.actions().dispatch::<A>()` / `.dispatch_payload::<A>(...)` | `cx.actions().action(...)` / `.action_payload(...)` / `.listen(...)` | first-party docs/tests stop teaching it and no curated app surface needs the alias wording | Deleted |
 | first-contact `cx.actions().payload::<A>()` teaching | `payload_local_update_if::<A>(...)` for the happy path; `payload_locals::<A>(...)` for the rarer coordinated payload case | templates/docs/examples no longer present `payload::<A>()` as a co-equal default path | Quarantined |
 | first-contact `DepsBuilder::new(cx)` + `local_layout_rev(...)` + `layout_in(cx)` selector teaching | new app-facing LocalState-first selector sugar (`cx.data().selector_layout(...)`) | the new selector surface is proven on generic-app and editor-grade surfaces and source gates prevent raw builder teaching on the default path | In progress |
-| first-contact `handle.layout(cx).value_or_default()` query teaching | a proven lower-noise default query read posture, if one lands | only after a replacement exists and keeps query-state ownership explicit | Not started |
+| first-contact `handle.layout(cx).value_or_default()` query teaching | app-facing `handle.read_layout(cx)` on the default `fret` lane | only after a replacement exists and keeps query-state ownership explicit | In progress |
 
 ## Current Execution Order
 

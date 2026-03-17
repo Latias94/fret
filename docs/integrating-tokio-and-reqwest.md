@@ -114,7 +114,7 @@ fn render_user_card(cx: &mut AppUi<'_, '_>) -> Ui {
         Ok(text)
     });
 
-    let state = handle.watch(cx).paint().value_or_default();
+    let state = handle.read_layout(cx);
     match state.status {
         QueryStatus::Loading => { /* render loading */ }
         QueryStatus::Success => { /* render data */ }

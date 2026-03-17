@@ -97,7 +97,7 @@ impl View for QueryBasicsView {
             })
         });
 
-        let state = handle.layout(cx).value_or_default();
+        let state = handle.read_layout(cx);
 
         let status_label = match state.status {
             QueryStatus::Idle => "Idle",

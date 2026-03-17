@@ -520,6 +520,29 @@ impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::Quer
     }
 }
 
+/// App-facing convenience reads for query handles on the default `fret` lane.
+///
+/// This intentionally collapses only the repeated `layout(...).value_or_default()` fallback for the
+/// ordinary app path. Query creation (`key`, `policy`, `fetch`) and lifecycle branching
+/// (`status` / `data` / `error`) stay explicit.
+#[cfg(feature = "state-query")]
+pub trait QueryHandleReadExt<T: 'static> {
+    fn read_layout<'view_cx, 'a, H: UiHost>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+    ) -> fret_query::QueryState<T>;
+}
+
+#[cfg(feature = "state-query")]
+impl<T: 'static> QueryHandleReadExt<T> for fret_query::QueryHandle<T> {
+    fn read_layout<'view_cx, 'a, H: UiHost>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+    ) -> fret_query::QueryState<T> {
+        TrackedStateExt::layout(self, cx).value_or_default()
+    }
+}
+
 /// LocalState-aware selector dependency helpers for the explicit `fret::selector` lane.
 ///
 /// This keeps `fret-selector` portable while still letting LocalState-first app code build
@@ -2334,10 +2357,12 @@ mod tests {
         assert!(!api_source.contains("pub fn use_query_async_local<"));
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
         assert!(api_source.contains("pub trait LocalSelectorInputs"));
+        assert!(api_source.contains("pub trait QueryHandleReadExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
         assert!(api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
         assert!(api_source.contains("pub trait AppActivateSurface"));
