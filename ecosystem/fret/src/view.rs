@@ -1815,8 +1815,8 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
         }
     }
 
-    /// Observe and read a model-backed local state handle.
-    pub fn watch_local<'m, T: Any>(
+    /// Internal substrate for app-facing local tracked reads.
+    pub(crate) fn watch_local<'m, T: Any>(
         &'m mut self,
         local: &'m LocalState<T>,
     ) -> WatchedState<'m, 'm, 'a, H, T> {
@@ -2323,6 +2323,8 @@ mod tests {
         assert!(api_source.contains("pub trait AppUiRawActionExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
+        assert!(!api_source.contains("pub fn watch_local<'m, T: Any>("));
+        assert!(api_source.contains("pub(crate) fn watch_local<'m, T: Any>("));
         assert!(!api_source.contains("pub fn action_root(&self) -> fret_ui::GlobalElementId"));
         assert!(!api_source.contains("pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self"));
         assert!(api_source.contains("pub(crate) fn new("));
