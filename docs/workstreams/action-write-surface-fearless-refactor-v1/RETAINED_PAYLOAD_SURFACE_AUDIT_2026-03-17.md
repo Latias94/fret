@@ -33,8 +33,8 @@ It is a post-closeout retained-seam inventory attached to the original lane.
 | --- | --- | --- | --- | --- |
 | `payload_local_update_if::<A>(...)` | direct helper on `AppUiActions` / `UiCxActions`; uses `on_payload_action` then updates `LocalState<T>` | strong default proof in `apps/fret-cookbook/examples/simple_todo.rs` and `apps/fret-examples/src/todo_demo.rs` | taught on default docs/templates/gates | Keep intentionally |
 | deleted: `payload::<A>().local_update_if(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; same underlying LocalState-owned write shape as `payload_local_update_if::<A>(...)` | its one cookbook/reference use in `apps/fret-cookbook/examples/payload_actions_basics.rs` is now migrated to the canonical direct helper | not taught on default docs; deleted from production code on 2026-03-17 | Deleted |
-| deleted: `payload_locals::<A>(...)` | former direct helper on `AppUiActions` / `UiCxActions`; opened `LocalTxn` from payload dispatch | no in-tree runtime use was ever found | removed from first-contact docs/templates, then deleted from production code on 2026-03-17 | Deleted |
-| deleted: `payload::<A>().locals(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; same underlying `LocalTxn` shape | no in-tree runtime use was ever found | not taught on default docs; deleted from production code on 2026-03-17 | Deleted |
+| deleted: `payload_locals::<A>(...)` | former direct helper on `AppUiActions` / `UiCxActions`; opened `LocalStateTxn` from payload dispatch | no in-tree runtime use was ever found | removed from first-contact docs/templates, then deleted from production code on 2026-03-17 | Deleted |
+| deleted: `payload::<A>().locals(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; same underlying `LocalStateTxn` shape | no in-tree runtime use was ever found | not taught on default docs; deleted from production code on 2026-03-17 | Deleted |
 | deleted: `payload::<A>().models(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; opened `ModelStore` from payload dispatch | its last advanced/runtime proof in `apps/fret-examples/src/markdown_demo.rs` now uses raw `on_payload_action_notify::<A>(...)` instead | no longer taught; deleted from production code on 2026-03-17 | Deleted |
 
 ## Key implementation fact
@@ -46,7 +46,7 @@ Important duplication before the cleanup:
 - `payload_local_update_if::<A>(...)` and `payload::<A>().local_update_if(...)` express the same
   LocalState-owned write story on top of the same payload dispatch hook.
 - `payload_locals::<A>(...)` and `payload::<A>().locals(...)` also expressed the same transaction
-  story on top of the same `LocalTxn` hook.
+  story on top of the same `LocalStateTxn` hook.
 
 Those duplicate pairs are now deleted from production code.
 

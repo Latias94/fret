@@ -64,7 +64,7 @@ missing.
 | --- | --- | --- | --- |
 | Starter/default docs and templates | Closed on `LocalState<T>` / `use_local*` | `docs/first-hour.md`; `docs/examples/todo-app-golden-path.md`; `apps/fretboard/src/scaffold/templates.rs`; `ecosystem/fret/src/lib.rs` source-policy tests | Do not use first-contact drift as a reason to reopen state-surface design unless new drift actually reappears. |
 | Canonical todo compare set | Already converged enough to teach the current default local-state path | `apps/fret-examples/src/todo_demo.rs`; `apps/fret-cookbook/examples/simple_todo_v2_target.rs`; `apps/fretboard/src/scaffold/templates.rs` | Todo pressure alone cannot justify a new shared state API. |
-| Default local-state read/write ergonomics | Already productized for the current model-backed contract | `ecosystem/fret/src/view.rs` (`TrackedStateExt`, `LocalTxn`, action-aware local writes); `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md` | The next question is architecture, not another helper pass. |
+| Default local-state read/write ergonomics | Already productized for the current model-backed contract | `ecosystem/fret/src/view.rs` (`TrackedStateExt`, `LocalStateTxn`, action-aware local writes); `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md` | The next question is architecture, not another helper pass. |
 | Default `use_state` migration | Already complete on first-contact surfaces | `docs/workstreams/action-first-authoring-fearless-refactor-v1/USE_STATE_CALLER_INVENTORY.md` | This lane should not spend time re-proving that `use_local*` is the default. |
 
 ---

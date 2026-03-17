@@ -288,11 +288,11 @@ impl<T> LocalState<T> {
 /// This is intentionally *not* a general-purpose model transaction API. If you need to coordinate
 /// across shared `Model<T>` graphs, use `cx.actions().models::<A>(...)` directly.
 #[doc(hidden)]
-pub struct LocalTxn<'a> {
+pub struct LocalStateTxn<'a> {
     models: &'a mut ModelStore,
 }
 
-impl<'a> LocalTxn<'a> {
+impl<'a> LocalStateTxn<'a> {
     pub fn value_or<T: Any + Clone>(&self, local: &LocalState<T>, default: T) -> T {
         local.value_in_or(self.models, default)
     }
@@ -1108,12 +1108,12 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     /// Inside the callback, use `tx.value_or(...)`, `tx.value_or_else(...)`, `tx.set(...)`,
     /// `tx.update(...)`, and `tx.update_if(...)` rather than naming the transaction carrier type
     /// directly.
-    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static)
+    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)
     where
         A: crate::TypedAction,
     {
         self.cx.on_action_notify::<A>(move |host, _action_cx| {
-            let mut tx = LocalTxn {
+            let mut tx = LocalStateTxn {
                 models: host.models_mut(),
             };
             f(&mut tx)
@@ -1228,12 +1228,12 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     /// Inside the callback, use `tx.value_or(...)`, `tx.value_or_else(...)`, `tx.set(...)`,
     /// `tx.update(...)`, and `tx.update_if(...)` rather than naming the transaction carrier type
     /// directly.
-    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalTxn<'m>) -> bool + 'static)
+    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)
     where
         A: crate::TypedAction,
     {
         uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| {
-            let mut tx = LocalTxn {
+            let mut tx = LocalStateTxn {
                 models: host.models_mut(),
             };
             f(&mut tx)
@@ -2293,7 +2293,7 @@ mod tests {
         assert!(!api_source.contains("pub fn payload<A>(self) -> UiCxPayloadActions"));
         assert!(!api_source.contains("pub fn local_update_if<T>("));
         assert!(!api_source.contains(
-            "pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static)"
+            "pub fn locals(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, A::Payload) -> bool + 'static)"
         ));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
@@ -2415,7 +2415,7 @@ mod tests {
             .next()
             .expect("view.rs test module marker should exist");
 
-        assert!(api_source.contains("#[doc(hidden)]\npub struct LocalTxn<'a>"));
+        assert!(api_source.contains("#[doc(hidden)]\npub struct LocalStateTxn<'a>"));
         assert!(
             api_source.contains("#[doc(hidden)]\npub struct AppUiState<'view, 'cx, 'a, H: UiHost>")
         );

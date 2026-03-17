@@ -93,7 +93,7 @@ What is now landed:
 - `payload_locals::<A>(...)` is demoted out of first-contact docs/templates
 - post-closeout cleanup on 2026-03-17 then deletes `payload_locals::<A>(...)` and its duplicate
   chain form `payload::<A>().locals(...)` from production code because no first-party proof
-  appeared and the duplicate LocalTxn story did not earn permanent public surface
+  appeared and the duplicate LocalStateTxn story did not earn permanent public surface
 
 ## Landed route
 
