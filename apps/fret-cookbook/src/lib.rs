@@ -332,7 +332,13 @@ mod authoring_surface_policy_tests {
         assert!(UNDO_EXAMPLE.contains("on_action_notify::<act::Undo>"));
 
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("MarkdownComponents::<App>::default()"));
+        assert!(
+            MARKDOWN_AND_CODE_EXAMPLE.contains(
+                ".selector_layout((&wrap_state, &cap_height_state), |(wrap, cap_height)| {"
+            )
+        );
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("local_set::<act::Reset, String>"));
+        assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("watch(&wrap_state)"));
 
         assert!(
             IMUI_ACTION_EXAMPLE
