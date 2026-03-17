@@ -45,6 +45,28 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)
         .test_id("ui-gallery-chart-tooltip-label-formatter");
 
+    let custom_label_children = shadcn::ChartTooltipContent::new()
+        .label("2024-07-16")
+        .items([
+            shadcn::ChartTooltipItem::new("Desktop", "186").color(ColorRef::Color(chart_1)),
+            shadcn::ChartTooltipItem::new("Mobile", "80").color(ColorRef::Color(chart_2)),
+        ])
+        .test_id_prefix("ui-gallery-chart-tooltip-custom-label-children")
+        .into_element_label_parts(cx, |cx, context| {
+            ui::h_row(|cx| {
+                vec![
+                    ui::text("Date:").text_xs().font_medium().into_element(cx),
+                    ui::text(context.label.clone().unwrap_or_default())
+                        .text_xs()
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
+        })
+        .test_id("ui-gallery-chart-tooltip-custom-label-children");
+
     let formatter = shadcn::ChartTooltipContent::new()
         .hide_label(true)
         .items([
@@ -197,6 +219,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "ui-gallery-chart-tooltip-dashed",
             ),
             label_formatter,
+            custom_label_children,
             formatter,
             custom_children,
             custom_keys,
