@@ -46,6 +46,78 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+#[derive(Default)]
+struct ComboboxInputAddonSlots {
+    inline_start: Vec<AnyElement>,
+    inline_end: Vec<AnyElement>,
+}
+
+fn combobox_input_addon_slots(
+    addons: Vec<crate::input_group::InputGroupAddon>,
+) -> ComboboxInputAddonSlots {
+    let mut slots = ComboboxInputAddonSlots::default();
+
+    for addon in addons {
+        let (align, children, _has_button, _has_kbd) = addon.into_parts();
+        match align {
+            crate::input_group::InputGroupAddonAlign::InlineStart => {
+                slots.inline_start.extend(children);
+            }
+            crate::input_group::InputGroupAddonAlign::InlineEnd => {
+                slots.inline_end.extend(children);
+            }
+            crate::input_group::InputGroupAddonAlign::BlockStart => {
+                slots.inline_start.extend(children);
+            }
+            crate::input_group::InputGroupAddonAlign::BlockEnd => {
+                slots.inline_end.extend(children);
+            }
+        }
+    }
+
+    slots
+}
+
+fn combobox_input_inline_addon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    dir: LayoutDirection,
+    children: Vec<AnyElement>,
+    is_start: bool,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let addon_pl = MetricRef::space(Space::N3).resolve(theme);
+    let addon_py = MetricRef::space(Space::N1p5).resolve(theme);
+    let gap = MetricRef::space(Space::N2).resolve(theme);
+    let (order_inline_start, order_inline_end) = crate::rtl::inline_start_end_pair(dir, -1, 1);
+    let order = if is_start {
+        order_inline_start
+    } else {
+        order_inline_end
+    };
+    let layout =
+        decl_style::layout_style(theme, LayoutRefinement::default().flex_none().order(order));
+    let padding = if is_start {
+        crate::rtl::padding_edges_with_inline_start_end(dir, addon_py, addon_py, addon_pl, Px(0.0))
+    } else {
+        crate::rtl::padding_edges_with_inline_start_end(dir, addon_py, addon_py, Px(0.0), addon_pl)
+    };
+    let muted_foreground = theme.color_token("muted-foreground");
+
+    cx.flex(
+        FlexProps {
+            layout,
+            direction: fret_core::Axis::Horizontal,
+            gap: gap.into(),
+            padding: padding.into(),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        |_cx| children,
+    )
+    .inherit_foreground(muted_foreground)
+}
+
 pub(crate) fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
     if !group.items.is_empty() {
         &group.items
@@ -287,6 +359,7 @@ pub struct ComboboxInput {
     pub(crate) aria_invalid: Option<bool>,
     pub(crate) show_trigger: Option<bool>,
     pub(crate) show_clear: Option<bool>,
+    pub(crate) addons: Vec<crate::input_group::InputGroupAddon>,
 }
 
 impl ComboboxInput {
@@ -317,6 +390,22 @@ impl ComboboxInput {
 
     pub fn show_clear(mut self, show_clear: bool) -> Self {
         self.show_clear = Some(show_clear);
+        self
+    }
+
+    /// Upstream `ComboboxInput` accepts `InputGroupAddon` children for icon/addon composition.
+    ///
+    /// Keep this surface typed to `InputGroupAddon` rather than widening to arbitrary children.
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = crate::input_group::InputGroupAddon>,
+    {
+        self.addons = children.into_iter().collect();
+        self
+    }
+
+    pub fn child(mut self, child: crate::input_group::InputGroupAddon) -> Self {
+        self.addons.push(child);
         self
     }
 }
@@ -599,6 +688,7 @@ struct ComboboxPartsPatch {
     aria_invalid: Option<bool>,
     show_trigger: Option<bool>,
     show_clear: Option<bool>,
+    input_addons: Option<Vec<crate::input_group::InputGroupAddon>>,
     content_side: Option<popper::Side>,
     content_align: Option<popper::Align>,
     content_side_offset: Option<Px>,
@@ -639,6 +729,9 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
                 }
                 if input.show_clear.is_some() {
                     patch.show_clear = input.show_clear;
+                }
+                if !input.addons.is_empty() {
+                    patch.input_addons = Some(input.addons);
                 }
             }
             ComboboxPart::Clear(clear) => {
@@ -739,6 +832,7 @@ pub struct Combobox {
     search_enabled: bool,
     show_clear: bool,
     show_trigger: bool,
+    input_addons: Vec<crate::input_group::InputGroupAddon>,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
@@ -777,6 +871,9 @@ impl Combobox {
         }
         if let Some(show_clear) = patch.show_clear {
             self.show_clear = show_clear;
+        }
+        if let Some(input_addons) = patch.input_addons {
+            self.input_addons = input_addons;
         }
         if let Some(side) = patch.content_side {
             self.content_side = side;
@@ -839,6 +936,7 @@ impl Combobox {
             search_enabled: true,
             show_clear: false,
             show_trigger: true,
+            input_addons: Vec::new(),
             trigger_variant: ComboboxTriggerVariant::default(),
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
@@ -1098,6 +1196,7 @@ impl Combobox {
             self.auto_highlight,
             self.show_clear,
             self.show_trigger,
+            self.input_addons,
             self.trigger_variant,
             self.consume_outside_pointer_events,
             self.selection_commit_policy,
@@ -1143,6 +1242,7 @@ fn combobox_with_patch<H: UiHost>(
     auto_highlight: bool,
     show_clear: bool,
     show_trigger: bool,
+    input_addons: Vec<crate::input_group::InputGroupAddon>,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
@@ -1423,6 +1523,7 @@ fn combobox_with_patch<H: UiHost>(
             fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
         );
         if responsive && !is_desktop {
+            let addon_slots_for_trigger = combobox_input_addon_slots(input_addons);
             let open_change_reason_model_for_trigger = open_change_reason_model.clone();
             let open_change_reason_model_for_content = open_change_reason_model.clone();
             let test_id_prefix_for_content = test_id_prefix.clone();
@@ -1452,6 +1553,10 @@ fn combobox_with_patch<H: UiHost>(
                         let query_model = query_model_for_trigger.clone();
                         let selected = selected_for_trigger.clone();
                         let show_trigger = show_trigger_for_trigger;
+                        let ComboboxInputAddonSlots {
+                            inline_start,
+                            inline_end,
+                        } = addon_slots_for_trigger;
                         control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
 	                            *focus_restore_target
 	                                .lock()
@@ -1584,7 +1689,7 @@ fn combobox_with_patch<H: UiHost>(
                             };
 
                             (props, chrome_props, move |cx| {
-                                vec![cx.flex(
+                                let row = cx.flex(
                                     FlexProps {
                                         layout: {
                                             let mut layout = LayoutStyle::default();
@@ -1630,7 +1735,16 @@ fn combobox_with_patch<H: UiHost>(
                                             label.into_element(cx)
                                         };
 
-                                        let right = (show_clear || show_trigger).then(|| {
+                                        let inline_start = (!inline_start.is_empty()).then(|| {
+                                            combobox_input_inline_addon(cx, dir, inline_start, true)
+                                        });
+                                        let inline_end = (!inline_end.is_empty()).then(|| {
+                                            combobox_input_inline_addon(cx, dir, inline_end, false)
+                                        });
+
+                                        let right =
+                                            (show_clear || show_trigger || inline_end.is_some())
+                                                .then(|| {
                                             cx.flex(
                                                 FlexProps {
                                                     layout: LayoutStyle::default(),
@@ -1777,9 +1891,9 @@ fn combobox_with_patch<H: UiHost>(
                                                         clear
                                                     };
                                                     out.push(clear);
-                                                } else if show_trigger {
-                                                    let mut icon = decl_icon::icon_with(
-                                                        cx,
+                                                    } else if show_trigger {
+                                                        let mut icon = decl_icon::icon_with(
+                                                            cx,
                                                         ids::ui::CHEVRON_DOWN,
                                                         Some(Px(16.0)),
                                                         Some(ColorRef::Color(icon_fg)),
@@ -1790,22 +1904,28 @@ fn combobox_with_patch<H: UiHost>(
                                                         icon = icon.test_id(format!(
                                                             "{prefix}-trigger-icon"
                                                         ));
+                                                        }
+                                                        out.push(icon);
                                                     }
-                                                    out.push(icon);
-                                                }
-                                                out
-                                            },
-                                        )
+                                                    if let Some(inline_end) = inline_end {
+                                                        out.push(inline_end);
+                                                    }
+                                                    out
+                                                },
+                                            )
                                         });
-
-	                                        crate::rtl::vec_main_with_inline_end(
-	                                            dir,
-	                                            label_el,
-	                                            right,
-	                                        )
-	                                    },
-	                                )]
-	                            })
+                                        let mut children =
+                                            crate::rtl::vec_main_with_inline_end(
+                                                dir, label_el, right,
+                                            );
+                                        if let Some(inline_start) = inline_start {
+                                            children.push(inline_start);
+                                        }
+                                        children
+                                    },
+                                );
+                                vec![row]
+                            })
                         })
                     },
                     move |cx| {
@@ -2186,6 +2306,7 @@ fn combobox_with_patch<H: UiHost>(
         let search_input_id_for_content = search_input_id.clone();
         let listbox_id_for_diag = Rc::new(Cell::new(None));
         let listbox_id_for_diag_for_content = listbox_id_for_diag.clone();
+        let addon_slots_for_trigger = combobox_input_addon_slots(input_addons);
 
         let mut popover = Popover::from_open(open.clone())
             .auto_focus(true)
@@ -2231,6 +2352,10 @@ fn combobox_with_patch<H: UiHost>(
                 let model = model_for_trigger.clone();
                 let query_model = query_model_for_trigger.clone();
                 let selected = selected_for_trigger.clone();
+                let ComboboxInputAddonSlots {
+                    inline_start,
+                    inline_end,
+                } = addon_slots_for_trigger;
                 control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
 	                    *focus_restore_target
 	                        .lock()
@@ -2357,7 +2482,7 @@ fn combobox_with_patch<H: UiHost>(
                     };
 
                     (props, chrome_props, move |cx| {
-                        vec![cx.flex(
+                        let row = cx.flex(
                             FlexProps {
                                 layout: LayoutStyle::default(),
                                 direction: fret_core::Axis::Horizontal,
@@ -2398,7 +2523,15 @@ fn combobox_with_patch<H: UiHost>(
                                     label.into_element(cx)
                                 };
 
-                                let right = (show_clear || show_trigger).then(|| {
+                                let inline_start = (!inline_start.is_empty()).then(|| {
+                                    combobox_input_inline_addon(cx, dir, inline_start, true)
+                                });
+                                let inline_end = (!inline_end.is_empty()).then(|| {
+                                    combobox_input_inline_addon(cx, dir, inline_end, false)
+                                });
+
+                                let right =
+                                    (show_clear || show_trigger || inline_end.is_some()).then(|| {
                                     cx.flex(
                                         FlexProps {
                                             layout: LayoutStyle::default(),
@@ -2527,15 +2660,24 @@ fn combobox_with_patch<H: UiHost>(
                                             }
                                             out.push(icon);
                                         }
+                                        if let Some(inline_end) = inline_end {
+                                            out.push(inline_end);
+                                        }
                                         out
                                     },
                                 )
-                                });
+                            });
 
-	                                crate::rtl::vec_main_with_inline_end(dir, label_el, right)
-	                            },
-	                        )]
-	                    })
+                                let mut children =
+                                    crate::rtl::vec_main_with_inline_end(dir, label_el, right);
+                                if let Some(inline_start) = inline_start {
+                                    children.push(inline_start);
+                                }
+                                children
+                            },
+                        );
+                        vec![row]
+                    })
                 })
             },
                 move |cx, anchor| {
@@ -3303,7 +3445,15 @@ mod tests {
                     .placeholder("Pick one")
                     .disabled(true)
                     .show_trigger(false)
-                    .show_clear(true),
+                    .show_clear(true)
+                    .children(
+                        [
+                            crate::input_group::InputGroupAddon::new(
+                                std::iter::empty::<AnyElement>(),
+                            )
+                            .align(crate::input_group::InputGroupAddonAlign::InlineStart),
+                        ],
+                    ),
             ),
             ComboboxPart::content(
                 ComboboxContent::new([
@@ -3339,6 +3489,14 @@ mod tests {
         assert_eq!(patch.disabled, Some(true));
         assert_eq!(patch.show_trigger, Some(false));
         assert_eq!(patch.show_clear, Some(true));
+        let input_addons = patch.input_addons.expect("expected input addons");
+        assert_eq!(input_addons.len(), 1);
+        let (align, _children, _has_button, _has_kbd) = input_addons
+            .into_iter()
+            .next()
+            .expect("input addon")
+            .into_parts();
+        assert_eq!(align, crate::input_group::InputGroupAddonAlign::InlineStart);
         assert_eq!(patch.content_side, Some(popper::Side::Top));
         assert_eq!(patch.content_align, Some(popper::Align::Start));
         assert_eq!(patch.content_side_offset, Some(Px(6.0)));
@@ -3386,7 +3544,15 @@ mod tests {
                     .placeholder("Pick one")
                     .disabled(true)
                     .show_trigger(false)
-                    .show_clear(true),
+                    .show_clear(true)
+                    .children(
+                        [
+                            crate::input_group::InputGroupAddon::new(
+                                std::iter::empty::<AnyElement>(),
+                            )
+                            .align(crate::input_group::InputGroupAddonAlign::InlineStart),
+                        ],
+                    ),
             )
             .content(
                 ComboboxContent::new([
@@ -3417,6 +3583,7 @@ mod tests {
         assert!(combobox.disabled);
         assert!(!combobox.show_trigger);
         assert!(combobox.show_clear);
+        assert_eq!(combobox.input_addons.len(), 1);
         assert_eq!(combobox.content_side, popper::Side::Top);
         assert_eq!(combobox.content_align, popper::Align::Start);
         assert_eq!(combobox.content_side_offset, Px(6.0));

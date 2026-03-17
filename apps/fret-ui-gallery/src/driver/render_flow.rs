@@ -2540,6 +2540,32 @@ mod tests {
     }
 
     #[test]
+    fn combobox_visible_section_contents_do_not_overlap_while_scrolling() {
+        assert_visible_section_contents_do_not_overlap_while_scrolling(
+            PAGE_COMBOBOX,
+            &[
+                "docsec-conformance-demo-content",
+                "docsec-basic-content",
+                "ui-gallery-combobox-usage-content",
+                "ui-gallery-combobox-label-content",
+                "docsec-auto-highlight-content",
+                "docsec-clear-button-content",
+                "docsec-groups-content",
+                "docsec-groups-separator-content",
+                "docsec-trigger-button-content",
+                "docsec-multiple-selection-content",
+                "docsec-extras-custom-items-content",
+                "docsec-extras-long-list-content",
+                "docsec-extras-invalid-content",
+                "docsec-extras-disabled-content",
+                "docsec-extras-input-group-content",
+                "docsec-extras-rtl-content",
+                "ui-gallery-combobox-notes-content",
+            ],
+        );
+    }
+
+    #[test]
     fn carousel_focus_and_duration_controls_stay_within_preview_card_content() {
         assert_targets_stay_within_preview_card_content(
             PAGE_CAROUSEL,

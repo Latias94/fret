@@ -974,6 +974,28 @@ fn selected_combobox_snippets_prefer_direct_builder_chain_for_default_recipe_roo
 }
 
 #[test]
+fn selected_combobox_input_group_snippet_prefers_typed_input_addons() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/combobox/input_group.rs",
+        &[
+            ".input(",
+            ".children([shadcn::InputGroupAddon::new([icon::icon(",
+            ".align(shadcn::InputGroupAddonAlign::InlineStart)",
+            "state_rows(cx, &value, &query, \"ui-gallery-combobox-input-group\").into_element(cx)",
+        ],
+        &["ui::h_row(|cx|"],
+    );
+
+    let page = read("src/ui/pages/combobox.rs");
+    assert!(
+        page.contains(
+            "`Extras: Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children."
+        ),
+        "src/ui/pages/combobox.rs should document the typed ComboboxInput addon surface instead of teaching a generic children escape hatch"
+    );
+}
+
+#[test]
 fn navigation_menu_and_pagination_pages_keep_their_dual_lane_story() {
     let navigation_menu_page = read("src/ui/pages/navigation_menu.rs");
     assert!(
@@ -1345,6 +1367,9 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/input_group/dropdown.rs",
         &[
+            "shadcn::DropdownMenu::uncontrolled(cx)",
+            ".compose()",
+            ".trigger(trigger)",
             "shadcn::InputGroup::new(value)",
             ".placeholder(\"Enter file name\")",
             ".control_test_id(\"ui-gallery-input-group-dropdown-control\")",
@@ -1352,7 +1377,7 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
             ".trailing_has_button(true)",
             ".into_element(cx)",
         ],
-        &[".into_element_parts("],
+        &[".into_element_parts(", ".build_parts("],
     );
 
     let page = read("src/ui/pages/input_group.rs");
@@ -1367,6 +1392,12 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
             "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane."
         ),
         "src/ui/pages/input_group.rs should keep the dual-lane narrative explicit"
+    );
+    assert!(
+        page.contains(
+            "The `Dropdown` example intentionally stays on `DropdownMenu::compose()`; swapping the trigger to `InputGroupButton` does not by itself require falling back to `build_parts(...)`."
+        ),
+        "src/ui/pages/input_group.rs should keep nested dropdown triggers on the default DropdownMenu compose lane when no lower-level adapter seam is needed"
     );
 }
 
