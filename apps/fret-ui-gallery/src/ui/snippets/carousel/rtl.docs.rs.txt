@@ -1,8 +1,6 @@
-pub const SOURCE: &str = include_str!("usage.rs");
-
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::Edges;
+use fret_core::{Edges, LayoutDirection};
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::IntoUiElement;
@@ -38,30 +36,27 @@ fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App
     shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
 }
 
-fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
-    let card = slide_card(cx, idx).into_element(cx);
-    ui::container(move |_cx| vec![card]).w_full().p_1()
-}
-
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let items = (1..=3)
-        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx).into_element(cx)))
+    let dir = LayoutDirection::Rtl;
+    let items = (1..=5)
+        .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx).into_element(cx)))
         .collect::<Vec<_>>();
-    let content = shadcn::CarouselContent::new(items);
 
-    shadcn::Carousel::default()
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .max_w(Px(320.0))
-                .mx_auto(),
-        )
-        .test_id("ui-gallery-carousel-usage")
-        .into_element_parts_content(
-            cx,
-            content,
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+    shadcn::DirectionProvider::new(dir).into_element(cx, |cx| {
+        shadcn::Carousel::default()
+            .opts(shadcn::CarouselOptions::new().direction(dir))
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .max_w(Px(320.0))
+                    .mx_auto(),
+            )
+            .into_element_parts_content(
+                cx,
+                shadcn::CarouselContent::new(items),
+                shadcn::CarouselPrevious::new(),
+                shadcn::CarouselNext::new(),
+            )
+    })
 }
 // endregion: example

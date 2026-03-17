@@ -2274,6 +2274,126 @@ mod tests {
         );
     }
 
+    fn assert_visible_section_contents_do_not_overlap_while_scrolling(
+        page: &str,
+        content_test_ids: &[&str],
+    ) {
+        let mut rendered = render_gallery_page(page);
+        let mut last_gallery_scroll_y: Option<f64> = None;
+        let mut stable_frames = 0usize;
+        let mut checked_visible_pair = false;
+
+        for _ in 0..96 {
+            let viewport_bounds =
+                visual_bounds_by_test_id(&rendered, "ui-gallery-content-viewport");
+            let preview_content_bounds =
+                visual_bounds_by_test_id(&rendered, "ui-gallery-preview-card-content");
+            let mut visible_sections = content_test_ids
+                .iter()
+                .filter_map(|test_id| {
+                    let bounds = visual_bounds_by_test_id_if_present(&rendered, test_id)?;
+                    rects_intersect(viewport_bounds, bounds).then_some((*test_id, bounds))
+                })
+                .collect::<Vec<_>>();
+
+            visible_sections.sort_by(|(_, a), (_, b)| {
+                a.origin
+                    .y
+                    .0
+                    .partial_cmp(&b.origin.y.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+
+            for (test_id, bounds) in &visible_sections {
+                let epsilon = 1.0;
+                let content_left = preview_content_bounds.origin.x.0;
+                let content_top = preview_content_bounds.origin.y.0;
+                let content_right = content_left + preview_content_bounds.size.width.0;
+                let content_bottom = content_top + preview_content_bounds.size.height.0;
+                let left = bounds.origin.x.0;
+                let top = bounds.origin.y.0;
+                let right = left + bounds.size.width.0;
+                let bottom = top + bounds.size.height.0;
+                assert!(
+                    left >= content_left - epsilon
+                        && top >= content_top - epsilon
+                        && right <= content_right + epsilon
+                        && bottom <= content_bottom + epsilon,
+                    "expected visible section content to stay contained by preview-card content while scrolling: page={page} test_id={test_id} section_bounds={bounds:?} preview_content_bounds={preview_content_bounds:?} viewport_bounds={viewport_bounds:?} epsilon={epsilon}"
+                );
+            }
+
+            for pair in visible_sections.windows(2) {
+                let (prev_test_id, prev_bounds) = pair[0];
+                let (next_test_id, next_bounds) = pair[1];
+                let prev_bottom = prev_bounds.origin.y.0 + prev_bounds.size.height.0;
+                let next_top = next_bounds.origin.y.0;
+                checked_visible_pair = true;
+                assert!(
+                    prev_bottom <= next_top + 1.0,
+                    "expected visible section contents to keep vertical order without overlap while scrolling: page={page} prev_test_id={prev_test_id} prev_bounds={prev_bounds:?} next_test_id={next_test_id} next_bounds={next_bounds:?} viewport_bounds={viewport_bounds:?}"
+                );
+            }
+
+            let snapshot = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot while validating visible section overlap");
+            let gallery_scroll = node_by_test_id(snapshot, "ui-gallery-content-viewport")
+                .extra
+                .scroll;
+            let current_scroll_y = gallery_scroll.y.unwrap_or(0.0);
+            if let Some(last_scroll_y) = last_gallery_scroll_y {
+                if (current_scroll_y - last_scroll_y).abs() <= 0.01 {
+                    stable_frames = stable_frames.saturating_add(1);
+                } else {
+                    stable_frames = 0;
+                }
+            }
+            last_gallery_scroll_y = Some(current_scroll_y);
+
+            if stable_frames >= 3 {
+                break;
+            }
+
+            wheel_gallery_viewport(&mut rendered, Px(-240.0));
+        }
+
+        assert!(
+            checked_visible_pair,
+            "expected at least one scrolling frame with two visible section contents: page={page} content_test_ids={content_test_ids:?}"
+        );
+    }
+
+    fn assert_targets_stay_within_preview_card_content(page: &str, targets: &[&str]) {
+        let mut rendered = render_gallery_page(page);
+
+        for target in targets {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let preview_content_bounds =
+                visual_bounds_by_test_id(&rendered, "ui-gallery-preview-card-content");
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            let epsilon = 1.0;
+            let content_left = preview_content_bounds.origin.x.0;
+            let content_top = preview_content_bounds.origin.y.0;
+            let content_right = content_left + preview_content_bounds.size.width.0;
+            let content_bottom = content_top + preview_content_bounds.size.height.0;
+            let left = bounds.origin.x.0;
+            let top = bounds.origin.y.0;
+            let right = left + bounds.size.width.0;
+            let bottom = top + bounds.size.height.0;
+
+            assert!(
+                left >= content_left - epsilon
+                    && top >= content_top - epsilon
+                    && right <= content_right + epsilon
+                    && bottom <= content_bottom + epsilon,
+                "expected target to stay within preview-card content: page={page} target={target} bounds={bounds:?} preview_content_bounds={preview_content_bounds:?} epsilon={epsilon}"
+            );
+        }
+    }
+
     #[test]
     fn notes_sections_keep_stable_height_while_scrolling_into_view() {
         let cases = [
@@ -2312,6 +2432,58 @@ mod tests {
         for (page, notes_test_id) in cases {
             assert_notes_section_keeps_stable_height_while_scrolling_into_view(page, notes_test_id);
         }
+    }
+
+    #[test]
+    fn carousel_visible_section_contents_do_not_overlap_while_scrolling() {
+        assert_visible_section_contents_do_not_overlap_while_scrolling(
+            PAGE_CAROUSEL,
+            &[
+                "ui-gallery-carousel-demo-content",
+                "ui-gallery-carousel-about-content",
+                "ui-gallery-carousel-usage-content",
+                "ui-gallery-carousel-basic-content",
+                "ui-gallery-carousel-sizes-thirds-content",
+                "ui-gallery-carousel-sizes-content",
+                "ui-gallery-carousel-spacing-content",
+                "ui-gallery-carousel-spacing-responsive-content",
+                "ui-gallery-carousel-orientation-vertical-content",
+                "ui-gallery-carousel-options-content",
+                "ui-gallery-carousel-api-content",
+                "ui-gallery-carousel-events-content",
+                "ui-gallery-carousel-plugin-content",
+                "ui-gallery-carousel-plugin-controlled-content",
+                "ui-gallery-carousel-plugin-stop-on-interaction-focus-content",
+                "ui-gallery-carousel-plugin-stop-on-last-snap-content",
+                "ui-gallery-carousel-plugin-delays-content",
+                "ui-gallery-carousel-plugin-wheel-content",
+                "ui-gallery-carousel-rtl-content",
+                "ui-gallery-carousel-follow-ups-content",
+                "ui-gallery-carousel-compact-builder-content",
+                "ui-gallery-carousel-parts-content",
+                "ui-gallery-carousel-loop-content",
+                "ui-gallery-carousel-loop-downgrade-cannot-loop-content",
+                "ui-gallery-carousel-focus-content",
+                "ui-gallery-carousel-duration-content",
+                "ui-gallery-carousel-expandable-content",
+                "ui-gallery-carousel-api-reference-content",
+            ],
+        );
+    }
+
+    #[test]
+    fn carousel_focus_and_duration_controls_stay_within_preview_card_content() {
+        assert_targets_stay_within_preview_card_content(
+            PAGE_CAROUSEL,
+            &[
+                "ui-gallery-carousel-focus-previous",
+                "ui-gallery-carousel-focus-next",
+                "ui-gallery-carousel-duration-fast-previous",
+                "ui-gallery-carousel-duration-fast-next",
+                "ui-gallery-carousel-duration-slow-previous",
+                "ui-gallery-carousel-duration-slow-next",
+            ],
+        );
     }
 
     #[test]

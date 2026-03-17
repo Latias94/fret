@@ -71,6 +71,7 @@ fn render_frame_parts(
     opts: shadcn::CarouselOptions,
     carousel_width: Px,
     item_basis_main_px: Px,
+    eager_content: bool,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -87,24 +88,49 @@ fn render_frame_parts(
             let items = (0..5)
                 .map(|_| shadcn::CarouselItem::new(cx.container(Default::default(), |_cx| vec![])))
                 .collect::<Vec<_>>();
-            let carousel = shadcn::Carousel::default()
-                .opts(opts)
-                .api_handle_model(api)
-                .track_start_neg_margin(Space::N0)
-                .item_padding_start(Space::N0)
-                .item_basis_main_px(item_basis_main_px)
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_px(MetricRef::Px(carousel_width))
-                        .h_px(MetricRef::Px(Px(120.0))),
-                )
-                .refine_viewport_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(120.0))))
-                .into_element_parts(
-                    cx,
-                    |_cx| shadcn::CarouselContent::new(items),
-                    shadcn::CarouselPrevious::new(),
-                    shadcn::CarouselNext::new(),
-                );
+            let carousel = if eager_content {
+                shadcn::Carousel::default()
+                    .opts(opts)
+                    .api_handle_model(api)
+                    .track_start_neg_margin(Space::N0)
+                    .item_padding_start(Space::N0)
+                    .item_basis_main_px(item_basis_main_px)
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_px(MetricRef::Px(carousel_width))
+                            .h_px(MetricRef::Px(Px(120.0))),
+                    )
+                    .refine_viewport_layout(
+                        LayoutRefinement::default().h_px(MetricRef::Px(Px(120.0))),
+                    )
+                    .into_element_parts_content(
+                        cx,
+                        shadcn::CarouselContent::new(items),
+                        shadcn::CarouselPrevious::new(),
+                        shadcn::CarouselNext::new(),
+                    )
+            } else {
+                shadcn::Carousel::default()
+                    .opts(opts)
+                    .api_handle_model(api)
+                    .track_start_neg_margin(Space::N0)
+                    .item_padding_start(Space::N0)
+                    .item_basis_main_px(item_basis_main_px)
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_px(MetricRef::Px(carousel_width))
+                            .h_px(MetricRef::Px(Px(120.0))),
+                    )
+                    .refine_viewport_layout(
+                        LayoutRefinement::default().h_px(MetricRef::Px(Px(120.0))),
+                    )
+                    .into_element_parts(
+                        cx,
+                        |_cx| shadcn::CarouselContent::new(items),
+                        shadcn::CarouselPrevious::new(),
+                        shadcn::CarouselNext::new(),
+                    )
+            };
             vec![carousel]
         },
     );
@@ -213,6 +239,7 @@ fn carousel_api_handle_is_published_when_using_parts_adapter() {
             opts,
             Px(200.0),
             Px(200.0),
+            true,
         );
     }
 
@@ -225,5 +252,45 @@ fn carousel_api_handle_is_published_when_using_parts_adapter() {
     assert!(
         snapshot.snap_count > 0,
         "expected measurable snaps; snapshot={snapshot:?}"
+    );
+}
+
+#[test]
+fn carousel_api_handle_is_published_when_using_parts_adapter_closure_content() {
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let api = app.models_mut().insert(None::<shadcn::CarouselApi>);
+    let opts = shadcn::CarouselOptions::default();
+
+    for _ in 0..3 {
+        render_frame_parts(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            api.clone(),
+            opts,
+            Px(200.0),
+            Px(200.0),
+            false,
+        );
+    }
+
+    let api_handle = app
+        .models()
+        .get_cloned(&api)
+        .flatten()
+        .expect("expected CarouselApi handle to be published");
+    let snapshot = api_handle.snapshot(&mut app);
+    assert!(
+        snapshot.snap_count > 0,
+        "expected measurable snaps from closure content; snapshot={snapshot:?}"
     );
 }

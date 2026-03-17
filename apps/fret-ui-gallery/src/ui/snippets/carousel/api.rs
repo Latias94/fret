@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("api.rs");
+pub const DOCS_SOURCE: &str = include_str!("api.docs.rs.txt");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -53,37 +53,7 @@ fn slide_card(
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
-    let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
-    let api_cursor = cx.local_model_keyed("api_cursor", shadcn::CarouselEventCursor::default);
-    let api_effect_current = cx.local_model_keyed("api_effect_current", || 0usize);
-    let api_effect_count = cx.local_model_keyed("api_effect_count", || 0usize);
-
-    // Upstream uses `setApi` + `api.on("select"|"reInit", ...)` to update counters.
-    // Here we poll a cursor for the same outcomes.
-    if let Some(api_now) = cx.watch_model(&api_handle).cloned().flatten() {
-        let mut cursor_now = cx.watch_model(&api_cursor).copied().unwrap_or_default();
-        let events = api_now.events_since(&mut *cx.app, &mut cursor_now);
-        let snapshot = api_now.snapshot(&mut *cx.app);
-        let count_now = cx.watch_model(&api_effect_count).copied().unwrap_or(0);
-
-        if !events.is_empty() || (count_now == 0 && snapshot.snap_count > 0) {
-            let next_count = snapshot.snap_count;
-            let next_current = if next_count > 0 {
-                snapshot.selected_index.saturating_add(1)
-            } else {
-                0
-            };
-            let _ = cx.app.models_mut().update(&api_cursor, |v| *v = cursor_now);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&api_effect_count, |v| *v = next_count);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&api_effect_current, |v| *v = next_current);
-        }
-    }
+    let api_snapshot = cx.local_model_keyed("api_snapshot", shadcn::CarouselApiSnapshot::default);
 
     let api_visual = SlideVisual {
         text_px: Px(36.0),
@@ -93,13 +63,19 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx, api_visual).into_element(cx)))
         .collect::<Vec<_>>();
     let api_carousel = shadcn::Carousel::new(items)
-        .api_handle_model(api_handle.clone())
+        .api_snapshot_model(api_snapshot.clone())
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-api")
         .into_element(cx);
 
-    let current = cx.watch_model(&api_effect_current).copied().unwrap_or(0);
-    let count = cx.watch_model(&api_effect_count).copied().unwrap_or(0);
+    // The common "Slide X of Y" docs outcome only needs a snapshot model.
+    let snapshot = cx.watch_model(&api_snapshot).copied().unwrap_or_default();
+    let current = if snapshot.snap_count > 0 {
+        snapshot.selected_index.saturating_add(1)
+    } else {
+        0
+    };
+    let count = snapshot.snap_count;
     let api_counter_text = format!("Slide {} of {}", current, count);
     let api_counter = {
         let theme = Theme::global(&*cx.app);

@@ -21,6 +21,7 @@ Embla-inspired authoring outcomes.
 - Component code: `ecosystem/fret-ui-shadcn/src/carousel.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/carousel/usage.rs`
+- Compact shorthand snippet: `apps/fret-ui-gallery/src/ui/snippets/carousel/compact_builder.rs`
 - Diagnostics suites: `tools/diag-scripts/suites/ui-gallery-carousel-docs-parity/suite.json`,
   `tools/diag-scripts/suites/ui-gallery-carousel-embla-engine/suite.json`
 
@@ -30,12 +31,16 @@ Embla-inspired authoring outcomes.
 
 - Pass: `Carousel::new(items)` / `Carousel::items(...)` already cover the compact builder path.
 - Pass: `Carousel::into_element_parts(...)` plus `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` expose the upstream-shaped parts surface for copyable examples.
-- Pass: first-party gallery now teaches that split explicitly: the `Usage` snippet stays on the
-  compact builder lane, while the dedicated `Parts` snippet keeps the upstream-shaped copyable
+- Pass: first-party gallery now teaches that split explicitly: `Usage` mirrors the upstream docs
+  shape on the parts lane, `Compact Builder` keeps the ergonomic Fret shorthand visible, and the
+  dedicated `Parts` snippet remains the explicit adapter/diagnostics seam on that same copyable
   lane.
 - Pass: docs-first gallery examples (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`,
-  `Loop`) now also stay on the compact builder lane instead of re-teaching parts composition where
-  the root builder already covers the same outcome.
+  `API`, plugin/RTL docs mirrors) stay on the compact builder lane instead of re-teaching parts
+  composition where the root builder already covers the same outcome.
+- Pass: the dedicated `Loop` preview remains on that same compact builder lane, but it is now
+  grouped as an explicit Fret follow-up rather than being described as part of the upstream docs
+  path.
 - Pass: ordinary diagnostics examples (`Demo`, `API`, `Focus`, `Duration`, autoplay/wheel demos,
   loop downgrade, expandable) now stay on that same compact builder lane too when they do not need
   named controls.
@@ -47,13 +52,22 @@ Embla-inspired authoring outcomes.
 - Pass: responsive item sizing is representable via `CarouselItem::viewport_layout_breakpoint(...)`, covering shadcn `md:basis-*` / `lg:basis-*` outcomes.
 - Pass: spacing parity is modeled through `track_start_neg_margin` + `item_padding_start`, matching the upstream `-ml-*` + `pl-*` recipe.
 - Pass: orientation, loop, options, events, API snapshot/handle, and autoplay/wheel plugins are already covered by the existing gallery surface.
-- Pass: parts authoring now remains focused on the cases that actually need explicit control parts
-  or diagnostics-specific test IDs (`Parts`, `Events`, `RTL`), rather than acting as the default
-  docs lane.
+- Pass: parts authoring now remains focused on the docs-aligned upstream usage lane plus the cases
+  that actually need explicit control parts or diagnostics-specific test IDs (`Usage`, `Parts`,
+  `Events`, `RTL`), rather than acting as the default story for every example.
+- Pass: the docs-heavy follow-up sections now call out the Fret translation points explicitly:
+  `API` maps the common `setApi` counter outcome onto `api_snapshot_model(...)`, `Events` maps
+  `api.on(...)` onto `api_handle_model(...)` + `CarouselEventCursor`, `Plugin` maps DOM hover
+  handlers onto a hover region, and `RTL` keeps the direction provider aligned with the Embla
+  direction option.
 
 ### Gallery / docs parity
 
-- Pass: the gallery now mirrors the upstream docs structure first (`Demo` / `About` / `Usage` / `Examples` / `Options` / `API` / `Events` / `Plugins` / `RTL` / `API Reference`), while keeping engine/diagnostics follow-ups explicit (loop downgrade, focus watch, duration, expandable).
+- Pass: the gallery now mirrors the upstream docs structure first (`Demo` / `About` / `Usage` /
+  `Examples` / `Options` / `API` / `Events` / `Plugins` / `RTL`), then inserts a dedicated
+  `Fret Follow-ups` bridge before the shorthand / adapter / engine surfaces (`Compact Builder`,
+  `Parts`, dedicated `Loop`, loop downgrade, focus watch, duration, expandable) and the trailing
+  `API Reference`.
 
 ### Defer rationale
 

@@ -1,0 +1,94 @@
+// region: example
+use fret::{UiChild, UiCx};
+use fret_core::Edges;
+use fret_ui::Theme;
+use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
+    let theme = Theme::global(&*cx.app).clone();
+
+    let number = ui::text(format!("{idx}"))
+        .text_size_px(Px(36.0))
+        .line_height_px(Px(40.0))
+        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+        .font_semibold()
+        .into_element(cx);
+
+    let content = cx.flex(
+        FlexProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().aspect_ratio(1.0),
+            ),
+            direction: fret_core::Axis::Horizontal,
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            padding: Edges::all(Px(24.0)).into(),
+            ..Default::default()
+        },
+        move |_cx| vec![number],
+    );
+
+    shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
+}
+
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
+    let api_cursor = cx.local_model_keyed("api_cursor", shadcn::CarouselEventCursor::default);
+    let select_seen = cx.local_model_keyed("select_seen", || false);
+    let reinit_seen = cx.local_model_keyed("reinit_seen", || false);
+
+    if let Some(api) = cx.watch_model(&api_handle).cloned().flatten() {
+        let mut cursor = cx.watch_model(&api_cursor).copied().unwrap_or_default();
+        let mut select_seen_now = cx.watch_model(&select_seen).copied().unwrap_or(false);
+        let mut reinit_seen_now = cx.watch_model(&reinit_seen).copied().unwrap_or(false);
+
+        for event in api.events_since(&mut *cx.app, &mut cursor) {
+            match event {
+                shadcn::CarouselEvent::Select { .. } => select_seen_now = true,
+                shadcn::CarouselEvent::ReInit => reinit_seen_now = true,
+            }
+        }
+
+        let _ = cx.app.models_mut().update(&api_cursor, |v| *v = cursor);
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&select_seen, |v| *v = select_seen_now);
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&reinit_seen, |v| *v = reinit_seen_now);
+    }
+
+    let items = (1..=5)
+        .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx).into_element(cx)))
+        .collect::<Vec<_>>();
+
+    let carousel = shadcn::Carousel::new(items)
+        .api_handle_model(api_handle.clone())
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .into_element(cx);
+
+    let status = ui::text(format!(
+        "select_seen={} • reinit_seen={}",
+        cx.watch_model(&select_seen).copied().unwrap_or(false),
+        cx.watch_model(&reinit_seen).copied().unwrap_or(false)
+    ))
+    .text_sm()
+    .text_align(fret_core::TextAlign::Center)
+    .into_element(cx);
+
+    ui::v_stack(move |_cx| vec![carousel, status])
+        .gap(Space::N2)
+        .w_full()
+        .max_w(Px(320.0))
+        .mx_auto()
+        .into_element(cx)
+}
+// endregion: example

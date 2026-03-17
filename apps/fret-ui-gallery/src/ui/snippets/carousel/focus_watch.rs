@@ -45,7 +45,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .map(shadcn::CarouselItem::new)
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::new(items)
+    let controls_shell_px = Px(48.0);
+    let carousel = shadcn::Carousel::new(items)
         .opts(
             shadcn::CarouselOptions::new()
                 .watch_focus(true)
@@ -64,6 +65,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .refine_viewport_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .test_id("ui-gallery-carousel-focus")
+        .into_element(cx);
+
+    ui::container(move |_cx| vec![carousel])
+        .w_px(Px(296.0))
+        .mx_auto()
+        .padding_px(controls_shell_px)
         .into_element(cx)
 }
 // endregion: example

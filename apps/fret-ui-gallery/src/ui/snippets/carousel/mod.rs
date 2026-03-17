@@ -1,5 +1,6 @@
 pub mod api;
 pub mod basic;
+pub mod compact_builder;
 pub mod demo;
 pub mod duration_embla;
 pub mod events;

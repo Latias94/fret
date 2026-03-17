@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("rtl.rs");
+pub const DOCS_SOURCE: &str = include_str!("rtl.docs.rs.txt");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -60,6 +60,7 @@ fn slide(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
+    let dir = LayoutDirection::Rtl;
 
     let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
 
@@ -71,9 +72,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual).into_element(cx)))
         .collect::<Vec<_>>();
 
-    let carousel = shadcn::DirectionProvider::new(LayoutDirection::Rtl).into_element(cx, |cx| {
+    // Keep the provider direction and the carousel option aligned, like docs `dir` + `opts.direction`.
+    let carousel = shadcn::DirectionProvider::new(dir).into_element(cx, |cx| {
         shadcn::Carousel::default()
-            .opts(shadcn::CarouselOptions::new().direction(LayoutDirection::Rtl))
+            .opts(shadcn::CarouselOptions::new().direction(dir))
             .api_handle_model(api_handle.clone())
             .refine_layout(
                 LayoutRefinement::default()
@@ -82,9 +84,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .mx_auto(),
             )
             .test_id("ui-gallery-carousel-rtl")
-            .into_element_parts(
+            .into_element_parts_content(
                 cx,
-                |_cx| shadcn::CarouselContent::new(items),
+                shadcn::CarouselContent::new(items),
                 shadcn::CarouselPrevious::new().test_id("ui-gallery-carousel-rtl-previous"),
                 shadcn::CarouselNext::new().test_id("ui-gallery-carousel-rtl-next"),
             )

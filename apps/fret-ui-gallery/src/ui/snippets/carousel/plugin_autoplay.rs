@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("plugin_autoplay.rs");
+pub const DOCS_SOURCE: &str = include_str!("plugin_autoplay.docs.rs.txt");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -67,6 +67,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
 
     let autoplay_api = cx.local_model_keyed("autoplay_api", || None::<shadcn::CarouselAutoplayApi>);
+    let autoplay = shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
+        .pause_on_hover(false)
+        .reset_on_hover_leave(false);
 
     let visual = SlideVisual {
         text_px: Px(36.0),
@@ -77,16 +80,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .collect::<Vec<_>>();
 
     let carousel = shadcn::Carousel::new(items)
-        .plugins([shadcn::CarouselPlugin::Autoplay(
-            shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
-                .pause_on_hover(false)
-                .reset_on_hover_leave(false),
-        )])
+        .plugins([shadcn::CarouselPlugin::Autoplay(autoplay)])
         .autoplay_api_handle_model(autoplay_api.clone())
         .refine_layout(LayoutRefinement::default().w_full())
         .test_id("ui-gallery-carousel-plugin")
         .into_element(cx);
 
+    // Self-drawn hover routing replaces the docs' DOM mouse-enter / mouse-leave handlers.
     let hover_overlay = {
         let autoplay_api = autoplay_api.clone();
         cx.hover_region(

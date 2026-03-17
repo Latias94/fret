@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("usage.rs");
+pub const SOURCE: &str = include_str!("compact_builder.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -47,21 +47,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let items = (1..=3)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx).into_element(cx)))
         .collect::<Vec<_>>();
-    let content = shadcn::CarouselContent::new(items);
 
-    shadcn::Carousel::default()
+    shadcn::Carousel::new(items)
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
                 .max_w(Px(320.0))
                 .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-usage")
-        .into_element_parts_content(
-            cx,
-            content,
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .test_id("ui-gallery-carousel-compact-builder")
+        .into_element(cx)
 }
 // endregion: example

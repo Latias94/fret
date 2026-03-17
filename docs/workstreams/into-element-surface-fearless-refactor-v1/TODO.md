@@ -170,9 +170,11 @@ Historical execution note on 2026-03-14:
   `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` remain the
   focused upstream-shaped bridge rather than the default copyable lane.
 - the `Carousel` dual-lane story is now also explicitly reflected in the snippets themselves:
-  `apps/fret-ui-gallery/src/ui/snippets/carousel/{usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,loop_carousel}.rs`
-  now stay on the compact `Carousel::new(items)` builder lane, while `parts.rs` remains the
-  upstream-shaped copyable lane.
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/usage.rs` now mirrors the upstream-shaped docs
+  lane, `compact_builder.rs` plus
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/{basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,loop_carousel}.rs`
+  stay on the compact `Carousel::new(items)` builder lane, while `parts.rs` remains the explicit
+  upstream-shaped adapter seam.
   A second tightening pass now moved the ordinary diagnostics snippets
   `api.rs`,
   `demo.rs`,

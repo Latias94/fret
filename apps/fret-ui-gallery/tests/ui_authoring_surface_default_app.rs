@@ -848,18 +848,57 @@ fn carousel_page_distinguishes_compact_builder_and_upstream_parts_lanes() {
     let carousel_page = read("src/ui/pages/carousel.rs");
     assert!(
         carousel_page.contains(
-            "`Usage` is the default compact builder path for common Fret call sites, while `Parts` remains the upstream-shaped copyable lane rather than an advanced escape hatch."
+            "`Usage` now mirrors the upstream docs-shaped parts lane, `Compact Builder` keeps the ergonomic Fret shorthand visible, and `Parts` remains the explicit adapter/diagnostics seam on that same copyable lane rather than an advanced escape hatch."
         ),
-        "src/ui/pages/carousel.rs should distinguish the compact default builder lane from the upstream-shaped parts lane"
+        "src/ui/pages/carousel.rs should distinguish upstream usage, the compact shorthand lane, and the explicit parts seam"
     );
     assert!(
-        carousel_page.contains("Default compact builder path for common Fret carousel call sites."),
-        "src/ui/pages/carousel.rs should label Usage as the compact default builder path"
+        !carousel_page
+            .contains("Default compact builder path for common Fret carousel call sites."),
+        "src/ui/pages/carousel.rs should keep the old compact-builder wording out of the Usage section"
     );
     assert!(
         carousel_page
-            .contains("Upstream-shaped copyable parts surface aligned with shadcn/ui v4 exports."),
-        "src/ui/pages/carousel.rs should keep Parts as a copyable upstream-shaped lane rather than marking it as advanced"
+            .contains("Compact Fret shorthand for common app call sites: `Carousel::new(items)`."),
+        "src/ui/pages/carousel.rs should expose Compact Builder as the Fret shorthand lane"
+    );
+    assert!(
+        carousel_page
+            .contains("Upstream shadcn docs shape using `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext`."),
+        "src/ui/pages/carousel.rs should label Usage as the docs-aligned upstream-shaped lane"
+    );
+    assert!(
+        carousel_page.contains(
+            "Focused adapter example on the same upstream-shaped lane when callers want explicit part values or diagnostics-specific control IDs."
+        ),
+        "src/ui/pages/carousel.rs should keep Parts as an explicit adapter seam on the upstream-shaped lane"
+    );
+    assert!(
+        carousel_page.contains(
+            "`Compact Builder` keeps `Carousel::new(items)` visible for app code, `Parts` keeps the explicit adapter/diagnostics seam visible, and `Loop` is a dedicated `loop=true` preview that the upstream docs only imply through `Options`."
+        ),
+        "src/ui/pages/carousel.rs should explain why the page switches into Fret follow-ups after the upstream docs path"
+    );
+    assert!(
+        carousel_page
+            .contains(".code_rust_from_file_region(snippets::api::DOCS_SOURCE, \"example\")"),
+        "src/ui/pages/carousel.rs should show the docs-aligned compact API example source"
+    );
+    assert!(
+        carousel_page
+            .contains(".code_rust_from_file_region(snippets::events::DOCS_SOURCE, \"example\")"),
+        "src/ui/pages/carousel.rs should show the docs-aligned Events example source"
+    );
+    assert!(
+        carousel_page.contains(
+            ".code_rust_from_file_region(snippets::plugin_autoplay::DOCS_SOURCE, \"example\")"
+        ),
+        "src/ui/pages/carousel.rs should show the docs-aligned Plugin example source"
+    );
+    assert!(
+        carousel_page
+            .contains(".code_rust_from_file_region(snippets::rtl::DOCS_SOURCE, \"example\")"),
+        "src/ui/pages/carousel.rs should show the docs-aligned RTL example source"
     );
 }
 
@@ -3517,10 +3556,10 @@ fn carousel_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Plugin (Wheel gestures)\", plugin_wheel)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"Loop\", loop_carousel)",
-            "DocSection::build(cx, \"Loop downgrade (cannotLoop)\", loop_downgrade_cannot_loop)",
-            "DocSection::build(cx, \"Focus\", focus)",
-            "DocSection::build(cx, \"Duration (Embla)\", duration)",
-            "DocSection::build(cx, \"Expandable\", expandable)",
+            "DocSection::build_diagnostics(cx, \"Loop downgrade (cannotLoop)\",",
+            "DocSection::build_diagnostics(cx, \"Focus\", focus)",
+            "DocSection::build_diagnostics(cx, \"Duration (Embla)\", duration)",
+            "DocSection::build_diagnostics(cx, \"Expandable\", expandable)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -5047,6 +5086,7 @@ fn selected_card_snippets_prefer_card_wrapper_family() {
     for relative_path in [
         "src/ui/snippets/carousel/basic.rs",
         "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/compact_builder.rs",
         "src/ui/snippets/carousel/demo.rs",
         "src/ui/snippets/carousel/duration_embla.rs",
         "src/ui/snippets/carousel/events.rs",
@@ -5748,18 +5788,40 @@ fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
         ],
     );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/compact_builder.rs",
+        &[
+            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+        ],
+    );
 }
 
 #[test]
-fn selected_carousel_usage_and_parts_snippets_keep_their_dual_lane_story() {
+fn selected_carousel_usage_compact_builder_and_parts_snippets_keep_their_lane_story() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/carousel/usage.rs",
         &[
-            "shadcn::Carousel::new(items)",
+            "shadcn::Carousel::default()",
             ".test_id(\"ui-gallery-carousel-usage\")",
+            ".into_element_parts_content(",
+        ],
+        &["shadcn::Carousel::new(items)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/compact_builder.rs",
+        &[
+            "shadcn::Carousel::new(items)",
+            ".test_id(\"ui-gallery-carousel-compact-builder\")",
             ".into_element(cx)",
         ],
-        &[".into_element_parts("],
+        &[".into_element_parts(", ".into_element_parts_content("],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -5767,9 +5829,11 @@ fn selected_carousel_usage_and_parts_snippets_keep_their_dual_lane_story() {
         &[
             "shadcn::Carousel::default()",
             ".test_id(\"ui-gallery-carousel-parts\")",
+            ".test_id(\"ui-gallery-carousel-parts-previous\")",
+            ".test_id(\"ui-gallery-carousel-parts-next\")",
             ".into_element_parts(",
         ],
-        &[],
+        &[".into_element_parts_content("],
     );
 }
 
@@ -5799,9 +5863,9 @@ fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
     let carousel_page = read("src/ui/pages/carousel.rs");
     assert!(
         carousel_page.contains(
-            "The docs-first examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`, `Loop`) and the ordinary diagnostics demos (`Demo`, `API`, `Focus`, `Duration`, autoplay/wheel examples) stay on that compact builder lane unless a snippet explicitly needs control-level parts for diagnostics or custom test IDs."
+            "The docs-path examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`) and the ordinary preview/demos (`Demo`, `API`, autoplay/wheel examples, dedicated `Loop`) still stay on the compact builder lane unless a snippet explicitly needs control-level parts or diagnostics-specific control IDs."
         ),
-        "src/ui/pages/carousel.rs should explain why docs-first examples stay on the compact builder lane"
+        "src/ui/pages/carousel.rs should explain why the docs path and the dedicated loop preview still stay on the compact builder lane"
     );
 }
 
@@ -5811,13 +5875,16 @@ fn carousel_parts_lane_is_limited_to_explicit_parts_and_diagnostics_snippets() {
         "src/ui/snippets/carousel/events.rs".to_string(),
         "src/ui/snippets/carousel/parts.rs".to_string(),
         "src/ui/snippets/carousel/rtl.rs".to_string(),
+        "src/ui/snippets/carousel/usage.rs".to_string(),
     ]);
 
     let actual = rust_sources("src/ui/snippets/carousel")
         .into_iter()
         .filter_map(|path| {
             let source = read_path(&path);
-            source.contains(".into_element_parts(").then(|| {
+            (source.contains(".into_element_parts(")
+                || source.contains(".into_element_parts_content("))
+            .then(|| {
                 path.strip_prefix(manifest_path(""))
                     .unwrap()
                     .display()
@@ -5828,7 +5895,7 @@ fn carousel_parts_lane_is_limited_to_explicit_parts_and_diagnostics_snippets() {
 
     assert_eq!(
         actual, expected,
-        "carousel parts-lane usage drifted; docs-first examples should stay on the compact builder lane unless a snippet explicitly needs parts or diagnostics wiring"
+        "carousel parts-lane usage drifted; only the docs-aligned Usage snippet plus explicit parts/diagnostics seams should exercise the parts adapters"
     );
 }
 
