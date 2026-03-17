@@ -223,7 +223,7 @@ impl<T> LocalState<T> {
     pub fn watch<'watch, 'view_cx, 'a, H: UiHost>(
         &'watch self,
         cx: &'watch mut AppUi<'view_cx, 'a, H>,
-    ) -> WatchedLocal<'watch, 'watch, 'a, H, T>
+    ) -> WatchedState<'watch, 'watch, 'a, H, T>
     where
         T: Any,
     {
@@ -238,7 +238,7 @@ impl<T> LocalState<T> {
     pub fn watch_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    ) -> WatchedState<'cx, 'm, 'a, H, T>
     where
         T: Any,
     {
@@ -249,7 +249,7 @@ impl<T> LocalState<T> {
     pub fn paint_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    ) -> WatchedState<'cx, 'm, 'a, H, T>
     where
         T: Any,
     {
@@ -260,7 +260,7 @@ impl<T> LocalState<T> {
     pub fn layout_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    ) -> WatchedState<'cx, 'm, 'a, H, T>
     where
         T: Any,
     {
@@ -271,7 +271,7 @@ impl<T> LocalState<T> {
     pub fn hit_test_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
         cx: &'cx mut ElementContext<'a, H>,
-    ) -> WatchedLocal<'cx, 'm, 'a, H, T>
+    ) -> WatchedState<'cx, 'm, 'a, H, T>
     where
         T: Any,
     {
@@ -320,11 +320,6 @@ pub struct WatchedState<'cx, 'm, 'a, H: UiHost, T: Any> {
     model: &'m Model<T>,
     invalidation: Invalidation,
 }
-
-pub type WatchedLocal<'cx, 'm, 'a, H, T> = WatchedState<'cx, 'm, 'a, H, T>;
-#[allow(dead_code)]
-/// Legacy alias retained for model-first terminology in downstream code.
-pub type WatchedModel<'cx, 'm, 'a, H, T> = WatchedState<'cx, 'm, 'a, H, T>;
 
 impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedState<'cx, 'm, 'a, H, T> {
     fn new(cx: &'cx mut ElementContext<'a, H>, model: &'m Model<T>) -> Self {
@@ -758,7 +753,7 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiState<'view, 'cx, 'a, H> {
     pub fn watch<T: Any>(
         self,
         local: &'view LocalState<T>,
-    ) -> WatchedLocal<'view, 'view, 'a, H, T> {
+    ) -> WatchedState<'view, 'view, 'a, H, T> {
         self.cx.watch_local(local)
     }
 }
@@ -1645,7 +1640,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     pub fn watch_local<'m, T: Any>(
         &'m mut self,
         local: &'m LocalState<T>,
-    ) -> WatchedLocal<'m, 'm, 'a, H, T> {
+    ) -> WatchedState<'m, 'm, 'a, H, T> {
         WatchedState::new(self.cx, local.model())
     }
 
@@ -2257,6 +2252,8 @@ mod tests {
         assert!(!api_source.contains("pub fn use_query_async<"));
         assert!(!api_source.contains("pub fn use_query_async_local<"));
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
+        assert!(!api_source.contains("pub type WatchedModel"));
+        assert!(!api_source.contains("pub type WatchedLocal"));
         assert!(api_source.contains("pub trait LocalSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
