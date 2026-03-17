@@ -1,6 +1,6 @@
 # Proof Surface Audit — 2026-03-17
 
-Status: Partial closeout note
+Status: Closeout note
 Last updated: 2026-03-17
 
 Related:
@@ -22,7 +22,7 @@ This note separates:
 
 - what is now genuinely proven,
 - what is intentionally explicit and therefore not expected to migrate,
-- and what still lacks proof.
+- and what remains intentionally outside the default app lane.
 
 ## Proven generic-app action surfaces
 
@@ -78,18 +78,21 @@ Conclusion:
 - they are not evidence that advanced/component code should be rewritten into `selector_layout(...)`
   or `read_layout(cx)`
 
-## Remaining open item
+## Selector proof closeout
 
-One proof item is still genuinely open:
+The remaining selector proof gap is now closed on a non-Todo runtime surface:
 
-- there is still no non-Todo runtime app surface in-tree that uses
-  `cx.data().selector_layout(inputs, compute)` as a real LocalState-first selector case
+- `apps/fret-examples/src/hello_counter_demo.rs`
+  - uses `cx.data().selector_layout(&step_state, |step_text| { ... })` on an ordinary runtime demo
+  - proves the LocalState-first selector story outside Todo/template-only teaching surfaces
+- `apps/fret-examples/src/lib.rs`
+  - source-policy gate now expects the `selector_layout(...)` usage in `hello_counter_demo`
+  - prevents the example from drifting back to first-contact raw layout reads
 
-Current evidence:
+Conclusion:
 
-- `selector_layout(...)` is present in docs and scaffold/template surfaces
-- `selector_layout(...)` is present in the Todo golden path
-- but there is no additional non-Todo runtime example using it yet
+- `selector_layout(...)` is now proven across docs/templates, Todo, and a non-Todo runtime example
+- no additional selector helper family is required to close this workstream's proof surface
 
 Counter-evidence that should stay explicit rather than migrate:
 
@@ -99,11 +102,14 @@ Counter-evidence that should stay explicit rather than migrate:
 
 ## Locked conclusion
 
-As of 2026-03-17, the remaining open scope for this workstream is no longer "dataflow in general".
+As of 2026-03-17, this note no longer carries an unresolved proof gap.
 
-It is specifically:
+What is now locked:
 
-- proving or consciously freezing the non-Todo adoption story for `selector_layout(...)`
+- action default-write posture is proven on ordinary app surfaces
+- query default read-side posture is proven on ordinary and editor-grade-compatible surfaces
+- selector default read posture is proven on Todo/template surfaces and on the non-Todo runtime
+  `hello_counter_demo`
 
-The workstream should not reopen action/query design while this remains the only unresolved proof
-gap.
+Any remaining discussion for the broader workstream is therefore a closeout/classification question
+rather than a missing proof-surface question.

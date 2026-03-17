@@ -1462,6 +1462,7 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0i64);",
                 "let step_state = cx.state().local_init(|| \"1\".to_string());",
+                "cx.data().selector_layout(&step_state, |step_text| {",
                 "cx.actions().locals::<act::Inc>({",
                 "cx.actions().locals::<act::Dec>({",
                 "cx.actions().local_set::<act::Reset, i64>(&count_state, 0);",
@@ -1470,6 +1471,7 @@ mod authoring_surface_policy_tests {
                 "cx.use_local_with(|| 0i64)",
                 "cx.on_action_notify_models::<act::Inc>",
                 "cx.on_action_notify_local_set::<act::Reset, i64>",
+                "let step_text = step_state.layout(cx).value_or_else(String::new);",
             ],
         );
 

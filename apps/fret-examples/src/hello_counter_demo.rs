@@ -78,8 +78,9 @@ impl View for HelloCounterView {
         let step_state = cx.state().local_init(|| "1".to_string());
 
         let count = count_state.layout(cx).value_or(0);
-        let step_text = step_state.layout(cx).value_or_else(String::new);
-        let (effective_step, step_valid) = parse_step(&step_text);
+        let (effective_step, step_valid) = cx.data().selector_layout(&step_state, |step_text| {
+            parse_step(step_text.as_str())
+        });
 
         cx.actions().locals::<act::Inc>({
             let count_state = count_state.clone();

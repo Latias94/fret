@@ -28,16 +28,18 @@ Read it as:
 
 - Milestone 1 is in late closeout: dispatch-style activation aliases are gone and the default app
   lane now teaches one narrower action-first vocabulary.
-- Milestone 2 is in implementation: `cx.data().selector_layout(inputs, compute)` is the chosen
-  LocalState-first default selector spelling, while raw `cx.data().selector(...)` remains the
-  explicit shared-model/global-signature lane.
+- Milestone 2 proof coverage is now landed: `cx.data().selector_layout(inputs, compute)` is the
+  chosen LocalState-first default selector spelling, while raw `cx.data().selector(...)` remains
+  the explicit shared-model/global-signature lane and `hello_counter_demo` now proves the default
+  posture on a non-Todo runtime surface.
 - Milestone 3 is now landed: `handle.read_layout(cx)` is the default app-lane query read posture
   for the common `QueryState::<T>::default()` fallback case while keeping `QueryStatus` ownership
   explicit.
 - Milestone 4 audit is now landed: reusable ecosystem crates remain on direct selector/query/router
   surfaces and router compatibility is confirmed without widening this lane's scope.
-- The remaining open item for this lane is now narrower than Milestones 1/3/4:
-  Milestone 2 still lacks a non-Todo runtime proof for `selector_layout(...)`.
+- The remaining work for this lane is now closeout-oriented:
+  legacy default-looking spellings still need final classification/delete-ready decisions where
+  applicable, but selector proof is no longer an open blocker.
 
 ## Milestone 0 — Freeze the lane
 
@@ -104,9 +106,10 @@ Exit criteria:
   first-contact selector story and teach `selector_layout(...)` for LocalState-first inputs,
 - reusable ecosystem crates can still use `fret-selector` directly without app-facade coupling.
 
-Current blocker on 2026-03-17:
+Proof closeout on 2026-03-17:
 
-- no non-Todo runtime app surface has adopted `selector_layout(...)` yet
+- `apps/fret-examples/src/hello_counter_demo.rs` now uses `selector_layout(...)` on a real runtime
+  demo, closing the non-Todo proof gap for this milestone.
 
 ## Milestone 3 — Collapse the query read-side surface
 
@@ -164,4 +167,5 @@ Exit criteria:
 Current remaining closeout gap:
 
 - first-contact docs/templates/gates are aligned for the landed batches,
-- but selector proof still lacks a non-Todo runtime surface.
+- and the remaining work is now about final closeout posture for still-classified legacy spellings,
+  not missing selector proof.

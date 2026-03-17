@@ -34,8 +34,8 @@ Execution note on 2026-03-17:
 - M4 audit is now landed:
   reusable ecosystem crates stay on direct engine/authoring bridges and router remains adjacent
 - proof-surface audit is now landed:
-  action/query are effectively proven on the current in-tree surfaces, and the remaining open proof
-  item is now specifically non-Todo `selector_layout(...)` adoption
+  action/query are effectively proven on the current in-tree surfaces, and selector proof is now
+  also closed on a non-Todo runtime example via `apps/fret-examples/src/hello_counter_demo.rs`
 
 ## Evidence set
 
@@ -58,8 +58,8 @@ Execution note on 2026-03-17:
 
 Selector-specific note:
 
-- these proofs close action/query/default-lane compatibility
-- they do **not** close the remaining non-Todo `selector_layout(...)` runtime adoption gap
+- these proofs now cover both the default selector teaching path and non-Todo runtime adoption
+- raw `cx.data().selector(...)` remains explicit for advanced/shared-model signatures by design
 
 ### Ecosystem / teaching proof surfaces
 
@@ -108,7 +108,8 @@ Rule:
 - [x] Audit editor-grade compatibility impact on shared-model surfaces.
 - [x] Audit router compatibility after the default surface is chosen.
 - [x] Update docs/templates/examples/gates together for each landed batch.
-  - Current remaining gap is proof coverage, not first-contact docs drift.
+  - Current remaining discussion is formal closeout posture, not proof coverage or first-contact
+    docs drift.
 
 ## M0 — Freeze the lane
 
@@ -132,8 +133,9 @@ Rule:
 - [x] Inventory LocalState-first selector dependency/read patterns.
 - [x] Decide the target default selector posture.
 - [x] Keep raw shared-model dependency signatures explicit.
-- [ ] Prove the result outside Todo.
-  - Remaining blocker on 2026-03-17: no non-Todo runtime `selector_layout(...)` app surface yet.
+- [x] Prove the result outside Todo.
+  - Landed on 2026-03-17 in `apps/fret-examples/src/hello_counter_demo.rs`, with the
+    corresponding source-policy expectation in `apps/fret-examples/src/lib.rs`.
 
 ## M3 — Query read surface
 
