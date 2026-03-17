@@ -222,7 +222,7 @@ fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui
 where
     C: IntoUiElement<KernelApp>,
 {
-    ui::v_flex(|cx| ui::children![cx; card])
+    ui::v_flex(|cx| ui::single(cx, card))
         .bg(ColorRef::Color(theme.color_token("background")))
         .p(Space::N6)
         .w_full()

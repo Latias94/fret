@@ -164,14 +164,14 @@ where
     C: IntoUiElement<KernelApp>,
 {
     let page = ui::container(move |cx| {
-        ui::children![
-            cx;
-            ui::v_flex(move |cx| ui::children![cx; viewport_card])
+        ui::single(
+            cx,
+            ui::v_flex(move |cx| ui::single(cx, viewport_card))
                 .w_full()
                 .h_full()
                 .justify_center()
-                .items_center()
-        ]
+                .items_center(),
+        )
     })
     .bg(ColorRef::Color(theme.color_token("background")))
     .p(Space::N6)

@@ -1006,8 +1006,9 @@ mod authoring_surface_policy_tests {
                 ") -> Ui",
                 "C: IntoUiElement<KernelApp>,",
                 "embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())",
+                "ui::v_flex(move |cx| ui::single(cx, viewport_card))",
             ],
-            &[],
+            &["ui::v_flex(move |cx| ui::children![cx; viewport_card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -1027,8 +1028,9 @@ mod authoring_surface_policy_tests {
                 "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
                 "C: IntoUiElement<KernelApp>,",
                 "query_page(cx.elements(), theme, card)",
+                "ui::v_flex(|cx| ui::single(cx, card))",
             ],
-            &[],
+            &["ui::v_flex(|cx| ui::children![cx; card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -1037,8 +1039,9 @@ mod authoring_surface_policy_tests {
                 "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
                 "C: IntoUiElement<KernelApp>,",
                 "query_page(cx.elements(), theme, card)",
+                "ui::v_flex(|cx| ui::single(cx, card))",
             ],
-            &[],
+            &["ui::v_flex(|cx| ui::children![cx; card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -1048,7 +1051,7 @@ mod authoring_surface_policy_tests {
                 "fn hello_world_compare_root(",
                 "cx: &mut UiCx<'_>,",
                 "panel_bg: Color,",
-                "children: Vec<AnyElement>,",
+                "children: Vec<AnyElement>)",
                 ") -> Ui",
                 "hello_world_compare_root(cx.elements(), panel_bg, children)",
             ],
