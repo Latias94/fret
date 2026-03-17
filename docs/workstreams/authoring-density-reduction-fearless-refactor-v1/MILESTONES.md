@@ -75,9 +75,11 @@ Tracked-read note on 2026-03-16:
 - that first M2 batch is now implemented:
   - query examples/templates/docs teach `handle.layout(...).value_or_default()` instead of the
     older `value_or_else(QueryState::<T>::default)` spelling,
-  - `fret::selector::{DepsBuilder, LocalDepsBuilderExt as _}` plus
-    `LocalState::{watch_in, paint_in, layout_in, hit_test_in}` now provide the narrow
-    LocalState-first selector path on helper-heavy `ElementContext` surfaces,
+  - an initial explicit `LocalState`-aware selector-deps bridge landed together with
+    `LocalState::{watch_in, paint_in, layout_in, hit_test_in}` for helper-heavy
+    `ElementContext` surfaces,
+  - follow-up audit on 2026-03-17 then internalized the explicit `LocalDepsBuilderExt` export
+    again because no first-party runtime surface proved it as a stable named selector-lane noun,
   - and the `fret` surface-policy tests now explicitly keep this lane out of
     `fret::app::prelude::*`.
 - `CHILD_COLLECTION_AUDIT_2026-03-16.md` now closes the next question after M2:

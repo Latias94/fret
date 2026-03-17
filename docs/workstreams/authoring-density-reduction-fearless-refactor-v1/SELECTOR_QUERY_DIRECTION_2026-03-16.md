@@ -18,6 +18,11 @@ Related:
 - The current shipped default app-lane query read posture is `handle.read_layout(cx)`.
 - Keep this file for the original M2 audit context and for the selector ownership rationale, not as
   the current query API direction.
+- The experimental named `LocalDepsBuilderExt` selector export also became historical on
+  2026-03-17.
+- The shipped selector posture keeps `cx.data().selector_layout(...)` as the LocalState-first
+  default path, while the explicit `fret::selector` lane retains only raw selector nouns such as
+  `DepsBuilder` / `DepsSignature` / `Selector`.
 
 ## Why this note exists
 

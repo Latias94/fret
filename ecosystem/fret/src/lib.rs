@@ -580,7 +580,6 @@ pub mod selector {
         pub use fret_selector::ui::*;
     }
 
-    pub use crate::view::LocalDepsBuilderExt;
     pub use fret_selector::ui::DepsBuilder;
     pub use fret_selector::{DepsSignature, Selector};
 }
@@ -2644,7 +2643,7 @@ mod authoring_surface_policy_tests {
         assert!(selector_surface.contains("pub mod selector {"));
         assert!(selector_surface.contains("pub mod core {"));
         assert!(selector_surface.contains("pub mod ui {"));
-        assert!(selector_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
+        assert!(!selector_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(selector_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
         assert!(query_surface.contains("pub mod query {"));
@@ -3729,7 +3728,7 @@ mod authoring_surface_policy_tests {
 
         assert!(public_surface.contains("pub mod selector {"));
         assert!(public_surface.contains("pub mod query {"));
-        assert!(public_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
+        assert!(!public_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(public_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
         assert!(public_surface.contains("pub use fret_query::{"));

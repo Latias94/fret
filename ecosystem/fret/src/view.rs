@@ -546,7 +546,7 @@ impl<T: 'static> QueryHandleReadExt<T> for fret_query::QueryHandle<T> {
 /// This keeps `fret-selector` portable while still letting LocalState-first app code build
 /// dependency signatures without bouncing through `clone_model()` or `local.model()`.
 #[cfg(feature = "state-selector")]
-pub trait LocalDepsBuilderExt {
+pub(crate) trait LocalDepsBuilderExt {
     fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self;
 
     fn local_rev_invalidation<T: Any>(
@@ -2323,6 +2323,8 @@ mod tests {
         assert!(!api_source.contains("pub fn update_action("));
         assert!(!api_source.contains("pub fn update_action_if("));
         assert!(!api_source.contains("pub fn set_action("));
+        assert!(!api_source.contains("pub trait LocalDepsBuilderExt"));
+        assert!(api_source.contains("pub(crate) trait LocalDepsBuilderExt"));
         assert!(api_source.contains("pub trait LocalSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
