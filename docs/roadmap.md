@@ -81,9 +81,9 @@ Current execution stance on 2026-03-17:
   default write-side questions on that tracker.
 - `action-write-surface-fearless-refactor-v1` = closed closeout lane:
   the default app-lane write-side budget is now frozen there; keep `payload_local_update_if` as
-  the taught default keyed row-write path, keep only `payload::<A>().models(...)` as the surviving
-  lower-level retained seam, and reopen only through a new narrower lane if fresh cross-surface
-  evidence appears.
+  the taught default keyed row-write path, keep raw
+  `on_payload_action_notify::<A>(...)` as the explicit payload-side advanced fallback, and reopen
+  only through a new narrower lane if fresh cross-surface evidence appears.
 - `app-composition-density-follow-on-v1` = closeout / maintenance lane:
   M1 and M2 are now closed; keep the lane limited to source-gate/docs lockstep and reopen only if
   fresh cross-surface evidence shows a new default app-lane gap beyond first-party drift.
@@ -114,8 +114,8 @@ Recommended order from here:
    justify a narrower re-promotion or delete-ready follow-on,
 2. keep any further retained payload-seam notes inside
    `action-write-surface-fearless-refactor-v1/RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`
-   unless they genuinely grow into a larger lane; the surviving advanced seam there is now
-   `payload::<A>().models(...)`,
+   unless they genuinely grow into a larger lane; the remaining payload-side advanced fallback
+   there is now raw `on_payload_action_notify::<A>(...)`,
 3. keep the remaining ecosystem-trait docs/export cleanup and the conversion-surface
    inventories/gates aligned as maintenance rather than reopening broad redesign,
 4. keep `app-composition-density-follow-on-v1` in closeout / maintenance mode unless new

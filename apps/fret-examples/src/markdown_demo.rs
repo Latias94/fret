@@ -358,21 +358,19 @@ $$
         cx.actions()
             .transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
 
-        cx.actions()
-            .payload::<act::ToggleCodeBlockExpand>()
-            .models({
-                let expanded = self.st.expanded_code_blocks.clone();
-                move |models, id| {
-                    let _ = models.update(&expanded, |set| {
-                        if set.contains(&id) {
-                            set.remove(&id);
-                        } else {
-                            set.insert(id);
-                        }
-                    });
-                    true
-                }
-            });
+        cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({
+            let expanded = self.st.expanded_code_blocks.clone();
+            move |host, _action_cx, id| {
+                let _ = host.models_mut().update(&expanded, |set| {
+                    if set.contains(&id) {
+                        set.remove(&id);
+                    } else {
+                        set.insert(id);
+                    }
+                });
+                true
+            }
+        });
 
         self.st.anchor_regions.borrow_mut().clear();
 

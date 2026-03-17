@@ -74,15 +74,14 @@ The shipped default row-write proof is now consistent:
 
 At the same time:
 
-- `payload::<A>().models(...)` remains intentionally lower-level/reference-only in
-  `apps/fret-examples/src/markdown_demo.rs`,
 - `apps/fret-cookbook/examples/payload_actions_basics.rs` is now migrated back onto
   `payload_local_update_if::<A>(...)` because its old chained spelling had no distinct ownership
   story,
 - post-closeout cleanup then deletes `payload_locals::<A>(...)`,
-  `payload::<A>().locals(...)`, and `payload::<A>().local_update_if(...)` from production code
-  because they either had no first-party runtime proof or only duplicated the same LocalState /
-  LocalTxn stories.
+  `payload::<A>().locals(...)`, `payload::<A>().local_update_if(...)`, and
+  `payload::<A>().models(...)` from production code because they either had no first-party runtime
+  proof or no longer carried a distinct product-surface ownership story once `markdown_demo`
+  returned to raw `on_payload_action_notify::<A>(...)`.
 
 Conclusion:
 
@@ -95,8 +94,9 @@ The first-contact/default teaching surfaces now align on the same posture:
 - teach `locals::<A>(...)` as the primary coordinated local transaction path,
 - teach the one-slot trio as a semantics-driven companion family,
 - teach `payload_local_update_if::<A>(...)` as the only default keyed row-write helper,
-- keep `models::<A>(...)`, `transient::<A>(...)`, and the surviving
-  `payload::<A>().models(...)` seam explicit rather than default.
+- keep `models::<A>(...)` and `transient::<A>(...)` explicit rather than default,
+- and keep raw `on_payload_action_notify::<A>(...)` as the payload-side advanced fallback rather
+  than carrying a grouped payload chain.
 
 This is not only prose alignment:
 
@@ -117,10 +117,11 @@ What remains after closeout does not justify keeping this lane active:
      again, that is a future re-promotion decision, not unfinished v1 work.
 2. Delete-ready question
    - the duplicate helper cleanup is now landed for `payload_locals::<A>(...)`,
-     `payload::<A>().locals(...)`, and `payload::<A>().local_update_if(...)`;
+     `payload::<A>().locals(...)`, `payload::<A>().local_update_if(...)`, and
+     `payload::<A>().models(...)`;
    - any future question is narrower still:
      whether any remaining historical docs that still talk about a generic `payload::<A>()` chain
-     should be rewritten to name `payload::<A>().models(...)` directly.
+     should be rewritten to point at raw `on_payload_action_notify::<A>(...)` directly.
 3. Broader runtime or dataflow questions
    - selector/query, router, and `LocalState<T>` architecture already live on other closed or
      separate lanes.
@@ -150,6 +151,6 @@ From this point forward:
 
 1. keep the shipped default write-side budget stable,
 2. keep `payload_local_update_if::<A>(...)` as the only taught default keyed row-write path,
-3. keep only the surviving `payload::<A>().models(...)` seam explicitly
-   advanced/reference unless new proof justifies further change,
+3. keep payload-side advanced coordination on raw `on_payload_action_notify::<A>(...)` unless new
+   proof justifies another narrower helper,
 4. do not reopen this lane just to explore helper growth from Todo-shaped pressure alone.

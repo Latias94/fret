@@ -76,9 +76,10 @@ Closeout note on 2026-03-17:
   - advanced/reference only
   - delete-ready
 - [x] Re-check non-Todo/runtime/default-facing evidence before changing any shared row-write helper.
-  - Current M2 conclusion: `payload_local_update_if::<A>(...)` is proven, `payload::<A>()` is
-    quarantined, and `payload_locals::<A>(...)` is deleted after first-contact demotion and
-    zero-proof review; see `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md` plus
+  - Current M2/M3 conclusion: `payload_local_update_if::<A>(...)` is proven, the grouped
+    `payload::<A>()` chain is now deleted from production code, and payload-side shared-model
+    coordination drops to raw `on_payload_action_notify::<A>(...)`; see
+    `PAYLOAD_ROW_WRITE_AUDIT_2026-03-17.md` plus
     `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`.
 - [x] Audit reusable ecosystem impact:
   - `ecosystem/fret`
@@ -111,9 +112,9 @@ Closeout note on 2026-03-17:
 - [x] Confirm whether `payload::<A>()` remains quarantined off the default path.
 - [x] Decide whether the current row-write posture is frozen or needs a narrower follow-on.
   - Decision: freeze the default row-write path at `payload_local_update_if::<A>(...)`, keep
-    `payload::<A>()` quarantined, and delete `payload_locals::<A>(...)` /
-    `payload::<A>().locals(...)` after first-contact demotion because no first-party proof surface
-    exists.
+    raw `on_payload_action_notify::<A>(...)` as the explicit payload-side fallback, and delete the
+    grouped `payload::<A>()` chain because its last advanced proof migrated cleanly back to the raw
+    notify hook.
 - [x] Update the default docs/templates/gates if the decision changes the teaching surface.
 
 ## M3 — Closeout
@@ -124,10 +125,11 @@ Closeout note on 2026-03-17:
     `payload_local_update_if::<A>(...)` as the only default row-write path; retained cookbook
     payload surfaces stay explicitly advanced/reference.
 - [x] Record any intentionally retained advanced/reference seams explicitly.
-  - Current result: surviving lower-level payload seams are recorded explicitly rather than taught
-    as first-contact defaults.
-  - Post-closeout cleanup: `payload_locals::<A>(...)` / `payload::<A>().locals(...)` are no
-    longer retained; see `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`.
+  - Current result: no grouped payload-chain helper remains retained; payload-side advanced work
+    now drops to raw `on_payload_action_notify::<A>(...)`.
+  - Post-closeout cleanup: `payload_locals::<A>(...)`, `payload::<A>().locals(...)`, and
+    `payload::<A>().models(...)` are no longer retained; see
+    `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`.
 - [x] Close this lane only after docs/templates/examples/gates are aligned.
   - 2026-03-17 result:
     - `CLOSEOUT_AUDIT_2026-03-17.md` closes the lane,

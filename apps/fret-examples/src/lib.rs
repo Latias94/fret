@@ -1641,7 +1641,7 @@ mod authoring_surface_policy_tests {
             &[
                 "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
-                "cx.actions().payload::<act::ToggleCodeBlockExpand>().models({",
+                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({",
                 "let pending = self.st.pending_anchor.layout(cx).value_or_default();",
                 "let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();",
                 "let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();",
@@ -1649,7 +1649,6 @@ mod authoring_surface_policy_tests {
             &[
                 "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.on_action_notify_transient::<act::RefreshRemoteImages>",
-                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>",
                 "cx.watch_model(&self.st.pending_anchor)",
                 "cx.watch_model(&self.st.wrap_code)",
                 "cx.watch_model(&self.st.cap_code_height)",

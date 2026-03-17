@@ -79,7 +79,7 @@ actions:
 
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
-- Handle actions via `cx.actions().locals::<A>(...)`, keyed-row `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default view-owned row-write path, `cx.actions().models::<A>(...)` (shared graphs), `cx.actions().transient::<A>(...)`, plus widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only surfaces after explicitly importing `use fret::app::AppActivateExt as _;`; keep raw `AppUi::on_action_notify*`, raw `AppUi::on_payload_action_notify*`, the lower-level `cx.actions().payload::<A>().models(...)` seam, and low-level `on_activate*` helpers for cookbook/reference host-side cases.
+- Handle actions via `cx.actions().locals::<A>(...)`, keyed-row `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default view-owned row-write path, `cx.actions().models::<A>(...)` (shared graphs), `cx.actions().transient::<A>(...)`, plus widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only surfaces after explicitly importing `use fret::app::AppActivateExt as _;`; keep raw `AppUi::on_action_notify*`, raw `AppUi::on_payload_action_notify*`, and low-level `on_activate*` helpers for cookbook/reference host-side cases.
 - If advanced code intentionally wants the raw model-backed hook, import `use fret::advanced::AppUiRawStateExt;` and call `cx.use_state::<T>()` explicitly instead of treating it as part of the default `AppUi` surface.
 
 Authoring and historical note:
@@ -148,7 +148,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- typed action handlers (`cx.actions().locals::<A>(...)`, keyed-row `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default row-write path, `cx.actions().models::<A>(...)`, `cx.actions().transient::<A>(...)`, widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` after an explicit `use fret::app::AppActivateExt as _;`, and rare cookbook/reference seams such as `AppUi::on_action_notify*`, `AppUi::on_payload_action_notify*`, and `cx.actions().payload::<A>().models(...)`) plus action IDs
+- typed action handlers (`cx.actions().locals::<A>(...)`, keyed-row `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default row-write path, `cx.actions().models::<A>(...)`, `cx.actions().transient::<A>(...)`, widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` after an explicit `use fret::app::AppActivateExt as _;`, and rare cookbook/reference seams such as `AppUi::on_action_notify*` and `AppUi::on_payload_action_notify*`) plus action IDs
 
 ### Prefer templates and golden demos as migration references
 

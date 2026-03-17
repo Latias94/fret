@@ -319,9 +319,8 @@ Target rule:
   lane: `.role(...)`, `.a11y_role(...)`, and `.test_id(...)` are treated as app-justified
   diagnostics/accessibility affordances even though the underlying trait names stay hidden.
 - `AppUi` is taught through grouped helper families:
-  `cx.state().local*`, `cx.actions().models/locals/transient`,
-  `cx.actions().payload::<A>().models`, `cx.data().selector/query*`, and
-  `cx.effects().take_transient(...)`.
+  `cx.state().local*`, `cx.actions().models/locals/transient/payload_local_update_if`,
+  `cx.data().selector/query*`, and `cx.effects().take_transient(...)`.
 
 App-level ecosystem integration seam:
 
@@ -451,7 +450,6 @@ Target operations:
 - `models::<A>(|models| ...)`
 - `locals::<A>(|tx| ...)`
 - `payload_local_update_if::<A>(&state, |value, payload| ...)`
-- `payload::<A>().models(|models, payload| ...)`
 - `transient::<A>(...)`
 - `availability::<A>(...)`
 

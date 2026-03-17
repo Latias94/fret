@@ -2784,7 +2784,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn repo_docs_prefer_app_ui_language_for_golden_path() {
         assert!(DOCS_README.contains("`ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)"));
-        assert!(DOCS_README.contains("`cx.actions().payload::<A>().models(...)`"));
+        assert!(DOCS_README.contains("`on_payload_action_notify`"));
         assert!(!DOCS_README.contains("`payload_locals::<A>(...)`"));
         assert!(!DOCS_README.contains("`ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)"));
         assert!(!DOCS_README.contains("ViewCx::on_payload_action*"));

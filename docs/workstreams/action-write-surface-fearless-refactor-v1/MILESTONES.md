@@ -100,13 +100,15 @@ Exit criteria:
 Current M2 decision on 2026-03-17:
 
 - `payload_local_update_if::<A>(...)` is strongly proven as the default row-write path
-- `payload::<A>()` remains successfully quarantined
+- the grouped `payload::<A>()` chain is now deleted from production code
 - route 2 landed:
   `payload_locals::<A>(...)` is demoted out of first-contact docs/templates and retained only as
   an explicit advanced/reference seam until a real first-party proof surface exists
 - post-closeout cleanup on 2026-03-17:
-  `payload_locals::<A>(...)` and `payload::<A>().locals(...)` are deleted from production code
-  because they had no first-party runtime proof and only duplicated the same LocalTxn story
+  `payload_locals::<A>(...)`, `payload::<A>().locals(...)`, and
+  `payload::<A>().models(...)` are deleted from production code because they had no surviving
+  product-surface role once the last advanced proof returned to raw
+  `on_payload_action_notify::<A>(...)`
 
 ## Milestone 3 — Closeout and gate alignment
 
@@ -139,4 +141,5 @@ Closeout note on 2026-03-17:
   - `locals::<A>(...)` remains the primary transaction story,
   - `payload_local_update_if::<A>(...)` is the only taught default keyed row-write path,
   - duplicate multi-local payload helpers are deleted,
-  - the remaining `payload::<A>().models(...)` seam stays explicit rather than default.
+  - payload-side advanced coordination stays on raw `on_payload_action_notify::<A>(...)` rather
+    than on a grouped `cx.actions().payload::<A>()` chain.

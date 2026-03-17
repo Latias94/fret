@@ -768,22 +768,10 @@ pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
-/// Grouped payload-action helpers for the default app authoring surface.
-pub struct AppUiPayloadActions<'view, 'cx, 'a, H: UiHost, A> {
-    cx: &'view mut AppUi<'cx, 'a, H>,
-    _marker: std::marker::PhantomData<A>,
-}
-
 /// Grouped action/effect registration helpers for extracted `UiCx` child builders on the default
 /// app surface.
 pub struct UiCxActions<'cx, 'a> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
-}
-
-/// Grouped payload-action helpers for extracted `UiCx` child builders on the default app surface.
-pub struct UiCxPayloadActions<'cx, 'a, A> {
-    cx: &'cx mut ElementContext<'a, crate::app::App>,
-    _marker: std::marker::PhantomData<A>,
 }
 
 /// Contract for app-facing widgets that expose an activation-only callback slot.
@@ -940,22 +928,6 @@ fn uicx_on_payload_action<A>(
     );
 }
 
-fn uicx_on_payload_action_notify<A>(
-    cx: &mut ElementContext<'_, crate::app::App>,
-    f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, ActionCx, A::Payload) -> bool + 'static,
-) where
-    A: crate::actions::TypedPayloadAction,
-{
-    uicx_on_payload_action::<A>(cx, move |host, action_cx, payload| {
-        let handled = f(host, action_cx, payload);
-        if handled {
-            host.request_redraw(action_cx.window);
-            host.notify(action_cx);
-        }
-        handled
-    });
-}
-
 fn uicx_on_action_availability<A>(
     cx: &mut ElementContext<'_, crate::app::App>,
     f: impl Fn(
@@ -1067,16 +1039,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         });
     }
 
-    pub fn payload<A>(self) -> AppUiPayloadActions<'view, 'cx, 'a, H, A>
-    where
-        A: crate::actions::TypedPayloadAction,
-    {
-        AppUiPayloadActions {
-            cx: self.cx,
-            _marker: std::marker::PhantomData,
-        }
-    }
-
     pub fn payload_local_update_if<A, T>(
         self,
         local: &LocalState<T>,
@@ -1103,18 +1065,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         A: crate::TypedAction,
     {
         self.cx.on_action_availability::<A>(f);
-    }
-}
-
-impl<'view, 'cx, 'a, H: UiHost, A> AppUiPayloadActions<'view, 'cx, 'a, H, A>
-where
-    A: crate::actions::TypedPayloadAction,
-{
-    pub fn models(self, f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static) {
-        self.cx
-            .on_payload_action_notify::<A>(move |host, _action_cx, payload| {
-                f(host.models_mut(), payload)
-            });
     }
 }
 
@@ -1204,16 +1154,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         });
     }
 
-    pub fn payload<A>(self) -> UiCxPayloadActions<'cx, 'a, A>
-    where
-        A: crate::actions::TypedPayloadAction,
-    {
-        UiCxPayloadActions {
-            cx: self.cx,
-            _marker: std::marker::PhantomData,
-        }
-    }
-
     pub fn payload_local_update_if<A, T>(
         self,
         local: &LocalState<T>,
@@ -1239,17 +1179,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         A: crate::TypedAction,
     {
         uicx_on_action_availability::<A>(self.cx, f);
-    }
-}
-
-impl<'cx, 'a, A> UiCxPayloadActions<'cx, 'a, A>
-where
-    A: crate::actions::TypedPayloadAction,
-{
-    pub fn models(self, f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static) {
-        uicx_on_payload_action_notify::<A>(self.cx, move |host, _action_cx, payload| {
-            f(host.models_mut(), payload)
-        });
     }
 }
 
@@ -2313,7 +2242,11 @@ mod tests {
         assert!(!api_source.contains("pub fn on_action_notify_transient<"));
         assert!(!api_source.contains("pub fn on_payload_action_notify_local_update_if<"));
         assert!(!api_source.contains("pub fn on_payload_action_notify_locals<"));
+        assert!(!api_source.contains("pub struct AppUiPayloadActions<"));
+        assert!(!api_source.contains("pub struct UiCxPayloadActions<"));
         assert!(!api_source.contains("pub fn payload_locals<"));
+        assert!(!api_source.contains("pub fn payload<A>(self) -> AppUiPayloadActions"));
+        assert!(!api_source.contains("pub fn payload<A>(self) -> UiCxPayloadActions"));
         assert!(!api_source.contains("pub fn local_update_if<T>("));
         assert!(!api_source.contains(
             "pub fn locals(self, f: impl for<'m> Fn(&mut LocalTxn<'m>, A::Payload) -> bool + 'static)"

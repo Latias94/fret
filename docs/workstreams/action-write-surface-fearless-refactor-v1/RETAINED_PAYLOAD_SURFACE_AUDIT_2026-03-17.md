@@ -35,7 +35,7 @@ It is a post-closeout retained-seam inventory attached to the original lane.
 | deleted: `payload::<A>().local_update_if(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; same underlying LocalState-owned write shape as `payload_local_update_if::<A>(...)` | its one cookbook/reference use in `apps/fret-cookbook/examples/payload_actions_basics.rs` is now migrated to the canonical direct helper | not taught on default docs; deleted from production code on 2026-03-17 | Deleted |
 | deleted: `payload_locals::<A>(...)` | former direct helper on `AppUiActions` / `UiCxActions`; opened `LocalTxn` from payload dispatch | no in-tree runtime use was ever found | removed from first-contact docs/templates, then deleted from production code on 2026-03-17 | Deleted |
 | deleted: `payload::<A>().locals(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; same underlying `LocalTxn` shape | no in-tree runtime use was ever found | not taught on default docs; deleted from production code on 2026-03-17 | Deleted |
-| `payload::<A>().models(...)` | chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; opens `ModelStore` from payload dispatch | one real advanced runtime use in `apps/fret-examples/src/markdown_demo.rs` | not first-contact; currently covered only by generic advanced `payload::<A>()` wording and example-source expectations | strongest retain candidate |
+| deleted: `payload::<A>().models(...)` | former chain helper on `AppUiPayloadActions` / `UiCxPayloadActions`; opened `ModelStore` from payload dispatch | its last advanced/runtime proof in `apps/fret-examples/src/markdown_demo.rs` now uses raw `on_payload_action_notify::<A>(...)` instead | no longer taught; deleted from production code on 2026-03-17 | Deleted |
 
 ## Key implementation fact
 
@@ -50,8 +50,8 @@ Important duplication before the cleanup:
 
 Those duplicate pairs are now deleted from production code.
 
-So the remaining retained payload chain is no longer a mixed bag of duplicate spellings.
-It now survives only where it names a different ownership story.
+So there is no remaining grouped payload chain in production code.
+Payload-side advanced coordination now drops directly to raw `on_payload_action_notify::<A>(...)`.
 
 ## Current gate posture
 
@@ -61,14 +61,15 @@ Default-lane gates already lock these constraints:
   - generated `simple-todo` / `todo` README guidance must not teach `cx.actions().payload::<A>()`
   - generated `todo` README guidance must not teach `payload_locals::<A>(...)`
 
-Current advanced-doc posture now names the surviving seam explicitly:
+Current advanced-doc posture now names the raw fallback explicitly:
 
 - `docs/README.md`
 - `docs/fearless-refactoring.md`
 - `docs/ui-ergonomics-and-interop.md`
 - `ecosystem/fret/src/lib.rs`
-  - current source-policy assertions now expect `docs/README.md` to mention
-    `cx.actions().payload::<A>().models(...)`
+  - current source-policy assertions now expect `docs/README.md` to keep raw
+    `on_payload_action_notify::<A>(...)` on the advanced/reference lane instead of teaching a
+    grouped payload chain
 
 ## Post-closeout read
 
@@ -77,6 +78,7 @@ The first delete-ready cleanup is now landed:
 1. `payload_locals::<A>(...)`
 2. `payload::<A>().locals(...)`
 3. `payload::<A>().local_update_if(...)`
+4. `payload::<A>().models(...)`
 
 Reason:
 
@@ -85,18 +87,15 @@ Reason:
 - no default teaching role,
 - duplicate LocalState-owned write story.
 
-The strongest retain candidate is:
+There is no longer a retained grouped payload-chain candidate.
 
-- `payload::<A>().models(...)`
+The explicit fallback is now:
 
-Reason:
-
-- it still names a genuinely different ownership story,
-- and it has at least one real advanced/runtime proof surface in `markdown_demo`.
+- raw `AppUi::on_payload_action_notify::<A>(...)`
 
 ## Recommended use of this note
 
-If maintainers later decide to delete or narrow the remaining retained payload spellings:
+If maintainers later decide to narrow payload-side advanced wording further:
 
 1. keep that work inside this original workstream folder,
 2. update this note plus `CLOSEOUT_AUDIT_2026-03-17.md`,
