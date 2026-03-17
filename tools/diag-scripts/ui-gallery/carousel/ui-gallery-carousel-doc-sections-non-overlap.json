@@ -1,0 +1,117 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: carousel diagnostics sections do not overlap",
+    "tags": ["ui-gallery", "carousel", "layout", "docs", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Navigate to the Carousel page and scroll to the diagnostics follow-up sections.",
+      "Expected behavior: Focus, Duration, and Expandable sections remain vertically separated."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "set_window_inner_size", "width_px": 1440.0, "height_px": 1100.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "carousel" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-carousel" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-carousel" } },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-carousel" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-title" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-title" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-carousel-doc-sections-non-overlap.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-carousel-doc-sections-non-overlap"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-carousel-doc-sections-non-overlap"
+    },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-carousel-loop-downgrade-cannot-loop-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-carousel-focus-title" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-carousel-focus-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-carousel-duration-title" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-carousel-duration-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-title" },
+        "eps_px": 1.0
+      }
+    }
+  ]
+}
