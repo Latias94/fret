@@ -204,7 +204,7 @@ Explicit secondary app lanes:
 - `fret::semantics::SemanticsRole` for explicit semantic-role nouns
 - `fret::style::ThemeSnapshot` for extracted helper signatures that intentionally take snapshot
   value types
-- `fret::selector::{DepsBuilder, DepsSignature}` for selector dependency signatures
+- `fret::selector::ui::DepsBuilder` plus `fret::selector::DepsSignature` for selector dependency signatures
 - `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` for explicit query nouns
 - `fret::children::UiElementSinkExt as _` for explicit sink-style `*_build(|cx, out| ...)`
   collection when a view intentionally opts into manual child pipelines

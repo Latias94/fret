@@ -28,7 +28,7 @@ missing default guideline).
 | Widget-local imperative glue | `.listen(|host, acx| { ... })` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks on activation-only surfaces; import `use fret::app::AppActivateExt as _;` explicitly. |
 | Single typed child landing | `ui::single(cx, child)` | Prefer this when `render()` or a wrapper closure only needs to return one already-typed child. |
 | Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper, then prefer `payload_local_update_if::<A>(...)` for the common row-write path. |
-| Derived values | `cx.data().selector_layout(inputs, compute)` | Default LocalState-first selector path. Keep raw `cx.data().selector(deps, compute)` plus `fret::selector::{DepsBuilder, ...}` for explicit shared `Model<T>` / global signatures. |
+| Derived values | `cx.data().selector_layout(inputs, compute)` | Default LocalState-first selector path. Keep raw `cx.data().selector(deps, compute)` plus `fret::selector::ui::DepsBuilder` for explicit shared `Model<T>` / global signatures. |
 | Async resources | `cx.data().query(key, policy, fetch)` + `handle.read_layout(cx)` | Keep create-side semantics explicit, then use `read_layout(cx)` for the default app-path read when `QueryState::<T>::default()` is the fallback. |
 | Query invalidation on app lane | `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` | Prefer this when invalidation happens inside `AppUi` / extracted `UiCx`; keep raw `with_query_client(...)` for pure app/driver code. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |

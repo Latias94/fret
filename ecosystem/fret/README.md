@@ -140,7 +140,8 @@ If app code needs explicit semantic-role nouns, import them from
 If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story
 (`cx.data().query*(...)`, `handle.read_layout(cx)`, `cx.data().invalidate_query(...)`,
 `cx.data().invalidate_query_namespace(...)`),
-import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
+import them intentionally from `fret::selector::ui::DepsBuilder`,
+`fret::selector::DepsSignature`, and
 `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`.
 For adaptive UI helpers such as breakpoints, safe-area insets, pointer/media preferences, or
 Tailwind breakpoint probes, use `fret::env::{...}` explicitly.

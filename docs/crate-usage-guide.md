@@ -164,8 +164,8 @@ expecting `CommandId` from the default prelude.
 When app code needs explicit semantics nouns, import them intentionally from
 `fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 When app code needs explicit selector/query nouns, keep them off the default prelude as well and
-import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
-`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
+import them intentionally from `fret::selector::ui::DepsBuilder`,
+`fret::selector::DepsSignature`, and `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
 Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
 instead of treating breakpoint/media helpers as part of the default app vocabulary.
 When a view intentionally opts into manual sink-style `*_build(|cx, out| ...)` composition, keep
@@ -618,8 +618,8 @@ consistent inbox + cancellation vocabulary.
 `cx.data().selector_layout(...)` for view-owned `LocalState<T>` inputs. Keep raw
 `cx.data().selector(...)` for explicit shared `Model<T>` / global signatures. When app code needs
 to spell dependency-signature helpers explicitly, import them from
-`fret::selector::{DepsBuilder, DepsSignature}` instead of expecting them from
-`fret::app::prelude::*`. Enable `fret-selector/ui` only when you are working directly with
+`fret::selector::ui::DepsBuilder` plus `fret::selector::DepsSignature` instead of expecting them
+from `fret::app::prelude::*`. Enable `fret-selector/ui` only when you are working directly with
 `ElementContext` in component/advanced surfaces.
 
 **Use it when:** you need stable derived values (counts, filtered views, projections) without
@@ -627,8 +627,8 @@ introducing “tick models” or storing every derived value in the model store.
 
 **Default app note:** on the `fret` golden path, prefer `cx.data().selector_layout(...)` when the
 inputs are view-owned `LocalState<T>` slots. Keep raw `cx.data().selector(...)` plus
-`fret::selector::{DepsBuilder, DepsSignature}` for explicit shared `Model<T>` / global signatures
-or direct component/advanced `ElementContext` work.
+`fret::selector::ui::DepsBuilder` plus `fret::selector::DepsSignature` for explicit shared
+`Model<T>` / global signatures or direct component/advanced `ElementContext` work.
 
 ### `fret-query`
 

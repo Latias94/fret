@@ -58,7 +58,7 @@
 //!   `cx.data().query*(...)` plus `handle.read_layout(cx)` as the default query read path, and use
 //!   `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` when
 //!   app-facing query invalidation stays inside `AppUi`; when app code needs explicit state helper
-//!   nouns, use `fret::selector::{DepsBuilder, DepsSignature}` and
+//!   nouns, use `fret::selector::ui::DepsBuilder`, `fret::selector::DepsSignature`, and
 //!   `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` instead of expecting
 //!   those names from `fret::app::prelude::*`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
@@ -566,8 +566,8 @@ pub mod component {
 /// - grouped default app data stays on `cx.data().selector_layout(...)` for LocalState-first
 ///   inputs, with raw `cx.data().selector(...)` kept explicit,
 /// - `fret-selector` remains the portable derived-state crate,
-/// - `fret::selector` gives app authors one explicit lane for dependency-signature nouns without
-///   widening `fret::app::prelude::*`.
+/// - `fret::selector` keeps selector-core nouns on the explicit lane, while UI dependency builders
+///   stay under `fret::selector::ui::*` instead of widening `fret::app::prelude::*`.
 #[cfg(feature = "state-selector")]
 pub mod selector {
     /// Raw selector-core exports for advanced or fully explicit use.
@@ -580,7 +580,6 @@ pub mod selector {
         pub use fret_selector::ui::*;
     }
 
-    pub use fret_selector::ui::DepsBuilder;
     pub use fret_selector::{DepsSignature, Selector};
 }
 
@@ -2627,7 +2626,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`handle.read_layout(cx)`"));
         assert!(CRATE_README.contains("`cx.data().invalidate_query(...)`"));
         assert!(CRATE_README.contains("`cx.data().invalidate_query_namespace(...)`"));
-        assert!(CRATE_README.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(CRATE_README.contains("`fret::selector::ui::DepsBuilder`"));
+        assert!(CRATE_README.contains("`fret::selector::DepsSignature`"));
         assert!(
             CRATE_README
                 .contains("`fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`")
@@ -2636,7 +2636,8 @@ mod authoring_surface_policy_tests {
         let rustdoc = crate_rustdoc();
         let selector_surface = selector_surface_source();
         let query_surface = query_surface_source();
-        assert!(rustdoc.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(rustdoc.contains("`fret::selector::ui::DepsBuilder`"));
+        assert!(rustdoc.contains("`fret::selector::DepsSignature`"));
         assert!(
             rustdoc.contains("`fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`")
         );
@@ -2645,7 +2646,8 @@ mod authoring_surface_policy_tests {
         assert!(selector_surface.contains("pub mod ui {"));
         assert!(!selector_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(selector_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
-        assert!(selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(!selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(selector_surface.contains("pub use fret_selector::ui::*;"));
         assert!(query_surface.contains("pub mod query {"));
         assert!(query_surface.contains("pub mod core {"));
         assert!(query_surface.contains("pub mod ui {"));
@@ -2881,7 +2883,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupMode`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::ui::DepsBuilder`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::DepsSignature`"));
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`")
         );
@@ -3730,7 +3733,8 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub mod query {"));
         assert!(!public_surface.contains("pub use crate::view::LocalDepsBuilderExt;"));
         assert!(public_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
-        assert!(public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(!public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(public_surface.contains("pub use fret_selector::ui::*;"));
         assert!(public_surface.contains("pub use fret_query::{"));
         assert!(public_surface.contains("CancellationToken, FutureSpawner, FutureSpawnerHandle"));
         assert!(
