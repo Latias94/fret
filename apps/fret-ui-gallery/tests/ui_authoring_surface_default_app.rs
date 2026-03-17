@@ -6606,9 +6606,9 @@ fn selected_breadcrumb_snippet_helpers_prefer_into_ui_element_over_anyelement() 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/breadcrumb/dropdown.rs",
         &[
-            "fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+            "fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
         ],
-        &["fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+        &["fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 }
 
