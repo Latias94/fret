@@ -51,13 +51,13 @@ Primary default app-facing proof surfaces:
 - `apps/fret-cookbook/examples/hello_counter.rs`
 - `docs/examples/todo-app-golden-path.md`
 
-Secondary app-facing comparison surface:
+Secondary app-facing proof surfaces:
 
+- `apps/fret-examples/src/simple_todo_demo.rs`
 - `apps/fret-examples/src/todo_demo.rs`
 
 Excluded boundary surfaces:
 
-- `apps/fret-examples/src/simple_todo_demo.rs`
 - `apps/fret-examples/src/cjk_conformance_demo.rs`
 - `apps/fret-examples/src/emoji_conformance_demo.rs`
 - `apps/fret-cookbook/examples/utility_window_materials_windows.rs`
@@ -103,6 +103,9 @@ The repeated shell that still looks dense is essentially:
 
 That makes it a poor candidate for promotion into `ecosystem/fret` because it would move page
 policy and presentation defaults into the facade layer instead of keeping them app-owned.
+
+`apps/fret-examples/src/simple_todo_demo.rs` now lands on the same default app lane and reaches the
+same conclusion from a public starter-style demo surface rather than from an advanced/manual shell.
 
 Conclusion:
 

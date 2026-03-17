@@ -226,6 +226,8 @@ now taught as `LocalState` + view runtime + typed actions.
 
 - End-to-end demo wiring (effects → runner → render): [apps/fret-examples/src/components_gallery.rs](../apps/fret-examples/src/components_gallery.rs)
   - Run: `cargo run -p fretboard -- dev native --bin components_gallery`
+- Starter todo public proof surface (default app lane, no selector/query): [apps/fret-examples/src/simple_todo_demo.rs](../apps/fret-examples/src/simple_todo_demo.rs)
+  - Run: `cargo run -p fretboard -- dev native --bin simple_todo_demo`
 - Todo app “golden path” (shadcn + bootstrap): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin todo_demo`
 - Starter todo template generator: `cargo run -p fretboard -- new todo --name my-todo`

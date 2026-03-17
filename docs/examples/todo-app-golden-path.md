@@ -36,7 +36,10 @@ cargo run -p fretboard -- new todo --name my-todo
 Maintainer comparison target (not the onboarding default):
 
 - `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
-- It remains useful as the smallest side-by-side comparison surface, but the same keyed-list direction now also ships in `apps/fret-examples/src/todo_demo.rs` and the `fretboard` simple-todo scaffold. Its value is comparison, not proving the default path is still missing.
+- It remains useful as the smallest side-by-side comparison surface, but the same keyed-list
+  direction now also ships in `apps/fret-examples/src/simple_todo_demo.rs`,
+  `apps/fret-examples/src/todo_demo.rs`, and the `fretboard` simple-todo scaffold. Its value is
+  comparison, not proving the default path is still missing.
 
 Related ADRs:
 

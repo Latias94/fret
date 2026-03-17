@@ -12,6 +12,7 @@ Related:
 - `docs/authoring-golden-path-v2.md`
 - `apps/fretboard/src/scaffold/templates.rs`
 - `apps/fret-cookbook/examples/simple_todo.rs`
+- `apps/fret-examples/src/simple_todo_demo.rs`
 - `apps/fret-examples/src/todo_demo.rs`
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
 - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/QUERY_READ_SURFACE_CLOSEOUT_2026-03-17.md`
@@ -35,6 +36,7 @@ Primary default-path surfaces:
 - `docs/examples/todo-app-golden-path.md`
 - `apps/fretboard/src/scaffold/templates.rs`
 - `apps/fret-cookbook/examples/simple_todo.rs`
+- `apps/fret-examples/src/simple_todo_demo.rs`
 - `apps/fret-examples/src/todo_demo.rs`
 
 Closeout decisions reused here:
@@ -42,6 +44,12 @@ Closeout decisions reused here:
 - action write budget is already closed on the current `cx.actions()` family
 - query read posture is already closed on `cx.data().query(...)` + `handle.read_layout(cx)`
 - query invalidation shell is already closed on grouped `cx.data().invalidate_query*`
+
+Additional public-demo note:
+
+- `apps/fret-examples/src/simple_todo_demo.rs` is now aligned with the same default app-lane
+  authoring story (`View` + `AppUi` + `LocalState<Vec<_>>` + typed/payload actions) instead of
+  staying on the older `Model + CommandId + UiTree + RenderRootContext` path.
 
 ## Current experience verdict
 

@@ -31,7 +31,7 @@ canonical query route:
 
 - `?demo=ui_gallery` — full UI Gallery app (pages use `?page=...`)
 - `?demo=components_gallery` — lightweight examples gallery
-- `?demo=simple_todo` — starter-style todo example
+- `?demo=simple_todo` — starter-style todo example aligned with the default app lane
 - `?demo=emoji_conformance_demo`
 - `?demo=cjk_conformance_demo`
 - `?demo=chart_demo`

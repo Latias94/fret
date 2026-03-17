@@ -47,7 +47,7 @@ Canonical cookbook index (Bevy-style tables + feature gates):
 |---|---|---|---|---|
 | cookbook.hello | Keep | `apps/fret-cookbook/examples/hello.rs` | `cargo run -p fret-cookbook --example hello` | Minimal “hello” runnable. |
 | cookbook.hello_counter | Keep | `apps/fret-cookbook/examples/hello_counter.rs` | `cargo run -p fret-cookbook --example hello_counter` | Small view-runtime + `LocalState` counter; stable `test_id` set. |
-| cookbook.simple_todo | Keep | `apps/fret-cookbook/examples/simple_todo.rs` | `cargo run -p fret-cookbook --example simple_todo` | Minimal todo list kept as the explicit-model comparison/reference case; the default starter keyed-list path now lives in the `simple-todo` template and `todo_demo`. |
+| cookbook.simple_todo | Keep | `apps/fret-cookbook/examples/simple_todo.rs` | `cargo run -p fret-cookbook --example simple_todo` | Minimal todo list kept as the explicit-model comparison/reference case; the default starter keyed-list path now lives in the `simple-todo` template, `simple_todo_demo`, and `todo_demo`. |
 | cookbook.toast_basics | Keep | `apps/fret-cookbook/examples/toast_basics.rs` | `cargo run -p fret-cookbook --example toast_basics` | Official. Sonner/Toaster integration; diag smoke exists (`cookbook-toast-basics`). |
 | cookbook.date_picker_basics | Keep | `apps/fret-cookbook/examples/date_picker_basics.rs` | `cargo run -p fret-cookbook --example date_picker_basics` | Official. Minimal DatePicker wiring; diag smoke exists (`cookbook-date-picker-basics`). |
 | cookbook.form_basics | Keep | `apps/fret-cookbook/examples/form_basics.rs` | `cargo run -p fret-cookbook --example form_basics` | Official. Minimal validation pattern (no form registry dep); diag smoke exists (`cookbook-form-basics`). |
