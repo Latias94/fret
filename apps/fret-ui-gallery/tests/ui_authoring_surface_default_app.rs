@@ -5920,7 +5920,6 @@ fn selected_carousel_usage_compact_builder_and_parts_snippets_keep_their_lane_st
 #[test]
 fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
     for relative_path in [
-        "src/ui/snippets/carousel/basic.rs",
         "src/ui/snippets/carousel/sizes_thirds.rs",
         "src/ui/snippets/carousel/sizes.rs",
         "src/ui/snippets/carousel/spacing.rs",
@@ -5943,16 +5942,15 @@ fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
     let carousel_page = read("src/ui/pages/carousel.rs");
     assert!(
         carousel_page.contains(
-            "The docs-path examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`) and the ordinary preview/demos (`Demo`, `API`, autoplay/wheel examples, dedicated `Loop`) still stay on the compact builder lane unless a snippet explicitly needs control-level parts or diagnostics-specific control IDs."
+            "The docs-path examples below (`Sizes`, `Spacing`, `Orientation`, `Options`) and the docs-aligned previews (`Demo`, `API`, base autoplay plugin, `RTL`) still stay on the compact builder lane unless a snippet explicitly needs control-level parts or diagnostics-specific control IDs."
         ),
-        "src/ui/pages/carousel.rs should explain why the docs path and the dedicated loop preview still stay on the compact builder lane"
+        "src/ui/pages/carousel.rs should explain which examples remain on the upstream docs path compact-builder lane"
     );
 }
 
 #[test]
 fn carousel_page_keeps_docs_width_lane_distinct_from_fixed_width_diagnostics_harnesses() {
     for relative_path in [
-        "src/ui/snippets/carousel/basic.rs",
         "src/ui/snippets/carousel/options.rs",
         "src/ui/snippets/carousel/loop_carousel.rs",
         "src/ui/snippets/carousel/api.rs",
@@ -5989,6 +5987,37 @@ fn carousel_page_keeps_docs_width_lane_distinct_from_fixed_width_diagnostics_har
 }
 
 #[test]
+fn carousel_page_keeps_basic_preview_out_of_the_upstream_docs_path() {
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    let normalized = carousel_page.split_whitespace().collect::<String>();
+
+    assert!(
+        carousel_page.contains(
+            "`Basic` remains a gallery follow-up baseline preview because the upstream docs jump straight from `Usage` into the `Sizes` examples instead of showing a separate single-slide baseline section."
+        ),
+        "src/ui/pages/carousel.rs should explain why `Basic` stays after the upstream docs path"
+    );
+    assert!(
+        carousel_page.contains(
+            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
+        ),
+        "src/ui/pages/carousel.rs should describe `Basic` as a follow-up baseline preview rather than part of the upstream docs path"
+    );
+    assert!(
+        normalized.contains(
+            "vec![demo,about,usage,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
+        ),
+        "src/ui/pages/carousel.rs should place `Basic` after `Fret Follow-ups` instead of inside the upstream docs path"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,"
+        ),
+        "src/ui/pages/carousel.rs should not keep `Basic` before the docs-path size examples"
+    );
+}
+
+#[test]
 fn carousel_page_keeps_extra_plugin_variants_out_of_the_upstream_docs_path() {
     let carousel_page = read("src/ui/pages/carousel.rs");
     let normalized = carousel_page.split_whitespace().collect::<String>();
@@ -6001,13 +6030,13 @@ fn carousel_page_keeps_extra_plugin_variants_out_of_the_upstream_docs_path() {
     );
     assert!(
         carousel_page.contains(
-            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Basic/Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
+            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
         ),
         "src/ui/pages/carousel.rs should describe the narrowed docs path before the follow-up plugin variants"
     );
     assert!(
         normalized.contains(
-            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
+            "vec![demo,about,usage,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
         ),
         "src/ui/pages/carousel.rs should place the extra plugin variants after `Fret Follow-ups` instead of inside the upstream docs path"
     );
