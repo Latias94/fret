@@ -40,7 +40,7 @@ Active tracker highlights:
 - Into-element surface cleanup (follow-on to the authoring reset; conversion vocabulary collapse): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
 - Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Dataflow authoring surface (closed closeout lane for selector/query + ecosystem/router boundary conclusions): `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
-- Action write surface (closed closeout lane for the default app-lane write budget): `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`.
+- Action write surface (closed closeout lane for the default app-lane write budget): `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`, and `docs/workstreams/action-write-surface-fearless-refactor-v1/RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`.
 - Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 - Local-state facade boundary hardening (closed maintenance lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
 
@@ -77,8 +77,9 @@ Current execution stance on 2026-03-17:
   default write-side questions on that tracker.
 - `action-write-surface-fearless-refactor-v1` = closed closeout lane:
   the default app-lane write-side budget is now frozen there; keep `payload_local_update_if` as
-  the taught default keyed row-write path and reopen only through a new narrower lane if fresh
-  cross-surface evidence appears.
+  the taught default keyed row-write path, keep only `payload::<A>().models(...)` as the surviving
+  lower-level retained seam, and reopen only through a new narrower lane if fresh cross-surface
+  evidence appears.
 - `authoring-surface-and-ecosystem-fearless-refactor-v1` = closeout lane:
   keep deleting stale aliases, tightening gates, and cleaning docs, but do not reopen broad
   surface redesign here.
@@ -104,15 +105,19 @@ Recommended order from here:
 
 1. keep `action-write-surface-fearless-refactor-v1` closed unless fresh cross-surface evidence can
    justify a narrower re-promotion or delete-ready follow-on,
-2. keep the remaining ecosystem-trait docs/export cleanup and the conversion-surface
+2. keep any further retained payload-seam notes inside
+   `action-write-surface-fearless-refactor-v1/RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`
+   unless they genuinely grow into a larger lane; the surviving advanced seam there is now
+   `payload::<A>().models(...)`,
+3. keep the remaining ecosystem-trait docs/export cleanup and the conversion-surface
    inventories/gates aligned as maintenance rather than reopening broad redesign,
-3. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
+4. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
    wording drift,
-4. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
+5. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
    treating it as another open-ended state-surface lane,
-5. keep `local-state-facade-boundary-hardening-v1` closed unless fresh evidence shows that wording
+6. keep `local-state-facade-boundary-hardening-v1` closed unless fresh evidence shows that wording
    and current gates are no longer sufficient,
-6. only reopen storage-model refactors if fresh evidence can name both the bottleneck and the
+7. only reopen storage-model refactors if fresh evidence can name both the bottleneck and the
    proof surfaces + gates in advance.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
