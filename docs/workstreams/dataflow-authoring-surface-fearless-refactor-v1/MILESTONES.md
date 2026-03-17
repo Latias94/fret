@@ -1,7 +1,7 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — Milestones
 
-Status: Active planning lane
-Last updated: 2026-03-16
+Status: Active implementation lane
+Last updated: 2026-03-17
 
 Related:
 
@@ -20,6 +20,15 @@ Read it as:
 - app-facing by default,
 - explicitly compatible with editor-grade and reusable-ecosystem consumers,
 - and intentionally separate from router/history scope.
+
+## Current execution stance (2026-03-17)
+
+- Milestone 1 is in late closeout: dispatch-style activation aliases are gone and the default app
+  lane now teaches one narrower action-first vocabulary.
+- Milestone 2 is in implementation: `cx.data().selector_layout(inputs, compute)` is the chosen
+  LocalState-first default selector spelling, while raw `cx.data().selector(...)` remains the
+  explicit shared-model/global-signature lane.
+- Milestone 3 is now the clearest remaining default-path density gap.
 
 ## Milestone 0 — Freeze the lane
 
@@ -76,12 +85,14 @@ Deliverables:
 
 - LocalState-first selector dependency/read inventory
 - chosen target surface for default app authoring
+  - current chosen spelling: `cx.data().selector_layout(inputs, compute)` for LocalState-first
+    selectors on the `fret` app lane
 - explicit advanced fallback story for shared-model dependency signatures
 
 Exit criteria:
 
 - default app docs/templates/examples no longer require raw dependency-builder knowledge as the
-  first-contact selector story,
+  first-contact selector story and teach `selector_layout(...)` for LocalState-first inputs,
 - reusable ecosystem crates can still use `fret-selector` directly without app-facade coupling.
 
 ## Milestone 3 — Collapse the query read-side surface

@@ -539,6 +539,10 @@ Post-closeout handoff order on 2026-03-16:
     `fret::app::prelude::*` into the explicit `fret::selector::*` lane so default first-contact
     imports stay smaller.
   - [x] Move default docs/templates/examples to `cx.data().selector(...)`.
+  - [x] Follow-on on 2026-03-17 under
+    `dataflow-authoring-surface-fearless-refactor-v1`: narrow the LocalState-first happy path to
+    `cx.data().selector_layout(...)` while keeping raw `cx.data().selector(...)` explicit for
+    shared-model/global-signature work.
   - [x] Audit remaining advanced/component call sites and keep them explicit.
 - [x] Migrate `fret-query` to the grouped app data surface.
   - [x] Move default docs/examples to `cx.data().query(...)` / `cx.data().query_async(...)`.

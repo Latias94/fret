@@ -287,7 +287,8 @@ surface.
     selector/query badges and alerts behind `state-selector` / `state-query`.
 - [x] Do not add a selector trait unless a concrete multi-crate need appears.
   - Current v1 posture remains explicit non-adoption.
-- [x] Keep official docs teaching grouped `cx.data().selector(...)` / `cx.data().query(...)` on the
+- [x] Keep official docs teaching grouped `cx.data().selector_layout(...)` for LocalState-first
+  inputs, raw `cx.data().selector(...)` for explicit signatures, and `cx.data().query(...)` on the
   app path.
   - Evidence: first-party docs/tests now gate the grouped app data surface and reject
     `cx.use_query*` as the default teaching path.

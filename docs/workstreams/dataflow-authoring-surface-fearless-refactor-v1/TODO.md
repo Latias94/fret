@@ -1,7 +1,7 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — TODO
 
-Status: Active planning tracker
-Last updated: 2026-03-16
+Status: Active implementation tracker
+Last updated: 2026-03-17
 
 Companion docs:
 
@@ -16,6 +16,16 @@ Execution note on 2026-03-16:
 - keep it narrow: `action`, `selector`, `query` default authoring only
 - do not turn this into another route/history or storage-architecture reset
 
+Execution note on 2026-03-17:
+
+- `action` closeout is materially landed on the default app surface; the remaining open questions
+  are narrower default-write/query follow-ons rather than alias cleanup
+- `selector` now has a chosen LocalState-first default spelling:
+  `cx.data().selector_layout(inputs, compute)`
+- raw `cx.data().selector(...)` remains explicit for shared `Model<T>` signatures, global tokens,
+  and direct advanced/component `ElementContext` work
+- the next major open default-path lane is query read-side density
+
 ## Evidence set
 
 ### Generic app proof surfaces
@@ -25,7 +35,7 @@ Execution note on 2026-03-16:
 - [ ] `apps/fret-cookbook/examples/query_basics.rs`
 - [ ] `apps/fret-cookbook/examples/form_basics.rs`
 - [ ] `apps/fret-cookbook/examples/commands_keymap_basics.rs`
-- [ ] `apps/fretboard/src/scaffold/templates.rs`
+- [x] `apps/fretboard/src/scaffold/templates.rs`
 
 ### Editor-grade proof surfaces
 
@@ -37,9 +47,9 @@ Execution note on 2026-03-16:
 
 ### Ecosystem / teaching proof surfaces
 
-- [ ] `docs/crate-usage-guide.md`
-- [ ] `docs/authoring-golden-path-v2.md`
-- [ ] `docs/examples/todo-app-golden-path.md`
+- [x] `docs/crate-usage-guide.md`
+- [x] `docs/authoring-golden-path-v2.md`
+- [x] `docs/examples/todo-app-golden-path.md`
 - [ ] first-party ecosystem adapter touchpoints under `ecosystem/*` once the target surfaces are chosen
 
 ### Router compatibility checks
@@ -54,20 +64,20 @@ Rule:
 
 ## Current priority checklist
 
-- [ ] Freeze the scope and ownership rules.
-- [ ] Freeze the consumer matrix:
+- [x] Freeze the scope and ownership rules.
+- [x] Freeze the consumer matrix:
   - generic app
   - editor-grade app
   - reusable ecosystem crate
-- [ ] Inventory current action helper families on the default app path.
-- [ ] Decide the target collapse for:
+- [x] Inventory current action helper families on the default app path.
+- [x] Decide the target collapse for:
   - one-slot local writes
   - multi-slot LocalState transactions
   - keyed payload row writes
   - app-only transient/effect handoff
   - explicit shared-model fallback
-- [ ] Inventory current LocalState-first selector choreography.
-- [ ] Decide the target collapse for default selector deps/reads.
+- [x] Inventory current LocalState-first selector choreography.
+- [x] Decide the target collapse for default selector deps/reads.
 - [ ] Inventory current query read-side ceremony.
 - [ ] Decide the target collapse for default query reads without hiding key/policy/fetch.
 - [ ] Audit ecosystem adapter impact:
@@ -81,26 +91,26 @@ Rule:
 
 ## M0 — Freeze the lane
 
-- [ ] Add the workstream directory and connect it from `docs/README.md`, `docs/roadmap.md`, and
+- [x] Add the workstream directory and connect it from `docs/README.md`, `docs/roadmap.md`, and
   `docs/workstreams/README.md`.
-- [ ] Record the router-out-of-scope decision explicitly.
-- [ ] Record the reusable-ecosystem adaptation rules explicitly.
+- [x] Record the router-out-of-scope decision explicitly.
+- [x] Record the reusable-ecosystem adaptation rules explicitly.
 
 ## M1 — Action surface
 
-- [ ] Inventory current default action spellings.
-- [ ] Classify each current spelling as:
+- [x] Inventory current default action spellings.
+- [x] Classify each current spelling as:
   - default
   - advanced/editor-grade
   - history-only/delete-ready
-- [ ] Choose the compact target posture for default app writes.
+- [x] Choose the compact target posture for default app writes.
 - [ ] Prove it on both generic-app and editor-grade surfaces.
 
 ## M2 — Selector surface
 
-- [ ] Inventory LocalState-first selector dependency/read patterns.
-- [ ] Decide the target default selector posture.
-- [ ] Keep raw shared-model dependency signatures explicit.
+- [x] Inventory LocalState-first selector dependency/read patterns.
+- [x] Decide the target default selector posture.
+- [x] Keep raw shared-model dependency signatures explicit.
 - [ ] Prove the result outside Todo.
 
 ## M3 — Query read surface

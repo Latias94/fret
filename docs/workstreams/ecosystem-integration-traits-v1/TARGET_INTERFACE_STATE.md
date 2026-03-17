@@ -172,7 +172,7 @@ Target export posture:
 
 | Surface | Purpose | Notes |
 | --- | --- | --- |
-| grouped `cx.data().selector(...)` / `cx.data().query(...)` | default app path | remains the canonical teaching surface |
+| grouped `cx.data().selector_layout(...)` for LocalState-first selectors, raw `cx.data().selector(...)` for explicit signatures, and `cx.data().query(...)` | default app path | remains the canonical teaching surface |
 | `QueryAdapter` | optional reusable-library bridge | deferred in v1 until a second real reusable consumer appears |
 | selector integration | data-first, no shared trait in v1 | `DepsBuilder` / `DepsSignature` stay enough |
 

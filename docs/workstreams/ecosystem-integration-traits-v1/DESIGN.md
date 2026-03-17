@@ -442,8 +442,9 @@ Deferred.
 
 Reason:
 
-- `DepsBuilder`, `DepsSignature`, and `cx.data().selector(...)` already provide a strong default
-  app-facing seam,
+- `DepsBuilder`, `DepsSignature`, and the current grouped selector surface
+  (`cx.data().selector_layout(...)` for LocalState-first inputs plus raw `cx.data().selector(...)`
+  for explicit signatures) already provide a strong app-facing seam,
 - the component-ecosystem state guidance already says primitives should remain selector-agnostic,
 - we should not add another trait until there is a concrete multi-crate pressure for it.
 
@@ -507,7 +508,9 @@ Target posture:
 
 Target posture:
 
-- app authors continue to use grouped `cx.data().selector(...)` / `cx.data().query(...)`,
+- app authors continue to use grouped `cx.data().selector_layout(...)` for LocalState-first
+  derived values, raw `cx.data().selector(...)` for explicit signatures, and
+  `cx.data().query(...)`,
 - primitives stay state-stack agnostic,
 - optional query adapters exist only for higher-level reusable libraries,
 - selector remains data-first without a shared trait in v1.
