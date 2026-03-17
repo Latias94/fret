@@ -22,15 +22,15 @@ use fret_ui_kit::declarative::motion::{
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::control_registry::{
-    ControlAction, ControlEntry, ControlId, control_registry_model,
+    control_registry_model, ControlAction, ControlEntry, ControlId,
 };
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
-    ShadowPreset, Size, Space, WidgetState, WidgetStateProperty, WidgetStates,
-    resolve_override_slot, ui,
+    resolve_override_slot, ui, ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement,
+    MetricRef, OverrideSlot, Radius, ShadowPreset, Size, Space, WidgetState, WidgetStateProperty,
+    WidgetStates,
 };
 
 use crate::command::{
@@ -914,7 +914,8 @@ impl Combobox {
             items: Vec::new(),
             groups: Vec::new(),
             group_separators: false,
-            auto_highlight: true,
+            // Base UI Combobox opts into first-match highlighting via `autoHighlight`.
+            auto_highlight: false,
             test_id_prefix: None,
             trigger_test_id: None,
             control_id: None,
@@ -3596,6 +3597,20 @@ mod tests {
     }
 
     #[test]
+    fn combobox_defaults_auto_highlight_to_opt_in_false() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let combobox = Combobox::new(model, open);
+
+        assert!(
+            !combobox.auto_highlight,
+            "Base UI Combobox keeps first-match highlight opt-in via autoHighlight"
+        );
+    }
+
+    #[test]
     fn combobox_test_id_prefix_derives_trigger_test_id() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3665,15 +3680,13 @@ mod tests {
                     bounds,
                     "combobox-clear",
                     |cx| {
-                        vec![
-                            Combobox::new(model, open.clone())
-                                .a11y_label("Combobox")
-                                .test_id_prefix("combobox-clear")
-                                .items([ComboboxItem::new("alpha", "Alpha")])
-                                .into_element_parts(cx, |_cx| {
-                                    vec![ComboboxPart::from(ComboboxInput::new().show_clear(true))]
-                                }),
-                        ]
+                        vec![Combobox::new(model, open.clone())
+                            .a11y_label("Combobox")
+                            .test_id_prefix("combobox-clear")
+                            .items([ComboboxItem::new("alpha", "Alpha")])
+                            .into_element_parts(cx, |_cx| {
+                                vec![ComboboxPart::from(ComboboxInput::new().show_clear(true))]
+                            })]
                     },
                 );
                 ui.set_root(root);
@@ -3739,17 +3752,15 @@ mod tests {
                 bounds,
                 "combobox-show-trigger",
                 |cx| {
-                    vec![
-                        Combobox::new(model.clone(), open.clone())
-                            .a11y_label("Combobox")
-                            .test_id_prefix("combobox-show-trigger")
-                            .items([ComboboxItem::new("alpha", "Alpha")])
-                            .into_element_parts(cx, |_cx| {
-                                vec![ComboboxPart::from(
-                                    ComboboxInput::new().show_trigger(show_trigger),
-                                )]
-                            }),
-                    ]
+                    vec![Combobox::new(model.clone(), open.clone())
+                        .a11y_label("Combobox")
+                        .test_id_prefix("combobox-show-trigger")
+                        .items([ComboboxItem::new("alpha", "Alpha")])
+                        .into_element_parts(cx, |_cx| {
+                            vec![ComboboxPart::from(
+                                ComboboxInput::new().show_trigger(show_trigger),
+                            )]
+                        })]
                 },
             );
             ui.set_root(root);

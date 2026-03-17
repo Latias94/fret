@@ -67,6 +67,9 @@ Base UI combobox lifecycle semantics.
 - Pass: Trigger/content width behavior matches recipe intent (default track-trigger width; optional fixed width).
 - Pass: Opening auto-focuses the command input, and combobox semantics are reported on the editable surface.
 - Pass: Trigger chrome aligns with shadcn outline-button intent while preserving combobox semantics.
+- Gap: `Combobox::new(...)` defaulted `auto_highlight` to `true`, but Base UI combobox keeps
+  first-match highlight opt-in via `autoHighlight`. This is a recipe default drift, not a
+  mechanism-layer gap.
 
 ### Item modeling (structured metadata)
 
@@ -78,18 +81,22 @@ Base UI combobox lifecycle semantics.
 
 - Gap: Base UI callbacks include cancellable event details; Fret currently exposes reason metadata
   but does not provide cancelable `eventDetails` contracts.
+- Gap: UI Gallery docs surface still uses a Fret-typed parts mapping instead of JSX-style arbitrary
+  nested children. That is currently intentional; only widen it if a concrete upstream authoring
+  outcome cannot be represented with `ComboboxContent::new([...])`, `ComboboxList::{items,groups}`,
+  or `ComboboxItem::content(...)`.
 
 ## Conclusion
 
-- Result: This component does not currently point to a missing mechanism-layer issue.
-- Result: The previous parity gap on the first-party authoring surface was compact default
-  storytelling rather than missing mechanism.
+- Result: This component still does not point to a missing mechanism-layer issue.
+- Result: The concrete parity regression here was a recipe default (`auto_highlight`) drifting away
+  from Base UI/shadcn semantics, not a missing overlay/focus/hit-testing primitive.
 - Result: Common recipe customization now lands through the direct root builder chain, while the
   closure-based parts surface remains available for upstream-shaped patch stories.
 - Result: That same compact-root posture now also covers the chips variant, so first-party
   `Combobox` examples no longer split into two default authoring stories.
-- Result: Follow-up work should focus on concrete behavior regressions or richer recipes rather
-  than adding another generic builder family.
+- Result: Keep the current typed children/parts posture unless a concrete upstream example proves
+  it insufficient; do not widen to arbitrary children by default.
 - Authoring-lane classification: keep `Combobox` on the direct recipe root/bridge lane.
   `Combobox::new(value, open)` plus the compact direct chain
   `.trigger(...).input(...).clear(...).content(...)` is the default root story and
