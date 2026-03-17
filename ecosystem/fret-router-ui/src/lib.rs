@@ -96,7 +96,7 @@ where
 pub const ROUTER_COMMAND_BACK: &str = "router.back";
 pub const ROUTER_COMMAND_FORWARD: &str = "router.forward";
 
-pub fn register_router_commands(registry: &mut CommandRegistry) {
+pub(crate) fn register_router_commands(registry: &mut CommandRegistry) {
     registry.register(
         CommandId::from(ROUTER_COMMAND_BACK),
         CommandMeta::new("Back")
@@ -1095,7 +1095,8 @@ mod tests {
         let normalized = public_surface.split_whitespace().collect::<String>();
 
         assert!(public_surface.contains("pub mod app;"));
-        assert!(public_surface.contains("pub fn register_router_commands("));
+        assert!(!public_surface.contains("pub fn register_router_commands("));
+        assert!(public_surface.contains("pub(crate) fn register_router_commands("));
         assert!(public_surface.contains("pub struct RouterUiStore"));
         assert!(public_surface.contains("pub struct RouterOutlet"));
         assert!(public_surface.contains("pub fn router_link<"));

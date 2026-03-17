@@ -3969,10 +3969,10 @@ fn selected_collapsible_snippet_helpers_prefer_into_ui_element_over_anyelement()
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/collapsible/rtl.rs",
         &[
-            "fn details_collapsible<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id_prefix: &'static str, open: Option<Model<bool>>, label: &'static str, status: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn detail_card<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str, title: &'static str, detail: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn details_collapsible<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id_prefix: &'static str, open: Option<Model<bool>>, label: &'static str, status: &'static str,) -> AnyElement",
+            "fn detail_card<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str, title: &'static str, detail: &'static str,) -> AnyElement",
         ],
     );
 
@@ -3981,12 +3981,12 @@ fn selected_collapsible_snippet_helpers_prefer_into_ui_element_over_anyelement()
         &[
             "fn rotated_lucide<H: UiHost>(cx: &mut ElementContext<'_, H>, id: &'static str, rotation_deg: f32,) -> impl IntoUiElement<H> + use<H>",
             "fn file_leaf<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
-            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, open_model: Model<bool>, children: Vec<AnyElement>,) -> impl IntoUiElement<H> + use<H>",
+            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, children: &'static [TreeItem],) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
             "fn rotated_lucide<H: UiHost>(cx: &mut ElementContext<'_, H>, id: &'static str, rotation_deg: f32,) -> AnyElement",
             "fn file_leaf<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str,) -> AnyElement",
-            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, open_model: Model<bool>, children: Vec<AnyElement>,) -> AnyElement",
+            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, children: &'static [TreeItem],) -> AnyElement",
         ],
     );
 }

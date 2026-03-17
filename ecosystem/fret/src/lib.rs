@@ -643,8 +643,8 @@ pub mod router {
     };
     pub use fret_router_ui::{
         RouterLeafStatus, RouterLink, RouterLinkContextMenuAction, RouterLinkContextMenuItem,
-        RouterOutlet, RouterUiSnapshot, RouterUiStore, register_router_commands, router_link,
-        router_link_to, router_link_to_typed_route, router_link_to_typed_route_with_test_id,
+        RouterOutlet, RouterUiSnapshot, RouterUiStore, router_link, router_link_to,
+        router_link_to_typed_route, router_link_to_typed_route_with_test_id,
         router_link_to_with_test_id, router_link_with_props, router_link_with_test_id,
         router_outlet, router_outlet_with_test_id,
     };
@@ -2616,6 +2616,7 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub mod router {"));
         assert!(public_surface.contains("pub mod app {"));
         assert!(public_surface.contains("pub fn install(app: &mut crate::app::App) {"));
+        assert!(!public_surface.contains("register_router_commands"));
         assert!(!public_surface.contains("pub fn install_app(app: &mut crate::app::App) {"));
     }
 

@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui::Theme;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -11,7 +12,7 @@ fn detail_card<H: UiHost>(
     test_id: &'static str,
     title: &'static str,
     detail: &'static str,
-) -> AnyElement {
+) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app).snapshot();
     let props = decl_style::container_props(
         &theme,
@@ -118,13 +119,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             "ui-gallery-collapsible-rtl-shipping-address",
                             "عنوان الشحن",
                             "100 Market St, San Francisco",
-                        ),
+                        )
+                        .into_element(cx),
                         detail_card(
                             cx,
                             "ui-gallery-collapsible-rtl-items",
                             "العناصر",
                             "2x سماعات الاستوديو",
-                        ),
+                        )
+                        .into_element(cx),
                     ])
                     .refine_layout(LayoutRefinement::default().w_full().min_w_0().mt(Space::N2))
                     .into_element(cx)
