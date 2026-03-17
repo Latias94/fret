@@ -300,8 +300,11 @@ mod authoring_surface_policy_tests {
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
+        assert!(QUERY_EXAMPLE.contains("cx.data().invalidate_query("));
+        assert!(QUERY_EXAMPLE.contains("cx.data().invalidate_query_namespace("));
         assert!(!QUERY_EXAMPLE.contains("handle.layout(cx).value_or_default()"));
         assert!(!QUERY_EXAMPLE.contains("cx.use_query("));
+        assert!(!QUERY_EXAMPLE.contains("with_query_client("));
         assert!(!QUERY_EXAMPLE.contains("fret_query::ui::QueryElementContextExt"));
         assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));
 

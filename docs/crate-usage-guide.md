@@ -650,6 +650,12 @@ computations.
 `handle.layout(cx).value_or_default()` or declarative/component `handle.layout_query(cx)` when you
 are intentionally staying on the lower-level tracked-read surface.
 
+**Default app invalidation note:** when query invalidation happens inside `AppUi` or extracted
+`UiCx` helpers, prefer `cx.data().invalidate_query(...)` /
+`cx.data().invalidate_query_namespace(...)` so grouped app code keeps the redraw shell in one
+place. Keep `fret::query::with_query_client(...)` for pure app/driver code that does not have a
+`cx.data()` surface.
+
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
 grouped app data helpers (`cx.data().query*`). When app code needs explicit query nouns, import
 them from `fret::query::{QueryKey, QueryPolicy, QueryState, ...}` rather than expecting them from

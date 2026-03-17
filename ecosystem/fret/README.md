@@ -137,7 +137,9 @@ signatures / command registration, import them intentionally from `fret::style::
 `fret::app::LocalState`, and `fret::actions::CommandId`.
 If app code needs explicit semantic-role nouns, import them from
 `fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
-If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story,
+If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story
+(`cx.data().query*(...)`, `handle.read_layout(cx)`, `cx.data().invalidate_query(...)`,
+`cx.data().invalidate_query_namespace(...)`),
 import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
 `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`.
 For adaptive UI helpers such as breakpoints, safe-area insets, pointer/media preferences, or
@@ -188,9 +190,10 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `app`: recommended baseline for apps (shadcn).
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector_layout(...)` for
   LocalState-first derived values, raw `cx.data().selector(...)` for explicit signatures, and
-  `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path), plus the
-  explicit `fret::selector::*` / `fret::query::*` secondary lanes when app code needs state helper
-  nouns.
+  `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path, plus
+  `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` for grouped
+  app-lane query invalidation), plus the explicit `fret::selector::*` / `fret::query::*`
+  secondary lanes when app code needs state helper nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
 - `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets.

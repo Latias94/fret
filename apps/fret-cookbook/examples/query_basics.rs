@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use fret::app::prelude::*;
 use fret::style::Space;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret_ui::CommandAvailability;
 
 mod act {
@@ -62,22 +62,14 @@ impl View for QueryBasicsView {
         let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
         let do_invalidate = invalidate_requested.layout(cx).value_or(false);
         let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
-        let window = cx.window;
 
         if do_invalidate {
-            let key = demo_key();
-            let _ = with_query_client(cx.app, |client, app| {
-                client.invalidate(app, key);
-            });
+            cx.data().invalidate_query(demo_key());
             let _ = invalidate_requested.set_in(cx.app.models_mut(), false);
-            cx.app.request_redraw(window);
         }
         if do_invalidate_namespace {
-            let _ = with_query_client(cx.app, |client, _app| {
-                client.invalidate_namespace(QUERY_NS);
-            });
+            cx.data().invalidate_query_namespace(QUERY_NS);
             let _ = invalidate_namespace_requested.set_in(cx.app.models_mut(), false);
-            cx.app.request_redraw(window);
         }
 
         let key = demo_key();

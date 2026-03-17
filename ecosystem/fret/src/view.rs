@@ -1376,6 +1376,26 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
             self.cx.cx, key, policy, fetch,
         )
     }
+
+    /// Default grouped invalidation path for app-facing query state when the caller is already on
+    /// `AppUi`.
+    #[cfg(feature = "state-query")]
+    pub fn invalidate_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
+        let _ = fret_query::with_query_client(self.cx.cx.app, |client, app| {
+            client.invalidate(app, key);
+        });
+        self.cx.cx.app.request_redraw(self.cx.cx.window);
+    }
+
+    /// Default grouped namespace invalidation path for app-facing query state when the caller is
+    /// already on `AppUi`.
+    #[cfg(feature = "state-query")]
+    pub fn invalidate_query_namespace(self, namespace: &'static str) {
+        let _ = fret_query::with_query_client(self.cx.cx.app, |client, _app| {
+            client.invalidate_namespace(namespace);
+        });
+        self.cx.cx.app.request_redraw(self.cx.cx.window);
+    }
 }
 
 /// Grouped selector/query helpers for extracted `UiCx` child builders on the default app surface.
@@ -1494,6 +1514,24 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         Fut: Future<Output = Result<T, fret_query::QueryError>> + 'static,
     {
         fret_query::ui::QueryElementContextExt::use_query_async_local(self.cx, key, policy, fetch)
+    }
+
+    /// Grouped invalidation helper for extracted `UiCx` app-facing helpers.
+    #[cfg(feature = "state-query")]
+    pub fn invalidate_query<T: Any + Send + Sync + 'static>(self, key: fret_query::QueryKey<T>) {
+        let _ = fret_query::with_query_client(self.cx.app, |client, app| {
+            client.invalidate(app, key);
+        });
+        self.cx.app.request_redraw(self.cx.window);
+    }
+
+    /// Grouped namespace invalidation helper for extracted `UiCx` app-facing helpers.
+    #[cfg(feature = "state-query")]
+    pub fn invalidate_query_namespace(self, namespace: &'static str) {
+        let _ = fret_query::with_query_client(self.cx.app, |client, _app| {
+            client.invalidate_namespace(namespace);
+        });
+        self.cx.app.request_redraw(self.cx.window);
     }
 }
 
@@ -2295,6 +2333,10 @@ mod tests {
         assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
         assert!(api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
+        assert!(api_source.contains("pub fn invalidate_query<T: Any + Send + Sync + 'static>("));
+        assert!(
+            api_source.contains("pub fn invalidate_query_namespace(self, namespace: &'static str)")
+        );
         assert!(api_source.contains("pub trait AppActivateSurface"));
         assert!(api_source.contains("pub trait AppActivateExt"));
         assert!(!api_source.contains("pub trait AppActivateCxMarker"));

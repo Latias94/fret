@@ -54,8 +54,11 @@
 //! Optional ecosystem extensions stay explicit:
 //!
 //! - enable `state` for grouped selector/query helpers on `AppUi`; prefer
-//!   `cx.data().selector_layout(...)` for LocalState-first derived values, and when app code needs
-//!   explicit state helper nouns, use `fret::selector::{DepsBuilder, DepsSignature}` and
+//!   `cx.data().selector_layout(...)` for LocalState-first derived values, keep
+//!   `cx.data().query*(...)` plus `handle.read_layout(cx)` as the default query read path, and use
+//!   `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` when
+//!   app-facing query invalidation stays inside `AppUi`; when app code needs explicit state helper
+//!   nouns, use `fret::selector::{DepsBuilder, DepsSignature}` and
 //!   `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` instead of expecting
 //!   those names from `fret::app::prelude::*`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
@@ -587,7 +590,8 @@ pub mod selector {
 /// Optional query integration surface for app code.
 ///
 /// This keeps the query story explicit:
-/// - grouped default app data stays on `cx.data().query*`,
+/// - grouped default app data stays on `cx.data().query*` plus
+///   `cx.data().invalidate_query*`,
 /// - `fret-query` remains the portable async resource crate,
 /// - `fret::query` gives app authors one curated import lane for `QueryKey` / `QueryPolicy` /
 ///   `QueryState`-style nouns without pulling those names into `fret::app::prelude::*`.
@@ -2618,6 +2622,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`cx.data().selector_layout(...)`"));
         assert!(CRATE_README.contains("raw `cx.data().selector(...)`"));
         assert!(CRATE_README.contains("`handle.read_layout(cx)`"));
+        assert!(CRATE_README.contains("`cx.data().invalidate_query(...)`"));
+        assert!(CRATE_README.contains("`cx.data().invalidate_query_namespace(...)`"));
         assert!(CRATE_README.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
         assert!(
             CRATE_README
@@ -2911,6 +2917,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("raw `cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`handle.read_layout(cx)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query_namespace(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
     }
@@ -2985,6 +2993,7 @@ mod authoring_surface_policy_tests {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(deps, compute)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`handle.read_layout(cx)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().invalidate_query(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
@@ -3006,7 +3015,13 @@ mod authoring_surface_policy_tests {
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async(...)`"));
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async_local(...)`"));
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("let state = handle.read_layout(cx);"));
+        assert!(
+            INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().invalidate_query_namespace(...)`")
+        );
         assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().query_async(...)`"));
+        assert!(
+            INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().invalidate_query_namespace(...)`")
+        );
     }
 
     #[test]

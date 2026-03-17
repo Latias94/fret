@@ -2,9 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_query::{
-    QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus, with_query_client,
-};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus};
 
 mod act {
     fret::actions!([
@@ -48,15 +46,11 @@ impl View for QueryDemoView {
         let fail_mode_state = cx.state().local_init(|| false);
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY) {
-            let _ = with_query_client(cx.app, |client, app| {
-                client.invalidate(app, demo_key());
-            });
+            cx.data().invalidate_query(demo_key());
         }
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             let key = demo_key();
-            let _ = with_query_client(cx.app, |client, _app| {
-                client.invalidate_namespace(key.namespace());
-            });
+            cx.data().invalidate_query_namespace(key.namespace());
         }
 
         cx.actions()
