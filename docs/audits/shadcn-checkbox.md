@@ -32,6 +32,9 @@ base implementation in `repo-ref/ui`.
 ### Interaction
 
 - Pass: Click toggles the bound `Model<bool>`.
+- Pass: Source-aligned snapshot/action authoring exists via `Checkbox::from_checked(...)` /
+  `from_checked_state(...)` plus `.action(...)` / `.on_click(...)`, so the recipe is not forced into
+  per-row `Model<bool>` ownership for every copyable example.
 - Note: `Checkbox` is a leaf control surface, so Fret intentionally does not add a generic
   `compose()` builder here; the direct control API already matches the important contract.
 - Pass: Supports optional state via `Checkbox::new_optional(Model<Option<bool>>)` where `None` maps
@@ -45,6 +48,15 @@ base implementation in `repo-ref/ui`.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Checked State`, `Invalid State`, `Basic`, `Description`, `Disabled`, `Group`, `Table`, `RTL`, and `API Reference`.
+- Pass: `Checked State` now teaches both the model-backed path and the narrower
+  `Checkbox::from_checked(...)` + `.action(...)` snapshot/action path directly in the copyable
+  snippet instead of burying that guidance only in prose.
+- Pass: `Description` now matches the upstream row order (`Checkbox` first, `FieldContent` second)
+  instead of teaching a reversed layout.
+- Pass: `Group` now restores the upstream `FieldSet` / `FieldLegend` / `FieldDescription` framing
+  before the checkbox list instead of collapsing the example into an unrelated list layout.
+- Pass: `Table` now teaches a derived select-all checkbox with mixed-state behavior, which is the
+  important source-aligned authoring story for checkbox collections.
 - Pass: `Label Association` and `With Title` remain as explicit Fret-only follow-ups after the upstream path because they document field/label composition rather than the base checkbox recipe itself.
 - Pass: the remaining parity work for this component is page/docs clarity; no extra generic children or `compose()` API is warranted.
 

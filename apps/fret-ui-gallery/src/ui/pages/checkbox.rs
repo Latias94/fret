@@ -19,15 +19,17 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl_section = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Checkbox::new(Model<bool>)`, `Checkbox::new_optional(Model<Option<bool>>)` and `Checkbox::new_tristate(...)` cover the important checked and mixed-state authoring paths.",
-        "Checkbox remains a leaf control surface: label, helper text, and larger click targets are composed through `FieldLabel`, `FieldDescription`, and surrounding field/layout recipes rather than a generic `compose()` API.",
+        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/checkbox.mdx`.",
+        "`Checkbox::new(Model<bool>)`, `Checkbox::new_optional(Model<Option<bool>>)` and `Checkbox::new_tristate(...)` cover the model-backed checked and mixed-state paths, while `Checkbox::from_checked(...)` / `from_checked_state(...)` plus `.action(...)` / `.on_click(...)` cover the source-aligned snapshot/action path.",
+        "Checkbox remains a leaf control surface: labels, descriptions, and larger click targets are composed through `Field`, `FieldContent`, `FieldLabel::for_control(...)`, and `FieldLabel::wrap(...)` rather than a generic children/`compose()` API on the checkbox itself.",
         "Visual defaults such as control size, border, focus ring, and indicator chrome stay recipe-owned, while row width and form layout remain caller-owned.",
+        "The docs-aligned `Description`, `Group`, and `Table` sections now keep the upstream row order, fieldset framing, and mixed select-all teaching surface visible on the page instead of hiding them behind unrelated composition shortcuts.",
         "`Label Association` and `With Title` stay after the upstream docs path because they document Fret-specific control-registry and wrapped-field composition patterns.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
-        .description("Public surface summary and ownership notes.");
+        .description("Public surface summary, docs-parity notes, and children API ownership.");
 
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Single checkbox with a label.")
@@ -37,7 +39,9 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Copyable minimal usage for `Checkbox`.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let checked_state = DocSection::build(cx, "Checked State", checked_state)
-        .description("Controlled checked model and optional/indeterminate model.")
+        .description(
+            "Controlled checked model, optional/indeterminate model, and source-aligned snapshot/action path.",
+        )
         .code_rust_from_file_region(snippets::checked_state::SOURCE, "example");
     let invalid_state = DocSection::build(cx, "Invalid State", invalid_state)
         .description(
@@ -48,16 +52,18 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Field plus checkbox plus label composition.")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let description_section = DocSection::build(cx, "Description", description_section)
-        .description("`FieldContent` keeps label and helper text aligned with the control.")
+        .description(
+            "Checkbox plus label and helper text aligned like the upstream description example.",
+        )
         .code_rust_from_file_region(snippets::description::SOURCE, "example");
     let disabled_section = DocSection::build(cx, "Disabled", disabled_section)
         .description("Disabled checkboxes block interaction and use muted styling.")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let group = DocSection::build(cx, "Group", group)
-        .description("Checkbox list pattern with per-item descriptions.")
+        .description("Fieldset + legend + checkbox list pattern from the upstream docs.")
         .code_rust_from_file_region(snippets::group::SOURCE, "example");
     let table = DocSection::build(cx, "Table", table)
-        .description("Table selection pattern with header and row checkboxes.")
+        .description("Table selection pattern with a derived select-all checkbox and mixed state.")
         .code_rust_from_file_region(snippets::table::SOURCE, "example");
     let rtl_section = DocSection::build(cx, "RTL", rtl_section)
         .description("Checkbox and label alignment under an RTL direction provider.")
@@ -73,7 +79,7 @@ pub(super) fn preview_checkbox(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Checkbox docs path first, then keeps `Label Association` and `With Title` as focused Fret follow-ups.",
+            "Preview mirrors the shadcn Checkbox docs path first, surfaces the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups.",
         ),
         vec![
             demo,

@@ -5,24 +5,24 @@ use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let description = cx.local_model(|| false);
+    let description = cx.local_model(|| true);
 
     shadcn::Field::new([
+        shadcn::Checkbox::new(description)
+            .control_id("ui-gallery-checkbox-description")
+            .a11y_label("Accept terms and conditions")
+            .test_id("ui-gallery-checkbox-description")
+            .into_element(cx),
         shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Enable notifications")
+            shadcn::FieldLabel::new("Accept terms and conditions")
                 .for_control("ui-gallery-checkbox-description")
                 .into_element(cx),
             shadcn::FieldDescription::new(
-                "Receive updates about release notes, fixes, and maintenance windows.",
+                "By clicking this checkbox, you agree to the terms and conditions.",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::Checkbox::new(description)
-            .control_id("ui-gallery-checkbox-description")
-            .a11y_label("Enable notifications")
-            .test_id("ui-gallery-checkbox-description")
-            .into_element(cx),
     ])
     .orientation(shadcn::FieldOrientation::Horizontal)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))

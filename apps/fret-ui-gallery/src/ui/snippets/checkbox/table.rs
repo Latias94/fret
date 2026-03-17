@@ -1,9 +1,42 @@
 pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
+use std::sync::Arc;
+
 use fret::{UiChild, UiCx};
+use fret_runtime::CommandId;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::primitives::checkbox::CheckedState;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+const CMD_TOGGLE_ALL_ROWS: &str = "ui_gallery.checkbox.table.toggle_all_rows";
+
+fn wire_toggle_all_rows(cx: &mut UiCx<'_>, rows: [Model<bool>; 3]) {
+    cx.command_on_command_for(
+        cx.root_id(),
+        Arc::new(move |host, action_cx, command| {
+            if command.as_str() != CMD_TOGGLE_ALL_ROWS {
+                return false;
+            }
+
+            let should_select_all = rows.iter().any(|row| {
+                host.models_mut()
+                    .read(row, |value| !*value)
+                    .ok()
+                    .unwrap_or(true)
+            });
+
+            for row in &rows {
+                let _ = host.models_mut().update(row, |value| {
+                    *value = should_select_all;
+                });
+            }
+
+            host.request_redraw(action_cx.window);
+            true
+        }),
+    );
+}
 
 fn table_row<H: UiHost>(
     id: &'static str,
@@ -27,10 +60,32 @@ fn table_row<H: UiHost>(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let table_all = cx.local_model_keyed("table_all", || false);
     let table_row_1 = cx.local_model_keyed("table_row_1", || true);
     let table_row_2 = cx.local_model_keyed("table_row_2", || false);
     let table_row_3 = cx.local_model_keyed("table_row_3", || false);
+    let row_values = [
+        cx.get_model_copied(&table_row_1, Invalidation::Layout)
+            .unwrap_or(false),
+        cx.get_model_copied(&table_row_2, Invalidation::Layout)
+            .unwrap_or(false),
+        cx.get_model_copied(&table_row_3, Invalidation::Layout)
+            .unwrap_or(false),
+    ];
+    let selected_count = row_values.iter().filter(|checked| **checked).count();
+    let select_all_state = match selected_count {
+        0 => CheckedState::Unchecked,
+        n if n == row_values.len() => CheckedState::Checked,
+        _ => CheckedState::Indeterminate,
+    };
+
+    wire_toggle_all_rows(
+        cx,
+        [
+            table_row_1.clone(),
+            table_row_2.clone(),
+            table_row_3.clone(),
+        ],
+    );
 
     shadcn::table(|cx| {
         ui::children![
@@ -42,8 +97,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ui::children![
                             cx;
                             shadcn::table_cell(
-                                shadcn::Checkbox::new(table_all)
+                                shadcn::Checkbox::from_checked_state(select_all_state)
                                     .a11y_label("Select all rows")
+                                    .on_click(CommandId::new(CMD_TOGGLE_ALL_ROWS))
                                     .test_id("ui-gallery-checkbox-table-all"),
                             ),
                             shadcn::table_head("Member"),
