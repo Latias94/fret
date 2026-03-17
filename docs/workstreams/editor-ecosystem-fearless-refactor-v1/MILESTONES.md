@@ -65,6 +65,8 @@ Deliverables:
   generic cards when the default baseline gets stronger contrast,
 - distinct panel-header and group-header tokens so the top inspector band can carry more framing
   weight than repeated section headers without reintroducing visual clutter,
+- one shared editor semantic color-helper lane for panel/group/header/popup surfaces so composite
+  chrome does not keep duplicating fallback order in each widget,
 - one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting
   between narrow hit targets and row-height targets,
 - one editor-owned popup surface chrome baseline for assist panels, select lists, and color-edit
@@ -136,6 +138,8 @@ Exit gates:
 - idle proof-local outcome placeholders no longer waste right-lane width or idle row height on the
   promoted review surface while committed/canceled readouts remain diagnosable,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
+- composite surfaces resolve panel/group/popup chrome through shared editor semantic helpers rather
+  than ad hoc local fallback chains,
 - repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
   launch,
 - buffered text-session proof coverage demonstrates default blur commit, inline-rename

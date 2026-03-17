@@ -24,7 +24,7 @@ use crate::controls::{
     NumericValidateFn, OnVecEditAxisOutcome, Vec3Edit, VecEditAxis, VecEditAxisOutcome,
     VecEditOptions,
 };
-use crate::primitives::colors::editor_muted_foreground;
+use crate::primitives::colors::{editor_border, editor_muted_foreground, editor_subtle_bg};
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::{EditorDensity, NumericPresentation};
 
@@ -555,14 +555,8 @@ fn section_row<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let label_fg = editor_muted_foreground(theme);
-    let badge_bg = theme
-        .color_by_key("muted")
-        .or_else(|| theme.color_by_key("component.card.bg"))
-        .unwrap_or_else(|| theme.color_token("background"));
-    let badge_border = theme
-        .color_by_key("border")
-        .or_else(|| theme.color_by_key("component.card.border"))
-        .unwrap_or_else(|| theme.color_token("foreground"));
+    let badge_bg = editor_subtle_bg(theme);
+    let badge_border = editor_border(theme);
     let badge_w = Px(density.row_height.0.max(density.hit_thickness.0));
 
     cx.flex(

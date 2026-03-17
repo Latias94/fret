@@ -44,7 +44,7 @@ It also records where stable seeding already exists today in adjacent crates suc
 
 | Category | Current families / keys | Notes |
 | --- | --- | --- |
-| Canonical editor-owned keys already modeled as constants | `editor.density.*`, `editor.text_field.*`, `editor.numeric.*`, `editor.property.*`, `editor.popup.*`, `editor.checkbox.*`, `editor.enum_select.*`, `editor.axis.*`, `editor.vec.*`, `editor.color.*`, `editor.slider.*` | This is the clearest and healthiest namespace posture in the current editor ecosystem. The latest baseline cleanup also split `editor.property.group_border` from the outer panel frame and `editor.property.panel_header_*` from repeated section headers so nested inspector hierarchy can be tuned without one shared chrome weight for every level, now also promotes shared popup surface background/border intent into `editor.popup.*`, and moves editor-owned text-field chrome defaults into `editor.text_field.*` so proof presets do not need to patch `component.text_field.*` just to keep editor controls stable. |
+| Canonical editor-owned keys already modeled as constants | `editor.density.*`, `editor.text_field.*`, `editor.numeric.*`, `editor.property.*`, `editor.popup.*`, `editor.checkbox.*`, `editor.enum_select.*`, `editor.axis.*`, `editor.vec.*`, `editor.color.*`, `editor.slider.*` | This is the clearest and healthiest namespace posture in the current editor ecosystem. The latest baseline cleanup also split `editor.property.group_border` from the outer panel frame and `editor.property.panel_header_*` from repeated section headers so nested inspector hierarchy can be tuned without one shared chrome weight for every level, now also promotes shared popup surface background/border intent into `editor.popup.*`, moves editor-owned text-field chrome defaults into `editor.text_field.*` so proof presets do not need to patch `component.text_field.*` just to keep editor controls stable, and centralizes composite-level panel/header/popup fallback reads in shared editor color helpers instead of leaving each surface to re-specify the ladder. |
 | Shared component compatibility keys still read | `component.text_field.*`, `component.checkbox.*`, `component.input.*`, `component.slider.*`, `component.card.*` | These are compatibility / reuse bridges, not editor-owned namespaces. `component.text_field.*` remains a supported read fallback for editor controls, but it is no longer the preferred preset write target. |
 | Generic semantic palette fallbacks still read | `background`, `foreground`, `muted`, `muted-foreground`, `accent`, `border`, `ring`, `primary`, `card`, `popover`, `destructive`, `secondary` | These are expected as safe fallbacks, but they should not be treated as editor ownership. |
 | Seeding / preset entrypoint | `apply_editor_theme_preset_v1`, `EditorThemePresetV1::{Default, ImguiLikeDense}` | Today this is the only editor ecosystem crate with an explicit preset patch path. |
@@ -58,6 +58,9 @@ Important observation:
   `border`, `foreground`, `muted-foreground`, `accent`, and `ring`.
 - The popup-surface cleanup now moves one more visible seam out of that host-palette dependency:
   shared popup shells can read `editor.popup.*` first instead of inheriting `popover`.
+- The same consolidation now applies inside editor composites too:
+  panel/header/group/popup fallback order is centralized in `primitives/colors` rather than being
+  repeated across `InspectorPanel`, `PropertyGroup`, `PopupSurface`, or section-badge renderers.
 
 That is materially better than the earlier proof preset, but it is not the final clean ownership
 seam for reusable editor skinning yet.
