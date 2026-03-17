@@ -164,8 +164,8 @@ Migration steps:
      model/transient shorthands do not fit.
 4) Replace manual “force refresh” hacks with:
    - first-class tracked writes (`cx.on_action_notify_models::<A>(...)`,
-     `cx.on_action_notify_local_*`, or `LocalState::update_action(...)`) when the change itself is
-     the rerender reason,
+     `cx.on_action_notify_local_*`, or the grouped `cx.actions().local_*` helpers) when the
+     change itself is the rerender reason,
    - `cx.notify()` only for imperative/cache-boundary invalidation that is not represented by a
      tracked write, and/or
    - selector/query hooks that carry proper dependency observation.

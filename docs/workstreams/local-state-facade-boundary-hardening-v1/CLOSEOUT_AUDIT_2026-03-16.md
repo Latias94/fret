@@ -2,6 +2,12 @@
 
 This audit records the M4 closeout pass for the local-state facade boundary hardening lane.
 
+Follow-on note (2026-03-17):
+
+- a narrower post-closeout cleanup later moved direct `LocalState::update_action*` /
+  `set_action(...)` helpers back to internal runtime substrate,
+- while leaving the public default/raw/bridge classification unchanged otherwise.
+
 Goal:
 
 - verify whether the O1 follow-on still owns active implementation uncertainty,
@@ -95,6 +101,8 @@ Current evidence says no:
 Conclusion:
 
 - there is no immediate reason to keep this lane open as an active execution queue.
+- later narrow cleanup was still allowed when evidence showed a direct action-aware `LocalState<T>`
+  seam had no first-party proof as a separate public lane.
 
 ### 4. Remaining work is maintenance or future separate reduction only
 

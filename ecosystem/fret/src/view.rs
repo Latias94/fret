@@ -101,9 +101,10 @@ impl<T> LocalState<T> {
 
     /// Clone the current local value through an explicit `ModelStore` bridge read.
     ///
-    /// This mirrors the render-time `watch(...).value_*` helpers for multi-state transactions that
-    /// still need to read from `ModelStore` inside `cx.actions().models::<A>(...)`. It is not the
-    /// normal render-loop read path for first-contact app code.
+    /// This mirrors the render-time `watch(...).value_*` helpers for advanced store-side
+    /// transactions that still need to read from `ModelStore` inside
+    /// `cx.actions().models::<A>(...)`. It is not the normal render-loop read path for
+    /// first-contact app code.
     pub fn value_in(&self, models: &ModelStore) -> Option<T>
     where
         T: Any + Clone,
@@ -136,8 +137,9 @@ impl<T> LocalState<T> {
     ///
     /// This is a store-only write helper: it does **not** request redraw or mark the current
     /// view-cache root dirty by itself. Use it inside `cx.actions().models::<A>(...)` when the
-    /// write participates in a broader model-store transaction, or use `update_action(...)` when
-    /// the local write itself should drive rerender.
+    /// write participates in a broader model-store transaction, or prefer the grouped
+    /// `cx.actions().local_*` / `payload_local_update_if::<A>(...)` helpers when the local write
+    /// itself should drive rerender.
     pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
     where
         T: Any,
@@ -160,7 +162,8 @@ impl<T> LocalState<T> {
     /// Set this local slot through an explicit `ModelStore` transaction.
     ///
     /// Like `update_in(...)`, this only mutates the tracked slot; redraw + `notify()` remain the
-    /// responsibility of the surrounding authoring surface unless you use the action-aware helpers.
+    /// responsibility of the surrounding authoring surface unless a higher-level action helper
+    /// owns the rerender rule.
     pub fn set_in(&self, models: &mut ModelStore, value: T) -> bool
     where
         T: Any,
@@ -170,7 +173,7 @@ impl<T> LocalState<T> {
 
     /// Update this local slot from an action dispatch and participate in the tracked-write
     /// rerender rule (`request_redraw(window)` + `notify(action_cx)`) when the write succeeds.
-    pub fn update_action(
+    fn update_action(
         &self,
         host: &mut dyn fret_ui::action::UiFocusActionHost,
         action_cx: fret_ui::action::ActionCx,
@@ -189,7 +192,7 @@ impl<T> LocalState<T> {
 
     /// Like `update_action(...)`, but the closure decides whether the mutation should count as
     /// `handled` before triggering redraw + `notify()`.
-    pub fn update_action_if(
+    fn update_action_if(
         &self,
         host: &mut dyn fret_ui::action::UiFocusActionHost,
         action_cx: fret_ui::action::ActionCx,
@@ -208,7 +211,7 @@ impl<T> LocalState<T> {
 
     /// Set this local slot from an action dispatch and participate in the tracked-write rerender
     /// rule (`request_redraw(window)` + `notify(action_cx)`) when the write succeeds.
-    pub fn set_action(
+    fn set_action(
         &self,
         host: &mut dyn fret_ui::action::UiFocusActionHost,
         action_cx: fret_ui::action::ActionCx,
@@ -2317,6 +2320,9 @@ mod tests {
         assert!(!api_source.contains("pub fn take_transient_on_action_root("));
         assert!(!api_source.contains("pub type WatchedModel"));
         assert!(!api_source.contains("pub type WatchedLocal"));
+        assert!(!api_source.contains("pub fn update_action("));
+        assert!(!api_source.contains("pub fn update_action_if("));
+        assert!(!api_source.contains("pub fn set_action("));
         assert!(api_source.contains("pub trait LocalSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
