@@ -320,8 +320,9 @@ pub mod facade {
     pub use crate::chart::{
         ChartConfig, ChartConfigItem, ChartContainer, ChartContainerBuild, ChartContext,
         ChartLegend, ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartStyle,
-        ChartTooltip, ChartTooltipContent, ChartTooltipContentKind, ChartTooltipIndicator,
-        ChartTooltipItem, chart_container, chart_context, use_chart,
+        ChartTooltip, ChartTooltipContent, ChartTooltipContentKind, ChartTooltipFormattedItem,
+        ChartTooltipIndicator, ChartTooltipItem, ChartTooltipItemFormatContext,
+        ChartTooltipLabelContext, chart_container, chart_context, use_chart,
     };
     pub use crate::checkbox::{Checkbox, checkbox};
     pub use crate::collapsible::{

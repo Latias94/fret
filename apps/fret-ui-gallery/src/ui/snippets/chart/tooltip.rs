@@ -76,6 +76,44 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .into_element(cx)
         .test_id("ui-gallery-chart-tooltip-formatter");
 
+    let custom_children = shadcn::ChartTooltipContent::new()
+        .hide_label(true)
+        .items([
+            shadcn::ChartTooltipItem::new("Running", "380").meta("unit", "kcal"),
+            shadcn::ChartTooltipItem::new("Swimming", "420").meta("unit", "kcal"),
+        ])
+        .test_id_prefix("ui-gallery-chart-tooltip-custom-children")
+        .into_element_parts(cx, |cx, context| {
+            let unit = context
+                .item
+                .metadata
+                .get("unit")
+                .cloned()
+                .unwrap_or_default();
+
+            ui::h_row(|cx| {
+                vec![
+                    ui::text(format!("{}.", context.index + 1))
+                        .text_xs()
+                        .font_medium()
+                        .into_element(cx),
+                    ui::text(context.item.label.clone())
+                        .text_xs()
+                        .into_element(cx),
+                    ui::text(format!("{} {unit}", context.item.value))
+                        .text_xs()
+                        .font_medium()
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .justify_between()
+            .items_center()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+        })
+        .test_id("ui-gallery-chart-tooltip-custom-children");
+
     let custom_keys_config: shadcn::ChartConfig = [
         (
             Arc::<str>::from("visitors"),
@@ -160,6 +198,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ),
             label_formatter,
             formatter,
+            custom_children,
             custom_keys,
         ]
     })

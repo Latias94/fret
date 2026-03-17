@@ -22,6 +22,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`ChartLegendContent::new()` can derive labels, icons, and colors from `ChartConfig` when explicit legend items are omitted.",
         "`ChartTooltipContent::new()` can now auto-derive label, items, colors, and icons from a shared `ChartCanvasOutput` model plus `ChartConfig`.",
         "`ChartTooltipContent` now exposes recipe-level `label_formatter(...)`, `formatter(...)`, `label_key(...)`, and `name_key(...)` hooks, with Fret-native item key/metadata remapping.",
+        "For fully custom tooltip rows, `ChartTooltipContent::into_element_parts(cx, ...)` is the advanced adapter seam for arbitrary children composition.",
         "The remaining parity gaps are full Recharts `payload.payload[...]` field lookup on engine-derived payloads and DOM-native overlay composition details.",
         "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
         "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
@@ -50,7 +51,7 @@ pub(super) fn preview_chart(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Fret-specific chart recipe contracts that still matter once payload auto-wiring is enabled.")
         .code_rust_from_file_region(snippets::contracts::SOURCE, "example");
     let tooltip_content = DocSection::build(cx, "Tooltip", tooltip_content)
-        .description("Recipe-level tooltip variants plus label/item format hooks aligned to the shadcn tooltip teaching surface.")
+        .description("Recipe-level tooltip variants, label/item format hooks, and an advanced custom-row children seam aligned to the shadcn tooltip teaching surface.")
         .test_id_prefix("ui-gallery-chart-tooltip")
         .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
     let legend_content = DocSection::build(cx, "Legend", legend_content)

@@ -14,7 +14,9 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, ui,
+};
 
 /// Upstream shadcn/ui v4 `ChartConfig` entry.
 #[derive(Debug, Clone)]
@@ -93,6 +95,19 @@ impl ChartTooltip {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.content.into_element(cx)
+    }
+
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost, F, T>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        item_parts: F,
+    ) -> AnyElement
+    where
+        F: Fn(&mut ElementContext<'_, H>, &ChartTooltipItemFormatContext) -> T,
+        T: IntoUiElement<H>,
+    {
+        self.content.into_element_parts(cx, item_parts)
     }
 }
 
@@ -695,6 +710,62 @@ mod tests {
     }
 
     #[test]
+    fn chart_tooltip_into_element_parts_renders_custom_row_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ChartTooltipContent::new()
+                .hide_label(true)
+                .items([ChartTooltipItem::new("Running", "380").meta("unit", "kcal")])
+                .formatter(|_context| ChartTooltipFormattedItem::new("Structured formatter", "999"))
+                .into_element_parts(cx, |cx, context| {
+                    let unit = context
+                        .item
+                        .metadata
+                        .get("unit")
+                        .cloned()
+                        .unwrap_or_default();
+
+                    ui::h_row(|cx| {
+                        vec![
+                            ui::text(format!("Custom {}", context.item.label))
+                                .text_xs()
+                                .into_element(cx),
+                            ui::text(format!("{} {unit}", context.item.value))
+                                .text_xs()
+                                .font_medium()
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .justify_between()
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
+                })
+        });
+
+        assert!(
+            find_text(&element, "Custom Running").is_some(),
+            "expected custom item parts to render arbitrary row children"
+        );
+        assert!(
+            find_text(&element, "380 kcal").is_some(),
+            "expected custom item parts to keep access to item metadata and value"
+        );
+        assert!(
+            find_text(&element, "Structured formatter").is_none(),
+            "expected custom item parts to take precedence over the structured formatter helper"
+        );
+    }
+
+    #[test]
     fn chart_tooltip_label_key_uses_chart_config_entry() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1129,6 +1200,27 @@ impl ChartTooltipItemFormatter {
     }
 }
 
+trait ChartTooltipItemPartsRenderer<H: UiHost> {
+    fn render_item_parts(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        context: &ChartTooltipItemFormatContext,
+    ) -> AnyElement;
+}
+
+impl<H: UiHost, F> ChartTooltipItemPartsRenderer<H> for F
+where
+    F: Fn(&mut ElementContext<'_, H>, &ChartTooltipItemFormatContext) -> AnyElement,
+{
+    fn render_item_parts(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        context: &ChartTooltipItemFormatContext,
+    ) -> AnyElement {
+        (self)(cx, context)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChartTooltipContentKind {
     Default,
@@ -1268,6 +1360,31 @@ impl ChartTooltipContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_element_with_parts(cx, None)
+    }
+
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost, F, T>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        item_parts: F,
+    ) -> AnyElement
+    where
+        F: Fn(&mut ElementContext<'_, H>, &ChartTooltipItemFormatContext) -> T,
+        T: IntoUiElement<H>,
+    {
+        let render_item_parts =
+            move |cx: &mut ElementContext<'_, H>, context: &ChartTooltipItemFormatContext| {
+                item_parts(cx, context).into_element(cx)
+            };
+        self.into_element_with_parts(cx, Some(&render_item_parts))
+    }
+
+    fn into_element_with_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        item_parts: Option<&dyn ChartTooltipItemPartsRenderer<H>>,
+    ) -> AnyElement {
         let Self {
             label,
             items,
@@ -1405,12 +1522,19 @@ impl ChartTooltipContent {
                 }
 
                 for (index, item) in items.into_iter().enumerate() {
+                    let item_context = ChartTooltipItemFormatContext {
+                        item: item.clone(),
+                        index,
+                        label: rendered_label.clone().or_else(|| label.clone()),
+                    };
+
+                    if let Some(item_parts) = item_parts {
+                        children.push(item_parts.render_item_parts(cx, &item_context));
+                        continue;
+                    }
+
                     if let Some(formatter) = formatter.as_ref() {
-                        let formatted = formatter.format(&ChartTooltipItemFormatContext {
-                            item: item.clone(),
-                            index,
-                            label: rendered_label.clone().or_else(|| label.clone()),
-                        });
+                        let formatted = formatter.format(&item_context);
                         let label = formatted.label.map(|label| {
                             ui::text(label)
                                 .text_xs()
