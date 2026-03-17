@@ -3493,6 +3493,41 @@ fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn chart_tooltip_docs_keep_custom_children_seam_explicit() {
+    let tooltip = read("src/ui/snippets/chart/tooltip.rs");
+    assert!(
+        tooltip.contains(".formatter(|context|"),
+        "src/ui/snippets/chart/tooltip.rs should keep the structured formatter example visible"
+    );
+    assert!(
+        tooltip.contains(".into_element_parts(cx, |cx, context|"),
+        "src/ui/snippets/chart/tooltip.rs should keep the custom children adapter seam visible"
+    );
+
+    let contracts = read("src/ui/snippets/chart/contracts.rs");
+    assert!(
+        contracts.contains(
+            "custom header/row composition via into_element_label_parts(...) and into_element_parts(...)"
+        ),
+        "src/ui/snippets/chart/contracts.rs should document both custom header and custom row tooltip composition seams"
+    );
+
+    let page = read("src/ui/pages/chart.rs");
+    assert!(
+        page.contains(
+            "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)` and `ChartTooltipContent::into_element_parts(cx, ...)` are the advanced adapter seams for arbitrary children composition."
+        ),
+        "src/ui/pages/chart.rs should explain the advanced custom header/row tooltip seams"
+    );
+    assert!(
+        page.contains(
+            "Recipe-level tooltip variants, label/item format hooks, and advanced custom header/row children seams aligned to the shadcn tooltip teaching surface."
+        ),
+        "src/ui/pages/chart.rs should keep the Tooltip section description aligned with the custom header/row seams"
+    );
+}
+
+#[test]
 fn motion_preset_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

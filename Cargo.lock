@@ -2981,6 +2981,7 @@ name = "fret-ui-shadcn"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-chart",
  "fret-core",
  "fret-executor",
  "fret-icons",
