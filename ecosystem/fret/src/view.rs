@@ -744,7 +744,7 @@ impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
 /// registration rather than the grouped `cx.actions()` helpers. Model/local mutation shorthands
 /// stay on the grouped default lane or on explicit store transactions; this trait keeps only the
 /// raw host-facing registration hooks.
-pub trait AppUiRawActionExt {
+pub trait AppUiRawActionNotifyExt {
     /// Register a typed unit action handler that requests redraw + notifies on `handled=true`.
     ///
     /// This is a small ergonomics helper: most action handlers that mutate models/state need both
@@ -767,7 +767,7 @@ pub trait AppUiRawActionExt {
     );
 }
 
-impl<'cx, 'a, H: UiHost> AppUiRawActionExt for AppUi<'cx, 'a, H> {
+impl<'cx, 'a, H: UiHost> AppUiRawActionNotifyExt for AppUi<'cx, 'a, H> {
     fn on_action_notify<A: crate::TypedAction>(
         &mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
@@ -2309,7 +2309,7 @@ mod tests {
         assert!(api_source.contains("pub trait LocalSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
-        assert!(api_source.contains("pub trait AppUiRawActionExt"));
+        assert!(api_source.contains("pub trait AppUiRawActionNotifyExt"));
         assert!(api_source.contains("pub trait UiCxDataExt"));
         assert!(api_source.contains("pub trait UiCxActionsExt"));
         assert!(!api_source.contains("pub fn watch_local<'m, T: Any>("));

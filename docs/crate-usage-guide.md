@@ -684,7 +684,7 @@ Notes:
   helpers, and history action helpers (`back_on_action()`, `forward_on_action()`,
   `navigate_history_on_action(...)`).
 - Prefer wiring router history actions through
-  `use fret::advanced::AppUiRawActionExt as _;` plus
+  `use fret::advanced::AppUiRawActionNotifyExt as _;` plus
   `cx.on_action_notify::<...>(store.back_on_action())` / `store.forward_on_action()` instead of
   hand-rolling window/host availability glue in app code.
 - Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or

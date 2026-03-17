@@ -734,7 +734,7 @@ pub mod advanced {
     /// This keeps raw notify/payload-notify registration discoverable for advanced/manual assembly
     /// and host-owned integrations while leaving
     /// `fret::app::prelude::*` focused on `cx.actions()`.
-    pub use crate::view::AppUiRawActionExt;
+    pub use crate::view::AppUiRawActionNotifyExt;
     /// Explicit raw-model local-state hooks kept on the advanced lane.
     ///
     /// This keeps `use_state*` discoverable for advanced/manual assembly and intentional
@@ -3037,7 +3037,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`back_on_action()`"));
         assert!(CRATE_USAGE_GUIDE.contains("`forward_on_action()`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`use fret::advanced::AppUiRawActionExt as _;`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`use fret::advanced::AppUiRawActionNotifyExt as _;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.on_action_notify::<...>(store.back_on_action())`"));
         assert!(CRATE_USAGE_GUIDE.contains("second default app runtime"));
     }
@@ -3433,7 +3433,7 @@ mod authoring_surface_policy_tests {
         let advanced_prelude = advanced_prelude_source();
         assert!(LIB_RS.contains("pub use crate::{AppUi, Ui, UiCx};"));
         assert!(advanced_prelude_exports_symbol("KernelApp"));
-        assert!(advanced_prelude_exports_symbol("AppUiRawActionExt"));
+        assert!(advanced_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(advanced_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
         assert!(advanced_prelude_exports_symbol("Ui"));
@@ -3765,7 +3765,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_prelude_omits_low_level_mechanism_types() {
         assert!(!app_prelude_exports_symbol("AppWindowId"));
-        assert!(!app_prelude_exports_symbol("AppUiRawActionExt"));
+        assert!(!app_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(!app_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(!app_prelude_exports_symbol("Event"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
