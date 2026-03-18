@@ -5,11 +5,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use fret::{FretApp, actions::CommandId, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_query::{
+use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
 };
+use fret::{FretApp, actions::CommandId, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_ui::element::{PressableA11y, PressableProps};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;

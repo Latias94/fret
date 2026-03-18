@@ -434,6 +434,11 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.use_query_async_local("));
     }
 
+    fn assert_prefers_fret_query_facade(src: &str) {
+        assert!(src.contains("use fret::query::{"));
+        assert!(!src.contains("use fret_query::{"));
+    }
+
     fn assert_shadcn_surface_is_curated(src: &str) {
         assert!(!src.contains("use fret_ui_shadcn as shadcn;"));
         assert!(!src.contains("use fret_ui_shadcn::{self as shadcn"));
@@ -854,6 +859,18 @@ mod authoring_surface_policy_tests {
     fn helper_heavy_examples_prefer_grouped_data_surface() {
         for src in [ASYNC_PLAYGROUND_DEMO, MARKDOWN_DEMO] {
             assert_prefers_grouped_data_surface(src);
+        }
+    }
+
+    #[test]
+    fn app_facing_query_examples_prefer_fret_query_facade() {
+        for src in [
+            ASYNC_PLAYGROUND_DEMO,
+            MARKDOWN_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            QUERY_DEMO,
+        ] {
+            assert_prefers_fret_query_facade(src);
         }
     }
 

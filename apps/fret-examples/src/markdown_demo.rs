@@ -9,10 +9,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
+use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
 use fret_runtime::Model;
 use fret_ui::element::{
     ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
