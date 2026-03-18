@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-03-17
+Catalog updated: 2026-03-18
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -34,6 +34,40 @@ git log -1 --format=%cs -- docs/workstreams/<path>
 git log --format='%cs %h %s' -- docs/workstreams/<path>
 git log --since='2026-01-01' --name-only -- docs/workstreams
 ```
+
+## Historical Status Note Rule
+
+When a workstream doc remains useful as audit/history context but no longer reflects the shipped
+surface, add a short status note near the top instead of silently letting it drift.
+
+Prefer this structure:
+
+1. State whether the file is still active, closed, historical, or partially superseded.
+2. Name the current shipped surface or current source-of-truth docs explicitly.
+3. Say how to read old API names that still appear below:
+   - current recommendation,
+   - historical-only,
+   - or deleted/superseded.
+
+Suggested template:
+
+```md
+Status: Historical reference (partially superseded by <new workstream or doc>)
+Last updated: YYYY-MM-DD
+
+Status note (YYYY-MM-DD): this document remains useful for <audit/history scope>, but the current
+shipped guidance lives in `<current doc 1>` and `<current doc 2>`. References below to
+`<old API name>` should be read as historical/deleted unless explicitly marked as retained.
+```
+
+Use this note when:
+
+- a default-path API was renamed, collapsed, or deleted,
+- a closeout workstream superseded an earlier planning note,
+- or a file is still worth keeping for evidence but should not teach the current golden path.
+
+Do not rewrite every old symbol out of closeout records, migration matrices, or delete audits. In
+those files, keep historical names when they are the evidence.
 
 ## Directory Index
 
