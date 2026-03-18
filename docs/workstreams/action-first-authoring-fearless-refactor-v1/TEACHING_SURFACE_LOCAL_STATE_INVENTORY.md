@@ -131,9 +131,10 @@ than to an explicit-model-vs-local-state split. See
 - `apps/fret-examples/src/window_hit_test_probe_demo.rs`
 
 Reason: these demos intentionally exercise query/client wiring, shared runtime state, embedded
-viewport interop, or multi-window host integration. `embedded_viewport_demo` now moves its
-view-local `size_preset` knob to `use_local_with(...)` + `on_action_notify_local_set(...)`, but
-the embedded viewport surfaces, forwarded input state, and host/window coordination remain
+viewport interop, or multi-window host integration. `embedded_viewport_demo` now keeps its
+view-local `size_preset` knob on the app-lane `LocalState` surface
+(`cx.state().local_init(...)` + `layout_value(...)` + `cx.actions().local_set(...)`), but the
+embedded viewport surfaces, forwarded input state, and host/window coordination remain
 intentionally explicit/runtime-bound.
 
 ### `apps/fret-ui-gallery` snippets (reference composition / current controlled APIs)
