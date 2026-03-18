@@ -1,11 +1,19 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-context-menu-basic-right-click-last-action",
-    "required_capabilities": ["diag.script_v2"],
-    "tags": ["ui_gallery", "shadcn", "context_menu", "mouse", "regression_pack"]
+    "name": "ui-gallery-context-menu-basic-touch-long-press-open",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.pointer_kind_touch"
+    ],
+    "tags": ["ui_gallery", "shadcn", "context_menu", "touch", "long_press", "screenshot"],
+    "target_hints": [
+      "Navigates to the Context Menu page using touch pointer injection.",
+      "Holds a touch pointer down on the basic trigger long enough to verify the menu opens on the touch long-press path."
+    ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
     {
       "type": "wait_until",
       "predicate": {
@@ -16,9 +24,12 @@
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1440.0, "height_px": 960.0 },
+    { "type": "wait_frames", "n": 10 },
 
     {
       "type": "click_stable",
+      "pointer_kind": "touch",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
       "button": "left",
       "stable_frames": 10,
@@ -42,6 +53,7 @@
     },
     {
       "type": "click_stable",
+      "pointer_kind": "touch",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-context-menu" },
       "button": "left",
       "stable_frames": 10,
@@ -77,13 +89,11 @@
     },
 
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" },
-      "button": "right",
-      "stable_frames": 10,
-      "max_move_px": 0.5,
-      "timeout_frames": 600
+      "type": "pointer_down",
+      "pointer_kind": "touch",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" }
     },
+    { "type": "wait_ms", "n_ms": 700 },
     {
       "type": "wait_until",
       "predicate": {
@@ -100,9 +110,15 @@
       },
       "timeout_frames": 240
     },
-
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-context-menu-basic-touch-long-press-open"
+    },
+    { "type": "pointer_up", "pointer_kind": "touch" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "click_stable",
+      "pointer_kind": "touch",
       "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" },
       "button": "left",
       "stable_frames": 10,
@@ -129,7 +145,7 @@
 
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-context-menu-basic-right-click-last-action"
+      "label": "ui-gallery-context-menu-basic-touch-long-press-open"
     }
   ]
 }

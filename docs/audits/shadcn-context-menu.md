@@ -81,8 +81,22 @@ Key upstream behaviors/surfaces:
 - Pass: The typed `compose()` root keeps the explicit menu-entry model while moving the final root
   landing seam back to the true call site instead of forcing extracted helpers through
   `build_parts(...) -> AnyElement`.
+- Pass: UI Gallery docs-aligned snippets now consistently prefer the typed `compose()` root lane
+  instead of mixing the older compact `build(...)` root into the default teaching surface.
+- Pass: `DropdownMenuSide::{InlineStart, InlineEnd}` is now supported on
+  `ContextMenuContent::side(...)` and `DropdownMenuContent::side(...)`, closing the remaining RTL
+  docs-surface gap against the upstream Base UI `side="inline-end"` example.
+- Pass: UI Gallery docs-backed examples now use a caller-owned dashed context region closer to the
+  upstream docs examples, while `Usage` intentionally remains the leaner copyable root example.
+- Pass: UI Gallery docs-backed examples now adapt trigger copy to the committed primary pointer
+  capability (`Right click here` vs `Long press here` / `Long press (...)`), matching the upstream
+  docs examples more closely without changing the existing long-press mechanism.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
+- Note: No extra generic heterogeneous children API is planned right now; the explicit
+  `ContextMenuEntry` tree is the intentional structured equivalent of upstream nested menu children,
+  and widening this family to generic children would add hidden scope/collection contracts without
+  unlocking new behavior.
 
 ### Keyboard navigation & typeahead
 
@@ -100,7 +114,12 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-_None tracked at this time._
+- Investigating: end-to-end native touch long-press open is not yet validated on the UI Gallery
+  `Basic` example. The repro script
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`
+  currently times out after the touch-hold open attempt, while lower-level/unit coverage still
+  indicates the long-press timer logic exists. That points to an integration or runner-level gap
+  rather than a shadcn docs-surface problem.
 
 ## Implemented surfaces (notable)
 
@@ -111,6 +130,15 @@ _None tracked at this time._
   layer above layout).
 - Pass: Chevron-right submenu affordance icon parity.
 - Pass: Destructive item variant styling via `ContextMenuItemVariant::Destructive`.
+- Pass: UI Gallery page order now mirrors the upstream shadcn docs path first (`Demo`, `Usage`,
+  docs examples through `RTL`, then `API Reference`), with `Notes` kept as a Fret-specific
+  follow-up.
+- Pass: UI Gallery example triggers now visually track the upstream docs surface more closely with a
+  dashed context region instead of per-example outline buttons.
+- Pass: UI Gallery example triggers now also keep the upstream fine/coarse pointer wording for
+  right-click vs long-press affordances.
+- Pass: The UI Gallery RTL example now uses logical `inline-end` placement on
+  `ContextMenuContent::side(...)` instead of stopping at direction-provider-only parity.
 
 ## Validation
 
@@ -123,6 +151,7 @@ _None tracked at this time._
 - Interaction test: `context_menu_opens_on_shift_f10`
 - Interaction test: `context_menu_opens_on_context_menu_key`
 - Interaction test: `context_menu_disabled_blocks_pointer_and_keyboard_open`
+- Touch long-press repro (currently failing under native diag): `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`
 - Interaction test: `context_menu_submenu_opens_on_arrow_right_without_pointer_move`
 - Submenu openSteps parity (web-vs-fret): `context-menu-demo.submenu-kbd*` follows the extractor semantics (`scrollIntoView({ block: "center" })` + focus + ArrowRight),
   while `context-menu-demo.submenu` opens via hover after driving the submenu open-delay timer from effects.

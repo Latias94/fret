@@ -5,22 +5,29 @@ use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
 use fret_runtime::CommandId;
-use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, GridProps};
+use fret_ui::{Invalidation, Theme};
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::primary_pointer_is_coarse;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn trigger_surface<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    label: &'static str,
+    fine_label: &'static str,
+    coarse_label: &'static str,
     test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let border = theme.color_token("border");
     let bg = theme.color_token("background");
     let fg = theme.color_token("muted-foreground");
+    let label = if primary_pointer_is_coarse(cx, Invalidation::Layout, false) {
+        coarse_label
+    } else {
+        fine_label
+    };
 
     let label = ui::text(label)
         .text_sm()
@@ -49,12 +56,18 @@ fn trigger_surface<H: UiHost>(
 
 fn side_menu<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    label: &'static str,
+    fine_label: &'static str,
+    coarse_label: &'static str,
     side: shadcn::DropdownMenuSide,
     trigger_test_id: &'static str,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let trigger = shadcn::ContextMenuTrigger::build(trigger_surface(cx, label, trigger_test_id));
+    let trigger = shadcn::ContextMenuTrigger::build(trigger_surface(
+        cx,
+        fine_label,
+        coarse_label,
+        trigger_test_id,
+    ));
 
     shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id(content_test_id)
@@ -101,6 +114,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 side_menu(
                     cx,
                     "Right click (top)",
+                    "Long press (top)",
                     shadcn::DropdownMenuSide::Top,
                     "ui-gallery-context-menu-sides-top-trigger",
                     "ui-gallery-context-menu-sides-top-content",
@@ -109,6 +123,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 side_menu(
                     cx,
                     "Right click (right)",
+                    "Long press (right)",
                     shadcn::DropdownMenuSide::Right,
                     "ui-gallery-context-menu-sides-right-trigger",
                     "ui-gallery-context-menu-sides-right-content",
@@ -117,6 +132,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 side_menu(
                     cx,
                     "Right click (bottom)",
+                    "Long press (bottom)",
                     shadcn::DropdownMenuSide::Bottom,
                     "ui-gallery-context-menu-sides-bottom-trigger",
                     "ui-gallery-context-menu-sides-bottom-content",
@@ -125,6 +141,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 side_menu(
                     cx,
                     "Right click (left)",
+                    "Long press (left)",
                     shadcn::DropdownMenuSide::Left,
                     "ui-gallery-context-menu-sides-left-trigger",
                     "ui-gallery-context-menu-sides-left-content",

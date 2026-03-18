@@ -22,7 +22,7 @@ use fret_ui::element::{
     SpacerProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, Side};
+use fret_ui::overlay_placement::Align;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -41,7 +41,7 @@ use fret_ui_kit::{
     Radius, Space, ui,
 };
 
-use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
+use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide, dropdown_menu_overlay_side};
 use crate::menu_authoring;
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
@@ -3429,7 +3429,9 @@ impl ContextMenu {
                 menu::context_menu_anchor_store_model(cx.app);
 
             let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
-            let touch_long_press = menu::context_menu_touch_long_press();
+            // Keep pending touch long-press state stable while the trigger subtree rerenders.
+            let touch_long_press: menu::ContextMenuTouchLongPress =
+                cx.root_state(menu::context_menu_touch_long_press, |state| state.clone());
             let pointer_policy = Arc::new({
                 let anchor_store_model = anchor_store_model.clone();
                 let touch_long_press = touch_long_press.clone();
@@ -3777,12 +3779,7 @@ impl ContextMenu {
                         DropdownMenuAlign::Center => Align::Center,
                         DropdownMenuAlign::End => Align::End,
                     };
-                    let side = match side {
-                        DropdownMenuSide::Top => Side::Top,
-                        DropdownMenuSide::Right => Side::Right,
-                        DropdownMenuSide::Bottom => Side::Bottom,
-                        DropdownMenuSide::Left => Side::Left,
-                    };
+                    let side = dropdown_menu_overlay_side(direction, side);
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
@@ -5566,6 +5563,77 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger_with_rekey(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        use_alt_trigger_key: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-touch-long-press-rekey",
+            move |cx| {
+                let use_alt_trigger_key = cx
+                    .watch_model(&use_alt_trigger_key)
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+
+                vec![ContextMenu::from_open(open).into_element(
+                    cx,
+                    move |cx| {
+                        let key = if use_alt_trigger_key {
+                            "trigger-b"
+                        } else {
+                            "trigger-a"
+                        };
+                        cx.keyed(key, |cx| {
+                            cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st| {
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            )
+                        })
+                    },
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_focusable_trigger_with_debug_cancel_open(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -5955,6 +6023,17 @@ mod tests {
             panic!("expected touch long-press timer; effects={effects:?}");
         };
 
+        // The gallery/native diag path rebuilds the trigger subtree while the pointer is still
+        // held down. Keep the pending long-press state alive across that rerender.
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -5971,6 +6050,106 @@ mod tests {
             window,
             bounds,
             open.clone(),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_survives_trigger_subtree_rekey() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(false);
+        let use_alt_trigger_key = app.models_mut().insert(false);
+
+        let root = render_frame_focusable_trigger_with_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_trigger_key.clone(),
+        );
+
+        let trigger_a = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger before rekey");
+        let trigger_bounds = ui.debug_node_bounds(trigger_a).expect("trigger bounds");
+        let touch_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(7),
+                position: touch_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let long_press_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. }
+                if *after == menu::CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY =>
+            {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(long_press_token) = long_press_token else {
+            panic!("expected touch long-press timer; effects={effects:?}");
+        };
+
+        let _ = app
+            .models_mut()
+            .update(&use_alt_trigger_key, |value| *value = true);
+        let root = render_frame_focusable_trigger_with_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_trigger_key.clone(),
+        );
+
+        let trigger_b = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger after rekey");
+        assert_ne!(trigger_a, trigger_b, "expected trigger subtree rekey to replace the trigger node");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer {
+                token: long_press_token,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_trigger_key,
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
     }

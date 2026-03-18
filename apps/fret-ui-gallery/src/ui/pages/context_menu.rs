@@ -6,8 +6,8 @@ use crate::ui::snippets::context_menu as snippets;
 
 pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
-    let basic = snippets::basic::render(cx);
     let usage = snippets::usage::render(cx);
+    let basic = snippets::basic::render(cx);
     let submenu = snippets::submenu::render(cx);
     let shortcuts = snippets::shortcuts::render(cx);
     let groups = snippets::groups::render(cx);
@@ -18,32 +18,46 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let sides = snippets::sides::render(cx);
     let rtl = snippets::rtl::render(cx);
 
+    let api_reference = doc_layout::notes_block([
+        "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/context-menu.mdx`.",
+        "`ContextMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` is the default copyable root path; `build(...)`, `build_parts(...)`, and `into_element_parts(...)` stay as narrower adapter seams for already-landed or closure-owned roots.",
+        "`ContextMenuTrigger`, `ContextMenuPortal`, `ContextMenuContent`, and `ContextMenuSub*` keep the shadcn/Base UI part names available without moving menu policy into `fret-ui`.",
+        "Trigger chrome stays caller-owned, while explicit panel sizing stays on `ContextMenuContent::{min_width,submenu_min_width}(...)`.",
+        "Logical-side placement now matches the upstream Base UI docs path: `DropdownMenuSide::{InlineStart, InlineEnd}` is accepted by `ContextMenuContent::side(...)` and `DropdownMenuContent::side(...)`.",
+        "The docs-backed preview examples now use a caller-owned dashed context region closer to the upstream docs surface, including pointer-aware trigger copy (`Right click here` vs `Long press here`); `Usage` intentionally stays simpler so the typed root lane remains easy to copy.",
+        "No extra generic heterogeneous children API is currently warranted: the explicit `ContextMenuEntry` tree is the Fret-equivalent structured surface for upstream nested menu children, and a generic children lane would add hidden scope/collection contracts without unlocking new behavior.",
+    ]);
     let notes = doc_layout::notes_block([
-        "Preview follows the upstream shadcn Context Menu docs (v4 Base UI).",
-        "Default copyable root path is now `ContextMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)`, while `build_parts(...)` / `into_element_parts(...)` remain the lower-level adapter seams.",
-        "Those lower-level adapter seams are still advanced API, not the default copyable teaching lane.",
-        "Context Menu already exposes shadcn-style parts plus `ContextMenuSub*` helpers, and the new typed root builder removes the remaining root-authoring cliff without changing the underlying menu infrastructure.",
-        "Typed menu entries remain explicit; `compose()` just moves the final landing seam out of extracted helpers and back to the true root call site.",
+        "Preview now mirrors the upstream shadcn Context Menu docs path first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
+        "Mechanism parity already looks healthy here: existing web-vs-fret placement/chrome gates plus context-menu diag scripts cover right-click open, keyboard open, dismissal, focus routing, safe-corridor submenu behavior, and panel geometry.",
+        "This pass mainly fixes teaching-surface drift: docs-aligned snippets now prefer the same typed `compose()` root lane instead of mixing older `build(...)` roots into the default examples.",
+        "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work.",
+        "The RTL example now exercises logical-side placement directly: `ContextMenuContent::side(shadcn::DropdownMenuSide::InlineEnd)` matches the upstream Base UI docs while submenu chevrons still follow direction-provider parity.",
+        "The explicit entry tree remains intentional, so the page records why we are not widening this family into a generic heterogeneous children API.",
         "Examples are snippet-backed: preview and code stay in sync.",
         "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
     ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-context-menu-api-reference")
+        .description("Public-surface ownership, part-surface mapping, and children API guidance.");
     let notes =
         DocSection::build(cx, "Notes", notes).test_id_prefix("ui-gallery-context-menu-notes");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Official-style combined example with submenu, toggles, and radio items.")
         .test_id_prefix("ui-gallery-context-menu-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
-    let basic = DocSection::build(cx, "Basic", basic)
-        .description("Right click on the trigger surface to open the menu.")
-        .test_id_prefix("ui-gallery-context-menu-basic")
-        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable shadcn-style composition reference for Context Menu.")
+        .description("Copyable source-aligned default root composition for Context Menu.")
         .test_id_prefix("ui-gallery-context-menu-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let basic = DocSection::build(cx, "Basic", basic)
+        .description("A simple context menu with a few actions.")
+        .test_id_prefix("ui-gallery-context-menu-basic")
+        .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let submenu = DocSection::build(cx, "Submenu", submenu)
-        .description("Nested submenu entries for grouped actions.")
+        .description("Use `ContextMenuSub*` helpers to nest secondary actions.")
         .test_id_prefix("ui-gallery-context-menu-submenu")
         .code_rust_from_file_region(snippets::submenu::SOURCE, "example");
     let shortcuts = DocSection::build(cx, "Shortcuts", shortcuts)
@@ -75,19 +89,19 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-context-menu-sides")
         .code_rust_from_file_region(snippets::sides::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("RTL layout keeps spacing and submenu direction parity-auditable.")
+        .description("RTL layout now demonstrates logical `inline-end` placement plus submenu direction parity.")
         .test_id_prefix("ui-gallery-context-menu-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Context Menu examples aligned with upstream shadcn docs: Demo, Basic, Usage, Submenu, Shortcuts, Groups, Icons, Checkboxes, Radio, Destructive, Sides, RTL.",
+            "Context Menu examples aligned with the upstream shadcn docs path first, followed by Fret-specific API guidance and notes.",
         ),
         vec![
             demo,
-            basic,
             usage,
+            basic,
             submenu,
             shortcuts,
             groups,
@@ -97,6 +111,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             destructive,
             sides,
             rtl,
+            api_reference,
             notes,
         ],
     );
