@@ -95,7 +95,8 @@ The default path should continue to teach only:
 - typed actions,
 - `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState writes,
 - keyed-row `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default row-write path,
-- `payload_locals::<A>(...)` only when one payload action coordinates multiple locals,
+- raw `on_payload_action_notify::<A>(...)` only on explicit advanced/reference surfaces when one
+  payload action truly coordinates broader non-default ownership,
 - `cx.actions().transient::<A>(...)` for App-bound effects,
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when widget glue truly
   needs it after an explicit `use fret::app::AppActivateExt as _;`.

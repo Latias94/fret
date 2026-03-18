@@ -272,8 +272,8 @@ shadcn::Dialog::new(open.clone())
 
 - The former single-model raw aliases were removed in the 2026-03-17 closeout because they no
   longer had any surviving in-tree proofs. For model writes, prefer `on_action_notify_models` on
-  older migration surfaces or the grouped `cx.actions().models::<A>(...)` / `locals::<A>(...)`
-  lanes on the current default surface.
+  older migration surfaces or the grouped `cx.actions().models::<A>(...)` /
+  `locals_with((...)).on::<A>(...)` lanes on the current default surface.
 
 ```rust,ignore
 cx.on_action_notify_models::<act::Click>({

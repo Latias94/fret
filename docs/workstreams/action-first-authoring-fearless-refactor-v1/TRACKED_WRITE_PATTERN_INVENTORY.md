@@ -17,7 +17,7 @@ steps landed:
 
 - render-side `state.layout(cx).value_*` / `state.paint(cx).value_*`,
 - store-side `LocalState::value_in*`,
-- handled-aware `LocalState::update_in_if(...)` plus grouped `locals::<A>(...)` /
+- handled-aware `LocalState::update_in_if(...)` plus grouped `locals_with((...)).on::<A>(...)` /
   `payload_local_update_if::<A>(...)`.
 
 The goal is to decide whether more API is actually justified, or whether the remaining complexity is
@@ -30,7 +30,7 @@ mostly *real coordination* that should stay on `cx.on_action_notify_models::<A>(
 | Straight local set | counter reset, set step, set filter enum | `on_action_notify_local_set` | Covered | Low noise already. |
 | Straight local toggle | simple bool flag | `on_action_notify_toggle_local_bool` | Covered | No new helper needed. |
 | Store-side local read | todo draft/id reads inside multi-state transaction | `value_in_or*` | Covered | Matches render-side `value_*` naming now. |
-| Collection mutation with handled decision | toggle/remove/retain by id in `LocalState<Vec<_>>` | `locals::<A>(...)` + `update_in_if`, or `payload_local_update_if::<A>(...)` | Covered | Removes the common `mut handled = false` pattern without leaving a second direct rerender API on `LocalState<T>`. |
+| Collection mutation with handled decision | toggle/remove/retain by id in `LocalState<Vec<_>>` | `locals_with((...)).on::<A>(...)` + `update_in_if`, or `payload_local_update_if::<A>(...)` | Covered | Removes the common `mut handled = false` pattern without leaving a second direct rerender API on `LocalState<T>`. |
 | Multi-state transaction touching local + explicit models | add todo, submit form, sync filters | `on_action_notify_models` | Keep as default | This is real coordination, not just syntax noise. |
 | Shared explicit-model collections | legacy todo/template flows that still keep nested row models or shared list ownership explicit | `on_action_notify_models` + explicit `Model<T>` reads/writes | Intentional for now | Narrow enough now that surface-by-surface migration evidence is better than new helper design. |
 | Runtime/effect transactions | query invalidation, host/runtime side effects, viewport interop | `on_action_notify_models` or render-time escape hatch | Intentional for now | Not a candidate for local-state sugar. |
@@ -50,7 +50,7 @@ mostly *real coordination* that should stay on `cx.on_action_notify_models::<A>(
 | Topic | Why it is no longer the main pressure |
 | --- | --- |
 | Store-side local reads | `value_in*` now covers the common path. |
-| Handled-aware list writes | `update_in_if` together with `locals::<A>(...)` / `payload_local_update_if::<A>(...)` covers the common local-collection mutation path. |
+| Handled-aware list writes | `update_in_if` together with `locals_with((...)).on::<A>(...)` / `payload_local_update_if::<A>(...)` covers the common local-collection mutation path. |
 | Discrete widget parity | Checkbox/Switch/Toggle action-only parity is already closed elsewhere. |
 
 ## What still needs judgment

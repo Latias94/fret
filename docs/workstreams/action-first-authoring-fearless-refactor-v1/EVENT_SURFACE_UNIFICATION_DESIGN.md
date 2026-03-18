@@ -63,9 +63,9 @@ The default app-facing event story should collapse to four concepts:
    - treat raw `.on_activate(...)` wired with `cx.actions().action* / dispatch* / listen(...)` as the
      lower-level building block behind that sugar, not as the default teaching lane.
 3. **Handle actions at the view/root layer**
-   - `cx.actions().locals::<A>(...)`
+   - `cx.actions().locals_with((...)).on::<A>(...)`
    - `cx.actions().models::<A>(...)`
-   - `cx.actions().payload::<A>().locals(...)`
+   - `cx.actions().payload_local_update_if::<A>(...)` for view-owned keyed rows
    - `cx.actions().transient::<A>(...)`
 4. **Use an explicit listener escape hatch for local imperative glue**
    - `widget.listen(|host, acx| { ... })`
@@ -104,9 +104,9 @@ shadcn::Button::new("Close")
 Preferred root/view handling:
 
 ```rust,ignore
-cx.actions().locals::<act::Add>(|tx| { ... });
+cx.actions().locals_with((draft, todos)).on::<act::Add>(|tx, (draft, todos)| { ... });
 cx.actions().models::<act::Save>(|models| { ... });
-cx.actions().payload::<act::ToggleTodo>().locals(|tx, id| { ... });
+cx.actions().payload_local_update_if::<act::ToggleTodo, Vec<TodoRow>>(&todos, |rows, id| { ... });
 cx.actions().transient::<act::Refresh>(TRANSIENT_REFRESH_KEY);
 ```
 
