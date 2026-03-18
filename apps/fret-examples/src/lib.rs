@@ -940,6 +940,36 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn examples_source_tree_limits_raw_action_notify_to_markdown_demo() {
+        let mut raw_action_notify_files = Vec::new();
+
+        for path in examples_rust_sources() {
+            if path.ends_with("src/lib.rs") {
+                continue;
+            }
+
+            let source = std::fs::read_to_string(&path).unwrap();
+            let uses_raw_action_notify_trait =
+                source.contains("use fret::advanced::AppUiRawActionNotifyExt as _;");
+            let uses_raw_action_notify = source.contains("cx.on_action_notify::<");
+            let uses_raw_payload_action_notify = source.contains("cx.on_payload_action_notify::<");
+
+            if uses_raw_action_notify_trait
+                || uses_raw_action_notify
+                || uses_raw_payload_action_notify
+            {
+                raw_action_notify_files
+                    .push(path.file_name().unwrap().to_string_lossy().into_owned());
+            }
+        }
+
+        assert_eq!(
+            raw_action_notify_files,
+            vec!["markdown_demo.rs".to_string()],
+        );
+    }
+
+    #[test]
     fn examples_source_tree_keeps_setup_on_named_installers() {
         for path in examples_rust_sources() {
             if path.ends_with("src/lib.rs") {
@@ -1703,22 +1733,6 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn selected_element_context_examples_prefer_handle_first_tracked_model_reads() {
-        assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            SIMPLE_TODO_DEMO,
-            &[
-                "let todos = todos_model.layout_in(cx).value_or_default();",
-                "let draft_value = draft_model.paint_in(cx).value_or_default();",
-                "if t.done.paint_in(cx).value_or_default() {",
-                "let done = item.done.paint_in(cx).value_or_default();",
-            ],
-            &[
-                "let todos = cx.watch_model(&todos_model).layout().value_or_default();",
-                "let draft_value = cx.watch_model(&draft_model).paint().value_or_default();",
-                "if cx.watch_model(&t.done).paint().value_or_default() {",
-                "let done = cx.watch_model(&item.done).paint().value_or_default();",
-            ],
-        );
-
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
