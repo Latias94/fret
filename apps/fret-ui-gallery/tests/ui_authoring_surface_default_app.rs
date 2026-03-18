@@ -2383,6 +2383,24 @@ fn drawer_snap_points_snippet_prefers_children_root_path() {
 }
 
 #[test]
+fn curated_drawer_snippets_prefer_drawer_close_scope_for_footer_close_actions() {
+    for relative_path in [
+        "src/ui/snippets/drawer/demo.rs",
+        "src/ui/snippets/drawer/usage.rs",
+        "src/ui/snippets/drawer/scrollable_content.rs",
+        "src/ui/snippets/drawer/sides.rs",
+        "src/ui/snippets/drawer/responsive_dialog.rs",
+        "src/ui/snippets/drawer/rtl.rs",
+        "src/ui/snippets/drawer/snap_points.rs",
+    ] {
+        assert_normalized_markers_present(
+            relative_path,
+            &["shadcn::DrawerClose::from_scope().build("],
+        );
+    }
+}
+
+#[test]
 fn sheet_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

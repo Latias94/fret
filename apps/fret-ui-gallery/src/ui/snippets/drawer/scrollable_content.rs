@@ -32,7 +32,6 @@ fn paragraph_block<H: UiHost>(
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
     let trigger_open = open.clone();
-    let close_open = open.clone();
 
     shadcn::Drawer::new(open)
         .direction(shadcn::DrawerDirection::Right)
@@ -81,9 +80,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::DrawerFooter::new(ui::children![
                         cx;
                         shadcn::Button::new("Submit"),
-                        shadcn::Button::new("Cancel")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(close_open.clone()),
+                        shadcn::DrawerClose::from_scope().build(
+                            cx,
+                            shadcn::Button::new("Cancel")
+                                .variant(shadcn::ButtonVariant::Outline),
+                        ),
                     ]),
                 ])
                 .into_element(cx)

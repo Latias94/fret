@@ -111,6 +111,8 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Bottom drawers support Vaul-style drag-to-dismiss from the handle affordance region.
 - Pass: Base UI-style `TrapFocus` follow-up now traps Tab focus inside the drawer while keeping
   outside pointer interaction enabled (`Drawer::modal_trap_focus(true)`).
+- Pass: Base UI-style non-modal / trap-focus follow-up keeps painting the configured visual scrim
+  (`DrawerOverlay` / `overlay_color(...)`) without silently turning back into a modal barrier.
 
 ### Focus behavior
 
@@ -123,9 +125,6 @@ Upstream exports a thin wrapper around `vaul`:
 
 ## Known gaps / intentional differences
 
-- Base UI `modal={false | 'trap-focus'}` is now available, but the non-modal/trap-focus follow-up
-  currently omits the modal scrim. In Fret, the current auto-overlay styling path is still
-  modal-oriented, so `DrawerOverlay` / `overlay_color(...)` only affect the modal barrier path.
 - Base UI / Vaul controlled snap-point surfaces are still narrower in Fret. Today we expose
   recipe-owned `snap_points(...)` plus `default_snap_point(index)`, but not
   `snapPoint` / `onSnapPointChange` / `snapToSequentialPoints`.

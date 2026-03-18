@@ -1977,6 +1977,21 @@ mod tests {
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
+    fn scene_contains_full_window_solid_quad(
+        scene: &fret_core::Scene,
+        bounds: Rect,
+        color: fret_core::Color,
+    ) -> bool {
+        scene.ops().iter().any(|op| {
+            matches!(
+                op,
+                fret_core::SceneOp::Quad {
+                    rect, background, ..
+                } if *rect == bounds && background.paint == fret_core::Paint::Solid(color).into()
+            )
+        })
+    }
+
     #[test]
     fn drawer_trigger_build_push_ui_accepts_late_landed_child() {
         let window = AppWindowId::default();
@@ -3212,6 +3227,12 @@ mod tests {
         let focusable_a_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let focusable_b_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let trigger_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let scrim_color = fret_core::Color {
+            r: 0.09,
+            g: 0.41,
+            b: 0.32,
+            a: 0.34,
+        };
 
         let mut services = FakeServices;
         let bounds = Rect::new(
@@ -3290,6 +3311,7 @@ mod tests {
                         let focusable_a_id = focusable_a_id.clone();
                         let focusable_b_id = focusable_b_id.clone();
                         let drawer = Drawer::new(open_for_drawer)
+                            .overlay_color(scrim_color)
                             .modal_trap_focus(true)
                             .into_element(
                                 cx,
@@ -3388,6 +3410,21 @@ mod tests {
 
         render_frame(&mut ui, &mut app, &mut services, 2);
         assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 2;
+        for i in 0..settle_frames {
+            render_frame(&mut ui, &mut app, &mut services, 3 + i as u64);
+        }
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(
+            scene_contains_full_window_solid_quad(&scene, bounds, scrim_color),
+            "expected trap-focus drawer to keep painting the configured overlay color as a visual scrim"
+        );
 
         let underlay_element = underlay_id.get().expect("underlay id");
         let content_element = drawer_content_id.get().expect("drawer content id");

@@ -73,7 +73,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let desktop_dialog = shadcn::Dialog::new(desktop_open).into_element(
         cx,
         move |cx| {
-            shadcn::Button::new("Edit Profile (Desktop)")
+            shadcn::Button::new("Edit Profile")
                 .variant(shadcn::ButtonVariant::Outline)
                 .toggle_model(desktop_open_trigger.clone())
                 .test_id("ui-gallery-drawer-responsive-desktop-trigger")
@@ -100,7 +100,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let mobile_drawer = shadcn::Drawer::new(mobile_open)
         .children([
             shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(
-                shadcn::Button::new("Edit Profile (Mobile)")
+                shadcn::Button::new("Edit Profile")
                     .variant(shadcn::ButtonVariant::Outline)
                     .toggle_model(mobile_open_trigger.clone())
                     .test_id("ui-gallery-drawer-responsive-mobile-trigger"),

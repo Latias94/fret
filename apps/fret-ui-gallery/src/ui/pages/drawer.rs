@@ -29,9 +29,10 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Preview mirrors the shadcn Drawer docs path after the prose-only `About` and `Installation` sections: `Demo`, `Usage`, `Scrollable Content`, `Sides`, `Responsive Dialog`, `RTL`, and `API Reference`.",
         "`Usage` is the default copyable path; `Snap Points` stays after `API Reference` as an explicit Vaul/Fret follow-up instead of being mixed into the docs path.",
         "The docs-path examples now share the same `Drawer::children([...])` root lane, while `Drawer::compose()` remains the builder-first alternative without pushing children API concerns into the mechanism layer.",
+        "Docs-path footer close actions now consistently use `DrawerClose::from_scope().build(cx, child)` so the copyable lane stays aligned with upstream `DrawerClose asChild` intent.",
         "Base UI-only policy variants such as `modal={false|'trap-focus'}` now exist as follow-up API, but they are intentionally not taught on this page because the shadcn docs path stays modal-first.",
         "Controlled snap points and nested-drawer coordination still require wider policy work than the shadcn docs path.",
-        "`Demo` and `Responsive Dialog` keep the official inner content structure (centered max-width body, profile form layout) so gallery visuals stay close to shadcn docs instead of only proving the raw mechanism works.",
+        "`Demo`, `Responsive Dialog`, and `RTL` keep the official inner content structure (centered max-width body, profile form layout, goal-adjust controls) so gallery visuals stay close to shadcn docs instead of only proving the raw mechanism works.",
         "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
         "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
     ]);
@@ -57,11 +58,13 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Keep actions visible while the content area scrolls.")
         .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example");
     let sides = DocSection::build(cx, "Sides", sides)
-        .description("Use the `direction` prop to control drawer placement.")
+        .description(
+            "Use the `direction` prop to set the side of the drawer. Available options are `top`, `right`, `bottom`, and `left`.",
+        )
         .code_rust_from_file_region(snippets::sides::SOURCE, "example");
     let responsive_dialog = DocSection::build(cx, "Responsive Dialog", responsive_dialog)
         .descriptions([
-            "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
+            "You can combine the `Dialog` and `Drawer` components to create a responsive dialog.",
             "Both branches preserve the official profile-form structure, while gallery renders them side by side for deterministic testing.",
         ])
         .code_rust_from_file_region(snippets::responsive_dialog::SOURCE, "example");
