@@ -97,59 +97,59 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         },
     );
 
-    let mobile_drawer = shadcn::Drawer::new(mobile_open).into_element(
-        cx,
-        move |cx| {
-            shadcn::Button::new("Edit Profile (Mobile)")
-                .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(mobile_open_trigger.clone())
-                .test_id("ui-gallery-drawer-responsive-mobile-trigger")
-                .into_element(cx)
-        },
-        move |cx| {
-            let form = profile_form(
-                cx,
-                mobile_email.clone(),
-                mobile_username.clone(),
-                Some(ProfileFormTestIds {
-                    form: "ui-gallery-drawer-responsive-mobile-form",
-                    email: "ui-gallery-drawer-responsive-mobile-email",
-                    username: "ui-gallery-drawer-responsive-mobile-username",
-                    save: "ui-gallery-drawer-responsive-mobile-save",
-                }),
-            )
-            .into_element(cx);
-            let form = ui::v_stack(move |_cx| vec![form])
-                .px_4()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
+    let mobile_drawer = shadcn::Drawer::new(mobile_open)
+        .children([
+            shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(
+                shadcn::Button::new("Edit Profile (Mobile)")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(mobile_open_trigger.clone())
+                    .test_id("ui-gallery-drawer-responsive-mobile-trigger"),
+            )),
+            shadcn::DrawerPart::content_with(move |cx| {
+                let form = profile_form(
+                    cx,
+                    mobile_email.clone(),
+                    mobile_username.clone(),
+                    Some(ProfileFormTestIds {
+                        form: "ui-gallery-drawer-responsive-mobile-form",
+                        email: "ui-gallery-drawer-responsive-mobile-email",
+                        username: "ui-gallery-drawer-responsive-mobile-username",
+                        save: "ui-gallery-drawer-responsive-mobile-save",
+                    }),
+                )
                 .into_element(cx);
+                let form = ui::v_stack(move |_cx| vec![form])
+                    .px_4()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx);
 
-            shadcn::DrawerContent::new(ui::children![
-                cx;
-                shadcn::DrawerHeader::new(ui::children![
+                shadcn::DrawerContent::new(ui::children![
                     cx;
-                    shadcn::DrawerTitle::new("Edit profile"),
-                    shadcn::DrawerDescription::new(
-                        "Make changes to your profile here. Click save when you're done.",
-                    )
+                    shadcn::DrawerHeader::new(ui::children![
+                        cx;
+                        shadcn::DrawerTitle::new("Edit profile"),
+                        shadcn::DrawerDescription::new(
+                            "Make changes to your profile here. Click save when you're done.",
+                        )
+                    ])
+                    .text_align(TextAlign::Start),
+                    form,
+                    shadcn::DrawerFooter::new(ui::children![
+                        cx;
+                        shadcn::DrawerClose::from_scope().build(
+                            cx,
+                            shadcn::Button::new("Cancel")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
+                        )
+                    ])
+                    .refine_style(ChromeRefinement::default().pt(Space::N2)),
                 ])
-                .text_align(TextAlign::Start),
-                form,
-                shadcn::DrawerFooter::new(ui::children![
-                    cx;
-                    shadcn::DrawerClose::from_scope().build(
-                        cx,
-                        shadcn::Button::new("Cancel")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
-                    )
-                ])
-                .refine_style(ChromeRefinement::default().pt(Space::N2)),
-            ])
-            .into_element(cx)
-            .test_id("ui-gallery-drawer-responsive-mobile-content")
-        },
-    );
+                .into_element(cx)
+                .test_id("ui-gallery-drawer-responsive-mobile-content")
+            }),
+        ])
+        .into_element(cx);
 
     ui::h_flex(move |_cx| [desktop_dialog, mobile_drawer])
         .gap(Space::N2)

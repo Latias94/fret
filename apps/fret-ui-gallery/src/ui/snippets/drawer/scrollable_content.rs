@@ -36,16 +36,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     shadcn::Drawer::new(open)
         .direction(shadcn::DrawerDirection::Right)
-        .into_element(
-            cx,
-            move |cx| {
+        .children([
+            shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(
                 shadcn::Button::new("Scrollable Content")
                     .variant(shadcn::ButtonVariant::Outline)
                     .toggle_model(trigger_open.clone())
-                    .test_id("ui-gallery-drawer-scrollable-trigger")
-                    .into_element(cx)
-            },
-            move |cx| {
+                    .test_id("ui-gallery-drawer-scrollable-trigger"),
+            )),
+            shadcn::DrawerPart::content_with(move |cx| {
                 let scroller = shadcn::ScrollArea::new(ui::children![
                     cx;
                     paragraph_block(cx, "Scrollable", 14)
@@ -90,7 +88,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 ])
                 .into_element(cx)
                 .test_id("ui-gallery-drawer-scrollable-content")
-            },
-        )
+            }),
+        ])
+        .into_element(cx)
 }
 // endregion: example

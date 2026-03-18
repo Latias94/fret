@@ -16,10 +16,12 @@ use fret_ui_kit::declarative::{
     occlusion_insets_or_zero, safe_area_insets_or_zero, viewport_queries,
 };
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayController,
-    OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    OverlayPresence, OverlayRequest, Space, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -255,6 +257,14 @@ pub enum SheetSide {
     Bottom,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SheetModalMode {
+    #[default]
+    Modal,
+    NonModal,
+    TrapFocus,
+}
+
 /// shadcn/ui `Sheet` (v4).
 ///
 /// This is a modal overlay (barrier-backed) installed via the component-layer overlay manager.
@@ -263,6 +273,7 @@ pub enum SheetSide {
 pub struct Sheet {
     open: Model<bool>,
     side: SheetSide,
+    modal_mode: SheetModalMode,
     size_override: Option<SheetSizeOverride>,
     max_size_override: Option<Px>,
     overlay_closable: bool,
@@ -296,6 +307,7 @@ impl std::fmt::Debug for Sheet {
         f.debug_struct("Sheet")
             .field("open", &"<model>")
             .field("side", &self.side)
+            .field("modal_mode", &self.modal_mode)
             .field("size_override", &self.size_override)
             .field("max_size_override", &self.max_size_override)
             .field("overlay_closable", &self.overlay_closable)
@@ -322,6 +334,7 @@ impl Sheet {
         Self {
             open,
             side: SheetSide::default(),
+            modal_mode: SheetModalMode::Modal,
             size_override: None,
             max_size_override: None,
             overlay_closable: true,
@@ -408,6 +421,42 @@ impl Sheet {
         self
     }
 
+    /// Enables or disables the modal overlay barrier.
+    ///
+    /// Default: `true`.
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal_mode = if modal {
+            SheetModalMode::Modal
+        } else {
+            SheetModalMode::NonModal
+        };
+        self
+    }
+
+    /// Sets the sheet modal policy in one call.
+    ///
+    /// - `SheetModalMode::Modal`: installs a barrier-backed modal overlay.
+    /// - `SheetModalMode::NonModal`: outside pointer interaction stays enabled.
+    /// - `SheetModalMode::TrapFocus`: traps Tab focus inside the sheet while keeping outside
+    ///   pointer interaction enabled.
+    pub fn modal_mode(mut self, mode: SheetModalMode) -> Self {
+        self.modal_mode = mode;
+        self
+    }
+
+    /// Base UI-style trap-focus mode.
+    ///
+    /// This differs from `modal(true)`: keyboard focus stays within the sheet, but outside pointer
+    /// interactions remain enabled.
+    pub fn modal_trap_focus(mut self, trap: bool) -> Self {
+        self.modal_mode = if trap {
+            SheetModalMode::TrapFocus
+        } else {
+            SheetModalMode::NonModal
+        };
+        self
+    }
+
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
         self.overlay_color = Some(overlay_color);
         self
@@ -488,7 +537,13 @@ impl Sheet {
 
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = radix_dialog::dialog_root_name(id);
+            let modal = matches!(self.modal_mode, SheetModalMode::Modal);
+            let trap_focus_only = matches!(self.modal_mode, SheetModalMode::TrapFocus);
+            let overlay_root_name = if modal {
+                radix_dialog::dialog_root_name(id)
+            } else {
+                format!("window-overlays.dismissible-sheet.{:x}", id.0)
+            };
 
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
@@ -517,13 +572,36 @@ impl Sheet {
 
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
-                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(true);
+                let on_dismiss_request = if !modal && !self.overlay_closable {
+                    let user = self.on_dismiss_request.clone();
+                    Some(Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              req: &mut fret_ui::action::DismissRequestCx| {
+                            if let Some(user) = user.as_ref() {
+                                user(host, action_cx, req);
+                            }
+                            if !req.default_prevented()
+                                && matches!(
+                                    req.reason,
+                                    fret_ui::action::DismissReason::OutsidePress { .. }
+                                        | fret_ui::action::DismissReason::FocusOutside
+                                )
+                            {
+                                req.prevent_default();
+                            }
+                        },
+                    ) as OnDismissRequest)
+                } else {
+                    self.on_dismiss_request.clone()
+                };
+                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(modal);
                 let (on_dismiss_request_for_request, on_close_auto_focus) =
                     radix_dialog::dialog_close_auto_focus_guard_hooks(
                         cx,
                         policy,
                         self.open.clone(),
-                        self.on_dismiss_request.clone(),
+                        on_dismiss_request,
                         self.on_close_auto_focus.clone(),
                     );
 
@@ -837,27 +915,53 @@ impl Sheet {
                             vec![wrapper],
                         );
 
-                        radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
-                            cx,
-                            open_for_children.clone(),
-                            dialog_options.clone(),
-                            on_dismiss_request_for_barrier.clone(),
-                            [barrier_fill],
-                            content,
-                        )
+                        let content = if trap_focus_only {
+                            focus_scope_prim::focus_trap(cx, move |_cx| vec![content])
+                        } else {
+                            content
+                        };
+
+                        if modal {
+                            radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
+                                cx,
+                                open_for_children.clone(),
+                                dialog_options.clone(),
+                                on_dismiss_request_for_barrier.clone(),
+                                [barrier_fill],
+                                content,
+                            )
+                        } else {
+                            [content]
+                                .into_iter()
+                                .collect::<fret_ui::element::Elements>()
+                        }
                     },
                 );
 
-                let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
-                    id,
-                    id,
-                    open,
-                    overlay_presence,
-                    dialog_options,
-                    on_dismiss_request_for_request,
-                    overlay_children,
-                );
-                radix_dialog::request_modal_dialog(cx, request);
+                if modal {
+                    let request =
+                        radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
+                            id,
+                            id,
+                            open,
+                            overlay_presence,
+                            dialog_options,
+                            on_dismiss_request_for_request,
+                            overlay_children,
+                        );
+                    radix_dialog::request_modal_dialog(cx, request);
+                } else {
+                    let mut request =
+                        OverlayRequest::dismissible_popover(id, id, open, overlay_presence, {
+                            overlay_children.into_iter().collect::<Vec<_>>()
+                        });
+                    request.root_name = Some(overlay_root_name);
+                    request.initial_focus = dialog_options.initial_focus;
+                    request.on_open_auto_focus = dialog_options.on_open_auto_focus.clone();
+                    request.on_close_auto_focus = dialog_options.on_close_auto_focus.clone();
+                    request.dismissible_on_dismiss_request = on_dismiss_request_for_request;
+                    OverlayController::request(cx, request);
+                }
             }
 
             trigger
@@ -1743,6 +1847,21 @@ mod tests {
 
         let b = Sheet::new(open).disable_pointer_dismissal(false);
         assert!(b.overlay_closable);
+    }
+
+    #[test]
+    fn sheet_modal_mode_alias_sets_expected_mode() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let modal = Sheet::new(open.clone()).modal(true);
+        assert_eq!(modal.modal_mode, SheetModalMode::Modal);
+
+        let non_modal = Sheet::new(open.clone()).modal(false);
+        assert_eq!(non_modal.modal_mode, SheetModalMode::NonModal);
+
+        let trap_focus = Sheet::new(open).modal_trap_focus(true);
+        assert_eq!(trap_focus.modal_mode, SheetModalMode::TrapFocus);
     }
 
     #[test]

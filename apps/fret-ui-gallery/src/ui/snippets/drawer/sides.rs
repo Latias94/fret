@@ -5,7 +5,7 @@ use fret::{UiChild, UiCx};
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn side_button<H: UiHost>(
+fn side_button<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     title: &'static str,
     direction: shadcn::DrawerDirection,
@@ -14,36 +14,37 @@ fn side_button<H: UiHost>(
 ) -> impl IntoUiElement<H> + use<H> {
     let open_for_trigger = open.clone();
     let open_for_close = open.clone();
-    shadcn::Drawer::new(open).direction(direction).into_element(
-        cx,
-        move |cx| {
-            shadcn::Button::new(title)
-                .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open_for_trigger.clone())
-                .test_id(format!("{test_id_prefix}-trigger"))
+    shadcn::Drawer::new(open)
+        .direction(direction)
+        .children([
+            shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(
+                shadcn::Button::new(title)
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(open_for_trigger.clone())
+                    .test_id(format!("{test_id_prefix}-trigger")),
+            )),
+            shadcn::DrawerPart::content_with(move |cx| {
+                shadcn::DrawerContent::new(ui::children![
+                    cx;
+                    shadcn::DrawerHeader::new(ui::children![
+                        cx;
+                        shadcn::DrawerTitle::new(format!("{title} Drawer")),
+                        shadcn::DrawerDescription::new(
+                            "Use the `direction` prop to control drawer placement.",
+                        )
+                    ]),
+                    shadcn::DrawerFooter::new(ui::children![
+                        cx;
+                        shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(open_for_close.clone())
+                    ]),
+                ])
                 .into_element(cx)
-        },
-        move |cx| {
-            shadcn::DrawerContent::new(ui::children![
-                cx;
-                shadcn::DrawerHeader::new(ui::children![
-                    cx;
-                    shadcn::DrawerTitle::new(format!("{title} Drawer")),
-                    shadcn::DrawerDescription::new(
-                        "Use the `direction` prop to control drawer placement.",
-                    )
-                ]),
-                shadcn::DrawerFooter::new(ui::children![
-                    cx;
-                    shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(open_for_close.clone())
-                ]),
-            ])
-            .into_element(cx)
-            .test_id(format!("{test_id_prefix}-content"))
-        },
-    )
+                .test_id(format!("{test_id_prefix}-content"))
+            }),
+        ])
+        .into_element(cx)
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {

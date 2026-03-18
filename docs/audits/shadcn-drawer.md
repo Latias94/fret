@@ -51,6 +51,14 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: `Drawer::direction(...)` now aliases the placement surface to match the upstream
   `direction` prop, while `side(...)` remains as a compatibility escape hatch.
+- Pass: `Drawer::disable_pointer_dismissal(...)` is now available as the Base UI-style alias for
+  `overlay_closable(false)`, so the root dismissal policy can be taught without inventing another
+  mechanism seam.
+- Pass: `Drawer::modal(false)` / `Drawer::modal_mode(DrawerModalMode::NonModal)` now expose the
+  Base UI-style non-modal follow-up on the recipe root.
+- Pass: `Drawer::modal_trap_focus(true)` / `Drawer::modal_mode(DrawerModalMode::TrapFocus)` now
+  expose the Base UI-style trap-focus follow-up on the recipe root without widening the mechanism
+  contract.
 - Pass: `DrawerTrigger` exists as a thin passthrough wrapper for taxonomy parity.
 - Pass: `DrawerPortal` is exposed for taxonomy parity (portal mounting is owned by the overlay
   manager in Fret).
@@ -61,16 +69,19 @@ Upstream exports a thin wrapper around `vaul`:
   buttons while preserving `DrawerClose::new(open)` as the explicit constructor.
 - Pass: `DrawerClose::from_scope().build(cx, child)` supports composable child-close authoring,
   which is the Fret-side approximation of upstream `DrawerClose asChild`.
+- Pass: `Drawer::children([DrawerPart::trigger(...), DrawerPart::content(...)])` is available as
+  the closest recipe-level equivalent to upstream nested children composition while still lowering
+  into the existing trigger/content slots.
 - Pass: `Drawer::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
 - Pass: The default first-party copyable root path is
-  `Drawer::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`, while
-  managed-open ownership remains explicit on `Drawer::new(open)` / `new_controllable(...)`.
+  `Drawer::new_controllable(cx, None, false).children([DrawerPart::trigger(...), DrawerPart::content_with(...)])`,
+  while managed-open ownership remains explicit on `Drawer::new(open)` / `new_controllable(...)`.
 - Pass: `DrawerContent` / `DrawerHeader` / `DrawerFooter` provide Drawer-specific layout while
   reusing shared dialog substrate building blocks (`Title` / `Description`).
-- Note: Public-surface drift remains at the root authoring surface: Fret still uses a closure/
-  compose root instead of a fully nested children API, but `compose()` is the current recipe-level
-  bridge.
+- Note: Root authoring still lowers through recipe-layer deferred parts rather than true JSX-style
+  nesting, but the default curated surface now matches the upstream mental model more closely via
+  `children([...])`.
 
 ### Placement & sizing
 
@@ -89,6 +100,8 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Escape dismiss is handled by the shared dismissible root (Radix-aligned outcome).
 - Pass: Overlay click-to-dismiss is implemented by rendering a full-window barrier behind the
   content (default on).
+- Pass: Base UI-style `disablePointerDismissal` intent is now represented directly by
+  `Drawer::disable_pointer_dismissal(...)`, which forwards to the existing sheet dismissal policy.
 - Pass: Default overlay color matches the upstream `bg-black/50` intent (via the shared `Sheet`
   overlay defaults).
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
@@ -96,14 +109,30 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Open lifecycle callbacks are available via `Drawer::on_open_change(...)` and
   `Drawer::on_open_change_complete(...)` (delegates to `Sheet`).
 - Pass: Bottom drawers support Vaul-style drag-to-dismiss from the handle affordance region.
+- Pass: Base UI-style `TrapFocus` follow-up now traps Tab focus inside the drawer while keeping
+  outside pointer interaction enabled (`Drawer::modal_trap_focus(true)`).
 
 ### Focus behavior
 
 - Pass: Modal barrier scoping prevents underlay focus traversal (ADR 0068).
 - Pass: Focus restore on close is deterministic to the trigger (modal close unmount path).
+- Pass: Base UI-style trap-focus follow-up keeps Tab traversal within the drawer subtree while
+  remaining click-through to the underlay.
 
 ## Known gaps / intentional differences
 
+- Base UI `modal={false | 'trap-focus'}` is now available, but the non-modal/trap-focus follow-up
+  currently omits the modal scrim. In Fret, the current auto-overlay styling path is still
+  modal-oriented, so `DrawerOverlay` / `overlay_color(...)` only affect the modal barrier path.
+- Base UI's non-modal `Drawer.Popup` defaults initial focus to the popup element itself. Fret's
+  non-modal/trap-focus follow-up still uses the shared overlay default of focusing the first
+  focusable descendant unless the caller redirects focus with hooks.
+- Base UI / Vaul controlled snap-point surfaces are still narrower in Fret. Today we expose
+  recipe-owned `snap_points(...)` plus `default_snap_point(index)`, but not
+  `snapPoint` / `onSnapPointChange` / `snapToSequentialPoints`.
+- Base UI nested-drawer coordination is not modeled yet. Upstream tracks nested swipe progress,
+  frontmost height, and nested-open state for features like background indentation and gesture
+  arbitration; Fret currently treats each drawer as an independent modal overlay.
 - Vaul drag physics (rubber-banding, velocity, snap decisions) are not modeled yet; Fret currently
   uses a simpler threshold/inertia-based settle-and-dismiss policy.
 
@@ -113,16 +142,18 @@ Upstream exports a thin wrapper around `vaul`:
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
 - `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
 
-## Authoring note: `compose()`
+## Authoring note: `children([...])` and `compose()`
 
-`Drawer::compose()` is a recipe-layer bridge for authors who want a more composable part-based
-style than the raw closure root.
+`Drawer::children([...])` is now the default recipe-layer bridge for authors who want the closest
+equivalent to upstream nested parts without widening the mechanism contract.
 
 - Scope: ergonomics only; it lowers into `Drawer::into_element_parts(...)`.
 - Default teaching path: first-party examples now prefer
-  `Drawer::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`.
+  `Drawer::new_controllable(cx, None, false).children([DrawerPart::trigger(...), DrawerPart::content_with(...)])`.
+- `Drawer::compose()` remains the builder-first alternative when explicit trigger/content chaining
+  reads better at the call site.
 - Follow-up policy lane: Vaul-oriented `snap_points(...)` / `default_snap_point(...)` remain
   explicit recipe policy on that same root surface rather than a separate authoring seam.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
-- Limitation: this is still not a full React-style nested children API; Fret stores already-built
-  elements and assembles them at the final call site.
+- Limitation: this is still not a full React-style nested children API; Fret stores deferred parts
+  and assembles them at the final call site.

@@ -373,8 +373,8 @@ pub mod facade {
     };
     pub use crate::drawer::{
         Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerDirection, DrawerFooter,
-        DrawerHeader, DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle,
-        DrawerTrigger,
+        DrawerHeader, DrawerModalMode, DrawerOverlay, DrawerPart, DrawerPortal, DrawerSide,
+        DrawerSnapPoint, DrawerTitle, DrawerTrigger,
     };
     pub use crate::dropdown_menu::{
         DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
@@ -463,8 +463,8 @@ pub mod facade {
     };
     pub use crate::separator::{Separator, SeparatorOrientation, separator};
     pub use crate::sheet::{
-        Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay,
-        SheetPortal, SheetSide, SheetTitle, SheetTrigger,
+        Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader,
+        SheetModalMode, SheetOverlay, SheetPortal, SheetSide, SheetTitle, SheetTrigger,
     };
     pub use crate::shortcut_hint::ShortcutHint;
     pub use crate::sidebar::{

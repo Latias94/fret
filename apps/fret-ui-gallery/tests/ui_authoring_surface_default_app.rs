@@ -754,7 +754,7 @@ fn context_menu_docs_examples_keep_dashed_context_region_triggers() {
 
     assert_normalized_markers_present(
         "src/ui/snippets/context_menu/rtl.rs",
-        &[".content(shadcn::ContextMenuContent::new().side(shadcn::DropdownMenuSide::InlineEnd))"],
+        &[".side(shadcn::DropdownMenuSide::InlineEnd)"],
     );
 
     let page = read("src/ui/pages/context_menu.rs");
@@ -796,6 +796,182 @@ fn context_menu_docs_examples_keep_pointer_aware_trigger_copy() {
             "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work."
         ),
         "src/ui/pages/context_menu.rs should record that docs-backed trigger copy now adapts to fine/coarse pointer capability"
+    );
+}
+
+#[test]
+fn context_menu_usage_and_basic_examples_stay_docs_aligned() {
+    let usage = read("src/ui/snippets/context_menu/usage.rs");
+    assert!(
+        usage.contains("shadcn::ContextMenuTrigger::build("),
+        "src/ui/snippets/context_menu/usage.rs should keep teaching the named `ContextMenuTrigger` surface from the upstream docs usage block"
+    );
+
+    let basic = read("src/ui/snippets/context_menu/basic.rs");
+    assert!(
+        basic.contains("shadcn::ContextMenuItem::new(\"Back\")")
+            && basic.contains("shadcn::ContextMenuItem::new(\"Forward\")")
+            && basic.contains(".disabled(true)")
+            && basic.contains("shadcn::ContextMenuItem::new(\"Reload\")"),
+        "src/ui/snippets/context_menu/basic.rs should stay aligned with the upstream Basic example (`Back`, disabled `Forward`, `Reload`)"
+    );
+}
+
+#[test]
+fn context_menu_rtl_example_keeps_the_richer_upstream_preview_shape() {
+    let rtl = read("src/ui/snippets/context_menu/rtl.rs");
+    assert!(
+        rtl.contains("ContextMenuContent::new()")
+            && rtl.contains(".side(shadcn::DropdownMenuSide::InlineEnd)")
+            && rtl.contains("ContextMenuItem::new(\"Navigation\")")
+            && rtl.contains("ContextMenuItem::new(\"More Tools\")")
+            && rtl.contains("ContextMenuCheckboxItem::from_checked(")
+            && rtl.contains("ContextMenuRadioGroup::from_value("),
+        "src/ui/snippets/context_menu/rtl.rs should keep the richer upstream RTL preview shape while preserving explicit `inline-end` placement"
+    );
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "The RTL preview now stays closer to the upstream Base UI example shape too: dual submenus, checkbox toggles, and a radio group all render under `LayoutDirection::Rtl` while keeping the explicit `inline-end` teaching point."
+        ),
+        "src/ui/pages/context_menu.rs should record that the RTL section now keeps the richer upstream preview structure"
+    );
+}
+
+#[test]
+fn context_menu_checkboxes_and_radio_examples_stay_docs_aligned() {
+    let checkboxes = read("src/ui/snippets/context_menu/checkboxes.rs");
+    assert!(
+        checkboxes.contains("ContextMenuGroup::new(vec![")
+            && checkboxes.contains("\"Show Bookmarks Bar\"")
+            && checkboxes.contains("\"Show Full URLs\"")
+            && checkboxes.contains("\"Show Developer Tools\""),
+        "src/ui/snippets/context_menu/checkboxes.rs should stay aligned with the upstream checkbox labels and grouped structure"
+    );
+
+    let radio = read("src/ui/snippets/context_menu/radio.rs");
+    assert!(
+        radio.contains("ContextMenuLabel::new(\"People\")")
+            && radio.contains("ContextMenuLabel::new(\"Theme\")")
+            && radio.contains("\"Pedro Duarte\"")
+            && radio.contains("\"Colm Tuite\"")
+            && radio.contains("\"Light\"")
+            && radio.contains("\"Dark\"")
+            && radio.contains("\"System\""),
+        "src/ui/snippets/context_menu/radio.rs should keep both upstream radio groups (`People` and `Theme`)"
+    );
+}
+
+#[test]
+fn context_menu_groups_and_icons_examples_stay_docs_aligned() {
+    let groups = read("src/ui/snippets/context_menu/groups.rs");
+    assert!(
+        groups.contains("ContextMenuLabel::new(\"File\")")
+            && groups.contains("\"New File\"")
+            && groups.contains("\"Open File\"")
+            && groups.contains("\"Save\"")
+            && groups.contains("ContextMenuLabel::new(\"Edit\")")
+            && groups.contains("\"Undo\"")
+            && groups.contains("\"Redo\"")
+            && groups.contains("\"Cut\"")
+            && groups.contains("\"Copy\"")
+            && groups.contains("\"Paste\"")
+            && groups.contains("\"Delete\"")
+            && groups.contains("ContextMenuShortcut::new(\"⌘N\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘O\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘S\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘Z\")")
+            && groups.contains("ContextMenuShortcut::new(\"⇧⌘Z\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘X\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘C\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘V\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌫\")"),
+        "src/ui/snippets/context_menu/groups.rs should keep the upstream groups example shape (`File`, `Edit`, clipboard actions, destructive `Delete`) with matching shortcuts"
+    );
+
+    let icons = read("src/ui/snippets/context_menu/icons.rs");
+    assert!(
+        icons.contains("\"Copy\"")
+            && icons.contains("\"Cut\"")
+            && icons.contains("\"Paste\"")
+            && icons.contains("\"Delete\"")
+            && icons.contains("IconId::new_static(\"lucide.copy\")")
+            && icons.contains("IconId::new_static(\"lucide.scissors\")")
+            && icons.contains("IconId::new_static(\"lucide.clipboard-paste\")")
+            && icons.contains("IconId::new_static(\"lucide.trash\")")
+            && icons.contains("ContextMenuGroup::new(vec!["),
+        "src/ui/snippets/context_menu/icons.rs should keep the upstream icons example shape (`Copy`, `Cut`, `Paste`, destructive `Delete`) with the matching lucide icons"
+    );
+}
+
+#[test]
+fn context_menu_submenu_shortcuts_destructive_and_demo_examples_stay_docs_aligned() {
+    let submenu = read("src/ui/snippets/context_menu/submenu.rs");
+    assert!(
+        submenu.contains("ContextMenuShortcut::new(\"⌘C\")")
+            && submenu.contains("ContextMenuShortcut::new(\"⌘X\")")
+            && submenu.contains("\"Save Page...\"")
+            && submenu.contains("\"Create Shortcut...\"")
+            && submenu.contains("\"Name Window...\"")
+            && submenu.contains("\"Developer Tools\"")
+            && submenu.contains("\"Delete\"")
+            && submenu.contains("ContextMenuGroup::new(vec!["),
+        "src/ui/snippets/context_menu/submenu.rs should stay aligned with the upstream submenu example (copy/cut shortcuts plus the grouped More Tools submenu)"
+    );
+
+    let shortcuts = read("src/ui/snippets/context_menu/shortcuts.rs");
+    assert!(
+        shortcuts.contains("\"Back\"")
+            && shortcuts.contains("\"Forward\"")
+            && shortcuts.contains(".disabled(true)")
+            && shortcuts.contains("\"Reload\"")
+            && shortcuts.contains("\"Save\"")
+            && shortcuts.contains("\"Save As...\"")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘[\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘]\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘R\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘S\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⇧⌘S\")"),
+        "src/ui/snippets/context_menu/shortcuts.rs should keep the upstream shortcuts example (`Back`, disabled `Forward`, `Reload`, `Save`, `Save As...`) with matching accelerators"
+    );
+
+    let destructive = read("src/ui/snippets/context_menu/destructive.rs");
+    assert!(
+        destructive.contains("\"Edit\"")
+            && destructive.contains("\"Share\"")
+            && destructive.contains("\"Delete\"")
+            && destructive.contains("IconId::new_static(\"lucide.pencil\")")
+            && destructive.contains("IconId::new_static(\"lucide.share\")")
+            && destructive.contains("IconId::new_static(\"lucide.trash\")")
+            && destructive.contains("ContextMenuItemVariant::Destructive"),
+        "src/ui/snippets/context_menu/destructive.rs should stay aligned with the upstream destructive example (`Edit`, `Share`, destructive `Delete`) and matching lucide icons"
+    );
+
+    let demo = read("src/ui/snippets/context_menu/demo.rs");
+    assert!(
+        demo.contains(".min_width(Px(192.0))")
+            && demo.contains(".submenu_min_width(Px(176.0))")
+            && demo.contains("ContextMenuSub::new(")
+            && demo.contains("ContextMenuShortcut::new(\"⌘[\")")
+            && demo.contains("\"Show Bookmarks\"")
+            && demo.contains("\"Show Full URLs\"")
+            && demo.contains("\"Pedro Duarte\"")
+            && demo.contains("\"Colm Tuite\""),
+        "src/ui/snippets/context_menu/demo.rs should keep the upstream combined docs example shape, including the `w-48` content width and `w-44` submenu width"
+    );
+
+    let sides = read("src/ui/snippets/context_menu/sides.rs");
+    assert!(
+        sides.contains("\"Right click (top)\"")
+            && sides.contains("\"Right click (right)\"")
+            && sides.contains("\"Right click (bottom)\"")
+            && sides.contains("\"Right click (left)\"")
+            && sides.contains("DropdownMenuSide::Top")
+            && sides.contains("DropdownMenuSide::Right")
+            && sides.contains("DropdownMenuSide::Bottom")
+            && sides.contains("DropdownMenuSide::Left"),
+        "src/ui/snippets/context_menu/sides.rs should keep the upstream sides example labels and explicit side assignments for top/right/bottom/left"
     );
 }
 
@@ -2145,13 +2321,14 @@ fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
     let drawer_page = read("src/ui/pages/drawer.rs");
     assert!(
         drawer_page.contains(
-            "`Usage` is the default copyable `compose()` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
+            "`Usage` is the default copyable `children([...])` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
         ),
-        "src/ui/pages/drawer.rs should distinguish the default compose() lane from the Vaul/Fret follow-up lane"
+        "src/ui/pages/drawer.rs should distinguish the default children() lane from the Vaul/Fret follow-up lane"
     );
     assert!(
-        drawer_page.contains("Default copyable `compose()` path for common Drawer call sites."),
-        "src/ui/pages/drawer.rs should label Usage as the default copyable compose() path"
+        drawer_page
+            .contains("Default copyable `children([...])` path for common Drawer call sites."),
+        "src/ui/pages/drawer.rs should label Usage as the default copyable children() path"
     );
     assert!(
         drawer_page.contains(
@@ -2162,20 +2339,45 @@ fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
 }
 
 #[test]
-fn drawer_snap_points_snippet_prefers_compose_root_path() {
+fn drawer_snippets_prefer_children_root_path() {
+    for relative_path in [
+        "src/ui/snippets/drawer/demo.rs",
+        "src/ui/snippets/drawer/usage.rs",
+        "src/ui/snippets/drawer/scrollable_content.rs",
+        "src/ui/snippets/drawer/sides.rs",
+        "src/ui/snippets/drawer/responsive_dialog.rs",
+        "src/ui/snippets/drawer/rtl.rs",
+        "src/ui/snippets/drawer/snap_points.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[".children([", "shadcn::DrawerPart::trigger("],
+        );
+        assert!(
+            normalized.contains("shadcn::DrawerPart::content_with("),
+            "{} should keep Drawer content on the default children() lane",
+            manifest_path(relative_path).display()
+        );
+    }
+}
+
+#[test]
+fn drawer_snap_points_snippet_prefers_children_root_path() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/snap_points.rs",
         &[
             "shadcn::Drawer::new_controllable(cx, None, false)",
             ".snap_points(vec![",
-            ".compose()",
-            ".trigger(shadcn::DrawerTrigger::build(",
+            ".children([",
+            "shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(",
+            "shadcn::DrawerPart::content_with(",
             "shadcn::DrawerClose::from_scope().build(",
         ],
         &[
             "let open = cx.local_model(|| false);",
             "shadcn::Drawer::new(open)",
             ".toggle_model(",
+            ".compose()",
         ],
     );
 }
@@ -5809,10 +6011,10 @@ fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement(
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn trigger_surface<H: UiHost>(label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+                "fn trigger_surface<H: UiHost>(fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             ],
             &[
-                "fn trigger_surface<H: UiHost>(label: &'static str, test_id: &'static str,) -> AnyElement",
+                "fn trigger_surface<H: UiHost>(fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> AnyElement",
             ],
         );
     }
@@ -5830,12 +6032,12 @@ fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement(
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/context_menu/sides.rs",
         &[
-            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
-            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, test_id: &'static str,) -> AnyElement",
-            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> AnyElement",
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> AnyElement",
+            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> AnyElement",
         ],
     );
 }
@@ -7475,10 +7677,10 @@ fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/sides.rs",
         &[
-            "fn side_button<H: UiHost>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn side_button<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn side_button<H: UiHost>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> AnyElement",
+            "fn side_button<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> AnyElement",
         ],
     );
 

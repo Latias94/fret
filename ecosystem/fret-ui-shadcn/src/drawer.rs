@@ -23,7 +23,8 @@ use fret_ui_headless::snap_points as headless_snap_points;
 use crate::layout as shadcn_layout;
 use crate::sheet::Sheet;
 pub use crate::sheet::{
-    SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
+    SheetDescription as DrawerDescription, SheetModalMode as DrawerModalMode,
+    SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
 
 pub type DrawerDirection = DrawerSide;
@@ -825,6 +826,40 @@ impl Drawer {
         self
     }
 
+    /// Base UI-compatible alias.
+    ///
+    /// When `true`, outside pointer press does not dismiss the drawer.
+    /// This is equivalent to `overlay_closable(false)`.
+    pub fn disable_pointer_dismissal(mut self, disable: bool) -> Self {
+        self.inner = self.inner.disable_pointer_dismissal(disable);
+        self
+    }
+
+    /// Enables or disables the modal overlay barrier.
+    ///
+    /// Default: `true`.
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.inner = self.inner.modal(modal);
+        self
+    }
+
+    /// Sets the drawer modal policy in one call.
+    ///
+    /// This is the closest Fret equivalent to Base UI's `modal={true | false | 'trap-focus'}`
+    /// root prop while keeping the policy in the recipe layer.
+    pub fn modal_mode(mut self, mode: DrawerModalMode) -> Self {
+        self.inner = self.inner.modal_mode(mode);
+        self
+    }
+
+    /// Base UI-style trap-focus mode.
+    ///
+    /// This traps Tab focus inside the drawer while leaving outside pointer interaction enabled.
+    pub fn modal_trap_focus(mut self, trap: bool) -> Self {
+        self.inner = self.inner.modal_trap_focus(trap);
+        self
+    }
+
     pub fn overlay_color(mut self, overlay_color: fret_core::Color) -> Self {
         self.inner = self.inner.overlay_color(overlay_color);
         self
@@ -836,6 +871,16 @@ impl Drawer {
     /// shadcn/Vaul while keeping the underlying mechanism surface unchanged.
     pub fn compose<H: UiHost>(self) -> DrawerComposition<H> {
         DrawerComposition::new(self)
+    }
+
+    /// Returns a part-children builder for root-level authoring that is closer to upstream nested
+    /// children composition while still lowering into the existing recipe-layer slots.
+    pub fn children<H: UiHost, I, P>(self, parts: I) -> DrawerChildren<H>
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<DrawerPart<H>>,
+    {
+        DrawerChildren::new(self, parts)
     }
 
     /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
@@ -1365,6 +1410,201 @@ impl Drawer {
 
 /// Recipe-level builder for composing a drawer from shadcn-style parts.
 type DrawerDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+type DrawerDeferredTrigger<H> =
+    Box<dyn FnOnce(&mut ElementContext<'_, H>) -> DrawerTrigger + 'static>;
+
+/// Root-level part adapter for shadcn-style `Drawer` children composition.
+///
+/// This stays in the recipe layer. It does not widen the mechanism contract in `fret-ui`; it only
+/// collects authored parts and lowers them into the existing trigger/content slot surface.
+pub enum DrawerPart<H: UiHost> {
+    Trigger(DrawerDeferredTrigger<H>),
+    Portal(DrawerPortal),
+    Overlay(DrawerOverlay),
+    Content(DrawerDeferredContent<H>),
+}
+
+impl<H: UiHost> std::fmt::Debug for DrawerPart<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("DrawerPart::Trigger(<deferred>)"),
+            Self::Portal(portal) => f.debug_tuple("DrawerPart::Portal").field(portal).finish(),
+            Self::Overlay(overlay) => f.debug_tuple("DrawerPart::Overlay").field(overlay).finish(),
+            Self::Content(_) => f.write_str("DrawerPart::Content(<deferred>)"),
+        }
+    }
+}
+
+impl<H: UiHost> DrawerPart<H> {
+    pub fn trigger<T>(trigger: T) -> Self
+    where
+        T: DrawerCompositionTriggerArg<H> + 'static,
+    {
+        Self::Trigger(Box::new(move |cx| trigger.into_drawer_trigger(cx)))
+    }
+
+    pub fn portal(portal: DrawerPortal) -> Self {
+        Self::Portal(portal)
+    }
+
+    pub fn overlay(overlay: DrawerOverlay) -> Self {
+        Self::Overlay(overlay)
+    }
+
+    pub fn content<T>(content: T) -> Self
+    where
+        T: IntoUiElement<H> + 'static,
+    {
+        Self::Content(Box::new(move |cx| content.into_element(cx)))
+    }
+
+    pub fn content_with(
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        Self::Content(Box::new(content))
+    }
+}
+
+impl<H: UiHost> From<DrawerTrigger> for DrawerPart<H> {
+    fn from(value: DrawerTrigger) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost + 'static, T> From<DrawerTriggerBuild<H, T>> for DrawerPart<H>
+where
+    T: IntoUiElement<H> + 'static,
+{
+    fn from(value: DrawerTriggerBuild<H, T>) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost> From<DrawerPortal> for DrawerPart<H> {
+    fn from(value: DrawerPortal) -> Self {
+        Self::portal(value)
+    }
+}
+
+impl<H: UiHost> From<DrawerOverlay> for DrawerPart<H> {
+    fn from(value: DrawerOverlay) -> Self {
+        Self::overlay(value)
+    }
+}
+
+impl<H: UiHost> From<DrawerContent> for DrawerPart<H> {
+    fn from(value: DrawerContent) -> Self {
+        Self::content(value)
+    }
+}
+
+impl<H: UiHost + 'static, B> From<DrawerContentBuild<H, B>> for DrawerPart<H>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>) + 'static,
+{
+    fn from(value: DrawerContentBuild<H, B>) -> Self {
+        Self::content(value)
+    }
+}
+
+/// Part-children builder for root-level `Drawer` composition.
+///
+/// This is the closest Fret recipe surface to upstream nested children today:
+/// collect `DrawerPart`s, then late-land them at the root call site.
+pub struct DrawerChildren<H: UiHost> {
+    drawer: Drawer,
+    parts: Vec<DrawerPart<H>>,
+}
+
+impl<H: UiHost> std::fmt::Debug for DrawerChildren<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut trigger = 0usize;
+        let mut portal = 0usize;
+        let mut overlay = 0usize;
+        let mut content = 0usize;
+
+        for part in &self.parts {
+            match part {
+                DrawerPart::Trigger(_) => trigger += 1,
+                DrawerPart::Portal(_) => portal += 1,
+                DrawerPart::Overlay(_) => overlay += 1,
+                DrawerPart::Content(_) => content += 1,
+            }
+        }
+
+        f.debug_struct("DrawerChildren")
+            .field("drawer", &self.drawer)
+            .field("trigger_parts", &trigger)
+            .field("portal_parts", &portal)
+            .field("overlay_parts", &overlay)
+            .field("content_parts", &content)
+            .finish()
+    }
+}
+
+impl<H: UiHost> DrawerChildren<H> {
+    pub fn new<I, P>(drawer: Drawer, parts: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<DrawerPart<H>>,
+    {
+        Self {
+            drawer,
+            parts: parts.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut trigger: Option<DrawerDeferredTrigger<H>> = None;
+        let mut portal = DrawerPortal::new();
+        let mut overlay = DrawerOverlay::new();
+        let mut content: Option<DrawerDeferredContent<H>> = None;
+
+        for part in self.parts {
+            match part {
+                DrawerPart::Trigger(next) => {
+                    assert!(
+                        trigger.replace(next).is_none(),
+                        "Drawer::children(...) accepts at most one DrawerTrigger"
+                    );
+                }
+                DrawerPart::Portal(next) => {
+                    portal = next;
+                }
+                DrawerPart::Overlay(next) => {
+                    overlay = next;
+                }
+                DrawerPart::Content(next) => {
+                    assert!(
+                        content.replace(next).is_none(),
+                        "Drawer::children(...) accepts at most one DrawerContent"
+                    );
+                }
+            }
+        }
+
+        let trigger =
+            trigger.expect("Drawer::children(...) requires one DrawerTrigger-compatible part");
+        let content =
+            content.expect("Drawer::children(...) requires one DrawerContent-compatible part");
+
+        self.drawer.into_element_parts(
+            cx,
+            move |cx| trigger(cx),
+            portal,
+            overlay,
+            move |cx| content(cx),
+        )
+    }
+}
+
+impl<H: UiHost> IntoUiElement<H> for DrawerChildren<H> {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerChildren::into_element(self, cx)
+    }
+}
 
 enum DrawerCompositionContent<H: UiHost> {
     Eager(AnyElement),
@@ -1726,7 +1966,7 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_runtime::FrameId;
+    use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
@@ -1763,6 +2003,16 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    fn apply_command_effects(ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices) {
+        let effects = app.flush_effects();
+        for effect in effects {
+            let Effect::Command { window: _, command } = effect else {
+                continue;
+            };
+            let _ = ui.dispatch_command(app, services, &command);
+        }
     }
 
     fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
@@ -2317,6 +2567,54 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
+    #[test]
+    fn drawer_children_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-drawer-children-content-with-from-scope",
+            |cx| {
+                let trigger =
+                    DrawerTrigger::new(crate::button::Button::new("Open").into_element(cx));
+
+                vec![
+                    Drawer::new(open.clone())
+                        .children([
+                            DrawerPart::trigger(trigger),
+                            DrawerPart::portal(DrawerPortal::new()),
+                            DrawerPart::overlay(DrawerOverlay::new()),
+                            DrawerPart::content_with(|cx| {
+                                let close = DrawerClose::from_scope().into_element(cx);
+                                DrawerContent::new(vec![close]).into_element(cx)
+                            }),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
     fn render_drawer_frame_with_underlay(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -2767,6 +3065,378 @@ mod tests {
         assert_eq!(cx.button, fret_core::MouseButton::Left);
         assert_eq!(cx.modifiers, fret_core::Modifiers::default());
         assert_eq!(cx.click_count, 1);
+    }
+
+    #[test]
+    fn drawer_disable_pointer_dismissal_alias_maps_overlay_closable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let underlay = {
+                    let underlay_activated = underlay_activated.clone();
+                    cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_set_bool(&underlay_activated, true);
+                            Vec::new()
+                        },
+                    )
+                };
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let drawer = Drawer::new(open.clone())
+                    .disable_pointer_dismissal(true)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Px(Px(20.0)),
+                                            height: Length::Px(Px(20.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            )
+                        },
+                    );
+
+                vec![underlay, drawer]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let point = Point::new(Px(4.0), Px(4.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while pointer dismissal is disabled"
+        );
+    }
+
+    #[test]
+    fn drawer_modal_trap_focus_traps_tab_but_keeps_outside_click_through() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let focusable_a_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let focusable_b_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let trigger_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+                OverlayController::begin_frame(app, window);
+
+                let open = open.clone();
+                let underlay_id = underlay_id.clone();
+                let focusable_a_id = focusable_a_id.clone();
+                let focusable_b_id = focusable_b_id.clone();
+                let trigger_id = trigger_id.clone();
+                let underlay_activated = underlay_activated.clone();
+
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "drawer-trap-focus",
+                    |cx| {
+                        let underlay_id = underlay_id.clone();
+                        let underlay_activated = underlay_activated.clone();
+                        let underlay = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                underlay_id.set(Some(id));
+                                cx.pressable_set_bool(&underlay_activated, true);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let trigger_id = trigger_id.clone();
+                        let open_for_trigger = open.clone();
+                        let open_for_drawer = open.clone();
+                        let trigger = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                trigger_id.set(Some(id));
+                                cx.pressable_toggle_bool(&open_for_trigger);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let focusable_a_id = focusable_a_id.clone();
+                        let focusable_b_id = focusable_b_id.clone();
+                        let drawer = Drawer::new(open_for_drawer)
+                            .modal_trap_focus(true)
+                            .into_element(
+                                cx,
+                                |_cx| trigger,
+                                move |cx| {
+                                    let a = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(180.0));
+                                                layout.size.height = Length::Px(Px(44.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            focusable_a_id.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+
+                                    let b = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(180.0));
+                                                layout.size.height = Length::Px(Px(44.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            focusable_b_id.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+
+                                    DrawerContent::new(vec![a, b]).into_element(cx)
+                                },
+                            );
+
+                        vec![underlay, drawer]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let trigger_element = trigger_id.get().expect("trigger id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let trigger_center = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let underlay_element = underlay_id.get().expect("underlay id");
+        let a_id = focusable_a_id.get().expect("focusable a id");
+        let b_id = focusable_b_id.get().expect("focusable b id");
+        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
+            .expect("underlay node");
+        let a_node = fret_ui::elements::node_for_element(&mut app, window, a_id).expect("a node");
+        let b_node = fret_ui::elements::node_for_element(&mut app, window, b_id).expect("b node");
+        assert_eq!(ui.focus(), Some(a_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+        apply_command_effects(&mut ui, &mut app, &mut services);
+        assert_ne!(ui.focus(), Some(underlay_node));
+        assert!(
+            ui.focus() == Some(a_node) || ui.focus() == Some(b_node),
+            "trap-focus drawer should keep focus inside content"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(true));
     }
 
     #[test]
