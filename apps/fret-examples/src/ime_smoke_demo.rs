@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
+use fret::advanced::prelude::LocalState;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
@@ -62,9 +62,7 @@ impl ImeSmokeDriver {
             app_ui_root,
             |cx| {
                 let theme = Theme::global(&*cx.app).snapshot();
-                let last = last_ime
-                    .paint(cx)
-                    .value_or_else(|| Arc::<str>::from("IME: <error>"));
+                let last = last_ime.paint_value(cx);
 
                 let mut root_layout = LayoutStyle::default();
                 root_layout.size.width = Length::Fill;

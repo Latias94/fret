@@ -1,4 +1,4 @@
-use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
+use fret::advanced::prelude::LocalState;
 use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, FontId, Px, Rect, TextStyle, TextWrap, UiServices};
@@ -97,7 +97,7 @@ impl EmojiConformanceDriver {
                     .unwrap_or_default()
                     .families_arc();
 
-                let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();
+                let selected_emoji_font = emoji_font_override.layout_value(cx);
 
                 let mut items: Vec<shadcn::SelectItem> = Vec::new();
                 let mut seen: HashSet<Arc<str>> = HashSet::new();

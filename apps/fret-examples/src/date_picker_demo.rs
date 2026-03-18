@@ -208,8 +208,8 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
             let theme = cx.theme_snapshot();
             let padding = theme.metric_token("metric.padding.md");
 
-            let open_value = open.layout(cx).copied_or(false);
-            let selected_value = selected.layout(cx).value_or_default();
+            let open_value = open.layout_value(cx);
+            let selected_value = selected.layout_value(cx);
             let month_label: Arc<str> = month
                 .layout(cx)
                 .read_ref(|m| Arc::from(format!("{:?} {}", m.month, m.year)))
@@ -219,11 +219,11 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                 .map(|d| Arc::from(d.to_string()))
                 .unwrap_or_else(|| Arc::from("<none>"));
 
-            let week_start_monday_value = week_start_monday.layout(cx).copied_or(true);
-            let show_outside_days_value = show_outside_days.layout(cx).copied_or(true);
-            let disable_outside_days_value = disable_outside_days.layout(cx).copied_or(true);
-            let disable_weekends_value = disable_weekends.layout(cx).copied_or(false);
-            let disabled_value = disabled.layout(cx).copied_or(false);
+            let week_start_monday_value = week_start_monday.layout_value(cx);
+            let show_outside_days_value = show_outside_days.layout_value(cx);
+            let disable_outside_days_value = disable_outside_days.layout_value(cx);
+            let disable_weekends_value = disable_weekends.layout_value(cx);
+            let disabled_value = disabled.layout_value(cx);
 
             let header = ui::h_row(|cx| {
                 [

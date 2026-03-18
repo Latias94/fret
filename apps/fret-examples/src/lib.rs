@@ -824,8 +824,8 @@ mod authoring_surface_policy_tests {
                 "open: LocalState<bool>,",
                 "month: LocalState<CalendarMonth>,",
                 "let root = render_root_with_app_ui(",
-                "let open_value = open.layout(cx).copied_or(false);",
-                "let selected_value = selected.layout(cx).value_or_default();",
+                "let open_value = open.layout_value(cx);",
+                "let selected_value = selected.layout_value(cx);",
                 "let month_label: Arc<str> = month.layout(cx).read_ref(",
             ],
             &[
@@ -834,6 +834,8 @@ mod authoring_surface_policy_tests {
                 "cx.observe_model(&open, Invalidation::Layout);",
                 "cx.app.models().get_copied(&open)",
                 "cx.app.models().read(&month, |m| format!(\"{:?} {}\", m.month, m.year))",
+                "open.layout(cx).copied_or(false)",
+                "selected.layout(cx).value_or_default()",
             ],
         );
     }
@@ -846,13 +848,14 @@ mod authoring_surface_policy_tests {
                 "app_ui_root: AppUiRenderRootState,",
                 "last_action: LocalState<Arc<str>>,",
                 "let root = render_root_with_app_ui(",
-                "let last_action_value = last_action.layout(cx).value_or_else(",
+                "let last_action_value = last_action.layout_value(cx);",
             ],
             &[
                 "last_action: Model<Arc<str>>,",
                 ".render_root(\"sonner-demo\", |cx| {",
                 "cx.observe_model(&last_action, Invalidation::Layout);",
                 "cx.app.models().get_cloned(&last_action)",
+                "last_action.layout(cx).value_or_else(",
             ],
         );
     }
@@ -866,7 +869,7 @@ mod authoring_surface_policy_tests {
                 "input_single: LocalState<String>,",
                 "last_ime: LocalState<Arc<str>>,",
                 "let root = render_root_with_app_ui(",
-                "let last = last_ime.paint(cx).value_or_else(",
+                "let last = last_ime.paint_value(cx);",
             ],
             &[
                 "input_single: Model<String>,",
@@ -874,6 +877,7 @@ mod authoring_surface_policy_tests {
                 ".render_root(\"ime-smoke\",",
                 "cx.observe_model(&last_ime, Invalidation::Paint);",
                 "cx.app.models().read(&last_ime, |v| v.clone())",
+                "last_ime.paint(cx).value_or_else(",
             ],
         );
     }
@@ -887,13 +891,14 @@ mod authoring_surface_policy_tests {
                 "emoji_font_override: LocalState<Option<Arc<str>>>,",
                 "emoji_font_override_open: LocalState<bool>,",
                 "let root = render_root_with_app_ui(",
-                "let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();",
+                "let selected_emoji_font = emoji_font_override.layout_value(cx);",
             ],
             &[
                 "emoji_font_override: Model<Option<Arc<str>>>,",
                 ".render_root(\"emoji-conformance\", |cx| {",
                 "cx.observe_model(&emoji_font_override, Invalidation::Layout);",
                 "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+                "emoji_font_override.layout(cx).value_or_default()",
             ],
         );
     }
