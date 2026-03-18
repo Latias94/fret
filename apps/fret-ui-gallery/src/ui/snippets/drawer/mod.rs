@@ -7,6 +7,7 @@
 //! Keep `ui-gallery-drawer-*` `test_id`s stable: diag scripts depend on them.
 
 pub mod demo;
+pub mod nested;
 pub mod responsive_dialog;
 pub mod rtl;
 pub mod scrollable_content;

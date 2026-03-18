@@ -1,0 +1,98 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-drawer-nested-child-drag-routing",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "drawer", "nested", "drag"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "drawer" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-drawer" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-drawer" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-drawer" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-drawer-nested-parent-trigger" },
+      "delta_y": 240.0,
+      "padding_px": 24.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-drawer-nested-parent-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-nested-parent-content"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-drawer-nested-child-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-nested-child-content"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-drawer-nested-child-handle" },
+      "delta_x": 0.0,
+      "delta_y": 72.0,
+      "steps": 18
+    },
+    { "type": "wait_frames", "n": 24 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-drawer-nested-child-content"
+        }
+      }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-drawer-nested-child-drag-routing" }
+  ]
+}
