@@ -1,4 +1,6 @@
+use std::cell::Cell;
 use std::marker::PhantomData;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextWrap};
@@ -6,7 +8,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges, Overflow,
-    PositionStyle, SemanticsDecoration, SizeStyle,
+    PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
@@ -640,6 +642,8 @@ impl Sheet {
                 let viewport_width = viewport_bounds.size.width;
                 let viewport_height = viewport_bounds.size.height;
                 let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+                let popup_initial_focus = Rc::new(Cell::new(None));
+                let popup_initial_focus_for_children = popup_initial_focus.clone();
                 let overlay_children = portal_inherited::with_root_name_inheriting(
                     cx,
                     &overlay_root_name,
@@ -673,6 +677,20 @@ impl Sheet {
                             with_sheet_open_provider(cx, open_for_children.clone(), |cx| {
                                 with_sheet_side_provider(cx, sheet_side, |cx| content(cx))
                             });
+                        let content = if modal {
+                            content
+                        } else {
+                            cx.semantics_with_id(
+                                SemanticsProps {
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                move |_cx, popup_focus_id| {
+                                    popup_initial_focus_for_children.set(Some(popup_focus_id));
+                                    vec![content]
+                                },
+                            )
+                        };
                         let vertical_auto_max_height_fraction = if vertical_auto_max_height_fraction
                             .is_finite()
                             && vertical_auto_max_height_fraction > 0.0
@@ -956,7 +974,8 @@ impl Sheet {
                             overlay_children.into_iter().collect::<Vec<_>>()
                         });
                     request.root_name = Some(overlay_root_name);
-                    request.initial_focus = dialog_options.initial_focus;
+                    request.initial_focus =
+                        popup_initial_focus.get().or(dialog_options.initial_focus);
                     request.on_open_auto_focus = dialog_options.on_open_auto_focus.clone();
                     request.on_close_auto_focus = dialog_options.on_close_auto_focus.clone();
                     request.dismissible_on_dismiss_request = on_dismiss_request_for_request;
@@ -2602,13 +2621,14 @@ mod tests {
         trigger_id.expect("trigger id")
     }
 
-    fn render_sheet_frame_with_auto_focus_hooks(
+    fn render_sheet_frame_with_auto_focus_hooks_and_mode(
         ui: &mut UiTree<App>,
         app: &mut App,
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        modal_mode: SheetModalMode,
         overlay_closable: bool,
         side: SheetSide,
         underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
@@ -2667,6 +2687,7 @@ mod tests {
 
                 let sheet = Sheet::new(open.clone())
                     .side(side)
+                    .modal_mode(modal_mode)
                     .overlay_closable(overlay_closable)
                     .size(Px(300.0))
                     .on_open_auto_focus(on_open_auto_focus.clone())
@@ -2705,6 +2726,41 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    fn render_sheet_frame_with_auto_focus_hooks(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        overlay_closable: bool,
+        side: SheetSide,
+        underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_id_cell: Option<Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>>>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        initial_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+        on_close_auto_focus: Option<OnCloseAutoFocus>,
+    ) -> fret_ui::elements::GlobalElementId {
+        render_sheet_frame_with_auto_focus_hooks_and_mode(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            open,
+            SheetModalMode::Modal,
+            overlay_closable,
+            side,
+            underlay_id_out,
+            underlay_id_cell,
+            content_id_out,
+            initial_focus_id_out,
+            on_open_auto_focus,
+            on_close_auto_focus,
+        )
     }
 
     fn render_sheet_frame_with_open_auto_focus_redirect_target(
@@ -3800,6 +3856,102 @@ mod tests {
             app.models().get_copied(&underlay_activated),
             Some(true),
             "underlay should activate once the barrier is removed"
+        );
+    }
+
+    #[test]
+    fn sheet_non_modal_focuses_popup_root_on_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(fret_runtime::FrameId(1));
+        let trigger = render_sheet_frame_with_auto_focus_hooks_and_mode(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            SheetModalMode::NonModal,
+            true,
+            SheetSide::Right,
+            underlay_id.clone(),
+            None,
+            content_id.clone(),
+            initial_focus_id.clone(),
+            None,
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(fret_runtime::FrameId(2));
+        let _ = render_sheet_frame_with_auto_focus_hooks_and_mode(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            SheetModalMode::NonModal,
+            true,
+            SheetSide::Right,
+            underlay_id,
+            None,
+            content_id.clone(),
+            initial_focus_id.clone(),
+            None,
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content = content_id.get().expect("sheet content element");
+        let content_node =
+            fret_ui::elements::node_for_element(&mut app, window, content).expect("content node");
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("focusable");
+        let focused = ui.focus().expect("focused popup root");
+
+        let mut focused_is_content_ancestor = false;
+        let mut current = Some(content_node);
+        while let Some(node) = current {
+            if node == focused {
+                focused_is_content_ancestor = true;
+                break;
+            }
+            current = ui.node_parent(node);
+        }
+
+        assert!(
+            focused_is_content_ancestor,
+            "expected non-modal sheet to focus a popup-root ancestor of the content"
+        );
+        assert_ne!(
+            Some(focused),
+            Some(initial_focus_node),
+            "expected non-modal sheet to avoid auto-focusing the first focusable descendant"
         );
     }
 

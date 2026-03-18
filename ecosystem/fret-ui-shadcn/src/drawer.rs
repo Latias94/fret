@@ -3208,6 +3208,7 @@ mod tests {
         let open = app.models_mut().insert(false);
         let underlay_activated = app.models_mut().insert(false);
         let underlay_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let drawer_content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let focusable_a_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let focusable_b_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let trigger_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
@@ -3225,6 +3226,7 @@ mod tests {
 
                 let open = open.clone();
                 let underlay_id = underlay_id.clone();
+                let drawer_content_id = drawer_content_id.clone();
                 let focusable_a_id = focusable_a_id.clone();
                 let focusable_b_id = focusable_b_id.clone();
                 let trigger_id = trigger_id.clone();
@@ -3284,6 +3286,7 @@ mod tests {
                             },
                         );
 
+                        let drawer_content_id = drawer_content_id.clone();
                         let focusable_a_id = focusable_a_id.clone();
                         let focusable_b_id = focusable_b_id.clone();
                         let drawer = Drawer::new(open_for_drawer)
@@ -3332,7 +3335,9 @@ mod tests {
                                         },
                                     );
 
-                                    DrawerContent::new(vec![a, b]).into_element(cx)
+                                    let content = DrawerContent::new(vec![a, b]).into_element(cx);
+                                    drawer_content_id.set(Some(content.id));
+                                    content
                                 },
                             );
 
@@ -3385,13 +3390,31 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
 
         let underlay_element = underlay_id.get().expect("underlay id");
+        let content_element = drawer_content_id.get().expect("drawer content id");
         let a_id = focusable_a_id.get().expect("focusable a id");
         let b_id = focusable_b_id.get().expect("focusable b id");
         let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
             .expect("underlay node");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
         let a_node = fret_ui::elements::node_for_element(&mut app, window, a_id).expect("a node");
         let b_node = fret_ui::elements::node_for_element(&mut app, window, b_id).expect("b node");
-        assert_eq!(ui.focus(), Some(a_node));
+        let focused = ui.focus().expect("focused popup root");
+        let mut focused_is_content_ancestor = false;
+        let mut current = Some(content_node);
+        while let Some(node) = current {
+            if node == focused {
+                focused_is_content_ancestor = true;
+                break;
+            }
+            current = ui.node_parent(node);
+        }
+        assert!(
+            focused_is_content_ancestor,
+            "expected trap-focus drawer to focus a popup-root ancestor of the content"
+        );
+        assert_ne!(Some(focused), Some(a_node));
+        assert_ne!(Some(focused), Some(b_node));
 
         ui.dispatch_event(
             &mut app,

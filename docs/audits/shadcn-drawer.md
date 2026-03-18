@@ -116,6 +116,8 @@ Upstream exports a thin wrapper around `vaul`:
 
 - Pass: Modal barrier scoping prevents underlay focus traversal (ADR 0068).
 - Pass: Focus restore on close is deterministic to the trigger (modal close unmount path).
+- Pass: Base UI-style non-modal / trap-focus follow-up now defaults initial focus to the drawer
+  popup root instead of the first focusable descendant.
 - Pass: Base UI-style trap-focus follow-up keeps Tab traversal within the drawer subtree while
   remaining click-through to the underlay.
 
@@ -124,9 +126,6 @@ Upstream exports a thin wrapper around `vaul`:
 - Base UI `modal={false | 'trap-focus'}` is now available, but the non-modal/trap-focus follow-up
   currently omits the modal scrim. In Fret, the current auto-overlay styling path is still
   modal-oriented, so `DrawerOverlay` / `overlay_color(...)` only affect the modal barrier path.
-- Base UI's non-modal `Drawer.Popup` defaults initial focus to the popup element itself. Fret's
-  non-modal/trap-focus follow-up still uses the shared overlay default of focusing the first
-  focusable descendant unless the caller redirects focus with hooks.
 - Base UI / Vaul controlled snap-point surfaces are still narrower in Fret. Today we expose
   recipe-owned `snap_points(...)` plus `default_snap_point(index)`, but not
   `snapPoint` / `onSnapPointChange` / `snapToSequentialPoints`.
