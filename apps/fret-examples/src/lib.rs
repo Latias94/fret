@@ -899,6 +899,28 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn manual_components_gallery_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            COMPONENTS_GALLERY_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "let root = render_root_with_app_ui(",
+                "let selected = tree_state.layout(cx).read_ref(|s| s.selected).ok().flatten();",
+                "let checkbox_value = checkbox.layout(cx).copied_or(false);",
+                "let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();",
+                "let last_action_value = last_action.layout(cx).value_or_else(",
+            ],
+            &[
+                ".render_root(\"components-gallery\", |cx| {",
+                "cx.observe_model(&tree_state, Invalidation::Layout);",
+                "cx.app.models().get_copied(&checkbox).unwrap_or(false);",
+                "cx.app.models().get_cloned(&last_action);",
+                "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+            ],
+        );
+    }
+
+    #[test]
     fn imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures() {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_editor_name_assist_surface("));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_surface("));

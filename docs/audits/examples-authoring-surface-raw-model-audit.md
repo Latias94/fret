@@ -194,6 +194,10 @@ Audit judgment:
 - `apps/fret-examples/src/emoji_conformance_demo.rs` now proves the bridge also covers focused
   conformance panels whose control state is just a small set of optional local selections/open
   flags, without keeping raw root-level `observe_model(...)` reads.
+- `apps/fret-examples/src/components_gallery.rs` now proves the same bridge also scales to a
+  mixed retained/manual control gallery: the root authoring surface can use grouped `AppUi`
+  tracked reads while retained table/file-tree/overlay subtrees keep their explicit `Model<T>`
+  interop seams.
 
 ### B2) Window/runtime interop harnesses
 
@@ -235,23 +239,12 @@ path, these are the best next candidates.
 
 ### C1) Control-panel demos with mostly local form/control state
 
-Candidate files:
+Current status:
 
-- `apps/fret-examples/src/components_gallery.rs`
-
-Why these are candidates:
-
-- most state slots are booleans, strings, selected values, open flags, and small inspector values,
-- they are conceptually close to ordinary app-lane local state,
-- unlike retained plot/table/node-graph state, these examples do not fundamentally require shared
-  retained graph ownership for every control model.
-
-Why they are not P0:
-
-- they currently sit on manual `UiTree` / driver surfaces,
-- the right migration path is now to reuse the landed
-  `fret::advanced::view::render_root_with_app_ui(...)` bridge rather than doing one-off ad hoc
-  rewrites.
+- closed for the current in-tree examples.
+- `apps/fret-examples/src/emoji_conformance_demo.rs` and
+  `apps/fret-examples/src/components_gallery.rs` now both exercise the landed
+  `fret::advanced::view::render_root_with_app_ui(...)` bridge on manual `UiTree` drivers.
 
 ### C2) Web custom-effect inspector harnesses
 
@@ -299,12 +292,9 @@ examples with `LocalState<T>`".
 
 It should be one of these:
 
-1. Reuse the landed `render_root_with_app_ui(...)` bridge on the next clean control-panel/manual
-   demos (`components_gallery`) and only reopen helper design if
-   those migrations reveal a real missing seam.
-2. Pick one candidate family with repetitive inspector state (for example the `custom_effect_v2_*`
+1. Pick one candidate family with repetitive inspector state (for example the `custom_effect_v2_*`
    web demos) and converge that family on one shared pattern.
-3. Leave retained plot/table/node-graph/chart examples alone until the retained runtime surfaces
+2. Leave retained plot/table/node-graph/chart examples alone until the retained runtime surfaces
    themselves change.
 
 The important boundary is:
