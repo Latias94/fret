@@ -10,7 +10,6 @@ use std::sync::Arc;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{Color, Corners, Edges, EffectId, Px};
-use fret_runtime::Model;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
@@ -181,23 +180,20 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params
 #[derive(Debug, Clone, Copy)]
 struct DemoEffect(EffectId);
 
-#[derive(Debug)]
 struct CustomEffectV1State {
-    enabled: Model<bool>,
-    blur_radius_px: Model<Vec<f32>>,
-    blur_downsample: Model<Vec<f32>>,
-    refraction_height_px: Model<Vec<f32>>,
-    refraction_amount_px: Model<Vec<f32>>,
-    depth_effect: Model<Vec<f32>>,
-    chromatic_aberration: Model<Vec<f32>>,
-    corner_radius_px: Model<Vec<f32>>,
-    grain_strength: Model<Vec<f32>>,
-    grain_scale: Model<Vec<f32>>,
+    enabled: LocalState<bool>,
+    blur_radius_px: LocalState<Vec<f32>>,
+    blur_downsample: LocalState<Vec<f32>>,
+    refraction_height_px: LocalState<Vec<f32>>,
+    refraction_amount_px: LocalState<Vec<f32>>,
+    depth_effect: LocalState<Vec<f32>>,
+    chromatic_aberration: LocalState<Vec<f32>>,
+    corner_radius_px: LocalState<Vec<f32>>,
+    grain_strength: LocalState<Vec<f32>>,
+    grain_scale: LocalState<Vec<f32>>,
 }
 
-struct CustomEffectV1View {
-    st: CustomEffectV1State,
-}
+struct CustomEffectV1View;
 
 fn install_demo_theme(app: &mut KernelApp) {
     shadcn::themes::apply_shadcn_new_york(
@@ -226,65 +222,52 @@ fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Custo
 }
 
 impl CustomEffectV1State {
-    fn reset(models: &mut fret_runtime::ModelStore, st: &CustomEffectV1State) {
-        let _ = models.update(&st.enabled, |v| *v = true);
-        let _ = models.update(&st.blur_radius_px, |v| *v = vec![14.0]);
-        let _ = models.update(&st.blur_downsample, |v| *v = vec![2.0]);
-        let _ = models.update(&st.refraction_height_px, |v| *v = vec![20.0]);
-        let _ = models.update(&st.refraction_amount_px, |v| *v = vec![12.0]);
-        let _ = models.update(&st.depth_effect, |v| *v = vec![0.35]);
-        let _ = models.update(&st.chromatic_aberration, |v| *v = vec![0.75]);
-        let _ = models.update(&st.corner_radius_px, |v| *v = vec![20.0]);
-        let _ = models.update(&st.grain_strength, |v| *v = vec![0.06]);
-        let _ = models.update(&st.grain_scale, |v| *v = vec![1.0]);
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            enabled: cx.state().local_init(|| true),
+            blur_radius_px: cx.state().local_init(|| vec![14.0]),
+            blur_downsample: cx.state().local_init(|| vec![2.0]),
+            refraction_height_px: cx.state().local_init(|| vec![20.0]),
+            refraction_amount_px: cx.state().local_init(|| vec![12.0]),
+            depth_effect: cx.state().local_init(|| vec![0.35]),
+            chromatic_aberration: cx.state().local_init(|| vec![0.75]),
+            corner_radius_px: cx.state().local_init(|| vec![20.0]),
+            grain_strength: cx.state().local_init(|| vec![0.06]),
+            grain_scale: cx.state().local_init(|| vec![1.0]),
+        }
     }
 }
 
 impl View for CustomEffectV1View {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        Self {
-            st: CustomEffectV1State {
-                enabled: app.models_mut().insert(true),
-                blur_radius_px: app.models_mut().insert(vec![14.0]),
-                blur_downsample: app.models_mut().insert(vec![2.0]),
-                refraction_height_px: app.models_mut().insert(vec![20.0]),
-                refraction_amount_px: app.models_mut().insert(vec![12.0]),
-                depth_effect: app.models_mut().insert(vec![0.35]),
-                chromatic_aberration: app.models_mut().insert(vec![0.75]),
-                corner_radius_px: app.models_mut().insert(vec![20.0]),
-                grain_strength: app.models_mut().insert(vec![0.06]),
-                grain_scale: app.models_mut().insert(vec![1.0]),
-            },
-        }
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        cx.actions().models::<act::Reset>({
-            let st = self.clone_for_reset();
-            move |models| {
-                CustomEffectV1State::reset(models, &st);
-                true
-            }
-        });
+        let mut st = CustomEffectV1State::new(cx);
 
-        view(cx, &mut self.st)
-    }
-}
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.enabled, true);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![14.0]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.blur_downsample, vec![2.0]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.refraction_height_px, vec![20.0]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.refraction_amount_px, vec![12.0]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.depth_effect, vec![0.35]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.chromatic_aberration, vec![0.75]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.corner_radius_px, vec![20.0]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.grain_strength, vec![0.06]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.grain_scale, vec![1.0]);
 
-impl CustomEffectV1View {
-    fn clone_for_reset(&self) -> CustomEffectV1State {
-        CustomEffectV1State {
-            enabled: self.st.enabled.clone(),
-            blur_radius_px: self.st.blur_radius_px.clone(),
-            blur_downsample: self.st.blur_downsample.clone(),
-            refraction_height_px: self.st.refraction_height_px.clone(),
-            refraction_amount_px: self.st.refraction_amount_px.clone(),
-            depth_effect: self.st.depth_effect.clone(),
-            chromatic_aberration: self.st.chromatic_aberration.clone(),
-            corner_radius_px: self.st.corner_radius_px.clone(),
-            grain_strength: self.st.grain_strength.clone(),
-            grain_scale: self.st.grain_scale.clone(),
-        }
+        view(cx, &mut st)
     }
 }
 
@@ -296,7 +279,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
     model
         .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -719,16 +702,16 @@ fn inspector(
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let enabled_model = st.enabled.clone();
-    let blur_radius_model = st.blur_radius_px.clone();
-    let blur_downsample_model = st.blur_downsample.clone();
-    let refraction_height_model = st.refraction_height_px.clone();
-    let refraction_amount_model = st.refraction_amount_px.clone();
-    let depth_effect_model = st.depth_effect.clone();
-    let chromatic_model = st.chromatic_aberration.clone();
-    let corner_radius_model = st.corner_radius_px.clone();
-    let grain_strength_model = st.grain_strength.clone();
-    let grain_scale_model = st.grain_scale.clone();
+    let enabled_model = st.enabled.clone_model();
+    let blur_radius_model = st.blur_radius_px.clone_model();
+    let blur_downsample_model = st.blur_downsample.clone_model();
+    let refraction_height_model = st.refraction_height_px.clone_model();
+    let refraction_amount_model = st.refraction_amount_px.clone_model();
+    let depth_effect_model = st.depth_effect.clone_model();
+    let chromatic_model = st.chromatic_aberration.clone_model();
+    let corner_radius_model = st.corner_radius_px.clone_model();
+    let grain_strength_model = st.grain_strength.clone_model();
+    let grain_scale_model = st.grain_scale.clone_model();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(360.0));

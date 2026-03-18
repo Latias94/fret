@@ -1755,8 +1755,35 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V1_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "blur_radius_px: cx.state().local_init(|| vec![14.0]),",
+                "blur_downsample: cx.state().local_init(|| vec![2.0]),",
+                "refraction_height_px: cx.state().local_init(|| vec![20.0]),",
+                "refraction_amount_px: cx.state().local_init(|| vec![12.0]),",
+                "depth_effect: cx.state().local_init(|| vec![0.35]),",
+                "chromatic_aberration: cx.state().local_init(|| vec![0.75]),",
+                "corner_radius_px: cx.state().local_init(|| vec![20.0]),",
+                "grain_strength: cx.state().local_init(|| vec![0.06]),",
+                "grain_scale: cx.state().local_init(|| vec![1.0]),",
+                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
+                ".local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![14.0]);",
+                ".local_set::<act::Reset, Vec<f32>>(&st.grain_scale, vec![1.0]);",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "blur_radius_px: app.models_mut().insert(vec![14.0])",
+                "blur_downsample: app.models_mut().insert(vec![2.0])",
+                "refraction_height_px: app.models_mut().insert(vec![20.0])",
+                "refraction_amount_px: app.models_mut().insert(vec![12.0])",
+                "depth_effect: app.models_mut().insert(vec![0.35])",
+                "chromatic_aberration: app.models_mut().insert(vec![0.75])",
+                "corner_radius_px: app.models_mut().insert(vec![20.0])",
+                "grain_strength: app.models_mut().insert(vec![0.06])",
+                "grain_scale: app.models_mut().insert(vec![1.0])",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
@@ -2027,10 +2054,14 @@ mod authoring_surface_policy_tests {
             &[
                 "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "let enabled_model = st.enabled.clone_model();",
+                "let blur_radius_model = st.blur_radius_px.clone_model();",
             ],
             &[
                 "cx.watch_model(model)",
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
+                "let enabled_model = st.enabled.clone();",
+                "let blur_radius_model = st.blur_radius_px.clone();",
             ],
         );
 
