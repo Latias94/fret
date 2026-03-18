@@ -477,6 +477,7 @@ fn maybe_init_asset_scaffold(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn make_temp_dir(prefix: &str) -> PathBuf {
@@ -487,6 +488,51 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("{prefix}-{nonce}"));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         dir
+    }
+
+    fn repo_workspace_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .expect("repo workspace root should resolve")
+    }
+
+    fn make_repo_local_dir(prefix: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let dir = repo_workspace_root()
+            .join("local")
+            .join(format!("{prefix}-{nonce}"));
+        std::fs::create_dir_all(&dir).expect("create repo-local test dir");
+        dir
+    }
+
+    fn cargo_check_generated_app(out_dir: &Path) {
+        let repo_root = repo_workspace_root();
+        let target_name = out_dir
+            .file_name()
+            .and_then(OsStr::to_str)
+            .expect("generated app dir should have a final path segment");
+        let target_dir = repo_root
+            .join("target")
+            .join("fretboard-generated-app-checks")
+            .join(target_name);
+
+        let status = Command::new("cargo")
+            .arg("check")
+            .arg("--quiet")
+            .current_dir(out_dir)
+            .env("CARGO_TARGET_DIR", &target_dir)
+            .status()
+            .expect("spawn cargo check for generated app");
+
+        assert!(
+            status.success(),
+            "generated app cargo check failed for {} with status {status}",
+            out_dir.display()
+        );
     }
 
     fn opts_with_ui_assets() -> ScaffoldOptions {
@@ -559,5 +605,59 @@ mod tests {
         .expect("simple todo scaffold should succeed");
 
         assert!(!out_dir.join("assets").exists());
+    }
+
+    #[test]
+    fn default_onboarding_templates_generate_projects_that_compile() {
+        // Generated app manifests rely on repo-relative path dependencies, so this test scaffolds
+        // inside the real workspace under the ignored `local/` tree and then runs cargo check
+        // against the generated manifests.
+        let workspace_root = repo_workspace_root();
+        let suite_root = make_repo_local_dir("fretboard-scaffold-compile");
+
+        let hello_dir = suite_root.join("hello-app");
+        init_hello_at(
+            &workspace_root,
+            &hello_dir,
+            "hello-app",
+            ScaffoldOptions {
+                icon_pack: IconPack::Lucide,
+                command_palette: false,
+                ui_assets: false,
+            },
+            false,
+        )
+        .expect("hello scaffold should succeed");
+        cargo_check_generated_app(&hello_dir);
+
+        let simple_todo_dir = suite_root.join("simple-todo-app");
+        init_simple_todo_at(
+            &workspace_root,
+            &simple_todo_dir,
+            "simple-todo-app",
+            ScaffoldOptions {
+                icon_pack: IconPack::Lucide,
+                command_palette: false,
+                ui_assets: false,
+            },
+            false,
+        )
+        .expect("simple todo scaffold should succeed");
+        cargo_check_generated_app(&simple_todo_dir);
+
+        let todo_dir = suite_root.join("todo-app");
+        init_todo_at(
+            &workspace_root,
+            &todo_dir,
+            "todo-app",
+            ScaffoldOptions {
+                icon_pack: IconPack::Lucide,
+                command_palette: false,
+                ui_assets: false,
+            },
+            false,
+        )
+        .expect("todo scaffold should succeed");
+        cargo_check_generated_app(&todo_dir);
     }
 }
