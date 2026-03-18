@@ -271,6 +271,7 @@ mod authoring_surface_policy_tests {
     const CUSTOM_EFFECT_V2_WEB_DEMO: &str = include_str!("custom_effect_v2_web_demo.rs");
     const CONTAINER_QUERIES_DOCKING_DEMO: &str = include_str!("container_queries_docking_demo.rs");
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
+    const DATE_PICKER_DEMO: &str = include_str!("date_picker_demo.rs");
     const DOCKING_ARBITRATION_DEMO: &str = include_str!("docking_arbitration_demo.rs");
     const DOCKING_DEMO: &str = include_str!("docking_demo.rs");
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
@@ -810,6 +811,29 @@ mod authoring_surface_policy_tests {
                 "cx.observe_model(&form_state, Invalidation::Layout);",
                 "cx.app.models().read(&form_state, |st| {",
                 "cx.app.models().read(&status, |v| Arc::clone(v))",
+            ],
+        );
+    }
+
+    #[test]
+    fn manual_date_picker_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            DATE_PICKER_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "open: LocalState<bool>,",
+                "month: LocalState<CalendarMonth>,",
+                "let root = render_root_with_app_ui(",
+                "let open_value = open.layout(cx).copied_or(false);",
+                "let selected_value = selected.layout(cx).value_or_default();",
+                "let month_label: Arc<str> = month.layout(cx).read_ref(",
+            ],
+            &[
+                "open: Model<bool>,",
+                ".render_root(\"date-picker-demo\", move |cx| {",
+                "cx.observe_model(&open, Invalidation::Layout);",
+                "cx.app.models().get_copied(&open)",
+                "cx.app.models().read(&month, |m| format!(\"{:?} {}\", m.month, m.year))",
             ],
         );
     }

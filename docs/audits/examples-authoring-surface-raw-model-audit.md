@@ -183,6 +183,8 @@ Audit judgment:
 - `apps/fret-examples/src/form_demo.rs` is now the first proof that a manual `UiTree` harness can
   still use grouped `AppUi` authoring via `fret::advanced::view::render_root_with_app_ui(...)`
   plus explicit `LocalState::from_model(...)` bridges.
+- `apps/fret-examples/src/date_picker_demo.rs` now proves the same bridge also covers the smaller
+  control-panel/calendar family without keeping raw tracked reads on the render path.
 
 ### B2) Window/runtime interop harnesses
 
@@ -227,7 +229,6 @@ path, these are the best next candidates.
 Candidate files:
 
 - `apps/fret-examples/src/components_gallery.rs`
-- `apps/fret-examples/src/date_picker_demo.rs`
 - `apps/fret-examples/src/emoji_conformance_demo.rs`
 - `apps/fret-examples/src/ime_smoke_demo.rs`
 - `apps/fret-examples/src/sonner_demo.rs`
