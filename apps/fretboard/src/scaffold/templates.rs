@@ -72,8 +72,6 @@ pub(super) fn todo_template_cargo_toml(
 
     let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
     let fret_icons_radix_path = join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
-    let fret_query_path = join_workspace_path(workspace_prefix, "ecosystem/fret-query");
-    let fret_selector_path = join_workspace_path(workspace_prefix, "ecosystem/fret-selector");
 
     let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
         format!(
@@ -92,8 +90,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
-{radix_dep}fret-query = {{ path = "{fret_query_path}", features = ["ui"] }}
-fret-selector = {{ path = "{fret_selector_path}", features = ["ui"] }}
+{radix_dep}
 [workspace]
 "#
     )
@@ -1597,6 +1594,13 @@ mod tests {
     #[test]
     fn simple_todo_template_cargo_toml_has_no_query_selector_deps() {
         let toml = simple_todo_template_cargo_toml("simple-todo-app", opts(), ".");
+        assert!(!toml.contains("fret-query"));
+        assert!(!toml.contains("fret-selector"));
+    }
+
+    #[test]
+    fn todo_template_cargo_toml_has_no_query_selector_deps() {
+        let toml = todo_template_cargo_toml("todo-app", opts(), ".");
         assert!(!toml.contains("fret-query"));
         assert!(!toml.contains("fret-selector"));
     }
