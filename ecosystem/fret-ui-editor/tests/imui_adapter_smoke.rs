@@ -10,8 +10,9 @@ use fret_ui::UiHost;
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, AxisDragValueOutcome, Checkbox, CheckboxOptions,
     DragValue, DragValueOptions, DragValueOutcome, EnumSelect, EnumSelectItem, EnumSelectOptions,
-    NumericFormatFn, NumericParseFn, NumericValueConstraints, Slider, SliderOptions, TextField,
-    TextFieldOptions, TransformEdit, TransformEditAxisOutcome, Vec3Edit, VecEditAxisOutcome,
+    NumericPresentation, NumericValueConstraints, Slider, SliderOptions, TextField,
+    TextFieldOptions, TransformEdit, TransformEditAxisOutcome, TransformEditPresentations,
+    Vec3Edit, VecEditAxisOutcome,
 };
 use fret_ui_editor::imui;
 
@@ -23,8 +24,8 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
     enabled_model: &Model<bool>,
     mode_model: &Model<Option<Arc<str>>>,
 ) {
-    let fmt: NumericFormatFn<f64> = Arc::new(|v| Arc::from(format!("{v:.3}")));
-    let parse: NumericParseFn<f64> = Arc::new(|s| s.trim().parse::<f64>().ok());
+    let value_presentation = NumericPresentation::<f64>::fixed_decimals(3);
+    let blend_presentation = NumericPresentation::<f64>::percent_0_1(0);
     let items: Arc<[EnumSelectItem]> = vec![
         EnumSelectItem::new("lit", "Lit"),
         EnumSelectItem::new("unlit", "Unlit"),
@@ -41,10 +42,12 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
 
     imui::drag_value(
         ui,
-        DragValue::new(value_model.clone(), fmt.clone(), parse.clone()).options(DragValueOptions {
-            id_source: Some(Arc::from("tests.drag_value")),
-            ..Default::default()
-        }),
+        DragValue::from_presentation(value_model.clone(), value_presentation.clone()).options(
+            DragValueOptions {
+                id_source: Some(Arc::from("tests.drag_value")),
+                ..Default::default()
+            },
+        ),
     );
 
     let on_drag_outcome = Arc::new(
@@ -68,7 +71,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
          _outcome: TransformEditAxisOutcome| {},
     );
 
-    let _ = DragValue::new(value_model.clone(), fmt.clone(), parse.clone())
+    let _ = DragValue::from_presentation(value_model.clone(), value_presentation.clone())
         .on_outcome(Some(on_drag_outcome))
         .options(DragValueOptions {
             id_source: Some(Arc::from("tests.drag_value.outcome")),
@@ -81,12 +84,11 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
             ..Default::default()
         });
 
-    let _ = AxisDragValue::new(
+    let _ = AxisDragValue::from_presentation(
         Arc::from("X"),
         Color::from_srgb_hex_rgb(0xf2_59_59),
         value_model.clone(),
-        fmt.clone(),
-        parse.clone(),
+        value_presentation.clone(),
     )
     .on_outcome(Some(on_axis_outcome))
     .options(AxisDragValueOptions {
@@ -100,17 +102,16 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         ..Default::default()
     });
 
-    let _ = Vec3Edit::new(
+    let _ = Vec3Edit::from_presentation(
         value_model.clone(),
         value_model.clone(),
         value_model.clone(),
-        fmt.clone(),
-        parse.clone(),
+        value_presentation.clone(),
     )
     .on_axis_outcome(Some(on_vec_axis_outcome))
     .options(Default::default());
 
-    let _ = TransformEdit::new(
+    let _ = TransformEdit::from_presentations(
         (
             value_model.clone(),
             value_model.clone(),
@@ -126,21 +127,19 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
             value_model.clone(),
             value_model.clone(),
         ),
-        fmt.clone(),
-        parse.clone(),
+        TransformEditPresentations::shared(value_presentation.clone()),
     )
     .on_axis_outcome(Some(on_transform_axis_outcome))
     .options(Default::default());
 
     imui::slider(
         ui,
-        Slider::new(value_model.clone(), 0.0, 1.0)
-            .format(fmt)
-            .parse(parse)
-            .options(SliderOptions {
+        Slider::from_presentation(value_model.clone(), 0.0, 1.0, blend_presentation).options(
+            SliderOptions {
                 id_source: Some(Arc::from("tests.slider")),
                 ..Default::default()
-            }),
+            },
+        ),
     );
 
     imui::checkbox(

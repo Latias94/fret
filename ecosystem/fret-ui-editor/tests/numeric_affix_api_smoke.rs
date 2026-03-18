@@ -6,7 +6,7 @@ use fret_runtime::Model;
 use fret_ui_editor::controls::{
     AxisDragValue, AxisDragValueOptions, DragValue, DragValueOptions, NumericFormatFn,
     NumericInput, NumericInputOptions, NumericParseFn, NumericPresentation, Slider, SliderOptions,
-    TransformEdit, TransformEditOptions, Vec3Edit, VecEditOptions,
+    TransformEdit, TransformEditOptions, TransformEditPresentations, Vec3Edit, VecEditOptions,
 };
 
 #[allow(dead_code)]
@@ -101,41 +101,78 @@ fn composite_controls_accept_affixes(value_model: &Model<f64>) {
 
 #[allow(dead_code)]
 fn numeric_controls_accept_presentation_bundle(value_model: &Model<f64>) {
-    let (value_format, value_parse, value_affixes) = NumericPresentation::<f64>::fixed_decimals(2)
+    let value_presentation = NumericPresentation::<f64>::fixed_decimals(2)
         .with_chrome_prefix("$")
-        .with_chrome_suffix("px")
-        .parts();
-    let (blend_format, blend_parse, blend_affixes) =
-        NumericPresentation::<f64>::percent_0_1(0).parts();
+        .with_chrome_suffix("px");
+    let axis_presentation = NumericPresentation::<f64>::fixed_decimals(2).with_chrome_suffix("m");
+    let blend_presentation = NumericPresentation::<f64>::percent_0_1(0);
 
-    let _numeric = NumericInput::new(
-        value_model.clone(),
-        value_format.clone(),
-        value_parse.clone(),
-    )
-    .options(NumericInputOptions {
-        prefix: value_affixes.prefix.clone(),
-        suffix: value_affixes.suffix.clone(),
-        id_source: Some(Arc::from("tests.numeric_presentation.input")),
-        ..Default::default()
-    });
+    let _numeric = NumericInput::from_presentation(value_model.clone(), value_presentation.clone())
+        .options(NumericInputOptions {
+            id_source: Some(Arc::from("tests.numeric_presentation.input")),
+            ..Default::default()
+        });
 
-    let _drag =
-        DragValue::new(value_model.clone(), value_format, value_parse).options(DragValueOptions {
-            prefix: value_affixes.prefix.clone(),
-            suffix: value_affixes.suffix.clone(),
+    let _drag = DragValue::from_presentation(value_model.clone(), value_presentation.clone())
+        .options(DragValueOptions {
             id_source: Some(Arc::from("tests.numeric_presentation.drag")),
             ..Default::default()
         });
 
-    let _slider = Slider::new(value_model.clone(), 0.0, 1.0)
-        .format(blend_format)
-        .parse(blend_parse)
+    let _axis_drag = AxisDragValue::from_presentation(
+        Arc::from("X"),
+        Color::from_srgb_hex_rgb(0xf2_59_59),
+        value_model.clone(),
+        axis_presentation.clone(),
+    )
+    .options(AxisDragValueOptions {
+        id_source: Some(Arc::from("tests.numeric_presentation.axis_drag")),
+        ..Default::default()
+    });
+
+    let _slider = Slider::from_presentation(value_model.clone(), 0.0, 1.0, blend_presentation)
         .options(SliderOptions {
             id_source: Some(Arc::from("tests.numeric_presentation.slider")),
-            suffix: blend_affixes.suffix.clone(),
             ..Default::default()
         });
+
+    let _vec3 = Vec3Edit::from_presentation(
+        value_model.clone(),
+        value_model.clone(),
+        value_model.clone(),
+        value_presentation,
+    )
+    .options(VecEditOptions {
+        id_source: Some(Arc::from("tests.numeric_presentation.vec3")),
+        ..Default::default()
+    });
+
+    let _transform = TransformEdit::from_presentations(
+        (
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+        ),
+        (
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+        ),
+        (
+            value_model.clone(),
+            value_model.clone(),
+            value_model.clone(),
+        ),
+        TransformEditPresentations::new(
+            axis_presentation,
+            NumericPresentation::<f64>::degrees(0),
+            NumericPresentation::<f64>::percent_0_1(0),
+        ),
+    )
+    .options(TransformEditOptions {
+        id_source: Some(Arc::from("tests.numeric_presentation.transform")),
+        ..Default::default()
+    });
 }
 
 #[test]

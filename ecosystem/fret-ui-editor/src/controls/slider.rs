@@ -14,19 +14,21 @@ use crate::controls::numeric_input::{
     NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
 use crate::primitives::EditorTokenKeys;
+use crate::primitives::colors::{editor_accent, editor_border};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_frame,
     editor_input_group_segment,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::numeric_value::NumericValueConstraints;
 use crate::primitives::readout::EditorCompactReadoutStyle;
-use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
+use crate::primitives::{NumericPresentation, style::EditorStyle};
 use fret_core::text::TextOverflow;
 use fret_core::{Axis, Corners, CursorIcon, Edges, MouseButton, PointerId, Px, TextAlign};
 use fret_runtime::Model;
@@ -254,6 +256,21 @@ where
         }
     }
 
+    /// Construct a slider from a shared editor authoring bundle.
+    pub fn from_presentation(
+        model: Model<T>,
+        min: f64,
+        max: f64,
+        presentation: NumericPresentation<T>,
+    ) -> Self {
+        let mut slider = Self::new(model, min, max);
+        slider.format = presentation.format();
+        slider.parse = presentation.parse();
+        slider.options.prefix = presentation.chrome_prefix().cloned();
+        slider.options.suffix = presentation.chrome_suffix().cloned();
+        slider
+    }
+
     pub fn format(mut self, format: NumericFormatFn<T>) -> Self {
         self.format = format;
         self
@@ -377,8 +394,6 @@ where
         let show_value = self.options.show_value;
         let value_width = self.options.value_width;
         let allow_typing = self.options.allow_typing;
-        let prefix = self.options.prefix.clone();
-        let suffix = self.options.suffix.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
         let value_display_test_id = derived_test_id(self.options.test_id.as_ref(), "value_display");
 
@@ -391,6 +406,11 @@ where
 
         let format = self.format.clone();
         let value_text = (format)(T::from_f64(value_f));
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            value_text.as_ref(),
+            self.options.prefix.clone(),
+            self.options.suffix.clone(),
+        );
         let value_display_text =
             compose_affixed_value_text(&value_text, prefix.as_ref(), suffix.as_ref());
 
@@ -542,7 +562,7 @@ where
                 let pressed = st.pressed;
                 let focused = st.focused;
 
-                let accent = theme.color_token("accent");
+                let accent = editor_accent(theme);
                 let disabled_alpha = if interactive_enabled { 1.0 } else { 0.55 };
 
                 let mut track_bg = theme
@@ -558,8 +578,7 @@ where
                     .unwrap_or_else(|| theme.color_token("background"));
                 let thumb_border = theme
                     .color_by_key("component.slider.thumb_border")
-                    .or_else(|| theme.color_by_key("border"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
+                    .unwrap_or_else(|| editor_border(theme));
 
                 if hovered && enabled {
                     track_bg = mix(track_bg, accent, 0.06);
@@ -839,8 +858,8 @@ where
                 layout: input_layout,
                 enabled: enabled && typing,
                 focusable: enabled && typing,
-                prefix: self.options.prefix.clone(),
-                suffix: self.options.suffix.clone(),
+                prefix: prefix.clone(),
+                suffix: suffix.clone(),
                 selection_behavior: self.options.selection_behavior,
                 test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
@@ -891,6 +910,10 @@ mod tests {
     use std::sync::Arc;
 
     use super::compose_affixed_value_text;
+    use crate::controls::Slider;
+    use crate::primitives::NumericPresentation;
+    use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
+    use fret_app::App;
 
     #[test]
     fn compose_affixed_value_text_keeps_plain_value_when_no_affix() {
@@ -907,5 +930,33 @@ mod tests {
             compose_affixed_value_text(&value, Some(&prefix), Some(&suffix)).as_ref(),
             "$12.0px"
         );
+    }
+
+    #[test]
+    fn compose_affixed_value_text_can_skip_duplicate_suffix_chrome() {
+        let value = Arc::<str>::from("25%");
+        let (_prefix, suffix) =
+            suppress_duplicate_chrome_affixes(value.as_ref(), None, Some(Arc::from("%")));
+
+        assert_eq!(
+            compose_affixed_value_text(&value, None, suffix.as_ref()).as_ref(),
+            "25%"
+        );
+    }
+
+    #[test]
+    fn slider_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(0.25f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(1)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let slider = Slider::from_presentation(model, 0.0, 1.0, presentation);
+
+        assert_eq!((slider.format)(0.25).as_ref(), "0.2");
+        assert_eq!((slider.parse)("0.2"), Some(0.2));
+        assert_eq!(slider.options.prefix, Some(Arc::from("$")));
+        assert_eq!(slider.options.suffix, Some(Arc::from("ms")));
     }
 }

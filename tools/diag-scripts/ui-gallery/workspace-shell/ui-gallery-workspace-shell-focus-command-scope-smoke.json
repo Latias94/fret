@@ -53,7 +53,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-overlay" }
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-dialog" }
       },
       "timeout_frames": 240
     },

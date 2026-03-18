@@ -65,6 +65,8 @@ Deliverables:
   generic cards when the default baseline gets stronger contrast,
 - distinct panel-header and group-header tokens so the top inspector band can carry more framing
   weight than repeated section headers without reintroducing visual clutter,
+- one shared editor semantic color-helper lane for panel/group/header/popup surfaces so composite
+  chrome does not keep duplicating fallback order in each widget,
 - one editor-owned trailing affordance baseline so reset/clear/remove/icon actions stop drifting
   between narrow hit targets and row-height targets,
 - one editor-owned popup surface chrome baseline for assist panels, select lists, and color-edit
@@ -119,6 +121,8 @@ Deliverables:
 - focused diag coverage for default buffered blur commit plus the first editor opt-in blur
   exceptions (`Cancel` for inline rename, `PreserveDraft` for multiline notes), alongside
   multiline explicit commit and Escape cancel on the promoted proof surface,
+- one app-local non-proof consumer for `TextFieldBlurBehavior::PreserveDraft` so multiline
+  editor notes stop being proof-only before any shared notes recipe is considered,
 - and a boring close-out path for screenshot automation after typed-mode interactions and reruns.
 
 Exit gates:
@@ -128,16 +132,22 @@ Exit gates:
 - proof/demo startup and host theme sync no longer silently erase the intended editor preset,
 - overview / typing / invalid screenshots are all meaningful and reproducible,
 - authoring-parity screenshots make clear-button alignment and percent slider composition reviewable
-  without manual proof setup,
+  without manual proof setup, including the "formatter owns the unit text" rule so joined percent
+  readouts do not double-render `%`,
 - the screenshot proof can switch into a review-only composition without manual window/layout setup,
 - idle proof-local outcome placeholders no longer waste right-lane width or idle row height on the
   promoted review surface while committed/canceled readouts remain diagnosable,
 - starter-set controls share one layout/state grammar instead of per-control heuristics,
+- composite surfaces resolve panel/group/popup chrome through shared editor semantic helpers rather
+  than ad hoc local fallback chains,
 - repeated screenshot runs reset proof-local filter/search state instead of depending on a fresh
   launch,
 - buffered text-session proof coverage demonstrates default blur commit, inline-rename
   cancel-on-blur, multiline preserve-draft, explicit multiline commit, and cancel/revert without
   relying on manual inspection,
+- both opt-in blur exceptions now have at least one in-tree non-proof consumer without promoting a
+  shared helper prematurely (`Cancel` in retained rename overlays, `PreserveDraft` in app-local
+  declarative notes),
 - a promoted text-assist/history proof plus diag gate demonstrate input-owned assist semantics
   (`expanded`, controlled listbox relation, `active_descendant`) and Enter-accept behavior without
   moving primary focus into the popup, and that proof is backed by shared `fret-ui-kit`
@@ -166,6 +176,8 @@ Goal:
 Deliverables:
 
 - `DragValue` closure for real editor workflows,
+- a preferred first-party numeric authoring lane (`NumericPresentation<T>` plus
+  `from_presentation(...)` constructors where controls/composites own prefix/suffix chrome),
 - richer text-input policy for editor surfaces beyond the shared buffered baseline
   (deciding where shared overlay/scroll/selection policy should live now that the
   popup-capable `fret-ui-kit` text-assist glue plus `TextAssistField` recipe have both object-name
@@ -178,6 +190,8 @@ Deliverables:
 Exit gates:
 
 - starter-set controls do not keep parallel declarative and `imui` implementations,
+- first-party numeric editor surfaces stop open-coding `(format, parse, prefix, suffix)` bundles
+  when the shared `NumericPresentation<T>` constructor lane already exists,
 - `imui_editor_proof_demo` or an equivalent promoted proof surface covers the core editor set,
 - focused gates exist for edit-session commit/cancel, state-identity correctness, and screenshot
   baseline review,
@@ -185,7 +199,7 @@ Exit gates:
 
 ## Phase D - Shell, adapters, and extraction closure
 
-Status: Planned
+Status: In progress
 
 Goal:
 
@@ -195,15 +209,20 @@ Goal:
 
 Deliverables:
 
-- a documented workspace-shell starter set,
+- a documented workspace-shell starter set
+  (`WORKSPACE_SHELL_STARTER_SET.md`) that freezes the v1 shell baseline around frame/top
+  bar/status bar/pane chrome/tabstrip/command-scope/focus-coordination seams,
 - explicit adapter rules for shell/docking/editor preset alignment,
 - a decision on future inspector/property protocol extraction,
 - a cleanup/migration note for promoting app-local surfaces into ecosystem crates.
 
 Exit gates:
 
+- `WORKSPACE_SHELL_STARTER_SET.md` points to one stable shell-level baseline and keeps app-local
+  menu/status/content protocols out of `fret-workspace`,
 - `fret-workspace` and `fret-docking` no longer have ambiguous tabstrip/chrome ownership,
-- shell proof surfaces remain promoted and gated,
+- shell proof surfaces remain promoted and gated, with the recurring UI Gallery workspace-shell
+  suite as the default shell-level review target,
 - adapter-side seeding remains the default recommendation for skins,
 - either a future protocol crate is scheduled or extraction is explicitly deferred with reasons.
 

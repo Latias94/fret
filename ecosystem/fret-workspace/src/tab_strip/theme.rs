@@ -24,9 +24,7 @@ pub(super) struct WorkspaceTabStripTheme {
 }
 
 impl WorkspaceTabStripTheme {
-    pub(super) fn resolve<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
-        let theme = Theme::global(cx.app);
-
+    fn from_theme(theme: &Theme) -> Self {
         let bar_bg = workspace_tabstrip_background(theme);
         let bar_border = workspace_tabstrip_border(theme);
 
@@ -41,8 +39,8 @@ impl WorkspaceTabStripTheme {
             .or_else(|| theme.color_by_key("primary"))
             .unwrap_or(active_fg);
         let hover_bg = theme
-            .color_by_key("accent")
-            .or_else(|| theme.color_by_key("workspace.tab.hover_bg"))
+            .color_by_key("workspace.tab.hover_bg")
+            .or_else(|| theme.color_by_key("accent"))
             .unwrap_or(Color::TRANSPARENT);
 
         let indicator_color = theme
@@ -71,5 +69,33 @@ impl WorkspaceTabStripTheme {
             scroll_button_fg,
             tab_max_width,
         }
+    }
+
+    pub(super) fn resolve<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Self {
+        Self::from_theme(Theme::global(cx.app))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WorkspaceTabStripTheme;
+    use fret_app::App;
+    use fret_core::Color;
+    use fret_ui::{Theme, ThemeConfig};
+
+    #[test]
+    fn workspace_tab_hover_background_prefers_owner_token_over_accent() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors
+                .insert("accent".to_string(), "#335577".to_string());
+            cfg.colors
+                .insert("workspace.tab.hover_bg".to_string(), "#112233".to_string());
+            theme.apply_config_patch(&cfg);
+        });
+
+        let resolved = WorkspaceTabStripTheme::from_theme(Theme::global(&app));
+        assert_eq!(resolved.hover_bg, Color::from_srgb_hex_rgb(0x11_22_33));
     }
 }

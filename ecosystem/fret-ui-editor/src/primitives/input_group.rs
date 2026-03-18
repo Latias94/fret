@@ -14,14 +14,15 @@ use fret_ui::element::{
     SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::ColorRef;
 use fret_ui_kit::typography;
+use fret_ui_kit::ColorRef;
 
-use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
+use super::colors::editor_foreground;
 use super::icons::{editor_icon, editor_icon_with};
-use super::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
+use super::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
+use super::EditorDensity;
 
 pub(crate) fn editor_input_group_frame<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -298,9 +299,48 @@ pub(crate) fn editor_clear_button_segment<H: UiHost>(
         enabled_for_paint,
         a11y_label,
         fret_icons::ids::ui::CLOSE,
-        Some(Px(12.0)),
+        Some(Px(11.0)),
         test_id,
         on_activate,
+    )
+}
+
+pub(crate) fn editor_clear_button_segment_multiline<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    chrome: ResolvedEditorFrameChrome,
+    enabled_for_paint: bool,
+    a11y_label: std::sync::Arc<str>,
+    test_id: Option<std::sync::Arc<str>>,
+    on_activate: OnActivate,
+) -> AnyElement {
+    let affordance_extent = density.affordance_extent();
+    let button = editor_clear_button_segment(
+        cx,
+        density,
+        enabled_for_paint,
+        a11y_label,
+        test_id,
+        on_activate,
+    );
+
+    editor_input_group_segment(
+        cx,
+        LayoutStyle {
+            size: SizeStyle {
+                width: Length::Px(affordance_extent),
+                height: Length::Fill,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        Edges {
+            top: chrome.padding.top,
+            right: Px(0.0),
+            bottom: Px(0.0),
+            left: Px(0.0),
+        },
+        button,
     )
 }
 
@@ -630,7 +670,7 @@ pub(crate) fn editor_axis_segment<H: UiHost>(
     bg: Color,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
-    let fg = theme.color_token("foreground");
+    let fg = editor_foreground(theme);
 
     // Keep the axis marker subtle: it should read as part of the input group, not a standalone button.
     let seg_bg = mix(bg, Color { a: 0.16, ..tint }, 0.35);

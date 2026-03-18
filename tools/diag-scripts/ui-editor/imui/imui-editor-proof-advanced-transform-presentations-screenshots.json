@@ -1,0 +1,119 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "imui-editor-proof-advanced-transform-presentations-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "screenshots",
+      "ui_editor",
+      "imui",
+      "transform_edit",
+      "numeric_presentation",
+      "regression"
+    ],
+    "target_hints": [
+      "Uses the review-only imui_editor_proof_demo layout and filters the inspector to the Advanced transform row.",
+      "Pins the heterogeneous TransformEdit numeric story: chrome-owned meter suffixes, formatter-owned degree labels, and normalized percent scale readouts."
+    ],
+    "env_defaults": {
+      "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW": "1",
+      "FRET_IMUI_EDITOR_PRESET": "default",
+      "FRET_IMUI_EDITOR_PROOF_LAYOUT": "editor_review"
+    }
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1440.0, "height_px": 1000.0 },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.editor.search" }
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "type_text", "text": "transform" },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.editor.advanced.transform" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.position.x.value"
+        },
+        "text": "0.000"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.rotation.x.value"
+        },
+        "text": "\u00b0"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.scale.x.value"
+        },
+        "text": "100%"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "imui-editor-proof.editor.advanced.transform.link-scale"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "imui-editor-proof-advanced-transform-presentations.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-advanced-transform-presentations"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "imui-editor-proof-advanced-transform-presentations"
+    }
+  ]
+}

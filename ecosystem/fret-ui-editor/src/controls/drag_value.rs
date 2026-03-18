@@ -12,11 +12,13 @@ use crate::controls::numeric_input::{
     NumericFormatFn, NumericInput, NumericInputErrorDisplay, NumericInputOptions,
     NumericInputOutcome, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
+use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
     editor_text_segment,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
     sync_numeric_text_entry_focus_handoff,
@@ -24,8 +26,8 @@ use crate::primitives::numeric_text_entry::{
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{
-    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericValueConstraints,
-    constrain_numeric_value,
+    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
+    NumericValueConstraints, constrain_numeric_value,
 };
 use fret_core::text::{TextOverflow, TextWrap};
 use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
@@ -133,6 +135,14 @@ where
         }
     }
 
+    /// Construct a drag value from a shared editor authoring bundle.
+    pub fn from_presentation(model: Model<T>, presentation: NumericPresentation<T>) -> Self {
+        let mut drag_value = Self::new(model, presentation.format(), presentation.parse());
+        drag_value.options.prefix = presentation.chrome_prefix().cloned();
+        drag_value.options.suffix = presentation.chrome_suffix().cloned();
+        drag_value
+    }
+
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
         self.validate = validate;
         self
@@ -188,8 +198,11 @@ where
         };
 
         let typing = mode == DragValueMode::Typing;
-        let prefix = self.options.prefix.clone();
-        let suffix = self.options.suffix.clone();
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            value_text.as_ref(),
+            self.options.prefix.clone(),
+            self.options.suffix.clone(),
+        );
         let scrub_test_id = self.options.test_id.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
         let prefix_test_id = derived_test_id(scrub_test_id.as_ref(), "prefix");
@@ -222,9 +235,13 @@ where
         let state_for_scrub = state.clone();
         let focus_handoff_for_scrub = focus_handoff.clone();
         let on_outcome_for_scrub = on_outcome.clone();
+        let prefix_for_scrub_root = prefix.clone();
+        let suffix_for_scrub_root = suffix.clone();
         let scrub = cx.keyed(
             ("fret-ui-editor.drag_value.scrub", scrub_revision),
             move |cx| {
+                let prefix_for_scrub = prefix_for_scrub_root.clone();
+                let suffix_for_scrub = suffix_for_scrub_root.clone();
                 let state_for_scrub_record = state_for_scrub.clone();
                 let focus_handoff_for_double_click = focus_handoff_for_scrub.clone();
                 let on_outcome_for_scrub_commit = on_outcome_for_scrub.clone();
@@ -312,10 +329,7 @@ where
                             },
                             move |cx| {
                                 let theme = Theme::global(&*cx.app);
-                                let affix_color = theme
-                                    .color_by_key("muted-foreground")
-                                    .or_else(|| theme.color_by_key("muted_foreground"))
-                                    .unwrap_or_else(|| theme.color_token("foreground"));
+                                let affix_color = editor_muted_foreground(theme);
                                 let divider = visuals.border;
                                 let value_text_el = cx.text_props(TextProps {
                                     layout: LayoutStyle {
@@ -349,7 +363,7 @@ where
                                         .a11y_label(value_text.clone());
                                 }
                                 let mut segments = Vec::new();
-                                if let Some(prefix) = prefix.clone() {
+                                if let Some(prefix) = prefix_for_scrub.clone() {
                                     let mut segment = editor_text_segment(
                                         cx,
                                         density,
@@ -366,7 +380,7 @@ where
                                     segments.push(editor_input_group_divider(cx, divider));
                                 }
                                 segments.push(value);
-                                if let Some(suffix) = suffix.clone() {
+                                if let Some(suffix) = suffix_for_scrub.clone() {
                                     segments.push(editor_input_group_divider(cx, divider));
                                     let mut segment = editor_text_segment(
                                         cx,
@@ -414,8 +428,8 @@ where
                 layout: input_layout,
                 enabled: typing,
                 focusable: typing,
-                prefix: self.options.prefix.clone(),
-                suffix: self.options.suffix.clone(),
+                prefix: prefix.clone(),
+                suffix: suffix.clone(),
                 selection_behavior: self.options.selection_behavior,
                 test_id: typing_test_id,
                 // Avoid growing the row height when a commit-time validation error occurs.
@@ -500,5 +514,29 @@ fn emit_drag_value_outcome(
 ) {
     if let Some(cb) = on_outcome {
         cb(host, action_cx, outcome);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DragValue;
+    use crate::primitives::NumericPresentation;
+    use fret_app::App;
+    use std::sync::Arc;
+
+    #[test]
+    fn drag_value_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(1.25f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(2)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let drag_value = DragValue::from_presentation(model, presentation);
+
+        assert_eq!((drag_value.format)(1.25).as_ref(), "1.25");
+        assert_eq!((drag_value.parse)("1.25"), Some(1.25));
+        assert_eq!(drag_value.options.prefix, Some(Arc::from("$")));
+        assert_eq!(drag_value.options.suffix, Some(Arc::from("ms")));
     }
 }

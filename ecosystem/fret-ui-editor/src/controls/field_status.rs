@@ -11,6 +11,10 @@ use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyl
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::typography;
 
+use crate::primitives::colors::{
+    editor_accent, editor_border, editor_focus_ring, editor_foreground, editor_muted_foreground,
+    editor_subtle_bg,
+};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -120,22 +124,12 @@ impl FieldStatusBadge {
 }
 
 fn status_badge_palette(theme: &Theme, status: &FieldStatus) -> (Color, Color, Color, Arc<str>) {
-    let field_bg = theme
-        .color_by_key("component.text_field.bg")
-        .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or_else(|| theme.color_token("background"));
-    let field_border = theme
-        .color_by_key("component.text_field.border")
-        .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER))
-        .or_else(|| theme.color_by_key("border"))
-        .unwrap_or_else(|| theme.color_token("foreground"));
-    let foreground = theme.color_token("foreground");
-    let muted_foreground = theme
-        .color_by_key("muted-foreground")
-        .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or(foreground);
-    let accent = theme.color_token("accent");
-    let ring = theme.color_token("ring");
+    let field_bg = editor_subtle_bg(theme);
+    let field_border = editor_border(theme);
+    let foreground = editor_foreground(theme);
+    let muted_foreground = editor_muted_foreground(theme);
+    let accent = editor_accent(theme);
+    let ring = editor_focus_ring(theme);
     let destructive = theme.color_token("destructive");
 
     let mixed_tint = theme

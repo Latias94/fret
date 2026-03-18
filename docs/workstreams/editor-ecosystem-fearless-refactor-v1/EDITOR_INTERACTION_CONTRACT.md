@@ -183,6 +183,9 @@ For editor numeric controls with prefix/suffix chrome:
 - affixes remain display-only joined segments, not part of the editable draft text,
 - typed entry should therefore replace the numeric draft without requiring the user to delete
   affixes manually,
+- joined numeric editors should suppress chrome affixes when the formatter text already starts or
+  ends with the same unit text, so `%` / currency-like readouts stay single-sourced instead of
+  rendering duplicated chrome,
 - and joined numeric editors should prefer a compact trailing invalid affordance over layout-growing
   inline error text unless the control is explicitly acting as a standalone form field.
 
@@ -191,8 +194,10 @@ Recommended first-party authoring pattern:
 - use `NumericPresentation<T>` when one surface needs to carry text formatting/parsing plus control
   chrome affixes as one reusable bundle,
 - keep editable unit text inside the formatter/parser pair rather than in chrome affixes,
-- and treat `presentation.parts()` as the preferred glue when wiring the same numeric story into
-  `DragValue`, `NumericInput`, `Slider`, or higher-level editor composites.
+- prefer per-control `from_presentation(...)` constructors when wiring the same numeric story into
+  `DragValue`, `NumericInput`, `Slider`, `VecEdit`, or other editor composites that expose that
+  lane, and treat `presentation.parts()` as fallback glue when a control does not yet have its own
+  constructor.
 
 ### Modifier defaults
 
@@ -232,6 +237,15 @@ Default commit points for the current buffered editor baseline:
 - single-line Enter commits explicitly,
 - multiline `Ctrl/Cmd+Enter` commits explicitly while plain Enter remains text insertion.
 
+Default multiline presentation baseline for promoted editor text fields:
+
+- multiline `TextField` should default to stable line boxes on editor/form surfaces,
+- the text style should use a fixed-from-style line-height policy plus a forced strut,
+- and the line box should align to bounds-based placement so focus/caret activity does not make the
+  field height visibly "breathe" between idle and editing states.
+- when a multiline field exposes a trailing clear affordance, that affordance should anchor to the
+  textarea's top content block rather than floating at the vertical midpoint of the full field.
+
 Current promoted opt-in blur exceptions above that baseline:
 
 - `TextFieldBlurBehavior::Cancel` is valid for inline-rename-style editor surfaces that should
@@ -240,8 +254,10 @@ Current promoted opt-in blur exceptions above that baseline:
   session and restores focus to the canvas without queueing a transaction,
 - `TextFieldBlurBehavior::PreserveDraft` is valid for multiline notes/description surfaces that
   should keep the local draft alive across blur until an explicit commit/cancel,
-- and both exceptions remain proofed editor-policy opt-ins rather than a promoted higher-level
-  helper/recipe; `Cancel` now has one non-proof consumer, while `PreserveDraft` still needs one.
+- and both exceptions remain editor-policy opt-ins rather than a promoted higher-level
+  helper/recipe; `Cancel` now has one retained non-proof consumer, while `PreserveDraft` now has
+  one app-local declarative non-proof consumer via `editor_notes_demo`'s inspector notes panel.
+  Neither path alone justifies a shared recipe yet.
 
 Editor-owned extension hooks already permitted on top of that baseline:
 

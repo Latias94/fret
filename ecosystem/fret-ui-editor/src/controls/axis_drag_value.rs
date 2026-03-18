@@ -24,27 +24,35 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use crate::controls::numeric_input::{
     NumericFormatFn, NumericInputSelectionBehavior, NumericParseFn, NumericValidateFn,
 };
-use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::resolve_editor_text_field_style;
+use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
-    editor_icon_button_segment, editor_icon_segment, editor_input_group_divider,
-    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
-    editor_input_group_row, editor_text_segment,
+    derived_test_id, editor_axis_segment, editor_icon_button_segment, editor_icon_segment,
+    editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
+    editor_input_group_inset, editor_input_group_row, editor_text_segment,
+    EditorInputGroupFrameOverrides,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
-    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
-    clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
-    numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
-    sync_numeric_text_entry_focus_handoff,
+    arm_numeric_text_entry_focus_handoff, clear_numeric_error_when_draft_changes,
+    handle_numeric_text_entry_replace_key, numeric_text_entry_focus_state,
+    sync_numeric_text_entry_focus, sync_numeric_text_entry_focus_handoff,
+    NumericTextEntryFocusHandoffState,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{
-    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericValueConstraints,
-    constrain_numeric_value,
+    constrain_numeric_value, DragValueCore, DragValueCoreOptions, EditSessionOutcome,
+    NumericPresentation, NumericValueConstraints,
 };
+
+fn axis_drag_value_input_text_style(base: TextStyle, row_height: Px) -> TextStyle {
+    typography::as_control_text(TextStyle {
+        line_height: Some(row_height),
+        ..base
+    })
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisDragValueMode {
@@ -167,6 +175,25 @@ where
         }
     }
 
+    /// Construct an axis drag value from a shared editor authoring bundle.
+    pub fn from_presentation(
+        axis_label: Arc<str>,
+        axis_tint: Color,
+        model: Model<T>,
+        presentation: NumericPresentation<T>,
+    ) -> Self {
+        let mut drag_value = Self::new(
+            axis_label,
+            axis_tint,
+            model,
+            presentation.format(),
+            presentation.parse(),
+        );
+        drag_value.options.prefix = presentation.chrome_prefix().cloned();
+        drag_value.options.suffix = presentation.chrome_suffix().cloned();
+        drag_value
+    }
+
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
         self.validate = validate;
         self
@@ -230,8 +257,11 @@ where
             (st.mode, st.scrub_revision)
         };
         let typing = mode == AxisDragValueMode::Typing;
-        let prefix = self.options.prefix.clone();
-        let suffix = self.options.suffix.clone();
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            value_text.as_ref(),
+            self.options.prefix.clone(),
+            self.options.suffix.clone(),
+        );
         let reset_action = self.options.reset.clone();
         let scrub_test_id = self.options.test_id.clone();
         let typing_test_id = derived_test_id(self.options.test_id.as_ref(), "typing");
@@ -264,6 +294,7 @@ where
                 self.options.size,
                 &ChromeRefinement::default(),
             );
+            let text_style = axis_drag_value_input_text_style(text_style, style.density.row_height);
 
             (style.density, frame_chrome, (text_style, input_chrome))
         };
@@ -378,10 +409,7 @@ where
                             move |cx, visuals| {
                                 let affix_color = {
                                     let theme = Theme::global(&*cx.app);
-                                    theme
-                                        .color_by_key("muted-foreground")
-                                        .or_else(|| theme.color_by_key("muted_foreground"))
-                                        .unwrap_or_else(|| theme.color_token("foreground"))
+                                    editor_muted_foreground(theme)
                                 };
                                 let mut axis = editor_axis_segment(
                                     cx,
@@ -727,10 +755,7 @@ where
                 move |cx, visuals| {
                     let affix_color = {
                         let theme = Theme::global(&*cx.app);
-                        theme
-                            .color_by_key("muted-foreground")
-                            .or_else(|| theme.color_by_key("muted_foreground"))
-                            .unwrap_or_else(|| theme.color_token("foreground"))
+                        editor_muted_foreground(theme)
                     };
                     let mut axis =
                         editor_axis_segment(cx, density, axis_label.clone(), axis_tint, visuals.bg);
@@ -777,14 +802,7 @@ where
                     if has_error {
                         let error_border = {
                             let theme = Theme::global(&*cx.app);
-                            theme
-                                .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
-                                .or_else(|| {
-                                    theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
-                                })
-                                .or_else(|| theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
-                                .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                                .unwrap_or_else(|| theme.color_token("destructive"))
+                            editor_invalid_border(theme)
                         };
                         segments.push(editor_input_group_divider(cx, divider));
                         let mut icon = editor_icon_segment(
@@ -854,6 +872,50 @@ fn emit_axis_drag_value_outcome(
 ) {
     if let Some(cb) = on_outcome {
         cb(host, action_cx, outcome);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{axis_drag_value_input_text_style, AxisDragValue};
+    use crate::primitives::NumericPresentation;
+    use fret_app::App;
+    use fret_core::{Color, Px, TextStyle};
+    use std::sync::Arc;
+
+    #[test]
+    fn axis_drag_value_input_text_style_uses_density_row_height_for_typing_line_box() {
+        let style = axis_drag_value_input_text_style(
+            TextStyle {
+                size: Px(12.0),
+                line_height: Some(Px(16.0)),
+                ..Default::default()
+            },
+            Px(24.0),
+        );
+
+        assert_eq!(style.line_height, Some(Px(24.0)));
+    }
+
+    #[test]
+    fn axis_drag_value_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(1.25f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(2)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let drag_value = AxisDragValue::from_presentation(
+            Arc::from("X"),
+            Color::from_srgb_hex_rgb(0xf2_59_59),
+            model,
+            presentation,
+        );
+
+        assert_eq!((drag_value.format)(1.25).as_ref(), "1.25");
+        assert_eq!((drag_value.parse)("1.25"), Some(1.25));
+        assert_eq!(drag_value.options.prefix, Some(Arc::from("$")));
+        assert_eq!(drag_value.options.suffix, Some(Arc::from("ms")));
     }
 }
 

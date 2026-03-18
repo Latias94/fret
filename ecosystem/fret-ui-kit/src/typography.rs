@@ -211,6 +211,7 @@ pub fn text_area_control_text_style_scaled(
         ..Default::default()
     };
     style.line_height_policy = TextLineHeightPolicy::FixedFromStyle;
+    style.vertical_placement = TextVerticalPlacement::BoundsAsLineBox;
     style.strut_style = force_strut_from_style(&style);
     style
 }
@@ -883,5 +884,32 @@ mod tests {
             style.line_height_policy,
             TextLineHeightPolicy::FixedFromStyle
         );
+    }
+
+    #[test]
+    fn text_area_control_text_style_scaled_uses_bounds_line_box_and_strut() {
+        let mut app = fret_app::App::default();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                metrics: std::collections::HashMap::from([
+                    ("font.size".to_string(), 12.0),
+                    ("font.line_height".to_string(), 18.0),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).clone();
+
+        let style = text_area_control_text_style_scaled(&theme, FontId::ui(), Px(18.0));
+        assert_eq!(
+            style.line_height_policy,
+            TextLineHeightPolicy::FixedFromStyle
+        );
+        assert_eq!(
+            style.vertical_placement,
+            TextVerticalPlacement::BoundsAsLineBox
+        );
+        assert!(style.strut_style.is_some());
     }
 }

@@ -11,6 +11,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
+use crate::primitives::colors::{
+    editor_border, editor_foreground, editor_muted_foreground, editor_subtle_bg,
+};
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
@@ -187,10 +190,7 @@ impl PropertyRow {
             let affordance_extent = density.affordance_extent();
             let gap = self.options.gap.unwrap_or(metrics.column_gap);
             let trailing_gap = self.options.trailing_gap.unwrap_or(metrics.trailing_gap);
-            let reset_fg = theme
-                .color_by_key("muted-foreground")
-                .or_else(|| theme.color_by_key("muted_foreground"))
-                .unwrap_or_else(|| theme.color_token("foreground"));
+            let reset_fg = editor_muted_foreground(theme);
             let auto_below = self
                 .options
                 .auto_stack_below
@@ -292,20 +292,15 @@ impl PropertyRow {
                     let theme = Theme::global(&*cx.app);
                     let hovered = st.hovered || st.hovered_raw;
                     let pressed = st.pressed;
-                    let mut idle_bg = theme
-                        .color_by_key("muted")
-                        .unwrap_or_else(|| theme.color_token("background"));
+                    let mut idle_bg = editor_subtle_bg(theme);
                     idle_bg.a = (idle_bg.a * 0.35).clamp(0.0, 1.0);
-                    let idle_border = theme
-                        .color_by_key("border")
-                        .or_else(|| theme.color_by_key("component.text_field.border"))
-                        .unwrap_or(reset_fg);
+                    let idle_border = editor_border(theme);
                     let bg =
                         editor_icon_button_bg(theme, true, hovered, pressed).unwrap_or(idle_bg);
                     let border = editor_icon_button_border(theme, true, hovered, pressed)
                         .unwrap_or(idle_border);
                     let fg = if hovered || pressed {
-                        theme.color_token("foreground")
+                        editor_foreground(theme)
                     } else {
                         reset_fg
                     };

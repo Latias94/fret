@@ -24,7 +24,7 @@ use crate::controls::{
 };
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::input_group::derived_test_id;
-use crate::primitives::style::EditorStyle;
+use crate::primitives::{NumericPresentation, style::EditorStyle};
 
 fn axis_color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
     theme.color_by_key(key).unwrap_or(fallback)
@@ -279,6 +279,18 @@ where
         }
     }
 
+    /// Construct a vec editor from a shared editor authoring bundle.
+    pub fn from_presentation(
+        x: Model<T>,
+        y: Model<T>,
+        presentation: NumericPresentation<T>,
+    ) -> Self {
+        let mut edit = Self::new(x, y, presentation.format(), presentation.parse());
+        edit.options.prefix = presentation.chrome_prefix().cloned();
+        edit.options.suffix = presentation.chrome_suffix().cloned();
+        edit
+    }
+
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
         self.validate = validate;
         self
@@ -476,6 +488,19 @@ where
             on_axis_outcome: None,
             options: VecEditOptions::default(),
         }
+    }
+
+    /// Construct a vec editor from a shared editor authoring bundle.
+    pub fn from_presentation(
+        x: Model<T>,
+        y: Model<T>,
+        z: Model<T>,
+        presentation: NumericPresentation<T>,
+    ) -> Self {
+        let mut edit = Self::new(x, y, z, presentation.format(), presentation.parse());
+        edit.options.prefix = presentation.chrome_prefix().cloned();
+        edit.options.suffix = presentation.chrome_suffix().cloned();
+        edit
     }
 
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
@@ -719,6 +744,20 @@ where
         }
     }
 
+    /// Construct a vec editor from a shared editor authoring bundle.
+    pub fn from_presentation(
+        x: Model<T>,
+        y: Model<T>,
+        z: Model<T>,
+        w: Model<T>,
+        presentation: NumericPresentation<T>,
+    ) -> Self {
+        let mut edit = Self::new(x, y, z, w, presentation.format(), presentation.parse());
+        edit.options.prefix = presentation.chrome_prefix().cloned();
+        edit.options.suffix = presentation.chrome_suffix().cloned();
+        edit
+    }
+
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
         self.validate = validate;
         self
@@ -943,5 +982,31 @@ where
             el = el.test_id(test_id.clone());
         }
         el
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Vec3Edit;
+    use crate::primitives::NumericPresentation;
+    use fret_app::App;
+    use std::sync::Arc;
+
+    #[test]
+    fn vec3_edit_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let x = app.models_mut().insert(1.0f64);
+        let y = app.models_mut().insert(2.0f64);
+        let z = app.models_mut().insert(3.0f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(2)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let edit = Vec3Edit::from_presentation(x, y, z, presentation);
+
+        assert_eq!((edit.format)(1.25).as_ref(), "1.25");
+        assert_eq!((edit.parse)("1.25"), Some(1.25));
+        assert_eq!(edit.options.prefix, Some(Arc::from("$")));
+        assert_eq!(edit.options.suffix, Some(Arc::from("ms")));
     }
 }

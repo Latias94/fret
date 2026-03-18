@@ -1,0 +1,356 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "editor-notes-demo-preserve-draft",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": [
+      "ui_editor",
+      "text_field",
+      "multiline",
+      "preserve_draft",
+      "regression",
+      "screenshots"
+    ],
+    "target_hints": [
+      "Uses the app-local editor_notes_demo inspector surface instead of the proof-only imui demo.",
+      "Proves multiline Notes keeps a local draft across blur, commits only on Ctrl+Enter, and restores the committed value on Escape.",
+      "The initial screenshot also pins the multiline Notes clear affordance against the textarea's top content edge.",
+      "That same initial screenshot should stay on the raw dark shadcn host baseline; if it drifts back to a bright host surface, the demo has likely slipped onto the shadcn app-integration theme-sync lane again."
+    ],
+    "env_defaults": {
+      "FRET_EDITOR_NOTES_DEMO_PRESET": "default"
+    }
+  },
+  "window": "lowest_id",
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 820.0 },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.selection.material" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.name" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "editor-notes-demo-initial"
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.selection.material" }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+      "text": "Baseline A\nBaseline B"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Baseline A\nBaseline B"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "enter", "modifiers": { "ctrl": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "2 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        },
+        "text": "Committed"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+      "text": "Draft A\nDraft B\nDraft C"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Draft A\nDraft B\nDraft C"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "2 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.name" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.name" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Draft A\nDraft B\nDraft C"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "2 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        },
+        "text": "Committed"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "enter", "modifiers": { "ctrl": true } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "3 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        },
+        "text": "Committed"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "set_text_value",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+      "text": "Discard me"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Discard me"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.name" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.name" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Discard me"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "3 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "editor-notes-demo.inspector.notes" },
+        "text": "Draft A\nDraft B\nDraft C"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.committed"
+        },
+        "text": "3 lines committed"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "editor-notes-demo.inspector.notes.outcome"
+        },
+        "text": "Canceled"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "editor-notes-demo-preserve-draft"
+    }
+  ]
+}

@@ -14,6 +14,7 @@ pub mod tokens;
 pub(crate) mod visuals;
 
 pub(crate) mod chrome;
+pub(crate) mod colors;
 
 pub mod drag_value_core;
 pub mod numeric_format;
