@@ -319,7 +319,9 @@ mod authoring_surface_policy_tests {
         assert!(!TOGGLE_EXAMPLE.contains("pressed_state.layout(cx).value_or(false)"));
 
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("cx.state().local_init(|| {"));
-        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("let rows_snapshot = rows_state.layout_value(cx);"));
+        assert!(
+            PAYLOAD_ACTIONS_EXAMPLE.contains("let rows_snapshot = rows_state.layout_value(cx);")
+        );
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains(
             ".payload_local_update_if::<act::Remove, Vec<Row>>(&rows_state, |rows, id| {"
         ));
@@ -388,6 +390,11 @@ mod authoring_surface_policy_tests {
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
+        assert!(
+            QUERY_EXAMPLE
+                .contains("use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};")
+        );
+        assert!(!QUERY_EXAMPLE.contains("use fret_query::{"));
         assert!(QUERY_EXAMPLE.contains("let fail_mode_enabled = fail_mode.layout_value(cx);"));
         assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
         assert!(QUERY_EXAMPLE.contains("cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)"));

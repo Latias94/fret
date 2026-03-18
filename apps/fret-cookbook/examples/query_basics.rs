@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::app::prelude::*;
+use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret::style::Space;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 
 mod act {
     fret::actions!([

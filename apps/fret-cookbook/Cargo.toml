@@ -31,7 +31,6 @@ fret-imui = { path = "../../ecosystem/fret-imui", optional = true }
 fret-genui-core = { path = "../../ecosystem/fret-genui-core", optional = true }
 fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn", optional = true }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", default-features = false, optional = true }
-fret-query = { path = "../../ecosystem/fret-query", default-features = false, features = ["ui"], optional = true }
 serde_json = { workspace = true, optional = true }
 fret-render = { path = "../../crates/fret-render", optional = true }
 fret-launch = { path = "../../crates/fret-launch", optional = true }
@@ -53,7 +52,7 @@ cookbook-assets = ["dep:fret-assets", "dep:fret-icons", "dep:fret-icons-lucide",
 cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
 cookbook-image-assets = ["dep:fret-ui-assets"]
-cookbook-query = ["fret/state-query", "dep:fret-query"]
+cookbook-query = ["fret/state-query"]
 cookbook-router = ["fret/router"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
