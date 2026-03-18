@@ -2148,9 +2148,7 @@ mod builder_surface_tests {
 mod tests {
     use std::any::TypeId;
 
-    use crate::shadcn::themes::{
-        ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
-    };
+    use crate::shadcn::themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
     use crate::{advanced::KernelApp, shadcn};
     use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
     use fret_ui::{Theme, UiTree};
@@ -2247,11 +2245,7 @@ mod tests {
     #[test]
     fn shadcn_auto_theme_middleware_reapplies_installed_editor_preset_once() {
         let mut app = KernelApp::new();
-        shadcn::app::install_with_theme(
-            &mut app,
-            ShadcnBaseColor::Slate,
-            ShadcnColorScheme::Dark,
-        );
+        shadcn::app::install_with_theme(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
         fret_ui_editor::theme::install_editor_theme_preset_v1(
             &mut app,
             fret_ui_editor::theme::EditorThemePresetV1::Default,
@@ -3541,6 +3535,13 @@ mod authoring_surface_policy_tests {
         assert!(ACTIONS_RS.contains(
             "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};"
         ));
+        assert!(!ACTIONS_RS.contains("pub type OnAction"));
+        assert!(!ACTIONS_RS.contains("pub type OnPayloadAction"));
+        assert!(!ACTIONS_RS.contains("pub type OnActionAvailability"));
+        assert!(!ACTIONS_RS.contains("pub trait TypedActionMeta"));
+        assert!(!ACTIONS_RS.contains("pub trait ActionRegistryExt"));
+        assert!(!ACTIONS_RS.contains("pub struct ActionHandlerTable"));
+        assert!(ACTIONS_RS.contains("pub(crate) struct ActionHandlerTable"));
         assert!(!app_prelude_exports_symbol("ActionMeta"));
         assert!(!app_prelude_exports_symbol("ActionRegistry"));
         assert!(!app_prelude.contains("ActionMeta"));
