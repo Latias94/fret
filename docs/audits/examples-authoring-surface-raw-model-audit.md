@@ -191,6 +191,9 @@ Audit judgment:
 - `apps/fret-examples/src/ime_smoke_demo.rs` now proves the bridge also covers text-input/IME
   smoke surfaces where event-driven status text still benefits from explicit `paint(...)`
   invalidation reads on `LocalState<T>`.
+- `apps/fret-examples/src/emoji_conformance_demo.rs` now proves the bridge also covers focused
+  conformance panels whose control state is just a small set of optional local selections/open
+  flags, without keeping raw root-level `observe_model(...)` reads.
 
 ### B2) Window/runtime interop harnesses
 
@@ -235,7 +238,6 @@ path, these are the best next candidates.
 Candidate files:
 
 - `apps/fret-examples/src/components_gallery.rs`
-- `apps/fret-examples/src/emoji_conformance_demo.rs`
 
 Why these are candidates:
 
@@ -298,7 +300,7 @@ examples with `LocalState<T>`".
 It should be one of these:
 
 1. Reuse the landed `render_root_with_app_ui(...)` bridge on the next clean control-panel/manual
-   demos (`date_picker_demo`, `sonner_demo`, `components_gallery`) and only reopen helper design if
+   demos (`components_gallery`) and only reopen helper design if
    those migrations reveal a real missing seam.
 2. Pick one candidate family with repetitive inspector state (for example the `custom_effect_v2_*`
    web demos) and converge that family on one shared pattern.

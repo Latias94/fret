@@ -879,6 +879,26 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn manual_emoji_conformance_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            EMOJI_CONFORMANCE_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "emoji_font_override: LocalState<Option<Arc<str>>>,",
+                "emoji_font_override_open: LocalState<bool>,",
+                "let root = render_root_with_app_ui(",
+                "let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();",
+            ],
+            &[
+                "emoji_font_override: Model<Option<Arc<str>>>,",
+                ".render_root(\"emoji-conformance\", |cx| {",
+                "cx.observe_model(&emoji_font_override, Invalidation::Layout);",
+                "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+            ],
+        );
+    }
+
+    #[test]
     fn imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures() {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_editor_name_assist_surface("));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_surface("));

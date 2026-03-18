@@ -1,12 +1,14 @@
-use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
+use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, FontId, Px, Rect, TextStyle, TextWrap, UiServices};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
+use fret_ui::UiTree;
 use fret_ui::declarative;
-use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::primitives::separator::Separator;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -62,9 +64,9 @@ const EMOJI_CASES: &[EmojiCase] = &[
 
 pub struct EmojiConformanceWindowState {
     ui: UiTree<App>,
-    root: Option<fret_core::NodeId>,
-    emoji_font_override: Model<Option<Arc<str>>>,
-    emoji_font_override_open: Model<bool>,
+    app_ui_root: AppUiRenderRootState,
+    emoji_font_override: LocalState<Option<Arc<str>>>,
+    emoji_font_override_open: LocalState<bool>,
 }
 
 #[derive(Default)]
@@ -81,11 +83,11 @@ impl EmojiConformanceDriver {
         let emoji_font_override = state.emoji_font_override.clone();
         let emoji_font_override_open = state.emoji_font_override_open.clone();
 
-        let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-            .render_root("emoji-conformance", |cx| {
-                cx.observe_model(&emoji_font_override, Invalidation::Layout);
-                cx.observe_model(&emoji_font_override_open, Invalidation::Layout);
-
+        let root = render_root_with_app_ui(
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds),
+            "emoji-conformance",
+            &mut state.app_ui_root,
+            |cx| {
                 let theme = cx.theme_snapshot();
 
                 let available_fonts = cx
@@ -95,12 +97,7 @@ impl EmojiConformanceDriver {
                     .unwrap_or_default()
                     .families_arc();
 
-                let selected_emoji_font = cx
-                    .app
-                    .models()
-                    .read(&emoji_font_override, |v| v.clone())
-                    .ok()
-                    .flatten();
+                let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();
 
                 let mut items: Vec<shadcn::SelectItem> = Vec::new();
                 let mut seen: HashSet<Arc<str>> = HashSet::new();
@@ -127,13 +124,14 @@ impl EmojiConformanceDriver {
                 let header = shadcn::CardHeader::new([title, subtitle]).into_element(cx);
 
                 let status_line = {
-                    let has_known_color_emoji_font = ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"]
-                        .iter()
-                        .any(|n| {
-                            available_fonts
-                                .iter()
-                                .any(|f| f.as_ref().eq_ignore_ascii_case(n))
-                        });
+                    let has_known_color_emoji_font =
+                        ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"]
+                            .iter()
+                            .any(|n| {
+                                available_fonts
+                                    .iter()
+                                    .any(|f| f.as_ref().eq_ignore_ascii_case(n))
+                            });
 
                     let msg: Arc<str> = if has_known_color_emoji_font {
                         Arc::from("Status: emoji color font detected in catalog.")
@@ -157,18 +155,17 @@ impl EmojiConformanceDriver {
 
                 let controls = ui::h_flex(|cx| {
                     [
-		                        shadcn::Select::new(
-		                            emoji_font_override.clone(),
-		                            emoji_font_override_open.clone(),
-	                        )
-	                        .value(
-	                            shadcn::SelectValue::new()
-	                                .placeholder("Force emoji font (optional)"),
-	                        )
-	                        .items(items)
-	                        .ui()
-	                        .w_px(Px(280.0))
-	                        .into_element(cx),
+                        shadcn::Select::new(
+                            emoji_font_override.clone_model(),
+                            emoji_font_override_open.clone_model(),
+                        )
+                        .value(
+                            shadcn::SelectValue::new().placeholder("Force emoji font (optional)"),
+                        )
+                        .items(items)
+                        .ui()
+                        .w_px(Px(280.0))
+                        .into_element(cx),
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Outline)
                             .on_click(CommandId::new(CMD_EMOJI_FONT_RESET))
@@ -247,13 +244,11 @@ impl EmojiConformanceDriver {
                     }));
                 }
 
-                let scroll = shadcn::ScrollArea::new([
-                    ui::v_flex(|_cx| rows)
-                        .w_full()
-                        .gap(Space::N2)
-                        .items_start()
-                        .into_element(cx),
-                ])
+                let scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| rows)
+                    .w_full()
+                    .gap(Space::N2)
+                    .items_start()
+                    .into_element(cx)])
                 .ui()
                 .w_full()
                 .h_full()
@@ -267,11 +262,11 @@ impl EmojiConformanceDriver {
                     .max_w(Px(960.0))
                     .into_element(cx);
 
-                ui::children![cx; emoji_conformance_page(cx, theme, card)]
-            });
+                ui::children![cx; emoji_conformance_page(cx, theme, card)].into()
+            },
+        );
 
         state.ui.set_root(root);
-        state.root = Some(root);
     }
 }
 
@@ -305,15 +300,15 @@ fn create_window_state(
     app: &mut App,
     window: AppWindowId,
 ) -> EmojiConformanceWindowState {
-    let emoji_font_override = app.models_mut().insert(None::<Arc<str>>);
-    let emoji_font_override_open = app.models_mut().insert(false);
+    let emoji_font_override = LocalState::from_model(app.models_mut().insert(None::<Arc<str>>));
+    let emoji_font_override_open = LocalState::from_model(app.models_mut().insert(false));
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
     EmojiConformanceWindowState {
         ui,
-        root: None,
+        app_ui_root: AppUiRenderRootState::default(),
         emoji_font_override,
         emoji_font_override_open,
     }
@@ -328,7 +323,6 @@ fn hot_reload_window(
     } = context;
 
     crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    state.root = None;
 }
 
 fn handle_command(
@@ -339,9 +333,7 @@ fn handle_command(
     let WinitCommandContext { app, state, .. } = context;
 
     if command.as_str() == CMD_EMOJI_FONT_RESET {
-        let _ = app
-            .models_mut()
-            .update(&state.emoji_font_override, |v| *v = None);
+        let _ = state.emoji_font_override.set_in(app.models_mut(), None);
     }
 }
 
