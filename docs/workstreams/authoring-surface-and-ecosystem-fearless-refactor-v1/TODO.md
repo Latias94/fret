@@ -12,6 +12,7 @@ Companion docs:
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
 - `REMAINING_SURFACE_SHRINK_AUDIT_2026-03-17.md`
+- `GENERIC_SHRINK_CLOSEOUT_2026-03-18.md`
 
 Execution note on 2026-03-12:
 
@@ -116,6 +117,23 @@ Surface-shrink closeout note on 2026-03-17:
 - future work in this folder should reopen only for genuinely misleading public-looking residue,
   not because density pressure still exists on write/read/list authoring.
 
+Generic-shrink closure note on 2026-03-18:
+
+- one final zero-proof batch has now landed on `fret::actions::*`:
+  `TypedActionMeta` and `ActionRegistryExt` are deleted, and `ActionHandlerTable` is internal-only,
+- `GENERIC_SHRINK_CLOSEOUT_2026-03-18.md` is now the authoritative answer to
+  "is there still another broad fearless-shrink pass left here?",
+- the answer is now "no" unless a new misleading alias, passthrough lane, or first-contact leak
+  appears,
+- this folder should therefore be treated as maintenance-only for lane-definition drift,
+  source-policy drift, and accidental surface re-expansion,
+- route remaining default-path density pressure to:
+  - `docs/workstreams/app-composition-density-follow-on-v1/`
+  - `docs/workstreams/action-write-surface-fearless-refactor-v1/`
+  - `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/`
+  - `docs/workstreams/into-element-surface-fearless-refactor-v1/`
+  instead of reopening broad rename/delete work here.
+
 Verification note on 2026-03-16:
 
 - the closeout posture above has been revalidated after the latest docs/source updates with:
@@ -173,6 +191,15 @@ Audit reconciliation note on 2026-03-16:
 - [ ] Coordinate the next happy-path ceremony pass across `fret`, `fret-ui-kit`, and first-party
   docs/examples so the first-hour/default todo path gets materially shorter without reopening the
   kernel/mechanism split.
+  - 2026-03-18 ownership clarification:
+    - this item is now a handoff/guardrail row rather than an active redesign brief in this
+      folder,
+    - concrete default-path density work should now land in
+      `docs/workstreams/app-composition-density-follow-on-v1/`,
+      `docs/workstreams/action-write-surface-fearless-refactor-v1/`,
+      `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/`, or
+      `docs/workstreams/into-element-surface-fearless-refactor-v1/` depending on the pressure,
+    - this folder only keeps the product-surface guardrails and lane-boundary rules.
   - Priority targets once lane curation is stable:
     - tracked-value reads,
     - common local/payload write paths,

@@ -9,6 +9,17 @@ Companion docs:
 - `MILESTONES.md`
 - `APP_SHELL_COMPOSITION_AUDIT_2026-03-17.md`
 - `QUERY_INVALIDATION_SHELL_AUDIT_2026-03-17.md`
+- `DEFAULT_TODO_AUTHORING_STATUS_2026-03-17.md`
+
+Handoff note on 2026-03-18:
+
+- `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/` has now formally
+  closed its generic fearless-shrink lane after the last zero-proof `fret::actions::*` cleanup,
+- this folder is therefore the primary owner for any remaining default app-lane density work that
+  is not actually a write-budget, selector/query, or `into_element` redesign question,
+- router remains an explicit adjacent seam and should still stay out of scope here,
+- do not treat this handoff as permission to widen grouped app nouns or reopen the
+  app/component/advanced lane split.
 
 ## Execution checklist
 
