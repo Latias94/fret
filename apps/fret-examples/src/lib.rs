@@ -1465,6 +1465,7 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0i64);",
                 "let step_state = cx.state().local_init(|| \"1\".to_string());",
+                "let count = count_state.layout_value(cx);",
                 "selector_layout(&step_state,",
                 "parse_step(step_text.as_str())",
                 ".locals_with((&count_state, &step_state))",
@@ -1476,7 +1477,9 @@ mod authoring_surface_policy_tests {
                 "cx.use_local_with(|| 0i64)",
                 "cx.on_action_notify_models::<act::Inc>",
                 "cx.on_action_notify_local_set::<act::Reset, i64>",
+                "let count = count_state.layout(cx).value_or(0);",
                 "let step_text = step_state.layout(cx).value_or_else(String::new);",
+                "tx.value_or_else(&step_state, || \"1\".to_string())",
             ],
         );
 
@@ -1484,6 +1487,7 @@ mod authoring_surface_policy_tests {
             QUERY_DEMO,
             &[
                 "let fail_mode_state = cx.state().local_init(|| false);",
+                "let fail_mode = fail_mode_state.layout_value(cx);",
                 "let query_state = query_handle.read_layout(cx);",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
@@ -1495,6 +1499,7 @@ mod authoring_surface_policy_tests {
                 "with_query_client(",
                 "cx.use_local_with(|| false)",
                 "query_handle.layout(cx).value_or_default()",
+                "fail_mode_state.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
             ],
@@ -1504,6 +1509,7 @@ mod authoring_surface_policy_tests {
             QUERY_ASYNC_TOKIO_DEMO,
             &[
                 "let fail_mode_state = cx.state().local_init(|| false);",
+                "let fail_mode = fail_mode_state.layout_value(cx);",
                 "let query_state = query_handle.read_layout(cx);",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
@@ -1515,6 +1521,7 @@ mod authoring_surface_policy_tests {
                 "with_query_client(",
                 "cx.use_local_with(|| false)",
                 "query_handle.layout(cx).value_or_default()",
+                "fail_mode_state.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
             ],

@@ -45,7 +45,7 @@ impl View for QueryBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let fail_mode = cx.state().local::<bool>();
+        let fail_mode = cx.state().local_init(|| false);
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY) {
             cx.data().invalidate_query(demo_key());
@@ -67,7 +67,7 @@ impl View for QueryBasicsView {
         cx.actions()
             .availability::<act::InvalidateNamespace>(|_host, _acx| CommandAvailability::Available);
 
-        let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
+        let fail_mode_enabled = fail_mode.layout_value(cx);
 
         let key = demo_key();
         let policy = QueryPolicy {

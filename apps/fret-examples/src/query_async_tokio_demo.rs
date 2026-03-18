@@ -91,7 +91,7 @@ impl View for QueryAsyncTokioDemoView {
         cx.actions()
             .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = fail_mode_state.layout(cx).value_or_default();
+        let fail_mode = fail_mode_state.layout_value(cx);
 
         let query_handle = cx.data().query_async(
             demo_key(),

@@ -18,7 +18,7 @@ impl View for ToggleBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let pressed_state = cx.state().local_init(|| false);
-        let pressed = pressed_state.layout(cx).value_or(false);
+        let pressed = pressed_state.layout_value(cx);
         let status = if pressed { "Pressed" } else { "Not pressed" };
 
         cx.actions()

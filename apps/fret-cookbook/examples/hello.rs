@@ -34,8 +34,8 @@ impl View for HelloView {
             "RenderedAgain"
         };
 
-        let count_state = cx.state().local::<u32>();
-        let count_value = count_state.layout(cx).value_or(0);
+        let count_state = cx.state().local_init(|| 0u32);
+        let count_value = count_state.layout_value(cx);
 
         cx.actions()
             .local_update::<act::Click, u32>(&count_state, |v| {

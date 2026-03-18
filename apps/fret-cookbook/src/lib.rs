@@ -221,7 +221,9 @@ mod authoring_surface_policy_tests {
         ));
         assert!(!HELLO_EXAMPLE.contains("fn hello_page(cx: &mut UiCx<'_>,"));
         assert!(HELLO_EXAMPLE.contains("ui::single(cx, hello_page(render_marker, count_value))"));
-        assert!(HELLO_EXAMPLE.contains("cx.state().local::<u32>()"));
+        assert!(HELLO_EXAMPLE.contains("cx.state().local_init(|| 0u32)"));
+        assert!(HELLO_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
+        assert!(!HELLO_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
@@ -312,6 +314,8 @@ mod authoring_surface_policy_tests {
         assert!(!TEXT_INPUT_EXAMPLE.contains("watch(&submitted_count_state)"));
 
         assert!(TOGGLE_EXAMPLE.contains("toggle_local_bool::<act::ToggleBookmark>"));
+        assert!(TOGGLE_EXAMPLE.contains("let pressed = pressed_state.layout_value(cx);"));
+        assert!(!TOGGLE_EXAMPLE.contains("pressed_state.layout(cx).value_or(false)"));
 
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("cx.state().local_init(|| {"));
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains(
@@ -375,6 +379,8 @@ mod authoring_surface_policy_tests {
         assert!(ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
+        assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
+        assert!(QUERY_EXAMPLE.contains("let fail_mode_enabled = fail_mode.layout_value(cx);"));
         assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
         assert!(QUERY_EXAMPLE.contains("cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)"));
         assert!(QUERY_EXAMPLE.contains("transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY)"));
@@ -386,6 +392,7 @@ mod authoring_surface_policy_tests {
         assert!(QUERY_EXAMPLE.contains("cx.data().invalidate_query_namespace("));
         assert!(!QUERY_EXAMPLE.contains("local_set::<act::Invalidate, bool>"));
         assert!(!QUERY_EXAMPLE.contains("invalidate_requested"));
+        assert!(!QUERY_EXAMPLE.contains("fail_mode.layout(cx).value_or(false)"));
         assert!(!QUERY_EXAMPLE.contains("handle.layout(cx).value_or_default()"));
         assert!(!QUERY_EXAMPLE.contains("cx.use_query("));
         assert!(!QUERY_EXAMPLE.contains("with_query_client("));
