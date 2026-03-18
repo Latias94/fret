@@ -655,35 +655,17 @@ impl<T: 'static> QueryHandleReadLayoutExt<T> for fret_query::QueryHandle<T> {
 /// dependency signatures without bouncing through `clone_model()` or `local.model()`.
 #[cfg(feature = "state-selector")]
 pub(crate) trait LocalSelectorDepsBuilderExt {
-    fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self;
-
     fn local_rev_invalidation<T: Any>(
         &mut self,
         local: &LocalState<T>,
         invalidation: Invalidation,
     ) -> &mut Self;
-
-    fn local_paint_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::Paint)
-    }
-
-    fn local_layout_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::Layout)
-    }
-
-    fn local_hit_test_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::HitTest)
-    }
 }
 
 #[cfg(feature = "state-selector")]
 impl<'cx, 'a, H: UiHost> LocalSelectorDepsBuilderExt
     for fret_selector::ui::DepsBuilder<'cx, 'a, H>
 {
-    fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::Paint)
-    }
-
     fn local_rev_invalidation<T: Any>(
         &mut self,
         local: &LocalState<T>,
