@@ -2119,9 +2119,9 @@ mod authoring_surface_policy_tests {
                 "let dark = locals.dark.layout_value(cx);",
                 "fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {",
                 "let query_inputs = tracked_query_inputs(cx, &locals);",
-                "let tab = locals.tabs.layout_in(cx).value_or_default();",
-                "let policy_settings: QueryPolicySettings = cx.data().selector(",
-                "config.fail_mode.layout_in(cx).value_or_default()",
+                "cx.data().selector_layout(&locals.tabs, |tab| match tab.as_deref() {",
+                "let policy_settings: QueryPolicySettings = cx.data().selector_layout(",
+                "cx.data().selector_layout(&config.fail_mode, |fail_mode| fail_mode)",
             ],
             &[
                 "let selected = cx.watch_model(&self.st.selected).layout().value_or_default();",
@@ -2136,6 +2136,8 @@ mod authoring_surface_policy_tests {
                 "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
                 "let cache_s = config.cache_time_s.layout_in(cx).value_or_default();",
                 "let keep_prev = config.keep_prev.layout_in(cx).value_or_default();",
+                "let policy_settings: QueryPolicySettings = cx.data().selector(",
+                "config.fail_mode.layout_in(cx).value_or_default()",
             ],
         );
 

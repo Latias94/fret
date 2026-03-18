@@ -117,36 +117,36 @@ fn install_light_theme(app: &mut KernelApp) {
 }
 
 #[derive(Clone)]
-struct SelectModel {
-    value: Model<Option<Arc<str>>>,
-    open: Model<bool>,
+struct SelectLocals {
+    value: LocalState<Option<Arc<str>>>,
+    open: LocalState<bool>,
 }
 
-impl SelectModel {
+impl SelectLocals {
     fn new(app: &mut KernelApp, initial: Option<&'static str>) -> Self {
         Self {
-            value: app.models_mut().insert(initial.map(Arc::from)),
-            open: app.models_mut().insert(false),
+            value: LocalState::from_model(app.models_mut().insert(initial.map(Arc::from))),
+            open: LocalState::from_model(app.models_mut().insert(false)),
         }
     }
 }
 
-struct QueryConfigModels {
-    stale_time_s: Model<String>,
-    cache_time_s: Model<String>,
-    keep_prev: Model<bool>,
-    cancel_mode: SelectModel,
-    fail_mode: Model<bool>,
+struct QueryConfigLocals {
+    stale_time_s: LocalState<String>,
+    cache_time_s: LocalState<String>,
+    keep_prev: LocalState<bool>,
+    cancel_mode: SelectLocals,
+    fail_mode: LocalState<bool>,
 }
 
-impl QueryConfigModels {
+impl QueryConfigLocals {
     fn new(app: &mut KernelApp) -> Self {
         Self {
-            stale_time_s: app.models_mut().insert("2".to_string()),
-            cache_time_s: app.models_mut().insert("30".to_string()),
-            keep_prev: app.models_mut().insert(true),
-            cancel_mode: SelectModel::new(app, Some("cancel")),
-            fail_mode: app.models_mut().insert(false),
+            stale_time_s: LocalState::from_model(app.models_mut().insert("2".to_string())),
+            cache_time_s: LocalState::from_model(app.models_mut().insert("30".to_string())),
+            keep_prev: LocalState::from_model(app.models_mut().insert(true)),
+            cancel_mode: SelectLocals::new(app, Some("cancel")),
+            fail_mode: LocalState::from_model(app.models_mut().insert(false)),
         }
     }
 }
@@ -187,7 +187,7 @@ enum FetchMode {
 }
 
 struct AsyncPlaygroundState {
-    configs: HashMap<QueryId, QueryConfigModels>,
+    configs: HashMap<QueryId, QueryConfigLocals>,
     last_diag: HashMap<QueryId, QueryDiag>,
 
     catalog_scroll: fret_ui::scroll::ScrollHandle,
@@ -249,7 +249,7 @@ impl View for AsyncPlaygroundView {
     fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let mut configs = HashMap::new();
         for id in QueryId::ALL {
-            configs.insert(id, QueryConfigModels::new(app));
+            configs.insert(id, QueryConfigLocals::new(app));
         }
 
         Self {
@@ -773,10 +773,10 @@ fn policy_editor(
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let config = st.configs.get(&id).expect("missing config");
 
-    let stale = shadcn::Input::new(config.stale_time_s.clone())
+    let stale = shadcn::Input::new(&config.stale_time_s)
         .placeholder("stale_time (s)")
         .into_element(cx);
-    let cache = shadcn::Input::new(config.cache_time_s.clone())
+    let cache = shadcn::Input::new(&config.cache_time_s)
         .placeholder("cache_time (s)")
         .into_element(cx);
 
@@ -784,7 +784,7 @@ fn policy_editor(
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let keep_prev = shadcn::Switch::new(config.keep_prev.clone())
+    let keep_prev = shadcn::Switch::new(config.keep_prev.clone_model())
         .a11y_label("Keep previous data while loading")
         .into_element(cx);
 
@@ -792,13 +792,13 @@ fn policy_editor(
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let fail = shadcn::Switch::new(config.fail_mode.clone())
+    let fail = shadcn::Switch::new(config.fail_mode.clone_model())
         .a11y_label("Force failures")
         .into_element(cx);
 
     let cancel_mode = shadcn::Select::new(
-        config.cancel_mode.value.clone(),
-        config.cancel_mode.open.clone(),
+        config.cancel_mode.value.clone_model(),
+        config.cancel_mode.open.clone_model(),
     )
     .a11y_label("Cancel mode")
     .value(shadcn::SelectValue::new().placeholder("Cancel mode"))
@@ -1028,65 +1028,32 @@ fn query_result_view(
 }
 
 fn active_mode(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> FetchMode {
-    let tab = locals.tabs.layout_in(cx).value_or_default();
-    match tab.as_deref() {
-        Some("sync") => FetchMode::Sync,
-        _ => FetchMode::Async,
-    }
+    cx.data()
+        .selector_layout(&locals.tabs, |tab| match tab.as_deref() {
+            Some("sync") => FetchMode::Sync,
+            _ => FetchMode::Async,
+        })
 }
 
 fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy {
     let config = st.configs.get(&id).expect("missing config");
-    let stale_time_s = config.stale_time_s.clone();
-    let cache_time_s = config.cache_time_s.clone();
-    let keep_prev = config.keep_prev.clone();
-    let cancel_mode_value = config.cancel_mode.value.clone();
-    let stale_time_s_deps = stale_time_s.clone();
-    let cache_time_s_deps = cache_time_s.clone();
-    let keep_prev_deps = keep_prev.clone();
-    let cancel_mode_value_deps = cancel_mode_value.clone();
-    let policy_settings: QueryPolicySettings = cx.data().selector(
-        move |cx| {
-            cx.observe_model(&stale_time_s_deps, Invalidation::Layout);
-            cx.observe_model(&cache_time_s_deps, Invalidation::Layout);
-            cx.observe_model(&keep_prev_deps, Invalidation::Layout);
-            cx.observe_model(&cancel_mode_value_deps, Invalidation::Layout);
-            (
-                cx.app.models().revision(&stale_time_s_deps).unwrap_or(0),
-                cx.app.models().revision(&cache_time_s_deps).unwrap_or(0),
-                cx.app.models().revision(&keep_prev_deps).unwrap_or(0),
-                cx.app
-                    .models()
-                    .revision(&cancel_mode_value_deps)
-                    .unwrap_or(0),
-            )
-        },
-        move |cx| QueryPolicySettings {
-            stale_time_s: cx
-                .app
-                .models()
-                .get_cloned(&stale_time_s)
-                .unwrap_or_default(),
-            cache_time_s: cx
-                .app
-                .models()
-                .get_cloned(&cache_time_s)
-                .unwrap_or_default(),
-            keep_previous_data_while_loading: cx
-                .app
-                .models()
-                .get_cloned(&keep_prev)
-                .unwrap_or_default(),
-            cancel_mode: match cx
-                .app
-                .models()
-                .get_cloned(&cancel_mode_value)
-                .unwrap_or_default()
-                .as_deref()
-            {
-                Some("keep") => QueryCancelMode::KeepInFlight,
-                _ => QueryCancelMode::CancelInFlight,
-            },
+    let policy_settings: QueryPolicySettings = cx.data().selector_layout(
+        (
+            &config.stale_time_s,
+            &config.cache_time_s,
+            &config.keep_prev,
+            &config.cancel_mode.value,
+        ),
+        |(stale_time_s, cache_time_s, keep_previous_data_while_loading, cancel_mode_value)| {
+            QueryPolicySettings {
+                stale_time_s,
+                cache_time_s,
+                keep_previous_data_while_loading,
+                cancel_mode: match cancel_mode_value.as_deref() {
+                    Some("keep") => QueryCancelMode::KeepInFlight,
+                    _ => QueryCancelMode::CancelInFlight,
+                },
+            }
         },
     );
 
@@ -1101,7 +1068,8 @@ fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> Qu
 
 fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
-    config.fail_mode.layout_in(cx).value_or_default()
+    cx.data()
+        .selector_layout(&config.fail_mode, |fail_mode| fail_mode)
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {
