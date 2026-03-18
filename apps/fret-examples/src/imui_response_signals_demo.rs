@@ -32,18 +32,18 @@ impl View for ImUiResponseSignalsView {
         let last_context_menu_anchor = cx.state().local_init(|| None::<Point>);
         let menu_toggle = cx.state().local_init(|| false);
 
-        let left_clicks_value = left_clicks.layout(cx).value_or_default();
-        let secondary_clicks_value = secondary_clicks.layout(cx).value_or_default();
-        let double_clicks_value = double_clicks.layout(cx).value_or_default();
-        let long_presses_value = long_presses.layout(cx).value_or_default();
-        let press_holding_value = press_holding.layout(cx).value_or_default();
+        let left_clicks_value = left_clicks.layout_value(cx);
+        let secondary_clicks_value = secondary_clicks.layout_value(cx);
+        let double_clicks_value = double_clicks.layout_value(cx);
+        let long_presses_value = long_presses.layout_value(cx);
+        let press_holding_value = press_holding.layout_value(cx);
 
-        let drag_offset_value = drag_offset.layout(cx).value_or_default();
-        let drag_starts_value = drag_starts.layout(cx).value_or_default();
-        let drag_stops_value = drag_stops.layout(cx).value_or_default();
+        let drag_offset_value = drag_offset.layout_value(cx);
+        let drag_starts_value = drag_starts.layout_value(cx);
+        let drag_stops_value = drag_stops.layout_value(cx);
 
-        let last_anchor_value = last_context_menu_anchor.layout(cx).value_or_default();
-        let menu_toggle_value = menu_toggle.layout(cx).value_or_default();
+        let last_anchor_value = last_context_menu_anchor.layout_value(cx);
+        let menu_toggle_value = menu_toggle.layout_value(cx);
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;

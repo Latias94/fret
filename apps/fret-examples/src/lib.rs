@@ -1558,12 +1558,13 @@ mod authoring_surface_policy_tests {
             EMBEDDED_VIEWPORT_DEMO,
             &[
                 "let size_preset_state = cx.state().local_init(|| 1usize);",
-                "let preset = size_preset_state.layout(cx).value_or_default();",
+                "let preset = size_preset_state.layout_value(cx);",
                 "cx.actions().local_set::<act::PickSize640, usize>(&size_preset_state, 0);",
             ],
             &[
                 "cx.use_local_with(|| 1usize)",
                 "cx.on_action_notify_local_set::<act::PickSize640, usize>",
+                "let preset = size_preset_state.layout(cx).value_or_default();",
             ],
         );
     }
@@ -1575,10 +1576,15 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0u32);",
                 "let enabled_state = cx.state().local_init(|| false);",
-                "let count = count_state.layout(cx).value_or_default();",
-                "let enabled = enabled_state.paint(cx).value_or_default();",
+                "let count = count_state.layout_value(cx);",
+                "let enabled = enabled_state.paint_value(cx);",
             ],
-            &["cx.use_local_with(|| 0u32)", "cx.use_local_with(|| false)"],
+            &[
+                "cx.use_local_with(|| 0u32)",
+                "cx.use_local_with(|| false)",
+                "count_state.layout(cx).value_or_default()",
+                "enabled_state.paint(cx).value_or_default()",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
@@ -1586,11 +1592,16 @@ mod authoring_surface_policy_tests {
             &[
                 "let left_clicks = cx.state().local_init(|| 0u32);",
                 "let drag_offset = cx.state().local_init(Point::default);",
-                "let last_anchor_value = last_context_menu_anchor.layout(cx).value_or_default();",
+                "let left_clicks_value = left_clicks.layout_value(cx);",
+                "let drag_offset_value = drag_offset.layout_value(cx);",
+                "let last_anchor_value = last_context_menu_anchor.layout_value(cx);",
             ],
             &[
                 "cx.use_local_with(|| 0u32)",
                 "cx.use_local_with(Point::default)",
+                "left_clicks.layout(cx).value_or_default()",
+                "drag_offset.layout(cx).value_or_default()",
+                "last_context_menu_anchor.layout(cx).value_or_default()",
             ],
         );
 
