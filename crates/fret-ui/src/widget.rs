@@ -357,6 +357,8 @@ pub struct CommandCx<'a, H: UiHost> {
     pub focus: Option<NodeId>,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub requested_focus: Option<NodeId>,
+    pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
     pub stop_propagation: bool,
 }
 
@@ -390,6 +392,23 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
             return;
         };
         self.app.request_redraw(window);
+    }
+
+    /// Mark the current view as dirty and schedule a redraw.
+    ///
+    /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
+    /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
+    pub fn notify(&mut self) {
+        self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 }
 

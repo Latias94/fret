@@ -226,6 +226,8 @@ fn command_cx<'a>(
         focus: Some(node),
         invalidations: Vec::new(),
         requested_focus: None,
+        notify_requested: false,
+        notify_requested_location: None,
         stop_propagation: false,
     }
 }

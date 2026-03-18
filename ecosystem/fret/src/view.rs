@@ -2011,6 +2011,7 @@ impl<'cx, 'a, H: UiHost> std::ops::DerefMut for AppUi<'cx, 'a, H> {
 pub struct ViewWindowState<V: View> {
     pub view: V,
     pub(crate) cached_handlers: Option<(OnCommand, OnCommandAvailability)>,
+    pub(crate) cached_action_root: Option<fret_ui::GlobalElementId>,
 }
 
 #[doc(hidden)]
@@ -2021,6 +2022,7 @@ pub fn view_init_window<V: View>(
     ViewWindowState {
         view: V::init(app, window),
         cached_handlers: None,
+        cached_action_root: None,
     }
 }
 
@@ -2030,21 +2032,24 @@ pub fn view_view<'a, V: View>(
     st: &mut ViewWindowState<V>,
 ) -> crate::Ui {
     cx.named("__fret.view.action_root", |cx| {
-        let action_root = cx.root_id();
-
-        cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
-        cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-            action_root,
-        );
-
-        // Ensure handlers remain installed even when the view-cache root is reused (render
-        // skipped).
-        if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
-            cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root, on_command);
-            cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
+        if let Some(action_root) = st.cached_action_root {
+            cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
+            cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
                 action_root,
-                on_command_availability,
             );
+
+            // Ensure handlers remain installed even when the view-cache root is reused (render
+            // skipped).
+            if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
+                cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(
+                    action_root,
+                    on_command,
+                );
+                cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
+                    action_root,
+                    on_command_availability,
+                );
+            }
         }
 
         cx.view_cache(
@@ -2054,6 +2059,7 @@ pub fn view_view<'a, V: View>(
                 ..fret_ui::element::ViewCacheProps::default()
             },
             |cx| {
+                let action_root = cx.root_id();
                 cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
                 cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
                     action_root,
@@ -2062,6 +2068,7 @@ pub fn view_view<'a, V: View>(
                 let mut app_ui = AppUi::new(cx, action_root);
                 let out = st.view.render(&mut app_ui);
                 st.cached_handlers = app_ui.take_action_handlers();
+                st.cached_action_root = Some(action_root);
 
                 if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
                     cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(
@@ -2104,13 +2111,82 @@ pub fn view_record_engine_frame<V: View>(
 mod tests {
     use super::{
         AppActivateExt, AppActivateSurface, LocalActionCapture, LocalState, LocalStateTxn,
-        OnActivate, action_listener, dispatch_action_listener, dispatch_payload_action_listener,
+        OnActivate, View, ViewWindowState, action_listener, dispatch_action_listener,
+        dispatch_payload_action_listener, view_init_window, view_view,
     };
     use std::any::Any;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
-    use fret_core::AppWindowId;
+    use fret_core::{
+        AppWindowId, FrameId, NodeId, Point, Px, Rect, Size, TextConstraints, TextMetrics,
+    };
     use fret_runtime::{ActionId, CommandId, Effect, ModelStore, TimerToken};
     use fret_ui::action::{ActionCx, ActivateReason, UiActionHost, UiFocusActionHost};
+    use fret_ui::declarative::render_root;
+    use fret_ui::{UiTree, element::Length};
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
 
     struct DispatchAction;
     impl fret_runtime::TypedAction for DispatchAction {
@@ -2127,6 +2203,13 @@ mod tests {
     }
     impl crate::actions::TypedPayloadAction for DispatchPayloadAction {
         type Payload = u64;
+    }
+
+    struct RuntimeIncrementAction;
+    impl fret_runtime::TypedAction for RuntimeIncrementAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.locals_with.runtime.increment.v1")
+        }
     }
 
     #[derive(Default)]
@@ -2204,6 +2287,98 @@ mod tests {
 
     impl UiFocusActionHost for FakeHost {
         fn request_focus(&mut self, _target: fret_ui::GlobalElementId) {}
+    }
+
+    struct RuntimeLocalsWithView {
+        count: Option<LocalState<u32>>,
+        touched: Option<LocalState<bool>>,
+        renders: Arc<AtomicUsize>,
+        last_seen_count: Arc<AtomicUsize>,
+    }
+
+    impl View for RuntimeLocalsWithView {
+        fn init(_app: &mut crate::app::App, _window: crate::WindowId) -> Self {
+            Self {
+                count: None,
+                touched: None,
+                renders: Arc::new(AtomicUsize::new(0)),
+                last_seen_count: Arc::new(AtomicUsize::new(0)),
+            }
+        }
+
+        fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui {
+            self.renders.fetch_add(1, Ordering::SeqCst);
+
+            if self.count.is_none() {
+                self.count = Some(cx.state().local_init(|| 0u32));
+            }
+            if self.touched.is_none() {
+                self.touched = Some(cx.state().local_init(|| false));
+            }
+
+            let count = self
+                .count
+                .as_ref()
+                .expect("count local should exist")
+                .clone();
+            let touched = self
+                .touched
+                .as_ref()
+                .expect("touched local should exist")
+                .clone();
+
+            cx.actions()
+                .locals_with((&count, &touched))
+                .on::<RuntimeIncrementAction>(|tx, (count, touched)| {
+                    let incremented = tx.update_if(&count, |value| {
+                        *value += 1;
+                        true
+                    });
+                    let flagged = tx.set(&touched, true);
+                    incremented || flagged
+                });
+
+            self.last_seen_count
+                .store(count.layout_value(cx) as usize, Ordering::SeqCst);
+
+            let mut props = fret_ui::element::ContainerProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            cx.container(props, |_cx| Vec::new()).into()
+        }
+    }
+
+    fn render_runtime_view(
+        ui: &mut UiTree<crate::app::App>,
+        app: &mut crate::app::App,
+        services: &mut FakeUiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        st: &mut ViewWindowState<RuntimeLocalsWithView>,
+    ) -> NodeId {
+        let root = render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "locals-with-runtime",
+            |cx| view_view(cx, st),
+        );
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn first_leaf(ui: &UiTree<crate::app::App>, mut node: NodeId) -> NodeId {
+        loop {
+            let children = ui.children(node);
+            if children.is_empty() {
+                return node;
+            }
+            node = children[0];
+        }
     }
 
     #[test]
@@ -2396,6 +2571,73 @@ mod tests {
         }));
         assert_eq!(host.redraws, vec![action_cx.window]);
         assert_eq!(host.notifies, vec![action_cx]);
+    }
+
+    #[test]
+    fn locals_with_runtime_dispatch_updates_locals_and_rerenders_cached_view() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+
+        let mut services = FakeUiServices;
+        let mut st = view_init_window::<RuntimeLocalsWithView>(&mut app, window);
+
+        app.set_frame_id(FrameId(1));
+        let root = render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        ui.set_focus(Some(first_leaf(&ui, root)));
+        assert!(
+            st.cached_handlers.is_some(),
+            "view render should install cached action handlers before command dispatch"
+        );
+        assert!(
+            st.cached_action_root.is_some(),
+            "view render should cache the concrete action root used for runtime dispatch"
+        );
+        assert_eq!(st.view.renders.load(Ordering::SeqCst), 1);
+        assert_eq!(st.view.last_seen_count.load(Ordering::SeqCst), 0);
+
+        app.set_frame_id(FrameId(2));
+        render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.view.renders.load(Ordering::SeqCst),
+            1,
+            "expected the view-cache root to reuse the previous frame before any notify-driven invalidation"
+        );
+
+        let command = <RuntimeIncrementAction as fret_runtime::TypedAction>::action_id();
+        assert!(ui.dispatch_command(&mut app, &mut services, &command));
+        assert_eq!(
+            st.view
+                .count
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(1)
+        );
+        assert_eq!(
+            st.view
+                .touched
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(true)
+        );
+        assert!(
+            app.flush_effects()
+                .iter()
+                .any(|effect| matches!(effect, Effect::Redraw(redraw) if *redraw == window)),
+            "locals_with action dispatch should request a redraw through the runtime host"
+        );
+
+        app.set_frame_id(FrameId(3));
+        render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.view.renders.load(Ordering::SeqCst),
+            2,
+            "notify should force the cached view root to rerender on the next frame"
+        );
+        assert_eq!(st.view.last_seen_count.load(Ordering::SeqCst), 1);
     }
 
     #[test]
