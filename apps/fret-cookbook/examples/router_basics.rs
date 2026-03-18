@@ -8,7 +8,7 @@ use fret::router::{
     SearchValidationMode, router_link_to_typed_route_with_test_id, router_link_with_test_id,
 };
 use fret::style::{LayoutRefinement, Space};
-use fret_ui::{CommandAvailability, Invalidation};
+use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -181,9 +181,8 @@ impl View for RouterBasicsView {
             .availability::<act::ClearIntents>(|_host, _acx| CommandAvailability::Available);
 
         let snapshot = snapshot_model
-            .watch(cx)
-            .invalidation(Invalidation::Layout)
-            .cloned()
+            .layout(cx)
+            .value()
             .expect("router snapshot should be readable");
         let intents = intents_model.layout(cx).value_or_default();
         let typed_route_label = APP_ROUTE_CODEC

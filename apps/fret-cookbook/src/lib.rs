@@ -400,8 +400,9 @@ mod authoring_surface_policy_tests {
 
         assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
-        assert!(VIRTUAL_LIST_EXAMPLE.contains(".watch(cx)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("let items = self.items.layout(cx).value_or_default();"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".selector_layout("));
+        assert!(!VIRTUAL_LIST_EXAMPLE.contains(".watch(cx)"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("watch(&mode_state)"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("watch(&visible_only_keys_state)"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains("models::<act::RotateItems>"));
@@ -460,7 +461,13 @@ mod authoring_surface_policy_tests {
         assert!(
             ROUTER_EXAMPLE.contains("let intents = intents_model.layout(cx).value_or_default();")
         );
+        assert!(
+            ROUTER_EXAMPLE.contains(
+                "let snapshot = snapshot_model.layout(cx).value().expect(\"router snapshot should be readable\");"
+            )
+        );
         assert!(!ROUTER_EXAMPLE.contains("intents_model.watch(cx).layout().value_or_default()"));
+        assert!(!ROUTER_EXAMPLE.contains("snapshot_model.watch(cx)"));
         assert!(!ROUTER_EXAMPLE.contains("set_router_command_availability(window"));
         assert!(ROUTER_EXAMPLE.contains(".setup(fret::router::app::install)"));
         assert!(!ROUTER_EXAMPLE.contains(".setup(fret::router::install_app)"));

@@ -13,7 +13,7 @@ use fret_ui::element::{
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::TrackedModelExt as _;
 use fret_ui_kit::headless::table::{
     ColumnPinningState, GroupedColumnMode, RowKey, TableState, create_column_helper,
 };
@@ -381,14 +381,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                     let header_menu_role_open = header_menu_role_open.clone();
                     let header_menu_score_open = header_menu_score_open.clone();
 
-                    let enable_grouping = cx
-                        .watch_model(&enable_grouping_model)
-                        .copied()
-                        .unwrap_or(true);
-                    let grouped_column_mode = cx
-                        .watch_model(&grouped_column_mode_model)
-                        .cloned()
-                        .flatten();
+                    let enable_grouping = enable_grouping_model.layout_in(cx).value_or(true);
+                    let grouped_column_mode = grouped_column_mode_model.layout_in(cx).value_or_default();
                     let grouped_column_mode = match grouped_column_mode.as_deref() {
                         Some("remove") => GroupedColumnMode::Remove,
                         Some("none") => GroupedColumnMode::None,

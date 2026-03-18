@@ -307,6 +307,7 @@ mod authoring_surface_policy_tests {
     const QUERY_DEMO: &str = include_str!("query_demo.rs");
     const SIMPLE_TODO_DEMO: &str = include_str!("simple_todo_demo.rs");
     const SONNER_DEMO: &str = include_str!("sonner_demo.rs");
+    const TABLE_DEMO: &str = include_str!("table_demo.rs");
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
@@ -1733,6 +1734,20 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn selected_element_context_examples_prefer_handle_first_tracked_model_reads() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            TABLE_DEMO,
+            &[
+                "use fret_ui_kit::declarative::TrackedModelExt as _;",
+                "let enable_grouping = enable_grouping_model.layout_in(cx).value_or(true);",
+                "let grouped_column_mode = grouped_column_mode_model.layout_in(cx).value_or_default();",
+            ],
+            &[
+                "use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;",
+                "cx.watch_model(&enable_grouping_model)",
+                "cx.watch_model(&grouped_column_mode_model)",
+            ],
+        );
+
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[

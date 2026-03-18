@@ -103,11 +103,7 @@ impl View for VirtualListBasicsView {
         let visible_only_keys_state = cx.state().local_init(|| false);
         let jump_state = cx.state().local::<String>();
 
-        let items = self
-            .items
-            .watch(cx)
-            .layout()
-            .value_or_else(|| Arc::new(Vec::new()));
+        let items = self.items.layout(cx).value_or_default();
         let len = items.len();
 
         let view_settings: VirtualListViewSettings = cx.data().selector_layout(
