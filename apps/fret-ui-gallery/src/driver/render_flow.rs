@@ -1714,6 +1714,7 @@ mod tests {
         assert_chart_gallery_example_is_present("ui-gallery-chart-grid-axis-spec");
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
     fn assert_chart_gallery_example_is_present(target_test_id: &str) {
         let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
         scroll_test_id_into_gallery_viewport(&mut rendered, target_test_id);
