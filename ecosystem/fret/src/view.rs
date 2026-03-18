@@ -1423,28 +1423,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         )
     }
 
-    /// Keyed LocalState-first selector path for repeated callsites (lists/loops) on the default
-    /// app-facing lane.
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn selector_layout_keyed<K: Hash, Inputs, TValue>(
-        self,
-        key: K,
-        inputs: Inputs,
-        compute: impl FnOnce(Inputs::Values) -> TValue,
-    ) -> TValue
-    where
-        Inputs: LocalSelectorLayoutInputs<'a, H>,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx.cx,
-            key,
-            move |cx| inputs.deps_in(cx, Invalidation::Layout),
-            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
-        )
-    }
-
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector<Deps, TValue>(
@@ -1457,23 +1435,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector(self.cx.cx, deps, compute)
-    }
-
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn selector_keyed<K: Hash, Deps, TValue>(
-        self,
-        key: K,
-        deps: impl FnOnce(&mut ElementContext<'a, H>) -> Deps,
-        compute: impl FnOnce(&mut ElementContext<'a, H>) -> TValue,
-    ) -> TValue
-    where
-        Deps: Any + PartialEq,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx.cx, key, deps, compute,
-        )
     }
 
     #[cfg(feature = "state-query")]
@@ -1566,27 +1527,6 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         )
     }
 
-    /// Keyed LocalState-first selector path for repeated extracted `UiCx` helper callsites.
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn selector_layout_keyed<K: Hash, Inputs, TValue>(
-        self,
-        key: K,
-        inputs: Inputs,
-        compute: impl FnOnce(Inputs::Values) -> TValue,
-    ) -> TValue
-    where
-        Inputs: LocalSelectorLayoutInputs<'a, crate::app::App>,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx,
-            key,
-            move |cx| inputs.deps_in(cx, Invalidation::Layout),
-            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
-        )
-    }
-
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector<Deps, TValue>(
@@ -1599,23 +1539,6 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector(self.cx, deps, compute)
-    }
-
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn selector_keyed<K: Hash, Deps, TValue>(
-        self,
-        key: K,
-        deps: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> Deps,
-        compute: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> TValue,
-    ) -> TValue
-    where
-        Deps: Any + PartialEq,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx, key, deps, compute,
-        )
     }
 
     #[cfg(feature = "state-query")]
@@ -2784,7 +2707,8 @@ mod tests {
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
         assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
-        assert!(api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
+        assert!(!api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
+        assert!(!api_source.contains("pub fn selector_keyed<K: Hash, Deps, TValue>("));
         assert!(api_source.contains("pub fn invalidate_query<T: Any + Send + Sync + 'static>("));
         assert!(
             api_source.contains("pub fn invalidate_query_namespace(self, namespace: &'static str)")
