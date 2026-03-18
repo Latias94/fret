@@ -1,4 +1,6 @@
 use anyhow::Context as _;
+use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
+use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
@@ -6,18 +8,19 @@ use fret_launch::{
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
-    BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Model, PlatformCapabilities,
+    BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, PlatformCapabilities,
 };
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Theme, UiTree};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 pub struct ImeSmokeWindowState {
     ui: UiTree<App>,
-    input_single: Model<String>,
-    input_multi: Model<String>,
-    last_ime: Model<Arc<str>>,
+    app_ui_root: AppUiRenderRootState,
+    input_single: LocalState<String>,
+    input_multi: LocalState<String>,
+    last_ime: LocalState<Arc<str>>,
 }
 
 #[derive(Default)]
@@ -25,15 +28,17 @@ pub struct ImeSmokeDriver;
 
 impl ImeSmokeDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ImeSmokeWindowState {
-        let input_single = app.models_mut().insert(String::new());
-        let input_multi = app.models_mut().insert(String::new());
-        let last_ime = app.models_mut().insert(Arc::<str>::from("IME: <none>"));
+        let input_single = LocalState::from_model(app.models_mut().insert(String::new()));
+        let input_multi = LocalState::from_model(app.models_mut().insert(String::new()));
+        let last_ime =
+            LocalState::from_model(app.models_mut().insert(Arc::<str>::from("IME: <none>")));
 
         let mut ui = UiTree::new();
         ui.set_window(window);
 
         ImeSmokeWindowState {
             ui,
+            app_ui_root: AppUiRenderRootState::default(),
             input_single,
             input_multi,
             last_ime,
@@ -46,71 +51,68 @@ impl ImeSmokeDriver {
         services: &mut dyn UiServices,
         window: AppWindowId,
         bounds: Rect,
-        input_single: Model<String>,
-        input_multi: Model<String>,
-        last_ime: Model<Arc<str>>,
+        app_ui_root: &mut AppUiRenderRootState,
+        input_single: LocalState<String>,
+        input_multi: LocalState<String>,
+        last_ime: LocalState<Arc<str>>,
     ) {
-        let root = declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
+        let root = render_root_with_app_ui(
+            declarative::RenderRootContext::new(ui, app, services, window, bounds),
             "ime-smoke",
+            app_ui_root,
             |cx| {
-             cx.observe_model(&input_single, Invalidation::Layout);
-             cx.observe_model(&input_multi, Invalidation::Layout);
-             cx.observe_model(&last_ime, Invalidation::Paint);
+                let theme = Theme::global(&*cx.app).snapshot();
+                let last = last_ime
+                    .paint(cx)
+                    .value_or_else(|| Arc::<str>::from("IME: <error>"));
 
-            let theme = Theme::global(&*cx.app).snapshot();
+                let mut root_layout = LayoutStyle::default();
+                root_layout.size.width = Length::Fill;
+                root_layout.size.height = Length::Fill;
 
-            let mut root_layout = LayoutStyle::default();
-            root_layout.size.width = Length::Fill;
-            root_layout.size.height = Length::Fill;
-
-            vec![cx.container(
-                ContainerProps {
-                    layout: root_layout,
-                    background: Some(theme.color_token("background")),
-                    ..Default::default()
-                },
-                |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: root_layout,
-                            direction: fret_core::Axis::Vertical,
-                            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
-                            padding: fret_core::Edges::all(
-                                theme.metric_token("metric.padding.md"),
-                            )
-                            .into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        |cx| {
-                            let last = cx
-                                .app
-                                .models()
-                                .read(&last_ime, |v| v.clone())
-                                .unwrap_or_else(|_| Arc::<str>::from("IME: <error>"));
-
-                            vec![
-                                cx.text("IME smoke (Chinese IME)"),
-                                cx.text("Target: Windows + Microsoft Pinyin (微软拼音)"),
-                                cx.text("Type `nihao` while IME is active and verify inline preedit + candidate window positioning."),
-                                cx.text(last),
-                                cx.text("Single-line input"),
-                                shadcn::Input::new(input_single)
-                                    .a11y_label("IME single-line input")
-                                    .into_element(cx),
-                                cx.text("Multiline textarea"),
-                                shadcn::Textarea::new(input_multi)
-                                    .a11y_label("IME multiline textarea")
-                                    .min_height(Px(160.0))
-                                    .into_element(cx),
-                                cx.text("Tips: While composing, Tab/Enter/Space/Escape should not trigger app shortcuts or focus traversal."),
-                                cx.text("After commit/cancel, Tab focus traversal should work again."),
-                            ]
-                        },
-                    )]
-                },
-            )]
+                vec![cx.container(
+                    ContainerProps {
+                        layout: root_layout,
+                        background: Some(theme.color_token("background")),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: root_layout,
+                                direction: fret_core::Axis::Vertical,
+                                gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                                padding: fret_core::Edges::all(
+                                    theme.metric_token("metric.padding.md"),
+                                )
+                                .into(),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Stretch,
+                                wrap: false,
+                            },
+                            |cx| {
+                                vec![
+                                    cx.text("IME smoke (Chinese IME)"),
+                                    cx.text("Target: Windows + Microsoft Pinyin (微软拼音)"),
+                                    cx.text("Type `nihao` while IME is active and verify inline preedit + candidate window positioning."),
+                                    cx.text(last),
+                                    cx.text("Single-line input"),
+                                    shadcn::Input::new(input_single.clone_model())
+                                        .a11y_label("IME single-line input")
+                                        .into_element(cx),
+                                    cx.text("Multiline textarea"),
+                                    shadcn::Textarea::new(input_multi.clone_model())
+                                        .a11y_label("IME multiline textarea")
+                                        .min_height(Px(160.0))
+                                        .into_element(cx),
+                                    cx.text("Tips: While composing, Tab/Enter/Space/Escape should not trigger app shortcuts or focus traversal."),
+                                    cx.text("After commit/cancel, Tab focus traversal should work again."),
+                                ]
+                            },
+                        )]
+                    },
+                )]
+                .into()
             },
         );
 
@@ -211,7 +213,7 @@ fn handle_event(
                 "IME: DeleteSurrounding(before_bytes={before_bytes}, after_bytes={after_bytes})"
             )),
         };
-        let _ = app.models_mut().update(&state.last_ime, |v| *v = msg);
+        let _ = state.last_ime.set_in(app.models_mut(), msg);
     }
 
     state.ui.dispatch_event(app, services, event);
@@ -233,6 +235,7 @@ fn render(_driver: &mut ImeSmokeDriver, context: WinitRenderContext<'_, ImeSmoke
         services,
         window,
         bounds,
+        &mut state.app_ui_root,
         state.input_single.clone(),
         state.input_multi.clone(),
         state.last_ime.clone(),

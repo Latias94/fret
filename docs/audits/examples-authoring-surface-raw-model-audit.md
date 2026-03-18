@@ -188,6 +188,9 @@ Audit judgment:
 - `apps/fret-examples/src/sonner_demo.rs` now proves the bridge also covers overlay/toast demos
   whose runtime-owned state bag mixes a manual root with explicit side-channel objects such as
   `ToastPromise`.
+- `apps/fret-examples/src/ime_smoke_demo.rs` now proves the bridge also covers text-input/IME
+  smoke surfaces where event-driven status text still benefits from explicit `paint(...)`
+  invalidation reads on `LocalState<T>`.
 
 ### B2) Window/runtime interop harnesses
 
@@ -233,7 +236,6 @@ Candidate files:
 
 - `apps/fret-examples/src/components_gallery.rs`
 - `apps/fret-examples/src/emoji_conformance_demo.rs`
-- `apps/fret-examples/src/ime_smoke_demo.rs`
 
 Why these are candidates:
 
