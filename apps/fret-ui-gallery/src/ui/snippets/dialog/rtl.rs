@@ -61,9 +61,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     profile_fields(cx, name_model.clone(), username_model.clone()),
                     shadcn::DialogFooter::new(ui::children![
                         cx;
-                        shadcn::Button::new("Cancel")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(open.clone()),
+                        shadcn::DialogClose::from_scope().build(
+                            cx,
+                            shadcn::Button::new("Cancel").variant(shadcn::ButtonVariant::Outline),
+                        ),
                         shadcn::Button::new("Save").toggle_model(save_open.clone()),
                     ]),
                 ])

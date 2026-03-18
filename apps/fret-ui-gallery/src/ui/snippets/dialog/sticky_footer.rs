@@ -67,9 +67,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 scroll_body,
                 shadcn::DialogFooter::new(ui::children![
                     cx;
-                    shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(open.clone()),
+                    shadcn::DialogClose::from_scope().build(
+                        cx,
+                        shadcn::Button::new("Close").variant(shadcn::ButtonVariant::Outline),
+                    ),
                     shadcn::Button::new("Save changes"),
                 ]),
             ])

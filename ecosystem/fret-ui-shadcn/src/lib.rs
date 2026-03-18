@@ -366,7 +366,7 @@ pub mod facade {
     pub use crate::date_range_picker::DateRangePicker;
     pub use crate::dialog::{
         Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
-        DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
+        DialogOverlay, DialogPart, DialogPortal, DialogTitle, DialogTrigger,
     };
     pub use crate::direction::{
         DirectionProvider, LayoutDirection, use_direction, with_direction_provider,

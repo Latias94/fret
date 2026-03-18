@@ -12,7 +12,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     });
 
     let open_for_trigger = open.clone();
-    let open_for_footer = open.clone();
     let link_model = share_link.clone();
 
     shadcn::Dialog::new(open.clone()).into_element(
@@ -37,11 +36,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::Input::new(link_model.clone())
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
-                shadcn::DialogFooter::new([shadcn::Button::new("Close")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .test_id("ui-gallery-dialog-custom-close-footer")
-                    .toggle_model(open_for_footer.clone())
-                    .into_element(cx)])
+                shadcn::DialogFooter::new([shadcn::DialogClose::from_scope().build(
+                    cx,
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .test_id("ui-gallery-dialog-custom-close-footer"),
+                )])
                 .into_element(cx),
             ])
             .show_close_button(false)
