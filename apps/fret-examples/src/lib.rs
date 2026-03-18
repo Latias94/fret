@@ -803,7 +803,7 @@ mod authoring_surface_policy_tests {
                 "form_state: LocalState<FormState>,",
                 "let root = render_root_with_app_ui(",
                 "let (submit_count, valid, dirty) = form_state.layout(cx).read_ref(",
-                "let status_text = status.layout(cx).value_or_else(|| Arc::from(\"Idle\"));",
+                "let status_text = status.layout_value(cx);",
             ],
             &[
                 "form_state: Model<FormState>,",
@@ -811,6 +811,7 @@ mod authoring_surface_policy_tests {
                 "cx.observe_model(&form_state, Invalidation::Layout);",
                 "cx.app.models().read(&form_state, |st| {",
                 "cx.app.models().read(&status, |v| Arc::clone(v))",
+                "status.layout(cx).value_or_else(|| Arc::from(\"Idle\"));",
             ],
         );
     }

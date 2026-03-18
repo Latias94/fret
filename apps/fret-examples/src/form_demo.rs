@@ -254,7 +254,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                 .read_ref(|st| (st.submit_count, st.is_valid(), st.is_dirty()))
                 .unwrap_or((0, true, false));
 
-            let status_text = status.layout(cx).value_or_else(|| Arc::from("Idle"));
+            let status_text = status.layout_value(cx);
 
             let mut root_layout = LayoutStyle::default();
             root_layout.size.width = Length::Fill;
