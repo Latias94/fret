@@ -198,6 +198,13 @@ Audit judgment:
   mixed retained/manual control gallery: the root authoring surface can use grouped `AppUi`
   tracked reads while retained table/file-tree/overlay subtrees keep their explicit `Model<T>`
   interop seams.
+- `apps/fret-examples/src/custom_effect_v2_web_demo.rs`,
+  `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`,
+  `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`, and
+  `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` now prove the other remaining seam:
+  low-level WebGPU/web inspector demos can keep explicit driver-owned `Model<T>` bags while moving
+  repeated derived inspector reads onto one grouped helper surface instead of raw
+  `selector(...)` dependency boilerplate at each callsite.
 
 ### B2) Window/runtime interop harnesses
 
@@ -248,25 +255,14 @@ Current status:
 
 ### C2) Web custom-effect inspector harnesses
 
-Candidate files:
+Current status:
 
-- `apps/fret-examples/src/custom_effect_v2_web_demo.rs`
-- `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
-- `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
-- `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs`
-
-Why these are candidates:
-
-- most controls are ordinary inspector knobs,
-- they still have duplicated `selector(...)` dependency/read boilerplate,
-- the family is structurally repetitive and could likely share a thinner helper for manual
-  `UiTree` demos.
-
-Why they are not P0:
-
-- they are explicitly low-level WebGPU/Web driver harnesses,
-- the right fix is likely a manual-harness ergonomics helper, not forcing app-lane `LocalState<T>`
-  into every driver-owned state bag.
+- closed for the current in-tree `custom_effect_v2_*` web examples.
+- the family now converges on one shared grouped selector helper for explicit `Model<T>` bags
+  rather than four copies of raw `selector(...)` dependency/revision scaffolding.
+- this keeps the right boundary intact: these demos are still low-level WebGPU/web harnesses, but
+  their inspector-derived reads no longer need bespoke boilerplate at every `view_settings(...)`
+  callsite.
 
 ## What Should Stay Locked
 
@@ -294,6 +290,7 @@ It should be one of these:
 
 1. Pick one candidate family with repetitive inspector state (for example the `custom_effect_v2_*`
    web demos) and converge that family on one shared pattern.
+   Status: done for the current `custom_effect_v2_*` web demos.
 2. Leave retained plot/table/node-graph/chart examples alone until the retained runtime surfaces
    themselves change.
 

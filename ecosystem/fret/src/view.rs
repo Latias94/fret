@@ -699,6 +699,22 @@ fn local_selector_value_in<T: Any + Clone, H: UiHost>(
     value.expect("LocalState-first selector inputs should always resolve a tracked value")
 }
 
+#[cfg(feature = "state-selector")]
+fn model_selector_value_in<T: Any + Clone, H: UiHost>(
+    model: &Model<T>,
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+) -> T {
+    let value = match invalidation {
+        Invalidation::Paint => cx.get_model_cloned(model, Invalidation::Paint),
+        Invalidation::Layout => cx.get_model_cloned(model, Invalidation::Layout),
+        Invalidation::HitTest | Invalidation::HitTestOnly => {
+            cx.get_model_cloned(model, Invalidation::HitTest)
+        }
+    };
+    value.expect("Model selector inputs should always resolve a tracked value")
+}
+
 /// App-facing LocalState selector inputs for the grouped `cx.data()` lane.
 ///
 /// This trait is intentionally hidden from docs because app authors should use the methods on
@@ -774,6 +790,90 @@ impl_local_selector_inputs_tuple!(
     (A:0, B:1, C:2, D:3),
     (A:0, B:1, C:2, D:3, E:4),
     (A:0, B:1, C:2, D:3, E:4, F:5),
+);
+
+/// Explicit shared-`Model<T>` selector inputs for grouped derived reads on the app-facing lane.
+///
+/// This keeps the advanced/manual path out of raw `selector(deps, compute)` boilerplate when the
+/// state already lives in an explicit `Model<T>` bag instead of `LocalState<T>`.
+#[cfg(feature = "state-selector")]
+#[doc(hidden)]
+pub trait ModelSelectorInputs<'a, H: UiHost>: Copy {
+    type Values;
+
+    fn deps_in(
+        self,
+        cx: &mut ElementContext<'a, H>,
+        invalidation: Invalidation,
+    ) -> fret_selector::DepsSignature;
+
+    fn values_in(self, cx: &mut ElementContext<'a, H>, invalidation: Invalidation) -> Self::Values;
+}
+
+#[cfg(feature = "state-selector")]
+impl<'a, H: UiHost, T: Any + Clone> ModelSelectorInputs<'a, H> for &Model<T> {
+    type Values = T;
+
+    fn deps_in(
+        self,
+        cx: &mut ElementContext<'a, H>,
+        invalidation: Invalidation,
+    ) -> fret_selector::DepsSignature {
+        let mut deps = fret_selector::ui::DepsBuilder::new(cx);
+        deps.model_rev_invalidation(self, invalidation);
+        deps.finish()
+    }
+
+    fn values_in(self, cx: &mut ElementContext<'a, H>, invalidation: Invalidation) -> Self::Values {
+        model_selector_value_in(self, cx, invalidation)
+    }
+}
+
+#[cfg(feature = "state-selector")]
+macro_rules! impl_model_selector_inputs_tuple {
+    ($(($($name:ident:$idx:tt),+)),+ $(,)?) => {
+        $(
+            impl<'a, H: UiHost, $($name: Any + Clone),+> ModelSelectorInputs<'a, H>
+                for ($(&Model<$name>,)+)
+            {
+                type Values = ($($name,)+);
+
+                fn deps_in(
+                    self,
+                    cx: &mut ElementContext<'a, H>,
+                    invalidation: Invalidation,
+                ) -> fret_selector::DepsSignature {
+                    let mut deps = fret_selector::ui::DepsBuilder::new(cx);
+                    $(deps.model_rev_invalidation(self.$idx, invalidation);)+
+                    deps.finish()
+                }
+
+                fn values_in(
+                    self,
+                    cx: &mut ElementContext<'a, H>,
+                    invalidation: Invalidation,
+                ) -> Self::Values {
+                    ($(model_selector_value_in(self.$idx, cx, invalidation),)+)
+                }
+            }
+        )+
+    };
+}
+
+#[cfg(feature = "state-selector")]
+impl_model_selector_inputs_tuple!(
+    (A:0, B:1),
+    (A:0, B:1, C:2),
+    (A:0, B:1, C:2, D:3),
+    (A:0, B:1, C:2, D:3, E:4),
+    (A:0, B:1, C:2, D:3, E:4, F:5),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9, K:10),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9, K:10, L:11),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9, K:10, L:11, M:12),
 );
 
 /// Per-frame view construction context passed to [`View::render`].
@@ -1434,6 +1534,48 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         )
     }
 
+    /// Grouped selector path for explicit shared `Model<T>` bags that affect layout.
+    ///
+    /// Use this when the deps intentionally stay as shared `Model<T>` handles on manual/advanced
+    /// surfaces. Prefer `selector_layout(...)` when the inputs are view-owned `LocalState<T>`.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_model_layout<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: ModelSelectorInputs<'a, H>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Layout),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
+    /// Grouped selector path for explicit shared `Model<T>` bags that affect paint-time derived
+    /// values.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_model_paint<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: ModelSelectorInputs<'a, H>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Paint),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Paint)),
+        )
+    }
+
     #[track_caller]
     #[cfg(feature = "state-selector")]
     pub fn selector<Deps, TValue>(
@@ -1535,6 +1677,46 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
             self.cx,
             move |cx| inputs.deps_in(cx, Invalidation::Layout),
             move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `UiCx` helpers when
+    /// the derived value affects layout.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_model_layout<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: ModelSelectorInputs<'a, crate::app::App>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Layout),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `UiCx` helpers when
+    /// the derived value affects paint.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_model_paint<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: ModelSelectorInputs<'a, crate::app::App>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Paint),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Paint)),
         )
     }
 
@@ -2924,6 +3106,7 @@ mod tests {
         assert!(!api_source.contains("pub trait LocalSelectorDepsBuilderExt"));
         assert!(api_source.contains("pub(crate) trait LocalSelectorDepsBuilderExt"));
         assert!(api_source.contains("pub trait LocalSelectorLayoutInputs"));
+        assert!(api_source.contains("pub trait ModelSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadLayoutExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait AppUiRawActionNotifyExt"));
@@ -2937,6 +3120,8 @@ mod tests {
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
         assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
+        assert!(api_source.contains("pub fn selector_model_layout<Inputs, TValue>("));
+        assert!(api_source.contains("pub fn selector_model_paint<Inputs, TValue>("));
         assert!(!api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
         assert!(!api_source.contains("pub fn selector_keyed<K: Hash, Deps, TValue>("));
         assert!(api_source.contains("pub fn invalidate_query<T: Any + Send + Sync + 'static>("));

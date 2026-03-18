@@ -14,6 +14,7 @@
 
 use std::sync::Arc;
 
+use fret::advanced::view::UiCxDataExt as _;
 use fret_app::{App, Effect};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::{
@@ -34,7 +35,6 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, Space, UiExt};
@@ -161,74 +161,35 @@ impl CustomEffectV2IdentityWebDriver {
         cx: &mut ElementContext<'_, App>,
         controls: &DemoControls,
     ) -> CustomEffectV2IdentityWebViewSettings {
-        let enabled = controls.enabled.clone();
-        let mode = controls.mode.clone();
-        let quality = controls.quality.clone();
-        let sampling = controls.sampling.clone();
-        let uv_span = controls.uv_span.clone();
-        let mix01 = controls.mix01.clone();
-        let debug_input = controls.debug_input.clone();
-        let enabled_deps = enabled.clone();
-        let mode_deps = mode.clone();
-        let quality_deps = quality.clone();
-        let sampling_deps = sampling.clone();
-        let uv_span_deps = uv_span.clone();
-        let mix01_deps = mix01.clone();
-        let debug_input_deps = debug_input.clone();
-        cx.data().selector(
-            move |cx| {
-                cx.observe_model(&enabled_deps, Invalidation::Paint);
-                cx.observe_model(&mode_deps, Invalidation::Paint);
-                cx.observe_model(&quality_deps, Invalidation::Paint);
-                cx.observe_model(&sampling_deps, Invalidation::Paint);
-                cx.observe_model(&uv_span_deps, Invalidation::Paint);
-                cx.observe_model(&mix01_deps, Invalidation::Paint);
-                cx.observe_model(&debug_input_deps, Invalidation::Paint);
-                [
-                    cx.app.models().revision(&enabled_deps).unwrap_or(0),
-                    cx.app.models().revision(&mode_deps).unwrap_or(0),
-                    cx.app.models().revision(&quality_deps).unwrap_or(0),
-                    cx.app.models().revision(&sampling_deps).unwrap_or(0),
-                    cx.app.models().revision(&uv_span_deps).unwrap_or(0),
-                    cx.app.models().revision(&mix01_deps).unwrap_or(0),
-                    cx.app.models().revision(&debug_input_deps).unwrap_or(0),
-                ]
-            },
-            move |cx| CustomEffectV2IdentityWebViewSettings {
-                enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
-                mode_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&mode)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "backdrop".to_string()),
-                quality_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&quality)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "high".to_string()),
-                sampling_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&sampling)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "linear".to_string()),
-                uv_span: cx
-                    .app
-                    .models()
-                    .get_cloned(&uv_span)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(1.0)
-                    .clamp(0.05, 1.0),
-                mix01: cx
-                    .app
-                    .models()
-                    .get_cloned(&mix01)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(0.65)
-                    .clamp(0.0, 1.0),
-                debug_input: cx.app.models().get_cloned(&debug_input).unwrap_or(false),
+        cx.data().selector_model_paint(
+            (
+                &controls.enabled,
+                &controls.mode,
+                &controls.quality,
+                &controls.sampling,
+                &controls.uv_span,
+                &controls.mix01,
+                &controls.debug_input,
+            ),
+            |(enabled, mode, quality, sampling, uv_span, mix01, debug_input)| {
+                CustomEffectV2IdentityWebViewSettings {
+                    enabled,
+                    mode_value: mode
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "backdrop".to_string()),
+                    quality_value: quality
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "high".to_string()),
+                    sampling_value: sampling
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "linear".to_string()),
+                    uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
+                    mix01: mix01.first().copied().unwrap_or(0.65).clamp(0.0, 1.0),
+                    debug_input,
+                }
             },
         )
     }

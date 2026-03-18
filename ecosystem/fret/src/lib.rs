@@ -706,8 +706,8 @@ pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
     pub mod view {
         pub use crate::view::{
-            AppUiRenderRootState, ViewWindowState, render_root_with_app_ui, view_init_window,
-            view_view,
+            AppUiRenderRootState, UiCxDataExt, ViewWindowState, render_root_with_app_ui,
+            view_init_window, view_view,
         };
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -3758,6 +3758,7 @@ mod authoring_surface_policy_tests {
         assert!(!root_header.contains("pub mod view;"));
         assert!(advanced_surface.contains("pub mod view {"));
         assert!(advanced_surface.contains("AppUiRenderRootState"));
+        assert!(advanced_surface.contains("UiCxDataExt"));
         assert!(advanced_surface.contains("render_root_with_app_ui"));
         assert!(advanced_surface.contains("ViewWindowState, view_init_window,"));
         assert!(advanced_surface.contains("view_view"));
