@@ -173,6 +173,12 @@ fn table_scroll_fill_layout() -> LayoutStyle {
     layout
 }
 
+fn table_clip_fill_layout() -> LayoutStyle {
+    let mut layout = table_scroll_fill_layout();
+    layout.overflow = Overflow::Clip;
+    layout
+}
+
 fn table_fixed_column_layout(col_w: Px) -> LayoutStyle {
     LayoutStyle {
         size: fret_ui::element::SizeStyle {
@@ -192,6 +198,12 @@ fn table_fixed_column_layout(col_w: Px) -> LayoutStyle {
 fn table_fixed_column_fill_layout(col_w: Px) -> LayoutStyle {
     let mut layout = table_fixed_column_layout(col_w);
     layout.size.height = Length::Fill;
+    layout
+}
+
+fn table_fixed_column_clip_fill_layout(col_w: Px) -> LayoutStyle {
+    let mut layout = table_fixed_column_fill_layout(col_w);
+    layout.overflow = Overflow::Clip;
     layout
 }
 
@@ -5245,15 +5257,7 @@ where
             };
             vec![cx.container(
                 ContainerProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
-                        layout.flex.grow = 1.0;
-                        layout.flex.basis = Length::Px(Px(0.0));
-                        layout.overflow = Overflow::Clip;
-                        layout
-                    },
+                    layout: table_clip_fill_layout(),
                     background: Some(table_bg),
                     border: if props.draw_frame {
                         Edges::all(Px(1.0))
@@ -6807,15 +6811,10 @@ where
                                                                                                                     cell_py,
                                                                                                                 )
                                                                                                                 .into(),
-                                                                                                                layout: {
-                                                                                                                    let mut layout =
-                                                                                                                        table_fixed_column_fill_layout(
-                                                                                                                            col_w,
-                                                                                                                        );
-                                                                                                                    layout.overflow =
-                                                                                                                        Overflow::Clip;
-                                                                                                                    layout
-                                                                                                                },
+                                                                                                                layout:
+                                                                                                                    table_fixed_column_clip_fill_layout(
+                                                                                                                        col_w,
+                                                                                                                    ),
                                                                                                                 ..Default::default()
                                                                                                             },
                                                                                                             |cx| {
@@ -6871,14 +6870,10 @@ where
                                                                                                     } else {
                                                                                                         Some(border)
                                                                                                     },
-                                                                                                    layout: {
-                                                                                                        let mut layout =
-                                                                                                            table_fixed_column_fill_layout(
-                                                                                                                col_w,
-                                                                                                            );
-                                                                                                        layout.overflow = Overflow::Clip;
-                                                                                                        layout
-                                                                                                    },
+                                                                                                    layout:
+                                                                                                        table_fixed_column_clip_fill_layout(
+                                                                                                            col_w,
+                                                                                                        ),
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             |cx| {
