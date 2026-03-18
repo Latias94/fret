@@ -128,8 +128,6 @@ The following remain valid, but should not be the first-contact story:
 
 Land:
 
-- `cx.actions().action(act::Save)`
-- `cx.actions().action_payload(act::RemoveTodo, payload)`
 - `cx.actions().listen(...)`
 - `cx.actions().dispatch::<A>()`
 - `cx.actions().dispatch_payload::<A>(payload)`
@@ -195,8 +193,8 @@ Trait boundary:
   `CheckpointTrigger` also stay off the bridge table for the same reason,
 - Material 3 wrappers that already ship native `.action(...)` such as `Card`, `DialogAction`,
   and `TopAppBarAction` also stay off the bridge table for the same reason,
-- powered internally by `cx.actions().action(...)` / `action_payload(...)` / `listen(...)`,
-  with `dispatch` / `dispatch_payload` / `listener` kept as equivalent explicit aliases,
+- final shipped direction keeps the host-side seam on `cx.actions().listen(...)` only, while
+  activation-only typed dispatch stays on the explicit widget-side `AppActivateExt` bridge,
 - kept off `crates/fret-ui` and off component-policy crates.
 - custom widgets join this lane by implementing `fret::app::AppActivateSurface` and forwarding
   their `on_activate(...)` slot.

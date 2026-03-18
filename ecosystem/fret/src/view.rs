@@ -1166,25 +1166,6 @@ fn uicx_on_action_availability<A>(
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
-    /// Build a widget-local activation handler using the same action-first vocabulary as widgets
-    /// that already expose `.action(...)`.
-    pub fn action<A>(self, _action: A) -> OnActivate
-    where
-        A: crate::TypedAction,
-    {
-        dispatch_action_listener::<A>()
-    }
-
-    /// Build a widget-local activation handler that dispatches a typed payload action while
-    /// keeping the action marker on the call site.
-    pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate
-    where
-        A: crate::actions::TypedPayloadAction,
-        A::Payload: Clone,
-    {
-        dispatch_payload_action_listener::<A>(payload)
-    }
-
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
     pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
@@ -1307,25 +1288,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
 }
 
 impl<'cx, 'a> UiCxActions<'cx, 'a> {
-    /// Build a widget-local activation handler using the same action-first vocabulary as widgets
-    /// that already expose `.action(...)`.
-    pub fn action<A>(self, _action: A) -> OnActivate
-    where
-        A: crate::TypedAction,
-    {
-        dispatch_action_listener::<A>()
-    }
-
-    /// Build a widget-local activation handler that dispatches a typed payload action while
-    /// keeping the action marker on the call site.
-    pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate
-    where
-        A: crate::actions::TypedPayloadAction,
-        A::Payload: Clone,
-    {
-        dispatch_payload_action_listener::<A>(payload)
-    }
-
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
     pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
@@ -2851,8 +2813,8 @@ mod tests {
         assert!(api_source.contains(
             "fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> Self"
         ));
-        assert!(api_source.contains("pub fn action<A>(self, _action: A) -> OnActivate"));
-        assert!(api_source.contains(
+        assert!(!api_source.contains("pub fn action<A>(self, _action: A) -> OnActivate"));
+        assert!(!api_source.contains(
             "pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate"
         ));
         assert!(!api_source.contains("fn dispatch<A>(self) -> Self"));

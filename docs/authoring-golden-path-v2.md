@@ -113,8 +113,9 @@ If a row helper genuinely needs the inner keyed child scope, drop to
 Custom app-facing widgets can opt into this lane by implementing
 `fret::app::AppActivateSurface` and forwarding their `on_activate(...)` slot.
 If you intentionally need the lower-level host-side seam, prefer
-`cx.actions().action(act::Save)` / `cx.actions().action_payload(act::RemoveTodo, todo.id)` /
-`cx.actions().listen(...)`.
+`cx.actions().listen(...)`. For activation-only typed dispatch, import
+`use fret::app::AppActivateExt as _;` explicitly and stay on widget-local
+`.action(...)` / `.action_payload(...)`.
 
 ## Why this exists (product goal)
 

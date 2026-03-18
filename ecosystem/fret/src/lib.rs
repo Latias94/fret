@@ -2952,9 +2952,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(|host, acx| { ... })`"));
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::app::AppActivateExt as _;`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().listen(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`tx.value(&local)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
@@ -3048,11 +3048,8 @@ mod authoring_surface_policy_tests {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(|host, acx| { ... })`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`use fret::app::AppActivateExt as _;`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
-        assert!(
-            AUTHORING_GOLDEN_PATH_V2
-                .contains("`cx.actions().action_payload(act::RemoveTodo, todo.id)`")
-        );
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action_payload("));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
@@ -3260,7 +3257,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("only first-contact component-family discovery"));
+        assert!(CRATE_USAGE_GUIDE.contains("component-family discovery lane"));
         assert!(
             CRATE_USAGE_GUIDE.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes")
         );
@@ -3754,7 +3751,8 @@ mod authoring_surface_policy_tests {
         assert!(!root_header.contains("pub mod view;"));
         assert!(advanced_surface.contains("pub mod view {"));
         assert!(advanced_surface.contains("ViewWindowState, view_init_window,"));
-        assert!(advanced_surface.contains("view_record_engine_frame, view_view,"));
+        assert!(advanced_surface.contains("view_view"));
+        assert!(advanced_surface.contains("view_record_engine_frame"));
     }
 
     #[test]
