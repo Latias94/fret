@@ -442,11 +442,6 @@ struct ContextMenuCancelOpenState {
 
 type ContextMenuCancelOpenShared = Arc<Mutex<ContextMenuCancelOpenState>>;
 
-#[derive(Default)]
-struct ContextMenuTriggerTimerInstalledState {
-    installed: bool,
-}
-
 fn context_menu_cancel_open_shared() -> ContextMenuCancelOpenShared {
     Arc::new(Mutex::new(ContextMenuCancelOpenState::default()))
 }
@@ -3429,9 +3424,10 @@ impl ContextMenu {
                 menu::context_menu_anchor_store_model(cx.app);
 
             let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
-            // Keep pending touch long-press state stable while the trigger subtree rerenders.
+            // Keep pending touch long-press state tied to the menu instance rather than the
+            // current render root so timer dispatch survives owner churn.
             let touch_long_press: menu::ContextMenuTouchLongPress =
-                cx.root_state(menu::context_menu_touch_long_press, |state| state.clone());
+                menu::context_menu_touch_long_press_for_open_model(cx.app, &open);
             let pointer_policy = Arc::new({
                 let anchor_store_model = anchor_store_model.clone();
                 let touch_long_press = touch_long_press.clone();
@@ -3529,44 +3525,26 @@ impl ContextMenu {
                         touch_on_cancel(host, acx, cancel)
                     }));
                     let region_id = cx.root_id();
-                    let installed = cx.state_for(
+                    let cancel_open_for_timer = cancel_open_for_region.clone();
+                    cx.timer_on_timer_for(
                         region_id,
-                        ContextMenuTriggerTimerInstalledState::default,
-                        |st| st.installed,
-                    );
-                    if !installed {
-                        let cancel_open_for_timer = cancel_open_for_region.clone();
-                        cx.timer_add_on_timer_for(
-                            region_id,
-                            Arc::new(move |host, action_cx, token| {
-                                context_menu_cancel_open_on_timer(
-                                    &cancel_open_for_timer,
-                                    host,
-                                    token,
-                                );
-                                let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
-                                    &touch_long_press_for_timer,
-                                    token,
-                                ) else {
-                                    return false;
-                                };
+                        Arc::new(move |host, action_cx, token| {
+                            context_menu_cancel_open_on_timer(&cancel_open_for_timer, host, token);
+                            let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
+                                &touch_long_press_for_timer,
+                                token,
+                            ) else {
+                                return false;
+                            };
 
-                                let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
-                                    map.insert(open_model_id, anchor);
-                                });
-                                let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
-                                host.request_redraw(action_cx.window);
-                                true
-                            }),
-                        );
-                        cx.state_for(
-                            region_id,
-                            ContextMenuTriggerTimerInstalledState::default,
-                            |st| {
-                                st.installed = true;
-                            },
-                        );
-                    }
+                            let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
+                                map.insert(open_model_id, anchor);
+                            });
+                            let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
+                            host.request_redraw(action_cx.window);
+                            true
+                        }),
+                    );
                     vec![trigger_element]
                 })
             });
@@ -5634,6 +5612,78 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger_with_owner_rekey(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        use_alt_owner_key: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-touch-long-press-owner-rekey",
+            move |cx| {
+                let use_alt_owner_key = cx
+                    .watch_model(&use_alt_owner_key)
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+
+                let owner_key = if use_alt_owner_key {
+                    "owner-b"
+                } else {
+                    "owner-a"
+                };
+
+                vec![cx.keyed(owner_key, |cx| {
+                    ContextMenu::from_open(open).into_element(
+                        cx,
+                        |cx| {
+                            cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st| {
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            )
+                        },
+                        |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                    )
+                })]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_focusable_trigger_with_debug_cancel_open(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -5781,32 +5831,18 @@ mod tests {
                                 false
                             }));
                             let region_id = cx.root_id();
-                            let installed = cx.state_for(
+                            let cancel_open_for_timer = cancel_open_for_region.clone();
+                            cx.timer_on_timer_for(
                                 region_id,
-                                ContextMenuTriggerTimerInstalledState::default,
-                                |st| st.installed,
+                                Arc::new(move |host, _acx, token| {
+                                    context_menu_cancel_open_on_timer(
+                                        &cancel_open_for_timer,
+                                        host,
+                                        token,
+                                    );
+                                    false
+                                }),
                             );
-                            if !installed {
-                                let cancel_open_for_timer = cancel_open_for_region.clone();
-                                cx.timer_add_on_timer_for(
-                                    region_id,
-                                    Arc::new(move |host, _acx, token| {
-                                        context_menu_cancel_open_on_timer(
-                                            &cancel_open_for_timer,
-                                            host,
-                                            token,
-                                        );
-                                        false
-                                    }),
-                                );
-                                cx.state_for(
-                                    region_id,
-                                    ContextMenuTriggerTimerInstalledState::default,
-                                    |st| {
-                                        st.installed = true;
-                                    },
-                                );
-                            }
                             vec![trigger]
                         })
                     },
@@ -6132,7 +6168,10 @@ mod tests {
         let trigger_b = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
             .expect("focusable trigger after rekey");
-        assert_ne!(trigger_a, trigger_b, "expected trigger subtree rekey to replace the trigger node");
+        assert_ne!(
+            trigger_a, trigger_b,
+            "expected trigger subtree rekey to replace the trigger node"
+        );
 
         ui.dispatch_event(
             &mut app,
@@ -6150,6 +6189,111 @@ mod tests {
             bounds,
             open.clone(),
             use_alt_trigger_key,
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_survives_owner_rekey() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(false);
+        let use_alt_owner_key = app.models_mut().insert(false);
+
+        let root = render_frame_focusable_trigger_with_owner_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_owner_key.clone(),
+        );
+
+        let trigger_before = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger before owner rekey");
+        let trigger_bounds = ui
+            .debug_node_bounds(trigger_before)
+            .expect("trigger bounds before owner rekey");
+        let touch_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(11),
+                position: touch_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let long_press_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. }
+                if *after == menu::CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY =>
+            {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(long_press_token) = long_press_token else {
+            panic!("expected touch long-press timer; effects={effects:?}");
+        };
+
+        let _ = app
+            .models_mut()
+            .update(&use_alt_owner_key, |value| *value = true);
+        let root = render_frame_focusable_trigger_with_owner_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_owner_key.clone(),
+        );
+
+        let trigger_after = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger after owner rekey");
+        assert_ne!(
+            trigger_before, trigger_after,
+            "expected owner rekey to replace the trigger subtree"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer {
+                token: long_press_token,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_owner_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_owner_key,
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
     }

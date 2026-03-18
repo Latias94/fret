@@ -48,6 +48,28 @@ pub fn context_menu_touch_long_press() -> ContextMenuTouchLongPress {
 }
 
 #[derive(Default)]
+struct ContextMenuTouchLongPressStore {
+    by_open_model: HashMap<ModelId, ContextMenuTouchLongPress>,
+}
+
+/// Returns a shared touch long-press state keyed by the context menu's open model id.
+///
+/// The pending long-press interaction should survive render-root churn as long as the menu
+/// instance itself is still represented by the same `open` model.
+pub fn context_menu_touch_long_press_for_open_model<H: UiHost>(
+    app: &mut H,
+    open: &Model<bool>,
+) -> ContextMenuTouchLongPress {
+    let open_model_id = open.id();
+    app.with_global_mut_untracked(ContextMenuTouchLongPressStore::default, |st, _app| {
+        st.by_open_model
+            .entry(open_model_id)
+            .or_insert_with(context_menu_touch_long_press)
+            .clone()
+    })
+}
+
+#[derive(Default)]
 struct ContextMenuAnchorStore {
     by_open_model: Option<Model<HashMap<ModelId, Point>>>,
 }
