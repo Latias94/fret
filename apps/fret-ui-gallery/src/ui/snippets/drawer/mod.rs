@@ -8,6 +8,7 @@
 
 pub mod demo;
 pub mod nested;
+pub mod outside_press;
 pub mod responsive_dialog;
 pub mod rtl;
 pub mod scrollable_content;

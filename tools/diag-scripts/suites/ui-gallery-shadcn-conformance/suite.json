@@ -83,6 +83,8 @@
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json",
     "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-docs-smoke.json",
     "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-nested-child-drag-routing.json",
+    "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json",
+    "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-responsive-mobile-open-screenshot.json",
     "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json",
     "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-click-profile-last-action.json",
     "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-open-screenshot-zinc-dark.json",

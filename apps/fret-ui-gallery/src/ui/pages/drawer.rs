@@ -9,6 +9,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let usage = snippets::usage::render(cx);
     let snap_points = snippets::snap_points::render(cx);
     let nested = snippets::nested::render(cx);
+    let outside_press = snippets::outside_press::render(cx);
     let scrollable_content = snippets::scrollable_content::render(cx);
     let sides = snippets::sides::render(cx);
     let responsive_dialog = snippets::responsive_dialog::render(cx);
@@ -30,11 +31,12 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/drawer.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx` and Vaul docs.",
         "Preview mirrors the shadcn Drawer docs path after the prose-only `About` and `Installation` sections: `Demo`, `Usage`, `Scrollable Content`, `Sides`, `Responsive Dialog`, `RTL`, and `API Reference`.",
-        "`Usage` is the default copyable path; `Snap Points` and `Nested Drawers` stay after `API Reference` as explicit Vaul/Fret follow-ups instead of being mixed into the docs path.",
+        "`Usage` is the default copyable path; `Snap Points`, `Nested Drawers`, and `Outside Press` stay after `API Reference` as explicit Vaul/Fret follow-ups instead of being mixed into the docs path.",
         "The docs-path examples now share the same `Drawer::children([...])` root lane, while `Drawer::compose()` remains the builder-first alternative without pushing children API concerns into the mechanism layer.",
         "Docs-path footer close actions now consistently use `DrawerClose::from_scope().build(cx, child)` so the copyable lane stays aligned with upstream `DrawerClose asChild` intent.",
         "Base UI-only policy variants such as `modal={false|'trap-focus'}` now exist as follow-up API, but they are intentionally not taught on this page because the shadcn docs path stays modal-first.",
         "Controlled snap points now exist as an authored-index follow-up surface, and nested non-modal child drawers now route drag input above the parent barrier while still suppressing parent drag and tracking frontmost child height.",
+        "`Outside Press` is a gallery-only follow-up probe surface that makes modal dismissal and focus-restore evidence deterministic without widening the core recipe API.",
         "Modal-on-modal nested swipe choreography and background indentation remain wider follow-up work than the shadcn docs path.",
         "`Demo`, `Responsive Dialog`, and `RTL` keep the official inner content structure (centered max-width body, profile form layout, goal-adjust controls) so gallery visuals stay close to shadcn docs instead of only proving the raw mechanism works.",
         "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
@@ -81,11 +83,14 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let nested = DocSection::build(cx, "Nested Drawers", nested)
         .description("Base UI/Fret follow-up: parent modal drawer plus child `modal(false)` drawer, with child-first drag routing kept intact.")
         .code_rust_from_file_region(snippets::nested::SOURCE, "example");
+    let outside_press = DocSection::build(cx, "Outside Press", outside_press)
+        .description("Gallery-only follow-up: modal outside press closes the drawer and restores focus to the trigger while the underlay probe stays inert.")
+        .code_rust_from_file_region(snippets::outside_press::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Drawer docs path after `About` and `Installation`, then keeps Vaul-specific `Snap Points` and Base UI-oriented `Nested Drawers` as focused follow-ups.",
+            "Preview mirrors the shadcn Drawer docs path after `About` and `Installation`, then keeps Vaul-specific `Snap Points` plus Base UI/Fret-oriented `Nested Drawers` and `Outside Press` as focused follow-ups.",
         ),
         vec![
             demo,
@@ -97,6 +102,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             api_reference,
             snap_points,
             nested,
+            outside_press,
             notes,
         ],
     );

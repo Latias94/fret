@@ -5280,6 +5280,41 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-drawer-outside-press-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-outside-press-focus-restore.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "drawer",
+        "focus",
+        "outside_press",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI Gallery Drawer page and scroll to the gallery-only outside-press follow-up.",
+        "Click the dedicated underlay probe while the modal drawer is open.",
+        "Assert the drawer closes and focus returns to the trigger instead of leaking the click into the probe."
+      ]
+    },
+    {
+      "id": "ui-gallery-drawer-responsive-mobile-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-responsive-mobile-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
       "required_capabilities": [],
