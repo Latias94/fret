@@ -1,15 +1,9 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::{FretApp, advanced::prelude::*};
 use fret_ui_shadcn::facade as shadcn;
 
-struct ImUiShadcnAdapterView {
-    count: Model<u32>,
-    enabled: Model<bool>,
-    value: Model<f32>,
-    mode: Model<Option<Arc<str>>>,
-    draft: Model<String>,
-}
+struct ImUiShadcnAdapterView;
 
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-shadcn-adapter-demo")
@@ -27,21 +21,21 @@ impl View for ImUiShadcnAdapterView {
             shadcn::themes::ShadcnColorScheme::Light,
         );
 
-        Self {
-            count: app.models_mut().insert(0),
-            enabled: app.models_mut().insert(false),
-            value: app.models_mut().insert(32.0),
-            mode: app.models_mut().insert(None::<Arc<str>>),
-            draft: app.models_mut().insert(String::new()),
-        }
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let count = self.count.layout(cx).value_or_default();
-        let enabled = self.enabled.paint(cx).value_or_default();
-        let value = self.value.paint(cx).value_or_default();
-        let mode = self.mode.paint(cx).value_or_default();
-        let draft = self.draft.paint(cx).value_or_default();
+        let count_state = cx.state().local_init(|| 0u32);
+        let enabled_state = cx.state().local_init(|| false);
+        let value_state = cx.state().local_init(|| 32.0f32);
+        let mode_state = cx.state().local_init(|| None::<Arc<str>>);
+        let draft_state = cx.state().local_init(String::new);
+
+        let count = count_state.layout_value(cx);
+        let enabled = enabled_state.paint_value(cx);
+        let value = value_state.paint_value(cx);
+        let mode = mode_state.paint_value(cx);
+        let draft = draft_state.paint_value(cx);
 
         let mode_label: Arc<str> = mode.unwrap_or_else(|| Arc::from("none"));
 
@@ -89,18 +83,14 @@ impl View for ImUiShadcnAdapterView {
             ui.add(summary_card);
 
             if ui.button("Increment count (imui button)").clicked() {
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&self.count, |v| *v += 1);
+                let _ = count_state.update_in(ui.cx_mut().app.models_mut(), |v| *v += 1);
             }
 
-            let _ = ui.toggle_model("Enabled (toggle wrapper)", &self.enabled);
+            let _ = ui.toggle_model("Enabled (toggle wrapper)", enabled_state.model());
 
             let _ = ui.slider_f32_model_ex(
                 "Value",
-                &self.value,
+                value_state.model(),
                 SliderOptions {
                     min: 0.0,
                     max: 100.0,
@@ -111,7 +101,7 @@ impl View for ImUiShadcnAdapterView {
 
             let _ = ui.select_model_ex(
                 "Mode",
-                &self.mode,
+                mode_state.model(),
                 &select_items,
                 fret_ui_kit::imui::SelectOptions {
                     test_id: Some(Arc::from("imui-shadcn-demo.mode")),
@@ -120,7 +110,7 @@ impl View for ImUiShadcnAdapterView {
             );
 
             let _ = ui.input_text_model_ex(
-                &self.draft,
+                draft_state.model(),
                 InputTextOptions {
                     placeholder: Some(Arc::from("Type some text...")),
                     ..Default::default()

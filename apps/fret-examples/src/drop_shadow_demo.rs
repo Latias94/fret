@@ -12,7 +12,6 @@ use std::sync::Arc;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuality, EffectStep};
 use fret_core::{Corners, Edges, Point, Px};
-use fret_runtime::Model;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacerProps};
 use fret_ui_kit::{IntoUiElement, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
@@ -124,29 +123,19 @@ fn card<H: UiHost>(
     )
 }
 
-#[derive(Clone)]
-struct DropShadowDemoState {
-    enabled: Model<bool>,
-    stress: Model<bool>,
-}
-
-struct DropShadowDemoView {
-    st: DropShadowDemoState,
-}
+struct DropShadowDemoView;
 
 impl View for DropShadowDemoView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        Self {
-            st: DropShadowDemoState {
-                enabled: app.models_mut().insert(false),
-                stress: app.models_mut().insert(false),
-            },
-        }
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let enabled = self.st.enabled.layout(cx).value_or_default();
-        let stress = self.st.stress.layout(cx).value_or_default();
+        let enabled_state = cx.state().local_init(|| false);
+        let stress_state = cx.state().local_init(|| false);
+
+        let enabled = enabled_state.layout_value(cx);
+        let stress = stress_state.layout_value(cx);
 
         let stage = cx.container(
             ContainerProps {
@@ -251,7 +240,7 @@ impl View for DropShadowDemoView {
                             shadcn::Separator::new().into_element(cx),
                             ui::h_row(|cx| {
                                 [
-                                    shadcn::Switch::new(self.st.enabled.clone())
+                                    shadcn::Switch::new(enabled_state.clone_model())
                                         .a11y_label("Enable drop shadow")
                                         .test_id("drop-shadow-switch-enabled")
                                         .into_element(cx),
@@ -263,7 +252,7 @@ impl View for DropShadowDemoView {
                             .into_element(cx),
                             ui::h_row(|cx| {
                                 [
-                                    shadcn::Switch::new(self.st.stress.clone())
+                                    shadcn::Switch::new(stress_state.clone_model())
                                         .a11y_label("Enable stress grid")
                                         .test_id("drop-shadow-switch-stress")
                                         .into_element(cx),

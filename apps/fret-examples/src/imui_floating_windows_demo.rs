@@ -1,15 +1,11 @@
 use std::sync::Arc;
 
-use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret::{FretApp, advanced::prelude::*};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_imui::prelude::UiWriter;
 use fret_ui_kit::on_activate_notify;
 
-struct ImUiFloatingWindowsView {
-    open_a: Model<bool>,
-    select_mode: Model<Option<Arc<str>>>,
-    a_overlap_clicked: Model<bool>,
-}
+struct ImUiFloatingWindowsView;
 
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("imui-floating-windows-demo")
@@ -20,15 +16,15 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 impl View for ImUiFloatingWindowsView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        Self {
-            open_a: app.models_mut().insert(true),
-            select_mode: app.models_mut().insert(None::<Arc<str>>),
-            a_overlap_clicked: app.models_mut().insert(false),
-        }
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let open_a_state = cx.state().local_init(|| true);
+        let select_mode_state = cx.state().local_init(|| None::<Arc<str>>);
+        let a_overlap_clicked_state = cx.state().local_init(|| false);
+
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
             use fret_ui_kit::imui::UiWriterUiKitExt as _;
@@ -80,13 +76,13 @@ impl View for ImUiFloatingWindowsView {
                 let resp = ui.window_open_resizable(
                     id,
                     "Window A",
-                    &self.open_a,
+                    open_a_state.model(),
                     initial_position,
                     initial_size,
                     |ui| {
                         ui.vertical(|ui| {
                             ui.mount(|cx| {
-                                let clicked_model = self.a_overlap_clicked.clone();
+                                let clicked_model = a_overlap_clicked_state.clone_model();
 
                                 let activate = cx.pressable(
                                     {
@@ -123,13 +119,7 @@ impl View for ImUiFloatingWindowsView {
                                     },
                                 );
 
-                                let clicked = cx
-                                    .read_model(
-                                        &self.a_overlap_clicked,
-                                        fret_ui::Invalidation::Paint,
-                                        |_app, v| *v,
-                                    )
-                                    .unwrap_or(false);
+                                let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);
 
                                 let clicked_label = clicked.then(|| {
                                     cx.text("A overlap clicked").attach_semantics(
@@ -196,7 +186,7 @@ impl View for ImUiFloatingWindowsView {
                             ];
                             let _ = ui.select_model_ex(
                                 "Mode",
-                                &self.select_mode,
+                                select_mode_state.model(),
                                 &select_items,
                                 fret_ui_kit::imui::SelectOptions {
                                     test_id: Some(Arc::from("imui-float-demo.select")),

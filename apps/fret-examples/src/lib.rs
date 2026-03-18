@@ -941,7 +941,7 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn examples_source_tree_limits_raw_action_notify_to_markdown_demo() {
+    fn examples_source_tree_avoids_raw_action_notify_helpers() {
         let mut raw_action_notify_files = Vec::new();
 
         for path in examples_rust_sources() {
@@ -964,10 +964,7 @@ mod authoring_surface_policy_tests {
             }
         }
 
-        assert_eq!(
-            raw_action_notify_files,
-            vec!["markdown_demo.rs".to_string()],
-        );
+        assert_eq!(raw_action_notify_files, Vec::<String>::new());
     }
 
     #[test]
@@ -1633,6 +1630,47 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            DROP_SHADOW_DEMO,
+            &[
+                "let enabled_state = cx.state().local_init(|| false);",
+                "let stress_state = cx.state().local_init(|| false);",
+                "let enabled = enabled_state.layout_value(cx);",
+                "let stress = stress_state.layout_value(cx);",
+                "shadcn::Switch::new(enabled_state.clone_model())",
+                "shadcn::Switch::new(stress_state.clone_model())",
+            ],
+            &[
+                "enabled: app.models_mut().insert(false)",
+                "stress: app.models_mut().insert(false)",
+                "self.st.enabled.layout(cx).value_or_default()",
+                "self.st.stress.layout(cx).value_or_default()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_FLOATING_WINDOWS_DEMO,
+            &[
+                "let open_a_state = cx.state().local_init(|| true);",
+                "let select_mode_state = cx.state().local_init(|| None::<Arc<str>>);",
+                "let a_overlap_clicked_state = cx.state().local_init(|| false);",
+                "\"Window A\",",
+                "open_a_state.model(),",
+                "let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);",
+                "\"Mode\",",
+                "select_mode_state.model(),",
+            ],
+            &[
+                "open_a: app.models_mut().insert(true)",
+                "select_mode: app.models_mut().insert(None::<Arc<str>>)",
+                "a_overlap_clicked: app.models_mut().insert(false)",
+                "&self.open_a",
+                "read_model(",
+                "&self.a_overlap_clicked",
+                "&self.select_mode",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             IMUI_RESPONSE_SIGNALS_DEMO,
             &[
                 "let left_clicks = cx.state().local_init(|| 0u32);",
@@ -1651,15 +1689,66 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_SHADCN_ADAPTER_DEMO,
+            &[
+                "let count_state = cx.state().local_init(|| 0u32);",
+                "let enabled_state = cx.state().local_init(|| false);",
+                "let value_state = cx.state().local_init(|| 32.0f32);",
+                "let mode_state = cx.state().local_init(|| None::<Arc<str>>);",
+                "let draft_state = cx.state().local_init(String::new);",
+                "let count = count_state.layout_value(cx);",
+                "let enabled = enabled_state.paint_value(cx);",
+                "let value = value_state.paint_value(cx);",
+                "let mode = mode_state.paint_value(cx);",
+                "let draft = draft_state.paint_value(cx);",
+                "let _ = ui.toggle_model(\"Enabled (toggle wrapper)\", enabled_state.model());",
+            ],
+            &[
+                "count: app.models_mut().insert(0)",
+                "enabled: app.models_mut().insert(false)",
+                "value: app.models_mut().insert(32.0)",
+                "mode: app.models_mut().insert(None::<Arc<str>>)",
+                "draft: app.models_mut().insert(String::new())",
+                "let count = self.count.layout(cx).value_or_default();",
+                "let enabled = self.enabled.paint(cx).value_or_default();",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
+                "selected: cx.state().local_init(|| QueryId::Tip),",
+                "dark: cx.state().local_init(|| false),",
+                "global_slow: cx.state().local_init(|| false),",
+                "tabs: cx.state().local_init(|| Some(Arc::<str>::from(\"async\"))),",
+                "search_input: cx.state().local_init(|| \"react\".to_string()),",
+                "stock_symbol: cx.state().local_init(|| \"FRET\".to_string()),",
+                "let selected = locals.selected.layout_value(cx);",
+                "let dark = locals.dark.layout_value(cx);",
+                "let global_slow = locals.global_slow.layout_value(cx);",
+                "let namespace_input = locals.namespace_input.layout_value(cx);",
+                ".locals_with((&locals.selected, &locals.namespace_input))",
+                "cx.actions().toggle_local_bool::<act::ToggleTheme>(&locals.dark);",
+                "shadcn::Switch::new(locals.global_slow.clone_model())",
+                "shadcn::Tabs::new(locals.tabs.clone_model())",
+                "shadcn::Input::new(&locals.namespace_input)",
+                "shadcn::Input::new(&locals.search_input)",
+                "shadcn::Input::new(&locals.stock_symbol)",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED)",
-                "cx.actions().models::<act::SelectTip>({",
                 "cx.actions().transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);",
             ],
             &[
+                "selected: app.models_mut().insert(QueryId::Tip)",
+                "dark: app.models_mut().insert(false)",
+                "global_slow: app.models_mut().insert(false)",
+                "tabs: app.models_mut().insert(Some(Arc::<str>::from(\"async\")))",
+                "namespace_input: app.models_mut().insert(\"tip\".to_string())",
+                "search_input: app.models_mut().insert(\"react\".to_string())",
+                "stock_symbol: app.models_mut().insert(\"FRET\".to_string())",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED)",
                 "cx.on_action_notify_models::<act::SelectTip>",
+                "cx.actions().models::<act::SelectTip>({",
+                "cx.actions().models::<act::ToggleTheme>({",
                 "cx.on_action_notify_transient::<act::InvalidateSelected>",
             ],
         );
@@ -1717,17 +1806,21 @@ mod authoring_surface_policy_tests {
             &[
                 "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
-                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({",
-                "let pending = self.st.pending_anchor.layout(cx).value_or_default();",
-                "let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();",
-                "let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();",
+                "cx.actions().payload_local_update_if::<act::ToggleCodeBlockExpand, HashSet<markdown::BlockId>>(",
+                "let pending = pending_anchor.layout_value(cx);",
+                "let wrap_enabled = wrap_code_state.layout_value(cx);",
+                "let cap_enabled = cap_code_height_state.layout_value(cx);",
+                "components.on_link_activate = Some(Self::on_link_activate(pending_anchor_state.clone()));",
+                "shadcn::Switch::new(wrap_code_state.clone_model())",
+                "shadcn::Switch::new(cap_code_height_state.clone_model())",
             ],
             &[
                 "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.on_action_notify_transient::<act::RefreshRemoteImages>",
-                "cx.watch_model(&self.st.pending_anchor)",
-                "cx.watch_model(&self.st.wrap_code)",
-                "cx.watch_model(&self.st.cap_code_height)",
+                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({",
+                "self.st.pending_anchor.layout(cx).value_or_default()",
+                "self.st.wrap_code.layout(cx).value_or_default()",
+                "self.st.cap_code_height.layout(cx).value_or_default()",
             ],
         );
     }
