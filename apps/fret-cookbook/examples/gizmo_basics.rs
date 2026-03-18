@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::component::prelude::*;
 use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_core::scene::Paint;
@@ -334,7 +335,7 @@ fn paint_gizmo(
 }
 
 fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState) -> ViewElements {
-    let model = cx.watch_model(&st.model).paint().value_or_default();
+    let model = st.model.paint_in(cx).value_or_default();
 
     let pos = model.transform.translation;
     let pos_len = pos.length() as f64;
@@ -678,14 +679,14 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GizmoBasicsWindowState)
 
     let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
 
-    vec![cx.semantics(
+    cx.semantics(
         SemanticsProps {
             role: SemanticsRole::Group,
             test_id: None,
             ..Default::default()
         },
-        |_cx| vec![root],
-    )]
+        |_cx| root,
+    )
     .into()
 }
 

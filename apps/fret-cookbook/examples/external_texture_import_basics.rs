@@ -1,3 +1,4 @@
+use fret::component::prelude::*;
 use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_core::{AppWindowId, Px, ViewportFit};
@@ -173,14 +174,11 @@ fn view(
 ) -> ViewElements {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let preset = cx.watch_model(&st.preset).paint().value_or_default();
-    let fit = cx
-        .watch_model(&st.fit)
-        .paint()
-        .value_or(ViewportFit::Contain);
-    let target_w = cx.watch_model(&st.target_w).paint().value_or_default();
-    let target_h = cx.watch_model(&st.target_h).paint().value_or_default();
-    let ingest = cx.watch_model(&st.ingest).paint().value_or_default();
+    let preset = st.preset.paint_in(cx).value_or_default();
+    let fit = st.fit.paint_in(cx).value_or(ViewportFit::Contain);
+    let target_w = st.target_w.paint_in(cx).value_or_default();
+    let target_h = st.target_h.paint_in(cx).value_or_default();
+    let ingest = st.ingest.paint_in(cx).value_or_default();
 
     let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
         0 => ((640, 360), "640×360"),
@@ -329,9 +327,7 @@ fn view(
     .h_full()
     .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
-
-    vec![root].into()
+    fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card)
 }
 
 fn record_engine_frame(

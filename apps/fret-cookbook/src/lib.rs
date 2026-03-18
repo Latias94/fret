@@ -198,6 +198,25 @@ mod authoring_surface_policy_tests {
         }
     }
 
+    fn assert_selected_examples_prefer_handle_first_tracked_reads(
+        src: &str,
+        required_markers: &[&str],
+        forbidden_markers: &[&str],
+    ) {
+        let normalized = src.split_whitespace().collect::<String>();
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "legacy marker still present: {marker}"
+            );
+        }
+    }
+
     fn assert_promoted_card_wrapper_family_only(name: &str, src: &str) {
         for forbidden in [
             "shadcn::Card::build(",
@@ -575,9 +594,11 @@ mod authoring_surface_policy_tests {
         assert_uses_advanced_surface(UTILITY_WINDOW_MATERIALS_EXAMPLE);
 
         assert!(DRAG_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};"));
+        assert!(DRAG_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(DRAG_EXAMPLE.contains("UiPointerActionHost"));
 
         assert!(EFFECTS_LAYER_EXAMPLE.contains("UiCx<'_>"));
+        assert!(EFFECTS_LAYER_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(EFFECTS_LAYER_EXAMPLE.contains("cx.actions().models::<act::Pixelate>"));
 
         assert!(DROP_SHADOW_EXAMPLE.contains("UiCx<'_>"));
@@ -675,6 +696,7 @@ mod authoring_surface_policy_tests {
         assert!(
             CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
         );
+        assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("PanZoomCanvasSurfacePanelProps"));
         assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("CanvasPainter"));
         assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("cx.actions().models::<act::ResetView>"));
@@ -717,6 +739,7 @@ mod authoring_surface_policy_tests {
             EMBEDDED_VIEWPORT_EXAMPLE
                 .contains("use fret::advanced::interop::embedded_viewport as embedded;")
         );
+        assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(EMBEDDED_VIEWPORT_EXAMPLE.contains("ui_app_with_hooks("));
         assert!(
             EMBEDDED_VIEWPORT_EXAMPLE
@@ -729,6 +752,7 @@ mod authoring_surface_policy_tests {
         assert!(
             EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};")
         );
+        assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(EXTERNAL_TEXTURE_IMPORT_EXAMPLE.contains("ui_app_with_hooks("));
         assert!(
             EXTERNAL_TEXTURE_IMPORT_EXAMPLE
@@ -741,6 +765,7 @@ mod authoring_surface_policy_tests {
         );
 
         assert!(GIZMO_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
+        assert!(GIZMO_EXAMPLE.contains("use fret::component::prelude::*;"));
         assert!(GIZMO_EXAMPLE.contains("GizmoInput"));
         assert!(GIZMO_EXAMPLE.contains("ui_app_with_hooks("));
         assert!(
@@ -985,6 +1010,89 @@ mod authoring_surface_policy_tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn selected_cookbook_examples_prefer_handle_first_tracked_reads() {
+        assert_selected_examples_prefer_handle_first_tracked_reads(
+            DRAG_EXAMPLE,
+            &[
+                "let origin = self.origin.layout(cx).value_or(Point::new(Px(0.0), Px(0.0)));",
+                "let drag_count = self.drag_count.layout(cx).value_or(0);",
+            ],
+            &[
+                "cx.watch_model(&self.origin)",
+                "cx.watch_model(&self.drag_count)",
+            ],
+        );
+
+        assert_selected_examples_prefer_handle_first_tracked_reads(
+            CANVAS_PAN_ZOOM_EXAMPLE,
+            &[
+                "let view_value = self.view.paint(cx).value_or_default();",
+                "let node_origin = self.node_origin.paint(cx).value_or_default();",
+                "let node_drag_count = self.node_drag_count.paint(cx).value_or_default();",
+            ],
+            &[
+                "cx.watch_model(&self.view)",
+                "cx.watch_model(&self.node_origin)",
+                "cx.watch_model(&self.node_drag_count)",
+            ],
+        );
+
+        assert_selected_examples_prefer_handle_first_tracked_reads(
+            EFFECTS_LAYER_EXAMPLE,
+            &["let effect_kind = self.effect.layout(cx).value_or(EffectKind::None);"],
+            &["cx.watch_model(&self.effect)"],
+        );
+
+        assert_selected_examples_prefer_handle_first_tracked_reads(
+            EXTERNAL_TEXTURE_IMPORT_EXAMPLE,
+            &[
+                "let preset = st.preset.paint_in(cx).value_or_default();",
+                "let fit = st.fit.paint_in(cx).value_or(ViewportFit::Contain);",
+                "let target_w = st.target_w.paint_in(cx).value_or_default();",
+                "let target_h = st.target_h.paint_in(cx).value_or_default();",
+                "let ingest = st.ingest.paint_in(cx).value_or_default();",
+            ],
+            &[
+                "cx.watch_model(&st.preset)",
+                "cx.watch_model(&st.fit)",
+                "cx.watch_model(&st.target_w)",
+                "cx.watch_model(&st.target_h)",
+                "cx.watch_model(&st.ingest)",
+            ],
+        );
+
+        assert_selected_examples_prefer_handle_first_tracked_reads(
+            EMBEDDED_VIEWPORT_EXAMPLE,
+            &[
+                "let clicks = embedded_models.clicks.paint_in(cx).value_or_default();",
+                "let uv_x = diag.uv_x.paint_in(cx).value_or_default();",
+                "let uv_y = diag.uv_y.paint_in(cx).value_or_default();",
+                "let target_w = diag.target_w.paint_in(cx).value_or_default();",
+                "let target_h = diag.target_h.paint_in(cx).value_or_default();",
+                "let kind = diag.kind.paint_in(cx).value_or_default();",
+                "let preset = st.size_preset.paint_in(cx).value_or_default();",
+                "let fit = st.fit.paint_in(cx).value_or(ViewportFit::Contain);",
+            ],
+            &[
+                "cx.watch_model(&embedded_models.clicks)",
+                "cx.watch_model(&diag.uv_x)",
+                "cx.watch_model(&diag.uv_y)",
+                "cx.watch_model(&diag.target_w)",
+                "cx.watch_model(&diag.target_h)",
+                "cx.watch_model(&diag.kind)",
+                "cx.watch_model(&st.size_preset)",
+                "cx.watch_model(&st.fit)",
+            ],
+        );
+
+        assert_selected_examples_prefer_handle_first_tracked_reads(
+            GIZMO_EXAMPLE,
+            &["let model = st.model.paint_in(cx).value_or_default();"],
+            &["cx.watch_model(&st.model)"],
+        );
     }
 
     #[test]

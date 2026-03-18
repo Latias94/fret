@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::component::prelude::*;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::{CursorIcon, MouseButton, Point, PointerId, Px};
 use fret_runtime::DefaultAction;
@@ -37,11 +38,11 @@ impl View for DragBasicsView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let origin = cx
-            .watch_model(&self.origin)
-            .layout()
+        let origin = self
+            .origin
+            .layout(cx)
             .value_or(Point::new(Px(0.0), Px(0.0)));
-        let drag_count = cx.watch_model(&self.drag_count).layout().value_or(0);
+        let drag_count = self.drag_count.layout(cx).value_or(0);
 
         let pos_label = format!("Offset: ({:.0}, {:.0})", origin.x.0, origin.y.0);
 

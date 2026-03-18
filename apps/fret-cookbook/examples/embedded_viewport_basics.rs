@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use fret::advanced::interop::embedded_viewport as embedded;
+use fret::component::prelude::*;
 use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
 use fret_core::{AppWindowId, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind};
@@ -293,17 +294,14 @@ fn view(
         .unwrap_or_else(|| embedded::ensure_models(cx.app, window));
     let diag = diag_models(&*cx.app, window).unwrap_or_else(|| ensure_diag_models(cx.app, window));
 
-    let clicks = cx
-        .watch_model(&embedded_models.clicks)
-        .paint()
-        .value_or_default();
-    let uv_x = cx.watch_model(&diag.uv_x).paint().value_or_default();
-    let uv_y = cx.watch_model(&diag.uv_y).paint().value_or_default();
-    let target_w = cx.watch_model(&diag.target_w).paint().value_or_default();
-    let target_h = cx.watch_model(&diag.target_h).paint().value_or_default();
-    let kind = cx.watch_model(&diag.kind).paint().value_or_default();
+    let clicks = embedded_models.clicks.paint_in(cx).value_or_default();
+    let uv_x = diag.uv_x.paint_in(cx).value_or_default();
+    let uv_y = diag.uv_y.paint_in(cx).value_or_default();
+    let target_w = diag.target_w.paint_in(cx).value_or_default();
+    let target_h = diag.target_h.paint_in(cx).value_or_default();
+    let kind = diag.kind.paint_in(cx).value_or_default();
 
-    let preset = cx.watch_model(&st.size_preset).paint().value_or_default();
+    let preset = st.size_preset.paint_in(cx).value_or_default();
     let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
         0 => ((640, 360), "640×360"),
         2 => ((1280, 720), "1280×720"),
@@ -311,10 +309,7 @@ fn view(
     };
     st.embedded.set_target_px_size(target_px_size);
 
-    let fit = cx
-        .watch_model(&st.fit)
-        .paint()
-        .value_or(ViewportFit::Contain);
+    let fit = st.fit.paint_in(cx).value_or(ViewportFit::Contain);
 
     let header = ui::v_flex(|cx| {
         ui::children![
@@ -478,9 +473,7 @@ fn view(
     .w_full()
     .max_w(Px(1100.0));
 
-    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
-
-    vec![root].into()
+    fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card)
 }
 
 fn configure_driver(

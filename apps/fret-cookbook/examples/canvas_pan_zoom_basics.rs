@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::component::prelude::*;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_canvas::ui::{
     PanZoomCanvasSurfacePanelProps, PanZoomInputPreset, pan_zoom_canvas_surface_panel,
@@ -66,12 +67,9 @@ impl View for CanvasPanZoomBasicsView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let view_value = cx.watch_model(&self.view).paint().value_or_default();
-        let node_origin = cx.watch_model(&self.node_origin).paint().value_or_default();
-        let node_drag_count = cx
-            .watch_model(&self.node_drag_count)
-            .paint()
-            .value_or_default();
+        let view_value = self.view.paint(cx).value_or_default();
+        let node_origin = self.node_origin.paint(cx).value_or_default();
+        let node_drag_count = self.node_drag_count.paint(cx).value_or_default();
 
         cx.actions().models::<act::ResetView>({
             let view = self.view.clone();
