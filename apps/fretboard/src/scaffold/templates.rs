@@ -224,6 +224,11 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
     // Radix doesn't currently ship the Lucide plus icon in our curated set; keep the template
     // functional by falling back to a text button when Lucide isn't selected.
     let has_action_icons = matches!(opts.icon_pack, IconPack::Lucide);
+    let install_app_binding = if matches!(opts.icon_pack, IconPack::Radix) {
+        "app"
+    } else {
+        "_app"
+    };
 
     let add_btn_def = if has_action_icons {
         r#"    let add_btn = shadcn::Button::new("")
@@ -461,6 +466,9 @@ impl View for TodoView {
         let progress = shadcn::Badge::new(format!("{}/{} done", derived.completed, derived.total))
             .variant(shadcn::BadgeVariant::Secondary);
 
+        let active = shadcn::Badge::new(format!("{} active", derived.active))
+            .variant(shadcn::BadgeVariant::Outline);
+
         let tip = shadcn::Badge::new(tip_text.clone())
             .variant(shadcn::BadgeVariant::Outline)
             .ui()
@@ -472,7 +480,7 @@ impl View for TodoView {
             .ui()
             .rounded_md();
 
-        let stats = ui::h_flex(|cx| ui::children![cx; progress, tip, refresh_tip_btn])
+        let stats = ui::h_flex(|cx| ui::children![cx; progress, active, tip, refresh_tip_btn])
             .gap(Space::N2)
             .items_center();
 
@@ -494,10 +502,18 @@ __ADD_BTN_DEF__
             .items_center()
             .w_full();
 
+        let chip_all = filter_chip(TodoFilter::All, filter_value, act::FilterAll);
+        let chip_active = filter_chip(TodoFilter::Active, filter_value, act::FilterActive);
+        let chip_completed = filter_chip(
+            TodoFilter::Completed,
+            filter_value,
+            act::FilterCompleted,
+        );
+
         let chips = ui::h_flex(|cx| ui::children![cx;
-            filter_chip(cx, TodoFilter::All, filter_value),
-            filter_chip(cx, TodoFilter::Active, filter_value),
-            filter_chip(cx, TodoFilter::Completed, filter_value),
+            chip_all,
+            chip_active,
+            chip_completed,
         ])
         .gap(Space::N1)
         .items_center();
@@ -645,11 +661,12 @@ fn bind_todo_actions(
 }
 
 fn filter_chip(
-    cx: &mut UiCx<'_>,
     filter: TodoFilter,
     current: TodoFilter,
+    action: impl Into<fret::ActionId>,
 ) -> impl UiChild {
     let selected = filter == current;
+    let action: fret::ActionId = action.into();
     shadcn::Button::new(filter.as_label())
         .variant(if selected {
             shadcn::ButtonVariant::Secondary
@@ -657,11 +674,7 @@ fn filter_chip(
             shadcn::ButtonVariant::Ghost
         })
         .size(shadcn::ButtonSize::Sm)
-        .action(match filter {
-            TodoFilter::All => act::FilterAll,
-            TodoFilter::Active => act::FilterActive,
-            TodoFilter::Completed => act::FilterCompleted,
-        })
+        .action(action)
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChild {
@@ -685,7 +698,7 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRowSnapshot) -> impl UiChild {
         .w_full()
 }
 
-fn install_app(app: &mut App) {
+fn install_app(__INSTALL_APP_BINDING__: &mut App) {
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }
@@ -705,12 +718,18 @@ __BUILDER_SUFFIX__        .run()
         .replace("__GENERATED_ASSET_MODULE__", generated_assets_module)
         .replace("__BUILDER_PREFIX__", builder_prefix)
         .replace("__BUILDER_SUFFIX__", builder_suffix)
+        .replace("__INSTALL_APP_BINDING__", install_app_binding)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
         .replace("__PACKAGE_NAME__", package_name)
 }
 
 pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) -> String {
+    let install_app_binding = if matches!(opts.icon_pack, IconPack::Radix) {
+        "app"
+    } else {
+        "_app"
+    };
     let palette_button = if opts.command_palette {
         r#"
                 shadcn::Button::new("Command palette")
@@ -769,7 +788,7 @@ __PALETTE_BUTTON__
     }}
 }}
 
-fn install_app(app: &mut App) {{
+fn install_app({install_app_binding}: &mut App) {{
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }}
@@ -792,6 +811,11 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
     // Radix doesn't currently ship the Lucide plus icon in our curated set; keep the template
     // functional by falling back to text buttons when Lucide isn't selected.
     let has_action_icons = matches!(opts.icon_pack, IconPack::Lucide);
+    let install_app_binding = if matches!(opts.icon_pack, IconPack::Radix) {
+        "app"
+    } else {
+        "_app"
+    };
 
     let add_btn_def = if has_action_icons {
         r#"    let add_btn = shadcn::Button::new("")
@@ -1061,7 +1085,7 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
         .w_full()
 }
 
-fn install_app(app: &mut App) {
+fn install_app(__INSTALL_APP_BINDING__: &mut App) {
 __INSTALL_ICONS__
     // Register app-owned globals, commands, services, etc.
 }
@@ -1081,6 +1105,7 @@ __BUILDER_SUFFIX__        .run()
         .replace("__GENERATED_ASSET_MODULE__", generated_assets_module)
         .replace("__BUILDER_PREFIX__", builder_prefix)
         .replace("__BUILDER_SUFFIX__", builder_suffix)
+        .replace("__INSTALL_APP_BINDING__", install_app_binding)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
         .replace("__PACKAGE_NAME__", package_name)
@@ -1374,7 +1399,7 @@ mod tests {
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
-        assert!(src.contains("cx: &mut UiCx<'_>,"));
+        assert!(!src.contains("cx: &mut UiCx<'_>,"));
         assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::container("));
         assert!(src.contains("ui::h_flex("));
@@ -1413,6 +1438,15 @@ mod tests {
         assert!(src.contains(".local_set::<act::FilterAll, TodoFilter>("));
         assert!(src.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>("));
         assert!(src.contains(
+            "let chip_all = filter_chip(TodoFilter::All, filter_value, act::FilterAll);"
+        ));
+        assert!(src.contains(
+            "let chip_active = filter_chip(TodoFilter::Active, filter_value, act::FilterActive);"
+        ));
+        assert!(src.contains("let chip_completed = filter_chip("));
+        assert!(!src.contains("filter_chip(cx, TodoFilter::All, filter_value)"));
+        assert!(!src.contains(".action(match filter {"));
+        assert!(src.contains(
             ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
         ));
         assert!(src.contains("cx.data()"));
@@ -1448,6 +1482,8 @@ mod tests {
         assert!(!src.contains("filter_state.layout(cx).value_or(TodoFilter::All)"));
         assert!(src.contains("bind_todo_actions("));
         assert!(src.contains("fn bind_todo_actions("));
+        assert!(src.contains("fn filter_chip("));
+        assert!(src.contains("action: impl Into<fret::ActionId>,"));
         assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
         assert!(src.contains("ui::v_flex(|cx| ui::single(cx, content))"));
         assert!(!src.contains("ui::v_flex(|cx| ui::children![cx; content])"));
