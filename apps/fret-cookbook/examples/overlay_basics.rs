@@ -90,7 +90,7 @@ impl View for OverlayBasicsView {
         let dialog_open_for_footer = dialog_open_state.clone_model();
         let dialog_open_for_close = dialog_open_state.clone_model();
 
-        let bumps = underlay_bumps_state.layout(cx).value_or(0);
+        let bumps = underlay_bumps_state.layout_value(cx);
         let enabled = cx.action_is_enabled(&cmd_bump);
         let enabled_label = if enabled {
             "Enabled"

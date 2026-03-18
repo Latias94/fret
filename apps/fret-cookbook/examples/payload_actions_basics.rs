@@ -48,7 +48,7 @@ impl View for PayloadActionsView {
                 },
             ]
         });
-        let rows_snapshot = rows_state.layout(cx).value_or_default();
+        let rows_snapshot = rows_state.layout_value(cx);
 
         let rows_el = ui::v_flex(|cx| {
             ui::for_each_keyed(

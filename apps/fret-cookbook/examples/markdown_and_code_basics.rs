@@ -64,7 +64,7 @@ impl View for MarkdownAndCodeBasicsView {
         let wrap_state = cx.state().local_init(|| Some(Arc::from(WRAP_SCROLL_X)));
         let cap_height_state = cx.state().local_init(|| true);
 
-        let source = source_state.layout(cx).value_or_default();
+        let source = source_state.layout_value(cx);
         let preview_settings: PreviewSettings =
             cx.data()
                 .selector_layout((&wrap_state, &cap_height_state), |(wrap, cap_height)| {

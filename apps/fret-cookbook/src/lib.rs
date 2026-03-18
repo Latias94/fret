@@ -318,11 +318,13 @@ mod authoring_surface_policy_tests {
         assert!(!TOGGLE_EXAMPLE.contains("pressed_state.layout(cx).value_or(false)"));
 
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("cx.state().local_init(|| {"));
+        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains("let rows_snapshot = rows_state.layout_value(cx);"));
         assert!(PAYLOAD_ACTIONS_EXAMPLE.contains(
             ".payload_local_update_if::<act::Remove, Vec<Row>>(&rows_state, |rows, id| {"
         ));
         assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("payload::<act::Remove>()"));
         assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("local_update_if::<Vec<Row>>(&rows_state"));
+        assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("rows_state.layout(cx).value_or_default()"));
 
         assert!(FORM_EXAMPLE.contains(".locals_with((&name_state, &email_state, &error_state))"));
         assert!(
@@ -360,6 +362,8 @@ mod authoring_surface_policy_tests {
 
         assert!(OVERLAY_EXAMPLE.contains("local_set::<act::OpenDialog, bool>"));
         assert!(OVERLAY_EXAMPLE.contains("local_update::<act::BumpUnderlay, u32>"));
+        assert!(OVERLAY_EXAMPLE.contains("let bumps = underlay_bumps_state.layout_value(cx);"));
+        assert!(!OVERLAY_EXAMPLE.contains("underlay_bumps_state.layout(cx).value_or(0)"));
 
         assert!(THEME_SWITCHING_EXAMPLE.contains("use fret_app::Effect;"));
         assert!(THEME_SWITCHING_EXAMPLE.contains("local_init(|| Some::<Arc<str>>"));
@@ -428,14 +432,19 @@ mod authoring_surface_policy_tests {
                 ".selector_layout((&wrap_state, &cap_height_state), |(wrap, cap_height)| {"
             )
         );
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("let source = source_state.layout_value(cx);"));
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("local_set::<act::Reset, String>"));
         assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("watch(&wrap_state)"));
+        assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("source_state.layout(cx).value_or_default()"));
 
         assert!(
             IMUI_ACTION_EXAMPLE
                 .contains("use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};")
         );
         assert!(IMUI_ACTION_EXAMPLE.contains("local_update::<act::Inc, u32>"));
+        assert!(IMUI_ACTION_EXAMPLE.contains("cx.state().local_init(|| 0u32)"));
+        assert!(IMUI_ACTION_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
+        assert!(!IMUI_ACTION_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
     }
 
     #[test]
