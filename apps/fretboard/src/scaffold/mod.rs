@@ -535,6 +535,54 @@ mod tests {
         );
     }
 
+    #[derive(Debug, Clone, Copy)]
+    struct ScaffoldCompileCase {
+        template: NewTemplate,
+        package_name: &'static str,
+        opts: ScaffoldOptions,
+    }
+
+    fn scaffold_template_case(
+        workspace_root: &Path,
+        suite_root: &Path,
+        case: ScaffoldCompileCase,
+    ) -> PathBuf {
+        let out_dir = suite_root.join(case.package_name);
+        let result = match case.template {
+            NewTemplate::Empty => init_empty_at(&out_dir, case.package_name, false),
+            NewTemplate::Hello => init_hello_at(
+                workspace_root,
+                &out_dir,
+                case.package_name,
+                case.opts,
+                false,
+            ),
+            NewTemplate::SimpleTodo => init_simple_todo_at(
+                workspace_root,
+                &out_dir,
+                case.package_name,
+                case.opts,
+                false,
+            ),
+            NewTemplate::Todo => init_todo_at(
+                workspace_root,
+                &out_dir,
+                case.package_name,
+                case.opts,
+                false,
+            ),
+        };
+
+        result.unwrap_or_else(|err| {
+            panic!(
+                "scaffold should succeed for {:?} at {}: {err}",
+                case.template,
+                out_dir.display()
+            )
+        });
+        out_dir
+    }
+
     fn opts_with_ui_assets() -> ScaffoldOptions {
         ScaffoldOptions {
             icon_pack: IconPack::Lucide,
@@ -614,50 +662,79 @@ mod tests {
         // against the generated manifests.
         let workspace_root = repo_workspace_root();
         let suite_root = make_repo_local_dir("fretboard-scaffold-compile");
-
-        let hello_dir = suite_root.join("hello-app");
-        init_hello_at(
-            &workspace_root,
-            &hello_dir,
-            "hello-app",
-            ScaffoldOptions {
-                icon_pack: IconPack::Lucide,
-                command_palette: false,
-                ui_assets: false,
+        let cases = [
+            ScaffoldCompileCase {
+                template: NewTemplate::Hello,
+                package_name: "hello-app",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: false,
+                    ui_assets: false,
+                },
             },
-            false,
-        )
-        .expect("hello scaffold should succeed");
-        cargo_check_generated_app(&hello_dir);
-
-        let simple_todo_dir = suite_root.join("simple-todo-app");
-        init_simple_todo_at(
-            &workspace_root,
-            &simple_todo_dir,
-            "simple-todo-app",
-            ScaffoldOptions {
-                icon_pack: IconPack::Lucide,
-                command_palette: false,
-                ui_assets: false,
+            ScaffoldCompileCase {
+                template: NewTemplate::SimpleTodo,
+                package_name: "simple-todo-app",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: false,
+                    ui_assets: false,
+                },
             },
-            false,
-        )
-        .expect("simple todo scaffold should succeed");
-        cargo_check_generated_app(&simple_todo_dir);
-
-        let todo_dir = suite_root.join("todo-app");
-        init_todo_at(
-            &workspace_root,
-            &todo_dir,
-            "todo-app",
-            ScaffoldOptions {
-                icon_pack: IconPack::Lucide,
-                command_palette: false,
-                ui_assets: false,
+            ScaffoldCompileCase {
+                template: NewTemplate::Todo,
+                package_name: "todo-app",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: false,
+                    ui_assets: false,
+                },
             },
-            false,
-        )
-        .expect("todo scaffold should succeed");
-        cargo_check_generated_app(&todo_dir);
+        ];
+
+        for case in cases {
+            let out_dir = scaffold_template_case(&workspace_root, &suite_root, case);
+            cargo_check_generated_app(&out_dir);
+        }
+    }
+
+    #[test]
+    fn key_scaffold_variants_generate_projects_that_compile() {
+        let workspace_root = repo_workspace_root();
+        let suite_root = make_repo_local_dir("fretboard-scaffold-variants");
+        let cases = [
+            ScaffoldCompileCase {
+                template: NewTemplate::Hello,
+                package_name: "hello-radix-palette",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Radix,
+                    command_palette: true,
+                    ui_assets: false,
+                },
+            },
+            ScaffoldCompileCase {
+                template: NewTemplate::SimpleTodo,
+                package_name: "simple-todo-assets-palette",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: true,
+                    ui_assets: true,
+                },
+            },
+            ScaffoldCompileCase {
+                template: NewTemplate::Todo,
+                package_name: "todo-radix-assets-palette",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Radix,
+                    command_palette: true,
+                    ui_assets: true,
+                },
+            },
+        ];
+
+        for case in cases {
+            let out_dir = scaffold_template_case(&workspace_root, &suite_root, case);
+            cargo_check_generated_app(&out_dir);
+        }
     }
 }
