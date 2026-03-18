@@ -112,6 +112,9 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Open lifecycle callbacks are available via `Drawer::on_open_change(...)` and
   `Drawer::on_open_change_complete(...)` (delegates to `Sheet`).
 - Pass: Bottom drawers support Vaul-style drag-to-dismiss from the handle affordance region.
+- Pass: Nested drawers now keep parent drag-to-dismiss from starting while a nested child drawer is
+  open, which matches the first required piece of Base UI-style nested gesture arbitration without
+  widening `fret-ui`.
 - Pass: Base UI-style `TrapFocus` follow-up now traps Tab focus inside the drawer while keeping
   outside pointer interaction enabled (`Drawer::modal_trap_focus(true)`).
 - Pass: Base UI-style non-modal / trap-focus follow-up keeps painting the configured visual scrim
@@ -131,9 +134,12 @@ Upstream exports a thin wrapper around `vaul`:
 - Fret models controlled snap points as authored indices (`Model<Option<usize>>`) rather than the
   Base UI value surface (`snapPoint` values plus event details). This keeps the recipe surface
   stable for fraction-based snap points without relying on float equality at the public boundary.
-- Base UI nested-drawer coordination is not modeled yet. Upstream tracks nested swipe progress,
-  frontmost height, and nested-open state for features like background indentation and gesture
-  arbitration; Fret currently treats each drawer as an independent modal overlay.
+- Base UI nested-drawer coordination is only partially modeled. Fret now tracks nested-open state
+  plus frontmost nested height and uses that state to suppress parent drag initiation, but nested
+  child swipe/input routing across overlay layers is still a wider follow-up before swipe-progress
+  parity can be claimed.
+- Background indentation / scale visuals from the Base UI provider layer are not modeled yet; this
+  audit only closes the interaction-policy slice needed for parent/child drag arbitration.
 - Vaul drag physics (rubber-banding, velocity, snap decisions) are not modeled yet; Fret currently
   uses a simpler threshold/inertia-based settle-and-dismiss policy.
 
@@ -143,6 +149,7 @@ Upstream exports a thin wrapper around `vaul`:
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
 - `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
 - `cargo nextest run -p fret-ui-shadcn drawer_snap_point_model_initializes_to_controlled_index_on_open drawer_snap_points_settle_to_nearest_point_on_release drawer_close_resets_snap_point_model_to_default_index drawer_snap_to_sequential_points_advances_one_step_per_drag`
+- `cargo nextest run -p fret-ui-shadcn drawer_nested_open_blocks_parent_drag_start drawer_nested_open_updates_parent_frontmost_height drawer_nested_close_restores_parent_drag_start`
 
 ## Authoring note: `children([...])` and `compose()`
 

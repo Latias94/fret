@@ -32,7 +32,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The docs-path examples now share the same `Drawer::children([...])` root lane, while `Drawer::compose()` remains the builder-first alternative without pushing children API concerns into the mechanism layer.",
         "Docs-path footer close actions now consistently use `DrawerClose::from_scope().build(cx, child)` so the copyable lane stays aligned with upstream `DrawerClose asChild` intent.",
         "Base UI-only policy variants such as `modal={false|'trap-focus'}` now exist as follow-up API, but they are intentionally not taught on this page because the shadcn docs path stays modal-first.",
-        "Controlled snap points now exist as an authored-index follow-up surface, while nested-drawer coordination still requires wider policy work than the shadcn docs path.",
+        "Controlled snap points now exist as an authored-index follow-up surface, and nested drawers now suppress parent drag while tracking frontmost child height; nested child swipe/input routing and background indentation remain wider follow-up work than the shadcn docs path.",
         "`Demo`, `Responsive Dialog`, and `RTL` keep the official inner content structure (centered max-width body, profile form layout, goal-adjust controls) so gallery visuals stay close to shadcn docs instead of only proving the raw mechanism works.",
         "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
         "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",

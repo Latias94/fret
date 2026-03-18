@@ -2,6 +2,7 @@
 //!
 //! Fret currently models drawers as a `Sheet` that defaults to the `Bottom` side.
 
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -14,7 +15,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, MarginEdge, MarginEdges,
     PointerRegionProps, RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
@@ -207,9 +208,59 @@ struct DrawerSideProviderState {
     current: DrawerSide,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct DrawerNestedChildState {
+    open: bool,
+    swiping: bool,
+    swipe_progress: f32,
+    frontmost_height: Px,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct DrawerNestedAggregateState {
+    has_open_child: bool,
+    nested_swiping: bool,
+    swipe_progress: f32,
+    frontmost_height: Px,
+}
+
+#[derive(Debug, Clone, Default)]
+struct DrawerNestedRegistry {
+    children: HashMap<GlobalElementId, DrawerNestedChildState>,
+}
+
+impl DrawerNestedRegistry {
+    fn aggregate(&self) -> DrawerNestedAggregateState {
+        let mut out = DrawerNestedAggregateState::default();
+        for state in self.children.values().copied() {
+            if state.open {
+                out.has_open_child = true;
+                out.frontmost_height = Px(out.frontmost_height.0.max(state.frontmost_height.0));
+            }
+            if state.swiping {
+                out.nested_swiping = true;
+            }
+            out.swipe_progress = out.swipe_progress.max(state.swipe_progress);
+        }
+        out
+    }
+}
+
+#[derive(Debug, Clone)]
+struct DrawerNestedProviderState {
+    registry: Model<DrawerNestedRegistry>,
+}
+
 fn inherited_drawer_side<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<DrawerSide> {
     cx.provided::<DrawerSideProviderState>()
         .map(|st| st.current)
+}
+
+fn inherited_drawer_nested_registry<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<Model<DrawerNestedRegistry>> {
+    cx.provided::<DrawerNestedProviderState>()
+        .map(|st| st.registry.clone())
 }
 
 fn drawer_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> DrawerSide {
@@ -223,6 +274,70 @@ fn with_drawer_side_provider<H: UiHost, R>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
     cx.provide(DrawerSideProviderState { current: side }, f)
+}
+
+#[track_caller]
+fn with_drawer_nested_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    registry: Model<DrawerNestedRegistry>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    cx.provide(DrawerNestedProviderState { registry }, f)
+}
+
+fn drawer_nested_registry_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<DrawerNestedRegistry> {
+    cx.local_model_keyed("drawer_nested_registry", DrawerNestedRegistry::default)
+}
+
+fn drawer_nested_registry_set_child_state(
+    models: &mut ModelStore,
+    registry: &Model<DrawerNestedRegistry>,
+    child_id: GlobalElementId,
+    next: DrawerNestedChildState,
+) -> bool {
+    let mut changed = false;
+    let _ = models.update(registry, |state| {
+        let current = state.children.get(&child_id).copied().unwrap_or_default();
+        if current == next {
+            return;
+        }
+        changed = true;
+        if next == DrawerNestedChildState::default() {
+            state.children.remove(&child_id);
+        } else {
+            state.children.insert(child_id, next);
+        }
+    });
+    changed
+}
+
+fn drawer_nested_self_state(
+    is_open: bool,
+    dragging: bool,
+    offset: Px,
+    drawer_height: Px,
+    nested: DrawerNestedAggregateState,
+) -> DrawerNestedChildState {
+    let own_progress = if is_open && dragging && drawer_height.0 > 0.0 {
+        (offset.0 / drawer_height.0).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let frontmost_height = if nested.has_open_child {
+        nested.frontmost_height
+    } else if is_open {
+        drawer_height
+    } else {
+        Px(0.0)
+    };
+    DrawerNestedChildState {
+        open: is_open,
+        swiping: dragging || nested.nested_swiping,
+        swipe_progress: nested.swipe_progress.max(own_progress),
+        frontmost_height,
+    }
 }
 
 fn drawer_drag_snap_height(drawer_height: Px, window_height: Px, side: DrawerSide) -> Px {
@@ -1187,6 +1302,8 @@ impl Drawer {
         let default_snap_point_index = self.default_snap_point_index;
         let snap_to_sequential_points = self.snap_to_sequential_points;
         let on_snap_point_change = self.on_snap_point_change.clone();
+        let parent_nested_registry = inherited_drawer_nested_registry(cx);
+        let drawer_instance_id = cx.keyed_slot_id("drawer_nested_instance");
 
         let mut inner = self
             .inner
@@ -1202,29 +1319,63 @@ impl Drawer {
         }
 
         inner.into_element(cx, trigger, move |cx| {
-            let content = with_drawer_side_provider(cx, side, |cx| content(cx));
-            if !drag_to_dismiss || side != DrawerSide::Bottom {
-                return content;
-            }
-
+            let nested_registry = drawer_nested_registry_model(cx);
+            let content = with_drawer_nested_provider(cx, nested_registry.clone(), |cx| {
+                with_drawer_side_provider(cx, side, |cx| content(cx))
+            });
             let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
-            let (runtime, offset_model, was_open) = drawer_drag_models(cx);
             let viewport_bounds = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
             let window_height =
                 fret_ui_kit::OverlayController::last_known_window_bounds(cx.app, cx.window)
                     .unwrap_or(viewport_bounds)
                     .size
                     .height;
+            let content_bounds = cx.last_bounds_for_element(content.id);
+            let drawer_frontmost_height = content_bounds
+                .as_ref()
+                .map(|bounds| drawer_drag_snap_height(bounds.size.height, window_height, side))
+                .unwrap_or(Px(0.0));
+            let nested_aggregate = cx
+                .watch_model(&nested_registry)
+                .layout()
+                .cloned()
+                .unwrap_or_default()
+                .aggregate();
+
+            if !drag_to_dismiss || side != DrawerSide::Bottom {
+                if let Some(parent_registry) = parent_nested_registry.as_ref() {
+                    let self_state = drawer_nested_self_state(
+                        is_open,
+                        false,
+                        Px(0.0),
+                        drawer_frontmost_height,
+                        nested_aggregate,
+                    );
+                    let _ = drawer_nested_registry_set_child_state(
+                        cx.app.models_mut(),
+                        parent_registry,
+                        drawer_instance_id,
+                        self_state,
+                    );
+                }
+                return content;
+            }
+
+            let (runtime, offset_model, was_open) = drawer_drag_models(cx);
             let _ = cx.app.models_mut().update(&runtime, |st| {
                 st.window_height = window_height;
                 st.viewport_height = viewport_bounds.size.height;
+                st.has_nested_open_drawer = nested_aggregate.has_open_child;
+                st.nested_swiping = nested_aggregate.nested_swiping;
+                st.nested_swipe_progress = nested_aggregate.swipe_progress;
+                st.nested_frontmost_height = nested_aggregate.frontmost_height;
             });
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
             let requested_snap_point_index = snap_point_model
                 .as_ref()
                 .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
 
-            if let Some(bounds) = cx.last_bounds_for_element(content.id) {
+            if let Some(bounds) = content_bounds.as_ref() {
                 let drawer_h = drawer_drag_snap_height(bounds.size.height, window_height, side);
                 let _ = cx.app.models_mut().update(&runtime, |st| {
                     if st.drawer_height != drawer_h {
@@ -1283,7 +1434,7 @@ impl Drawer {
                     .unwrap_or(false);
 
                 if needs_init {
-                    if let Some(bounds) = cx.last_bounds_for_element(content.id) {
+                    if let Some(bounds) = content_bounds.as_ref() {
                         let drawer_h =
                             drawer_drag_snap_height(bounds.size.height, window_height, side);
                         let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
@@ -1308,7 +1459,7 @@ impl Drawer {
                             });
                         }
                     }
-                } else if let Some(bounds) = cx.last_bounds_for_element(content.id) {
+                } else if let Some(bounds) = content_bounds.as_ref() {
                     let drawer_h = drawer_drag_snap_height(bounds.size.height, window_height, side);
                     let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
                     let runtime_snapshot = cx.app.models().get_copied(&runtime).unwrap_or_default();
@@ -1382,12 +1533,42 @@ impl Drawer {
                 }
             }
 
+            let runtime_snapshot = cx.app.models().get_copied(&runtime).unwrap_or_default();
+            if let Some(parent_registry) = parent_nested_registry.as_ref() {
+                let drawer_height_for_parent = if runtime_snapshot.drawer_height.0 > 0.0 {
+                    runtime_snapshot.drawer_height
+                } else {
+                    drawer_frontmost_height
+                };
+                let self_state = drawer_nested_self_state(
+                    is_open,
+                    runtime_snapshot.dragging,
+                    offset,
+                    drawer_height_for_parent,
+                    nested_aggregate,
+                );
+                let _ = drawer_nested_registry_set_child_state(
+                    cx.app.models_mut(),
+                    parent_registry,
+                    drawer_instance_id,
+                    self_state,
+                );
+            }
+
             let transform = Transform2D::translation(Point::new(Px(0.0), offset));
 
             let runtime_for_down = runtime.clone();
             let offset_for_down = offset_model.clone();
             let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, _cx, down| {
                 if !is_open || down.button != MouseButton::Left {
+                    return false;
+                }
+                let has_nested_open_drawer = host
+                    .models_mut()
+                    .read(&runtime_for_down, |st| st.has_nested_open_drawer)
+                    .ok()
+                    .unwrap_or(false);
+                if has_nested_open_drawer {
                     return false;
                 }
 
@@ -2037,6 +2218,10 @@ struct DrawerDragRuntime {
     start: Point,
     start_offset: Px,
     drawer_height: Px,
+    has_nested_open_drawer: bool,
+    nested_swiping: bool,
+    nested_swipe_progress: f32,
+    nested_frontmost_height: Px,
     window_height: Px,
     viewport_height: Px,
     last_tick: TickId,
@@ -2057,6 +2242,10 @@ impl Default for DrawerDragRuntime {
             start: Point::new(Px(0.0), Px(0.0)),
             start_offset: Px(0.0),
             drawer_height: Px(0.0),
+            has_nested_open_drawer: false,
+            nested_swiping: false,
+            nested_swipe_progress: 0.0,
+            nested_frontmost_height: Px(0.0),
             window_height: Px(0.0),
             viewport_height: Px(0.0),
             last_tick: TickId(0),
@@ -2449,6 +2638,144 @@ mod tests {
         ui.layout_all(app, services, bounds, 1.0);
         let mut scene = fret_core::Scene::default();
         ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    #[derive(Clone, Default)]
+    struct NestedDrawerHarnessState {
+        parent_runtime_model: Rc<RefCell<Option<Model<DrawerDragRuntime>>>>,
+        parent_offset_model: Rc<RefCell<Option<Model<Px>>>>,
+        parent_content_id: Rc<RefCell<Option<GlobalElementId>>>,
+        child_runtime_model: Rc<RefCell<Option<Model<DrawerDragRuntime>>>>,
+        child_offset_model: Rc<RefCell<Option<Model<Px>>>>,
+        child_content_id: Rc<RefCell<Option<GlobalElementId>>>,
+    }
+
+    fn render_nested_drawer_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        parent_open: &Model<bool>,
+        child_open: &Model<bool>,
+        state: &NestedDrawerHarnessState,
+    ) {
+        let parent_open_for_drawer = parent_open.clone();
+        let child_open_for_drawer = child_open.clone();
+        let parent_runtime_model_cell = state.parent_runtime_model.clone();
+        let parent_offset_model_cell = state.parent_offset_model.clone();
+        let parent_content_id_cell = state.parent_content_id.clone();
+        let child_runtime_model_cell = state.child_runtime_model.clone();
+        let child_offset_model_cell = state.child_offset_model.clone();
+        let child_content_id_cell = state.child_content_id.clone();
+
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let parent_drawer = Drawer::new(parent_open_for_drawer).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                        *parent_runtime_model_cell.borrow_mut() = Some(runtime);
+                        *parent_offset_model_cell.borrow_mut() = Some(offset_model);
+
+                        let child_trigger = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(96.0));
+                                    layout.size.height = Length::Px(Px(32.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |_cx, _st| Vec::new(),
+                        );
+                        let child_drawer = Drawer::new(child_open_for_drawer.clone())
+                            .modal(false)
+                            .into_element(
+                                cx,
+                                |_cx| child_trigger,
+                                move |cx| {
+                                    let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                                    *child_runtime_model_cell.borrow_mut() = Some(runtime);
+                                    *child_offset_model_cell.borrow_mut() = Some(offset_model);
+
+                                    let content = DrawerContent::new(vec![cx.container(
+                                        ContainerProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Px(Px(140.0)),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |_cx| Vec::new(),
+                                    )])
+                                    .into_element(cx);
+                                    *child_content_id_cell.borrow_mut() = Some(content.id);
+                                    content
+                                },
+                            );
+
+                        let content = DrawerContent::new(vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Px(Px(360.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            ),
+                            child_drawer,
+                        ])
+                        .into_element(cx);
+                        *parent_content_id_cell.borrow_mut() = Some(content.id);
+                        content
+                    },
+                );
+
+                vec![parent_drawer]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    fn shadcn_settle_frames() -> usize {
+        fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4
     }
 
     #[test]
@@ -4150,6 +4477,282 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn drawer_nested_open_blocks_parent_drag_start() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_runtime_model = state
+            .parent_runtime_model
+            .borrow()
+            .clone()
+            .expect("parent runtime model captured");
+        let parent_offset_model = state
+            .parent_offset_model
+            .borrow()
+            .clone()
+            .expect("parent offset model captured");
+        let parent_content_id = state
+            .parent_content_id
+            .borrow()
+            .clone()
+            .expect("parent content id captured");
+        let parent_runtime = app
+            .models()
+            .get_copied(&parent_runtime_model)
+            .expect("parent runtime snapshot");
+        assert!(
+            parent_runtime.has_nested_open_drawer,
+            "expected parent drawer runtime to observe an open nested drawer"
+        );
+
+        let parent_dialog =
+            visual_bounds_for_element(&mut app, window, parent_content_id).expect("parent visual");
+        let start = Point::new(
+            Px(parent_dialog.origin.x.0 + parent_dialog.size.width.0 * 0.5),
+            Px(parent_dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 + 80.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let parent_offset = app
+            .models()
+            .get_copied(&parent_offset_model)
+            .unwrap_or(Px(0.0));
+        assert!(
+            parent_offset.0.abs() < 0.5,
+            "expected nested child to block parent drag initiation, got offset {parent_offset:?}"
+        );
+    }
+
+    #[test]
+    fn drawer_nested_close_restores_parent_drag_start() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let _ = app.models_mut().update(&child_open, |value| *value = false);
+        for _ in 0..2 {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_runtime_model = state
+            .parent_runtime_model
+            .borrow()
+            .clone()
+            .expect("parent runtime model captured");
+        let parent_offset_model = state
+            .parent_offset_model
+            .borrow()
+            .clone()
+            .expect("parent offset model captured");
+        let parent_content_id = state
+            .parent_content_id
+            .borrow()
+            .clone()
+            .expect("parent content id captured");
+        let parent_runtime = app
+            .models()
+            .get_copied(&parent_runtime_model)
+            .expect("parent runtime snapshot");
+        assert!(
+            !parent_runtime.has_nested_open_drawer,
+            "expected parent drag arbitration to clear once the nested drawer closes"
+        );
+
+        let parent_dialog =
+            visual_bounds_for_element(&mut app, window, parent_content_id).expect("parent visual");
+        let start = Point::new(
+            Px(parent_dialog.origin.x.0 + parent_dialog.size.width.0 * 0.5),
+            Px(parent_dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 + 80.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let parent_offset = app
+            .models()
+            .get_copied(&parent_offset_model)
+            .unwrap_or(Px(0.0));
+        assert!(
+            parent_offset.0 > 1.0,
+            "expected parent drag initiation to resume after nested close, got offset {parent_offset:?}"
+        );
+    }
+
+    #[test]
+    fn drawer_nested_open_updates_parent_frontmost_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_runtime_model = state
+            .parent_runtime_model
+            .borrow()
+            .clone()
+            .expect("parent runtime model captured");
+        let parent_runtime = app
+            .models()
+            .get_copied(&parent_runtime_model)
+            .expect("parent runtime snapshot");
+        assert!(
+            parent_runtime.has_nested_open_drawer,
+            "expected parent runtime to record an open nested child"
+        );
+        assert!(
+            parent_runtime.nested_swipe_progress == 0.0,
+            "expected nested swipe progress to stay idle without an active nested drag"
+        );
+        assert!(
+            parent_runtime.nested_frontmost_height.0 > 0.0,
+            "expected parent runtime to keep the frontmost nested drawer height"
+        );
     }
 
     #[test]
