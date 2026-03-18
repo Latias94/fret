@@ -41,6 +41,7 @@ pub(crate) fn on_select_for_last_action(
 
 pub mod action_first_view;
 pub mod basic;
+pub mod behavior_demos;
 pub mod docs_demo;
 pub mod groups;
 pub mod loading;
