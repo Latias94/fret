@@ -996,6 +996,38 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn cookbook_examples_limit_raw_action_notify_to_host_owned_cases() {
+        let mut raw_action_notify_files = Vec::new();
+
+        for path in cookbook_rust_sources() {
+            let source = std::fs::read_to_string(&path).unwrap();
+            let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
+
+            let uses_raw_action_notify_trait =
+                source.contains("use fret::advanced::AppUiRawActionNotifyExt as _;");
+            let uses_raw_action_notify = source.contains("cx.on_action_notify::<");
+            let uses_raw_payload_action_notify = source.contains("cx.on_payload_action_notify::<");
+
+            if uses_raw_action_notify_trait
+                || uses_raw_action_notify
+                || uses_raw_payload_action_notify
+            {
+                raw_action_notify_files.push(file_name);
+            }
+        }
+
+        assert_eq!(
+            raw_action_notify_files,
+            vec![
+                "async_inbox_basics.rs".to_string(),
+                "router_basics.rs".to_string(),
+                "toast_basics.rs".to_string(),
+                "undo_basics.rs".to_string(),
+            ],
+        );
+    }
+
+    #[test]
     fn docs_and_examples_prefer_builder_then_run() {
         for src in [
             ROOT_README,
