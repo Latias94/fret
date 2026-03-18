@@ -16,8 +16,6 @@ use fret_core::{AlphaMode, Color, Corners, Edges, EffectId, ImageId, Px};
 use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region,
 };
-use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
@@ -78,22 +76,19 @@ impl DemoEffectPack {
     }
 }
 
-#[derive(Debug)]
 struct CustomEffectV2State {
-    enabled: Model<bool>,
-    use_non_filterable_input: Model<bool>,
-    sampling: Model<Option<Arc<str>>>,
-    sampling_open: Model<bool>,
-    uv_span: Model<Vec<f32>>,
-    input_strength: Model<Vec<f32>>,
-    rim_strength: Model<Vec<f32>>,
-    blur_radius_px: Model<Vec<f32>>,
-    debug_input: Model<bool>,
+    enabled: LocalState<bool>,
+    use_non_filterable_input: LocalState<bool>,
+    sampling: LocalState<Option<Arc<str>>>,
+    sampling_open: LocalState<bool>,
+    uv_span: LocalState<Vec<f32>>,
+    input_strength: LocalState<Vec<f32>>,
+    rim_strength: LocalState<Vec<f32>>,
+    blur_radius_px: LocalState<Vec<f32>>,
+    debug_input: LocalState<bool>,
 }
 
-struct CustomEffectV2View {
-    st: CustomEffectV2State,
-}
+struct CustomEffectV2View;
 
 fn install_demo_theme(app: &mut KernelApp) {
     shadcn::themes::apply_shadcn_new_york(
@@ -220,61 +215,49 @@ fn upload_input_image(app: &mut KernelApp, context: &WgpuContext, renderer: &mut
 }
 
 impl CustomEffectV2State {
-    fn reset(models: &mut fret_runtime::ModelStore, st: &CustomEffectV2State) {
-        let _ = models.update(&st.enabled, |v| *v = true);
-        let _ = models.update(&st.use_non_filterable_input, |v| *v = false);
-        let _ = models.update(&st.sampling, |v| *v = Some(Arc::from("linear")));
-        let _ = models.update(&st.uv_span, |v| *v = vec![0.25]);
-        let _ = models.update(&st.input_strength, |v| *v = vec![0.35]);
-        let _ = models.update(&st.rim_strength, |v| *v = vec![0.65]);
-        let _ = models.update(&st.blur_radius_px, |v| *v = vec![10.0]);
-        let _ = models.update(&st.debug_input, |v| *v = false);
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            enabled: cx.state().local_init(|| true),
+            use_non_filterable_input: cx.state().local_init(|| false),
+            sampling: cx.state().local_init(|| Some(Arc::<str>::from("linear"))),
+            sampling_open: cx.state().local_init(|| false),
+            uv_span: cx.state().local_init(|| vec![0.25]),
+            input_strength: cx.state().local_init(|| vec![0.35]),
+            rim_strength: cx.state().local_init(|| vec![0.65]),
+            blur_radius_px: cx.state().local_init(|| vec![10.0]),
+            debug_input: cx.state().local_init(|| false),
+        }
     }
 }
 
 impl View for CustomEffectV2View {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        Self {
-            st: CustomEffectV2State {
-                enabled: app.models_mut().insert(true),
-                use_non_filterable_input: app.models_mut().insert(false),
-                sampling: app.models_mut().insert(Some(Arc::from("linear"))),
-                sampling_open: app.models_mut().insert(false),
-                uv_span: app.models_mut().insert(vec![0.25]),
-                input_strength: app.models_mut().insert(vec![0.35]),
-                rim_strength: app.models_mut().insert(vec![0.65]),
-                blur_radius_px: app.models_mut().insert(vec![10.0]),
-                debug_input: app.models_mut().insert(false),
-            },
-        }
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        cx.actions().models::<act::Reset>({
-            let st = self.clone_for_reset();
-            move |models| {
-                CustomEffectV2State::reset(models, &st);
-                true
-            }
-        });
+        let mut st = CustomEffectV2State::new(cx);
 
-        view(cx, &mut self.st)
-    }
-}
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.enabled, true);
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.use_non_filterable_input, false);
+        cx.actions().local_set::<act::Reset, Option<Arc<str>>>(
+            &st.sampling,
+            Some(Arc::<str>::from("linear")),
+        );
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.uv_span, vec![0.25]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.input_strength, vec![0.35]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.rim_strength, vec![0.65]);
+        cx.actions()
+            .local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![10.0]);
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.debug_input, false);
 
-impl CustomEffectV2View {
-    fn clone_for_reset(&self) -> CustomEffectV2State {
-        CustomEffectV2State {
-            enabled: self.st.enabled.clone(),
-            use_non_filterable_input: self.st.use_non_filterable_input.clone(),
-            sampling: self.st.sampling.clone(),
-            sampling_open: self.st.sampling_open.clone(),
-            uv_span: self.st.uv_span.clone(),
-            input_strength: self.st.input_strength.clone(),
-            rim_strength: self.st.rim_strength.clone(),
-            blur_radius_px: self.st.blur_radius_px.clone(),
-            debug_input: self.st.debug_input.clone(),
-        }
+        view(cx, &mut st)
     }
 }
 
@@ -294,7 +277,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
     model
         .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
@@ -325,44 +308,18 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
             .into();
     };
 
-    let enabled = st.enabled.clone();
-    let use_non_filterable_input = st.use_non_filterable_input.clone();
-    let sampling = st.sampling.clone();
-    let debug_input = st.debug_input.clone();
-    let enabled_deps = enabled.clone();
-    let use_non_filterable_input_deps = use_non_filterable_input.clone();
-    let sampling_deps = sampling.clone();
-    let debug_input_deps = debug_input.clone();
-    let view_settings: CustomEffectV2ViewSettings = cx.data().selector(
-        move |cx| {
-            cx.observe_model(&enabled_deps, Invalidation::Layout);
-            cx.observe_model(&use_non_filterable_input_deps, Invalidation::Layout);
-            cx.observe_model(&sampling_deps, Invalidation::Layout);
-            cx.observe_model(&debug_input_deps, Invalidation::Layout);
-            (
-                cx.app.models().revision(&enabled_deps).unwrap_or(0),
-                cx.app
-                    .models()
-                    .revision(&use_non_filterable_input_deps)
-                    .unwrap_or(0),
-                cx.app.models().revision(&sampling_deps).unwrap_or(0),
-                cx.app.models().revision(&debug_input_deps).unwrap_or(0),
-            )
-        },
-        move |cx| CustomEffectV2ViewSettings {
-            enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
-            use_non_filterable_input: cx
-                .app
-                .models()
-                .get_cloned(&use_non_filterable_input)
-                .unwrap_or(false),
-            sampling_value: cx
-                .app
-                .models()
-                .get_cloned(&sampling)
-                .and_then(|v| v.as_ref().map(|s| s.to_string()))
-                .unwrap_or_else(|| "linear".to_string()),
-            debug_input: cx.app.models().get_cloned(&debug_input).unwrap_or(false),
+    let view_settings: CustomEffectV2ViewSettings = cx.data().selector_layout(
+        (
+            &st.enabled,
+            &st.use_non_filterable_input,
+            &st.sampling,
+            &st.debug_input,
+        ),
+        |(enabled, use_non_filterable_input, sampling, debug_input)| CustomEffectV2ViewSettings {
+            enabled,
+            use_non_filterable_input,
+            sampling_value: sampling.as_deref().unwrap_or("linear").to_string(),
+            debug_input,
         },
     );
     let input_image = if view_settings.use_non_filterable_input {
@@ -754,15 +711,15 @@ fn inspector(
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let enabled_model = st.enabled.clone();
-    let non_filterable_model = st.use_non_filterable_input.clone();
-    let sampling_model = st.sampling.clone();
-    let sampling_open_model = st.sampling_open.clone();
-    let uv_span_model = st.uv_span.clone();
-    let input_strength_model = st.input_strength.clone();
-    let rim_strength_model = st.rim_strength.clone();
-    let blur_radius_model = st.blur_radius_px.clone();
-    let debug_model = st.debug_input.clone();
+    let enabled_model = st.enabled.clone_model();
+    let non_filterable_model = st.use_non_filterable_input.clone_model();
+    let sampling_model = st.sampling.clone_model();
+    let sampling_open_model = st.sampling_open.clone_model();
+    let uv_span_model = st.uv_span.clone_model();
+    let input_strength_model = st.input_strength.clone_model();
+    let rim_strength_model = st.rim_strength.clone_model();
+    let blur_radius_model = st.blur_radius_px.clone_model();
+    let debug_model = st.debug_input.clone_model();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(380.0));

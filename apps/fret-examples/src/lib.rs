@@ -1788,8 +1788,35 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "use_non_filterable_input: cx.state().local_init(|| false),",
+                "sampling: cx.state().local_init(|| Some(Arc::<str>::from(\"linear\"))),",
+                "sampling_open: cx.state().local_init(|| false),",
+                "uv_span: cx.state().local_init(|| vec![0.25]),",
+                "input_strength: cx.state().local_init(|| vec![0.35]),",
+                "rim_strength: cx.state().local_init(|| vec![0.65]),",
+                "blur_radius_px: cx.state().local_init(|| vec![10.0]),",
+                "debug_input: cx.state().local_init(|| false),",
+                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
+                ".local_set::<act::Reset, bool>(&st.use_non_filterable_input, false);",
+                ".local_set::<act::Reset, Option<Arc<str>>>(",
+                ".local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![10.0]);",
+                ".local_set::<act::Reset, bool>(&st.debug_input, false);",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "use_non_filterable_input: app.models_mut().insert(false)",
+                "sampling: app.models_mut().insert(Some(Arc::from(\"linear\")))",
+                "sampling_open: app.models_mut().insert(false)",
+                "uv_span: app.models_mut().insert(vec![0.25])",
+                "input_strength: app.models_mut().insert(vec![0.35])",
+                "rim_strength: app.models_mut().insert(vec![0.65])",
+                "blur_radius_px: app.models_mut().insert(vec![10.0])",
+                "debug_input: app.models_mut().insert(false)",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
@@ -1973,9 +2000,17 @@ mod authoring_surface_policy_tests {
             CUSTOM_EFFECT_V2_DEMO,
             &[
                 "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector(",
+                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector_layout(",
+                "&st.enabled,",
+                "&st.use_non_filterable_input,",
+                "&st.sampling,",
+                "&st.debug_input,",
+                "let enabled_model = st.enabled.clone_model();",
+                "let sampling_model = st.sampling.clone_model();",
+                "let sampling_open_model = st.sampling_open.clone_model();",
             ],
             &[
+                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector(",
                 "cx.watch_model(model)",
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let use_non_filterable_input = cx.watch_model(&st.use_non_filterable_input)",
@@ -1984,6 +2019,9 @@ mod authoring_surface_policy_tests {
                 "let use_non_filterable_input = st.use_non_filterable_input.layout_in(cx).value_or(false);",
                 "let sampling_value = st",
                 "let debug_input = st.debug_input.layout_in(cx).value_or(false);",
+                "let enabled_model = st.enabled.clone();",
+                "let sampling_model = st.sampling.clone();",
+                "let sampling_open_model = st.sampling_open.clone();",
             ],
         );
 
