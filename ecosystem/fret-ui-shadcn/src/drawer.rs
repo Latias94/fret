@@ -4756,6 +4756,119 @@ mod tests {
     }
 
     #[test]
+    fn drawer_nested_non_modal_child_drag_routes_to_child_layer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_offset_model = state
+            .parent_offset_model
+            .borrow()
+            .clone()
+            .expect("parent offset model captured");
+        let child_offset_model = state
+            .child_offset_model
+            .borrow()
+            .clone()
+            .expect("child offset model captured");
+        let child_content_id = state
+            .child_content_id
+            .borrow()
+            .clone()
+            .expect("child content id captured");
+
+        let child_dialog =
+            visual_bounds_for_element(&mut app, window, child_content_id).expect("child visual");
+        let start = Point::new(
+            Px(child_dialog.origin.x.0 + child_dialog.size.width.0 * 0.5),
+            Px(child_dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 + 80.0));
+
+        let child_node = fret_ui::elements::node_for_element(&mut app, window, child_content_id)
+            .expect("child node");
+        let child_layer = ui.node_layer(child_node).expect("child layer");
+        let pre_hit = ui.debug_hit_test(start);
+        let pre_hit_node = pre_hit.hit.expect("pre-hit node");
+        let pre_hit_layer = ui.node_layer(pre_hit_node);
+        assert!(
+            pre_hit_layer == Some(child_layer),
+            "expected nested child drag start to hit child layer; start={start:?} hit={pre_hit:?} hit_layer={pre_hit_layer:?} child_layer={child_layer:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let parent_offset = app
+            .models()
+            .get_copied(&parent_offset_model)
+            .unwrap_or(Px(0.0));
+        let child_offset = app
+            .models()
+            .get_copied(&child_offset_model)
+            .unwrap_or(Px(0.0));
+        assert!(
+            child_offset.0 > 1.0,
+            "expected nested child drag to update child offset, got {child_offset:?}"
+        );
+        assert!(
+            parent_offset.0.abs() < 0.5,
+            "expected nested child drag to avoid parent offset changes, got {parent_offset:?}"
+        );
+    }
+
+    #[test]
     fn drawer_snap_points_settle_to_nearest_point_on_release() {
         let window = AppWindowId::default();
         let mut app = App::new();

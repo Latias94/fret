@@ -3237,15 +3237,19 @@ pub fn render<H: UiHost + 'static>(
     // can depend on first-creation order (e.g. a long-lived toast layer created before the first
     // modal, causing toasts to render under modal barriers).
     //
-    // Keep the ordering deterministic and Radix/GPUI-aligned:
-    // base < popovers < modals < hover/tooltips < toasts.
+    // Keep the ordering deterministic while preserving relative order within the main overlay
+    // substrate:
+    // base < popovers/modals (stable relative order) < hover/tooltips < toasts.
+    //
+    // Popovers requested from inside an already-open modal must stay above that modal; forcing all
+    // popovers below all modals breaks nested overlay routing even when request order is correct.
     let layer_priorities: HashMap<UiLayerId, u8> =
         app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             let mut out: HashMap<UiLayerId, u8> = HashMap::new();
 
             for ((w, _id), active) in overlays.popovers.iter() {
                 if *w == window {
-                    out.insert(active.layer, 10);
+                    out.insert(active.layer, 20);
                 }
             }
             for ((w, _id), active) in overlays.modals.iter() {
