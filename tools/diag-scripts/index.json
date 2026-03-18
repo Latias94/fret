@@ -5249,6 +5249,37 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-drawer-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-drawer-nested-child-drag-routing",
+      "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-nested-child-drag-routing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "drag",
+        "drawer",
+        "nested",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
       "required_capabilities": [],
@@ -7888,6 +7919,76 @@
         "window"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-workspace-shell-chrome-shadcn-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-chrome-shadcn-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-workspace-shell"
+      ],
+      "tags": [
+        "screenshots",
+        "shadcn",
+        "ui-gallery",
+        "workspace",
+        "workspace_shell"
+      ],
+      "target_hints": [
+        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+        "Waits for the workspace shell chrome surfaces without opening theme or settings UI.",
+        "Captures a screenshot + diagnostics bundle for the workspace frame/top bar/status bar/tabstrip proof surface."
+      ]
+    },
+    {
+      "id": "ui-gallery-workspace-shell-focus-command-scope-smoke",
+      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-focus-command-scope-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-workspace-shell"
+      ],
+      "tags": [
+        "focus",
+        "keyboard",
+        "smoke",
+        "ui-gallery",
+        "workspace",
+        "workspace_shell"
+      ],
+      "target_hints": [
+        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+        "Focuses the workspace content surface, presses Ctrl+F6, and asserts focus moves into the active tab.",
+        "Presses Escape and asserts focus returns to the workspace content surface."
+      ]
+    },
+    {
+      "id": "ui-gallery-workspace-shell-tab-commands-smoke",
+      "path": "tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-workspace-shell"
+      ],
+      "tags": [
+        "keyboard",
+        "smoke",
+        "tabs",
+        "ui-gallery",
+        "workspace",
+        "workspace_shell"
+      ],
+      "target_hints": [
+        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+        "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
+        "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
+      ]
     },
     {
       "id": "workspace-shell-demo-file-tree-bounce-keep-alive",
