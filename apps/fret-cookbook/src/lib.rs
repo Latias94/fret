@@ -375,6 +375,9 @@ mod authoring_surface_policy_tests {
         assert!(!TOAST_EXAMPLE.contains("availability::<act::DefaultToast>"));
         assert!(!TOAST_EXAMPLE.contains("availability::<act::SuccessToast>"));
         assert!(!TOAST_EXAMPLE.contains("availability::<act::DismissAll>"));
+        assert!(TOAST_EXAMPLE.contains("cx.on_action_notify::<act::DefaultToast>"));
+        assert!(TOAST_EXAMPLE.contains("cx.on_action_notify::<act::SuccessToast>"));
+        assert!(TOAST_EXAMPLE.contains("cx.on_action_notify::<act::DismissAll>"));
 
         assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
@@ -387,6 +390,15 @@ mod authoring_surface_policy_tests {
         assert!(ASYNC_INBOX_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(ASYNC_INBOX_EXAMPLE.contains("models::<act::Cancel>"));
         assert!(ASYNC_INBOX_EXAMPLE.contains("on_action_notify::<act::Start>"));
+        let async_inbox_normalized = ASYNC_INBOX_EXAMPLE.split_whitespace().collect::<String>();
+        assert!(
+            async_inbox_normalized.contains("self.st.status.layout(cx).read_ref(|v|Arc::clone(v))")
+        );
+        assert!(ASYNC_INBOX_EXAMPLE.contains("self.st.running.layout(cx).value_or(false)"));
+        assert!(ASYNC_INBOX_EXAMPLE.contains("self.st.progress.layout(cx).value_or(0.0)"));
+        assert!(!async_inbox_normalized.contains("self.st.status.watch(cx).layout()"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.running.watch(cx).layout()"));
+        assert!(!ASYNC_INBOX_EXAMPLE.contains("self.st.progress.watch(cx).layout()"));
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
@@ -426,6 +438,10 @@ mod authoring_surface_policy_tests {
         assert!(ROUTER_EXAMPLE.contains("on_action_notify::<act::RouterBack>"));
         assert!(ROUTER_EXAMPLE.contains("self.store.back_on_action()"));
         assert!(ROUTER_EXAMPLE.contains("self.store.forward_on_action()"));
+        assert!(
+            ROUTER_EXAMPLE.contains("let intents = intents_model.layout(cx).value_or_default();")
+        );
+        assert!(!ROUTER_EXAMPLE.contains("intents_model.watch(cx).layout().value_or_default()"));
         assert!(!ROUTER_EXAMPLE.contains("set_router_command_availability(window"));
         assert!(ROUTER_EXAMPLE.contains(".setup(fret::router::app::install)"));
         assert!(!ROUTER_EXAMPLE.contains(".setup(fret::router::install_app)"));
@@ -439,6 +455,14 @@ mod authoring_surface_policy_tests {
         assert!(UNDO_EXAMPLE.contains("use fret_app::Effect;"));
         assert!(UNDO_EXAMPLE.contains("models::<act::Inc>"));
         assert!(UNDO_EXAMPLE.contains("on_action_notify::<act::Undo>"));
+        assert!(UNDO_EXAMPLE.contains("let value = self.value.paint(cx).value_or_default();"));
+        assert!(UNDO_EXAMPLE.contains("let history = self.history.paint(cx).value_or_default();"));
+        assert!(
+            UNDO_EXAMPLE.contains("let coalesce = self.coalesce.paint(cx).value_or_default();")
+        );
+        assert!(!UNDO_EXAMPLE.contains("self.value.watch(cx).paint().value_or_default()"));
+        assert!(!UNDO_EXAMPLE.contains("self.history.watch(cx).paint().value_or_default()"));
+        assert!(!UNDO_EXAMPLE.contains("self.coalesce.watch(cx).paint().value_or_default()"));
 
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("MarkdownComponents::<App>::default()"));
         assert!(

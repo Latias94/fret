@@ -176,8 +176,8 @@ impl View for UndoBasicsView {
         let undo_cmd: CommandId = act::Undo.into();
         let redo_cmd: CommandId = act::Redo.into();
 
-        let value = self.value.watch(cx).paint().value_or_default();
-        let history = self.history.watch(cx).paint().value_or_default();
+        let value = self.value.paint(cx).value_or_default();
+        let history = self.history.paint(cx).value_or_default();
         let can_undo = history.can_undo();
         let can_redo = history.can_redo();
 
@@ -190,7 +190,7 @@ impl View for UndoBasicsView {
             .and_then(|rec| rec.label.as_deref())
             .unwrap_or("None");
 
-        let coalesce = self.coalesce.watch(cx).paint().value_or_default();
+        let coalesce = self.coalesce.paint(cx).value_or_default();
         let coalesce_label = if coalesce { "On" } else { "Off" };
 
         let undo_shortcut = cx

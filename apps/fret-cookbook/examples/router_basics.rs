@@ -185,7 +185,7 @@ impl View for RouterBasicsView {
             .invalidation(Invalidation::Layout)
             .cloned()
             .expect("router snapshot should be readable");
-        let intents = intents_model.watch(cx).layout().value_or_default();
+        let intents = intents_model.layout(cx).value_or_default();
         let typed_route_label = APP_ROUTE_CODEC
             .decode_canonical(&snapshot.location)
             .map(|route| format!("{route:?}"))
