@@ -2851,6 +2851,7 @@ mod authoring_surface_policy_tests {
         ));
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(FIRST_HOUR.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
         assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
         assert!(!FIRST_HOUR.contains("`.dispatch::<A>()`"));
         assert!(!FIRST_HOUR.contains("`.dispatch_payload::<A>(...)`"));
@@ -2869,6 +2870,8 @@ mod authoring_surface_policy_tests {
         );
         assert!(!FIRST_HOUR.contains("cx.watch_model(&models.clicks)"));
         assert!(!FIRST_HOUR.contains("`fret_ui_shadcn::prelude::*`"));
+        assert!(!FIRST_HOUR.contains("let clicks = clicks_state.paint(cx).value_or_default();"));
+        assert!(!FIRST_HOUR.contains("let label = label_state.layout(cx).value_or_default();"));
     }
 
     #[test]

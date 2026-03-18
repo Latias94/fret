@@ -1335,6 +1335,10 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     /// `(&draft_state, &next_id_state, ...)` directly, then register the typed action via
     /// `.on::<A>(...)` without repeating a `LocalState::clone(...)` prelude at every call site.
     ///
+    /// Borrowed captures are often the right default in real render bodies because the same local
+    /// handles are still used later for reads, widget binding, or other action registration. Use
+    /// owned `LocalState<T>` values only when the handles are not needed again in the same scope.
+    ///
     /// This keeps action identity and the `LocalStateTxn` boundary explicit while trimming the
     /// common multi-slot capture ceremony on the default app lane.
     pub fn locals_with<C>(self, captures: C) -> AppUiLocalsWith<'view, 'cx, 'a, H, C::Owned>

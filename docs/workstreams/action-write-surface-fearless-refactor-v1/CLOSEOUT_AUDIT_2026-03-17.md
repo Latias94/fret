@@ -7,6 +7,10 @@ Post-closeout update on 2026-03-18:
 - the repo now also deletes `locals::<A>(...)`
 - `locals_with((...)).on::<A>(...)` is the only retained coordinated LocalState transaction
   spelling on the shipped `fret` app lane
+- follow-up review of current cookbook/example call sites shows that many `locals_with((&a, &b,
+  ...))` captures are not just syntax residue: the same local handles are still used later in the
+  same render body for tracked reads, widget binding, or sibling registrations, so the borrowed
+  capture shape remains an intentional ownership signal rather than unfinished helper debt
 
 Goal:
 

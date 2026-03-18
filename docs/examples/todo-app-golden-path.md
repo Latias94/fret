@@ -355,7 +355,9 @@ LocalState-first flows, use
 `cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use
 `cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and
 keep raw `on_action_notify` plus lower-level payload/model seams for cookbook/reference host-side
-cases only:
+cases only. In ordinary render bodies, borrowed captures like `(&draft_state, &next_id_state,
+&todos_state)` are often intentional rather than accidental noise, because those same local handles
+usually remain in use later for reads, widget binding, or sibling action registration:
 
 ```rust,ignore
 cx.actions()
