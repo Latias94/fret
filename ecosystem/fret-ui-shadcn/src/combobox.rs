@@ -22,15 +22,15 @@ use fret_ui_kit::declarative::motion::{
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::control_registry::{
-    control_registry_model, ControlAction, ControlEntry, ControlId,
+    ControlAction, ControlEntry, ControlId, control_registry_model,
 };
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{
-    resolve_override_slot, ui, ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement,
-    MetricRef, OverrideSlot, Radius, ShadowPreset, Size, Space, WidgetState, WidgetStateProperty,
-    WidgetStates,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
+    ShadowPreset, Size, Space, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, ui,
 };
 
 use crate::command::{
@@ -3680,13 +3680,15 @@ mod tests {
                     bounds,
                     "combobox-clear",
                     |cx| {
-                        vec![Combobox::new(model, open.clone())
-                            .a11y_label("Combobox")
-                            .test_id_prefix("combobox-clear")
-                            .items([ComboboxItem::new("alpha", "Alpha")])
-                            .into_element_parts(cx, |_cx| {
-                                vec![ComboboxPart::from(ComboboxInput::new().show_clear(true))]
-                            })]
+                        vec![
+                            Combobox::new(model, open.clone())
+                                .a11y_label("Combobox")
+                                .test_id_prefix("combobox-clear")
+                                .items([ComboboxItem::new("alpha", "Alpha")])
+                                .into_element_parts(cx, |_cx| {
+                                    vec![ComboboxPart::from(ComboboxInput::new().show_clear(true))]
+                                }),
+                        ]
                     },
                 );
                 ui.set_root(root);
@@ -3752,15 +3754,17 @@ mod tests {
                 bounds,
                 "combobox-show-trigger",
                 |cx| {
-                    vec![Combobox::new(model.clone(), open.clone())
-                        .a11y_label("Combobox")
-                        .test_id_prefix("combobox-show-trigger")
-                        .items([ComboboxItem::new("alpha", "Alpha")])
-                        .into_element_parts(cx, |_cx| {
-                            vec![ComboboxPart::from(
-                                ComboboxInput::new().show_trigger(show_trigger),
-                            )]
-                        })]
+                    vec![
+                        Combobox::new(model.clone(), open.clone())
+                            .a11y_label("Combobox")
+                            .test_id_prefix("combobox-show-trigger")
+                            .items([ComboboxItem::new("alpha", "Alpha")])
+                            .into_element_parts(cx, |_cx| {
+                                vec![ComboboxPart::from(
+                                    ComboboxInput::new().show_trigger(show_trigger),
+                                )]
+                            }),
+                    ]
                 },
             );
             ui.set_root(root);
