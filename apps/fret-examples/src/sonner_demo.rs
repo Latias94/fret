@@ -3,24 +3,27 @@ use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
-use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
+use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Edges, Event, Px, Rect, UiServices};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 use fret_ui::action::UiActionHostAdapter;
 use fret_ui::declarative;
 use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, MainAlign};
-use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 
 pub struct SonnerDemoWindowState {
     ui: UiTree<App>,
+    app_ui_root: AppUiRenderRootState,
     root: Option<fret_core::NodeId>,
-    last_action: Model<Arc<str>>,
+    last_action: LocalState<Arc<str>>,
     promise: Option<shadcn::ToastPromise>,
 }
 
@@ -29,13 +32,15 @@ pub struct SonnerDemoDriver;
 
 impl SonnerDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> SonnerDemoWindowState {
-        let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
+        let last_action =
+            LocalState::from_model(app.models_mut().insert(Arc::<str>::from("<none>")));
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
         SonnerDemoWindowState {
             ui,
+            app_ui_root: AppUiRenderRootState::default(),
             root: None,
             last_action,
             promise: None,
@@ -54,156 +59,133 @@ impl SonnerDemoDriver {
         let last_action = state.last_action.clone();
         let promise_active = state.promise.is_some();
 
-        let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("sonner-demo", |cx| {
-                    cx.observe_model(&last_action, Invalidation::Layout);
-                    let last_action_value = cx
-                        .app
-                        .models()
-                        .get_cloned(&last_action)
-                        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+        let root = render_root_with_app_ui(
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds),
+            "sonner-demo",
+            &mut state.app_ui_root,
+            |cx| {
+                let last_action_value = last_action
+                    .layout(cx)
+                    .value_or_else(|| Arc::<str>::from("<none>"));
 
-                    vec![
-                        cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle::default(),
-                                direction: fret_core::Axis::Vertical,
-                                gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
-                                padding: Edges::all(Px(24.0)).into(),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Stretch,
-                                wrap: false,
-                            },
-                            |cx| {
-                                vec![
-                                    cx.text("Sonner (shadcn/ui) demo"),
-                                    cx.text(format!(
-                                        "promise active: {promise_active} | last action: {last_action_value}"
-                                    )),
-                                    cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: fret_core::Axis::Horizontal,
-                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
-                                            padding: Edges::all(Px(0.0)).into(),
-                                            justify: MainAlign::Start,
-                                            align: CrossAlign::Center,
-                                            wrap: true,
-                                        },
-                                        |cx| {
-                                            vec![
-                                                shadcn::Button::new("Default")
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.default",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Description")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.description",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Success")
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.success",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Info")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from("sonner.toast.info"))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Warning")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.warning",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Error")
-                                                    .variant(shadcn::ButtonVariant::Destructive)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.error",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Loading (pinned)")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.loading",
-                                                    ))
-                                                    .into_element(cx),
-                                            ]
-                                        },
-                                    ),
-                                    cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: fret_core::Axis::Horizontal,
-                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
-                                            padding: Edges::all(Px(0.0)).into(),
-                                            justify: MainAlign::Start,
-                                            align: CrossAlign::Center,
-                                            wrap: true,
-                                        },
-                                        |cx| {
-                                            vec![
-                                                shadcn::Button::new("Action + Cancel")
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.action_cancel",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Pinned")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.pinned",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Not dismissible")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.toast.not_dismissible",
-                                                    ))
-                                                    .into_element(cx),
-                                            ]
-                                        },
-                                    ),
-                                    cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: fret_core::Axis::Horizontal,
-                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
-                                            padding: Edges::all(Px(0.0)).into(),
-                                            justify: MainAlign::Start,
-                                            align: CrossAlign::Center,
-                                            wrap: true,
-                                        },
-                                        |cx| {
-                                            vec![
-                                                shadcn::Button::new("Promise: start")
-                                                    .on_click(CommandId::from(
-                                                        "sonner.promise.start",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Promise: resolve success")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.promise.success",
-                                                    ))
-                                                    .into_element(cx),
-                                                shadcn::Button::new("Promise: resolve error")
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CommandId::from(
-                                                        "sonner.promise.error",
-                                                    ))
-                                                    .into_element(cx),
-                                            ]
-                                        },
-                                    ),
-                                ]
-                            },
-                        ),
-                        shadcn::Toaster::new().into_element(cx),
-                    ]
-                });
+                vec![
+                    cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: fret_core::Axis::Vertical,
+                            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                            padding: Edges::all(Px(24.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        |cx| {
+                            vec![
+                                cx.text("Sonner (shadcn/ui) demo"),
+                                cx.text(format!(
+                                    "promise active: {promise_active} | last action: {last_action_value}"
+                                )),
+                                cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: true,
+                                    },
+                                    |cx| {
+                                        vec![
+                                            shadcn::Button::new("Default")
+                                                .on_click(CommandId::from("sonner.toast.default"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Description")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.toast.description"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Success")
+                                                .on_click(CommandId::from("sonner.toast.success"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Info")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.toast.info"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Warning")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.toast.warning"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Error")
+                                                .variant(shadcn::ButtonVariant::Destructive)
+                                                .on_click(CommandId::from("sonner.toast.error"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Loading (pinned)")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.toast.loading"))
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                ),
+                                cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: true,
+                                    },
+                                    |cx| {
+                                        vec![
+                                            shadcn::Button::new("Action + Cancel")
+                                                .on_click(CommandId::from("sonner.toast.action_cancel"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Pinned")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.toast.pinned"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Not dismissible")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.toast.not_dismissible"))
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                ),
+                                cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: true,
+                                    },
+                                    |cx| {
+                                        vec![
+                                            shadcn::Button::new("Promise: start")
+                                                .on_click(CommandId::from("sonner.promise.start"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Promise: resolve success")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.promise.success"))
+                                                .into_element(cx),
+                                            shadcn::Button::new("Promise: resolve error")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .on_click(CommandId::from("sonner.promise.error"))
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                ),
+                            ]
+                        },
+                    ),
+                    shadcn::Toaster::new().into_element(cx),
+                ]
+                .into()
+            },
+        );
 
         state.ui.set_root(root);
         OverlayController::render(&mut state.ui, app, services, window, bounds);
@@ -384,9 +366,9 @@ fn handle_command(
                 sonner.toast_promise(&mut host, window, "Working…")
             };
             state.promise = Some(promise);
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("promise.start");
-            });
+            let _ = state
+                .last_action
+                .set_in(app.models_mut(), Arc::<str>::from("promise.start"));
         }
         "sonner.promise.success" => {
             if let Some(promise) = state.promise.take() {
@@ -398,9 +380,9 @@ fn handle_command(
                         shadcn::ToastMessageOptions::new().description("Promise resolved."),
                     );
                 }
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("promise.success");
-                });
+                let _ = state
+                    .last_action
+                    .set_in(app.models_mut(), Arc::<str>::from("promise.success"));
             } else {
                 let mut host = UiActionHostAdapter { app };
                 sonner.toast_info_message(
@@ -421,9 +403,9 @@ fn handle_command(
                         shadcn::ToastMessageOptions::new().description("Promise rejected."),
                     );
                 }
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("promise.error");
-                });
+                let _ = state
+                    .last_action
+                    .set_in(app.models_mut(), Arc::<str>::from("promise.error"));
             } else {
                 let mut host = UiActionHostAdapter { app };
                 sonner.toast_info_message(
@@ -435,14 +417,14 @@ fn handle_command(
             }
         }
         "sonner.toast.action" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("toast.action");
-            });
+            let _ = state
+                .last_action
+                .set_in(app.models_mut(), Arc::<str>::from("toast.action"));
         }
         "sonner.toast.cancel" => {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("toast.cancel");
-            });
+            let _ = state
+                .last_action
+                .set_in(app.models_mut(), Arc::<str>::from("toast.cancel"));
         }
         _ => {}
     }

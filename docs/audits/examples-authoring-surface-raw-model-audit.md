@@ -185,6 +185,9 @@ Audit judgment:
   plus explicit `LocalState::from_model(...)` bridges.
 - `apps/fret-examples/src/date_picker_demo.rs` now proves the same bridge also covers the smaller
   control-panel/calendar family without keeping raw tracked reads on the render path.
+- `apps/fret-examples/src/sonner_demo.rs` now proves the bridge also covers overlay/toast demos
+  whose runtime-owned state bag mixes a manual root with explicit side-channel objects such as
+  `ToastPromise`.
 
 ### B2) Window/runtime interop harnesses
 
@@ -231,7 +234,6 @@ Candidate files:
 - `apps/fret-examples/src/components_gallery.rs`
 - `apps/fret-examples/src/emoji_conformance_demo.rs`
 - `apps/fret-examples/src/ime_smoke_demo.rs`
-- `apps/fret-examples/src/sonner_demo.rs`
 
 Why these are candidates:
 

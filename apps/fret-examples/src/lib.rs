@@ -839,6 +839,25 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn manual_sonner_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            SONNER_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "last_action: LocalState<Arc<str>>,",
+                "let root = render_root_with_app_ui(",
+                "let last_action_value = last_action.layout(cx).value_or_else(",
+            ],
+            &[
+                "last_action: Model<Arc<str>>,",
+                ".render_root(\"sonner-demo\", |cx| {",
+                "cx.observe_model(&last_action, Invalidation::Layout);",
+                "cx.app.models().get_cloned(&last_action)",
+            ],
+        );
+    }
+
+    #[test]
     fn imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures() {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_editor_name_assist_surface("));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_surface("));
