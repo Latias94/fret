@@ -1,10 +1,13 @@
 # Into-Element Surface (Fearless Refactor v1) — Milestones
 
+Status: maintenance-only closeout tracker
+Last updated: 2026-03-18
+
 This file defines milestones for the workstream in `DESIGN.md`.
 
-## Current execution stance (2026-03-15)
+## Current execution stance (2026-03-18)
 
-This workstream should now be read as a **closeout / maintenance lane**, not the current main
+This workstream should now be read as a **maintenance-only closeout lane**, not the current main
 authoring lane.
 
 Coordination note on 2026-03-16:
@@ -15,6 +18,19 @@ Coordination note on 2026-03-16:
   story, not to reopen tier design independently
 - remaining work here should stay limited to helper-tail cleanup, explicit raw-seam inventory,
   source-gate maintenance, and low-noise wrapper cleanup
+
+Closeout note on 2026-03-18:
+
+- the sampled re-audit now confirms the previously open-looking helper/family rows are already
+  source-gated and should be treated as migrated rather than actively in flight,
+- representative closure evidence now includes:
+  - `ecosystem/fret/tests/reusable_component_helper_surface.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
+  - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
+- this leaves only maintenance-only drift control: keep the intentional raw-seam inventory
+  accurate, keep page/snippet family notes aligned, and do not reopen conversion taxonomy design
+  unless one of those audited boundaries changes.
 
 Closeout note on 2026-03-15:
 
@@ -40,6 +56,17 @@ Historical readout on 2026-03-14:
 | M3 | Done | surface migration is landed across the curated app/component lanes, the canonical todo/scaffold compare set, and the first-party Gallery/doc scaffolds; the previously ambiguous families are classified (`Select` / `Combobox` / `Command` => direct recipe root/bridge, `NavigationMenu` / `Pagination` => dual-lane), the high-signal `Select` / `Combobox` snippets prefer the compact direct root builder chains instead of teaching closure-based `into_element_parts(...)`, the default-app UI Gallery `pages/` + `snippets/` surface is closed on the target posture (no `DocSection::new(...)`, no default snippet `UiCx -> AnyElement`, only intentional diagnostics/raw roots remain), and the internal preview page surface is also off `DocSection::new(...)`; remaining work is maintenance of the audited intentional seam inventory rather than active migration |
 | M4 | Done | prelude gates are in place, curated component-authoring docs teach only `IntoUiElement<H>`, stale-name source/doc guards cover the curated docs, `UiChildIntoElement` / `UiIntoElement` / `UiBuilderHostBoundIntoElementExt` are deleted from production code, `fret_ui_shadcn::prelude::*` re-exports `IntoUiElement` so typed direct-crate helpers do not need ad-hoc trait imports, exported `fret-ui-kit` adapter macros plus built-in primitive glue attach `IntoUiElement<H>` directly, built-in text primitives and declarative semantics wrappers land through `IntoUiElement<H>` directly, and current follow-up is limited to keeping historical design notes accurate rather than closing code-level migration gaps |
 | M6 | Done | the shadcn raw-seam inventory is now explicitly closed: `use_combobox_anchor(...)` is deleted in favor of `PopoverAnchor::build(...).into_anchor(cx)`, `TooltipContent::{build,text}(...)` and `state.rs::{use_selector_badge,query_status_badge,query_error_alert}` are back on the typed lane, and the only remaining deliberate raw helper contracts on that lane are `kbd.rs::kbd_icon(...)` plus the final-wrapper `text_edit_context_menu*` family, both guarded by source-policy tests and reflected in `TARGET_INTERFACE_STATE.md` / `MIGRATION_MATRIX.md` |
+
+Current status snapshot (as of 2026-03-18):
+
+| Milestone | State | Notes |
+| --- | --- | --- |
+| M0 | Met | target vocabulary and delete rules stay locked |
+| M1 | Met | curated conversion vocabulary remains collapsed to `IntoUiElement<H>` |
+| M2 | Met | builder/macro/child landing remains on the unified trait |
+| M3 | Met | app/helper/family teaching surfaces are source-gated on the settled lane story |
+| M4 | Met | stale-name and prelude guards remain in place |
+| M6 | Met | intentional raw seams remain explicitly documented rather than implicitly taught |
 
 Implementation addendum on 2026-03-14:
 
@@ -115,7 +142,7 @@ Implementation addendum on 2026-03-14:
   `DocSection::build(...)`, and `wrap_preview_page(...)` / `render_doc_page(...)` stay on the
   typed lane.
 - the selected first-party shadcn family lanes now also have a curated export completeness guard:
-  `surface_policy_tests::authoring_critical_family_exports_stay_on_root_and_curated_facade`
+  `surface_policy_tests::authoring_critical_family_exports_live_on_curated_facade_only`
   locks the crate root and `facade` exports for `Select`, `Combobox`, `ComboboxChips`, `Command`,
   `NavigationMenu`, and `Pagination`, so newly added builder parts do not strand the curated
   `shadcn::...` namespace behind root-only exports.

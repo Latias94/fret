@@ -1,7 +1,7 @@
 # Into-Element Surface (Fearless Refactor v1)
 
-Status: closeout / maintenance lane
-Last updated: 2026-03-16
+Status: maintenance-only historical design record
+Last updated: 2026-03-18
 
 Related:
 
@@ -20,7 +20,20 @@ Closeout reading rule on 2026-03-16:
 - remaining work here is maintenance only: explicit raw-seam inventory, low-noise wrapper cleanup,
   and source-gate/docs alignment
 
-This workstream focuses on one narrow product-surface problem:
+Closeout note on 2026-03-18:
+
+- a sampled re-audit confirmed that the remaining `MIGRATION_MATRIX.md` rows were stale status
+  lag, not active product-surface migration,
+- representative source-policy gates now lock the settled posture across reusable helpers, default
+  app snippets/pages, and intentional raw preview seams:
+  - `ecosystem/fret/tests/reusable_component_helper_surface.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
+  - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
+- this document should now be read strictly as the historical explanation for why the lane existed,
+  not as a live design owner for further authoring-surface work.
+
+This workstream focused on one narrow product-surface problem:
 
 - how authoring values become `AnyElement`,
 - which conversion concepts are public,
@@ -39,7 +52,7 @@ runtime contracts, the relevant ADRs must be updated separately.
 
 ## 1. Problem Statement
 
-The app-facing authoring reset has already improved the main story:
+The app-facing authoring reset had already improved the main story:
 
 - `FretApp`
 - `App`
@@ -49,9 +62,10 @@ The app-facing authoring reset has already improved the main story:
 - `UiChild`
 - grouped `state/actions/data/effects`
 
-But the **value-to-element conversion surface** is still fragmented.
+But the **value-to-element conversion surface** was still fragmented when this lane opened.
 
-Today, first-party code and public exports expose multiple overlapping concepts:
+At the time this lane opened, first-party code and public exports exposed multiple overlapping
+concepts:
 
 - `UiIntoElement`
 - `UiHostBoundIntoElement<H>`
@@ -71,7 +85,7 @@ Ordinary app authors should learn:
 - `.ui()` for fluent refinement,
 - `.into_element(cx)` only as a landing operation, not as a taxonomy lesson.
 
-When the default path still depends on several conversion traits being in scope, the surface feels
+When the default path still depended on several conversion traits being in scope, the surface felt
 more mechanical than it should.
 
 ### 1.2 Why this matters for component authors
@@ -98,13 +112,13 @@ That split is now deleted from production code. The remaining closeout evidence 
 - a few intentionally non-raw first-party helpers can still drift back to `AnyElement` even though
   the unified `IntoUiElement<H>` / `UiChild` story is already available.
 
-First-party usage also showed that `AnyElement` used to be the default authoring currency for many
+First-party usage also showed that `AnyElement` had become the default authoring currency for many
 component/snippet surfaces:
 
 - `apps/fret-cookbook/examples/**`: the official cookbook is already much closer to the target
   app-facing story.
-- `apps/fret-ui-gallery/src/ui/snippets/**`: helper/snippet surfaces still overwhelmingly return
-  `AnyElement` and land children explicitly with `.into_element(cx)`.
+- `apps/fret-ui-gallery/src/ui/snippets/**`: helper/snippet surfaces still overwhelmingly returned
+  `AnyElement` and landed children explicitly with `.into_element(cx)`.
 
 That is acceptable for advanced/raw surfaces. It is not the product surface we should teach by
 default.

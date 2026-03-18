@@ -1,5 +1,7 @@
 # Into-Element Surface (Fearless Refactor v1) — TODO
 
+Status: maintenance-only closeout tracker
+
 This TODO list tracks the work described in `DESIGN.md`.
 
 Because this is a pre-release reset, "done" means we actually delete superseded public conversion
@@ -20,6 +22,19 @@ Closeout reading rule on 2026-03-16:
 - remaining work here is helper-tail cleanup, explicit raw-seam inventory, source-policy gates,
   and stale-doc closeout
 - historical execution notes below are archived evidence, not current sequencing instructions
+
+Closeout note on 2026-03-18:
+
+- there are now no unchecked execution items left on this lane,
+- a sampled 2026-03-18 re-audit confirmed the representative closure gates still pass:
+  - `reusable_component_helper_surface`
+  - `copyable_ui_gallery_snippet_lane_has_no_top_level_raw_render_roots`
+  - `direct_recipe_root_pages_mark_their_default_lane_without_inventing_compose`
+  - `navigation_menu_and_pagination_pages_keep_their_dual_lane_story`
+  - `gallery_doc_layout_retains_only_intentional_raw_boundaries`
+  - `internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams`
+- future edits in this folder should therefore be limited to drift control and audited seam
+  inventory updates, not new conversion-surface design.
 
 Historical execution note on 2026-03-13:
 
@@ -192,7 +207,7 @@ Historical execution note on 2026-03-14:
   The focused gallery source gate now locks `Carousel` parts usage down to the explicit
   upstream-shaped lane plus the custom-control diagnostics snippets `events.rs` and `rtl.rs`.
 - the selected first-party shadcn family lanes now also have a crate-root/facade export guard:
-  `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs::authoring_critical_family_exports_stay_on_root_and_curated_facade`
+  `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs::authoring_critical_family_exports_live_on_curated_facade_only`
   now locks `Select`, `Combobox`, `ComboboxChips`, `Command`, `NavigationMenu`, and `Pagination`
   so newly added builder steps or upstream-shaped parts do not become root-only exports and drift
   away from the curated `shadcn::...` teaching surface.
