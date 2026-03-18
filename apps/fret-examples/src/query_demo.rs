@@ -1,8 +1,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus};
+use fret::app::prelude::*;
+use fret::children::UiElementSinkExt as _;
+use fret::query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus};
+use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
 
 mod act {
     fret::actions!([
@@ -37,7 +39,7 @@ fn query_policy() -> QueryPolicy {
 struct QueryDemoView;
 
 impl View for QueryDemoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -193,23 +195,18 @@ impl View for QueryDemoView {
         .w_full()
         .max_w(Px(520.0));
 
-        query_page(cx.elements(), theme, card)
+        ui::single(cx, query_page(theme, card))
     }
 }
 
-fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui
-where
-    C: IntoUiElement<KernelApp>,
-{
-    ui::v_flex(|cx| ui::single(cx, card))
+fn query_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
+    ui::v_flex(|cx| ui::single(cx, content))
         .bg(ColorRef::Color(theme.color_token("background")))
         .p(Space::N6)
         .w_full()
         .h_full()
         .justify_center()
         .items_center()
-        .into_element(cx)
-        .into()
 }
 
 pub fn run() -> anyhow::Result<()> {

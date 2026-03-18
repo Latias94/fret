@@ -357,21 +357,28 @@ mod authoring_surface_policy_tests {
         );
     }
 
-    fn assert_uses_default_app_surface(src: &str) {
+    fn assert_uses_default_app_surface_with_page(src: &str, page_fn: &str, call_site: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(!src.contains("advanced::prelude::*"));
         assert!(!src.contains("KernelApp"));
         assert!(!src.contains("AppWindowId"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
-        assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
-        assert!(
-            src.contains(
-                "fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild"
-            )
-        );
-        assert!(!src.contains("fn todo_page(cx: &mut UiCx<'_>,"));
+        let page_sig =
+            format!("fn {page_fn}(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild");
+        let legacy_page_sig = format!("fn {page_fn}(cx: &mut UiCx<'_>,");
+        assert!(src.contains(call_site));
+        assert!(src.contains(&page_sig));
+        assert!(!src.contains(&legacy_page_sig));
         assert!(!src.contains("let card = card.into_element(cx);"));
-        assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
+        assert!(!src.contains(&format!("{page_fn}(theme, card).into_element(cx).into()")));
+    }
+
+    fn assert_uses_default_app_surface(src: &str) {
+        assert_uses_default_app_surface_with_page(
+            src,
+            "todo_page",
+            "ui::single(cx, todo_page(theme, card))",
+        );
     }
 
     fn assert_avoids_legacy_conversion_names(src: &str) {
@@ -593,8 +600,6 @@ mod authoring_surface_policy_tests {
             MARKDOWN_DEMO,
             NODE_GRAPH_DEMO,
             POSTPROCESS_THEME_DEMO,
-            QUERY_ASYNC_TOKIO_DEMO,
-            QUERY_DEMO,
             TEXT_HEAVY_MEMORY_DEMO,
             WINDOW_HIT_TEST_PROBE_DEMO,
         ] {
@@ -635,6 +640,18 @@ mod authoring_surface_policy_tests {
         assert!(!SIMPLE_TODO_DEMO.contains("CommandId"));
         assert!(!SIMPLE_TODO_DEMO.contains("UiTree<App>"));
         assert!(!SIMPLE_TODO_DEMO.contains("Model<"));
+    }
+
+    #[test]
+    fn query_demos_prefer_default_app_surface() {
+        for src in [QUERY_DEMO, QUERY_ASYNC_TOKIO_DEMO] {
+            assert_uses_default_app_surface_with_page(
+                src,
+                "query_page",
+                "ui::single(cx, query_page(theme, card))",
+            );
+            assert_avoids_legacy_conversion_names(src);
+        }
     }
 
     #[test]
@@ -1018,28 +1035,6 @@ mod authoring_surface_policy_tests {
                 "genui_page(cx, theme, left, right)",
             ],
             &["let page = ui::container(move |cx| {"],
-        );
-
-        assert_advanced_helpers_prefer_uicx(
-            QUERY_DEMO,
-            &[
-                "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
-                "C: IntoUiElement<KernelApp>,",
-                "query_page(cx.elements(), theme, card)",
-                "ui::v_flex(|cx| ui::single(cx, card))",
-            ],
-            &["ui::v_flex(|cx| ui::children![cx; card])"],
-        );
-
-        assert_advanced_helpers_prefer_uicx(
-            QUERY_ASYNC_TOKIO_DEMO,
-            &[
-                "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
-                "C: IntoUiElement<KernelApp>,",
-                "query_page(cx.elements(), theme, card)",
-                "ui::v_flex(|cx| ui::single(cx, card))",
-            ],
-            &["ui::v_flex(|cx| ui::children![cx; card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
