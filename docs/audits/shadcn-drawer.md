@@ -91,6 +91,9 @@ Upstream exports a thin wrapper around `vaul`:
   at 384px).
 - Pass: Bottom drawers include the small handle affordance region above the content.
 - Pass: Vaul-style snap points are modeled for bottom drawers via `Drawer::snap_points(...)`.
+- Pass: Base UI-style controlled snap points now exist at recipe level via
+  `Drawer::snap_point(...)`, `Drawer::on_snap_point_change(...)`, and
+  `Drawer::snap_to_sequential_points(...)`.
 - Pass: The first-party `Snap Points` recipe now stays on that same typed `compose()` root lane
   rather than falling back to the older closure-root `into_element(...)` path just to demonstrate
   the Vaul/Fret policy extension.
@@ -125,9 +128,9 @@ Upstream exports a thin wrapper around `vaul`:
 
 ## Known gaps / intentional differences
 
-- Base UI / Vaul controlled snap-point surfaces are still narrower in Fret. Today we expose
-  recipe-owned `snap_points(...)` plus `default_snap_point(index)`, but not
-  `snapPoint` / `onSnapPointChange` / `snapToSequentialPoints`.
+- Fret models controlled snap points as authored indices (`Model<Option<usize>>`) rather than the
+  Base UI value surface (`snapPoint` values plus event details). This keeps the recipe surface
+  stable for fraction-based snap points without relying on float equality at the public boundary.
 - Base UI nested-drawer coordination is not modeled yet. Upstream tracks nested swipe progress,
   frontmost height, and nested-open state for features like background indentation and gesture
   arbitration; Fret currently treats each drawer as an independent modal overlay.
@@ -139,6 +142,7 @@ Upstream exports a thin wrapper around `vaul`:
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
 - `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
+- `cargo nextest run -p fret-ui-shadcn drawer_snap_point_model_initializes_to_controlled_index_on_open drawer_snap_points_settle_to_nearest_point_on_release drawer_close_resets_snap_point_model_to_default_index drawer_snap_to_sequential_points_advances_one_step_per_drag`
 
 ## Authoring note: `children([...])` and `compose()`
 

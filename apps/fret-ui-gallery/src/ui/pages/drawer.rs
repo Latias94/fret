@@ -22,6 +22,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Drawer::compose()` remains the builder-first follow-up when callers prefer explicit trigger/content chaining over part collection.",
         "`Usage` is the default copyable `children([...])` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane.",
         "`snap_points(...)` and `default_snap_point(...)` are Vaul-oriented extensions that stay outside the core shadcn docs path even though they are first-class Drawer policy in Fret.",
+        "`snap_point(...)`, `on_snap_point_change(...)`, and `snap_to_sequential_points(...)` are recipe-owned controlled snap-point follow-ups on that same Drawer root lane.",
     ]);
 
     let notes = doc_layout::notes_block([
@@ -31,7 +32,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The docs-path examples now share the same `Drawer::children([...])` root lane, while `Drawer::compose()` remains the builder-first alternative without pushing children API concerns into the mechanism layer.",
         "Docs-path footer close actions now consistently use `DrawerClose::from_scope().build(cx, child)` so the copyable lane stays aligned with upstream `DrawerClose asChild` intent.",
         "Base UI-only policy variants such as `modal={false|'trap-focus'}` now exist as follow-up API, but they are intentionally not taught on this page because the shadcn docs path stays modal-first.",
-        "Controlled snap points and nested-drawer coordination still require wider policy work than the shadcn docs path.",
+        "Controlled snap points now exist as an authored-index follow-up surface, while nested-drawer coordination still requires wider policy work than the shadcn docs path.",
         "`Demo`, `Responsive Dialog`, and `RTL` keep the official inner content structure (centered max-width body, profile form layout, goal-adjust controls) so gallery visuals stay close to shadcn docs instead of only proving the raw mechanism works.",
         "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
         "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",

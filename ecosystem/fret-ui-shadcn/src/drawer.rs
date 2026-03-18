@@ -8,7 +8,7 @@ use std::sync::Arc;
 use fret_core::{
     Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextAlign, Transform2D,
 };
-use fret_runtime::{Model, TickId};
+use fret_runtime::{Model, ModelStore, TickId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, MarginEdge, MarginEdges,
@@ -18,7 +18,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
-use fret_ui_headless::snap_points as headless_snap_points;
 
 use crate::layout as shadcn_layout;
 use crate::sheet::Sheet;
@@ -36,6 +35,7 @@ use fret_ui_kit::declarative::motion_value::{
     MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
@@ -43,6 +43,7 @@ use fret_ui_kit::{
 };
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnSnapPointChange = Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>;
 
 const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
@@ -91,16 +92,114 @@ pub enum DrawerSnapPoint {
 }
 
 fn normalize_snap_points(points: Vec<DrawerSnapPoint>) -> Vec<f32> {
-    let mut out: Vec<f32> = points
-        .into_iter()
-        .filter_map(|p| match p {
+    let mut out = Vec::new();
+    for point in points {
+        let Some(fraction) = (match point {
             DrawerSnapPoint::Fraction(f) if f.is_finite() && f > 0.0 => Some(f.min(1.0)),
             _ => None,
-        })
-        .collect();
-    out.sort_by(|a, b| a.total_cmp(b));
-    out.dedup_by(|a, b| (*a - *b).abs() < f32::EPSILON);
+        }) else {
+            continue;
+        };
+        if out
+            .iter()
+            .any(|existing: &f32| (*existing - fraction).abs() < f32::EPSILON)
+        {
+            continue;
+        }
+        out.push(fraction);
+    }
     out
+}
+
+fn drawer_default_snap_point_index(points: &[f32], explicit_index: Option<usize>) -> Option<usize> {
+    if points.is_empty() {
+        return None;
+    }
+    if let Some(index) = explicit_index.filter(|index| *index < points.len()) {
+        return Some(index);
+    }
+    points
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.total_cmp(b))
+        .map(|(index, _)| index)
+}
+
+fn drawer_resolve_snap_point_index(
+    points: &[f32],
+    explicit_default_index: Option<usize>,
+    requested_index: Option<usize>,
+) -> Option<usize> {
+    requested_index
+        .filter(|index| *index < points.len())
+        .or_else(|| drawer_default_snap_point_index(points, explicit_default_index))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct DrawerResolvedSnapTarget {
+    model_index: usize,
+    visible: Px,
+    offset: Px,
+}
+
+fn drawer_resolved_snap_targets(
+    points: &[f32],
+    drawer_height: Px,
+    window_height: Px,
+) -> Vec<DrawerResolvedSnapTarget> {
+    points
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(model_index, fraction)| {
+            let desired_visible = Px((window_height.0 * fraction).max(0.0));
+            let visible = Px(desired_visible.0.min(drawer_height.0).max(0.0));
+            let offset = Px((drawer_height.0 - visible.0).max(0.0));
+            DrawerResolvedSnapTarget {
+                model_index,
+                visible,
+                offset,
+            }
+        })
+        .collect()
+}
+
+fn drawer_resolved_snap_target_for_index(
+    targets: &[DrawerResolvedSnapTarget],
+    index: usize,
+) -> Option<DrawerResolvedSnapTarget> {
+    targets
+        .iter()
+        .copied()
+        .find(|target| target.model_index == index)
+}
+
+fn drawer_resolved_snap_target_closest_by_offset(
+    targets: &[DrawerResolvedSnapTarget],
+    offset: Px,
+) -> Option<DrawerResolvedSnapTarget> {
+    targets.iter().copied().min_by(|a, b| {
+        let da = (a.offset.0 - offset.0).abs();
+        let db = (b.offset.0 - offset.0).abs();
+        da.total_cmp(&db)
+    })
+}
+
+fn drawer_set_snap_point_with_callback(
+    models: &mut ModelStore,
+    model: &Model<Option<usize>>,
+    on_change: Option<&OnSnapPointChange>,
+    next: Option<usize>,
+) -> bool {
+    let current = models.get_cloned(model).unwrap_or(None);
+    if current == next {
+        return false;
+    }
+    let _ = models.update(model, |value| *value = next);
+    if let Some(on_change) = on_change {
+        on_change(next);
+    }
+    true
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -775,7 +874,10 @@ pub struct Drawer {
     inner: Sheet,
     drag_to_dismiss: bool,
     snap_points: Option<Vec<f32>>,
+    snap_point: Option<Model<Option<usize>>>,
     default_snap_point_index: Option<usize>,
+    snap_to_sequential_points: bool,
+    on_snap_point_change: Option<OnSnapPointChange>,
 }
 
 impl std::fmt::Debug for Drawer {
@@ -785,7 +887,10 @@ impl std::fmt::Debug for Drawer {
             .field("side", &self.side)
             .field("drag_to_dismiss", &self.drag_to_dismiss)
             .field("snap_points", &self.snap_points.as_ref().map(|v| v.len()))
+            .field("snap_point", &self.snap_point.as_ref().map(|_| "<model>"))
             .field("default_snap_point_index", &self.default_snap_point_index)
+            .field("snap_to_sequential_points", &self.snap_to_sequential_points)
+            .field("on_snap_point_change", &self.on_snap_point_change.is_some())
             .finish()
     }
 }
@@ -801,7 +906,10 @@ impl Drawer {
                 .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION),
             drag_to_dismiss: true,
             snap_points: None,
+            snap_point: None,
             default_snap_point_index: None,
+            snap_to_sequential_points: false,
+            on_snap_point_change: None,
         }
     }
 
@@ -964,11 +1072,36 @@ impl Drawer {
         self
     }
 
+    /// Sets the active snap point model (Base UI `snapPoint`).
+    ///
+    /// The model stores an authored snap-point index into the `snap_points(...)` list. When the
+    /// model is `None` or out of range, the drawer falls back to `default_snap_point(...)` or the
+    /// largest authored snap point.
+    pub fn snap_point(mut self, snap_point: Model<Option<usize>>) -> Self {
+        self.snap_point = Some(snap_point);
+        self
+    }
+
     /// Overrides which snap point is used as the initial "open" position.
     ///
     /// When unset, the largest snap point is used (most open), matching typical Vaul usage.
     pub fn default_snap_point(mut self, index: usize) -> Self {
         self.default_snap_point_index = Some(index);
+        self
+    }
+
+    /// Disables velocity-based snap skipping so a drag only advances one snap point at a time.
+    pub fn snap_to_sequential_points(mut self, enabled: bool) -> Self {
+        self.snap_to_sequential_points = enabled;
+        self
+    }
+
+    /// Called when the active snap point changes due to drawer-owned interactions or close reset.
+    pub fn on_snap_point_change(
+        mut self,
+        on_snap_point_change: impl Fn(Option<usize>) + Send + Sync + 'static,
+    ) -> Self {
+        self.on_snap_point_change = Some(Arc::new(on_snap_point_change));
         self
     }
 
@@ -1045,7 +1178,15 @@ impl Drawer {
         let side = self.side;
         let drag_to_dismiss = self.drag_to_dismiss;
         let snap_points = self.snap_points.clone();
+        let snap_point_model = snap_points.as_ref().map(|points| {
+            controllable_state::use_controllable_model(cx, self.snap_point.clone(), || {
+                drawer_default_snap_point_index(points, self.default_snap_point_index)
+            })
+            .model()
+        });
         let default_snap_point_index = self.default_snap_point_index;
+        let snap_to_sequential_points = self.snap_to_sequential_points;
+        let on_snap_point_change = self.on_snap_point_change.clone();
 
         let mut inner = self
             .inner
@@ -1079,6 +1220,9 @@ impl Drawer {
                 st.viewport_height = viewport_bounds.size.height;
             });
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
+            let requested_snap_point_index = snap_point_model
+                .as_ref()
+                .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
 
             if let Some(bounds) = cx.last_bounds_for_element(content.id) {
                 let drawer_h = drawer_drag_snap_height(bounds.size.height, window_height, side);
@@ -1089,12 +1233,28 @@ impl Drawer {
                 });
             }
 
+            if !is_open && was_open {
+                if let (Some(points), Some(model)) =
+                    (snap_points.as_ref(), snap_point_model.as_ref())
+                {
+                    let default_index =
+                        drawer_default_snap_point_index(points, default_snap_point_index);
+                    let _ = drawer_set_snap_point_with_callback(
+                        cx.app.models_mut(),
+                        model,
+                        on_snap_point_change.as_ref(),
+                        default_index,
+                    );
+                }
+            }
+
             if is_open && !was_open {
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = Px(0.0));
                 if has_snap_points {
                     let _ = cx.app.models_mut().update(&runtime, |st| {
                         st.needs_snap_init = true;
                         st.settling = false;
+                        st.applied_snap_point_index = None;
                     });
                 }
             }
@@ -1104,10 +1264,17 @@ impl Drawer {
                 let _ = cx.app.models_mut().update(&runtime, |st| {
                     st.needs_snap_init = false;
                     st.settling = false;
+                    st.applied_snap_point_index = None;
                 });
             }
 
             if is_open && has_snap_points {
+                let points = snap_points.as_ref().expect("snap points");
+                let resolved_snap_point_index = drawer_resolve_snap_point_index(
+                    points,
+                    default_snap_point_index,
+                    requested_snap_point_index,
+                );
                 let needs_init = cx
                     .app
                     .models()
@@ -1119,27 +1286,59 @@ impl Drawer {
                     if let Some(bounds) = cx.last_bounds_for_element(content.id) {
                         let drawer_h =
                             drawer_drag_snap_height(bounds.size.height, window_height, side);
-                        let _ = cx
-                            .app
-                            .models_mut()
-                            .update(&runtime, |st| st.drawer_height = drawer_h);
-                        let points = snap_points.as_ref().expect("snap points");
-                        let mut idx = default_snap_point_index
-                            .unwrap_or_else(|| points.len().saturating_sub(1));
-                        if idx >= points.len() {
-                            idx = points.len().saturating_sub(1);
-                        }
-                        let fraction = points.get(idx).copied().unwrap_or(1.0);
-                        let desired_visible = Px((window_height.0 * fraction).max(0.0));
-                        let visible = Px(desired_visible.0.min(drawer_h.0).max(0.0));
-                        let desired_offset = Px((drawer_h.0 - visible.0).max(0.0));
-
-                        let _ = cx.app.models_mut().update(&offset_model, |v| {
-                            *v = desired_offset;
-                        });
+                        let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
                         let _ = cx.app.models_mut().update(&runtime, |st| {
-                            st.needs_snap_init = false;
+                            st.drawer_height = drawer_h;
                         });
+
+                        if let Some(target) = resolved_snap_point_index.and_then(|index| {
+                            drawer_resolved_snap_target_for_index(&targets, index)
+                        }) {
+                            let _ = cx.app.models_mut().update(&offset_model, |v| {
+                                *v = target.offset;
+                            });
+                            let _ = cx.app.models_mut().update(&runtime, |st| {
+                                st.needs_snap_init = false;
+                                st.applied_snap_point_index = Some(target.model_index);
+                            });
+                        } else {
+                            let _ = cx.app.models_mut().update(&runtime, |st| {
+                                st.needs_snap_init = false;
+                                st.applied_snap_point_index = None;
+                            });
+                        }
+                    }
+                } else if let Some(bounds) = cx.last_bounds_for_element(content.id) {
+                    let drawer_h = drawer_drag_snap_height(bounds.size.height, window_height, side);
+                    let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
+                    let runtime_snapshot = cx.app.models().get_copied(&runtime).unwrap_or_default();
+                    if !runtime_snapshot.dragging
+                        && resolved_snap_point_index != runtime_snapshot.applied_snap_point_index
+                    {
+                        if let Some(target) = resolved_snap_point_index.and_then(|index| {
+                            drawer_resolved_snap_target_for_index(&targets, index)
+                        }) {
+                            let current_offset =
+                                cx.app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+                            if (current_offset.0 - target.offset.0).abs() > 0.5 {
+                                let _ = cx.app.models_mut().update(&runtime, |st| {
+                                    st.settling = true;
+                                    st.settle_to = target.offset;
+                                    st.settle_seq = st.settle_seq.saturating_add(1).max(1);
+                                    st.settle_velocity = 0.0;
+                                    st.applied_snap_point_index = Some(target.model_index);
+                                });
+                            } else {
+                                let _ = cx.app.models_mut().update(&offset_model, |v| {
+                                    *v = target.offset;
+                                });
+                                let _ = cx.app.models_mut().update(&runtime, |st| {
+                                    st.settling = false;
+                                    st.settle_velocity = 0.0;
+                                    st.applied_snap_point_index = Some(target.model_index);
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -1260,12 +1459,25 @@ impl Drawer {
             let runtime_for_up = runtime.clone();
             let offset_for_up = offset_model.clone();
             let snap_points_for_up = snap_points.clone();
+            let snap_point_model_for_up = snap_point_model.clone();
+            let on_snap_point_change_for_up = on_snap_point_change.clone();
             let inertia_bounce_spring = shadcn_drawer_inertia_bounce_spring_description(&*cx.app);
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, up| {
-                let Ok((dragging, stored_velocity, stored_drawer_h)) =
-                    host.models_mut().read(&runtime_for_up, |st| {
-                        (st.dragging, st.velocity, st.drawer_height)
-                    })
+                let Ok((
+                    dragging,
+                    stored_velocity,
+                    stored_drawer_h,
+                    stored_start_offset,
+                    applied_snap_point_index,
+                )) = host.models_mut().read(&runtime_for_up, |st| {
+                    (
+                        st.dragging,
+                        st.velocity,
+                        st.drawer_height,
+                        st.start_offset,
+                        st.applied_snap_point_index,
+                    )
+                })
                 else {
                     return false;
                 };
@@ -1314,22 +1526,13 @@ impl Drawer {
                     .unwrap_or(false);
                 if has_snap_points {
                     let points = snap_points_for_up.as_ref().expect("snap points");
+                    let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
 
-                    let mut min_visible = None::<Px>;
-                    let mut targets: Vec<Px> = Vec::new();
-                    for fraction in points {
-                        let desired_visible = Px((window_height.0 * *fraction).max(0.0));
-                        let visible = Px(desired_visible.0.min(drawer_h.0).max(0.0));
-                        if visible.0 > 0.0 {
-                            min_visible = Some(match min_visible {
-                                Some(prev) => Px(prev.0.min(visible.0)),
-                                None => visible,
-                            });
-                        }
-                        let target_offset = Px((drawer_h.0 - visible.0).max(0.0));
-                        targets.push(target_offset);
-                    }
-                    targets.push(Px(0.0));
+                    let min_visible = targets
+                        .iter()
+                        .map(|target| target.visible)
+                        .filter(|visible| visible.0 > 0.0)
+                        .min_by(|a, b| a.0.total_cmp(&b.0));
 
                     let close_threshold = min_visible
                         .map(|v| Px((drawer_h.0 - v.0 * 0.5).max(DRAWER_DRAG_DISMISS_MIN_PX)))
@@ -1345,16 +1548,109 @@ impl Drawer {
                         let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
-                        let nearest =
-                            headless_snap_points::closest_value_px(&targets, projected_offset)
-                                .unwrap_or(Px(0.0));
+                        let nearest = if snap_to_sequential_points {
+                            let mut ordered_targets = targets.clone();
+                            ordered_targets.sort_by(|a, b| a.offset.0.total_cmp(&b.offset.0));
+
+                            let current_target = applied_snap_point_index
+                                .and_then(|index| {
+                                    drawer_resolved_snap_target_for_index(&ordered_targets, index)
+                                })
+                                .or_else(|| {
+                                    drawer_resolved_snap_target_closest_by_offset(
+                                        &ordered_targets,
+                                        stored_start_offset,
+                                    )
+                                });
+                            let mut target = drawer_resolved_snap_target_closest_by_offset(
+                                &ordered_targets,
+                                projected_offset,
+                            )
+                            .or_else(|| ordered_targets.first().copied())
+                            .expect("snap target");
+                            let drag_delta = offset.0 - stored_start_offset.0;
+                            let drag_direction = if drag_delta > 0.5 {
+                                1isize
+                            } else if drag_delta < -0.5 {
+                                -1isize
+                            } else {
+                                0
+                            };
+                            let velocity_direction =
+                                if velocity >= DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC {
+                                    1isize
+                                } else if velocity <= -DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC {
+                                    -1isize
+                                } else {
+                                    0
+                                };
+
+                            if drag_direction != 0 && drag_direction == velocity_direction {
+                                if let Some(current_target) = current_target {
+                                    if let Some(current_sorted_index) = ordered_targets
+                                        .iter()
+                                        .position(|candidate| *candidate == current_target)
+                                    {
+                                        let adjacent_index = if drag_direction > 0 {
+                                            current_sorted_index
+                                                .saturating_add(1)
+                                                .min(ordered_targets.len().saturating_sub(1))
+                                        } else {
+                                            current_sorted_index.saturating_sub(1)
+                                        };
+                                        if adjacent_index != current_sorted_index {
+                                            let adjacent_target = ordered_targets[adjacent_index];
+                                            let should_force_adjacent = if drag_direction > 0 {
+                                                offset.0 < adjacent_target.offset.0
+                                            } else {
+                                                offset.0 > adjacent_target.offset.0
+                                            };
+                                            if should_force_adjacent {
+                                                target = adjacent_target;
+                                            }
+                                        } else if drag_direction > 0 {
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&offset_for_up, |v| *v = Px(0.0));
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&open_for_up, |v| *v = false);
+                                            let _ =
+                                                host.models_mut().update(&runtime_for_up, |st| {
+                                                    st.dragging = false;
+                                                });
+                                            host.release_pointer_capture();
+                                            host.request_redraw(_cx.window);
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                            target
+                        } else {
+                            drawer_resolved_snap_target_closest_by_offset(
+                                &targets,
+                                projected_offset,
+                            )
+                            .expect("snap target")
+                        };
+
+                        if let Some(model) = snap_point_model_for_up.as_ref() {
+                            let _ = drawer_set_snap_point_with_callback(
+                                host.models_mut(),
+                                model,
+                                on_snap_point_change_for_up.as_ref(),
+                                Some(nearest.model_index),
+                            );
+                        }
 
                         let _ = host.models_mut().update(&runtime_for_up, |st| {
                             st.settling = true;
-                            st.settle_to = nearest;
+                            st.settle_to = nearest.offset;
                             st.settle_seq = st.settle_seq.saturating_add(1).max(1);
                             st.settle_velocity = velocity;
                             st.dragging = false;
+                            st.applied_snap_point_index = Some(nearest.model_index);
                         });
                         host.release_pointer_capture();
                         host.request_redraw(_cx.window);
@@ -1747,6 +2043,7 @@ struct DrawerDragRuntime {
     last_offset: Px,
     velocity: f32,
     needs_snap_init: bool,
+    applied_snap_point_index: Option<usize>,
     settling: bool,
     settle_to: Px,
     settle_seq: u64,
@@ -1766,6 +2063,7 @@ impl Default for DrawerDragRuntime {
             last_offset: Px(0.0),
             velocity: 0.0,
             needs_snap_init: false,
+            applied_snap_point_index: None,
             settling: false,
             settle_to: Px(0.0),
             settle_seq: 0,
@@ -2046,6 +2344,111 @@ mod tests {
             ElementKind::Text(props) => Some(props),
             _ => None,
         }
+    }
+
+    #[derive(Clone, Default)]
+    struct DrawerSnapHarnessState {
+        runtime_model: Rc<RefCell<Option<Model<DrawerDragRuntime>>>>,
+        offset_model: Rc<RefCell<Option<Model<Px>>>>,
+        drawer_content_id: Rc<RefCell<Option<GlobalElementId>>>,
+    }
+
+    fn drawer_snap_test_points() -> Vec<DrawerSnapPoint> {
+        vec![
+            DrawerSnapPoint::Fraction(0.25),
+            DrawerSnapPoint::Fraction(0.5),
+            DrawerSnapPoint::Fraction(0.75),
+        ]
+    }
+
+    fn render_snap_drawer_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: &Model<bool>,
+        snap_point: Option<&Model<Option<usize>>>,
+        default_snap_point_index: Option<usize>,
+        snap_to_sequential_points: bool,
+        on_snap_point_change: Option<OnSnapPointChange>,
+        state: &DrawerSnapHarnessState,
+    ) {
+        let open_for_drawer = open.clone();
+        let snap_point_for_drawer = snap_point.cloned();
+        let on_snap_point_change_for_drawer = on_snap_point_change.clone();
+        let runtime_model_cell = state.runtime_model.clone();
+        let offset_model_cell = state.offset_model.clone();
+        let drawer_content_id_cell = state.drawer_content_id.clone();
+
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let mut drawer =
+                    Drawer::new(open_for_drawer).snap_points(drawer_snap_test_points());
+                if let Some(snap_point) = snap_point_for_drawer.clone() {
+                    drawer = drawer.snap_point(snap_point);
+                }
+                if let Some(index) = default_snap_point_index {
+                    drawer = drawer.default_snap_point(index);
+                }
+                if snap_to_sequential_points {
+                    drawer = drawer.snap_to_sequential_points(true);
+                }
+                if let Some(on_snap_point_change) = on_snap_point_change_for_drawer.clone() {
+                    drawer = drawer.on_snap_point_change(move |index| on_snap_point_change(index));
+                }
+
+                let drawer = drawer.into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                        *runtime_model_cell.borrow_mut() = Some(runtime);
+                        *offset_model_cell.borrow_mut() = Some(offset_model);
+
+                        let content = DrawerContent::new(vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Px(Px(800.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )])
+                        .into_element(cx);
+                        *drawer_content_id_cell.borrow_mut() = Some(content.id);
+                        content
+                    },
+                );
+
+                vec![drawer]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
     }
 
     #[test]
@@ -3757,84 +4160,14 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(true);
-        let runtime_model_cell: Rc<RefCell<Option<Model<DrawerDragRuntime>>>> =
-            Rc::new(RefCell::new(None));
-        let offset_model_cell: Rc<RefCell<Option<Model<Px>>>> = Rc::new(RefCell::new(None));
-        let drawer_content_id_cell: Rc<RefCell<Option<GlobalElementId>>> =
-            Rc::new(RefCell::new(None));
+        let snap_point = app.models_mut().insert(Some(2usize));
+        let state = DrawerSnapHarnessState::default();
 
         let mut services = FakeServices::default();
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(600.0)),
         );
-
-        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
-            let open_for_drawer = open.clone();
-            let runtime_model_cell_for_drawer = runtime_model_cell.clone();
-            let offset_model_cell_for_drawer = offset_model_cell.clone();
-            let drawer_content_id_for_drawer = drawer_content_id_cell.clone();
-
-            OverlayController::begin_frame(app, window);
-            let root =
-                fret_ui::declarative::render_root(ui, app, services, window, b, "test", |cx| {
-                    let trigger = cx.pressable(
-                        PressableProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Px(Px(120.0));
-                                layout.size.height = Length::Px(Px(40.0));
-                                layout
-                            },
-                            enabled: true,
-                            focusable: true,
-                            ..Default::default()
-                        },
-                        |_cx, _st| Vec::new(),
-                    );
-
-                    let drawer = Drawer::new(open_for_drawer)
-                        .snap_points(vec![
-                            DrawerSnapPoint::Fraction(0.25),
-                            DrawerSnapPoint::Fraction(0.5),
-                            DrawerSnapPoint::Fraction(0.75),
-                        ])
-                        .into_element(
-                            cx,
-                            |_cx| trigger,
-                            move |cx| {
-                                let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
-                                *runtime_model_cell_for_drawer.borrow_mut() = Some(runtime);
-                                *offset_model_cell_for_drawer.borrow_mut() = Some(offset_model);
-
-                                let content = DrawerContent::new(vec![cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Px(Px(800.0)),
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    |_cx| Vec::new(),
-                                )])
-                                .into_element(cx);
-                                *drawer_content_id_for_drawer.borrow_mut() = Some(content.id);
-                                content
-                            },
-                        );
-
-                    vec![drawer]
-                });
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, b);
-            ui.layout_all(app, services, b, 1.0);
-            let mut scene = fret_core::Scene::default();
-            ui.paint_all(app, services, b, &mut scene, 1.0);
-        };
 
         let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
             crate::overlay_motion::SHADCN_MOTION_DURATION_500,
@@ -3844,20 +4177,35 @@ mod tests {
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
             frame = FrameId(frame.0.saturating_add(1));
-            render_frame(&mut ui, &mut app, &mut services);
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                false,
+                None,
+                &state,
+            );
         }
 
-        let drawer_content_id = drawer_content_id_cell
+        let drawer_content_id = state
+            .drawer_content_id
             .borrow()
             .clone()
             .expect("drawer content id captured");
 
-        let offset_model = offset_model_cell
+        let offset_model = state
+            .offset_model
             .borrow()
             .clone()
             .expect("offset model captured");
         let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
-        let runtime_model = runtime_model_cell
+        let runtime_model = state
+            .runtime_model
             .borrow()
             .clone()
             .expect("runtime model captured");
@@ -3914,17 +4262,25 @@ mod tests {
             }),
         );
 
-        let offset_model = offset_model_cell
-            .borrow()
-            .clone()
-            .expect("offset model captured");
         let expected = Px(180.0);
 
         let mut settled = false;
         for _ in 0..120 {
             app.set_frame_id(frame);
             frame = FrameId(frame.0.saturating_add(1));
-            render_frame(&mut ui, &mut app, &mut services);
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                false,
+                None,
+                &state,
+            );
 
             let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
             if (offset.0 - expected.0).abs() < 1.0 {
@@ -3942,6 +4298,290 @@ mod tests {
             settled,
             "expected offset to settle near {expected:?}, got {offset:?} (window_height={:?}, viewport_height={:?}, drawer_height={:?})",
             runtime.window_height, runtime.viewport_height, runtime.drawer_height,
+        );
+        assert_eq!(
+            app.models().get_cloned(&snap_point).unwrap_or(None),
+            Some(1),
+            "expected drag release to update the snap-point model to the nearest authored index",
+        );
+    }
+
+    #[test]
+    fn drawer_snap_point_model_initializes_to_controlled_index_on_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let snap_point = app.models_mut().insert(Some(1usize));
+        let state = DrawerSnapHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                false,
+                None,
+                &state,
+            );
+        }
+
+        let offset_model = state
+            .offset_model
+            .borrow()
+            .clone()
+            .expect("offset model captured");
+        let runtime_model = state
+            .runtime_model
+            .borrow()
+            .clone()
+            .expect("runtime model captured");
+        let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+        let runtime = app
+            .models()
+            .get_copied(&runtime_model)
+            .expect("runtime snapshot");
+
+        assert!(
+            (offset.0 - 180.0).abs() < 1.0,
+            "expected controlled snap point index 1 to initialize near 180px offset, got {offset:?}",
+        );
+        assert_eq!(
+            runtime.applied_snap_point_index,
+            Some(1),
+            "expected runtime to track the controlled active snap-point index",
+        );
+    }
+
+    #[test]
+    fn drawer_close_resets_snap_point_model_to_default_index() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let snap_point = app.models_mut().insert(Some(2usize));
+        let state = DrawerSnapHarnessState::default();
+        let events: Arc<Mutex<Vec<Option<usize>>>> = Arc::new(Mutex::new(Vec::new()));
+        let on_snap_point_change: OnSnapPointChange = {
+            let events = events.clone();
+            Arc::new(move |index| {
+                events.lock().expect("snap-point events").push(index);
+            })
+        };
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                Some(1),
+                false,
+                Some(on_snap_point_change.clone()),
+                &state,
+            );
+        }
+
+        let _ = app.models_mut().update(&open, |value| *value = false);
+        app.set_frame_id(frame);
+        render_snap_drawer_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            &open,
+            Some(&snap_point),
+            Some(1),
+            false,
+            Some(on_snap_point_change.clone()),
+            &state,
+        );
+
+        assert_eq!(
+            app.models().get_cloned(&snap_point).unwrap_or(None),
+            Some(1),
+            "expected close transition to restore the default snap-point index",
+        );
+        assert_eq!(
+            events.lock().expect("snap-point events").as_slice(),
+            &[Some(1)],
+            "expected close reset to emit a single snap-point change callback",
+        );
+    }
+
+    #[test]
+    fn drawer_snap_to_sequential_points_advances_one_step_per_drag() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let snap_point = app.models_mut().insert(Some(0usize));
+        let state = DrawerSnapHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                true,
+                None,
+                &state,
+            );
+        }
+
+        let drawer_content_id = state
+            .drawer_content_id
+            .borrow()
+            .clone()
+            .expect("drawer content id captured");
+        let offset_model = state
+            .offset_model
+            .borrow()
+            .clone()
+            .expect("offset model captured");
+        let dialog =
+            visual_bounds_for_element(&mut app, window, drawer_content_id).expect("drawer visual");
+        let start = Point::new(
+            Px(dialog.origin.x.0 + dialog.size.width.0 * 0.5),
+            Px(dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 - 220.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_cloned(&snap_point).unwrap_or(None),
+            Some(1),
+            "expected sequential snap mode to advance only to the adjacent snap-point index",
+        );
+
+        let expected = Px(180.0);
+        let mut settled = false;
+        for _ in 0..120 {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                true,
+                None,
+                &state,
+            );
+
+            let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+            if (offset.0 - expected.0).abs() < 1.0 {
+                settled = true;
+                break;
+            }
+        }
+
+        let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+        assert!(
+            settled,
+            "expected sequential snap mode to settle near {expected:?}, got {offset:?}",
         );
     }
 
