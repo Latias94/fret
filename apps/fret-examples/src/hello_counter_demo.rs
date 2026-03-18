@@ -82,25 +82,21 @@ impl View for HelloCounterView {
             .data()
             .selector_layout(&step_state, |step_text| parse_step(step_text.as_str()));
 
-        cx.actions().locals::<act::Inc>({
-            let count_state = count_state.clone();
-            let step_state = step_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with((&count_state, &step_state))
+            .on::<act::Inc>(|tx, (count_state, step_state)| {
                 let step_text = tx.value_or_else(&step_state, || "1".to_string());
                 let (step, _) = parse_step(&step_text);
                 tx.update(&count_state, |value| *value = value.saturating_add(step))
-            }
-        });
+            });
 
-        cx.actions().locals::<act::Dec>({
-            let count_state = count_state.clone();
-            let step_state = step_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with((&count_state, &step_state))
+            .on::<act::Dec>(|tx, (count_state, step_state)| {
                 let step_text = tx.value_or_else(&step_state, || "1".to_string());
                 let (step, _) = parse_step(&step_text);
                 tx.update(&count_state, |value| *value = value.saturating_sub(step))
-            }
-        });
+            });
 
         cx.actions().local_set::<act::Reset, i64>(&count_state, 0);
         cx.actions()

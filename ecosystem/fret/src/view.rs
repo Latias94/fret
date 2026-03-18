@@ -325,8 +325,8 @@ impl<'a> LocalStateTxn<'a> {
     /// Read the current value from an initialized local slot.
     ///
     /// `LocalState<T>` on the app lane always owns an inserted model slot, so ordinary
-    /// `locals::<A>(...)` transactions can read with `tx.value(&local)` instead of reopening
-    /// fallback noise at every call site.
+    /// `locals_with((...)).on::<A>(...)` transactions can read with `tx.value(&local)` instead of
+    /// reopening fallback noise at every call site.
     pub fn value<T: Any + Clone>(&self, local: &LocalState<T>) -> T {
         local
             .value_in(self.models)
@@ -357,6 +357,62 @@ impl<'a> LocalStateTxn<'a> {
         local.update_in_if(self.models, f)
     }
 }
+
+/// Hidden capture helper for `locals_with(...)`.
+///
+/// This lets first-party and downstream app code pass `&LocalState<T>` handles directly into a
+/// registered action closure without repeating a `LocalState::clone(...)` prelude at every call
+/// site.
+#[doc(hidden)]
+pub trait LocalActionCapture {
+    type Owned: Clone + 'static;
+
+    fn capture_owned(&self) -> Self::Owned;
+}
+
+impl<T: Any> LocalActionCapture for LocalState<T> {
+    type Owned = LocalState<T>;
+
+    fn capture_owned(&self) -> Self::Owned {
+        self.clone()
+    }
+}
+
+impl<T: Any> LocalActionCapture for &LocalState<T> {
+    type Owned = LocalState<T>;
+
+    fn capture_owned(&self) -> Self::Owned {
+        (*self).clone()
+    }
+}
+
+macro_rules! impl_local_action_capture_tuple {
+    ($(($($name:ident $idx:tt),+)),+ $(,)?) => {
+        $(
+            impl<$($name),+> LocalActionCapture for ($($name,)+)
+            where
+                $($name: LocalActionCapture,)+
+            {
+                type Owned = ($($name::Owned,)+);
+
+                fn capture_owned(&self) -> Self::Owned {
+                    ($(self.$idx.capture_owned(),)+)
+                }
+            }
+        )+
+    };
+}
+
+impl_local_action_capture_tuple!(
+    (A 0),
+    (A 0, B 1),
+    (A 0, B 1, C 2),
+    (A 0, B 1, C 2, D 3),
+    (A 0, B 1, C 2, D 3, E 4),
+    (A 0, B 1, C 2, D 3, E 4, F 5),
+    (A 0, B 1, C 2, D 3, E 4, F 5, G 6),
+    (A 0, B 1, C 2, D 3, E 4, F 5, G 6, H 7),
+);
 
 /// Explicit tracked-read builder returned by `watch(...)` / `layout(...)` / `paint(...)`.
 ///
@@ -898,6 +954,54 @@ pub struct UiCxActions<'cx, 'a> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
 }
 
+#[doc(hidden)]
+pub struct AppUiLocalsWith<'view, 'cx, 'a, H: UiHost, C> {
+    cx: &'view mut AppUi<'cx, 'a, H>,
+    captures: C,
+}
+
+#[doc(hidden)]
+pub struct UiCxLocalsWith<'cx, 'a, C> {
+    cx: &'cx mut ElementContext<'a, crate::app::App>,
+    captures: C,
+}
+
+impl<'view, 'cx, 'a, H: UiHost, C> AppUiLocalsWith<'view, 'cx, 'a, H, C>
+where
+    C: Clone + 'static,
+{
+    pub fn on<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> bool + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let captures = self.captures;
+        self.cx.on_action_notify::<A>(move |host, _action_cx| {
+            let mut tx = LocalStateTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, captures.clone())
+        });
+    }
+}
+
+impl<'cx, 'a, C> UiCxLocalsWith<'cx, 'a, C>
+where
+    C: Clone + 'static,
+{
+    pub fn on<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> bool + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let captures = self.captures;
+        uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| {
+            let mut tx = LocalStateTxn {
+                models: host.models_mut(),
+            };
+            f(&mut tx, captures.clone())
+        });
+    }
+}
+
 /// Contract for app-facing widgets that expose an activation-only callback slot.
 ///
 /// This stays in `ecosystem/fret` because it is authoring sugar, not runtime mechanism.
@@ -1165,22 +1269,20 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
             });
     }
 
-    /// Coordinate multiple `LocalState<T>` slots through one store transaction.
+    /// Clone the provided `LocalState<T>` handles into a hidden builder so the call site can pass
+    /// `(&draft_state, &next_id_state, ...)` directly, then register the typed action via
+    /// `.on::<A>(...)` without repeating a `LocalState::clone(...)` prelude at every call site.
     ///
-    /// Inside the callback, prefer `tx.value(...)` for ordinary initialized locals, keep
-    /// `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases, and use
-    /// `tx.set(...)`, `tx.update(...)`, and `tx.update_if(...)` for writes rather than naming the
-    /// transaction carrier type directly.
-    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)
+    /// This keeps action identity and the `LocalStateTxn` boundary explicit while trimming the
+    /// common multi-slot capture ceremony on the default app lane.
+    pub fn locals_with<C>(self, captures: C) -> AppUiLocalsWith<'view, 'cx, 'a, H, C::Owned>
     where
-        A: crate::TypedAction,
+        C: LocalActionCapture,
     {
-        self.cx.on_action_notify::<A>(move |host, _action_cx| {
-            let mut tx = LocalStateTxn {
-                models: host.models_mut(),
-            };
-            f(&mut tx)
-        });
+        AppUiLocalsWith {
+            cx: self.cx,
+            captures: captures.capture_owned(),
+        }
     }
 
     pub fn transient<A>(self, transient_key: u64)
@@ -1308,22 +1410,17 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         });
     }
 
-    /// Coordinate multiple `LocalState<T>` slots through one store transaction.
-    ///
-    /// Inside the callback, prefer `tx.value(...)` for ordinary initialized locals, keep
-    /// `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases, and use
-    /// `tx.set(...)`, `tx.update(...)`, and `tx.update_if(...)` for writes rather than naming the
-    /// transaction carrier type directly.
-    pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)
+    /// Clone the provided `LocalState<T>` handles into a hidden builder so helper-heavy `UiCx`
+    /// code can pass `(&draft_state, &next_id_state, ...)` directly, then register the typed
+    /// action via `.on::<A>(...)` without reopening a `LocalState::clone(...)` prelude.
+    pub fn locals_with<C>(self, captures: C) -> UiCxLocalsWith<'cx, 'a, C::Owned>
     where
-        A: crate::TypedAction,
+        C: LocalActionCapture,
     {
-        uicx_on_action_notify::<A>(self.cx, move |host, _action_cx| {
-            let mut tx = LocalStateTxn {
-                models: host.models_mut(),
-            };
-            f(&mut tx)
-        });
+        UiCxLocalsWith {
+            cx: self.cx,
+            captures: captures.capture_owned(),
+        }
     }
 
     pub fn transient<A>(self, transient_key: u64)
@@ -1716,7 +1813,8 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
     ///
     /// Discover this namespace through `cx.actions()` rather than naming the returned carrier
     /// type directly. The grouped surface owns widget-local action glue, one-slot local writes,
-    /// coordinated `locals::<A>(...)`, keyed payload writes, transients, and availability hooks.
+    /// coordinated `locals_with((...)).on::<A>(...)`, keyed payload writes, transients, and
+    /// availability hooks.
     pub fn actions(&mut self) -> AppUiActions<'_, 'cx, 'a, H> {
         AppUiActions { cx: self }
     }
@@ -2005,8 +2103,8 @@ pub fn view_record_engine_frame<V: View>(
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateExt, AppActivateSurface, LocalState, LocalStateTxn, OnActivate, action_listener,
-        dispatch_action_listener, dispatch_payload_action_listener,
+        AppActivateExt, AppActivateSurface, LocalActionCapture, LocalState, LocalStateTxn,
+        OnActivate, action_listener, dispatch_action_listener, dispatch_payload_action_listener,
     };
     use std::any::Any;
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
@@ -2145,6 +2243,65 @@ mod tests {
 
         assert_eq!(tx.value(&draft), String::from("draft"));
         assert_eq!(tx.value(&next_id), 7u64);
+    }
+
+    #[test]
+    fn local_action_capture_clones_local_state_handles_from_refs() {
+        let mut host = FakeHost::default();
+        let draft = LocalState {
+            model: host.models.insert(String::from("draft")),
+        };
+        let next_id = LocalState {
+            model: host.models.insert(7u64),
+        };
+
+        let (draft_capture, next_id_capture) = (&draft, &next_id).capture_owned();
+
+        assert_eq!(
+            draft_capture.value_in(&host.models),
+            Some(String::from("draft"))
+        );
+        assert_eq!(next_id_capture.value_in(&host.models), Some(7u64));
+    }
+
+    #[test]
+    fn local_action_capture_supports_wide_local_tuples() {
+        let mut host = FakeHost::default();
+        let a = LocalState {
+            model: host.models.insert(1u64),
+        };
+        let b = LocalState {
+            model: host.models.insert(2u64),
+        };
+        let c = LocalState {
+            model: host.models.insert(3u64),
+        };
+        let d = LocalState {
+            model: host.models.insert(4u64),
+        };
+        let e = LocalState {
+            model: host.models.insert(5u64),
+        };
+        let f = LocalState {
+            model: host.models.insert(6u64),
+        };
+        let g = LocalState {
+            model: host.models.insert(7u64),
+        };
+        let h = LocalState {
+            model: host.models.insert(8u64),
+        };
+
+        let captures = (&a, &b, &c, &d, &e, &f, &g, &h).capture_owned();
+
+        assert_eq!(captures.0.value_in(&host.models), Some(1u64));
+        assert_eq!(captures.1.value_in(&host.models), Some(2u64));
+        assert_eq!(captures.2.value_in(&host.models), Some(3u64));
+        assert_eq!(captures.3.value_in(&host.models), Some(4u64));
+        assert_eq!(captures.4.value_in(&host.models), Some(5u64));
+        assert_eq!(captures.5.value_in(&host.models), Some(6u64));
+        assert_eq!(captures.6.value_in(&host.models), Some(7u64));
+        assert_eq!(captures.7.value_in(&host.models), Some(8u64));
     }
 
     #[test]
@@ -2485,6 +2642,13 @@ mod tests {
         assert!(api_source.contains(
             "pub fn payload_models<A>(\n        self,\n        f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,"
         ));
+        assert!(api_source.contains("pub fn locals_with<C>("));
+        assert!(api_source.contains(
+            "pub fn on<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> bool + 'static)"
+        ));
+        assert!(!api_source.contains(
+            "pub fn locals<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>) -> bool + 'static)"
+        ));
         assert!(!api_source.contains("pub fn listener("));
         assert!(!api_source.contains("impl AppActivateSurface for fret_ui_shadcn::facade::Button"));
         assert!(
@@ -2549,6 +2713,13 @@ mod tests {
             .expect("view.rs test module marker should exist");
 
         assert!(api_source.contains("#[doc(hidden)]\npub struct LocalStateTxn<'a>"));
+        assert!(api_source.contains("#[doc(hidden)]\npub trait LocalActionCapture"));
+        assert!(
+            api_source.contains(
+                "#[doc(hidden)]\npub struct AppUiLocalsWith<'view, 'cx, 'a, H: UiHost, C>"
+            )
+        );
+        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxLocalsWith<'cx, 'a, C>"));
         assert!(
             api_source.contains("#[doc(hidden)]\npub struct AppUiState<'view, 'cx, 'a, H: UiHost>")
         );

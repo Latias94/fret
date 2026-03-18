@@ -2864,7 +2864,10 @@ mod authoring_surface_policy_tests {
     #[test]
     fn usage_docs_prefer_grouped_app_ui_actions() {
         assert!(CRATE_USAGE_GUIDE.contains("start with `View` + `AppUi` + typed actions"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().payload_models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
@@ -3295,7 +3298,7 @@ mod authoring_surface_policy_tests {
         assert!(
             FEARLESS_REFACTORING.contains("Return `Ui` (the app-facing alias over `Elements`)")
         );
-        assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals_with((...)).on::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().models::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().payload_models::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().transient::<A>(...)`"));

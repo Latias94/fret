@@ -1,7 +1,7 @@
 # Action Write Surface (Fearless Refactor v1)
 
 Status: closed closeout lane (write budget locked; maintenance only)
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 Related:
 
@@ -31,6 +31,13 @@ Post-closeout cleanup on 2026-03-17:
 - duplicated multi-local payload helpers `payload_locals::<A>(...)` and
   `payload::<A>().locals(...)` are now deleted from production code
 - read `RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md` for the surviving retained-seam question
+
+Post-closeout update on 2026-03-18:
+
+- `locals_with((...)).on::<A>(...)` is now the only shipped coordinated `LocalState<T>`
+  transaction surface on the default `fret` app lane
+- the older bare transaction helper `locals::<A>(...)` is deleted from production code after the
+  first-party proof surfaces migrated cleanly to the capture-explicit builder
 
 ## Why this workstream exists
 
@@ -65,7 +72,7 @@ The current default app lane already works, but it still spans several visible w
   - `local_set::<A, T>(...)`
   - `toggle_local_bool::<A>(...)`
 - coordinated LocalState transactions:
-  - `locals::<A>(...)`
+  - `locals_with((...)).on::<A>(...)`
 - keyed payload row writes:
   - `payload_local_update_if::<A>(...)`
 - multi-local payload transactions:
@@ -193,7 +200,7 @@ Current M1 conclusion (2026-03-17):
 - keep `local_update`, `local_set`, and `toggle_local_bool` as the entire intentional one-slot
   default budget
 - treat the trio as a companion family for obvious one-slot writes rather than as a replacement
-  for `locals::<A>(...)`
+  for `locals_with((...)).on::<A>(...)`
 
 Reopen only if fresh non-Todo/default-facing evidence shows that the current trio still creates
 real first-contact confusion.
@@ -202,12 +209,13 @@ real first-contact confusion.
 
 Current baseline:
 
-- `locals::<A>(...)`
+- `locals_with((...)).on::<A>(...)`
 
-Working assumption:
+Current landed interpretation (2026-03-18):
 
-- this remains the canonical explicit transaction path unless a clearly better LocalState-first
-  alternative is proven on non-Todo surfaces.
+- this remains the canonical explicit transaction path,
+- and the older bare `locals::<A>(...)` helper no longer carries a distinct product-surface role
+  now that the capture-explicit builder has real Todo, form, and template proof.
 
 ### 3. Keyed payload row writes
 

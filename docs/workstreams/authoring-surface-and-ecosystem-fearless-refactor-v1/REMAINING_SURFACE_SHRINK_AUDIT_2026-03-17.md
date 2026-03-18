@@ -139,7 +139,7 @@ audit:
   - `local_update` / `local_set` / `toggle_local_bool`
   - owner: `action-write-surface-fearless-refactor-v1`
 - coordinated write ceremony
-  - `locals::<A>(|tx| ...)`
+  - `locals_with((...)).on::<A>(|tx, (...)| ...)`
   - owner: evidence-backed write-side follow-on only
 - tracked-read ceremony beyond the current shipped wording
   - owner: authoring-density follow-on only if repeated non-Todo evidence appears

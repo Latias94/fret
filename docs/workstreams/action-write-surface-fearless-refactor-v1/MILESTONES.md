@@ -1,7 +1,7 @@
 # Action Write Surface (Fearless Refactor v1) — Milestones
 
 Status: Closed closeout lane (write budget locked; maintenance only)
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 Related:
 
@@ -21,6 +21,9 @@ Related:
   scope unless fresh evidence reopens them separately
 - Milestone 3 is now landed:
   `CLOSEOUT_AUDIT_2026-03-17.md` closes the lane on the shipped default write budget.
+- Post-closeout update on 2026-03-18:
+  `locals_with((...)).on::<A>(...)` is now the only coordinated LocalState transaction surface
+  retained on the shipped app lane; `locals::<A>(...)` is deleted after first-party migration.
 
 ## Milestone 0 — Freeze scope and evidence
 
@@ -72,7 +75,7 @@ Current decision on 2026-03-17:
   - `local_update::<A>(...)`
   - `local_set::<A, T>(...)`
   - `toggle_local_bool::<A>(...)`
-- `locals::<A>(...)` remains the primary transaction story for coordinated writes
+- `locals_with((...)).on::<A>(...)` remains the primary transaction story for coordinated writes
 
 ## Milestone 2 — Decide the payload row-write budget
 
@@ -138,8 +141,14 @@ Closeout note on 2026-03-17:
 - M3 is closed.
 - The shipped default posture is:
   - one-slot trio frozen,
-  - `locals::<A>(...)` remains the primary transaction story,
+  - `locals_with((...)).on::<A>(...)` remains the primary transaction story,
   - `payload_local_update_if::<A>(...)` is the only taught default keyed row-write path,
   - duplicate multi-local payload helpers are deleted,
   - payload-side advanced coordination stays on raw `on_payload_action_notify::<A>(...)` rather
     than on a grouped `cx.actions().payload::<A>()` chain.
+
+Post-closeout update on 2026-03-18:
+
+- the bare `locals::<A>(...)` helper is now also deleted from production code
+- the default write budget keeps one coordinated LocalState transaction spelling instead of a
+  hidden retained fallback

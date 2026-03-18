@@ -29,21 +29,22 @@ This note separates:
 These generic app surfaces now match the intended default action posture:
 
 - `apps/fret-cookbook/examples/simple_todo.rs`
-  - `cx.actions().locals::<...>()`
+  - `cx.actions().locals_with(...).on::<...>()`
   - `payload_local_update_if::<...>()`
 - `apps/fret-examples/src/todo_demo.rs`
-  - `cx.actions().locals::<...>()`
+  - `cx.actions().locals_with(...).on::<...>()`
   - `payload_local_update_if::<...>()`
 - `apps/fret-cookbook/examples/form_basics.rs`
-  - `cx.actions().locals::<...>()` for coordinated form writes
+  - `cx.actions().locals_with(...).on::<...>()` for coordinated form writes
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
   - `toggle_local_bool::<...>()`
-  - `cx.actions().locals::<...>()`
+  - `cx.actions().locals_with(...).on::<...>()`
 
 Conclusion:
 
 - the default write-side story is proven on ordinary app surfaces beyond the scaffold template
 - no parallel write-family expansion is needed to support these examples
+- the older bare `locals::<A>(...)` helper no longer carries unique proof and can be deleted
 
 ## Proven query read surfaces
 

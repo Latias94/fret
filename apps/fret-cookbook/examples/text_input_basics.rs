@@ -18,6 +18,7 @@ const TEST_ID_INPUT: &str = "cookbook.text_input_basics.input";
 const TEST_ID_LEN: &str = "cookbook.text_input_basics.len";
 const TEST_ID_SUBMITTED_COUNT: &str = "cookbook.text_input_basics.submitted_count";
 
+#[derive(Clone)]
 struct TextInputStats {
     text_len_chars: u32,
     submitted_count: u32,
@@ -100,10 +101,9 @@ impl View for TextInputBasicsView {
             .cancel_action(act::Clear)
             .test_id(TEST_ID_INPUT);
 
-        cx.actions().locals::<act::Submit>({
-            let text_state = text_state.clone();
-            let submitted_count_state = submitted_count_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with((&text_state, &submitted_count_state))
+            .on::<act::Submit>(|tx, (text_state, submitted_count_state)| {
                 let text = tx.value(&text_state);
                 if text.trim().is_empty() {
                     return false;
@@ -113,20 +113,18 @@ impl View for TextInputBasicsView {
                     *value = value.saturating_add(1)
                 });
                 tx.set(&text_state, String::new())
-            }
-        });
+            });
 
-        cx.actions().locals::<act::Clear>({
-            let text_state = text_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with(&text_state)
+            .on::<act::Clear>(|tx, text_state| {
                 let text = tx.value(&text_state);
                 if text.trim().is_empty() {
                     return false;
                 }
 
                 tx.set(&text_state, String::new())
-            }
-        });
+            });
 
         cx.actions().availability::<act::Submit>({
             let text_state = text_state.clone();

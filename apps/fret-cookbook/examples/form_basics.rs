@@ -64,28 +64,22 @@ impl View for FormBasicsView {
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 
-        cx.actions().locals::<act::Submit>({
-            let name_state = name_state.clone();
-            let email_state = email_state.clone();
-            let error_state = error_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with((&name_state, &email_state, &error_state))
+            .on::<act::Submit>(|tx, (name_state, email_state, error_state)| {
                 let name = tx.value(&name_state);
                 let email = tx.value(&email_state);
                 let err = FormBasicsView::validate(&name, &email);
                 tx.set(&error_state, err)
-            }
-        });
+            });
 
-        cx.actions().locals::<act::Reset>({
-            let name_state = name_state.clone();
-            let email_state = email_state.clone();
-            let error_state = error_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with((&name_state, &email_state, &error_state))
+            .on::<act::Reset>(|tx, (name_state, email_state, error_state)| {
                 let ok = tx.set(&name_state, String::new());
                 let ok = tx.set(&email_state, String::new()) && ok;
                 tx.set(&error_state, None) && ok
-            }
-        });
+            });
 
         cx.actions().availability::<act::Submit>({
             let name_state = name_state.clone();

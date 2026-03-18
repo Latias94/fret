@@ -225,7 +225,13 @@ mod authoring_surface_policy_tests {
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
-        assert!(SIMPLE_TODO_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert!(
+            SIMPLE_TODO_EXAMPLE.contains(".locals_with((draft_state, next_id_state, todos_state))")
+        );
+        assert!(
+            SIMPLE_TODO_EXAMPLE
+                .contains(".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {")
+        );
         assert!(SIMPLE_TODO_EXAMPLE.contains("let todos = todos_state.layout_value(cx);"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("let draft_value = draft_state.layout_value(cx);"));
         assert!(
@@ -238,7 +244,14 @@ mod authoring_surface_policy_tests {
         );
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
-        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("cx.actions().locals::<act::Add>"));
+        assert!(
+            SIMPLE_TODO_V2_TARGET_EXAMPLE
+                .contains(".locals_with((draft_state, next_id_state, todos_state))")
+        );
+        assert!(
+            SIMPLE_TODO_V2_TARGET_EXAMPLE
+                .contains(".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {")
+        );
         assert!(
             SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let todos = todos_state.layout_value(cx);")
         );
@@ -279,12 +292,19 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(IMUI_ACTION_EXAMPLE);
 
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.state().local_init(|| 0i64)"));
-        assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().locals::<act::Inc>"));
+        assert!(HELLO_COUNTER_EXAMPLE.contains(".locals_with((&count_state, &step_state))"));
+        assert!(
+            HELLO_COUNTER_EXAMPLE.contains(".on::<act::Inc>(|tx, (count_state, step_state)| {")
+        );
         assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().local_set::<act::Reset, i64>"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("let count = count_state.layout_value(cx);"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("let step_text = step_state.layout_value(cx);"));
 
-        assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().locals::<act::Submit>"));
+        assert!(TEXT_INPUT_EXAMPLE.contains(".locals_with((&text_state, &submitted_count_state))"));
+        assert!(
+            TEXT_INPUT_EXAMPLE
+                .contains(".on::<act::Submit>(|tx, (text_state, submitted_count_state)| {")
+        );
         assert!(TEXT_INPUT_EXAMPLE.contains("cx.actions().availability::<act::Submit>"));
         assert!(TEXT_INPUT_EXAMPLE.contains(".selector_layout("));
         assert!(TEXT_INPUT_EXAMPLE.contains("(&text_state, &submitted_count_state),"));
@@ -300,7 +320,11 @@ mod authoring_surface_policy_tests {
         assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("payload::<act::Remove>()"));
         assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("local_update_if::<Vec<Row>>(&rows_state"));
 
-        assert!(FORM_EXAMPLE.contains("locals::<act::Submit>"));
+        assert!(FORM_EXAMPLE.contains(".locals_with((&name_state, &email_state, &error_state))"));
+        assert!(
+            FORM_EXAMPLE
+                .contains(".on::<act::Submit>(|tx, (name_state, email_state, error_state)| {")
+        );
         assert!(FORM_EXAMPLE.contains("availability::<act::Submit>"));
         assert!(FORM_EXAMPLE.contains("let name = name_state.layout_value(cx);"));
         assert!(FORM_EXAMPLE.contains("let email = email_state.layout_value(cx);"));
@@ -312,7 +336,15 @@ mod authoring_surface_policy_tests {
         assert!(DATE_PICKER_EXAMPLE.contains("cx.state().local_init(|| false)"));
         assert!(DATE_PICKER_EXAMPLE.contains("watch(&selected_state)"));
 
-        assert!(COMMANDS_KEYMAP_EXAMPLE.contains("locals::<act::TogglePanel>"));
+        assert!(
+            COMMANDS_KEYMAP_EXAMPLE
+                .contains(".locals_with((&panel_open_state, &allow_command_state))")
+        );
+        assert!(
+            COMMANDS_KEYMAP_EXAMPLE.contains(
+                ".on::<act::TogglePanel>(|tx, (panel_open_state, allow_command_state)| {"
+            )
+        );
         assert!(
             COMMANDS_KEYMAP_EXAMPLE.contains("let panel_open = panel_open_state.layout_value(cx);")
         );

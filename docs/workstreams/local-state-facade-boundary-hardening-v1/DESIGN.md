@@ -84,7 +84,7 @@ This lane should leave the repo with one stable reading:
   - `use_local*`,
   - `LocalState<T>`,
   - tracked reads through `TrackedStateExt`,
-  - `cx.actions().locals::<A>(...)`.
+  - `cx.actions().locals_with((...)).on::<A>(...)`.
 - **explicit raw-model lane**:
   - `AppUiRawStateExt::use_state*`,
   - returned `Model<T>` handles,

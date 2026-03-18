@@ -590,11 +590,9 @@ fn bind_todo_actions(
     tip_nonce_state: &LocalState<u64>,
     todos_state: &LocalState<Vec<TodoRow>>,
 ) {
-    cx.actions().locals::<act::Add>({
-        let draft_state = LocalState::clone(draft_state);
-        let next_id_state = LocalState::clone(next_id_state);
-        let todos_state = LocalState::clone(todos_state);
-        move |tx| {
+    cx.actions()
+        .locals_with((draft_state, next_id_state, todos_state))
+        .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
             let text = tx.value(&draft_state).trim().to_string();
             if text.is_empty() {
                 return false;
@@ -614,19 +612,17 @@ fn bind_todo_actions(
             }
 
             tx.set(&draft_state, String::new())
-        }
-    });
+        });
 
-    cx.actions().locals::<act::ClearDone>({
-        let todos_state = LocalState::clone(todos_state);
-        move |tx| {
+    cx.actions()
+        .locals_with(todos_state)
+        .on::<act::ClearDone>(|tx, todos_state| {
             tx.update_if(&todos_state, |rows| {
                 let before = rows.len();
                 rows.retain(|row| !row.done);
                 rows.len() != before
             })
-        }
-    });
+        });
 
     cx.actions()
         .local_update::<act::RefreshTip, u64>(tip_nonce_state, |v| {
@@ -1002,11 +998,9 @@ fn bind_todo_actions(
     next_id_state: &LocalState<u64>,
     todos_state: &LocalState<Vec<TodoRow>>,
 ) {
-    cx.actions().locals::<act::Add>({
-        let draft_state = LocalState::clone(draft_state);
-        let next_id_state = LocalState::clone(next_id_state);
-        let todos_state = LocalState::clone(todos_state);
-        move |tx| {
+    cx.actions()
+        .locals_with((draft_state, next_id_state, todos_state))
+        .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
             let text = tx.value(&draft_state).trim().to_string();
             if text.is_empty() {
                 return false;
@@ -1026,19 +1020,17 @@ fn bind_todo_actions(
             }
 
             tx.set(&draft_state, String::new())
-        }
-    });
+        });
 
-    cx.actions().locals::<act::ClearDone>({
-        let todos_state = LocalState::clone(todos_state);
-        move |tx| {
+    cx.actions()
+        .locals_with(todos_state)
+        .on::<act::ClearDone>(|tx, todos_state| {
             tx.update_if(&todos_state, |rows| {
                 let before = rows.len();
                 rows.retain(|row| !row.done);
                 rows.len() != before
             })
-        }
-    });
+        });
 
     cx.actions()
         .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {
@@ -1216,7 +1208,7 @@ cargo run --release
 - Authoring: view runtime + typed actions + local-state slots (action-first, v2)
 - Hooks: selector + query (v1)
 - State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
-- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, bind keyed-row payloads via `.action_payload(...)`, use `payload_local_update_if::<A>(...)` as the default row-write path, and use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
+- Default entrypoints: start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, bind keyed-row payloads via `.action_payload(...)`, use `payload_local_update_if::<A>(...)` as the default row-write path, and use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` and lower-level payload helpers as cookbook/reference-only host-side glue.
 - Read tracked state values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `cx.actions().transient::<A>(...)` in the handler and consume the transient via `cx.effects().take_transient(...)` in `render()`.
@@ -1297,7 +1289,7 @@ cargo run --release
 {ui_assets_line}
 - Ladder position: second rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed actions + local-state keyed lists (action-first, v2)
-- Default entrypoints: start with `cx.actions().locals::<A>(...)` for multi-slot `LocalState<T>` transactions, bind per-row payloads via `.action_payload(...)` inside `ui::for_each_keyed(...)`, and handle row writes with `payload_local_update_if::<A>(...)`.
+- Default entrypoints: start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, bind per-row payloads via `.action_payload(...)` inside `ui::for_each_keyed(...)`, and handle row writes with `payload_local_update_if::<A>(...)`.
 - Keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only glue instead of reopening raw `on_activate*` on the default path.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - For keyed dynamic lists, prefer `LocalState<Vec<_>>` + payload actions when the rows are view-owned; keep explicit `Model<Vec<_>>` only when shared ownership or runtime coordination is the point.
@@ -1411,8 +1403,10 @@ mod tests {
         assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
-        assert!(src.contains("cx.actions().locals::<act::Add>"));
-        assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
+        assert!(src.contains(".locals_with((draft_state, next_id_state, todos_state))"));
+        assert!(src.contains(".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {"));
+        assert!(src.contains(".locals_with(todos_state)"));
+        assert!(src.contains(".on::<act::ClearDone>(|tx, todos_state| {"));
         assert!(src.contains("let text = tx.value(&draft_state).trim().to_string();"));
         assert!(src.contains("let id = tx.value(&next_id_state);"));
         assert!(!src.contains("tx.value_or_else(&draft_state, String::new)"));
@@ -1542,8 +1536,10 @@ mod tests {
         assert!(!src.contains("shadcn::Card::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardHeader::build(|cx, out| {"));
         assert!(!src.contains("shadcn::CardContent::build(|cx, out| {"));
-        assert!(src.contains("cx.actions().locals::<act::Add>"));
-        assert!(src.contains("cx.actions().locals::<act::ClearDone>"));
+        assert!(src.contains(".locals_with((draft_state, next_id_state, todos_state))"));
+        assert!(src.contains(".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {"));
+        assert!(src.contains(".locals_with(todos_state)"));
+        assert!(src.contains(".on::<act::ClearDone>(|tx, todos_state| {"));
         assert!(src.contains("let text = tx.value(&draft_state).trim().to_string();"));
         assert!(src.contains("let id = tx.value(&next_id_state);"));
         assert!(!src.contains("tx.value_or_else(&draft_state, String::new)"));
@@ -1633,7 +1629,7 @@ mod tests {
         ));
         assert!(simple.contains("prefer `LocalState<Vec<_>>` + payload actions"));
         assert!(simple.contains("Read tracked state near the top of `render()`"));
-        assert!(simple.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(simple.contains("`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`"));
         assert!(simple.contains("bind per-row payloads via `.action_payload(...)`"));
         assert!(simple.contains("`payload_local_update_if::<A>(...)`"));
         assert!(

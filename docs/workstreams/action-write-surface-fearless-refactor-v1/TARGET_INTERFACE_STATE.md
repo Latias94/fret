@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1) — Target Interface State
 
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 Companion docs:
 
@@ -22,7 +22,7 @@ Important constraint:
 | Need | Default app lane | Explicit / advanced lane | Reusable ecosystem lane | Owner |
 | --- | --- | --- | --- | --- |
 | Single-local write | one intentionally small companion family on `cx.actions()`: `local_update`, `local_set`, and `toggle_local_bool` | raw model writes remain explicit | no forced `fret` dependency | `ecosystem/fret` |
-| Coordinated LocalState transaction | `locals::<A>(...)` unless a clearly better non-Todo replacement is proven | shared-model coordination remains explicit | no forced `fret` dependency | `ecosystem/fret` |
+| Coordinated LocalState transaction | `locals_with((...)).on::<A>(...)` | shared-model coordination remains explicit and there is no retained bare `locals::<A>(...)` fallback | no forced `fret` dependency | `ecosystem/fret` |
 | Keyed payload row write | one canonical row-write helper: `payload_local_update_if::<A>(...)` | collection/model orchestration remains explicit | no forced `fret` dependency | `ecosystem/fret` |
 | Multi-local payload transaction | not taught on the default path and no dedicated helper is retained | raw `AppUi::on_payload_action_notify::<A>(...)` remains the explicit fallback unless future proof reopens a narrower helper | no forced `fret` dependency | `ecosystem/fret` |
 | App-only effect handoff | `transient::<A>(...)` stays explicit | host/runtime seams remain explicit | generally app-only | `ecosystem/fret` + existing runtime semantics |
@@ -53,7 +53,7 @@ It should not teach by default:
 
 Additional rule:
 
-- `locals::<A>(...)` remains the primary explicit transaction story
+- `locals_with((...)).on::<A>(...)` remains the primary explicit transaction story
 - the one-slot trio is an intentional companion family, not a second transaction dialect
 - keyed payload row writes teach `payload_local_update_if::<A>(...)` alone on the default path
 

@@ -2,7 +2,10 @@ const UI_ERGONOMICS_AND_INTEROP: &str = include_str!("../../../docs/ui-ergonomic
 
 #[test]
 fn ui_ergonomics_doc_uses_grouped_action_surface_names() {
-    assert!(UI_ERGONOMICS_AND_INTEROP.contains("`cx.actions().locals::<A>(...)`"));
+    assert!(
+        UI_ERGONOMICS_AND_INTEROP
+            .contains("`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`")
+    );
     assert!(UI_ERGONOMICS_AND_INTEROP.contains("`cx.actions().models::<A>(...)`"));
     assert!(UI_ERGONOMICS_AND_INTEROP.contains("`cx.actions().transient::<A>(...)`"));
     assert!(UI_ERGONOMICS_AND_INTEROP.contains("raw `on_action_notify`"));

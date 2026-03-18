@@ -215,18 +215,16 @@ impl View for CommandsKeymapBasicsView {
         cx.actions()
             .toggle_local_bool::<act::ToggleAllowCommand>(&allow_command_state);
 
-        cx.actions().locals::<act::TogglePanel>({
-            let panel_open_state = panel_open_state.clone();
-            let allow_command_state = allow_command_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with((&panel_open_state, &allow_command_state))
+            .on::<act::TogglePanel>(|tx, (panel_open_state, allow_command_state)| {
                 let allowed = tx.value(&allow_command_state);
                 if !allowed {
                     return false;
                 }
 
                 tx.update(&panel_open_state, |value| *value = !*value)
-            }
-        });
+            });
 
         cx.actions().availability::<act::TogglePanel>({
             let allow_command_state = allow_command_state.clone();

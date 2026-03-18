@@ -55,7 +55,7 @@ cargo run --manifest-path local/my-todo/Cargo.toml
 Keep the default authoring model intentionally small:
 
 - use `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state,
-- use `cx.actions().locals::<A>(...)` for most LocalState-first typed UI actions,
+- use `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
 - for view-owned keyed rows, bind payloads with `.action_payload(...)`, prefer
   `payload_local_update_if::<A>(...)` as the default row-write path,
 - use `cx.actions().transient::<A>(...)` when the real effect must happen with `&mut App` in

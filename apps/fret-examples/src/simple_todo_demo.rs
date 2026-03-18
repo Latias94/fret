@@ -171,11 +171,9 @@ fn bind_todo_actions(
     next_id_state: &LocalState<u64>,
     todos_state: &LocalState<Vec<TodoRow>>,
 ) {
-    cx.actions().locals::<act::Add>({
-        let draft_state = LocalState::clone(draft_state);
-        let next_id_state = LocalState::clone(next_id_state);
-        let todos_state = LocalState::clone(todos_state);
-        move |tx| {
+    cx.actions()
+        .locals_with((draft_state, next_id_state, todos_state))
+        .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
             let text = tx.value(&draft_state).trim().to_string();
             if text.is_empty() {
                 return false;
@@ -195,19 +193,17 @@ fn bind_todo_actions(
             }
 
             tx.set(&draft_state, String::new())
-        }
-    });
+        });
 
-    cx.actions().locals::<act::ClearDone>({
-        let todos_state = LocalState::clone(todos_state);
-        move |tx| {
+    cx.actions()
+        .locals_with(todos_state)
+        .on::<act::ClearDone>(|tx, todos_state| {
             tx.update_if(&todos_state, |rows| {
                 let before = rows.len();
                 rows.retain(|row| !row.done);
                 rows.len() != before
             })
-        }
-    });
+        });
 
     cx.actions()
         .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {

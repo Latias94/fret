@@ -99,7 +99,7 @@ Conclusion:
 The default Todo path now reads with one stable mutation model:
 
 - local view-owned state via `cx.state().local*`
-- coordinated writes via `cx.actions().locals::<A>(...)`
+- coordinated writes via `cx.actions().locals_with((...)).on::<A>(...)`
 - simple one-slot writes via `local_set` / `local_update`
 - keyed row writes via `payload_local_update_if::<A>(...)`
 

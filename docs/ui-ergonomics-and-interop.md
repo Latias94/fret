@@ -45,7 +45,7 @@ When users say “the API feels complex”, it usually comes from these layers b
 2. **Policy / authoring surface** (`ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `fret`):
    default padding/row height, focus policy, dismiss semantics, hover intent, tokens → styles.
    For the `fret` golden path, keep the default first-contact handler surface on
-   `cx.actions().locals::<A>(...)`, keyed-row payload binding via `.action_payload(...)`,
+   `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, keyed-row payload binding via `.action_payload(...)`,
    `payload_local_update_if::<A>(...)` as the default view-owned row-write path,
    `cx.actions().transient::<A>(...)`, and widget `.action(...)` / `.action_payload(...)` when a
    stable action slot exists. Keep the same action-first vocabulary (`.action(...)` /
@@ -159,7 +159,7 @@ If we want to evaluate ergonomics concretely, measure:
 
 - How many times the user has to write `vec![...]` / `.collect::<Vec<_>>()`.
 - How much state wiring is required (`Model` + observation + invalidation).
-- Whether a simple todo app can stay on `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, and widget-local `.action(...)` / `.listen(...)` without reaching for raw `on_action_notify` or shared-model coordination.
+- Whether a simple todo app can stay on `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, `cx.actions().transient::<A>(...)`, and widget-local `.action(...)` / `.listen(...)` without reaching for raw `on_action_notify` or shared-model coordination.
 - How easy it is to embed a foreign viewport panel (Tier A) next to normal UI.
 
 The current `apps/fret-examples/src/todo_demo.rs` is a good baseline because it already exercises:

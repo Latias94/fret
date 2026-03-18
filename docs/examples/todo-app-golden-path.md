@@ -160,7 +160,7 @@ fn install_todo_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- Start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
@@ -226,7 +226,7 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-- for non-payload multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)`.
+- for non-payload multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`.
 - for keyed-row payload writes, start with `payload_local_update_if::<A>(...)`.
 
 ## Actions (UI -> app logic)
@@ -345,7 +345,8 @@ In a typical window driver:
 ## Action handlers (logic)
 
 In the view runtime shape, typed action handlers are the boundary where you mutate tracked state and
-request UI updates. Start with `cx.actions().locals(...)` for LocalState-first flows, use
+request UI updates. Start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for
+LocalState-first flows, use
 `payload_local_update_if::<A>(...)` as the default keyed-row payload write path, drop to
 `cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use
 `cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and
@@ -353,11 +354,9 @@ keep raw `on_action_notify` plus lower-level payload/model seams for cookbook/re
 cases only:
 
 ```rust,ignore
-cx.actions().locals::<act::Add>({
-    let draft_state = LocalState::clone(&draft_state);
-    let next_id_state = LocalState::clone(&next_id_state);
-    let todos_state = LocalState::clone(&todos_state);
-    move |tx| {
+cx.actions()
+    .locals_with((&draft_state, &next_id_state, &todos_state))
+    .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
         let text = tx.value(&draft_state).trim().to_string();
         if text.is_empty() {
             return false;
@@ -377,8 +376,7 @@ cx.actions().locals::<act::Add>({
         }
 
         tx.set(&draft_state, String::new())
-    }
-});
+    });
 
 cx.actions()
     .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {

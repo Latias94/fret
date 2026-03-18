@@ -92,10 +92,10 @@ Classification:
 The current docs/templates do **not** present these helpers as three competing global defaults:
 
 - `docs/crate-usage-guide.md`
-  - keeps the broad first-contact handler surface centered on `locals::<A>(...)`,
+  - keeps the broad first-contact handler surface centered on `locals_with((...)).on::<A>(...)`,
     `transient::<A>(...)`, keyed payload row writes, and explicit `models::<A>(...)`
 - `docs/first-hour.md`
-  - also centers the default ladder on `locals::<A>(...)` plus payload row writes
+  - also centers the default ladder on `locals_with((...)).on::<A>(...)` plus payload row writes
 - `docs/authoring-golden-path-v2.md`
   - collapses the trio into one row: `cx.actions().local_set/update`
 - `apps/fretboard/src/scaffold/templates.rs`
@@ -106,7 +106,8 @@ The current docs/templates do **not** present these helpers as three competing g
 Conclusion:
 
 - the repo is already teaching the trio as a small, semantics-driven companion family
-- it is **not** currently teaching them as three co-equal replacements for `locals::<A>(...)`
+- it is **not** currently teaching them as three co-equal replacements for
+  `locals_with((...)).on::<A>(...)`
 
 ## Decision
 
@@ -118,17 +119,18 @@ Freeze the current one-slot family as the intentional default budget:
 
 Additional interpretation:
 
-- `locals::<A>(...)` remains the primary explicit transaction story for anything that coordinates
-  more than one local or requires cross-field reasoning
+- `locals_with((...)).on::<A>(...)` remains the primary explicit transaction story for anything
+  that coordinates more than one local or requires cross-field reasoning
 - the one-slot trio is a companion family, not a competing "new root default" that should replace
-  `locals::<A>(...)` everywhere
+  `locals_with((...)).on::<A>(...)` everywhere
 
 ## What this audit rules out
 
 - no new one-slot helper family should be introduced from this evidence alone
 - no rename-only churn is justified just because the repo currently has three one-slot verbs
-- no workstream time should be spent trying to force all one-slot writes through `locals::<A>(...)`
-  when the existing trio is already small and semantically distinct
+- no workstream time should be spent trying to force all one-slot writes through
+  `locals_with((...)).on::<A>(...)` when the existing trio is already small and semantically
+  distinct
 
 ## What remains open after M1
 

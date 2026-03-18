@@ -1,7 +1,7 @@
 # Action Write Surface (Fearless Refactor v1) — TODO
 
 Status: Closed closeout tracker (write budget locked; maintenance only)
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 Companion docs:
 
@@ -29,6 +29,13 @@ Closeout note on 2026-03-17:
 - `CLOSEOUT_AUDIT_2026-03-17.md` closes this lane on the shipped default write budget
 - read any unchecked proof-surface or standing-rule rows below as archived scope guards, not as
   pending work orders
+
+Post-closeout update on 2026-03-18:
+
+- `locals_with((...)).on::<A>(...)` is now the only retained coordinated LocalState transaction
+  helper on the default app lane
+- `locals::<A>(...)` is deleted from production code after the first-party proof surfaces migrate
+  cleanly to the capture-explicit builder
 
 ## Evidence set
 
@@ -135,6 +142,11 @@ Closeout note on 2026-03-17:
     - `CLOSEOUT_AUDIT_2026-03-17.md` closes the lane,
     - the shipped default write budget is frozen,
     - and future work must reopen through a narrower follow-on if needed.
+  - 2026-03-18 update:
+    - the repo also deletes `locals::<A>(...)`,
+    - migrates remaining first-party callsites to `locals_with((...)).on::<A>(...)`,
+    - and keeps the closeout lane status unchanged because this is still a shrink within the same
+      frozen write budget.
 
 ## Standing rules
 

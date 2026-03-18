@@ -448,7 +448,7 @@ Target operations:
 - `local_set::<A, T>(&state, value)`
 - `toggle_local_bool::<A>(&state)`
 - `models::<A>(|models| ...)`
-- `locals::<A>(|tx| ...)`
+- `locals_with((...)).on::<A>(|tx, (...)| ...)`
 - `payload_local_update_if::<A>(&state, |value, payload| ...)`
 - `transient::<A>(...)`
 - `availability::<A>(...)`

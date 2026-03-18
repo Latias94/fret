@@ -2,6 +2,12 @@
 
 This audit records the final closeout read for the action-write surface v1 lane.
 
+Post-closeout update on 2026-03-18:
+
+- the repo now also deletes `locals::<A>(...)`
+- `locals_with((...)).on::<A>(...)` is the only retained coordinated LocalState transaction
+  spelling on the shipped `fret` app lane
+
 Goal:
 
 - verify whether the repo still has an active default write-side migration problem on
@@ -53,7 +59,7 @@ The M1 audit evidence is coherent across cookbook, demos, templates, and default
 - `local_update::<A>(...)` covers in-place mutation of one local slot,
 - `local_set::<A, T>(...)` covers fixed target-value writes,
 - `toggle_local_bool::<A>(...)` covers explicit boolean flips,
-- and `locals::<A>(...)` remains the primary coordinated transaction story.
+- and `locals_with((...)).on::<A>(...)` remains the primary coordinated transaction story.
 
 The repo is no longer teaching these as competing transaction dialects.
 
@@ -91,7 +97,7 @@ Conclusion:
 
 The first-contact/default teaching surfaces now align on the same posture:
 
-- teach `locals::<A>(...)` as the primary coordinated local transaction path,
+- teach `locals_with((...)).on::<A>(...)` as the primary coordinated local transaction path,
 - teach the one-slot trio as a semantics-driven companion family,
 - teach `payload_local_update_if::<A>(...)` as the only default keyed row-write helper,
 - keep `models::<A>(...)` and `transient::<A>(...)` explicit rather than default,
@@ -150,7 +156,9 @@ Treat `action-write-surface-fearless-refactor-v1` as:
 From this point forward:
 
 1. keep the shipped default write-side budget stable,
-2. keep `payload_local_update_if::<A>(...)` as the only taught default keyed row-write path,
-3. keep payload-side advanced coordination on raw `on_payload_action_notify::<A>(...)` unless new
+2. keep `locals_with((...)).on::<A>(...)` as the only coordinated LocalState transaction helper
+   on the default app lane,
+3. keep `payload_local_update_if::<A>(...)` as the only taught default keyed row-write path,
+4. keep payload-side advanced coordination on raw `on_payload_action_notify::<A>(...)` unless new
    proof justifies another narrower helper,
-4. do not reopen this lane just to explore helper growth from Todo-shaped pressure alone.
+5. do not reopen this lane just to explore helper growth from Todo-shaped pressure alone.

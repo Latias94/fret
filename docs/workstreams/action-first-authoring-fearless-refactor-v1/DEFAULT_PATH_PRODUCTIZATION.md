@@ -93,7 +93,7 @@ The default path should continue to teach only:
 
 - `LocalState` for view-owned state,
 - typed actions,
-- `cx.actions().locals::<A>(...)` for coordinated LocalState writes,
+- `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState writes,
 - keyed-row `.action_payload(...)` plus `payload_local_update_if::<A>(...)` as the default row-write path,
 - `payload_locals::<A>(...)` only when one payload action coordinates multiple locals,
 - `cx.actions().transient::<A>(...)` for App-bound effects,

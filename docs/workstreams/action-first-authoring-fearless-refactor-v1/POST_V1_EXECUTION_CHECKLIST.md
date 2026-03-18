@@ -98,7 +98,7 @@ The evidence rule for gate 1 lives in
 The current watch list is intentionally small:
 
 - tracked-value read density,
-- coordinated `locals::<A>(...)` write-closure ceremony.
+- coordinated `locals_with((...)).on::<A>(...)` capture ceremony.
 
 For either item, reopen only if all of the following are true:
 
