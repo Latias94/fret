@@ -15,6 +15,9 @@
 //! - `fret::advanced::ui_app(...)` and `fret::advanced::ui_app_with_hooks(...)` are the
 //!   recommended explicit manual-assembly entry points when you want the golden-path UI app
 //!   builder without depending on `fret-bootstrap` directly.
+//! - `fret::advanced::view::render_root_with_app_ui(...)` is the recommended bridge when a manual
+//!   `UiTree` / `FnDriver` surface still wants grouped `AppUi` + `LocalState` authoring without
+//!   switching the whole window to `View`.
 //! - `fret::advanced::run_native_with_fn_driver(...)`,
 //!   `fret::advanced::run_native_with_fn_driver_with_hooks(...)`, and
 //!   `fret::advanced::run_native_with_configured_fn_driver(...)` are the recommended advanced
@@ -702,7 +705,10 @@ pub mod docking {
 pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
     pub mod view {
-        pub use crate::view::{ViewWindowState, view_init_window, view_view};
+        pub use crate::view::{
+            AppUiRenderRootState, ViewWindowState, render_root_with_app_ui, view_init_window,
+            view_view,
+        };
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::view::view_record_engine_frame;
@@ -3751,6 +3757,8 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::view::View;"));
         assert!(!root_header.contains("pub mod view;"));
         assert!(advanced_surface.contains("pub mod view {"));
+        assert!(advanced_surface.contains("AppUiRenderRootState"));
+        assert!(advanced_surface.contains("render_root_with_app_ui"));
         assert!(advanced_surface.contains("ViewWindowState, view_init_window,"));
         assert!(advanced_surface.contains("view_view"));
         assert!(advanced_surface.contains("view_record_engine_frame"));

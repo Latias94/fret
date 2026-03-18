@@ -58,6 +58,16 @@ impl<T> Clone for LocalState<T> {
 }
 
 impl<T> LocalState<T> {
+    /// Wrap an existing raw `Model<T>` handle as explicit `LocalState<T>` bridge state.
+    ///
+    /// This is primarily for advanced/manual surfaces that allocate tracked slots outside the
+    /// default `AppUi` render loop (for example: manual `UiTree` drivers or hybrid runtime-owned
+    /// window state) but still want to read/write that slot through the `LocalState<T>` helpers on
+    /// the app-facing authoring lane.
+    pub fn from_model(model: Model<T>) -> Self {
+        Self { model }
+    }
+
     /// Expose the underlying `Model<T>` as an explicit bridge.
     ///
     /// This exists for advanced/component/hybrid surfaces that intentionally still speak
@@ -1049,6 +1059,7 @@ struct UiCxActionHooksFrameSlot {
 
 struct UiCxActionHooksOwner;
 struct ViewRuntimeActionHooksOwner;
+struct AppUiRenderRootActionHooksOwner;
 
 fn prepare_uicx_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
     let frame_id = cx.frame_id;
@@ -1869,6 +1880,82 @@ pub struct ViewWindowState<V: View> {
     pub(crate) cached_action_root: Option<fret_ui::GlobalElementId>,
 }
 
+/// Keepalive state for manual `render_root(...)` surfaces that opt into `AppUi`.
+///
+/// This mirrors the cached action-handler lifecycle used by the `View` runtime so manual `UiTree`
+/// / `FnDriver` hosts can reuse the same grouped `AppUi` authoring surface without reintroducing
+/// low-level action-hook bookkeeping at each call site.
+#[derive(Default)]
+pub struct AppUiRenderRootState {
+    cached_handlers: Option<(OnCommand, OnCommandAvailability)>,
+    cached_action_root: Option<fret_ui::GlobalElementId>,
+}
+
+fn clear_app_ui_action_handlers_for_owner<Owner: 'static, H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    action_root: fret_ui::GlobalElementId,
+) {
+    cx.action_clear_on_command_for_owner::<Owner>(action_root);
+    cx.action_clear_on_command_availability_for_owner::<Owner>(action_root);
+}
+
+fn install_app_ui_action_handlers_for_owner<Owner: 'static, H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    action_root: fret_ui::GlobalElementId,
+    handlers: &Option<(OnCommand, OnCommandAvailability)>,
+) {
+    if let Some((on_command, on_command_availability)) = handlers.clone() {
+        cx.action_on_command_for_owner::<Owner>(action_root, on_command);
+        cx.action_on_command_availability_for_owner::<Owner>(action_root, on_command_availability);
+    }
+}
+
+fn render_app_ui_with_cached_handlers<'a, Owner: 'static, H: UiHost + 'static>(
+    cx: &mut ElementContext<'a, H>,
+    action_root_name: &str,
+    cached_handlers: &mut Option<(OnCommand, OnCommandAvailability)>,
+    cached_action_root: &mut Option<fret_ui::GlobalElementId>,
+    render: impl for<'cx, 'el> FnOnce(&mut AppUi<'cx, 'el, H>) -> crate::Ui,
+) -> crate::Ui {
+    let mut render = Some(render);
+    cx.named(action_root_name, |cx| {
+        if let Some(action_root) = *cached_action_root {
+            clear_app_ui_action_handlers_for_owner::<Owner, _>(cx, action_root);
+
+            // Ensure handlers remain installed even when the view-cache root is reused (render
+            // skipped).
+            install_app_ui_action_handlers_for_owner::<Owner, _>(cx, action_root, cached_handlers);
+        }
+
+        cx.view_cache(
+            fret_ui::element::ViewCacheProps {
+                contained_layout: true,
+                cache_key: 0,
+                ..fret_ui::element::ViewCacheProps::default()
+            },
+            |cx| {
+                let action_root = cx.root_id();
+                clear_app_ui_action_handlers_for_owner::<Owner, _>(cx, action_root);
+
+                let mut app_ui = AppUi::new(cx, action_root);
+                let render = render.take().expect("AppUi render closure should run once");
+                let out = render(&mut app_ui);
+                *cached_handlers = app_ui.take_action_handlers();
+                *cached_action_root = Some(action_root);
+
+                install_app_ui_action_handlers_for_owner::<Owner, _>(
+                    cx,
+                    action_root,
+                    cached_handlers,
+                );
+
+                out
+            },
+        )
+        .into()
+    })
+}
+
 #[doc(hidden)]
 pub fn view_init_window<V: View>(
     app: &mut fret_app::App,
@@ -1886,60 +1973,46 @@ pub fn view_view<'a, V: View>(
     cx: &mut ElementContext<'a, fret_app::App>,
     st: &mut ViewWindowState<V>,
 ) -> crate::Ui {
-    cx.named("__fret.view.action_root", |cx| {
-        if let Some(action_root) = st.cached_action_root {
-            cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
-            cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-                action_root,
-            );
+    let ViewWindowState {
+        view,
+        cached_handlers,
+        cached_action_root,
+    } = st;
+    render_app_ui_with_cached_handlers::<ViewRuntimeActionHooksOwner, _>(
+        cx,
+        "__fret.view.action_root",
+        cached_handlers,
+        cached_action_root,
+        |app_ui| view.render(app_ui),
+    )
+}
 
-            // Ensure handlers remain installed even when the view-cache root is reused (render
-            // skipped).
-            if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
-                cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(
-                    action_root,
-                    on_command,
-                );
-                cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-                    action_root,
-                    on_command_availability,
-                );
-            }
-        }
-
-        cx.view_cache(
-            fret_ui::element::ViewCacheProps {
-                contained_layout: true,
-                cache_key: 0,
-                ..fret_ui::element::ViewCacheProps::default()
-            },
-            |cx| {
-                let action_root = cx.root_id();
-                cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
-                cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-                    action_root,
-                );
-
-                let mut app_ui = AppUi::new(cx, action_root);
-                let out = st.view.render(&mut app_ui);
-                st.cached_handlers = app_ui.take_action_handlers();
-                st.cached_action_root = Some(action_root);
-
-                if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
-                    cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(
-                        action_root,
-                        on_command,
-                    );
-                    cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-                        action_root,
-                        on_command_availability,
-                    );
-                }
-
-                out
-            },
+/// Render a manual declarative root through the grouped `AppUi` authoring surface.
+///
+/// This is the explicit advanced/manual-assembly bridge for `UiTree` / `FnDriver` code that still
+/// owns its own window state but wants the same `AppUi` + `LocalState` authoring lane that the
+/// higher-level `View` runtime uses.
+pub fn render_root_with_app_ui<'a, H: UiHost + 'static>(
+    cx: fret_ui::declarative::RenderRootContext<'a, H>,
+    root_name: &str,
+    state: &mut AppUiRenderRootState,
+    render: impl for<'cx, 'el> FnOnce(&mut AppUi<'cx, 'el, H>) -> crate::Ui,
+) -> fret_core::NodeId {
+    let fret_ui::declarative::RenderRootContext {
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+    } = cx;
+    fret_ui::declarative::render_root(ui, app, services, window, bounds, root_name, |cx| {
+        render_app_ui_with_cached_handlers::<AppUiRenderRootActionHooksOwner, _>(
+            cx,
+            "__fret.advanced.view.render_root_with_app_ui.action_root",
+            &mut state.cached_handlers,
+            &mut state.cached_action_root,
+            render,
         )
-        .into()
     })
 }
 
@@ -1965,9 +2038,10 @@ pub fn view_record_engine_frame<V: View>(
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateExt, AppActivateSurface, LocalActionCapture, LocalState, LocalStateTxn,
-        OnActivate, View, ViewWindowState, action_listener, dispatch_action_listener,
-        dispatch_payload_action_listener, view_init_window, view_view,
+        AppActivateExt, AppActivateSurface, AppUiRenderRootState, LocalActionCapture, LocalState,
+        LocalStateTxn, OnActivate, View, ViewWindowState, action_listener,
+        dispatch_action_listener, dispatch_payload_action_listener, render_root_with_app_ui,
+        view_init_window, view_view,
     };
     use std::any::Any;
     use std::sync::{
@@ -2226,6 +2300,86 @@ mod tests {
         root
     }
 
+    struct ManualRuntimeLocalsWithRoot {
+        app_ui_root: AppUiRenderRootState,
+        count: Option<LocalState<u32>>,
+        touched: Option<LocalState<bool>>,
+        renders: Arc<AtomicUsize>,
+        last_seen_count: Arc<AtomicUsize>,
+    }
+
+    impl Default for ManualRuntimeLocalsWithRoot {
+        fn default() -> Self {
+            Self {
+                app_ui_root: AppUiRenderRootState::default(),
+                count: None,
+                touched: None,
+                renders: Arc::new(AtomicUsize::new(0)),
+                last_seen_count: Arc::new(AtomicUsize::new(0)),
+            }
+        }
+    }
+
+    fn render_manual_runtime_view(
+        ui: &mut UiTree<crate::app::App>,
+        app: &mut crate::app::App,
+        services: &mut FakeUiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        st: &mut ManualRuntimeLocalsWithRoot,
+    ) -> NodeId {
+        let ManualRuntimeLocalsWithRoot {
+            app_ui_root,
+            count,
+            touched,
+            renders,
+            last_seen_count,
+        } = st;
+        let root = render_root_with_app_ui(
+            fret_ui::declarative::RenderRootContext::new(ui, app, services, window, bounds),
+            "manual-locals-with-runtime",
+            app_ui_root,
+            |cx| {
+                renders.fetch_add(1, Ordering::SeqCst);
+
+                if count.is_none() {
+                    *count = Some(cx.state().local_init(|| 0u32));
+                }
+                if touched.is_none() {
+                    *touched = Some(cx.state().local_init(|| false));
+                }
+
+                let count = count.as_ref().expect("count local should exist").clone();
+                let touched = touched
+                    .as_ref()
+                    .expect("touched local should exist")
+                    .clone();
+
+                cx.actions()
+                    .locals_with((&count, &touched))
+                    .on::<RuntimeIncrementAction>(|tx, (count, touched)| {
+                        let incremented = tx.update_if(&count, |value| {
+                            *value += 1;
+                            true
+                        });
+                        let flagged = tx.set(&touched, true);
+                        incremented || flagged
+                    });
+
+                last_seen_count.store(count.layout_value(cx) as usize, Ordering::SeqCst);
+
+                let mut props = fret_ui::element::ContainerProps::default();
+                props.layout.size.width = Length::Fill;
+                props.layout.size.height = Length::Fill;
+
+                cx.container(props, |_cx| Vec::new()).into()
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn first_leaf(ui: &UiTree<crate::app::App>, mut node: NodeId) -> NodeId {
         loop {
             let children = ui.children(node);
@@ -2255,6 +2409,16 @@ mod tests {
             .value_in_or_default(&host.models),
             String::new()
         );
+    }
+
+    #[test]
+    fn local_state_from_model_wraps_existing_raw_handle() {
+        let mut host = FakeHost::default();
+        let model = host.models.insert(String::from("hello"));
+        let local = LocalState::from_model(model.clone());
+
+        assert_eq!(local.model(), &model);
+        assert_eq!(local.value_in(&host.models), Some(String::from("hello")));
     }
 
     #[test]
@@ -2493,6 +2657,72 @@ mod tests {
             "notify should force the cached view root to rerender on the next frame"
         );
         assert_eq!(st.view.last_seen_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn manual_render_root_with_app_ui_keeps_handlers_and_local_state_alive() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+
+        let mut services = FakeUiServices;
+        let mut st = ManualRuntimeLocalsWithRoot::default();
+
+        app.set_frame_id(FrameId(1));
+        let root =
+            render_manual_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        ui.set_focus(Some(first_leaf(&ui, root)));
+        assert!(
+            st.app_ui_root.cached_handlers.is_some(),
+            "manual AppUi root should install cached action handlers before command dispatch"
+        );
+        assert!(
+            st.app_ui_root.cached_action_root.is_some(),
+            "manual AppUi root should cache the concrete action root used for runtime dispatch"
+        );
+        assert_eq!(st.renders.load(Ordering::SeqCst), 1);
+        assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 0);
+
+        app.set_frame_id(FrameId(2));
+        render_manual_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.renders.load(Ordering::SeqCst),
+            1,
+            "expected the manual AppUi root to reuse the previous frame before any notify-driven invalidation"
+        );
+
+        let command = <RuntimeIncrementAction as fret_runtime::TypedAction>::action_id();
+        assert!(ui.dispatch_command(&mut app, &mut services, &command));
+        assert_eq!(
+            st.count
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(1)
+        );
+        assert_eq!(
+            st.touched
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(true)
+        );
+        assert!(
+            app.flush_effects()
+                .iter()
+                .any(|effect| matches!(effect, Effect::Redraw(redraw) if *redraw == window)),
+            "manual AppUi root dispatch should request a redraw through the runtime host"
+        );
+
+        app.set_frame_id(FrameId(3));
+        render_manual_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.renders.load(Ordering::SeqCst),
+            2,
+            "notify should force the cached manual AppUi root to rerender on the next frame"
+        );
+        assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 1);
     }
 
     #[test]

@@ -180,6 +180,9 @@ Audit judgment:
 
 - raw `Model<T>` is not automatically wrong here,
 - these examples should not be used as the source of truth for the default app authoring path.
+- `apps/fret-examples/src/form_demo.rs` is now the first proof that a manual `UiTree` harness can
+  still use grouped `AppUi` authoring via `fret::advanced::view::render_root_with_app_ui(...)`
+  plus explicit `LocalState::from_model(...)` bridges.
 
 ### B2) Window/runtime interop harnesses
 
@@ -224,7 +227,6 @@ path, these are the best next candidates.
 Candidate files:
 
 - `apps/fret-examples/src/components_gallery.rs`
-- `apps/fret-examples/src/form_demo.rs`
 - `apps/fret-examples/src/date_picker_demo.rs`
 - `apps/fret-examples/src/emoji_conformance_demo.rs`
 - `apps/fret-examples/src/ime_smoke_demo.rs`
@@ -240,8 +242,9 @@ Why these are candidates:
 Why they are not P0:
 
 - they currently sit on manual `UiTree` / driver surfaces,
-- converting them cleanly may benefit from a dedicated "manual harness LocalState-like ergonomics"
-  helper rather than one-off ad hoc rewrites.
+- the right migration path is now to reuse the landed
+  `fret::advanced::view::render_root_with_app_ui(...)` bridge rather than doing one-off ad hoc
+  rewrites.
 
 ### C2) Web custom-effect inspector harnesses
 
@@ -289,7 +292,9 @@ examples with `LocalState<T>`".
 
 It should be one of these:
 
-1. Introduce a thinner manual-harness state/read helper for driver-owned `UiTree` demos.
+1. Reuse the landed `render_root_with_app_ui(...)` bridge on the next clean control-panel/manual
+   demos (`date_picker_demo`, `sonner_demo`, `components_gallery`) and only reopen helper design if
+   those migrations reveal a real missing seam.
 2. Pick one candidate family with repetitive inspector state (for example the `custom_effect_v2_*`
    web demos) and converge that family on one shared pattern.
 3. Leave retained plot/table/node-graph/chart examples alone until the retained runtime surfaces

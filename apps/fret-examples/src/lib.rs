@@ -285,6 +285,7 @@ mod authoring_surface_policy_tests {
         include_str!("external_video_imports_avf_demo.rs");
     const EXTERNAL_VIDEO_IMPORTS_MF_DEMO: &str = include_str!("external_video_imports_mf_demo.rs");
     const EXTRAS_MARQUEE_PERF_DEMO: &str = include_str!("extras_marquee_perf_demo.rs");
+    const FORM_DEMO: &str = include_str!("form_demo.rs");
     const GENUI_DEMO: &str = include_str!("genui_demo.rs");
     const HELLO_COUNTER_DEMO: &str = include_str!("hello_counter_demo.rs");
     const HELLO_WORLD_COMPARE_DEMO: &str = include_str!("hello_world_compare_demo.rs");
@@ -788,6 +789,27 @@ mod authoring_surface_policy_tests {
             &[
                 "let page = ui::container(|cx| {",
                 "ui::v_flex(move |_cx| [card])",
+            ],
+        );
+    }
+
+    #[test]
+    fn manual_form_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            FORM_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "form_state: LocalState<FormState>,",
+                "let root = render_root_with_app_ui(",
+                "let (submit_count, valid, dirty) = form_state.layout(cx).read_ref(",
+                "let status_text = status.layout(cx).value_or_else(|| Arc::from(\"Idle\"));",
+            ],
+            &[
+                "form_state: Model<FormState>,",
+                ".render_root(\"form-demo\", move |cx| {",
+                "cx.observe_model(&form_state, Invalidation::Layout);",
+                "cx.app.models().read(&form_state, |st| {",
+                "cx.app.models().read(&status, |v| Arc::clone(v))",
             ],
         );
     }
