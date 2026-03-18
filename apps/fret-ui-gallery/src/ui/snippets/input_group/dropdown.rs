@@ -8,7 +8,6 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", String::new);
-    let open = cx.local_model_keyed("open", || false);
 
     let trigger = shadcn::InputGroupButton::new("")
         .a11y_label("More")
@@ -18,26 +17,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .children([icon::icon(cx, IconId::new_static("lucide.more-horizontal"))])
         .into_element(cx);
 
-    let dropdown = shadcn::DropdownMenu::from_open(open)
-        .align(shadcn::DropdownMenuAlign::End)
-        .side_offset(Px(8.0))
-        .align_offset(Px(-4.0))
-        .build_parts(
-            cx,
-            shadcn::DropdownMenuTrigger::new(trigger),
-            shadcn::DropdownMenuContent::new(),
-            |_cx| {
-                vec![shadcn::DropdownMenuEntry::Group(
-                    shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Settings")),
-                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Copy path")),
-                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new(
-                            "Open location",
-                        )),
-                    ]),
-                )]
-            },
-        );
+    let dropdown = shadcn::DropdownMenu::uncontrolled(cx)
+        .compose()
+        .trigger(trigger)
+        .content(
+            shadcn::DropdownMenuContent::new()
+                .align(shadcn::DropdownMenuAlign::End)
+                .side_offset(Px(8.0))
+                .align_offset(Px(-4.0)),
+        )
+        .entries([shadcn::DropdownMenuGroup::new([
+            shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Settings")),
+            shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Copy path")),
+            shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Open location")),
+        ])
+        .into()])
+        .into_element(cx);
 
     shadcn::InputGroup::new(value)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))

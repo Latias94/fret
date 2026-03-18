@@ -438,6 +438,8 @@ mod tests {
         PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType,
         Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    use fret_core::{KeyCode, Scene};
     use fret_launch::WinitAppDriver;
     use fret_runtime::{FrameId, TickId};
 
@@ -617,6 +619,24 @@ mod tests {
         );
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    fn paint_gallery_frame(rendered: &mut RenderedGalleryPage) {
+        let mut scene = Scene::default();
+        rendered.state.ui.paint_all(
+            &mut rendered.app,
+            &mut rendered.services,
+            rendered.bounds,
+            &mut scene,
+            1.0,
+        );
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    fn render_gallery_frame_with_paint(rendered: &mut RenderedGalleryPage) {
+        render_gallery_frame(rendered);
+        paint_gallery_frame(rendered);
+    }
+
     fn dispatch_command(rendered: &mut RenderedGalleryPage, command: impl Into<CommandId>) {
         UiGalleryDriver::default().handle_command(
             fret_launch::WinitCommandContext {
@@ -629,6 +649,7 @@ mod tests {
         );
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
     fn node_id_by_test_id(rendered: &RenderedGalleryPage, test_id: &str) -> fret_core::NodeId {
         let snapshot = rendered
             .state
@@ -1604,6 +1625,114 @@ mod tests {
         out
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_first_chart_keyboard_navigation_shows_auto_wired_tooltip_under_default_cache_policy() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-chart-first-chart-canvas");
+
+        let canvas_node = node_id_by_test_id(&rendered, "ui-gallery-chart-first-chart-canvas");
+        rendered.state.ui.set_focus(Some(canvas_node));
+        render_gallery_frame_with_paint(&mut rendered);
+
+        rendered.state.ui.dispatch_event(
+            &mut rendered.app,
+            &mut rendered.services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        render_gallery_frame_with_paint(&mut rendered);
+        render_gallery_frame_with_paint(&mut rendered);
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after chart keyboard navigation");
+        let canvas = node_by_test_id(snapshot, "ui-gallery-chart-first-chart-canvas");
+
+        assert_eq!(
+            canvas.pos_in_set,
+            Some(2),
+            "expected ArrowRight to advance the chart accessibility index"
+        );
+        assert!(
+            canvas
+                .value
+                .as_deref()
+                .is_some_and(|value| !value.is_empty()),
+            "expected chart keyboard navigation to publish an accessibility value once tooltip wiring is active"
+        );
+        assert!(
+            find_node_by_test_id(snapshot, "ui-gallery-chart-first-chart-tooltip").is_some(),
+            "expected the auto-wired chart tooltip to appear on the First Chart gallery section"
+        );
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_tooltip_custom_label_children_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-label-children");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_tooltip_custom_children_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-children");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_tooltip_custom_parts_with_label_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-parts-with-label");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_tooltip_custom_keys_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-tooltip-custom-keys");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_legend_colors_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-legend-colors");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_legend_custom_keys_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-legend-custom-keys");
+    }
+
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
+    #[test]
+    fn chart_grid_axis_follow_up_gallery_example_is_present() {
+        assert_chart_gallery_example_is_present("ui-gallery-chart-grid-axis-spec");
+    }
+
+    fn assert_chart_gallery_example_is_present(target_test_id: &str) {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
+        scroll_test_id_into_gallery_viewport(&mut rendered, target_test_id);
+        wait_until_test_id_exists(&mut rendered, target_test_id, 12);
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after scrolling the custom label children chart tooltip example into view");
+        let _target = node_by_test_id(snapshot, target_test_id);
+        let bounds = visual_bounds_by_test_id(&rendered, target_test_id);
+
+        assert!(
+            bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+            "expected the custom label children chart tooltip example to render with non-zero bounds: target={target_test_id} bounds={bounds:?}"
+        );
+    }
+
     fn assert_inner_viewport_vertical_touch_pan_is_owned_by_editor(
         page: &str,
         viewport_test_id: &str,
@@ -2021,17 +2150,97 @@ mod tests {
     }
 
     #[test]
+    fn gallery_input_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INPUT);
+
+        for target in [
+            "ui-gallery-input-usage-content",
+            "ui-gallery-input-basic-content",
+            "ui-gallery-input-field-content",
+            "ui-gallery-input-field-group-content",
+            "ui-gallery-input-disabled-content",
+            "ui-gallery-input-invalid-content",
+            "ui-gallery-input-file-section-content",
+            "ui-gallery-input-inline-content",
+            "ui-gallery-input-grid-content",
+            "ui-gallery-input-required-content",
+            "ui-gallery-input-badge-content",
+            "ui-gallery-input-input-group-content",
+            "ui-gallery-input-button-group-content",
+            "ui-gallery-input-form-content",
+            "ui-gallery-input-rtl-content",
+            "ui-gallery-input-label-content",
+            "ui-gallery-input-api-reference-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Input page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_button_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON);
+
+        for target in [
+            "ui-gallery-button-demo-content",
+            "ui-gallery-button-usage-content",
+            "ui-gallery-button-cursor-content",
+            "ui-gallery-button-size-content",
+            "ui-gallery-button-default-content",
+            "ui-gallery-button-outline-content",
+            "ui-gallery-button-secondary-content",
+            "ui-gallery-button-ghost-content",
+            "ui-gallery-button-destructive-content",
+            "ui-gallery-button-link-content",
+            "ui-gallery-button-icon-content",
+            "ui-gallery-button-with-icon-content",
+            "ui-gallery-button-rounded-content",
+            "ui-gallery-button-spinner-content",
+            "ui-gallery-button-button-group-content",
+            "ui-gallery-button-link-semantic-content",
+            "ui-gallery-button-rtl-content",
+            "ui-gallery-button-api-reference-content",
+            "ui-gallery-button-children-content",
+            "ui-gallery-button-variants-overview-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Button page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_button_notes_keep_stable_height_while_scrolling_into_view() {
+        assert_notes_section_keeps_stable_height_while_scrolling_into_view(
+            PAGE_BUTTON,
+            "ui-gallery-button-notes-content",
+        );
+    }
+
+    #[test]
     fn gallery_button_group_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_BUTTON_GROUP);
 
         for target in [
             "ui-gallery-button-group-demo-content",
+            "ui-gallery-button-group-usage-content",
+            "ui-gallery-button-group-accessibility-content",
+            "ui-gallery-button-group-vs-toggle-group-content",
             "ui-gallery-button-group-orientation-content",
             "ui-gallery-button-group-size-content",
             "ui-gallery-button-group-nested-content",
             "ui-gallery-button-group-nested-step-1",
             "ui-gallery-button-group-nested-previous",
             "ui-gallery-button-group-nested-next",
+            "ui-gallery-button-group-separator-content",
+            "ui-gallery-button-group-split-content",
             "ui-gallery-button-group-input-content",
             "ui-gallery-button-group-input-group-content",
             "ui-gallery-button-group-input-group-add-button",
@@ -2041,9 +2250,11 @@ mod tests {
             "ui-gallery-button-group-select-content",
             "ui-gallery-button-group-select-currency-trigger",
             "ui-gallery-button-group-select-amount",
+            "ui-gallery-button-group-popover-content",
             "ui-gallery-button-group-rtl-content",
             "ui-gallery-button-group-api-reference-content",
             "ui-gallery-button-group-text-content",
+            "ui-gallery-button-group-flex1-content",
         ] {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
             let bounds = visual_bounds_by_test_id(&rendered, target);
@@ -2192,6 +2403,126 @@ mod tests {
         );
     }
 
+    fn assert_visible_section_contents_do_not_overlap_while_scrolling(
+        page: &str,
+        content_test_ids: &[&str],
+    ) {
+        let mut rendered = render_gallery_page(page);
+        let mut last_gallery_scroll_y: Option<f64> = None;
+        let mut stable_frames = 0usize;
+        let mut checked_visible_pair = false;
+
+        for _ in 0..96 {
+            let viewport_bounds =
+                visual_bounds_by_test_id(&rendered, "ui-gallery-content-viewport");
+            let preview_content_bounds =
+                visual_bounds_by_test_id(&rendered, "ui-gallery-preview-card-content");
+            let mut visible_sections = content_test_ids
+                .iter()
+                .filter_map(|test_id| {
+                    let bounds = visual_bounds_by_test_id_if_present(&rendered, test_id)?;
+                    rects_intersect(viewport_bounds, bounds).then_some((*test_id, bounds))
+                })
+                .collect::<Vec<_>>();
+
+            visible_sections.sort_by(|(_, a), (_, b)| {
+                a.origin
+                    .y
+                    .0
+                    .partial_cmp(&b.origin.y.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+
+            for (test_id, bounds) in &visible_sections {
+                let epsilon = 1.0;
+                let content_left = preview_content_bounds.origin.x.0;
+                let content_top = preview_content_bounds.origin.y.0;
+                let content_right = content_left + preview_content_bounds.size.width.0;
+                let content_bottom = content_top + preview_content_bounds.size.height.0;
+                let left = bounds.origin.x.0;
+                let top = bounds.origin.y.0;
+                let right = left + bounds.size.width.0;
+                let bottom = top + bounds.size.height.0;
+                assert!(
+                    left >= content_left - epsilon
+                        && top >= content_top - epsilon
+                        && right <= content_right + epsilon
+                        && bottom <= content_bottom + epsilon,
+                    "expected visible section content to stay contained by preview-card content while scrolling: page={page} test_id={test_id} section_bounds={bounds:?} preview_content_bounds={preview_content_bounds:?} viewport_bounds={viewport_bounds:?} epsilon={epsilon}"
+                );
+            }
+
+            for pair in visible_sections.windows(2) {
+                let (prev_test_id, prev_bounds) = pair[0];
+                let (next_test_id, next_bounds) = pair[1];
+                let prev_bottom = prev_bounds.origin.y.0 + prev_bounds.size.height.0;
+                let next_top = next_bounds.origin.y.0;
+                checked_visible_pair = true;
+                assert!(
+                    prev_bottom <= next_top + 1.0,
+                    "expected visible section contents to keep vertical order without overlap while scrolling: page={page} prev_test_id={prev_test_id} prev_bounds={prev_bounds:?} next_test_id={next_test_id} next_bounds={next_bounds:?} viewport_bounds={viewport_bounds:?}"
+                );
+            }
+
+            let snapshot = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot while validating visible section overlap");
+            let gallery_scroll = node_by_test_id(snapshot, "ui-gallery-content-viewport")
+                .extra
+                .scroll;
+            let current_scroll_y = gallery_scroll.y.unwrap_or(0.0);
+            if let Some(last_scroll_y) = last_gallery_scroll_y {
+                if (current_scroll_y - last_scroll_y).abs() <= 0.01 {
+                    stable_frames = stable_frames.saturating_add(1);
+                } else {
+                    stable_frames = 0;
+                }
+            }
+            last_gallery_scroll_y = Some(current_scroll_y);
+
+            if stable_frames >= 3 {
+                break;
+            }
+
+            wheel_gallery_viewport(&mut rendered, Px(-240.0));
+        }
+
+        assert!(
+            checked_visible_pair,
+            "expected at least one scrolling frame with two visible section contents: page={page} content_test_ids={content_test_ids:?}"
+        );
+    }
+
+    fn assert_targets_stay_within_preview_card_content(page: &str, targets: &[&str]) {
+        let mut rendered = render_gallery_page(page);
+
+        for target in targets {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let preview_content_bounds =
+                visual_bounds_by_test_id(&rendered, "ui-gallery-preview-card-content");
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            let epsilon = 1.0;
+            let content_left = preview_content_bounds.origin.x.0;
+            let content_top = preview_content_bounds.origin.y.0;
+            let content_right = content_left + preview_content_bounds.size.width.0;
+            let content_bottom = content_top + preview_content_bounds.size.height.0;
+            let left = bounds.origin.x.0;
+            let top = bounds.origin.y.0;
+            let right = left + bounds.size.width.0;
+            let bottom = top + bounds.size.height.0;
+
+            assert!(
+                left >= content_left - epsilon
+                    && top >= content_top - epsilon
+                    && right <= content_right + epsilon
+                    && bottom <= content_bottom + epsilon,
+                "expected target to stay within preview-card content: page={page} target={target} bounds={bounds:?} preview_content_bounds={preview_content_bounds:?} epsilon={epsilon}"
+            );
+        }
+    }
+
     #[test]
     fn notes_sections_keep_stable_height_while_scrolling_into_view() {
         let cases = [
@@ -2199,6 +2530,7 @@ mod tests {
             (PAGE_ALERT, "ui-gallery-alert-notes-content"),
             (PAGE_ALERT_DIALOG, "ui-gallery-alert-dialog-notes-content"),
             (PAGE_AVATAR, "ui-gallery-avatar-notes-content"),
+            (PAGE_BUTTON, "ui-gallery-button-notes-content"),
             (PAGE_BUTTON_GROUP, "ui-gallery-button-group-notes-content"),
             (PAGE_CALENDAR, "ui-gallery-calendar-notes-content"),
             (PAGE_CARD, "ui-gallery-card-section-notes-content"),
@@ -2229,6 +2561,84 @@ mod tests {
         for (page, notes_test_id) in cases {
             assert_notes_section_keeps_stable_height_while_scrolling_into_view(page, notes_test_id);
         }
+    }
+
+    #[test]
+    fn carousel_visible_section_contents_do_not_overlap_while_scrolling() {
+        assert_visible_section_contents_do_not_overlap_while_scrolling(
+            PAGE_CAROUSEL,
+            &[
+                "ui-gallery-carousel-demo-content",
+                "ui-gallery-carousel-about-content",
+                "ui-gallery-carousel-usage-content",
+                "ui-gallery-carousel-basic-content",
+                "ui-gallery-carousel-sizes-thirds-content",
+                "ui-gallery-carousel-sizes-content",
+                "ui-gallery-carousel-spacing-content",
+                "ui-gallery-carousel-spacing-responsive-content",
+                "ui-gallery-carousel-orientation-vertical-content",
+                "ui-gallery-carousel-options-content",
+                "ui-gallery-carousel-api-content",
+                "ui-gallery-carousel-events-content",
+                "ui-gallery-carousel-plugin-content",
+                "ui-gallery-carousel-plugin-controlled-content",
+                "ui-gallery-carousel-plugin-stop-on-interaction-focus-content",
+                "ui-gallery-carousel-plugin-stop-on-last-snap-content",
+                "ui-gallery-carousel-plugin-delays-content",
+                "ui-gallery-carousel-plugin-wheel-content",
+                "ui-gallery-carousel-rtl-content",
+                "ui-gallery-carousel-follow-ups-content",
+                "ui-gallery-carousel-compact-builder-content",
+                "ui-gallery-carousel-parts-content",
+                "ui-gallery-carousel-loop-content",
+                "ui-gallery-carousel-loop-downgrade-cannot-loop-content",
+                "ui-gallery-carousel-focus-content",
+                "ui-gallery-carousel-duration-content",
+                "ui-gallery-carousel-expandable-content",
+                "ui-gallery-carousel-api-reference-content",
+            ],
+        );
+    }
+
+    #[test]
+    fn combobox_visible_section_contents_do_not_overlap_while_scrolling() {
+        assert_visible_section_contents_do_not_overlap_while_scrolling(
+            PAGE_COMBOBOX,
+            &[
+                "docsec-conformance-demo-content",
+                "docsec-basic-content",
+                "ui-gallery-combobox-usage-content",
+                "ui-gallery-combobox-label-content",
+                "docsec-auto-highlight-content",
+                "docsec-clear-button-content",
+                "docsec-groups-content",
+                "docsec-groups-separator-content",
+                "docsec-trigger-button-content",
+                "docsec-multiple-selection-content",
+                "docsec-extras-custom-items-content",
+                "docsec-extras-long-list-content",
+                "docsec-extras-invalid-content",
+                "docsec-extras-disabled-content",
+                "docsec-extras-input-group-content",
+                "docsec-extras-rtl-content",
+                "ui-gallery-combobox-notes-content",
+            ],
+        );
+    }
+
+    #[test]
+    fn carousel_focus_and_duration_controls_stay_within_preview_card_content() {
+        assert_targets_stay_within_preview_card_content(
+            PAGE_CAROUSEL,
+            &[
+                "ui-gallery-carousel-focus-previous",
+                "ui-gallery-carousel-focus-next",
+                "ui-gallery-carousel-duration-fast-previous",
+                "ui-gallery-carousel-duration-fast-next",
+                "ui-gallery-carousel-duration-slow-previous",
+                "ui-gallery-carousel-duration-slow-next",
+            ],
+        );
     }
 
     #[test]

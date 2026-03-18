@@ -1,7 +1,8 @@
-use fret_ui_shadcn::facade as shadcn;
 #![cfg(feature = "web-goldens")]
 // Heavy, web-golden-backed conformance. Enable via:
 //   cargo nextest run -p fret-ui-shadcn --features web-goldens
+
+use fret_ui_shadcn::facade as shadcn;
 
 use fret_app::App;
 use fret_core::{
@@ -4514,10 +4515,10 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
         use fret_ui_shadcn::facade::{
             DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
         };
+        use fret_ui_shadcn::raw::breadcrumb::primitives as bc;
 
         let dropdown = DropdownMenu::from_open(open.clone()).align(DropdownMenuAlign::Start);
 
@@ -8296,9 +8297,7 @@ fn combobox_demo_open_snapshot(
             .items(items)
             .into_element_parts(cx, |_cx| {
                 vec![
-                    shadcn::ComboboxPart::from(
-                        shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
-                    ),
+                    shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(200.0))),
                     shadcn::ComboboxPart::from(
                         shadcn::ComboboxInput::new().placeholder("Select a fruit"),
                     ),
@@ -14204,11 +14203,7 @@ fn fret_first_toast_item_rect(snap: &SemanticsSnapshot) -> Rect {
 fn assert_sonner_toast_rect_matches_web(
     web_name: &str,
     web: &WebGolden,
-    dispatch_toast: impl FnOnce(
-        &shadcn::Sonner,
-        &mut dyn fret_ui::action::UiActionHost,
-        AppWindowId,
-    ),
+    dispatch_toast: impl FnOnce(&shadcn::Sonner, &mut dyn fret_ui::action::UiActionHost, AppWindowId),
 ) {
     let theme = web_theme(web);
     let bounds = bounds_for_web_theme(theme);

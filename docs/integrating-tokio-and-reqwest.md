@@ -114,7 +114,7 @@ fn render_user_card(cx: &mut AppUi<'_, '_>) -> Ui {
         Ok(text)
     });
 
-    let state = handle.watch(cx).paint().value_or_default();
+    let state = handle.read_layout(cx);
     match state.status {
         QueryStatus::Loading => { /* render loading */ }
         QueryStatus::Success => { /* render data */ }
@@ -154,6 +154,15 @@ fn render_local_value(cx: &mut AppUi<'_, '_>) -> Ui {
 
 After a write (POST/PUT/DELETE), invalidate the affected keys so the next UI frame refetches.
 Prefer invalidating by namespace so you can evolve key shapes without missing dependent queries.
+
+Inside `AppUi` / extracted `UiCx` helpers, prefer the grouped app-facing helpers
+`cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)`:
+
+```rust,ignore
+cx.data().invalidate_query_namespace("my_app.http.user.v1");
+```
+
+If you are already at a pure `&mut App` / driver boundary, keep the raw client helper:
 
 ```rust
 use fret_query::with_query_client;

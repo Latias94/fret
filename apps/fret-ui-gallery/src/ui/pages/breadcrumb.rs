@@ -17,17 +17,17 @@ pub(super) fn preview_breadcrumb(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`shadcn::Breadcrumb` remains the compact builder for standard trails: `Breadcrumb::new().items([...])`.",
         "For upstream parity, `breadcrumb::primitives::{Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis}` keep the shadcn-shaped composition surface.",
-        "`BreadcrumbLink` and `BreadcrumbPage` now expose `.children(|cx| [...])` as the default typed alternative to upstream arbitrary React children, while `children_raw(...)` stays explicit for pre-landed content and `href(...)`, `on_click(...)`, and `on_activate(...)` keep navigation typed instead of introducing generic `Slot` / `asChild` prop merging.",
-        "`BreadcrumbSeparator` keeps a narrow typed override surface through `BreadcrumbSeparatorKind` because the documented parity cases are icon/text separators rather than arbitrary slot-prop merging.",
+        "`BreadcrumbLink`, `BreadcrumbPage`, and `BreadcrumbSeparator` expose `.children(|cx| [...])` as the default typed alternative to upstream arbitrary React children, while `children_raw(...)` stays explicit for pre-landed content.",
+        "`BreadcrumbSeparatorKind` remains the shortcut for the common chevron/slash/icon cases, while `href(...)`, `on_click(...)`, and `on_activate(...)` keep navigation typed instead of introducing generic `Slot` / `asChild` prop merging.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API implementation: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`.",
         "Gallery sections now mirror the shadcn Breadcrumb docs order more directly: Demo, Usage, Basic, Custom Separator, Dropdown, Collapsed, Link Component, RTL, API Reference. `Responsive` remains a Fret-specific extra appended afterward.",
-        "Breadcrumb already exposes both upstream-shaped primitives and a compact builder; the docs `Usage` section prefers primitives for parity, while the compact builder remains a Fret ergonomic shortcut.",
+        "Breadcrumb already exposes both upstream-shaped primitives and a compact builder; the docs-aligned example sections now prefer primitives for parity, while the compact builder remains a Fret ergonomic shortcut.",
         "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
         "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
-        "Dropdown and router-link samples use typed pressables/links; `.children(|cx| [...])` covers composable inline content without widening the public surface into a generic Slot/`asChild` mechanism (ADR 0115), while `children_raw(...)` remains the explicit advanced seam.",
+        "Dropdown, router-link, and custom-separator samples use typed pressables/links plus `.children(|cx| [...])` for composable inline content without widening the public surface into a generic Slot/`asChild` mechanism (ADR 0115), while `children_raw(...)` remains the explicit advanced seam.",
         "The live gallery keeps usage links deterministic via `on_click(\"ui_gallery.app.open\")`, so clicking `Home` no longer launches the system browser while the code still demonstrates the semantic-link path.",
         "The root/list/current-page semantics now approximate upstream `nav/ol/li` more closely; separators and ellipsis stay presentation-only in the semantics tree.",
     ]);

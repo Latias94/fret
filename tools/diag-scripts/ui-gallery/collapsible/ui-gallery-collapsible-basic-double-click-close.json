@@ -40,40 +40,57 @@
       "padding_px": 16.0,
       "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 4 },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-content" }
-      },
-      "timeout_frames": 120
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" } },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" } },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-content" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" } },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-content" }
-      },
-      "timeout_frames": 240
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-content" },
-        "min_w_px": 120.0,
-        "min_h_px": 24.0,
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic" },
+        "min_w_px": 300.0,
+        "min_h_px": 80.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic" },
+        "max_w_px": 400.0,
+        "max_h_px": 50.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic" },
+        "min_w_px": 300.0,
+        "min_h_px": 80.0,
         "eps_px": 1.0
       },
       "timeout_frames": 240

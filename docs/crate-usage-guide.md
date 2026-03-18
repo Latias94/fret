@@ -137,7 +137,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions and keep the first-contact handler surface to `cx.actions().locals::<A>(...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`; the explicit `widget.dispatch::<A>()` / `widget.dispatch_payload::<A>(payload)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models::<A>(...)` when coordinating shared `Model<T>` graphs. Treat raw `AppUi::on_action_notify*` and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, prefer `cx.actions().action(act::Save)`, `cx.actions().action_payload(act::Remove, payload)`, and `cx.actions().listen(...)`.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions, prefer `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState tracked reads, and keep the first-contact handler surface to `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For ordinary initialized locals inside `locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed lists, bind row payloads with `.action_payload(...)` and prefer `payload_local_update_if::<A>(...)` as the default row-write path. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared `Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed payload actions without reopening the deleted payload-carrier namespace. Treat lower-level payload helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, prefer `cx.actions().action(act::Save)`, `cx.actions().action_payload(act::Remove, payload)`, and `cx.actions().listen(...)`.
 
 `fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they cover
 activation-only widgets that expose the standard `OnActivate` slot but still lack a tighter
@@ -164,8 +164,8 @@ expecting `CommandId` from the default prelude.
 When app code needs explicit semantics nouns, import them intentionally from
 `fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
 When app code needs explicit selector/query nouns, keep them off the default prelude as well and
-import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
-`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
+import them intentionally from `fret::selector::ui::DepsBuilder`,
+`fret::selector::DepsSignature`, and `fret::query::{QueryKey, QueryPolicy, QueryState, ...}`.
 Do the same for environment/responsive helpers: import them intentionally from `fret::env::{...}`
 instead of treating breakpoint/media helpers as part of the default app vocabulary.
 When a view intentionally opts into manual sink-style `*_build(|cx, out| ...)` composition, keep
@@ -282,7 +282,7 @@ authoring vocabulary through a hidden umbrella import.
 | Goal | Suggested `fret` features | Notes |
 | --- | --- | --- |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
-| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
+| Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
 | Add docking integration | `["docking"]` | Exposes the explicit docking surface (`fret::docking::{core::*, ...}`). |
 | Add editor theming integration | `["editor"]` | Keeps installed `fret-ui-editor` presets resilient to `FretApp` shadcn auto-theme resets; widgets still come from `fret-ui-editor`. |
@@ -298,7 +298,7 @@ Minimal / explicit profile (useful for embed/minimal builds that must avoid file
 fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
 ```
 
-Enable selector/query helpers (for `cx.data().selector(...)` / `cx.data().query(...)` on `AppUi`):
+Enable selector/query helpers (for `cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, and `cx.data().query(...)` on `AppUi`):
 
 ```toml
 [dependencies]
@@ -467,8 +467,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `shadcn::themes::apply_shadcn_new_york(...)` for an explicit one-shot preset when the app wants
   to own a fixed theme baseline directly, or enable `fret-ui-shadcn/app-integration` and call
   `shadcn::app::install(...)` for the golden-path app wiring that also opts the app into
-  environment-aware host-theme syncing. For environment / `UiServices`-boundary hooks, stay explicit with
+  environment-aware host-theme syncing. Treat that curated facade import as the only first-contact
+  component-family discovery lane: `shadcn::app::*` and `shadcn::themes::*` are setup lanes, not
+  peer discovery lanes. For environment / `UiServices`-boundary hooks, stay explicit with
   `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
+  `fret_ui_shadcn::advanced::*` is an implementation/debug lane, not a competing default import.
   For first-party prose/demo helpers, `shadcn::raw::typography::*` remains an explicit escape
   hatch. Only drop to `shadcn::raw::*` beyond these documented cases when you intentionally need
   the full uncurated module surface; the flat crate root is now treated as a hidden compatibility
@@ -476,9 +479,12 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)` for explicit
   app-owned/fixed presets, use `fret::shadcn::app::install(...)` when you want the curated app
   integration plus environment-aware host-theme syncing, and only drop to `fret::shadcn::raw::*`
-  when you need the full uncurated `fret_ui_shadcn` surface. That same raw escape hatch also
-  carries advanced service hooks at `fret::shadcn::raw::advanced::*`; first-party prose/demo
-  helpers may also use `fret::shadcn::raw::typography::*`.
+  when you need the full uncurated `fret_ui_shadcn` surface. Treat
+  `fret::shadcn::{Button, Card, ...}` as the only first-contact component-family lane here too:
+  `fret::shadcn::app::*` and `fret::shadcn::themes::*` are setup lanes, not peer discovery lanes.
+  That same raw escape hatch also carries advanced service hooks at
+  `fret::shadcn::raw::advanced::*`; first-party prose/demo helpers may also use
+  `fret::shadcn::raw::typography::*`.
 
 **Tables vs grids (naming and intent):**
 
@@ -608,16 +614,24 @@ consistent inbox + cancellation vocabulary.
 
 - memoize expensive derived values behind an explicit dependency signature (`Deps: PartialEq`),
 - optional UI sugar (`ElementContext::use_selector(...)`) plus the `fret` app-surface bridge
-  (`cx.data().selector(...)`) to keep view code readable.
+  (`cx.data().selector_layout(...)` for LocalState-first inputs, raw `cx.data().selector(...)`
+  otherwise) to keep view code readable.
 
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer
-`cx.data().selector(...)`. When app code needs to spell dependency-signature helpers explicitly,
-import them from `fret::selector::{DepsBuilder, DepsSignature}` instead of expecting them from
-`fret::app::prelude::*`. Enable `fret-selector/ui` only when you are working directly with
+`cx.data().selector_layout(...)` for view-owned `LocalState<T>` inputs. Keep raw
+`cx.data().selector(...)` for explicit shared `Model<T>` / global signatures. When app code needs
+to spell dependency-signature helpers explicitly, import them from
+`fret::selector::ui::DepsBuilder` plus `fret::selector::DepsSignature` instead of expecting them
+from `fret::app::prelude::*`. Enable `fret-selector/ui` only when you are working directly with
 `ElementContext` in component/advanced surfaces.
 
 **Use it when:** you need stable derived values (counts, filtered views, projections) without
 introducing “tick models” or storing every derived value in the model store.
+
+**Default app note:** on the `fret` golden path, prefer `cx.data().selector_layout(...)` when the
+inputs are view-owned `LocalState<T>` slots. Keep raw `cx.data().selector(...)` plus
+`fret::selector::ui::DepsBuilder` plus `fret::selector::DepsSignature` for explicit shared
+`Model<T>` / global signatures or direct component/advanced `ElementContext` work.
 
 ### `fret-query`
 
@@ -633,6 +647,17 @@ computations.
 
 **Async fetch:** install a `FutureSpawnerHandle` global and use `cx.data().query_async(...)` /
 `cx.data().query_async_local(...)` on `AppUi`. See `docs/integrating-tokio-and-reqwest.md`.
+
+**Default app read note:** after creating a handle on the `fret` app path, prefer
+`handle.read_layout(cx)` for the common `QueryState::<T>::default()` fallback case. Keep
+`handle.layout(cx).value_or_default()` or declarative/component `handle.layout_query(cx)` when you
+are intentionally staying on the lower-level tracked-read surface.
+
+**Default app invalidation note:** when query invalidation happens inside `AppUi` or extracted
+`UiCx` helpers, prefer `cx.data().invalidate_query(...)` /
+`cx.data().invalidate_query_namespace(...)` so grouped app code keeps the redraw shell in one
+place. Keep `fret::query::with_query_client(...)` for pure app/driver code that does not have a
+`cx.data()` surface.
 
 **Feature note:** on the default `fret` app path, enable `fret`'s `state` feature and prefer the
 grouped app data helpers (`cx.data().query*`). When app code needs explicit query nouns, import
@@ -661,8 +686,10 @@ Notes:
 - `fret-router-ui` provides `RouterUiStore` (router + snapshot model), pressable-based link/outlet
   helpers, and history action helpers (`back_on_action()`, `forward_on_action()`,
   `navigate_history_on_action(...)`).
-- Prefer wiring router history actions through `cx.on_action_notify::<...>(store.back_on_action())`
-  / `store.forward_on_action()` instead of hand-rolling window/host availability glue in app code.
+- Prefer wiring router history actions through
+  `use fret::advanced::AppUiRawActionNotifyExt as _;` plus
+  `cx.on_action_notify::<...>(store.back_on_action())` / `store.forward_on_action()` instead of
+  hand-rolling window/host availability glue in app code.
 - Keep routing adoption explicit at the app boundary (`FretApp::setup(...)`, app-owned models, or
   explicit view state) rather than treating router crates as a second default app runtime.
 - Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).

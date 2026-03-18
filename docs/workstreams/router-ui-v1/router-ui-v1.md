@@ -157,7 +157,7 @@ Apps can map these to their own command IDs and menus.
 
 Implemented helpers (optional):
 
-- `register_router_commands(&mut CommandRegistry)` registers `router.back` and `router.forward`.
+- `fret_router_ui::app::install(app)` registers `router.back` and `router.forward`.
 - `RouterUiStore::handle_router_command(...)` performs navigation via the store and updates snapshot/intents models.
 - `RouterUiStore::navigate_history_on_action(...)`, `back_on_action()`, and `forward_on_action()`
   bridge history navigation onto object-safe UI action hosts so apps can keep `cx.on_action_notify`

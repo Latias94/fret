@@ -181,7 +181,12 @@ impl Collapsible {
 
             let root = with_collapsible_scope_provider(cx, scope, |cx| {
                 let children = children(cx);
-                shadcn_layout::container_vstack_gap(cx, props, gap, children)
+                shadcn_layout::container_vstack_fill_width(
+                    cx,
+                    props,
+                    shadcn_layout::VStackProps::default().gap(gap),
+                    children,
+                )
             });
 
             root.attach_semantics(SemanticsDecoration {

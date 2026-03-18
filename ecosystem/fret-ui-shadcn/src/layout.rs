@@ -27,10 +27,6 @@ impl VStackProps {
         self
     }
 
-    pub(crate) fn gap_y(self, gap: Space) -> Self {
-        self.gap(gap)
-    }
-
     pub(crate) fn layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = layout;
         self
@@ -41,16 +37,8 @@ impl VStackProps {
         self
     }
 
-    pub(crate) fn items_center(self) -> Self {
-        self.items(Items::Center)
-    }
-
     pub(crate) fn items_start(self) -> Self {
         self.items(Items::Start)
-    }
-
-    pub(crate) fn items_end(self) -> Self {
-        self.items(Items::End)
     }
 
     pub(crate) fn items_stretch(self) -> Self {
@@ -62,16 +50,8 @@ impl VStackProps {
         self
     }
 
-    pub(crate) fn justify_center(self) -> Self {
-        self.justify(Justify::Center)
-    }
-
     pub(crate) fn justify_start(self) -> Self {
         self.justify(Justify::Start)
-    }
-
-    pub(crate) fn justify_end(self) -> Self {
-        self.justify(Justify::End)
     }
 }
 
@@ -100,10 +80,6 @@ impl HStackProps {
         self
     }
 
-    pub(crate) fn gap_x(self, gap: Space) -> Self {
-        self.gap(gap)
-    }
-
     pub(crate) fn layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = layout;
         self
@@ -122,14 +98,6 @@ impl HStackProps {
         self.items(Items::Start)
     }
 
-    pub(crate) fn items_end(self) -> Self {
-        self.items(Items::End)
-    }
-
-    pub(crate) fn items_stretch(self) -> Self {
-        self.items(Items::Stretch)
-    }
-
     pub(crate) fn justify(mut self, justify: Justify) -> Self {
         self.justify = justify;
         self
@@ -137,10 +105,6 @@ impl HStackProps {
 
     pub(crate) fn justify_center(self) -> Self {
         self.justify(Justify::Center)
-    }
-
-    pub(crate) fn justify_start(self) -> Self {
-        self.justify(Justify::Start)
     }
 
     pub(crate) fn justify_end(self) -> Self {

@@ -1391,6 +1391,10 @@ impl InputGroupAddon {
         self.has_kbd = has_kbd;
         self
     }
+
+    pub(crate) fn into_parts(self) -> (InputGroupAddonAlign, Vec<AnyElement>, bool, bool) {
+        (self.align, self.children, self.has_button, self.has_kbd)
+    }
 }
 
 /// shadcn/ui `InputGroupInput` (v4).

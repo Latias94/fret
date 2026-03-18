@@ -11,6 +11,7 @@ Companion docs:
 - `MILESTONES.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
+- `REMAINING_SURFACE_SHRINK_AUDIT_2026-03-17.md`
 
 Execution note on 2026-03-12:
 
@@ -104,6 +105,16 @@ Root-budget freeze note on 2026-03-16:
 - devloop helpers now live on `fret::advanced::dev::*` instead of `fret::dev::*`,
 - remaining work in this folder is therefore no longer "what should still be on the root?", but
   "how much ceremony remains on the default app lane after the root is already closed".
+
+Surface-shrink closeout note on 2026-03-17:
+
+- the generic rename/delete tail is now audited in
+  `REMAINING_SURFACE_SHRINK_AUDIT_2026-03-17.md`,
+- maintainers should now treat the remaining `view.rs` carrier nouns as either intentional seams,
+  rustdoc-hidden structural carriers, or internal substrate rather than as open-ended rename
+  backlog,
+- future work in this folder should reopen only for genuinely misleading public-looking residue,
+  not because density pressure still exists on write/read/list authoring.
 
 Verification note on 2026-03-16:
 
@@ -539,6 +550,10 @@ Post-closeout handoff order on 2026-03-16:
     `fret::app::prelude::*` into the explicit `fret::selector::*` lane so default first-contact
     imports stay smaller.
   - [x] Move default docs/templates/examples to `cx.data().selector(...)`.
+  - [x] Follow-on on 2026-03-17 under
+    `dataflow-authoring-surface-fearless-refactor-v1`: narrow the LocalState-first happy path to
+    `cx.data().selector_layout(...)` while keeping raw `cx.data().selector(...)` explicit for
+    shared-model/global-signature work.
   - [x] Audit remaining advanced/component call sites and keep them explicit.
 - [x] Migrate `fret-query` to the grouped app data surface.
   - [x] Move default docs/examples to `cx.data().query(...)` / `cx.data().query_async(...)`.
@@ -639,6 +654,11 @@ Post-closeout handoff order on 2026-03-16:
   - [x] 2026-03-12: removed root `fret::kernel::*` / `fret::interop::*` module exports; low-level
     runtime/render/viewport seams now stay on the explicit `fret::advanced::{kernel, interop}`
     lane.
+  - [x] 2026-03-17: removed the raw `fret::query::ui` and `fret::router::ui` passthrough lanes
+    from the `fret` facade and narrowed `fret::selector::ui` to the explicitly documented
+    `DepsBuilder` export; reusable/advanced code that needs raw UI adoption traits keeps using the
+    direct crates (`fret-query`, `fret-selector`, `fret-router-ui`) instead of routing those seams
+    back through `fret`.
 - [ ] Remove dead docs and stale guidance after the migration is complete.
   - 2026-03-16 bounded remainder: default-facing docs/examples are now largely aligned; the main
     remaining stale guidance is historical workstream prose and closeout bookkeeping, not the

@@ -319,6 +319,16 @@ impl AlertDialog {
         AlertDialogComposition::new(self)
     }
 
+    /// Returns a part-children builder for root-level authoring that is closer to upstream nested
+    /// children composition while still lowering into the existing recipe-layer slots.
+    pub fn children<H: UiHost, I, P>(self, parts: I) -> AlertDialogChildren<H>
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AlertDialogPart<H>>,
+    {
+        AlertDialogChildren::new(self, parts)
+    }
+
     /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
     #[track_caller]
     pub fn build<H: UiHost>(
@@ -592,6 +602,224 @@ impl AlertDialog {
 /// mechanism surface unchanged while giving call sites a more composable authoring style.
 type AlertDialogDeferredContent<H> =
     Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+type AlertDialogDeferredTrigger<H> =
+    Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AlertDialogTrigger + 'static>;
+
+fn alert_dialog_fallback_trigger<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AlertDialogTrigger {
+    AlertDialogTrigger::new(cx.container(ContainerProps::default(), |_cx| Vec::new()))
+}
+
+/// Root-level part adapter for shadcn-style `AlertDialog` children composition.
+///
+/// This stays in the recipe layer. It does not widen the mechanism contract in `fret-ui`; it only
+/// collects authored parts and lowers them into the existing trigger/content slot surface.
+pub enum AlertDialogPart<H: UiHost> {
+    Trigger(AlertDialogDeferredTrigger<H>),
+    Portal(AlertDialogPortal),
+    Overlay(AlertDialogOverlay),
+    Content(AlertDialogDeferredContent<H>),
+}
+
+impl<H: UiHost> std::fmt::Debug for AlertDialogPart<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("AlertDialogPart::Trigger(<deferred>)"),
+            Self::Portal(portal) => f
+                .debug_tuple("AlertDialogPart::Portal")
+                .field(portal)
+                .finish(),
+            Self::Overlay(overlay) => f
+                .debug_tuple("AlertDialogPart::Overlay")
+                .field(overlay)
+                .finish(),
+            Self::Content(_) => f.write_str("AlertDialogPart::Content(<deferred>)"),
+        }
+    }
+}
+
+impl<H: UiHost> AlertDialogPart<H> {
+    pub fn trigger<T>(trigger: T) -> Self
+    where
+        T: AlertDialogCompositionTriggerArg<H> + 'static,
+    {
+        Self::Trigger(Box::new(move |cx| trigger.into_alert_dialog_trigger(cx)))
+    }
+
+    pub fn portal(portal: AlertDialogPortal) -> Self {
+        Self::Portal(portal)
+    }
+
+    pub fn overlay(overlay: AlertDialogOverlay) -> Self {
+        Self::Overlay(overlay)
+    }
+
+    pub fn content<T>(content: T) -> Self
+    where
+        T: IntoUiElement<H> + 'static,
+    {
+        Self::Content(Box::new(move |cx| content.into_element(cx)))
+    }
+
+    pub fn content_with(
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        Self::Content(Box::new(content))
+    }
+}
+
+impl<H: UiHost> From<AlertDialogTrigger> for AlertDialogPart<H> {
+    fn from(value: AlertDialogTrigger) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost + 'static, T> From<AlertDialogTriggerBuild<H, T>> for AlertDialogPart<H>
+where
+    T: IntoUiElement<H> + 'static,
+{
+    fn from(value: AlertDialogTriggerBuild<H, T>) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost> From<AlertDialogPortal> for AlertDialogPart<H> {
+    fn from(value: AlertDialogPortal) -> Self {
+        Self::portal(value)
+    }
+}
+
+impl<H: UiHost> From<AlertDialogOverlay> for AlertDialogPart<H> {
+    fn from(value: AlertDialogOverlay) -> Self {
+        Self::overlay(value)
+    }
+}
+
+impl<H: UiHost> From<AlertDialogContent> for AlertDialogPart<H> {
+    fn from(value: AlertDialogContent) -> Self {
+        Self::content(value)
+    }
+}
+
+impl<H: UiHost + 'static, B> From<AlertDialogContentBuild<H, B>> for AlertDialogPart<H>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>) + 'static,
+{
+    fn from(value: AlertDialogContentBuild<H, B>) -> Self {
+        Self::content(value)
+    }
+}
+
+/// Part-children builder for root-level `AlertDialog` composition.
+///
+/// This is the closest Fret recipe surface to upstream nested children today:
+/// collect `AlertDialogPart`s, then late-land them at the root call site.
+pub struct AlertDialogChildren<H: UiHost> {
+    dialog: AlertDialog,
+    parts: Vec<AlertDialogPart<H>>,
+}
+
+impl<H: UiHost> std::fmt::Debug for AlertDialogChildren<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut trigger = 0usize;
+        let mut portal = 0usize;
+        let mut overlay = 0usize;
+        let mut content = 0usize;
+
+        for part in &self.parts {
+            match part {
+                AlertDialogPart::Trigger(_) => trigger += 1,
+                AlertDialogPart::Portal(_) => portal += 1,
+                AlertDialogPart::Overlay(_) => overlay += 1,
+                AlertDialogPart::Content(_) => content += 1,
+            }
+        }
+
+        f.debug_struct("AlertDialogChildren")
+            .field("dialog", &self.dialog)
+            .field("trigger_parts", &trigger)
+            .field("portal_parts", &portal)
+            .field("overlay_parts", &overlay)
+            .field("content_parts", &content)
+            .finish()
+    }
+}
+
+impl<H: UiHost> AlertDialogChildren<H> {
+    pub fn new<I, P>(dialog: AlertDialog, parts: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AlertDialogPart<H>>,
+    {
+        Self {
+            dialog,
+            parts: parts.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut trigger: Option<AlertDialogDeferredTrigger<H>> = None;
+        let mut portal = AlertDialogPortal::new();
+        let mut overlay = AlertDialogOverlay::new();
+        let mut content: Option<AlertDialogDeferredContent<H>> = None;
+
+        for part in self.parts {
+            match part {
+                AlertDialogPart::Trigger(next) => {
+                    assert!(
+                        trigger.replace(next).is_none(),
+                        "AlertDialog::children(...) accepts at most one AlertDialogTrigger"
+                    );
+                }
+                AlertDialogPart::Portal(next) => {
+                    portal = next;
+                }
+                AlertDialogPart::Overlay(next) => {
+                    overlay = next;
+                }
+                AlertDialogPart::Content(next) => {
+                    assert!(
+                        content.replace(next).is_none(),
+                        "AlertDialog::children(...) accepts at most one AlertDialogContent"
+                    );
+                }
+            }
+        }
+
+        let allow_fallback_trigger = self.dialog.handle.is_some();
+        let content = content
+            .expect("AlertDialog::children(...) requires one AlertDialogContent-compatible part");
+
+        match trigger {
+            Some(trigger) => self.dialog.into_element_parts(
+                cx,
+                move |cx| trigger(cx),
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+            None if allow_fallback_trigger => self.dialog.into_element_parts(
+                cx,
+                move |cx| alert_dialog_fallback_trigger(cx),
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+            None => {
+                panic!(
+                    "AlertDialog::children(...) requires one AlertDialogTrigger unless AlertDialog::from_handle(...) is used"
+                )
+            }
+        }
+    }
+}
+
+impl<H: UiHost> IntoUiElement<H> for AlertDialogChildren<H> {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        AlertDialogChildren::into_element(self, cx)
+    }
+}
 
 enum AlertDialogCompositionContent<H: UiHost> {
     Eager(AnyElement),
@@ -674,9 +902,7 @@ impl<H: UiHost, TTrigger> AlertDialogComposition<H, TTrigger> {
     {
         let trigger = match self.trigger {
             Some(trigger) => trigger.into_alert_dialog_trigger(cx),
-            None if self.dialog.handle.is_some() => {
-                AlertDialogTrigger::new(cx.container(ContainerProps::default(), |_cx| Vec::new()))
-            }
+            None if self.dialog.handle.is_some() => alert_dialog_fallback_trigger(cx),
             None => {
                 panic!("AlertDialog::compose().trigger(...) must be provided before into_element()")
             }
@@ -1857,6 +2083,7 @@ pub struct AlertDialogCancel {
     a11y_label: Option<Arc<str>>,
     children: Vec<AnyElement>,
     open: Option<Model<bool>>,
+    variant: ButtonVariant,
     disabled: bool,
     test_id: Option<Arc<str>>,
 }
@@ -1868,6 +2095,7 @@ impl std::fmt::Debug for AlertDialogCancel {
             .field("a11y_label", &self.a11y_label)
             .field("children_len", &self.children.len())
             .field("open", &"<model>")
+            .field("variant", &self.variant)
             .field("disabled", &self.disabled)
             .finish()
     }
@@ -1884,6 +2112,7 @@ impl AlertDialogCancel {
             a11y_label: None,
             children: Vec::new(),
             open: Some(open),
+            variant: ButtonVariant::Outline,
             disabled: false,
             test_id: None,
         }
@@ -1904,6 +2133,7 @@ impl AlertDialogCancel {
             a11y_label: None,
             children: Vec::new(),
             open: None,
+            variant: ButtonVariant::Outline,
             disabled: false,
             test_id: None,
         }
@@ -1930,6 +2160,11 @@ impl AlertDialogCancel {
         self
     }
 
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -1946,7 +2181,7 @@ impl AlertDialogCancel {
         });
         let open_id = open.id();
         let mut button = Button::new(self.label)
-            .variant(ButtonVariant::Outline)
+            .variant(self.variant)
             .disabled(self.disabled)
             .toggle_model(open)
             .children(self.children);
@@ -2478,6 +2713,58 @@ mod tests {
 
                             AlertDialogContent::new(vec![footer]).into_element(cx)
                         })
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn alert_dialog_children_api_supports_from_scope_buttons() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-alert-dialog-children-api-from-scope",
+            |cx| {
+                vec![
+                    AlertDialog::new(open.clone())
+                        .children([
+                            AlertDialogPart::trigger(AlertDialogTrigger::build(
+                                crate::button::Button::new("Open"),
+                            )),
+                            AlertDialogPart::portal(AlertDialogPortal::new()),
+                            AlertDialogPart::overlay(AlertDialogOverlay::new()),
+                            AlertDialogPart::content(AlertDialogContent::build(|cx, out| {
+                                out.push(
+                                    AlertDialogFooter::new(vec![
+                                        AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                                        AlertDialogAction::from_scope("Continue").into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                );
+                            })),
+                        ])
                         .into_element(cx),
                 ]
             },

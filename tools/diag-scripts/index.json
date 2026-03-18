@@ -468,7 +468,7 @@
         "smoke"
       ],
       "target_hints": [
-        "Validates that icon + asset panels mount and that the reload epoch button is wired."
+        "Validates that icon + asset panels mount and captures a stable screenshot + bundle."
       ]
     },
     {
@@ -2799,6 +2799,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-breadcrumb-custom-separator-single-line",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-breadcrumb-demo-ellipsis-dropdown",
       "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-dropdown.json",
       "required_capabilities": [
@@ -2813,16 +2823,6 @@
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-breadcrumb-dot-separator-single-line",
-      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-dot-separator-single-line.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
       "target_hints": []
     },
     {
@@ -2879,6 +2879,28 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-button-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button",
+        "docs",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button page via the left nav search.",
+        "Captures representative screenshots for the docs-aligned sections plus the Fret-only children section code tab."
+      ]
     },
     {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
@@ -3015,6 +3037,18 @@
       "id": "ui-gallery-card-description-no-early-wrap",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
       "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-card-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -3577,6 +3611,27 @@
         "ui-gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-doc-sections-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-doc-sections-non-overlap.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity"
+      ],
+      "tags": [
+        "carousel",
+        "docs",
+        "gate",
+        "layout",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Carousel page and scroll to the diagnostics follow-up sections.",
+        "Expected behavior: Focus, Duration, and Expandable sections remain vertically separated."
+      ]
     },
     {
       "id": "ui-gallery-carousel-events-reinit-gate",
@@ -4388,9 +4443,43 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-collapsible-basic-double-click-close",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-collapsible-demo-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-first-open-height.json",
       "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-demo-repository-list-shows-items",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-repository-list-shows-items.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-file-tree-open-components-ui-shows-button",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-file-tree-open-components-ui-shows-button.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
@@ -4415,6 +4504,30 @@
         "tabs",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-rtl-open-scrolls-to-content",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-open-scrolls-to-content.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-settings-open-shows-inputs",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-settings-open-shows-inputs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -5610,6 +5723,28 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-input-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs",
+        "input",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Input page via the left nav search.",
+        "Captures representative screenshots for docs-aligned sections and the Fret-only label association follow-up."
+      ]
     },
     {
       "id": "ui-gallery-input-file-browse-mocked",

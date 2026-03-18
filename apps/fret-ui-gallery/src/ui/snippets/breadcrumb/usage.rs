@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
+#[allow(unused_imports)]
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
 

@@ -898,25 +898,15 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let apply_queue_cmd_banner = apply_queue_cmd.clone();
 
     let auto_apply_model = st.auto_apply_standard_actions.clone();
-    let auto_apply_enabled = cx
-        .watch_model(&st.auto_apply_standard_actions)
-        .layout()
-        .read(|_host, v| *v)
-        .ok()
-        .unwrap_or(true);
+    let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);
 
     let auto_fix_model = st.auto_fix_on_apply.clone();
-    let _auto_fix_enabled = cx
-        .watch_model(&st.auto_fix_on_apply)
-        .layout()
-        .read(|_host, v| *v)
-        .ok()
-        .unwrap_or(true);
+    let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);
 
-    let count_label: Arc<str> = cx
-        .watch_model(&st.genui_state)
-        .layout()
-        .read(|_host, v| {
+    let count_label: Arc<str> = st
+        .genui_state
+        .layout_in(cx)
+        .read_ref(|v| {
             let count = json_pointer::get_opt(v, "/count");
             let s = match count {
                 Some(Value::Number(n)) => n.to_string(),
@@ -930,10 +920,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         .ok()
         .unwrap_or_else(|| Arc::<str>::from("count: <unavailable>"));
 
-    let queue_snapshot: Vec<Arc<str>> = cx
-        .watch_model(&st.action_queue)
-        .layout()
-        .read(|_host, q| {
+    let queue_snapshot: Vec<Arc<str>> = st
+        .action_queue
+        .layout_in(cx)
+        .read_ref(|q| {
             q.invocations
                 .iter()
                 .enumerate()
@@ -950,10 +940,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         .map(|line| ui::text(line).text_sm().into_element(cx))
         .collect();
 
-    let state_snapshot: Vec<Arc<str>> = cx
-        .watch_model(&st.genui_state)
-        .layout()
-        .read(|_host, v| {
+    let state_snapshot: Vec<Arc<str>> = st
+        .genui_state
+        .layout_in(cx)
+        .read_ref(|v| {
             let pretty = serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string());
             pretty
                 .lines()
@@ -967,10 +957,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         .map(|line| ui::text(line).text_sm().into_element(cx))
         .collect();
 
-    let (validation_issue_count, validation_snapshot): (usize, Vec<Arc<str>>) = cx
-        .watch_model(&st.validation_state)
-        .layout()
-        .read(|_host, v| {
+    let (validation_issue_count, validation_snapshot): (usize, Vec<Arc<str>>) = st
+        .validation_state
+        .layout_in(cx)
+        .read_ref(|v| {
             let pretty =
                 serde_json::to_string_pretty(v).unwrap_or_else(|_| "<validation>".to_string());
             (
@@ -1192,12 +1182,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let queue_summary = st.queue_summary.clone();
     let stream_model = st.stream_text.clone();
     let stream_patch_only_model = st.stream_patch_only.clone();
-    let stream_patch_only = cx
-        .watch_model(&st.stream_patch_only)
-        .layout()
-        .read(|_host, v| *v)
-        .ok()
-        .unwrap_or(false);
+    let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);
     let stream_summary = st.stream_summary.clone();
     let stream_error = st.stream_error.clone();
 

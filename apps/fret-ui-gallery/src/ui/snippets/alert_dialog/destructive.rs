@@ -3,24 +3,33 @@ pub const SOURCE: &str = include_str!("destructive.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
+use fret_core::window::ColorScheme;
+use fret_ui::Theme;
+use fret_ui_kit::{ChromeRefinement, ColorRef};
 use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
-    let open_for_trigger = open.clone();
-    let open_for_children = open.clone();
 
-    shadcn::AlertDialog::new(open).into_element(
-        cx,
-        move |cx| {
-            shadcn::Button::new("Delete Chat")
-                .variant(shadcn::ButtonVariant::Destructive)
-                .toggle_model(open_for_trigger.clone())
-                .test_id("ui-gallery-alert-dialog-destructive-trigger")
-                .into_element(cx)
-        },
-        move |cx| {
-            shadcn::AlertDialogContent::build(move |cx, children| {
+    shadcn::AlertDialog::new(open)
+        .children([
+            shadcn::AlertDialogPart::trigger(shadcn::AlertDialogTrigger::build(
+                shadcn::Button::new("Delete Chat")
+                    .variant(shadcn::ButtonVariant::Destructive)
+                    .test_id("ui-gallery-alert-dialog-destructive-trigger"),
+            )),
+            shadcn::AlertDialogPart::content(shadcn::AlertDialogContent::build(|cx, out| {
+                let theme = Theme::global(&*cx.app).snapshot();
+                let destructive_fg = theme
+                    .color_by_key("destructive")
+                    .unwrap_or_else(|| theme.color_token("destructive"));
+                let destructive_bg = theme
+                    .color_by_key(if theme.color_scheme == Some(ColorScheme::Dark) {
+                        "destructive/20"
+                    } else {
+                        "destructive/10"
+                    })
+                    .unwrap_or_else(|| theme.color_token("muted"));
                 let icon = shadcn::raw::icon::icon_with(
                     cx,
                     fret_icons::IconId::new_static("lucide.trash-2"),
@@ -28,23 +37,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     None,
                 );
 
-                children.push(
-                    shadcn::AlertDialogHeader::new(vec![
+                out.push(
+                    shadcn::AlertDialogHeader::new([
                         shadcn::AlertDialogTitle::new("Delete chat?").into_element(cx),
                         shadcn::AlertDialogDescription::new(
-                            "This will permanently delete this chat conversation. Review settings if you need to clear related memories.",
+                            "This will permanently delete this chat conversation. View Settings to delete any memories saved during this chat.",
                         )
                         .into_element(cx),
                     ])
-                    .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
+                    .media(
+                        shadcn::AlertDialogMedia::new(icon)
+                            .refine_style(
+                                ChromeRefinement::default()
+                                    .bg(ColorRef::Color(destructive_bg))
+                                    .text_color(ColorRef::Color(destructive_fg)),
+                            )
+                            .into_element(cx),
+                    )
                     .into_element(cx),
                 );
-                children.push(
-                    shadcn::AlertDialogFooter::new(vec![
-                        shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
+                out.push(
+                    shadcn::AlertDialogFooter::new([
+                        shadcn::AlertDialogCancel::from_scope("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline)
                             .test_id("ui-gallery-alert-dialog-destructive-cancel")
                             .into_element(cx),
-                        shadcn::AlertDialogAction::new("Delete", open_for_children.clone())
+                        shadcn::AlertDialogAction::from_scope("Delete")
                             .variant(shadcn::ButtonVariant::Destructive)
                             .test_id("ui-gallery-alert-dialog-destructive-action")
                             .into_element(cx),
@@ -52,10 +70,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx),
                 );
             })
-                .size(shadcn::AlertDialogContentSize::Sm)
-                .into_element(cx)
-                .test_id("ui-gallery-alert-dialog-destructive-content")
-        },
-    )
+            .size(shadcn::AlertDialogContentSize::Sm)
+            .test_id("ui-gallery-alert-dialog-destructive-content")),
+        ])
+        .into_element(cx)
 }
 // endregion: example

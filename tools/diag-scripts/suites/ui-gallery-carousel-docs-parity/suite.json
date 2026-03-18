@@ -14,6 +14,7 @@
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json",
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-screenshot.json",
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-screenshot.json",
+    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-doc-sections-non-overlap.json",
 
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json",
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
@@ -22,4 +23,3 @@
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json"
   ]
 }
-

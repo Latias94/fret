@@ -151,6 +151,20 @@ impl QueryConfigModels {
     }
 }
 
+#[derive(Clone)]
+struct QueryPolicySettings {
+    stale_time_s: String,
+    cache_time_s: String,
+    keep_previous_data_while_loading: bool,
+    cancel_mode: QueryCancelMode,
+}
+
+#[derive(Clone)]
+struct QueryKeyInputs {
+    search: String,
+    symbol: String,
+}
+
 #[derive(Debug, Clone)]
 struct QueryDiag {
     status: QueryStatus,
@@ -285,15 +299,9 @@ impl View for AsyncPlaygroundView {
         }
 
         let theme = Theme::global(&*cx.app).snapshot();
-        let selected = cx
-            .watch_model(&self.st.selected)
-            .layout()
-            .value_or_default();
-        let dark = cx.watch_model(&self.st.dark).layout().value_or_default();
-        let global_slow = cx
-            .watch_model(&self.st.global_slow)
-            .layout()
-            .value_or_default();
+        let selected = self.st.selected.layout_in(cx).value_or_default();
+        let dark = self.st.dark.layout_in(cx).value_or_default();
+        let global_slow = self.st.global_slow.layout_in(cx).value_or_default();
 
         let header =
             header_bar(cx, &mut self.st, theme.clone(), global_slow, dark).into_element(cx);
@@ -846,7 +854,8 @@ fn query_panel_for_mode(
     let id = selected;
     let policy = query_policy(cx, st, id);
     let fail_mode = query_fail_mode(cx, st, id);
-    let key = query_key_for_id(cx, st, id);
+    let query_inputs = tracked_query_inputs(cx, st);
+    let key = query_key_for_params(id, query_inputs.search.clone(), query_inputs.symbol.clone());
 
     let base_delay = match id {
         QueryId::Tip => Duration::from_millis(240),
@@ -862,15 +871,15 @@ fn query_panel_for_mode(
 
     let handle = match mode {
         FetchMode::Sync => {
-            let search = cx.watch_model(&st.search_input).layout().value_or_default();
-            let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
+            let search = query_inputs.search.clone();
+            let symbol = query_inputs.symbol.clone();
             cx.data().query(key, policy.clone(), move |token| {
                 mock_fetch_sync(token, id, delay, fail_mode, search, symbol)
             })
         }
         FetchMode::Async => {
-            let search = cx.watch_model(&st.search_input).layout().value_or_default();
-            let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
+            let search = query_inputs.search.clone();
+            let symbol = query_inputs.symbol.clone();
             cx.data()
                 .query_async(key, policy.clone(), move |token| async move {
                     mock_fetch_async(token, id, delay, fail_mode, search, symbol).await
@@ -878,9 +887,7 @@ fn query_panel_for_mode(
         }
     };
 
-    let state = handle
-        .layout_query(cx)
-        .value_or_else(QueryState::<Arc<str>>::default);
+    let state = handle.layout_query(cx).value_or_default();
 
     let snap = snapshot_entry_for_key(cx, key);
     observe_query_diag(st, id, &state, snap.as_ref());
@@ -1034,7 +1041,7 @@ fn query_result_view(
 }
 
 fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode {
-    let tab = cx.watch_model(&st.tabs).layout().value_or_default();
+    let tab = st.tabs.layout_in(cx).value_or_default();
     match tab.as_deref() {
         Some("sync") => FetchMode::Sync,
         _ => FetchMode::Async,
@@ -1043,43 +1050,71 @@ fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode {
 
 fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy {
     let config = st.configs.get(&id).expect("missing config");
-    let stale_s = cx
-        .watch_model(&config.stale_time_s)
-        .layout()
-        .value_or_default();
-    let cache_s = cx
-        .watch_model(&config.cache_time_s)
-        .layout()
-        .value_or_default();
-    let keep_prev = cx
-        .watch_model(&config.keep_prev)
-        .layout()
-        .value_or_default();
-
-    let cancel_mode = cx
-        .watch_model(&config.cancel_mode.value)
-        .layout()
-        .value_or_default()
-        .unwrap_or_else(|| Arc::<str>::from("cancel"));
-    let cancel_mode = match cancel_mode.as_ref() {
-        "keep" => QueryCancelMode::KeepInFlight,
-        _ => QueryCancelMode::CancelInFlight,
-    };
+    let stale_time_s = config.stale_time_s.clone();
+    let cache_time_s = config.cache_time_s.clone();
+    let keep_prev = config.keep_prev.clone();
+    let cancel_mode_value = config.cancel_mode.value.clone();
+    let stale_time_s_deps = stale_time_s.clone();
+    let cache_time_s_deps = cache_time_s.clone();
+    let keep_prev_deps = keep_prev.clone();
+    let cancel_mode_value_deps = cancel_mode_value.clone();
+    let policy_settings: QueryPolicySettings = cx.data().selector(
+        move |cx| {
+            cx.observe_model(&stale_time_s_deps, Invalidation::Layout);
+            cx.observe_model(&cache_time_s_deps, Invalidation::Layout);
+            cx.observe_model(&keep_prev_deps, Invalidation::Layout);
+            cx.observe_model(&cancel_mode_value_deps, Invalidation::Layout);
+            (
+                cx.app.models().revision(&stale_time_s_deps).unwrap_or(0),
+                cx.app.models().revision(&cache_time_s_deps).unwrap_or(0),
+                cx.app.models().revision(&keep_prev_deps).unwrap_or(0),
+                cx.app
+                    .models()
+                    .revision(&cancel_mode_value_deps)
+                    .unwrap_or(0),
+            )
+        },
+        move |cx| QueryPolicySettings {
+            stale_time_s: cx
+                .app
+                .models()
+                .get_cloned(&stale_time_s)
+                .unwrap_or_default(),
+            cache_time_s: cx
+                .app
+                .models()
+                .get_cloned(&cache_time_s)
+                .unwrap_or_default(),
+            keep_previous_data_while_loading: cx
+                .app
+                .models()
+                .get_cloned(&keep_prev)
+                .unwrap_or_default(),
+            cancel_mode: match cx
+                .app
+                .models()
+                .get_cloned(&cancel_mode_value)
+                .unwrap_or_default()
+                .as_deref()
+            {
+                Some("keep") => QueryCancelMode::KeepInFlight,
+                _ => QueryCancelMode::CancelInFlight,
+            },
+        },
+    );
 
     QueryPolicy {
-        stale_time: Duration::from_secs(parse_u64_or(&stale_s, 2)),
-        cache_time: Duration::from_secs(parse_u64_or(&cache_s, 30)),
-        keep_previous_data_while_loading: keep_prev,
-        cancel_mode,
+        stale_time: Duration::from_secs(parse_u64_or(&policy_settings.stale_time_s, 2)),
+        cache_time: Duration::from_secs(parse_u64_or(&policy_settings.cache_time_s, 30)),
+        keep_previous_data_while_loading: policy_settings.keep_previous_data_while_loading,
+        cancel_mode: policy_settings.cancel_mode,
         ..Default::default()
     }
 }
 
 fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
-    cx.watch_model(&config.fail_mode)
-        .layout()
-        .value_or_default()
+    config.fail_mode.layout_in(cx).value_or_default()
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {
@@ -1102,14 +1137,42 @@ fn query_key_for_selected(
     query_key_for_params(selected, search, symbol)
 }
 
+fn tracked_query_inputs(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> QueryKeyInputs {
+    let search_input = st.search_input.clone();
+    let stock_symbol = st.stock_symbol.clone();
+    let search_input_deps = search_input.clone();
+    let stock_symbol_deps = stock_symbol.clone();
+    cx.data().selector(
+        move |cx| {
+            cx.observe_model(&search_input_deps, Invalidation::Layout);
+            cx.observe_model(&stock_symbol_deps, Invalidation::Layout);
+            (
+                cx.app.models().revision(&search_input_deps).unwrap_or(0),
+                cx.app.models().revision(&stock_symbol_deps).unwrap_or(0),
+            )
+        },
+        move |cx| QueryKeyInputs {
+            search: cx
+                .app
+                .models()
+                .get_cloned(&search_input)
+                .unwrap_or_default(),
+            symbol: cx
+                .app
+                .models()
+                .get_cloned(&stock_symbol)
+                .unwrap_or_default(),
+        },
+    )
+}
+
 fn query_key_for_id(
     cx: &mut UiCx<'_>,
     st: &AsyncPlaygroundState,
     id: QueryId,
 ) -> QueryKey<Arc<str>> {
-    let search = cx.watch_model(&st.search_input).layout().value_or_default();
-    let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();
-    query_key_for_params(id, search, symbol)
+    let query_inputs = tracked_query_inputs(cx, st);
+    query_key_for_params(id, query_inputs.search, query_inputs.symbol)
 }
 
 fn query_key_for_params(id: QueryId, search: String, symbol: String) -> QueryKey<Arc<str>> {

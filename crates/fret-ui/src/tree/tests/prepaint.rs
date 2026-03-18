@@ -98,6 +98,43 @@ fn prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache() 
     assert_eq!(calls.load(Ordering::SeqCst), 2);
 }
 
+#[test]
+fn prepaint_hook_runs_for_manual_cache_root_when_global_view_cache_is_disabled() {
+    use std::sync::atomic::Ordering;
+
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(false);
+
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(PrepaintCountStack {
+        calls: calls.clone(),
+    });
+    let leaf = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.add_child(root, cache_root);
+    ui.add_child(cache_root, leaf);
+
+    ui.set_node_view_cache_flags(cache_root, true, false, false);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+    app.advance_frame();
+    ui.invalidate(root, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+}
+
 struct PrepaintActionStack;
 
 impl<H: UiHost> Widget<H> for PrepaintActionStack {

@@ -219,7 +219,7 @@ Suggested default operations:
 - `ui.state().local::<T>()`
 - `ui.state().local_init(|| ...)`
 - `ui.state().watch(&state)`
-- `ui.actions().locals::<A>(...)`
+- `ui.actions().locals_with((...)).on::<A>(...)`
 - `ui.actions().payload::<A>().local(&state, ...)`
 - `ui.actions().transient::<A>(...)`
 - `ui.data().selector(...)`
@@ -242,7 +242,7 @@ The app-facing extracted-helper story must stay narrow and explicit:
 The default mental model should become:
 
 - view-owned state: `LocalState<T>`
-- coordinated writes: `actions().locals::<A>(...)`
+- coordinated writes: `actions().locals_with((...)).on::<A>(...)`
 - app-bound side effects: `actions().transient::<A>(...)`
 - shared cross-view graphs: explicit advanced/escape hatch
 
@@ -394,16 +394,18 @@ fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
     let draft = cx.state().local::<String>();
     let todos = cx.state().local_init(seed_todos);
 
-    cx.actions().locals::<act::Add>(|tx| {
-        let text = tx.value_or_else(&draft, String::new).trim().to_string();
-        if text.is_empty() {
-            return false;
-        }
+    cx.actions()
+        .locals_with((&draft, &todos))
+        .on::<act::Add>(|tx, (draft, todos)| {
+            let text = tx.value(&draft).trim().to_string();
+            if text.is_empty() {
+                return false;
+            }
 
-        tx.update(&todos, |rows| rows.push(TodoRow::new(text)));
-        tx.set(&draft, String::new());
-        true
-    });
+            tx.update(&todos, |rows| rows.push(TodoRow::new(text)));
+            tx.set(&draft, String::new());
+            true
+        });
 
     vstack![
         input(&draft).submit(act::Add),

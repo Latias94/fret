@@ -14,6 +14,7 @@ where
         .gap(Space::N2)
         .wrap()
         .w_full()
+        .justify_center()
         .items_center()
 }
 

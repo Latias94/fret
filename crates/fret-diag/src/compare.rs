@@ -970,6 +970,9 @@ pub(crate) fn maybe_launch_demo(
         .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
     let pid = child.id();
 
+    #[cfg(not(windows))]
+    let _ = launch_high_priority;
+
     #[cfg(windows)]
     if launch_high_priority {
         use std::os::windows::io::AsRawHandle;

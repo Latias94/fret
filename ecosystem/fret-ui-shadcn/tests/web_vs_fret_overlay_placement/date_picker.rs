@@ -1,5 +1,5 @@
-use fret_ui_shadcn::facade as shadcn;
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scrolled_tiny_viewport_160h()

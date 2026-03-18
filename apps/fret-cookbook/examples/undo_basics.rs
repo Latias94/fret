@@ -1,4 +1,5 @@
 use fret::actions::CommandId;
+use fret::advanced::AppUiRawActionNotifyExt as _;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Space, Theme};

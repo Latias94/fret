@@ -40,6 +40,8 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 ### Gallery / docs parity
 
 - Pass: the gallery now presents the guide as `Basic Table`, `Guide Demo`, `RTL`, `Guide Outline`, and `API Reference`, making the compression of the upstream multi-chapter guide explicit.
+- Pass: the selection column examples now stay on typed `.action(...)` / `.action_payload(...)` plus grouped `cx.actions().models::<A>(...)` / `payload_models::<A>(...)` instead of teaching root command routing for select-all and row toggles.
+- Pass: the row-action dropdown menus in `Basic Table`, `Guide Demo`, and `RTL` now also stay on typed `.action(...)` / `.action_payload(...)` instead of falling back to per-row `CommandId::new(...)` strings for menu items.
 - Pass: `Guide Outline` remains a compact Fret follow-up that points to reusable pieces instead of copying every upstream chapter verbatim.
 - Pass: this work is docs/public-surface parity for an extension surface, not a mechanism-layer fix.
 
@@ -47,4 +49,5 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib data_table`
+- `cargo test -p fret-ui-gallery --test data_table_action_first_surface`
 - Existing geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`

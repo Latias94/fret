@@ -6,7 +6,7 @@ use std::time::Duration;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryError, QueryKey, QueryPolicy,
-    QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
+    QueryRetryPolicy, QueryStatus,
 };
 
 mod act {
@@ -77,15 +77,11 @@ impl View for QueryAsyncTokioDemoView {
         let fail_mode_state = cx.state().local_init(|| false);
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY) {
-            let _ = with_query_client(cx.app, |client, app| {
-                client.invalidate(app, demo_key());
-            });
+            cx.data().invalidate_query(demo_key());
         }
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             let key = demo_key();
-            let _ = with_query_client(cx.app, |client, _app| {
-                client.invalidate_namespace(key.namespace());
-            });
+            cx.data().invalidate_query_namespace(key.namespace());
         }
 
         cx.actions()
@@ -95,11 +91,7 @@ impl View for QueryAsyncTokioDemoView {
         cx.actions()
             .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = cx
-            .state()
-            .watch(&fail_mode_state)
-            .layout()
-            .value_or_default();
+        let fail_mode = fail_mode_state.layout(cx).value_or_default();
 
         let query_handle = cx.data().query_async(
             demo_key(),
@@ -123,9 +115,7 @@ impl View for QueryAsyncTokioDemoView {
             },
         );
 
-        let query_state = query_handle
-            .layout(cx)
-            .value_or_else(QueryState::<DemoData>::default);
+        let query_state = query_handle.read_layout(cx);
 
         let status_label = match query_state.status {
             QueryStatus::Idle => "Idle",
@@ -232,7 +222,7 @@ fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui
 where
     C: IntoUiElement<KernelApp>,
 {
-    ui::v_flex(|cx| ui::children![cx; card])
+    ui::v_flex(|cx| ui::single(cx, card))
         .bg(ColorRef::Color(theme.color_token("background")))
         .p(Space::N6)
         .w_full()

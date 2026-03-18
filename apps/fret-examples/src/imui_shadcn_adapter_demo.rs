@@ -37,11 +37,11 @@ impl View for ImUiShadcnAdapterView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let count = cx.watch_model(&self.count).layout().value_or_default();
-        let enabled = cx.watch_model(&self.enabled).paint().value_or_default();
-        let value = cx.watch_model(&self.value).paint().value_or_default();
-        let mode = cx.watch_model(&self.mode).paint().value_or_default();
-        let draft = cx.watch_model(&self.draft).paint().value_or_default();
+        let count = self.count.layout(cx).value_or_default();
+        let enabled = self.enabled.paint(cx).value_or_default();
+        let value = self.value.paint(cx).value_or_default();
+        let mode = self.mode.paint(cx).value_or_default();
+        let draft = self.draft.paint(cx).value_or_default();
 
         let mode_label: Arc<str> = mode.unwrap_or_else(|| Arc::from("none"));
 

@@ -9,11 +9,15 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
-fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
+fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
     bc::BreadcrumbSeparator::new()
-        .kind(bc::BreadcrumbSeparatorKind::Icon {
-            icon: fret_icons::IconId::new_static("lucide.dot"),
-            size: Px(14.0),
+        .children(|cx| {
+            [shadcn::raw::icon::icon_with(
+                cx,
+                fret_icons::ids::ui::SLASH,
+                Some(Px(14.0)),
+                None,
+            )]
         })
         .into_element(cx)
 }
@@ -26,7 +30,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let home = bc::BreadcrumbItem::new().into_element(cx, |cx| {
                 vec![
                     bc::BreadcrumbLink::new("Home")
-                        .href("/home")
+                        .href("/")
                         .on_activate(Arc::new(|_host, _acx, _reason| {}))
                         .into_element(cx)
                         .test_id("ui-gallery-breadcrumb-dropdown-home-link"),
@@ -95,9 +99,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
             vec![
                 home,
-                dot_separator(cx).into_element(cx),
+                slash_separator(cx).into_element(cx),
                 components_dropdown,
-                dot_separator(cx).into_element(cx),
+                slash_separator(cx).into_element(cx),
                 page,
             ]
         });

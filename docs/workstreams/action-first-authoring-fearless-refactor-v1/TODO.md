@@ -1,13 +1,16 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
-Status: Landed (v1), hardening follow-ups in progress
+Status: Closed (v1), maintenance only unless a new narrower lane is opened
 Last updated: 2026-03-16
 
 Related:
 
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
+- Closeout audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- Post-v1 execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
+- Shared-surface evidence matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
@@ -53,19 +56,14 @@ ID format:
 
 ---
 
-## Current post-v1 ownership correction (2026-03-16)
+## Closeout reading rule (2026-03-16)
 
-This workstream is no longer the owner of crate-discovery curation.
+This workstream is now closed for the v1 action/view migration and default-path hardening goals.
 
 - `fret-ui-shadcn` discovery-lane closure and `fret` root lane budgeting belong first to
   `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/`
-- this workstream owns the next density pass only after those lane-curation blockers are stable
-- the two active post-v1 product tasks here are:
-  - reducing happy-path ceremony on the default app path,
-  - keeping `AppActivateExt` on a shrinking bridge-only path rather than letting the bridge table
-    become a permanent growth surface
-- do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
-  this workstream until the shadcn discovery-lane and `fret` root-budget closeout items are green
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/` is now also a closeout /
+  maintenance lane rather than an adjacent active blocker
 - the first density-reduction batch is now already landed on the canonical trio, generated
   todo/simple-todo templates, and default-path docs:
   `state.layout(cx).value_*` / `state.paint(cx).value_*` are the taught tracked-read path, and
@@ -74,10 +72,13 @@ This workstream is no longer the owner of crate-discovery curation.
   `ui::single(cx, child)` is the narrow default helper for late-landing one typed child, and the
   first-party root/wrapper cases (`hello`, `hello_counter_demo`, `todo_demo`, generated
   todo/simple-todo templates) now use it instead of `ui::children![cx; child].into()`
-- after those lane-curation items are stable, the execution order here is:
-  1. reduce first-hour/default-path ceremony,
-  2. continue shrinking bridge-only activation residue,
-  3. only then reconsider whether any additional sugar still earns its weight
+- `AppActivateExt` now stays only as a shrinking bridge-maintenance rule; it is not a growth lane
+- multi-frontend convergence, editor-grade proof points, and local-state architecture are future
+  separate lanes rather than open items on this workstream
+- do not promote new default-path sugar, new macros, or broader ecosystem-facing trait sugar from
+  this closed workstream
+- if fresh cross-surface evidence appears, open a narrower follow-on lane first and use
+  `SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md` to justify it
 
 ## A. Decision + Contract Locking
 
@@ -566,8 +567,14 @@ These are documentation/surface-area follow-ups, not blockers for the v1 closure
     - `examples/README.md`
     - `docs/examples/README.md`
     - `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
-- [ ] AFA-postv1-002b Decide whether all top-level example links should collapse to one canonical docs
+- [x] AFA-postv1-002b Decide whether all top-level example links should collapse to one canonical docs
   page while preserving `examples/README.md` as a GitHub portal alias.
+  - Decision (2026-03-16 closeout): yes, treat `docs/examples/README.md` as the canonical docs
+    index and keep `examples/README.md` only as the GitHub portal alias; this is now documentation
+    navigation policy, not an open action-first item.
+  - Evidence:
+    - `docs/examples/README.md`
+    - `examples/README.md`
 - [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
@@ -704,7 +711,7 @@ Current sequencing note (as of 2026-03-09):
   - Update (as of 2026-03-07): `TrackedStateExt::{layout, paint, hit_test}` plus `LocalState::watch(cx)` and the first `ViewCx::on_action_notify_local_*` helpers landed as the next additive step. `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now read local state from the handle side and use local-state-specific write helpers for the straightforward set/toggle cases without re-exposing raw model handles. `apps/fret-cookbook/examples/hello_counter.rs` and `apps/fret-cookbook/examples/query_basics.rs` now mirror the same direction for the first medium cookbook samples.
   - Update (as of 2026-03-08): `LocalState::read_in` / `revision_in` now cover the remaining ?generic model-store closure? read path too, so cookbook `hello_counter`, `form_basics`, `text_input_basics`, `simple_todo`, `virtual_list_basics`, the `fretboard` simple-todo template, and `hello_counter_demo` no longer need to leak `local.model()` just to read or revision-check local state inside `on_action_notify_models` or derived revision code.
   - Update (as of 2026-03-08, store-side value helpers): `LocalState::value_in*` now mirrors render-time `value_*` reads for the common `ModelStore` transaction path. `simple_todo`, `simple_todo_v2_target`, and the `fretboard` simple-todo template now use `value_in_or*` for their plain local-state reads, which narrows the remaining invalidation/default-path discussion back to tracked writes rather than store-side read boilerplate.
-  - Update (as of 2026-03-08, handled-aware local writes): `LocalState::update_in_if` / `update_action_if` now let the mutation closure return the `handled` decision directly. `simple_todo_v2_target` uses the helper for clear/toggle/remove list mutations, so the remaining tracked-write pressure is now more about which action surface should own multi-state transactions than about passing handled flags through external mutable locals.
+  - Update (as of 2026-03-08, revised for the later `locals_with` closeout): `LocalState::update_in_if` now lets the mutation closure return the `handled` decision directly, while grouped `locals_with((...)).on::<A>(...)` and `payload_local_update_if::<A>(...)` own the rerendering path above it. `simple_todo_v2_target` uses that shape for clear/toggle/remove list mutations, so the remaining tracked-write pressure is now more about which action surface should own multi-state transactions than about passing handled flags through external mutable locals.
   - Inventory note (as of 2026-03-08): `docs/workstreams/action-first-authoring-fearless-refactor-v1/TRACKED_WRITE_PATTERN_INVENTORY.md` now records the remaining repo-wide transaction shapes. Current conclusion: do not add another default helper yet; the next evidence target should be explicit-model collection surfaces rather than more local-state sugar.
   - Inventory note (as of 2026-03-08, explicit-model collections): `docs/workstreams/action-first-authoring-fearless-refactor-v1/EXPLICIT_MODEL_COLLECTION_SURFACE_INVENTORY.md` now records that both `apps/fret-examples/src/todo_demo.rs` and the `fretboard` simple-todo scaffold path have joined the v2 local-state keyed-list path. Current conclusion: default-surface collection migration is no longer the blocker; do not widen tracked-write helpers just to chase the remaining explicit comparison/advanced surfaces.
   - Next-phase note (as of 2026-03-08): with cookbook / app-grade / scaffold keyed-list defaults aligned, the immediate next work should focus on onboarding docs, default/comparison/advanced taxonomy, visual productization, and deprecation planning rather than more generic authoring helpers.
@@ -745,10 +752,10 @@ Current sequencing note (as of 2026-03-09):
 - [~] AFA-postv1-004 Evaluate v2 invalidation ergonomics: keep explicit `notify()` as a low-level runtime escape hatch while making local-state writes rerender implicitly by default.
   - Goal: preserve cache/debug determinism without forcing users to call `notify()` after most tracked state writes.
   - Evidence target: prototype one medium demo and confirm diagnostics still explain rebuild reasons.
-  - Update (as of 2026-03-06): the prototype keeps explicit `notify()` out of the call site by combining `LocalState::update_in` / `set_in` with the existing `on_action_notify_models` path in `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo`; `LocalState::update_action` / `set_action` remain available for future keyed-row/payload handler experiments if the narrower placement question is revisited.
+  - Update (as of 2026-03-06; narrowed again on 2026-03-17): the prototype keeps explicit `notify()` out of the call site by combining `LocalState::update_in` / `set_in` with the existing `on_action_notify_models` path in `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo`. The later direct `LocalState::update_action*` / `set_action` seam did not earn first-party proof and has now moved back to internal runtime substrate, leaving public rerendering writes on grouped action helpers instead.
   - Update (as of 2026-03-07): `ViewCx::on_action_notify_local_update` / `on_action_notify_local_set` / `on_action_notify_toggle_local_bool` now promote the same “tracked local write => redraw + notify” rule into a first-class authoring path. The current medium demos plus cookbook `hello_counter` and `query_basics` use those helpers for the simple local-state mutations, while `commands_keymap_basics` / `text_input_basics` validate command availability and widget interop on `use_local*` / `state.layout(cx).value_*` / `state.paint(cx).value_*`, `form_basics` shows that multi-field validation/reset flows can stay on the generic `on_action_notify_models` path, `simple_todo` demonstrates the first keyed-list hybrid where draft/ID counters move to local state but the dynamic collection itself remains an explicit `Model<Vec<_>>`, `drop_shadow_basics` proves the same local-state bridge on a pure toggle-only renderer demo, `markdown_and_code_basics` extends that bridge to a mixed editor/render-options page built from model-centered `Textarea` / `ToggleGroup` / `Switch` widgets, `assets_reload_epoch_basics` shows the same local-state path on a host/runtime escape-hatch page where the counter is local but the actual asset reload bump plus redraw/RAF scheduling intentionally stay in render-time code, `virtual_list_basics` closes the first virtualization hybrid by moving mode/toggle/jump controls to local state while intentionally keeping the items collection plus scroll/reorder coordination on explicit model/runtime surfaces, `theme_switching_basics` applies the same hybrid rule to theme selection by moving the chosen scheme to local state while keeping theme application plus redraw/RAF sync as render-time host effects, and `icons_and_assets_basics` now does the same for asset demos by moving the reload bump counter to local state while keeping asset reload epoch bump plus redraw/RAF synchronization as render-time host effects, while `customv1_basics` closes the same loop for renderer/effect demos by moving `enabled` / `strength` to local state and intentionally keeping effect registration, capability checks, and effect-layer plumbing render-time/runtime-owned. `notify()` remains a low-level escape hatch rather than a default teaching-surface step, Queue A and Queue B are now cleared, and the teaching-surface inventory treats the remaining explicit-model cookbook cases as intentionally advanced rather than pending default-surface migrations. The new `LocalState::read_in` / `revision_in` helpers keep even those generic `on_action_notify_models` / derived-revision closures on the local-state handle surface, so the remaining local-state pressure is increasingly about write-path policy rather than read-path leakage.
   - Update (as of 2026-03-08, follow-up): cookbook `customv1_basics` now uses `on_action_notify_toggle_local_bool` for its simple `enabled` flag, while `commands_keymap_basics` intentionally stays on the generic `on_action_notify_models` transaction for command availability gating but now reads the gate through `LocalState::read_in(...)` instead of reopening the raw model handle.
-  - Update (as of 2026-03-08, tracked-write review): no additional invalidation helper is promoted into the default path for now. `LocalState::update_in` / `set_in` are now explicitly documented as store-only transaction helpers, while `LocalState::update_action` plus `ViewCx::on_action_notify_local_*` remain the first-class `tracked local write => request_redraw + notify` boundary. A focused unit test in `ecosystem/fret/src/view.rs` locks that contract so `notify()` can stay a low-level escape hatch instead of reappearing as a default teaching-surface step.
+  - Update (as of 2026-03-08, tracked-write review; revised after the later `locals_with` closeout): no additional invalidation helper is promoted into the default path for now. `LocalState::update_in` / `set_in` are store-only transaction helpers, while grouped action helpers (`cx.actions().local_*`, `cx.actions().locals_with((...)).on::<A>(...)`, and `payload_local_update_if::<A>(...)`) remain the first-class `tracked local write => request_redraw + notify` boundary. A focused unit test in `ecosystem/fret/src/view.rs` locks that contract so `notify()` can stay a low-level escape hatch instead of reappearing as a default teaching-surface step.
   - Update (as of 2026-03-09, cookbook keyed-list alignment): `apps/fret-cookbook/examples/simple_todo.rs` now also uses `LocalState<Vec<TodoRow>>` plus payload row toggles, so the default cookbook keyed-list lesson no longer contradicts the scaffold/app-grade baseline. The remaining keyed-list comparison pressure is now concentrated in `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, which stays as the denser payload-row/root-handler evidence slice rather than as a “real default path” preview.
   - Audit update (as of 2026-03-09, richer todo template): `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`) remains intentionally explicit for now. The retained `Model<T>` graph is carrying the richer teaching goal itself (selector deps across nested row models, filter coordination, and query invalidation keyed by tracked state), so this surface should be treated as the third-rung selector/query baseline rather than as the next local-state migration target.
   - Review update (as of 2026-03-09): `INVALIDATION_LOCAL_STATE_REVIEW.md` now records a focused review of `apps/fret-cookbook/examples/simple_todo_v2_target.rs`, `apps/fret-cookbook/examples/query_basics.rs`, `apps/fret-cookbook/examples/commands_keymap_basics.rs`, and `apps/fret-cookbook/examples/form_basics.rs`. Conclusion: on real medium surfaces, tracked writes already rerender without explicit `notify()`, query-trigger invalidation still belongs to the explicit render-time path, and command/keymap plus cross-field form handlers are often the runtime contract; the next plausible ergonomics move is therefore still **not** another invalidation helper, and `AFA-postv1-003` now looks like a much narrower keyed-list/payload-row question rather than a general medium-surface need.
@@ -926,6 +933,8 @@ Current sequencing note (as of 2026-03-09):
   - Status (as of 2026-03-09): those aliases now exist in `ecosystem/fret-ui-shadcn/src/context_menu.rs` and `ecosystem/fret-ui-shadcn/src/menubar.rs`; the broader gallery menu surface now also prefers `action(...)` across the main context-menu and menubar snippets (`basic`, `usage`, `demo`, `checkboxes`/`checkbox`, `radio`, `destructive`, `groups`, `icons`, `shortcuts`, `sides`, `submenu`, `rtl`, `parts`, `with_icons`), and `COMMAND_FIRST_WIDGET_CONTRACT_AUDIT.md` records the pass while keeping command-centric routing/storage unchanged.
   - Follow-up update (as of 2026-03-09): app/internal helper surfaces now also start converging on the same spelling: `ecosystem/fret-ui-shadcn/src/text_edit_context_menu.rs`, `ecosystem/fret-workspace/src/tab_strip/mod.rs`, and the focused keyboard/dismiss tests for context menu / menubar now use `action(...)` as the default builder name while still routing through the same command pipeline.
   - Dropdown follow-up (as of 2026-03-09): `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` now exposes `DropdownMenuItem::action(...)` / `trailing_action(...)`, `DropdownMenuCheckboxItem::action(...)`, `DropdownMenuRadioItemSpec::action(...)`, and `DropdownMenuRadioItem::action(...)`; the primary dropdown-menu gallery snippets (`basic`, `demo`) plus overlay preview surfaces now also prefer `action(...)`.
+  - Dropdown payload follow-up (as of 2026-03-17): `DropdownMenuItem` now also exposes `action_payload(...)` / `action_payload_factory(...)`, the root-menu and submenu dispatch paths both record pending payloads before command dispatch, and the first-party `data_table` gallery snippets (`basic_demo`, `guide_demo`, `rtl_demo`) now keep row-action menus on typed `.action(...)` / `.action_payload(...)` instead of per-row `CommandId::new(...)` strings.
+  - Context/menubar payload follow-up (as of 2026-03-17): `ContextMenuItem` and `MenubarItem` now also expose `action_payload(...)` / `action_payload_factory(...)`, and focused unit tests now cover both root-item and submenu-item payload dispatch without widening checkbox/radio menu variants prematurely.
   - Gate update (as of 2026-03-09): `tools/gate_menu_action_default_surfaces.py` now keeps the primary ui-gallery dropdown-menu / context-menu / menubar teaching snippets plus the overlay preview menu surfaces on `action(...)`, and `tools/pre_release.py` runs that narrow policy check alongside the other default-surface gates.
   - Curated internal follow-up (as of 2026-03-09): `ecosystem/fret-workspace/src/tab_strip/overflow.rs` and `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` now also prefer `action(...)` / `trailing_action(...)` for their stable action-bearing menu rows, and `tools/gate_menu_action_curated_internal_surfaces.py` keeps that explicit internal/app-facing residue slice on the same spelling without broadening the policy to every advanced/internal menu surface.
   - Intentional-retention inventory update (as of 2026-03-09): `COMMAND_FIRST_INTENTIONAL_SURFACES.md` now records that the main remaining command-shaped surfaces are command palette/catalog (`ecosystem/fret-ui-shadcn/src/command.rs`), `DataTable` business-table wiring (`ecosystem/fret-ui-shadcn/src/data_table.rs` plus gallery demos), compat/conformance tests, and out-of-scope callback widgets; the practical rule is to stop broad residue chasing unless a new default-facing leak appears.
@@ -1041,10 +1050,16 @@ Current sequencing note (as of 2026-03-09):
     medium-surface evidence still remains after that pass, then re-evaluate narrow keyed-list /
     payload-row handler ergonomics, and keep macros last and optional.
 
-- [ ] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
-  - Goal: decide whether keyed child-list macros or optional layout collection sugar materially improve density after builder-first improvements.
-  - Guardrail: no macro should hide action identity, key context, or cache-boundary semantics.
-  - Note: this is optional polish, not a prerequisite for declaring v2 successful.
+- [x] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
+  - Decision (2026-03-16 closeout): do not open a macro lane from this workstream.
+  - Reason: the current shared-evidence set does not justify macro promotion, and the repo keeps
+    macros optional and last rather than letting them become the default authoring answer.
+  - Guardrail: if macros are reconsidered later, they must live on a separate future lane and must
+    not hide action identity, key context, or cache-boundary semantics.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_GOLDEN_PATH.md`
 
 - Done: key context stack + diagnostics-visible context naming/stacking rules.
   - Evidence:
@@ -1138,10 +1153,11 @@ Current sequencing note (as of 2026-03-09):
     - do not add more tiny helpers until another round of template/demo evidence shows repeated pressure.
 - Helper visibility policy snapshot (as of 2026-03-16):
   - Default teaching surface: `cx.actions().locals/models/transient/payload(...)` at the root/view layer, plus widget-local `.action(act::Save)`, `.action_payload(act::Remove, payload)`, and `.listen(|host, acx| ...)` for activation-only surfaces. The explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(payload)` aliases remain available, but they are no longer the shortest recommended wording.
-  - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
+  - Advanced/reference surface: raw `cx.on_action_notify(...)`, `cx.on_payload_action_notify(...)`, and redraw-oriented `on_activate_request_redraw*` helpers.
+  - Follow-up shrink (as of 2026-03-17, revised after the later `locals_with` closeout): the zero-proof single-model raw aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`) plus the raw non-notify `cx.on_action(...)` / `cx.on_payload_action(...)` hooks and raw availability hook are deleted from `AppUiRawActionNotifyExt`; advanced code now either stays on raw `on_action_notify(...)` / `on_payload_action_notify(...)` or uses the grouped `cx.actions().models::<A>(...)` / `locals_with((...)).on::<A>(...)` / `availability::<A>(...)` surfaces.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
   - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
-  - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme` and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, `embedded_viewport_demo` now uses `use_local_with(...)` + `on_action_notify_local_set(...)` for its view-local size preset while keeping viewport interop/render-time effects explicit, and `hello_counter_demo` plus both query demos remain the intentional `use_local` prototypes that still keep the default `on_action_notify_models` action surface for coordinated writes.
+  - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme` and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, `embedded_viewport_demo` now uses `use_local_with(...)` + `on_action_notify_local_set(...)` for its view-local size preset while keeping viewport interop/render-time effects explicit, and `hello_counter_demo` plus both query demos remain the intentional `use_local` prototypes that still keep the default `on_action_notify_models` action surface for coordinated writes.
 - [x] AFA-postv1-022 Start event-surface unification under `cx.actions()`.
   - Goal: move default widget-side activation glue onto the same grouped action namespace as root/view action registration, without rewriting runtime dispatch.
   - Evidence target: a design note, grouped `action` / `action_payload` / `dispatch` / `dispatch_payload` / `listen` helpers on `AppUiActions`, and at least one docs/source-policy update that treats them as the preferred widget-local glue surface.

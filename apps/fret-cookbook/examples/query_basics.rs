@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use fret::app::prelude::*;
 use fret::style::Space;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret_ui::CommandAvailability;
 
 mod act {
@@ -59,33 +59,17 @@ impl View for QueryBasicsView {
         cx.actions()
             .availability::<act::InvalidateNamespace>(|_host, _acx| CommandAvailability::Available);
 
-        let fail_mode_enabled = cx.state().watch(&fail_mode).layout().value_or(false);
-        let do_invalidate = cx
-            .state()
-            .watch(&invalidate_requested)
-            .layout()
-            .value_or(false);
-        let do_invalidate_namespace = cx
-            .state()
-            .watch(&invalidate_namespace_requested)
-            .layout()
-            .value_or(false);
-        let window = cx.window;
+        let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
+        let do_invalidate = invalidate_requested.layout(cx).value_or(false);
+        let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
 
         if do_invalidate {
-            let key = demo_key();
-            let _ = with_query_client(cx.app, |client, app| {
-                client.invalidate(app, key);
-            });
+            cx.data().invalidate_query(demo_key());
             let _ = invalidate_requested.set_in(cx.app.models_mut(), false);
-            cx.app.request_redraw(window);
         }
         if do_invalidate_namespace {
-            let _ = with_query_client(cx.app, |client, _app| {
-                client.invalidate_namespace(QUERY_NS);
-            });
+            cx.data().invalidate_query_namespace(QUERY_NS);
             let _ = invalidate_namespace_requested.set_in(cx.app.models_mut(), false);
-            cx.app.request_redraw(window);
         }
 
         let key = demo_key();
@@ -105,10 +89,7 @@ impl View for QueryBasicsView {
             })
         });
 
-        let state = handle
-            .watch(cx)
-            .layout()
-            .value_or_else(QueryState::<DemoData>::default);
+        let state = handle.read_layout(cx);
 
         let status_label = match state.status {
             QueryStatus::Idle => "Idle",

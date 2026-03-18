@@ -60,9 +60,9 @@ Current conclusion:
 | --- | --- | --- | --- | --- |
 | `Button` | `action(...)`, `action_payload(...)`, legacy `on_click(CommandId)` | generic pressable dispatch; default authoring already converged | Aligned | Keep current dual surface; treat `on_click(...)` as compat naming only |
 | `CommandItem` / command palette entries | `on_select(CommandId)` plus `on_select_action(...)` / `on_select_value_action(...)`; host-command catalog builders derive from `CommandMeta` | palette items naturally map to registry metadata, shortcut display, and gating snapshots | Mostly aligned | Keep command-first catalog APIs; keep action-first callback path for custom items |
-| `DropdownMenuItem` / `DropdownMenuCheckboxItem` / `DropdownMenuRadioItem` | `on_select(CommandId)` only (plus `trailing_on_select(...)` on item rows) | menu rows dispatch through command gating and may expose trailing command affordances | Default-facing blocker | Add `action(...)` / `trailing_action(...)` aliases first; keep command-centric internals and trailing command pipeline intact |
-| `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem` | `on_select(CommandId)` only | menu rows display shortcut labels and dispatch through command gating | Default-facing blocker | Add `action(...)` alias first; keep command-centric internals and shortcut display logic |
-| `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem` | `on_select(CommandId)` only | same as context menu, plus stronger OS/menu parity expectations | Default-facing blocker | Same as context menu: action-first alias on public builders, command-centric core retained |
+| `DropdownMenuItem` / `DropdownMenuCheckboxItem` / `DropdownMenuRadioItem` | `DropdownMenuItem` now exposes `action(...)`, `action_payload(...)`, and `trailing_action(...)`; checkbox/radio variants expose `action(...)` while keeping `on_select(CommandId)` | menu rows dispatch through command gating and may expose trailing command affordances | Partially aligned | Keep command-centric internals; keep item-level payload support, and only add payload aliases to checkbox/radio variants if first-party proof appears |
+| `ContextMenuItem` / `ContextMenuCheckboxItem` / `ContextMenuRadioItem` | `ContextMenuItem` now exposes `action(...)` and `action_payload(...)`; checkbox/radio variants expose `action(...)` while keeping `on_select(CommandId)` | menu rows display shortcut labels and dispatch through command gating | Partially aligned | Keep command-centric internals; keep item-level payload support, and only add payload aliases to checkbox/radio variants if first-party proof appears |
+| `MenubarItem` / `MenubarCheckboxItem` / `MenubarRadioItem` | `MenubarItem` now exposes `action(...)` and `action_payload(...)`; checkbox/radio variants expose `action(...)` while keeping `on_select(CommandId)` | same as context menu, plus stronger OS/menu parity expectations | Partially aligned | Same as context menu: keep item-level payload support, and only widen checkbox/radio payload aliases if first-party proof appears |
 | `NavigationMenuLink` / `NavigationMenuItem` | `on_click(CommandId)` only | current activation path reuses command gating/dispatch | Medium blocker | Add `action(...)` alias; this surface reads like a regular app-facing widget, not a registry API |
 | `BreadcrumbItem` | `on_click(CommandId)` plus `on_activate(...)` closure | historical command pipeline reuse | Medium blocker | Add `action(...)` alias; keep `on_click(...)` as compat name |
 | `Sonner` / `ToastMessageOptions` | historical `action(label, CommandId)` / `cancel(label, CommandId)` message helpers | toast buttons still lower to command-backed overlay dispatch | Aligned (dual surface) | Prefer `action_id(...)` / `cancel_id(...)` in default-facing docs/examples; keep `action(...)` / `cancel(...)` plus explicit `*_command(...)` aliases as compat/low-level spellings |
@@ -120,17 +120,20 @@ Assessment:
   - **default-facing app-author widgets** should expose action-first naming even if they still lower
     into the same command dispatch path.
 
-### 3) Menu families are the largest remaining default-surface inconsistency
+### 3) Menu families still carry the largest command-shaped residue
 
 Representative evidence:
 
 - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/menubar.rs`
+- `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 
 Current shape:
 
-- item builders still expose only `on_select(CommandId)`,
-- checkbox/radio variants also expose only `on_select(CommandId)`,
+- `DropdownMenuItem` now exposes `action(...)` / `action_payload(...)` / `trailing_action(...)`,
+- `ContextMenuItem` and `MenubarItem` now also expose `action_payload(...)`,
+- checkbox/radio menu variants still stop at `action(...)` + `on_select(CommandId)`,
+- context-menu and menubar families now expose `action(...)` aliases but still keep command-shaped selection methods underneath,
 - rendering logic uses command availability and shortcut display helpers.
 
 Assessment:
@@ -145,9 +148,9 @@ Recommendation:
 
 - Keep internals unchanged for now.
 - Add public aliases such as:
-  - `action(...)` for `Item`,
+  - `action_payload(...)` for `Item` when row/menu payload proof exists,
   - `action(...)` for checkbox/radio variants when the action is the semantic trigger,
-  - possibly payload-aware aliases later only if payload actions become part of menu-family policy.
+  - payload-aware aliases for checkbox/radio variants only if payload actions become part of menu-family policy.
 - Do **not** remove the explicit command-oriented method yet; keep it as the lower-level/legacy
   spelling.
 
@@ -330,6 +333,15 @@ Progress update (as of 2026-03-09, follow-up):
 - The main dropdown-menu gallery teaching snippets now also prefer `action(...)`:
   - `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/basic.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/demo.rs`
+- Additional follow-up (as of 2026-03-17): `DropdownMenuItem` now also exposes
+  `action_payload(...)` / `action_payload_factory(...)`, both root-menu and submenu item dispatch
+  paths record pending payloads before command dispatch, and the first-party `data_table`
+  row-action menus now use typed `.action(...)` / `.action_payload(...)` instead of per-row
+  `CommandId::new(...)` strings.
+- Additional follow-up (as of 2026-03-17): `ContextMenuItem` and `MenubarItem` now also expose
+  `action_payload(...)` / `action_payload_factory(...)`, and both their root-item and submenu-item
+  dispatch paths now record pending payloads before command dispatch. Checkbox/radio menu variants
+  intentionally remain unit-action-only until first-party proof justifies widening them.
 - The gallery overlay preview surfaces now also prefer `action(...)` for dropdown/context menu rows:
   - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs`
   - `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`

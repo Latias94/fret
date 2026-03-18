@@ -924,7 +924,7 @@ impl ChartCanvas {
         }
     }
 
-    fn publish_output<H: UiHost>(&mut self, app: &mut H) {
+    fn publish_output<H: UiHost>(&mut self, app: &mut H) -> bool {
         let drained_link_events = self.with_engine_mut(|engine| engine.drain_link_events());
         let (link_events_revision, link_events) = if drained_link_events.is_empty() {
             (
@@ -967,18 +967,30 @@ impl ChartCanvas {
 
             out
         });
+        let tooltip_lines = self.with_engine(|engine| {
+            let Some(axis_pointer) = engine.output().axis_pointer.as_ref() else {
+                return Vec::new();
+            };
+
+            self.tooltip_formatter.format_axis_pointer(
+                engine,
+                &engine.output().axis_windows,
+                axis_pointer,
+            )
+        });
         let snapshot = ChartCanvasOutputSnapshot {
             brush_selection_2d: self.with_engine(|engine| engine.state().brush_selection_2d),
             brush_x_row_ranges_by_series: self
                 .with_engine(|engine| engine.output().brush_x_row_ranges_by_series.clone()),
             link_events,
+            tooltip_lines,
             domain_windows_by_key,
         };
 
         if self.output.snapshot == snapshot
             && self.output.link_events_revision == link_events_revision
         {
-            return;
+            return false;
         }
 
         self.output.revision = self.output.revision.wrapping_add(1);
@@ -991,6 +1003,8 @@ impl ChartCanvas {
                 *s = next;
             });
         }
+
+        true
     }
 
     fn sync_style_from_theme(&mut self, theme: &Theme) -> bool {
@@ -5821,7 +5835,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         self.rebuild_paths_if_needed(cx);
         self.clear_tooltip_text_cache(cx.services);
-        self.publish_output(cx.app);
+        let output_changed = self.publish_output(cx.app);
+        if output_changed {
+            cx.request_animation_frame();
+        }
 
         if let Some(background) = self.style.background {
             cx.scene.push(SceneOp::Quad {
@@ -7240,11 +7257,237 @@ fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::TooltipTextLineKind;
     use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId, VisualMapId};
     use delinea::{
         AxisKind, AxisPosition, AxisRange, AxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
         SeriesEncode, SeriesKind, SeriesSpec, VisualMapSpec,
     };
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Scene, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
+        TextService,
+    };
+    use fret_runtime::{FrameId, Model};
+    use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+    use fret_ui::tree::UiTree;
+
+    fn first_chart_bar_spec() -> (ChartSpec, DatasetId, SeriesId, Vec<f64>, Vec<f64>, Vec<f64>) {
+        use delinea::CategoryAxisScale;
+
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let desktop_field = FieldId::new(2);
+        let mobile_field = FieldId::new(3);
+        let desktop_series = SeriesId::new(1);
+        let mobile_series = SeriesId::new(2);
+
+        let categories = vec![
+            "January".to_string(),
+            "February".to_string(),
+            "March".to_string(),
+            "April".to_string(),
+            "May".to_string(),
+            "June".to_string(),
+        ];
+        let x = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let desktop = vec![186.0, 305.0, 237.0, 73.0, 209.0, 214.0];
+        let mobile = vec![80.0, 200.0, 120.0, 190.0, 130.0, 140.0];
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: desktop_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: mobile_field,
+                        column: 2,
+                    },
+                ],
+                ..Default::default()
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("Month".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::Category(CategoryAxisScale { categories }),
+                    range: Default::default(),
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Visitors".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: Default::default(),
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: Some(delinea::AxisPointerSpec::default()),
+            visual_maps: vec![],
+            series: vec![
+                SeriesSpec {
+                    id: desktop_series,
+                    name: Some("Desktop".to_string()),
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: desktop_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+                SeriesSpec {
+                    id: mobile_series,
+                    name: Some("Mobile".to_string()),
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: mobile_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+            ],
+        };
+
+        (spec, dataset_id, desktop_series, x, desktop, mobile)
+    }
+
+    fn seed_first_chart_dataset(
+        canvas: &mut ChartCanvas,
+        dataset_id: DatasetId,
+        x: Vec<f64>,
+        desktop: Vec<f64>,
+        mobile: Vec<f64>,
+    ) {
+        use delinea::data::{Column, DataTable};
+
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(x));
+        table.push_column(Column::F64(desktop));
+        table.push_column(Column::F64(mobile));
+        canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+    }
+
+    fn step_chart_engine(canvas: &mut ChartCanvas) {
+        let mut measurer = NullTextMeasurer::default();
+        for _ in 0..8 {
+            let step = canvas
+                .with_engine_mut(|engine| {
+                    engine.step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+                })
+                .expect("chart engine step should succeed");
+            if !step.unfinished {
+                return;
+            }
+        }
+
+        panic!("chart engine should settle within the test work budget");
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn pump_chart_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        bounds: Rect,
+    ) {
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
 
     #[test]
     fn legend_double_click_isolates_and_restores_all_series() {
@@ -7653,6 +7896,219 @@ mod tests {
         let (x, y) = canvas.active_axes(&layout).expect("expected active axes");
         assert_eq!(x, AxisId::new(1));
         assert_eq!(y, AxisId::new(3));
+    }
+
+    #[test]
+    fn first_chart_bar_hover_publishes_tooltip_lines_to_output_model() {
+        let mut app = App::new();
+        let output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+
+        let (spec, dataset_id, desktop_series, x, desktop, mobile) = first_chart_bar_spec();
+        let mut canvas = ChartCanvas::new(spec).expect("spec should be valid");
+        canvas = canvas.output_model(output.clone());
+        seed_first_chart_dataset(&mut canvas, dataset_id, x, desktop, mobile);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(208.0)),
+        );
+        canvas.last_bounds = bounds;
+        canvas.last_layout = canvas.compute_layout(bounds);
+        canvas.sync_viewport(canvas.last_layout.plot);
+
+        step_chart_engine(&mut canvas);
+
+        let point = canvas
+            .point_for_series_data_index(desktop_series, 0)
+            .expect("expected a point for the first desktop bar");
+        assert!(
+            canvas.last_layout.plot.contains(point),
+            "expected the derived hover point to land inside the plot"
+        );
+
+        let layout = canvas.last_layout.clone();
+        canvas.refresh_hover_for_axis_pointer(&layout, point);
+        step_chart_engine(&mut canvas);
+
+        let axis_pointer_present =
+            canvas.with_engine(|engine| engine.output().axis_pointer.is_some());
+        assert!(
+            axis_pointer_present,
+            "expected axis pointer output after applying hover to the first-chart bar spec"
+        );
+
+        let output_changed = canvas.publish_output(&mut app);
+        assert!(
+            output_changed,
+            "expected publish_output to detect tooltip payload changes"
+        );
+
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+        assert!(
+            published.revision > 0,
+            "expected output revision to advance after tooltip publish"
+        );
+        assert!(
+            !published.snapshot.tooltip_lines.is_empty(),
+            "expected tooltip lines to be published into the shared output model"
+        );
+        assert_eq!(
+            published.snapshot.tooltip_lines[0].kind,
+            TooltipTextLineKind::AxisHeader
+        );
+    }
+
+    #[test]
+    fn first_chart_bar_hover_publishes_tooltip_lines_with_nonzero_bounds_origin() {
+        let mut app = App::new();
+        let output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+
+        let (spec, dataset_id, desktop_series, x, desktop, mobile) = first_chart_bar_spec();
+        let mut canvas = ChartCanvas::new(spec).expect("spec should be valid");
+        canvas = canvas.output_model(output.clone());
+        seed_first_chart_dataset(&mut canvas, dataset_id, x, desktop, mobile);
+
+        let bounds = Rect::new(
+            Point::new(Px(293.5), Px(296.5)),
+            Size::new(Px(560.0), Px(208.0)),
+        );
+        canvas.last_bounds = bounds;
+        canvas.last_layout = canvas.compute_layout(bounds);
+        canvas.sync_viewport(canvas.last_layout.plot);
+
+        step_chart_engine(&mut canvas);
+
+        let point = canvas
+            .point_for_series_data_index(desktop_series, 0)
+            .expect("expected a point for the first desktop bar");
+        assert!(
+            canvas.last_layout.plot.contains(point),
+            "expected the derived hover point to land inside the plot"
+        );
+
+        let layout = canvas.last_layout.clone();
+        canvas.refresh_hover_for_axis_pointer(&layout, point);
+        step_chart_engine(&mut canvas);
+
+        let axis_pointer_present =
+            canvas.with_engine(|engine| engine.output().axis_pointer.is_some());
+        assert!(
+            axis_pointer_present,
+            "expected axis pointer output after applying hover with non-zero canvas bounds"
+        );
+
+        let output_changed = canvas.publish_output(&mut app);
+        assert!(
+            output_changed,
+            "expected publish_output to detect tooltip payload changes with non-zero canvas bounds"
+        );
+
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+        assert!(
+            !published.snapshot.tooltip_lines.is_empty(),
+            "expected tooltip lines to be published for non-zero canvas bounds"
+        );
+    }
+
+    #[test]
+    fn ui_tree_keyboard_navigation_publishes_tooltip_lines_to_output_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+
+        let (spec, dataset_id, _desktop_series, x, desktop, mobile) = first_chart_bar_spec();
+        let mut canvas = ChartCanvas::new(spec).expect("spec should be valid");
+        canvas.set_accessibility_layer(true);
+        canvas.set_input_map(crate::input_map::ChartInputMap::default());
+        canvas = canvas.output_model(output.clone());
+        seed_first_chart_dataset(&mut canvas, dataset_id, x, desktop, mobile);
+
+        let root = ui.create_node_retained(canvas.test_id("chart-keyboard-canvas"));
+        ui.set_node_view_cache_flags(root, true, true, false);
+        ui.set_root(root);
+
+        let bounds = Rect::new(
+            Point::new(Px(293.5), Px(296.5)),
+            Size::new(Px(560.0), Px(208.0)),
+        );
+        let mut services = FakeServices;
+
+        ui.request_semantics_snapshot();
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+        ui.request_semantics_snapshot();
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+
+        let before_pos_in_set = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot before keyboard navigation")
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("chart-keyboard-canvas"))
+            .and_then(|node| node.pos_in_set);
+
+        ui.set_focus(Some(root));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        ui.request_semantics_snapshot();
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+        ui.request_semantics_snapshot();
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+
+        let after_pos_in_set = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after keyboard navigation")
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("chart-keyboard-canvas"))
+            .and_then(|node| node.pos_in_set);
+        let after_value = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after keyboard navigation")
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("chart-keyboard-canvas"))
+            .and_then(|node| node.value.clone());
+
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+        assert_eq!(
+            before_pos_in_set,
+            Some(1),
+            "expected initial chart semantics collection position to point at the first item"
+        );
+        assert_eq!(
+            after_pos_in_set,
+            Some(2),
+            "expected keyboard accessibility navigation to update chart semantics collection position"
+        );
+        assert!(
+            published.revision > 0,
+            "expected keyboard accessibility navigation to advance the shared output model revision; after_pos_in_set={after_pos_in_set:?} after_value={after_value:?} tooltip_lines={}",
+            published.snapshot.tooltip_lines.len()
+        );
+        assert!(
+            !published.snapshot.tooltip_lines.is_empty(),
+            "expected keyboard accessibility navigation to publish tooltip lines"
+        );
     }
 
     #[test]

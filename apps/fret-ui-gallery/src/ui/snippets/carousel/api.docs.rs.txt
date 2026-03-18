@@ -1,0 +1,71 @@
+// region: example
+use fret::{UiChild, UiCx};
+use fret_core::Edges;
+use fret_ui::Theme;
+use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
+use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
+
+fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<> {
+    let theme = Theme::global(&*cx.app).clone();
+
+    let number = ui::text(format!("{idx}"))
+        .text_size_px(Px(36.0))
+        .line_height_px(Px(40.0))
+        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+        .font_semibold()
+        .into_element(cx);
+
+    let content = cx.flex(
+        FlexProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().aspect_ratio(1.0),
+            ),
+            direction: fret_core::Axis::Horizontal,
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            padding: Edges::all(Px(24.0)).into(),
+            ..Default::default()
+        },
+        move |_cx| vec![number],
+    );
+
+    shadcn::card(|cx| ui::children![cx; shadcn::card_content(|cx| ui::children![cx; content])])
+}
+
+pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    let api_snapshot = cx.local_model_keyed("api_snapshot", shadcn::CarouselApiSnapshot::default);
+    let items = (1..=5)
+        .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx).into_element(cx)))
+        .collect::<Vec<_>>();
+
+    let snapshot = cx.watch_model(&api_snapshot).copied().unwrap_or_default();
+    let current = if snapshot.snap_count > 0 {
+        snapshot.selected_index.saturating_add(1)
+    } else {
+        0
+    };
+    let count = snapshot.snap_count;
+
+    let carousel = shadcn::Carousel::new(items)
+        .api_snapshot_model(api_snapshot.clone())
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .into_element(cx);
+
+    let counter = ui::text(format!("Slide {current} of {count}"))
+        .text_sm()
+        .text_align(fret_core::TextAlign::Center)
+        .into_element(cx);
+
+    ui::v_stack(move |_cx| vec![carousel, counter])
+        .gap(Space::N2)
+        .w_full()
+        .max_w(Px(320.0))
+        .mx_auto()
+        .into_element(cx)
+}
+// endregion: example

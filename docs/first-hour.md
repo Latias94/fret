@@ -53,7 +53,7 @@ The template is intentionally small:
 
 - `TodoView` keeps view-owned draft text and keyed list state in `LocalState<T>` / `LocalState<Vec<_>>`.
 - `act::*` are typed actions: unit actions for top-level intents and payload actions for per-row list interactions.
-- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals(...)`, `cx.actions().transient(...)`, plus widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge; the explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` aliases remain available when you want the type-directed wording. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, keyed-row payload binding via `.action_payload(...)`, `payload_local_update_if::<A>(...)` as the default row-write path, `cx.actions().transient(...)` for App-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
 Memorize the default app surface before you start editing:
@@ -65,8 +65,9 @@ Memorize the default app surface before you start editing:
 - if you intentionally need the raw model-backed hook, make that an advanced choice via
   `use fret::advanced::AppUiRawStateExt;`
 - if you later graduate to the richer `todo` rung and need explicit selector/query nouns, add
-  `fret::selector::{DepsBuilder, DepsSignature}` or `fret::query::{QueryKey, QueryPolicy, ...}`
-  intentionally instead of expecting them from the default prelude
+  `fret::selector::ui::DepsBuilder`, `fret::selector::DepsSignature`, or
+  `fret::query::{QueryKey, QueryPolicy, ...}` intentionally instead of expecting them from the
+  default prelude
 
 ### Path taxonomy
 
@@ -115,7 +116,8 @@ In the onboarding path, stay on one small surface:
 
 - `LocalState` for view-owned state
 - typed actions for intent
-- `cx.actions().locals(...)` for coordinated LocalState writes
+- `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for coordinated LocalState writes
+- `.action_payload(...)` plus `payload_local_update_if::<A>(...)` for view-owned keyed-row interactions
 - `cx.actions().transient(...)` only for App-bound effects
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs activation glue, with an explicit `use fret::app::AppActivateExt as _;`
 
@@ -128,11 +130,14 @@ For UI composition, you will mostly author via `ui::*` constructors from that ap
 
 Key points:
 
-- `ui::*` constructors return `UiBuilder<T>` (a patchable builder surface).
+- `ui::*` constructors return typed builder/child values that usually stay typed until a sink
+  lands them.
 - Apply layout/chrome refinement via fluent methods (`px_2()`, `gap(Space::N2)`, `rounded_md()`, ...).
-- Convert into `AnyElement` at the boundary via `.into_element(cx)`.
+- Prefer `ui::children![cx; ...]` for heterogeneous child groups.
 - If a render root or wrapper closure only needs to late-land one typed child, prefer
   `ui::single(cx, child)` over `ui::children![cx; child].into()`.
+- Treat explicit `.into_element(cx)` / `AnyElement` seams as advanced helper or interop boundaries,
+  not as the first thing to memorize on the default path.
 - If a local helper actually reads state, emits text/layout nodes, or otherwise needs runtime
   access, give it `cx: &mut UiCx<'_>`.
 - If a local helper is only a pure page shell around already-typed children, prefer
@@ -198,7 +203,7 @@ remain explicit at the ecosystem boundary.
 
 Fret uses explicit invalidation (this is a contract, not an optimization detail).
 
-When observing models (via `cx.watch_model(...)`):
+When observing tracked state in views:
 
 | If the value affects… | Choose | Notes |
 | --- | --- | --- |
@@ -206,11 +211,17 @@ When observing models (via `cx.watch_model(...)`):
 | layout (size/flow/scroll extents) | `Layout` | safe when in doubt |
 | hit regions only | `HitTest` | pointer-only changes without layout changes |
 
+Keep the default path handle-first:
+
+- for view-owned state, prefer `local.paint(cx)` / `local.layout(cx)` / `local.hit_test(cx)`
+- when you intentionally drop to explicit shared handles on helper-heavy surfaces, keep the same
+  handle-side shape (`model.paint_in(cx)` / `model.layout_in(cx)` / `model.hit_test_in(cx)`)
+
 Examples:
 
 ```rust
-let clicks = cx.watch_model(&models.clicks).paint().value_or_default();
-let label = cx.watch_model(&models.label).layout().value_or_default();
+let clicks = clicks_state.paint(cx).value_or_default();
+let label = label_state.layout(cx).value_or_default();
 ```
 
 If you are unsure, start with `Layout` and tighten later.

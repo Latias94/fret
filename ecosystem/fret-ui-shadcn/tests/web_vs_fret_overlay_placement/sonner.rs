@@ -1,5 +1,5 @@
-use fret_ui_shadcn::facade as shadcn;
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn web_vs_fret_sonner_open_toast_rect_matches_web_fixtures() {

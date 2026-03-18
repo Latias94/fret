@@ -27,7 +27,7 @@ base example implementations in `repo-ref/ui`.
 ### Authoring surface
 
 - Pass: `ButtonGroup::new(...)` covers the primary upstream composition model for grouped action buttons.
-- Pass: `ButtonGroup::a11y_label(...)` provides the `aria-label` equivalent required by the upstream accessibility guidance.
+- Pass: `ButtonGroup::a11y_label(...)` and `ButtonGroup::labelled_by_element(...)` cover the upstream `aria-label` / `aria-labelledby` accessibility guidance without introducing DOM-only ids.
 - Pass: `ButtonGroupSeparator::new().orientation(...)` maps directly to the documented separator surface.
 - Pass: `ButtonGroupText::new(...)` and `ButtonGroupText::children(...)` cover the upstream `ButtonGroupText` use cases without adding a generic `asChild` slot merge surface.
 - Pass: first-party composition examples now also follow the child family defaults: the embedded

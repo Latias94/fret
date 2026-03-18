@@ -43,6 +43,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupTextarea, InputGroupText).",
         "The current parity work here is page/public-surface alignment, not a mechanism bug.",
         "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane.",
+        "The `Dropdown` example intentionally stays on `DropdownMenu::compose()`; swapping the trigger to `InputGroupButton` does not by itself require falling back to `build_parts(...)`.",
         "`Custom Input` is expressed as composition via slots / parts (no dedicated \"custom control\" type).",
         "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
     ]);
@@ -111,7 +112,7 @@ shadcn::InputGroup::new(query)
         .test_id_prefix("ui-gallery-input-group-kbd")
         .code_rust_from_file_region(snippets::kbd::SOURCE, "example");
     let dropdown = DocSection::build(cx, "Dropdown", dropdown)
-        .description("Inline-end dropdown menu trigger composed with a real `DropdownMenu`.")
+        .description("Inline-end dropdown menu trigger composed with a real `DropdownMenu` on the default `compose()` lane.")
         .test_id_prefix("ui-gallery-input-group-dropdown")
         .code_rust_from_file_region(snippets::dropdown::SOURCE, "example");
     let spinner = DocSection::build(cx, "Spinner", spinner)

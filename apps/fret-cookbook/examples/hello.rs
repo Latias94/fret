@@ -35,7 +35,7 @@ impl View for HelloView {
         };
 
         let count_state = cx.state().local::<u32>();
-        let count_value = cx.state().watch(&count_state).layout().value_or(0);
+        let count_value = count_state.layout(cx).value_or(0);
 
         cx.actions()
             .local_update::<act::Click, u32>(&count_state, |v| {

@@ -46,6 +46,12 @@ mod act {
     fret::actions!([Reset = "cookbook.markdown_and_code_basics.reset.v1"]);
 }
 
+#[derive(Clone)]
+struct PreviewSettings {
+    wrap: Arc<str>,
+    cap_height: bool,
+}
+
 struct MarkdownAndCodeBasicsView;
 
 impl View for MarkdownAndCodeBasicsView {
@@ -58,21 +64,26 @@ impl View for MarkdownAndCodeBasicsView {
         let wrap_state = cx.state().local_init(|| Some(Arc::from(WRAP_SCROLL_X)));
         let cap_height_state = cx.state().local_init(|| true);
 
-        let source = cx.state().watch(&source_state).layout().value_or_default();
-        let wrap: Arc<str> = cx
-            .state()
-            .watch(&wrap_state)
-            .layout()
-            .value_or_else(|| Some(Arc::from(WRAP_SCROLL_X)))
-            .unwrap_or_else(|| Arc::from(WRAP_SCROLL_X));
-        let cap_height = cx.state().watch(&cap_height_state).layout().value_or(true);
+        let source = source_state.layout(cx).value_or_default();
+        let preview_settings: PreviewSettings =
+            cx.data()
+                .selector_layout((&wrap_state, &cap_height_state), |(wrap, cap_height)| {
+                    PreviewSettings {
+                        wrap: wrap.unwrap_or_else(|| Arc::from(WRAP_SCROLL_X)),
+                        cap_height,
+                    }
+                });
 
-        let wrap_mode = match wrap.as_ref() {
+        let wrap_mode = match preview_settings.wrap.as_ref() {
             WRAP_WORD => CodeBlockWrap::Word,
             _ => CodeBlockWrap::ScrollX,
         };
 
-        let max_height = if cap_height { Some(Px(220.0)) } else { None };
+        let max_height = if preview_settings.cap_height {
+            Some(Px(220.0))
+        } else {
+            None
+        };
 
         let mut components = markdown::MarkdownComponents::<App>::default()
             .with_open_url()

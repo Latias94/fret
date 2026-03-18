@@ -367,9 +367,9 @@ Policy note:
 Target authoring outcome:
 
 ```rust,ignore
-cx.on_action(act::EditorSave, |app, cx| {
-    app.save_current_buffer();
-    cx.notify();
+cx.on_action_notify::<act::EditorSave>(|host, _action_cx| {
+    save_current_buffer(host);
+    true
 });
 ```
 

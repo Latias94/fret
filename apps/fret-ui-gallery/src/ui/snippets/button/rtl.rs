@@ -45,7 +45,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .variant(shadcn::ButtonVariant::Secondary)
                         .disabled(true)
                         .test_id("ui-gallery-button-rtl-loading")
-                        .leading_children([shadcn::Spinner::new().into_element(cx)])
+                        .leading_child(shadcn::Spinner::new().into_element(cx))
                         .into_element(cx),
                 ]
             })

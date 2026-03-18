@@ -151,6 +151,14 @@ struct ThemePostprocessView {
     st: ThemePostprocessState,
 }
 
+#[derive(Clone)]
+struct ThemePostprocessViewSettings {
+    enabled: bool,
+    compare: bool,
+    theme: Option<Arc<str>>,
+    retro_dither: bool,
+}
+
 pub fn run() -> anyhow::Result<()> {
     FretApp::new("postprocess-theme-demo")
         .window("postprocess-theme-demo", (1200.0, 760.0))
@@ -217,12 +225,34 @@ impl View for ThemePostprocessView {
             .into();
         };
 
-        let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);
-        let compare = cx.watch_model(&self.st.compare).layout().value_or(true);
-        let theme = cx
-            .watch_model(&self.st.theme)
-            .layout()
-            .value_or(Option::<Arc<str>>::None);
+        let enabled = self.st.enabled.clone();
+        let compare = self.st.compare.clone();
+        let theme = self.st.theme.clone();
+        let retro_dither = self.st.retro_dither.clone();
+        let enabled_deps = enabled.clone();
+        let compare_deps = compare.clone();
+        let theme_deps = theme.clone();
+        let retro_dither_deps = retro_dither.clone();
+        let view_settings: ThemePostprocessViewSettings = cx.data().selector(
+            move |cx| {
+                cx.observe_model(&enabled_deps, Invalidation::Layout);
+                cx.observe_model(&compare_deps, Invalidation::Layout);
+                cx.observe_model(&theme_deps, Invalidation::Layout);
+                cx.observe_model(&retro_dither_deps, Invalidation::Layout);
+                (
+                    cx.app.models().revision(&enabled_deps).unwrap_or(0),
+                    cx.app.models().revision(&compare_deps).unwrap_or(0),
+                    cx.app.models().revision(&theme_deps).unwrap_or(0),
+                    cx.app.models().revision(&retro_dither_deps).unwrap_or(0),
+                )
+            },
+            move |cx| ThemePostprocessViewSettings {
+                enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
+                compare: cx.app.models().get_cloned(&compare).unwrap_or(true),
+                theme: cx.app.models().get_cloned(&theme).unwrap_or_default(),
+                retro_dither: cx.app.models().get_cloned(&retro_dither).unwrap_or(true),
+            },
+        );
 
         let chromatic_offset_px = watch_first_f32(cx, &self.st.chromatic_offset_px, 2.0);
         let scanline_strength = watch_first_f32(cx, &self.st.scanline_strength, 0.18);
@@ -232,15 +262,11 @@ impl View for ThemePostprocessView {
         let grain_scale = watch_first_f32(cx, &self.st.grain_scale, 1.5);
 
         let retro_pixel_scale = watch_first_f32(cx, &self.st.retro_pixel_scale, 10.0);
-        let retro_dither = cx
-            .watch_model(&self.st.retro_dither)
-            .layout()
-            .value_or(true);
 
         let inspector = inspector(
             cx,
             &mut self.st,
-            theme.as_deref().unwrap_or("cyberpunk"),
+            view_settings.theme.as_deref().unwrap_or("cyberpunk"),
             chromatic_offset_px,
             scanline_strength,
             scanline_spacing_px,
@@ -248,14 +274,14 @@ impl View for ThemePostprocessView {
             grain_strength,
             grain_scale,
             retro_pixel_scale,
-            retro_dither,
+            view_settings.retro_dither,
         );
 
         let stage = stage(
             cx,
-            enabled,
-            compare,
-            theme.as_deref().unwrap_or("cyberpunk"),
+            view_settings.enabled,
+            view_settings.compare,
+            view_settings.theme.as_deref().unwrap_or("cyberpunk"),
             effect,
             chromatic_offset_px,
             scanline_strength,
@@ -264,7 +290,7 @@ impl View for ThemePostprocessView {
             grain_strength,
             grain_scale,
             retro_pixel_scale,
-            retro_dither,
+            view_settings.retro_dither,
         );
 
         cx.actions().models::<act::Reset>({
@@ -317,8 +343,8 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    cx.watch_model(model)
-        .layout()
+    model
+        .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
         .ok()
         .unwrap_or(default)

@@ -1,7 +1,7 @@
 # Target Interface State
 
 Status: target state for the pre-release surface reset
-Last updated: 2026-03-16
+Last updated: 2026-03-17
 
 This document is the single place that records the **intended public interface state** for the
 authoring-surface reset.
@@ -41,6 +41,16 @@ Fresh-audit reading rule on 2026-03-16:
 - post-closeout follow-ons such as ecosystem integration traits, macros, or other sugar should
   read from the stabilized lane story below rather than running ahead of it.
 
+Coordination rule on 2026-03-16:
+
+- treat this file as the public-surface owner for the adjacent post-v1 lanes
+- `action-first-authoring-fearless-refactor-v1` should only land default-path density and
+  bridge-shrink work against this lane story
+- `into-element-surface-fearless-refactor-v1` should only land conversion/helper cleanup against
+  this lane story
+- non-goal: do not let adjacent workstreams reopen the app/component/advanced tier design
+  independently
+
 1. `fret-ui-shadcn` discovery-lane closure
    - Default teaching lane: `use fret_ui_shadcn::{facade as shadcn, prelude::*};`
    - Explicit escape hatch: `shadcn::raw::*` / `fret_ui_shadcn::raw::*`
@@ -66,6 +76,17 @@ Fresh-audit reading rule on 2026-03-16:
      surface an ordinary app author has to hold in their head in the first hour
    - Priority targets: tracked-value reads, common local/payload write paths, and list/keyed-row
      defaults
+   - Refactor rule on 2026-03-16:
+     - treat the canonical compare set (`simple_todo`, `simple_todo_v2_target`, `todo_demo`),
+       generated templates, and default-path docs as the **detection surface** for default-path
+       friction,
+     - do **not** treat Todo-only friction as automatic justification for widening the shared
+       public helper/API surface,
+     - first prefer doc tightening, source-policy cleanup, local helper adoption, or recipe-level
+       narrowing when the pain is still confined to that compare set,
+     - only widen a public helper surface when the same pressure is clearly repeated beyond one
+       Todo-shaped lane and still reads as default-path friction rather than as an advanced/runtime
+       boundary
    - Status on 2026-03-16:
      - first batch already landed on the canonical trio (`simple_todo`,
        `simple_todo_v2_target`, `todo_demo`), the generated todo/simple-todo templates, and the
@@ -183,7 +204,7 @@ Explicit secondary app lanes:
 - `fret::semantics::SemanticsRole` for explicit semantic-role nouns
 - `fret::style::ThemeSnapshot` for extracted helper signatures that intentionally take snapshot
   value types
-- `fret::selector::{DepsBuilder, DepsSignature}` for selector dependency signatures
+- `fret::selector::ui::DepsBuilder` plus `fret::selector::DepsSignature` for selector dependency signatures
 - `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` for explicit query nouns
 - `fret::children::UiElementSinkExt as _` for explicit sink-style `*_build(|cx, out| ...)`
   collection when a view intentionally opts into manual child pipelines
@@ -298,9 +319,8 @@ Target rule:
   lane: `.role(...)`, `.a11y_role(...)`, and `.test_id(...)` are treated as app-justified
   diagnostics/accessibility affordances even though the underlying trait names stay hidden.
 - `AppUi` is taught through grouped helper families:
-  `cx.state().local*`, `cx.actions().models/locals/transient`,
-  `cx.actions().payload::<A>().models/locals/local_update_if`, `cx.data().selector/query*`, and
-  `cx.effects().take_transient(...)`.
+  `cx.state().local*`, `cx.actions().models/locals/transient/payload_local_update_if`,
+  `cx.data().selector/query*`, and `cx.effects().take_transient(...)`.
 
 App-level ecosystem integration seam:
 
@@ -428,10 +448,8 @@ Target operations:
 - `local_set::<A, T>(&state, value)`
 - `toggle_local_bool::<A>(&state)`
 - `models::<A>(|models| ...)`
-- `locals::<A>(|tx| ...)`
-- `payload::<A>().models(|models, payload| ...)`
-- `payload::<A>().locals(|tx, payload| ...)`
-- `payload::<A>().local_update_if(&state, |value, payload| ...)`
+- `locals_with((...)).on::<A>(|tx, (...)| ...)`
+- `payload_local_update_if::<A>(&state, |value, payload| ...)`
 - `transient::<A>(...)`
 - `availability::<A>(...)`
 

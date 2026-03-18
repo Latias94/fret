@@ -69,7 +69,7 @@ impl View for AssetsReloadEpochBasicsView {
                 *value = value.wrapping_add(1);
             });
 
-        let bumps = cx.state().watch(&bumps_state).layout().value_or(0);
+        let bumps = bumps_state.layout(cx).value_or(0);
         if bumps != self.applied_bumps {
             fret::assets::bump_asset_reload_epoch(&mut *cx.app);
             self.applied_bumps = bumps;

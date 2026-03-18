@@ -13,6 +13,7 @@ where
         .gap(Space::N2)
         .wrap()
         .w_full()
+        .justify_center()
         .items_center()
 }
 
@@ -22,7 +23,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         vec![
             shadcn::Badge::new("Deleting")
                 .variant(shadcn::BadgeVariant::Destructive)
-                .children([shadcn::Spinner::new().into_element(cx)])
+                .leading_children([shadcn::Spinner::new().into_element(cx)])
                 .test_id("ui-gallery-badge-spinner-deleting")
                 .into_element(cx),
             shadcn::Badge::new("Generating")

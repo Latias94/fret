@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use fret_core::{Px, TextWrap};
-use fret_ui::element::{AnyElement, ElementKind};
+use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
+use fret_ui::element::{AnyElement, ElementKind, Length};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{current_color, style as decl_style};
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
     UiSupportsChrome, UiSupportsLayout, ui,
@@ -332,6 +332,20 @@ where
     T: Into<Arc<str>>,
 {
     CardTitle::new(text)
+}
+
+pub fn card_title_children<H: UiHost, I, F, T>(
+    f: F,
+) -> CardTitleBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    CardTitle::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_children(cx, out, children);
+    })
 }
 
 pub fn card_description<T>(text: T) -> CardDescription
@@ -765,7 +779,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Axis, Point, Rect, Size};
+    use fret_core::{AppWindowId, AttributedText, Axis, Point, Rect, Size, TextSpan};
     use fret_ui::element::{
         ContainerProps, CrossAlign, FlexProps, Length, Overflow, SemanticsProps,
     };
@@ -821,6 +835,13 @@ mod tests {
                 .children
                 .iter()
                 .find_map(|child| find_text(child, needle)),
+        }
+    }
+
+    fn find_first_styled_text(element: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
+        match &element.kind {
+            ElementKind::StyledText(props) => Some(props),
+            _ => element.children.iter().find_map(find_first_styled_text),
         }
     }
 
@@ -921,6 +942,99 @@ mod tests {
             element.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
+    }
+
+    #[test]
+    fn card_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = AttributedText::new(
+                Arc::<str>::from("Card title rendered from a rich text child"),
+                Arc::<[TextSpan]>::from([TextSpan::new(
+                    "Card title rendered from a rich text child".len(),
+                )]),
+            );
+
+            CardTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let ElementKind::StyledText(props) = &element.kind else {
+            panic!(
+                "expected CardTitle::new_children(single child) to keep the rich text node, got {:?}",
+                element.kind
+            );
+        };
+
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected CardTitle children to receive explicit title text style");
+        let theme = Theme::global(&app);
+        let expected_px = theme
+            .metric_by_key("component.card.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.card.title_line_height")
+            .unwrap_or(expected_px);
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, FontWeight::SEMIBOLD);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(
+            element.inherited_foreground,
+            Some(theme.color_token("card-foreground"))
+        );
+    }
+
+    #[test]
+    fn card_title_children_helper_accepts_late_landed_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            card(|cx| {
+                ui::children![
+                    cx;
+                    card_header(|cx| {
+                        ui::children![
+                            cx;
+                            card_title_children(|cx| ui::children![
+                                cx;
+                                cx.styled_text(AttributedText::new(
+                                    Arc::<str>::from("Nested title"),
+                                    Arc::<[TextSpan]>::from([TextSpan::new("Nested title".len())]),
+                                )),
+                            ]),
+                        ]
+                    }),
+                ]
+            })
+            .into_element(cx)
+        });
+
+        let title = find_first_styled_text(&element)
+            .expect("expected card_title_children(...) to keep the styled text node");
+        let style = title
+            .style
+            .as_ref()
+            .expect("expected card_title_children(...) to patch styled text typography");
+        assert_eq!(style.weight, FontWeight::SEMIBOLD);
+        assert_eq!(title.wrap, TextWrap::Word);
     }
 
     #[test]
@@ -2258,14 +2372,39 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CardTitle {
-    text: Arc<str>,
+    content: CardTitleContent,
+}
+
+#[derive(Debug)]
+enum CardTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl CardTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: CardTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: CardTitleContent::Children(children.into_iter().collect()),
+        }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> CardTitleBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        CardTitleBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -2287,14 +2426,123 @@ impl CardTitle {
             (fg, px, line_height)
         };
 
-        ui::text(self.text)
-            .w_full()
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_semibold()
-            .wrap(TextWrap::Word)
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        match self.content {
+            CardTitleContent::Text(text) => ui::text(text)
+                .w_full()
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_semibold()
+                .wrap(TextWrap::Word)
+                .text_color(ColorRef::Color(fg))
+                .into_element(cx),
+            CardTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_card_title_text_style_recursive(child, px, line_height);
+                }
+
+                let mut children =
+                    current_color::scope_children(cx, ColorRef::Color(fg), |_cx| children);
+
+                match children.len() {
+                    0 => ui::text("")
+                        .w_full()
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_semibold()
+                        .wrap(TextWrap::Word)
+                        .text_color(ColorRef::Color(fg))
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N0)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                }
+            }
+        }
+    }
+}
+
+fn patch_card_title_text_style_recursive(el: &mut AnyElement, px: Px, line_height: Px) {
+    fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = FontWeight::SEMIBOLD;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        *style = Some(style_value);
+    }
+
+    fn ensure_fill_width(layout: &mut fret_ui::element::LayoutStyle) {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+    }
+
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            patch_text_style(&mut props.style, px, line_height);
+            ensure_fill_width(&mut props.layout);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::StyledText(props) => {
+            patch_text_style(&mut props.style, px, line_height);
+            ensure_fill_width(&mut props.layout);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::SelectableText(props) => {
+            patch_text_style(&mut props.style, px, line_height);
+            ensure_fill_width(&mut props.layout);
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_card_title_text_style_recursive(child, px, line_height);
+    }
+}
+
+pub struct CardTitleBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> CardTitleBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_card_children(cx, self.build.expect("expected card title build closure"));
+        CardTitle::new_children(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardTitleBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for CardTitleBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardTitleBuild::into_element(self, cx)
     }
 }
 

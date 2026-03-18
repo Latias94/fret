@@ -36,7 +36,10 @@ cargo run -p fretboard -- new todo --name my-todo
 Maintainer comparison target (not the onboarding default):
 
 - `cargo run -p fretboard -- dev native --example simple_todo_v2_target`
-- It remains useful as the smallest side-by-side comparison surface, but the same keyed-list direction now also ships in `apps/fret-examples/src/todo_demo.rs` and the `fretboard` simple-todo scaffold. Its value is comparison, not proving the default path is still missing.
+- It remains useful as the smallest side-by-side comparison surface, but the same keyed-list
+  direction now also ships in `apps/fret-examples/src/simple_todo_demo.rs`,
+  `apps/fret-examples/src/todo_demo.rs`, and the `fretboard` simple-todo scaffold. Its value is
+  comparison, not proving the default path is still missing.
 
 Related ADRs:
 
@@ -78,7 +81,7 @@ Notes:
 
 ## Invalidation rules of thumb (keep it simple)
 
-When observing models in views:
+When observing tracked state in views:
 
 - Visual-only changes → `Paint`
 - Affects sizing/flow/scroll extents → `Layout`
@@ -157,7 +160,7 @@ fn install_todo_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `cx.actions().locals(...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge; the explicit `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` aliases remain available, but they are no longer the shortest recommended wording. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- Start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
@@ -201,9 +204,12 @@ This section describes the **best-practice baseline** (`todo`) and the `cargo ru
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
-Current status note (as of 2026-03-10): the `todo` scaffold is **LocalState-first** (view-owned slots)
-and uses typed payload actions + keyed lists for per-row interaction, while still showcasing selector
-and query hooks.
+Current status note (as of 2026-03-17): the `todo` scaffold is **LocalState-first** (view-owned
+slots) and uses typed payload actions + keyed lists for per-row interaction, while still
+showcasing selector and query hooks. On the current third rung, selector dependencies now stay on
+the LocalState-first teaching path via `cx.data().selector_layout(...)`, so the default authoring
+surface no longer teaches `clone_model()` or raw `DepsBuilder` choreography as the first selector
+story.
 
 The official baseline uses a 3-layer state split:
 
@@ -220,8 +226,8 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-  - For multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals(...)` /
-    `cx.actions().payload_locals::<A>(...)` over `cx.actions().models(...)`.
+- for non-payload multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`.
+- for keyed-row payload writes, start with `payload_local_update_if::<A>(...)`.
 
 ## Actions (UI -> app logic)
 
@@ -269,12 +275,14 @@ Default helper rule on this path:
   `fn page(...) -> impl UiChild` and late-land it from `render(...)` with
   `ui::single(cx, page(...))`.
 
-If a product intentionally needs the raw model-backed hook, keep that explicit and advanced:
+If a product intentionally needs the raw model-backed hook, keep that on the explicit
+`fret::advanced` lane rather than reintroducing it into the default todo authoring path.
+Make that choice explicit:
 
 ```rust,ignore
 use fret::advanced::AppUiRawStateExt;
 
-let raw_model = cx.use_state::<MyState>();
+let raw_model = cx.use_state::<T>();
 ```
 
 For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.
@@ -287,52 +295,44 @@ memoizing these computations with selectors instead of:
 - recomputing every frame, or
 - introducing user-managed “tick models” to force refresh.
 
-High-level sketch:
+High-level sketch (matching the current third-rung scaffold):
 
 ```rust,ignore
-use fret::selector::DepsBuilder;
-
-let derived = cx.data().selector(
-    |cx| {
-        let mut deps = DepsBuilder::new(cx);
-        deps.model_rev(&self.todos);
-        deps.model_rev(&self.filter);
-        deps.finish()
-    },
-    |cx| {
-        // expensive projection (filtering/counts)
-        compute(cx)
-    },
-);
+let derived = cx
+    .data()
+    .selector_layout((&todos_state, &filter_state), |(todos, filter)| {
+        compute(&todos, filter)
+    });
 ```
 
 ## Async resource state (queries)
 
-For async data (network, disk, indexing), we recommend storing cached resource state in
-`Model<QueryState<T>>` via `fret-query` so the UI can observe loading/error/success consistently.
+For async data (network, disk, indexing), we recommend `cx.data().query(...)` so the UI can observe
+loading/error/success/cache state consistently. Internally this still rides on tracked query state,
+but app code should stay handle-first.
 
 High-level sketch:
 
 ```rust,ignore
-use fret::query::{QueryKey, QueryPolicy, QueryState};
+use fret::query::{QueryKey, QueryPolicy};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = handle.layout(cx).value_or_default();
+let state = handle.read_layout(cx);
 ```
 
 To invalidate/refetch from app logic:
 
 ```rust,ignore
-// v1 (view runtime): if refetch is just a pure state projection, keep it as a normal model
-// transaction (for example, bump a `Model<u64>` nonce like `tip_nonce`).
-cx.actions().models::<act::RefreshTip>({
-    let tip_nonce = self.tip_nonce.clone();
-    move |models| models.update(&tip_nonce, |v| *v = v.saturating_add(1)).is_ok()
-});
+// If refetch is just a pure state projection, keep it on the LocalState-first lane
+// (for example, bump a local nonce like `tip_nonce_state`).
+cx.actions()
+    .local_update::<act::RefreshTip, u64>(&tip_nonce_state, |value| {
+        *value = value.saturating_add(1);
+    });
 
 // then include the nonce in the query key:
-let nonce = cx.watch_model(&tip_nonce).paint().value_or(0);
-let handle = cx.data().query(tip_key(nonce), policy, move |token| fetch(token));
+let tip_nonce_value = tip_nonce_state.paint_value(cx);
+let handle = cx.data().query(tip_key(tip_nonce_value), policy, move |token| fetch(token));
 ```
 
 ## Event pipeline (platform → UI)
@@ -344,33 +344,49 @@ In a typical window driver:
 
 ## Action handlers (logic)
 
-In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates. Start with `cx.actions().locals(...)` for LocalState-first flows, drop to `cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use `cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
+In the view runtime shape, typed action handlers are the boundary where you mutate tracked state and
+request UI updates. Start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for
+LocalState-first flows, use
+`payload_local_update_if::<A>(...)` as the default keyed-row payload write path, drop to
+`cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use
+`cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and
+keep raw `on_action_notify` plus lower-level payload/model seams for cookbook/reference host-side
+cases only:
 
 ```rust,ignore
-cx.actions().models::<act::Add>({
-    let draft = self.draft.clone();
-    let todos = self.todos.clone();
-    move |models| {
-        let text = models
-            .read(&draft, |v| v.trim().to_string())
-            .ok()
-            .unwrap_or_default();
+cx.actions()
+    .locals_with((&draft_state, &next_id_state, &todos_state))
+    .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
+        let text = tx.value(&draft_state).trim().to_string();
         if text.is_empty() {
             return false;
         }
 
-        let done = models.insert(false);
-        let _ = models.update(&todos, |todos| {
-            todos.push(TodoItem {
-                id: todos.len() as u64,
-                done,
-                text: Arc::from(text.clone()),
+        let id = tx.value(&next_id_state);
+        let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
+
+        if !tx.update(&todos_state, |rows| {
+            rows.insert(0, TodoRow {
+                id,
+                done: false,
+                text: Arc::from(text),
             });
-        });
-        let _ = models.update(&draft, String::clear);
-        true
-    }
-});
+        }) {
+            return false;
+        }
+
+        tx.set(&draft_state, String::new())
+    });
+
+cx.actions()
+    .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
+        if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+            row.done = !row.done;
+            true
+        } else {
+            false
+        }
+    });
 ```
 
 ## Async / background work (two patterns)

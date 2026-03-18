@@ -23,13 +23,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .variant(shadcn::ButtonVariant::Outline)
                 .disabled(true)
                 .test_id("ui-gallery-button-loading-submit")
-                .leading_children([shadcn::Spinner::new().into_element(cx)])
+                .leading_child(shadcn::Spinner::new().into_element(cx))
                 .into_element(cx),
             shadcn::Button::new("Downloading")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .disabled(true)
                 .test_id("ui-gallery-button-loading-download")
-                .trailing_children([shadcn::Spinner::new().into_element(cx)])
+                .trailing_child(shadcn::Spinner::new().into_element(cx))
                 .into_element(cx),
         ]
     })

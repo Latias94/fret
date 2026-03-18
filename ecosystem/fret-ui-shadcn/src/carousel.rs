@@ -1449,6 +1449,21 @@ impl Carousel {
             .into_element(cx)
     }
 
+    /// Eager-content helper for the upstream-shaped parts surface.
+    ///
+    /// Use this when the parts are already assembled as a `CarouselContent` value and the caller
+    /// does not need `cx` during content construction.
+    #[track_caller]
+    pub fn into_element_parts_content<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        content: CarouselContent,
+        previous: CarouselPrevious,
+        next: CarouselNext,
+    ) -> AnyElement {
+        self.into_element_parts(cx, |_cx| content, previous, next)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {

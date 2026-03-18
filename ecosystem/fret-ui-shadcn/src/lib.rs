@@ -227,6 +227,7 @@ pub mod raw {
     raw_module!(popover);
     raw_module!(progress);
     raw_module!(radio_group);
+    raw_module!(recharts_geometry);
     raw_module!(resizable);
     raw_module!(scroll_area);
     raw_module!(select);
@@ -274,8 +275,8 @@ pub mod facade {
     pub use crate::alert_dialog::{
         AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
         AlertDialogContentSize, AlertDialogDescription, AlertDialogFooter, AlertDialogHandle,
-        AlertDialogHeader, AlertDialogMedia, AlertDialogOverlay, AlertDialogPortal,
-        AlertDialogTitle, AlertDialogTrigger,
+        AlertDialogHeader, AlertDialogMedia, AlertDialogOverlay, AlertDialogPart,
+        AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
     };
     pub use crate::aspect_ratio::AspectRatio;
     pub use crate::avatar::{
@@ -306,6 +307,7 @@ pub mod facade {
         Card, CardAction, CardContent, CardDescription, CardFooter, CardFooterDirection,
         CardHeader, CardSize, CardTitle, card, card_action, card_content, card_description,
         card_description_children, card_footer, card_header, card_sized, card_title,
+        card_title_children,
     };
     pub use crate::carousel::{
         Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayApi,
@@ -316,12 +318,17 @@ pub mod facade {
         CarouselSlidesToScroll, CarouselWheelGesturesConfig, carousel_context, use_carousel,
     };
     pub use crate::chart::{
-        ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend,
-        ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartStyle, ChartTooltip,
-        ChartTooltipContent, ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,
-        chart_context, use_chart,
+        ChartConfig, ChartConfigItem, ChartContainer, ChartContainerBuild, ChartContext,
+        ChartLegend, ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartStyle,
+        ChartTooltip, ChartTooltipContent, ChartTooltipContentKind, ChartTooltipFormattedItem,
+        ChartTooltipIndicator, ChartTooltipItem, ChartTooltipItemFormatContext,
+        ChartTooltipLabelContext, chart_container, chart_context, use_chart,
     };
     pub use crate::checkbox::{Checkbox, checkbox};
+    pub use crate::collapsible::primitives::{
+        Collapsible as CollapsibleRoot, CollapsibleContent as CollapsibleContentPart,
+        CollapsibleTrigger as CollapsibleTriggerPart,
+    };
     pub use crate::collapsible::{
         Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
     };

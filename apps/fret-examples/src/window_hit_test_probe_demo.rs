@@ -137,10 +137,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut WindowState) -> ViewEle
         .unwrap_or_else(|| "<unknown>".to_string());
     let is_overlay = logical == OVERLAY_LOGICAL_WINDOW_ID;
 
-    let status = cx
-        .watch_model(&st.status)
-        .layout()
-        .value_or_else(|| Arc::from("Idle"));
+    let status = st.status.layout_in(cx).value_or_else(|| Arc::from("Idle"));
 
     let root_test_id = if is_overlay {
         TEST_ID_OVERLAY_ROOT

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
 use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
@@ -68,8 +69,10 @@ impl View for TodoDemoView {
             ]
         });
 
-        let todos = todos_state.layout(cx).value_or_default();
-        let draft_value = draft_state.layout(cx).value_or_default();
+        bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);
+
+        let todos = todos_state.layout_value(cx);
+        let draft_value = draft_state.layout_value(cx);
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
@@ -169,73 +172,73 @@ impl View for TodoDemoView {
         .w_full()
         .max_w(Px(720.0));
 
-        cx.actions().locals::<act::Add>({
-            let draft_state = draft_state.clone();
-            let next_id_state = next_id_state.clone();
-            let todos_state = todos_state.clone();
-            move |tx| {
-                let text = tx
-                    .value_or_else(&draft_state, String::new)
-                    .trim()
-                    .to_string();
-                if text.is_empty() {
-                    return false;
-                }
-
-                let id = tx.value_or(&next_id_state, 1);
-                let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
-
-                if !tx.update(&todos_state, |rows| {
-                    rows.push(TodoRow {
-                        id,
-                        done: false,
-                        text: Arc::from(text),
-                    });
-                }) {
-                    return false;
-                }
-
-                tx.set(&draft_state, String::new())
-            }
-        });
-
-        cx.actions().locals::<act::ClearDone>({
-            let todos_state = todos_state.clone();
-            move |tx| {
-                tx.update_if(&todos_state, |rows| {
-                    let before = rows.len();
-                    rows.retain(|row| !row.done);
-                    rows.len() != before
-                })
-            }
-        });
-
-        cx.actions()
-            .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
-                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
-                    row.done = !row.done;
-                    true
-                } else {
-                    false
-                }
-            });
-
-        cx.actions()
-            .payload_local_update_if::<act::Remove, Vec<TodoRow>>(&todos_state, |rows, id| {
-                let before = rows.len();
-                rows.retain(|row| row.id != id);
-                rows.len() != before
-            });
-
         ui::single(cx, todo_page(theme, card))
     }
+}
+
+fn bind_todo_actions(
+    cx: &mut AppUi<'_, '_>,
+    draft_state: &LocalState<String>,
+    next_id_state: &LocalState<u64>,
+    todos_state: &LocalState<Vec<TodoRow>>,
+) {
+    cx.actions()
+        .locals_with((draft_state, next_id_state, todos_state))
+        .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
+            let text = tx.value(&draft_state).trim().to_string();
+            if text.is_empty() {
+                return false;
+            }
+
+            let id = tx.value(&next_id_state);
+            let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
+
+            if !tx.update(&todos_state, |rows| {
+                rows.push(TodoRow {
+                    id,
+                    done: false,
+                    text: Arc::from(text),
+                });
+            }) {
+                return false;
+            }
+
+            tx.set(&draft_state, String::new())
+        });
+
+    cx.actions()
+        .locals_with(todos_state)
+        .on::<act::ClearDone>(|tx, todos_state| {
+            tx.update_if(&todos_state, |rows| {
+                let before = rows.len();
+                rows.retain(|row| !row.done);
+                rows.len() != before
+            })
+        });
+
+    cx.actions()
+        .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {
+            if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                row.done = !row.done;
+                true
+            } else {
+                false
+            }
+        });
+
+    cx.actions()
+        .payload_local_update_if::<act::Remove, Vec<TodoRow>>(todos_state, |rows, id| {
+            let before = rows.len();
+            rows.retain(|row| row.id != id);
+            rows.len() != before
+        });
 }
 
 fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
     ui::container(move |cx| {
         ui::single(
             cx,
-            ui::v_flex(move |cx| ui::children![cx; content])
+            ui::v_flex(move |cx| ui::single(cx, content))
                 .w_full()
                 .h_full()
                 .justify_center()

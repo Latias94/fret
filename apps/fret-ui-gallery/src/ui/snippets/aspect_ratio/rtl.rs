@@ -13,13 +13,15 @@ fn rtl_image<H: UiHost>(
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
     content_test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let image_id = demo_image
+    let model_image_id = demo_image
         .as_ref()
-        .and_then(|model| cx.watch_model(model).layout().cloned().flatten())
-        .or_else(|| super::images::landscape_image_id(cx));
+        .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
+    let asset_image = super::images::landscape_image_state(cx);
+    let image_id = model_image_id.or(asset_image.image);
+    let loading = model_image_id.is_none() && asset_image.loading;
 
     shadcn::MediaImage::maybe(image_id)
-        .loading(true)
+        .loading(loading)
         .fit(fret_core::ViewportFit::Cover)
         .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
         .refine_layout(LayoutRefinement::default().w_full().h_full())
@@ -32,12 +34,15 @@ fn ratio_example<H: UiHost>(
     ratio: f32,
     max_w: Px,
     test_id: &'static str,
+    figure_test_id: &'static str,
     content_test_id: &'static str,
+    caption_test_id: &'static str,
     demo_image: Option<Model<Option<fret_core::ImageId>>>,
 ) -> impl IntoUiElement<H> + use<H> {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
     let border = theme.color_token("border");
+    let muted_fg = theme.color_token("muted-foreground");
     let content = rtl_image(cx, demo_image, content_test_id).into_element(cx);
 
     let frame = shadcn::AspectRatio::with_child(content)
@@ -53,9 +58,17 @@ fn ratio_example<H: UiHost>(
         .into_element(cx)
         .test_id(test_id);
 
-    ui::h_flex(move |_cx| vec![frame])
+    let caption = ui::text("منظر طبيعي جميل")
+        .text_sm()
+        .text_color(ColorRef::Color(muted_fg))
+        .into_element(cx)
+        .test_id(caption_test_id);
+
+    ui::v_flex(move |_cx| vec![frame, caption])
         .layout(LayoutRefinement::default().w_full().min_w_0())
-        .justify_center()
+        .gap(Space::N2)
+        .items_center()
+        .test_id(figure_test_id)
 }
 
 // Kept as the copyable app-facing snippet surface; the gallery preview uses `render_preview(...)`
@@ -68,7 +81,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             16.0 / 9.0,
             Px(384.0),
             "ui-gallery-aspect-ratio-rtl",
+            "ui-gallery-aspect-ratio-rtl-figure",
             "ui-gallery-aspect-ratio-rtl-content",
+            "ui-gallery-aspect-ratio-rtl-caption",
             None,
         )
         .into_element(cx)
@@ -86,7 +101,9 @@ pub fn render_preview<H: UiHost>(
             16.0 / 9.0,
             Px(384.0),
             "ui-gallery-aspect-ratio-rtl",
+            "ui-gallery-aspect-ratio-rtl-figure",
             "ui-gallery-aspect-ratio-rtl-content",
+            "ui-gallery-aspect-ratio-rtl-caption",
             demo_image.clone(),
         )
         .into_element(cx)

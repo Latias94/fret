@@ -1146,6 +1146,15 @@ mod tests {
         >::new());
     }
 
+    #[test]
+    fn curated_facade_exposes_collapsible_parts_aliases() {
+        let _ = crate::facade::CollapsibleRoot::new();
+        let _ =
+            crate::facade::CollapsibleTriggerPart::new(Vec::<fret_ui::element::AnyElement>::new());
+        let _ =
+            crate::facade::CollapsibleContentPart::new(Vec::<fret_ui::element::AnyElement>::new());
+    }
+
     fn contains_text(root: &AnyElement, expected: &str) -> bool {
         match &root.kind {
             ElementKind::Text(props) if props.text.as_ref() == expected => true,

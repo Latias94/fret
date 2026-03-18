@@ -125,9 +125,11 @@ pressable
   .action_payload(TabId(42));
 
 // v2: handler consumes the pending payload
-cx.on_payload_action::<act::WorkspaceTabClose>(|host, acx, tab_id: TabId| {
+use fret::advanced::AppUiRawActionNotifyExt as _;
+
+cx.on_payload_action_notify::<act::WorkspaceTabClose>(|host, _acx, tab_id: TabId| {
     // close the tab
-    host.notify(acx);
+    close_tab(host, tab_id);
     true
 });
 ```
@@ -162,4 +164,3 @@ Rejected: explodes action registry and breaks keymap/palette discoverability.
 Deferred: replayable/serializable payloads are useful, but forcing it in v2 increases scope and
 cost. This prototype keeps payload as `Any` and can add serialization later for specific payload
 types/frontends.
-

@@ -584,6 +584,16 @@ impl Button {
         self
     }
 
+    /// Appends one fully custom content node, replacing the default label row once any custom
+    /// content is present.
+    ///
+    /// Prefer `leading_child(...)` / `trailing_child(...)` when you want to preserve the default
+    /// label and slot layout.
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
+        self
+    }
+
     /// Adds inline-start content while preserving the button's default label and slot layout.
     ///
     /// Prefer this for dynamic affordances such as `Spinner`, matching upstream
@@ -593,12 +603,24 @@ impl Button {
         self
     }
 
+    /// Appends one inline-start child while preserving the button's default label and slot layout.
+    pub fn leading_child(mut self, child: AnyElement) -> Self {
+        self.leading_children.push(child);
+        self
+    }
+
     /// Adds inline-end content while preserving the button's default label and slot layout.
     ///
     /// Prefer this for trailing affordances such as `Spinner`, matching upstream
     /// `data-icon="inline-end"` compositions without forcing a full content override.
     pub fn trailing_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.trailing_children = children.into_iter().collect();
+        self
+    }
+
+    /// Appends one inline-end child while preserving the button's default label and slot layout.
+    pub fn trailing_child(mut self, child: AnyElement) -> Self {
+        self.trailing_children.push(child);
         self
     }
 
@@ -1794,23 +1816,37 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 0.0);
     }
 
-    fn find_first_row(el: &AnyElement) -> Option<fret_ui::element::RowProps> {
+    fn find_first_horizontal_content_layout(
+        el: &AnyElement,
+    ) -> Option<fret_ui::element::LayoutStyle> {
         match &el.kind {
-            ElementKind::Row(props) => Some(*props),
-            _ => el.children.iter().find_map(find_first_row),
+            ElementKind::Row(props) => Some(props.layout),
+            ElementKind::Flex(props) if props.direction == fret_core::Axis::Horizontal => {
+                Some(props.layout)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(find_first_horizontal_content_layout),
         }
     }
 
-    fn find_first_row_element(el: &AnyElement) -> Option<&AnyElement> {
+    fn find_first_horizontal_content_element(el: &AnyElement) -> Option<&AnyElement> {
         match &el.kind {
             ElementKind::Row(_) => Some(el),
-            _ => el.children.iter().find_map(find_first_row_element),
+            ElementKind::Flex(props) if props.direction == fret_core::Axis::Horizontal => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(find_first_horizontal_content_element),
         }
     }
 
-    fn collect_row_texts(el: &AnyElement) -> Vec<String> {
-        let row = find_first_row_element(el).expect("expected row element");
-        row.children
+    fn collect_horizontal_content_texts(el: &AnyElement) -> Vec<String> {
+        let content =
+            find_first_horizontal_content_element(el).expect("expected horizontal content stack");
+        content
+            .children
             .iter()
             .filter_map(|child| match &child.kind {
                 ElementKind::Text(props) => Some(props.text.to_string()),
@@ -1836,7 +1872,10 @@ mod tests {
                     .trailing_children(vec![cx.text("end")])
                     .into_element(cx)
             });
-        assert_eq!(collect_row_texts(&ltr), vec!["start", "Main", "end"]);
+        assert_eq!(
+            collect_horizontal_content_texts(&ltr),
+            vec!["start", "Main", "end"]
+        );
 
         let rtl =
             elements::with_element_cx(&mut app, window, bounds, "button-inline-slots-rtl", |cx| {
@@ -1851,7 +1890,40 @@ mod tests {
                     },
                 )
             });
-        assert_eq!(collect_row_texts(&rtl), vec!["end", "Main", "start"]);
+        assert_eq!(
+            collect_horizontal_content_texts(&rtl),
+            vec!["end", "Main", "start"]
+        );
+    }
+
+    #[test]
+    fn button_single_child_helpers_append_without_replacing_existing_content() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let _ = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-single-child-helpers",
+            |cx| {
+                let button = Button::new("Hello")
+                    .child(cx.text("custom-a"))
+                    .child(cx.text("custom-b"))
+                    .leading_child(cx.text("lead"))
+                    .trailing_child(cx.text("trail"));
+
+                assert_eq!(button.children.len(), 2);
+                assert_eq!(button.leading_children.len(), 1);
+                assert_eq!(button.trailing_children.len(), 1);
+
+                button.into_element(cx)
+            },
+        );
     }
 
     #[test]
@@ -1879,9 +1951,10 @@ mod tests {
                     .into_element(cx)
             });
 
-        let row = find_first_row(&element).expect("expected Button to render a Row content stack");
-        assert_eq!(row.layout.size.height, Length::Fill);
-        assert_eq!(row.layout.size.width, Length::Auto);
+        let layout = find_first_horizontal_content_layout(&element)
+            .expect("expected Button to render a horizontal content stack");
+        assert_eq!(layout.size.height, Length::Fill);
+        assert_eq!(layout.size.width, Length::Auto);
     }
 
     #[test]
@@ -1915,9 +1988,10 @@ mod tests {
             },
         );
 
-        let row = find_first_row(&element).expect("expected Button to render a Row content stack");
-        assert_eq!(row.layout.size.height, Length::Fill);
-        assert_eq!(row.layout.size.width, Length::Fill);
+        let layout = find_first_horizontal_content_layout(&element)
+            .expect("expected Button to render a horizontal content stack");
+        assert_eq!(layout.size.height, Length::Fill);
+        assert_eq!(layout.size.width, Length::Fill);
     }
 
     #[test]

@@ -23,6 +23,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ])
         .trigger(shadcn::ComboboxTrigger::new().width_px(Px(260.0)))
         .input(shadcn::ComboboxInput::new().placeholder("Select a framework"))
+        .content(shadcn::ComboboxContent::new([
+            shadcn::ComboboxContentPart::input(
+                shadcn::ComboboxInput::new().placeholder("Search framework..."),
+            ),
+            shadcn::ComboboxContentPart::empty(shadcn::ComboboxEmpty::new("No framework found.")),
+        ]))
         .into_element(cx)
 }
 // endregion: example

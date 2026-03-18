@@ -1,5 +1,5 @@
-use fret_ui_shadcn::facade as shadcn;
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, Deserialize)]

@@ -552,6 +552,30 @@ fn badge_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn badge_docs_snippets_keep_centered_rows_and_explicit_inline_child_slots() {
+    for relative_path in [
+        "src/ui/snippets/badge/demo.rs",
+        "src/ui/snippets/badge/variants.rs",
+        "src/ui/snippets/badge/icon.rs",
+        "src/ui/snippets/badge/spinner.rs",
+        "src/ui/snippets/badge/colors.rs",
+        "src/ui/snippets/badge/rtl.rs",
+        "src/ui/snippets/badge/counts.rs",
+        "src/ui/snippets/badge/link.rs",
+    ] {
+        assert_normalized_markers_present(relative_path, &[".justify_center()"]);
+    }
+
+    assert_normalized_markers_present(
+        "src/ui/snippets/badge/spinner.rs",
+        &[
+            ".leading_children([shadcn::Spinner::new().into_element(cx)])",
+            ".trailing_children([shadcn::Spinner::new().into_element(cx)])",
+        ],
+    );
+}
+
+#[test]
 fn aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -584,7 +608,8 @@ fn aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Square\", square)",
             "DocSection::build(cx, \"Portrait\", portrait)",
             "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"Notes\", notes)",
+            "let api_reference = doc_layout::notes_block([",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -592,7 +617,8 @@ fn aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Square\", square)",
             "DocSection::new(\"Portrait\", portrait)",
             "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"Notes\", notes)",
+            "let api_reference = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
         ],
     );
 }
@@ -824,18 +850,57 @@ fn carousel_page_distinguishes_compact_builder_and_upstream_parts_lanes() {
     let carousel_page = read("src/ui/pages/carousel.rs");
     assert!(
         carousel_page.contains(
-            "`Usage` is the default compact builder path for common Fret call sites, while `Parts` remains the upstream-shaped copyable lane rather than an advanced escape hatch."
+            "`Usage` now mirrors the upstream docs-shaped parts lane, `Compact Builder` keeps the ergonomic Fret shorthand visible, and `Parts` remains the explicit adapter/diagnostics seam on that same copyable lane rather than an advanced escape hatch."
         ),
-        "src/ui/pages/carousel.rs should distinguish the compact default builder lane from the upstream-shaped parts lane"
+        "src/ui/pages/carousel.rs should distinguish upstream usage, the compact shorthand lane, and the explicit parts seam"
     );
     assert!(
-        carousel_page.contains("Default compact builder path for common Fret carousel call sites."),
-        "src/ui/pages/carousel.rs should label Usage as the compact default builder path"
+        !carousel_page
+            .contains("Default compact builder path for common Fret carousel call sites."),
+        "src/ui/pages/carousel.rs should keep the old compact-builder wording out of the Usage section"
     );
     assert!(
         carousel_page
-            .contains("Upstream-shaped copyable parts surface aligned with shadcn/ui v4 exports."),
-        "src/ui/pages/carousel.rs should keep Parts as a copyable upstream-shaped lane rather than marking it as advanced"
+            .contains("Compact Fret shorthand for common app call sites: `Carousel::new(items)`."),
+        "src/ui/pages/carousel.rs should expose Compact Builder as the Fret shorthand lane"
+    );
+    assert!(
+        carousel_page
+            .contains("Upstream shadcn docs shape using `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext`."),
+        "src/ui/pages/carousel.rs should label Usage as the docs-aligned upstream-shaped lane"
+    );
+    assert!(
+        carousel_page.contains(
+            "Focused adapter example on the same upstream-shaped lane when callers want explicit part values or diagnostics-specific control IDs."
+        ),
+        "src/ui/pages/carousel.rs should keep Parts as an explicit adapter seam on the upstream-shaped lane"
+    );
+    assert!(
+        carousel_page.contains(
+            "`Compact Builder` keeps `Carousel::new(items)` visible for app code, `Parts` keeps the explicit adapter/diagnostics seam visible, and `Loop` is a dedicated `loop=true` preview that the upstream docs only imply through `Options`."
+        ),
+        "src/ui/pages/carousel.rs should explain why the page switches into Fret follow-ups after the upstream docs path"
+    );
+    assert!(
+        carousel_page
+            .contains(".code_rust_from_file_region(snippets::api::DOCS_SOURCE, \"example\")"),
+        "src/ui/pages/carousel.rs should show the docs-aligned compact API example source"
+    );
+    assert!(
+        carousel_page
+            .contains(".code_rust_from_file_region(snippets::events::DOCS_SOURCE, \"example\")"),
+        "src/ui/pages/carousel.rs should show the docs-aligned Events example source"
+    );
+    assert!(
+        carousel_page.contains(
+            ".code_rust_from_file_region(snippets::plugin_autoplay::DOCS_SOURCE, \"example\")"
+        ),
+        "src/ui/pages/carousel.rs should show the docs-aligned Plugin example source"
+    );
+    assert!(
+        carousel_page
+            .contains(".code_rust_from_file_region(snippets::rtl::DOCS_SOURCE, \"example\")"),
+        "src/ui/pages/carousel.rs should show the docs-aligned RTL example source"
     );
 }
 
@@ -908,6 +973,28 @@ fn selected_combobox_snippets_prefer_direct_builder_chain_for_default_recipe_roo
         );
     }
     assert_sources_absent("src/ui/snippets/combobox", &[".into_element_parts("]);
+}
+
+#[test]
+fn selected_combobox_input_group_snippet_prefers_typed_input_addons() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/combobox/input_group.rs",
+        &[
+            ".input(",
+            ".children([shadcn::InputGroupAddon::new([icon::icon(",
+            ".align(shadcn::InputGroupAddonAlign::InlineStart)",
+            "state_rows(cx, &value, &query, \"ui-gallery-combobox-input-group\").into_element(cx)",
+        ],
+        &["ui::h_row(|cx|"],
+    );
+
+    let page = read("src/ui/pages/combobox.rs");
+    assert!(
+        page.contains(
+            "`Extras: Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children."
+        ),
+        "src/ui/pages/combobox.rs should document the typed ComboboxInput addon surface instead of teaching a generic children escape hatch"
+    );
 }
 
 #[test]
@@ -1282,6 +1369,9 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/input_group/dropdown.rs",
         &[
+            "shadcn::DropdownMenu::uncontrolled(cx)",
+            ".compose()",
+            ".trigger(trigger)",
             "shadcn::InputGroup::new(value)",
             ".placeholder(\"Enter file name\")",
             ".control_test_id(\"ui-gallery-input-group-dropdown-control\")",
@@ -1289,7 +1379,7 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
             ".trailing_has_button(true)",
             ".into_element(cx)",
         ],
-        &[".into_element_parts("],
+        &[".into_element_parts(", ".build_parts("],
     );
 
     let page = read("src/ui/pages/input_group.rs");
@@ -1304,6 +1394,12 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
             "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane."
         ),
         "src/ui/pages/input_group.rs should keep the dual-lane narrative explicit"
+    );
+    assert!(
+        page.contains(
+            "The `Dropdown` example intentionally stays on `DropdownMenu::compose()`; swapping the trigger to `InputGroupButton` does not by itself require falling back to `build_parts(...)`."
+        ),
+        "src/ui/pages/input_group.rs should keep nested dropdown triggers on the default DropdownMenu compose lane when no lower-level adapter seam is needed"
     );
 }
 
@@ -3357,6 +3453,7 @@ fn chart_snippets_prefer_ui_cx_on_the_default_app_surface() {
         &[
             "src/ui/snippets/chart/contracts.rs",
             "src/ui/snippets/chart/demo.rs",
+            "src/ui/snippets/chart/grid_axis.rs",
             "src/ui/snippets/chart/legend.rs",
             "src/ui/snippets/chart/rtl.rs",
             "src/ui/snippets/chart/tooltip.rs",
@@ -3380,21 +3477,123 @@ fn chart_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/chart.rs",
         &[
-            "DocSection::build(cx, \"Demo\", demo_cards)",
-            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Component\", demo_cards)",
+            "DocSection::build(cx, \"First Chart\", first_chart)",
+            "DocSection::build(cx, \"Chart Config\", config)",
+            "DocSection::build(cx, \"Theming\", theming)",
+            "DocSection::build(cx, \"Grid / Axis (Fret)\", grid_axis)",
             "DocSection::build(cx, \"Contracts\", contracts_overview)",
             "DocSection::build(cx, \"Tooltip\", tooltip_content)",
             "DocSection::build(cx, \"Legend\", legend_content)",
+            "DocSection::build(cx, \"Accessibility\", accessibility)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Notes\", notes_stack)",
         ],
         &[
-            "DocSection::new(\"Demo\", demo_cards)",
-            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Component\", demo_cards)",
+            "DocSection::new(\"First Chart\", first_chart)",
+            "DocSection::new(\"Chart Config\", config)",
+            "DocSection::new(\"Theming\", theming)",
+            "DocSection::new(\"Grid / Axis (Fret)\", grid_axis)",
             "DocSection::new(\"Contracts\", contracts_overview)",
             "DocSection::new(\"Tooltip\", tooltip_content)",
             "DocSection::new(\"Legend\", legend_content)",
+            "DocSection::new(\"Accessibility\", accessibility)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Notes\", notes_stack)",
         ],
+    );
+}
+
+#[test]
+fn chart_tooltip_docs_keep_custom_children_seam_explicit() {
+    let tooltip = read("src/ui/snippets/chart/tooltip.rs");
+    assert!(
+        tooltip.contains(".formatter(|context|"),
+        "src/ui/snippets/chart/tooltip.rs should keep the structured formatter example visible"
+    );
+    assert!(
+        tooltip.contains(".into_element_parts(cx, |cx, context|"),
+        "src/ui/snippets/chart/tooltip.rs should keep the custom children adapter seam visible"
+    );
+    assert!(
+        tooltip.contains(".into_element_parts_with_label("),
+        "src/ui/snippets/chart/tooltip.rs should keep the combined custom label + row adapter seam visible"
+    );
+
+    let contracts = read("src/ui/snippets/chart/contracts.rs");
+    assert!(
+        contracts.contains(
+            "custom header/row composition via into_element_label_parts(...), into_element_parts(...), and into_element_parts_with_label(...)"
+        ),
+        "src/ui/snippets/chart/contracts.rs should document the header-only, row-only, and combined tooltip composition seams"
+    );
+
+    let page = read("src/ui/pages/chart.rs");
+    assert!(
+        page.contains(
+            "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)`, `ChartTooltipContent::into_element_parts(cx, ...)`, and `ChartTooltipContent::into_element_parts_with_label(cx, ...)` cover header-only, row-only, or fully combined children composition."
+        ),
+        "src/ui/pages/chart.rs should explain the advanced custom header/row tooltip seams"
+    );
+    assert!(
+        page.contains(
+            "Tooltip examples now read in a shadcn-like order: props first, config-driven colors and key remapping second, then formatter plus header-only, row-only, and combined custom children seams."
+        ),
+        "src/ui/pages/chart.rs should keep the Tooltip section description aligned with the custom header/row seams"
+    );
+}
+
+#[test]
+fn chart_page_keeps_shadcn_docs_path_before_fret_follow_ups() {
+    let page = read("src/ui/pages/chart.rs");
+    let normalized = page.split_whitespace().collect::<String>();
+
+    assert!(
+        page.contains(
+            "Composition-first chart recipe surface: build the chart body inside `chart_container(config, |cx| ...)`, then opt into `ChartTooltip` and `ChartLegend` only where needed."
+        ),
+        "src/ui/pages/chart.rs should keep the Component section on the composition-first child-authoring lane"
+    );
+    assert!(
+        page.contains(
+            "Preview mirrors the shadcn Chart docs path first: `Component`, `First Chart`, `Chart Config`, `Theming`, `Tooltip`, `Legend`, `Accessibility`, and `RTL`. After that, Gallery keeps Fret-specific follow-ups explicit: `Grid / Axis (Fret)`, `Contracts`, and `Notes`."
+        ),
+        "src/ui/pages/chart.rs should explain the shadcn docs path before the Fret-specific follow-ups"
+    );
+    assert!(
+        page.contains(
+            "Focused Fret follow-up: grid and axis remain spec-owned on `delinea::ChartSpec` today, so the copyable setup lives beside the retained chart engine instead of the `ChartContainer` child lane."
+        ),
+        "src/ui/pages/chart.rs should keep the spec-owned grid/axis follow-up explicit on the page surface"
+    );
+    assert!(
+        page.contains(
+            "Grid and axis stay in the retained chart spec instead of separate child widgets."
+        ),
+        "src/ui/pages/chart.rs should explain why the shadcn `Add Grid` and `Add Axis` steps stay inside the retained chart spec on Fret"
+    );
+    assert!(
+        normalized.contains(
+            "vec![component,first_chart,config,theming,tooltip_content,legend_content,accessibility,rtl,grid_axis,contracts_overview,notes_stack,]"
+        ),
+        "src/ui/pages/chart.rs should place the grid/axis follow-up ahead of `Contracts` and `Notes`"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![component,first_chart,config,theming,contracts_overview,tooltip_content,legend_content,accessibility,rtl,notes_stack,]"
+        ),
+        "src/ui/pages/chart.rs should not reinsert `Contracts` into the middle of the shadcn docs path"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![component,first_chart,config,theming,tooltip_content,legend_content,accessibility,grid_axis,rtl,contracts_overview,notes_stack,]"
+        ),
+        "src/ui/pages/chart.rs should keep `Grid / Axis (Fret)` after `RTL`, not inside the shadcn docs path"
+    );
+    assert!(
+        !page.contains("DocSection::build(cx, \"Demo\", demo_cards)"),
+        "src/ui/pages/chart.rs should keep the top section aligned to shadcn's `Component` naming instead of `Demo`"
     );
 }
 
@@ -3493,10 +3692,10 @@ fn carousel_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Plugin (Wheel gestures)\", plugin_wheel)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"Loop\", loop_carousel)",
-            "DocSection::build(cx, \"Loop downgrade (cannotLoop)\", loop_downgrade_cannot_loop)",
-            "DocSection::build(cx, \"Focus\", focus)",
-            "DocSection::build(cx, \"Duration (Embla)\", duration)",
-            "DocSection::build(cx, \"Expandable\", expandable)",
+            "DocSection::build_diagnostics(cx, \"Loop downgrade (cannotLoop)\",",
+            "DocSection::build_diagnostics(cx, \"Focus\", focus)",
+            "DocSection::build_diagnostics(cx, \"Duration (Embla)\", duration)",
+            "DocSection::build_diagnostics(cx, \"Expandable\", expandable)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -3698,6 +3897,7 @@ fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/card/meeting_notes.rs",
             "src/ui/snippets/card/rtl.rs",
             "src/ui/snippets/card/size.rs",
+            "src/ui/snippets/card/title_children.rs",
             "src/ui/snippets/card/usage.rs",
         ],
         &[
@@ -3717,6 +3917,27 @@ fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn card_rich_title_snippet_prefers_copyable_card_title_children_helper() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/card/title_children.rs",
+        &[
+            "shadcn::card_title_children(|cx|",
+            "cx.styled_text(rich_title_text())",
+            "icon::icon(cx, IconId::new_static(\"lucide.sparkles\"))",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("CardTitle::build("),
+        "src/ui/snippets/card/title_children.rs reintroduced the lower-level `CardTitle::build(...)` teaching surface",
+    );
+    assert!(
+        !normalized.contains("CardTitle::new_children("),
+        "src/ui/snippets/card/title_children.rs should prefer the app-facing `shadcn::card_title_children(...)` helper",
+    );
+}
+
+#[test]
 fn card_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/card.rs",
@@ -3726,6 +3947,8 @@ fn card_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Size\", size)",
             "DocSection::build(cx, \"Image\", image)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Rich Title (Fret)\", rich_title)",
             "DocSection::build(cx, \"Compositions\", compositions)",
             "DocSection::build(cx, \"CardContent\", card_content_inline_button)",
             "DocSection::build(cx, \"Meeting Notes\", meeting_notes)",
@@ -3737,6 +3960,8 @@ fn card_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Size\", size)",
             "DocSection::new(\"Image\", image)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Rich Title (Fret)\", rich_title)",
             "DocSection::new(\"Compositions\", compositions)",
             "DocSection::new(\"CardContent\", card_content_inline_button)",
             "DocSection::new(\"Meeting Notes\", meeting_notes)",
@@ -3849,10 +4074,10 @@ fn selected_collapsible_snippet_helpers_prefer_into_ui_element_over_anyelement()
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/collapsible/rtl.rs",
         &[
-            "fn details_collapsible<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id_prefix: &'static str, open: Option<Model<bool>>, label: &'static str, status: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn detail_card<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str, title: &'static str, detail: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn details_collapsible<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id_prefix: &'static str, open: Option<Model<bool>>, label: &'static str, status: &'static str,) -> AnyElement",
+            "fn detail_card<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str, title: &'static str, detail: &'static str,) -> AnyElement",
         ],
     );
 
@@ -3861,12 +4086,12 @@ fn selected_collapsible_snippet_helpers_prefer_into_ui_element_over_anyelement()
         &[
             "fn rotated_lucide<H: UiHost>(cx: &mut ElementContext<'_, H>, id: &'static str, rotation_deg: f32,) -> impl IntoUiElement<H> + use<H>",
             "fn file_leaf<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str,) -> impl IntoUiElement<H> + use<H>",
-            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, open_model: Model<bool>, children: Vec<AnyElement>,) -> impl IntoUiElement<H> + use<H>",
+            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, children: &'static [TreeItem],) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
             "fn rotated_lucide<H: UiHost>(cx: &mut ElementContext<'_, H>, id: &'static str, rotation_deg: f32,) -> AnyElement",
             "fn file_leaf<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str,) -> AnyElement",
-            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, open_model: Model<bool>, children: Vec<AnyElement>,) -> AnyElement",
+            "fn folder<H: UiHost>(cx: &mut ElementContext<'_, H>, key: &'static str, label: &'static str, children: &'static [TreeItem],) -> AnyElement",
         ],
     );
 }
@@ -4609,20 +4834,24 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             "let about = doc_layout::notes_block([",
             "let date_picker = doc_layout::notes_block([",
             "let selected_date_timezone = doc_layout::notes_block([",
+            "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
             "let about = DocSection::build(cx, \"About\", about)",
             "let date_picker = DocSection::build(cx, \"Date Picker\", date_picker)",
             "let selected_date_timezone = DocSection::build(cx, \"Selected Date (With TimeZone)\", selected_date_timezone)",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "let about = doc_layout::notes(",
             "let date_picker = doc_layout::notes(",
             "let selected_date_timezone = doc_layout::notes(",
+            "let api_reference = doc_layout::notes(",
             "let notes = doc_layout::notes(",
             "DocSection::new(\"About\", about)",
             "DocSection::new(\"Date Picker\", date_picker)",
             "DocSection::new(\"Selected Date (With TimeZone)\", selected_date_timezone)",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -4755,6 +4984,7 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
     }
 
     for relative_path in [
+        "src/ui/pages/card.rs",
         "src/ui/pages/switch.rs",
         "src/ui/pages/toggle.rs",
         "src/ui/pages/toggle_group.rs",
@@ -4810,12 +5040,7 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
         ],
     );
 
-    for relative_path in [
-        "src/ui/pages/card.rs",
-        "src/ui/pages/input_otp.rs",
-        "src/ui/pages/sidebar.rs",
-        "src/ui/pages/aspect_ratio.rs",
-    ] {
+    for relative_path in ["src/ui/pages/input_otp.rs", "src/ui/pages/sidebar.rs"] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
@@ -4828,6 +5053,18 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             ],
         );
     }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/aspect_ratio.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+        ],
+    );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/card.rs",
@@ -4997,6 +5234,7 @@ fn selected_card_snippets_prefer_card_wrapper_family() {
     for relative_path in [
         "src/ui/snippets/carousel/basic.rs",
         "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/compact_builder.rs",
         "src/ui/snippets/carousel/demo.rs",
         "src/ui/snippets/carousel/duration_embla.rs",
         "src/ui/snippets/carousel/events.rs",
@@ -5698,18 +5936,40 @@ fn selected_carousel_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
         ],
     );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/compact_builder.rs",
+        &[
+            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> impl IntoUiElement<fret_app::App> + use<>",
+        ],
+        &[
+            "fn slide_card(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+            "fn slide(cx: &mut UiCx<'_>, idx: usize) -> AnyElement",
+        ],
+    );
 }
 
 #[test]
-fn selected_carousel_usage_and_parts_snippets_keep_their_dual_lane_story() {
+fn selected_carousel_usage_compact_builder_and_parts_snippets_keep_their_lane_story() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/carousel/usage.rs",
         &[
-            "shadcn::Carousel::new(items)",
+            "shadcn::Carousel::default()",
             ".test_id(\"ui-gallery-carousel-usage\")",
+            ".into_element_parts_content(",
+        ],
+        &["shadcn::Carousel::new(items)"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/carousel/compact_builder.rs",
+        &[
+            "shadcn::Carousel::new(items)",
+            ".test_id(\"ui-gallery-carousel-compact-builder\")",
             ".into_element(cx)",
         ],
-        &[".into_element_parts("],
+        &[".into_element_parts(", ".into_element_parts_content("],
     );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
@@ -5717,16 +5977,17 @@ fn selected_carousel_usage_and_parts_snippets_keep_their_dual_lane_story() {
         &[
             "shadcn::Carousel::default()",
             ".test_id(\"ui-gallery-carousel-parts\")",
+            ".test_id(\"ui-gallery-carousel-parts-previous\")",
+            ".test_id(\"ui-gallery-carousel-parts-next\")",
             ".into_element_parts(",
         ],
-        &[],
+        &[".into_element_parts_content("],
     );
 }
 
 #[test]
 fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
     for relative_path in [
-        "src/ui/snippets/carousel/basic.rs",
         "src/ui/snippets/carousel/sizes_thirds.rs",
         "src/ui/snippets/carousel/sizes.rs",
         "src/ui/snippets/carousel/spacing.rs",
@@ -5749,9 +6010,109 @@ fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
     let carousel_page = read("src/ui/pages/carousel.rs");
     assert!(
         carousel_page.contains(
-            "The docs-first examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`, `Loop`) and the ordinary diagnostics demos (`Demo`, `API`, `Focus`, `Duration`, autoplay/wheel examples) stay on that compact builder lane unless a snippet explicitly needs control-level parts for diagnostics or custom test IDs."
+            "The docs-path examples below (`Sizes`, `Spacing`, `Orientation`, `Options`) and the docs-aligned previews (`Demo`, `API`, base autoplay plugin, `RTL`) still stay on the compact builder lane unless a snippet explicitly needs control-level parts or diagnostics-specific control IDs."
         ),
-        "src/ui/pages/carousel.rs should explain why docs-first examples stay on the compact builder lane"
+        "src/ui/pages/carousel.rs should explain which examples remain on the upstream docs path compact-builder lane"
+    );
+}
+
+#[test]
+fn carousel_page_keeps_docs_width_lane_distinct_from_fixed_width_diagnostics_harnesses() {
+    for relative_path in [
+        "src/ui/snippets/carousel/options.rs",
+        "src/ui/snippets/carousel/loop_carousel.rs",
+        "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/events.rs",
+        "src/ui/snippets/carousel/plugin_autoplay.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_delays.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(relative_path, &[".max_w(max_w_xs)"]);
+        assert!(
+            !normalized.contains(".w_px(max_w_xs)"),
+            "{} should keep the upstream docs width lane (`w_full + max_w`) instead of a fixed-width harness",
+            manifest_path(relative_path).display()
+        );
+    }
+
+    let duration_normalized = assert_normalized_markers_present(
+        "src/ui/snippets/carousel/duration_embla.rs",
+        &["LayoutRefinement::default().w_px(max_w_xs)"],
+    );
+    assert!(
+        !duration_normalized.contains("LayoutRefinement::default().w_full().max_w(max_w_xs)"),
+        "{} should keep the fixed-width harness lane for deterministic engine evidence",
+        manifest_path("src/ui/snippets/carousel/duration_embla.rs").display()
+    );
+
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    assert!(
+        carousel_page.contains(
+            "Docs-path snippets keep the upstream `w_full().max_w(...)` width lane on the carousel root itself; diagnostics follow-ups may switch to fixed-width shells (`w_px(...)`) when deterministic control geometry matters more than copyable docs parity."
+        ),
+        "src/ui/pages/carousel.rs should explain why docs snippets keep the upstream root width lane while diagnostics harnesses may use fixed-width shells"
+    );
+}
+
+#[test]
+fn carousel_page_keeps_basic_preview_out_of_the_upstream_docs_path() {
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    let normalized = carousel_page.split_whitespace().collect::<String>();
+
+    assert!(
+        carousel_page.contains(
+            "`Basic` remains a gallery follow-up baseline preview because the upstream docs jump straight from `Usage` into the `Sizes` examples instead of showing a separate single-slide baseline section."
+        ),
+        "src/ui/pages/carousel.rs should explain why `Basic` stays after the upstream docs path"
+    );
+    assert!(
+        carousel_page.contains(
+            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
+        ),
+        "src/ui/pages/carousel.rs should describe `Basic` as a follow-up baseline preview rather than part of the upstream docs path"
+    );
+    assert!(
+        normalized.contains(
+            "vec![demo,about,usage,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
+        ),
+        "src/ui/pages/carousel.rs should place `Basic` after `Fret Follow-ups` instead of inside the upstream docs path"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,"
+        ),
+        "src/ui/pages/carousel.rs should not keep `Basic` before the docs-path size examples"
+    );
+}
+
+#[test]
+fn carousel_page_keeps_extra_plugin_variants_out_of_the_upstream_docs_path() {
+    let carousel_page = read("src/ui/pages/carousel.rs");
+    let normalized = carousel_page.split_whitespace().collect::<String>();
+
+    assert!(
+        carousel_page.contains(
+            "`Plugin (Autoplay, Controlled)`, `Plugin (Autoplay, stopOnInteraction via focus)`, `Plugin (Autoplay, stopOnLastSnap)`, `Plugin (Autoplay, per-snap delays)`, and `Plugin (Wheel gestures)` remain follow-ups because the upstream docs only show the base autoplay plugin example."
+        ),
+        "src/ui/pages/carousel.rs should explain why the extra plugin variants stay after the upstream docs path"
+    );
+    assert!(
+        carousel_page.contains(
+            "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`."
+        ),
+        "src/ui/pages/carousel.rs should describe the narrowed docs path before the follow-up plugin variants"
+    );
+    assert!(
+        normalized.contains(
+            "vec![demo,about,usage,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,rtl,fret_follow_ups,basic,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,compact_builder,parts,loop_carousel,loop_downgrade_cannot_loop,focus,duration,expandable,api_reference,]"
+        ),
+        "src/ui/pages/carousel.rs should place the extra plugin variants after `Fret Follow-ups` instead of inside the upstream docs path"
+    );
+    assert!(
+        !normalized.contains(
+            "vec![demo,about,usage,basic,sizes_thirds,sizes,spacing,spacing_responsive,orientation_vertical,options,api,events,plugin,plugin_controlled,plugin_stop_on_focus,plugin_stop_on_last_snap,plugin_delays,plugin_wheel,rtl,"
+        ),
+        "src/ui/pages/carousel.rs should not place the extra plugin variants before `RTL`"
     );
 }
 
@@ -5761,13 +6122,16 @@ fn carousel_parts_lane_is_limited_to_explicit_parts_and_diagnostics_snippets() {
         "src/ui/snippets/carousel/events.rs".to_string(),
         "src/ui/snippets/carousel/parts.rs".to_string(),
         "src/ui/snippets/carousel/rtl.rs".to_string(),
+        "src/ui/snippets/carousel/usage.rs".to_string(),
     ]);
 
     let actual = rust_sources("src/ui/snippets/carousel")
         .into_iter()
         .filter_map(|path| {
             let source = read_path(&path);
-            source.contains(".into_element_parts(").then(|| {
+            (source.contains(".into_element_parts(")
+                || source.contains(".into_element_parts_content("))
+            .then(|| {
                 path.strip_prefix(manifest_path(""))
                     .unwrap()
                     .display()
@@ -5778,7 +6142,7 @@ fn carousel_parts_lane_is_limited_to_explicit_parts_and_diagnostics_snippets() {
 
     assert_eq!(
         actual, expected,
-        "carousel parts-lane usage drifted; docs-first examples should stay on the compact builder lane unless a snippet explicitly needs parts or diagnostics wiring"
+        "carousel parts-lane usage drifted; only the docs-aligned Usage snippet plus explicit parts/diagnostics seams should exercise the parts adapters"
     );
 }
 
@@ -6409,9 +6773,9 @@ fn selected_breadcrumb_snippet_helpers_prefer_into_ui_element_over_anyelement() 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/breadcrumb/dropdown.rs",
         &[
-            "fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
+            "fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H>",
         ],
-        &["fn dot_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+        &["fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 }
 
@@ -7299,17 +7663,27 @@ fn selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement(
         } else {
             "fn rtl_image<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>, content_test_id: &'static str,) -> AnyElement"
         };
+        let ratio_helper = if relative_path.ends_with("rtl.rs") {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
+        } else {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>"
+        };
+        let ratio_helper_old = if relative_path.ends_with("rtl.rs") {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, figure_test_id: &'static str, content_test_id: &'static str, caption_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement"
+        } else {
+            "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement"
+        };
 
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
                 image_helper,
-                "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
+                ratio_helper,
                 "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> impl IntoUiElement<H> + use<H>",
             ],
             &[
                 image_helper_old,
-                "fn ratio_example<H: UiHost>(cx: &mut ElementContext<'_, H>, ratio: f32, max_w: Px, test_id: &'static str, content_test_id: &'static str, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
+                ratio_helper_old,
                 "pub fn render_preview<H: UiHost>(cx: &mut ElementContext<'_, H>, demo_image: Option<Model<Option<fret_core::ImageId>>>,) -> AnyElement",
             ],
         );
@@ -7607,16 +7981,16 @@ fn selected_chart_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/chart/demo.rs",
         &[
-            "let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| -> impl IntoUiElement<fret_app::App> + use<>",
-            "let chart_card = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str, kind: DemoChartKind, footer_secondary: &'static str, test_id: &'static str| -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn trending_footer(cx: &mut UiCx<'_>, secondary: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn chart_card(title: &'static str, description: &'static str, canvas: AnyElement, footer_secondary: &'static str, test_id: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
             "shadcn::card(",
             "shadcn::card_header(",
             "shadcn::card_content(",
             "shadcn::card_footer(",
         ],
         &[
-            "let trending_footer = |cx: &mut UiCx<'_>, secondary: &'static str| {",
-            "let chart_card = |cx: &mut UiCx<'_>, title: &'static str, description: &'static str, kind: DemoChartKind, footer_secondary: &'static str, test_id: &'static str| {",
+            "fn trending_footer(cx: &mut UiCx<'_>, secondary: &'static str,) -> AnyElement",
+            "fn chart_card(title: &'static str, description: &'static str, canvas: AnyElement, footer_secondary: &'static str, test_id: &'static str,) -> AnyElement",
             "shadcn::Card::new(",
             "shadcn::CardHeader::new(",
             "shadcn::CardContent::new(",

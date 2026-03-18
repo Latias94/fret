@@ -6,8 +6,11 @@ Related:
 
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
+- Closeout audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+- Post-v1 execution checklist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
 - Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 - Post-v1 shortlist: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- Shared-surface evidence matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
 - Post-v1 endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
 - Post-app-entry retained-seam audit: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
 - Hard-delete endgame index: `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
@@ -35,16 +38,22 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-03-16)
+## Closeout status snapshot (as of 2026-03-16)
 
 This snapshot is intentionally evidence-based: only mark a milestone as “Met” when the in-tree code,
 teaching surfaces, and gates line up.
 
 - **M0**: Met (workstream docs + ADRs exist; indices are updated).
 - **M1**: Met (typed unit actions exist; keymap/palette/menu/pointer triggers converge on the same dispatch pipeline, with diagnostics traces explaining availability/dispatch outcomes).
-- **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; default onboarding has narrowed to three entrypoints; adoption in templates + cookbook/examples is ongoing).
-- **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
-- **M4**: In progress (cookbook/examples + ui-gallery now share the same default `value_*` read suffix, default teaching/reference surfaces have moved off `use_state`, and broader builder-first cleanup continues).
+- **M2**: Met for the shipped v1 runtime surface (`View` + grouped app authoring are landed; the
+  remaining template/cookbook/docs cleanup is post-v1 productization, not missing runtime
+  contract work).
+- **M3**: Deferred out of scope for v1 closeout (multi-frontend convergence remains a future
+  cross-frontend/product lane rather than unresolved action-first migration debt).
+- **M4**: Met as the final default-path hardening batch (cookbook/examples + ui-gallery share the
+  same default `value_*` read suffix, default teaching/reference surfaces have moved off
+  `use_state`, the canonical trio/docs/templates teach the shorter tracked-read and keyed-row
+  write path, and `ui::single(cx, child)` now closes the narrow single-child late-landing batch).
 - **M4 progress correction (2026-03-16)**: the first ceremony-reduction batch is now landed on
   the canonical trio plus the generated todo/simple-todo templates and default-path docs:
   tracked reads teach `state.layout(cx).value_*` / `state.paint(cx).value_*`, and common keyed-row
@@ -57,22 +66,33 @@ teaching surfaces, and gates line up.
   audit rather than as unfinished primitive-table migration work.
 - **M4 note**: a docs-first `DataTable` golden-path note now exists, so future work should only
   widen helpers if a smaller curated recipe still looks materially too noisy in practice.
-- **M5**: Planned (editor-grade proof points: docking/workspace integration).
+- **M5**: Deferred out of scope for this closeout (editor-grade docking/workspace proof points are
+  future product/integration lanes, not blockers for the shipped action/view runtime reset).
 - **M6**: Met (MVU long-term stance is decided; in-tree MVU is removed and only archival migration notes remain).
 - **M7-M9**: Met (payload actions v2 landed; MVU hard delete and reintroduction gates are in place).
-- **Overall assessment**: v1 is successful as an architectural reset and teaching-surface convergence
-  pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
-  ergonomics work rather than unfinished migration closure.
+- **Closeout correction (2026-03-16)**: `CLOSEOUT_AUDIT_2026-03-16.md` now classifies this
+  workstream as closed for v1 migration and default-path hardening. Remaining future questions are
+  separate architecture/product lanes or optional ergonomics experiments, not open migration debt.
+- **Overall assessment**: the action-first workstream is now closed as an architectural reset plus
+  default-path convergence pass; future work should reopen only through narrower follow-on lanes
+  rather than by keeping this workstream marked "in progress".
+- **Reading rule (2026-03-16)**: historical M3/M5 notes describe future cross-cutting directions,
+  not blockers to the action-first closeout.
 - **Ownership correction (2026-03-16)**: shadcn discovery-lane closure and `fret` root lane
   budgeting are now explicitly treated as authoring-surface closeout work, not as this
-  workstream's main next milestone. The remaining action-first responsibility is default-path
-  density reduction plus bridge retirement pressure (`AppActivateExt` should keep shrinking, not
-  expanding).
+  workstream's main next milestone. The only remaining maintenance rule carried forward from this
+  lane is bridge retirement pressure (`AppActivateExt` should keep shrinking, not expanding).
 - **Execution gate (2026-03-16)**: do not widen the default app lane with new sugar, macro
   promotion, or bridge growth until the authoring-surface closeout has first stabilized
   `fret-ui-shadcn` discovery and the `fret` root lane budget.
 
-## Current density-reduction order (2026-03-16)
+## Historical density-reduction order (archived on 2026-03-16)
+
+The operational form of this order now lives in
+`docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`.
+
+Read this section as the archived order that led to closeout, not as a standing invitation to
+reopen the workstream.
 
 1. Finish the next default-path batch on keyed/list/default child-collection ergonomics.
    Scope rule: move the canonical trio, generated templates, first-hour docs, and source-policy
@@ -231,7 +251,7 @@ Adoption note (as of 2026-03-07):
 
 Evidence anchors (verified in-tree as of 2026-03-08):
 
-- `ecosystem/fret/src/view.rs` (`TrackedStateExt::{layout, paint, hit_test}` now covers `LocalState<T>`, `Model<T>`, and `QueryHandle<T>` behind `state-query`; `WatchedState::value*`, `LocalState::{watch, read_in, revision_in}`, documented `LocalState::{update_in, set_in, update_action, set_action}` write semantics, `ViewCx::on_action_notify_*`, and `ViewCx::on_action_notify_local_*` helpers)
+- `ecosystem/fret/src/view.rs` (`TrackedStateExt::{layout, paint, hit_test}` now covers `LocalState<T>`, `Model<T>`, and `QueryHandle<T>` behind `state-query`; `WatchedState::value*`, `LocalState::{watch, read_in, revision_in}`, documented `LocalState::{update_in, set_in}` store-transaction semantics, grouped tracked-write helpers, and `ViewCx::on_action_notify_*` / `ViewCx::on_action_notify_local_*`)
 - `ecosystem/fret/src/view.rs` test `local_state_update_action_requests_redraw_and_notify` (locks the post-v1 rule that tracked local writes inside action dispatch request redraw and notify, while `notify()` remains an escape hatch rather than a teaching-surface default)
 - `ecosystem/fret-ui-kit/src/declarative/model_watch.rs` (`ModelWatchExt` still backs legacy `cx.watch_model(...)`, while `QueryHandleWatchExt` now gives `ElementContext` query surfaces the query-specific handle-side `handle.layout_query(cx).value_*` read shape that mirrors the View runtime)
 - `docs/examples/todo-app-golden-path.md`, `docs/integrating-tokio-and-reqwest.md`, `docs/workstreams/standalone/imui-state-integration-v1.md` (narrative docs now mirror the same query handle-side read story across `ViewCx` and `ElementContext`, including the `QueryHandleWatchExt` path for `handle.paint_query(cx).value_*` / `handle.layout_query(cx).value_*`)
@@ -302,7 +322,7 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
 - `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the approved advanced `on_action_notify` teaching-surface exceptions and keeps `fret-examples` plus ui-gallery pages/snippets on the zero-exception path)
-- `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` (keeps `fret-examples` and ui-gallery teaching pages/snippets on the default helper surface without single-model aliases; scaffold templates keep equivalent unit-test assertions)
+- `ecosystem/fret/src/view.rs` source-policy tests (keep the former single-model raw action aliases deleted; scaffold templates keep equivalent unit-test assertions)
 - `tools/gate_no_mvu_in_tree.py` / `tools/gate_no_mvu_in_cookbook.py` (prevent MVU surfaces from reappearing in code after the M9 hard delete)
 
 Hardening follow-up (open):
@@ -311,7 +331,7 @@ Hardening follow-up (open):
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
-- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` as the default activation glue; advanced aliases remain available but stay off the default teaching surfaces via `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` plus scaffold template unit tests, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
+- Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame grouped `cx.actions().locals/models/transient/payload(...)` as the root/view default and widget-local `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` / `.listen(...)` as the default activation glue; the former single-model raw aliases are now deleted outright, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` plus scaffold template and source-policy tests.
 
 Post-v1 direction (recommended):
 

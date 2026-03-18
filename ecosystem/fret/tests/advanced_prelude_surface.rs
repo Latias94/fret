@@ -20,6 +20,45 @@ fn advanced_prelude_slice() -> &'static str {
     &advanced_slice[prelude_start..advanced_end]
 }
 
+fn advanced_prelude_exports_symbol(symbol: &str) -> bool {
+    advanced_prelude_slice()
+        .split(';')
+        .filter(|statement| statement.contains("pub use "))
+        .any(|statement| statement_exports_symbol(statement, symbol))
+}
+
+fn statement_exports_symbol(statement: &str, symbol: &str) -> bool {
+    let Some(pub_use_start) = statement.find("pub use ") else {
+        return false;
+    };
+    let statement = &statement[pub_use_start + "pub use ".len()..];
+
+    if let Some((_, items)) = statement.rsplit_once("::{") {
+        let items = items.trim_end_matches('}');
+        return items
+            .split(',')
+            .filter_map(exported_symbol_name)
+            .any(|exported| exported == symbol);
+    }
+
+    exported_symbol_name(statement).is_some_and(|exported| exported == symbol)
+}
+
+fn exported_symbol_name(item: &str) -> Option<&str> {
+    let item = item.trim();
+    if item.is_empty() {
+        return None;
+    }
+
+    if let Some((_, alias)) = item.rsplit_once(" as ") {
+        let alias = alias.trim();
+        return (alias != "_").then_some(alias);
+    }
+
+    let exported = item.rsplit("::").next()?.trim();
+    (exported != "_").then_some(exported)
+}
+
 #[test]
 fn advanced_prelude_stays_advanced_only_instead_of_smuggling_component_surface() {
     let advanced_prelude = advanced_prelude_slice();
@@ -43,7 +82,6 @@ fn advanced_prelude_keeps_manual_assembly_seams_explicit() {
 
 #[test]
 fn advanced_prelude_does_not_reexport_component_authoring_nouns() {
-    let advanced_prelude = advanced_prelude_slice();
     for forbidden in [
         "UiBuilder",
         "UiPatchTarget",
@@ -56,10 +94,11 @@ fn advanced_prelude_does_not_reexport_component_authoring_nouns() {
         "OverlayPresence",
     ] {
         assert!(
-            !advanced_prelude.contains(forbidden),
+            !advanced_prelude_exports_symbol(forbidden),
             "advanced prelude should not re-export component noun `{forbidden}`",
         );
     }
+    assert!(advanced_prelude_slice().contains("TrackedModelExt as _;"));
 }
 
 #[test]

@@ -216,18 +216,21 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         let Some(window) = cx.window else {
             return false;
         };
-        let Some(instance) = self.instance(cx.app, window, cx.node) else {
-            return false;
-        };
-
-        let hook = crate::elements::with_element_state(
+        let action_hooks = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::action::ActionRouteHooks::default,
+            |hooks| hooks.on_command_handlers(),
+        );
+        let legacy_hook = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             crate::action::CommandActionHooks::default,
             |hooks| hooks.on_command.clone(),
         );
-        if let Some(hook) = hook {
+        if !action_hooks.is_empty() || legacy_hook.is_some() {
             struct CommandHookHost<'a, H: UiHost> {
                 app: &'a mut H,
                 window: AppWindowId,
@@ -323,18 +326,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 element: self.element,
                 requested_focus: &mut cx.requested_focus,
             };
-            if hook(
-                &mut host,
-                crate::action::ActionCx {
-                    window,
-                    target: self.element,
-                },
-                command.clone(),
-            ) {
+            let action_cx = crate::action::ActionCx {
+                window,
+                target: self.element,
+            };
+            for hook in action_hooks {
+                if hook(&mut host, action_cx, command.clone()) {
+                    cx.stop_propagation();
+                    return true;
+                }
+            }
+            if let Some(hook) = legacy_hook
+                && hook(&mut host, action_cx, command.clone())
+            {
                 cx.stop_propagation();
                 return true;
             }
         }
+
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return false;
+        };
 
         match instance {
             ElementInstance::SelectableText(props) => {
@@ -472,18 +484,21 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         let Some(window) = cx.window else {
             return CommandAvailability::NotHandled;
         };
-        let Some(instance) = self.instance(cx.app, window, cx.node) else {
-            return CommandAvailability::NotHandled;
-        };
-
-        let hook = crate::elements::with_element_state(
+        let action_hooks = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::action::ActionRouteHooks::default,
+            |hooks| hooks.on_command_availability_handlers(),
+        );
+        let legacy_hook = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             crate::action::CommandAvailabilityActionHooks::default,
             |hooks| hooks.on_command_availability.clone(),
         );
-        if let Some(hook) = hook {
+        if !action_hooks.is_empty() || legacy_hook.is_some() {
             struct AvailabilityHookHost<'a, H: UiHost> {
                 app: &'a mut H,
             }
@@ -499,22 +514,31 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 .map(|focus| cx.tree.is_descendant(cx.node, focus))
                 .unwrap_or(false);
             let mut host = AvailabilityHookHost { app: &mut *cx.app };
-            let availability = hook(
-                &mut host,
-                crate::action::CommandAvailabilityActionCx {
-                    window,
-                    target: self.element,
-                    node: cx.node,
-                    focus: cx.focus,
-                    focus_in_subtree,
-                    input_ctx: cx.input_ctx.clone(),
-                },
-                command.clone(),
-            );
-            if availability != CommandAvailability::NotHandled {
-                return availability;
+            let action_cx = crate::action::CommandAvailabilityActionCx {
+                window,
+                target: self.element,
+                node: cx.node,
+                focus: cx.focus,
+                focus_in_subtree,
+                input_ctx: cx.input_ctx.clone(),
+            };
+            for hook in action_hooks {
+                let availability = hook(&mut host, action_cx.clone(), command.clone());
+                if availability != CommandAvailability::NotHandled {
+                    return availability;
+                }
+            }
+            if let Some(hook) = legacy_hook {
+                let availability = hook(&mut host, action_cx, command.clone());
+                if availability != CommandAvailability::NotHandled {
+                    return availability;
+                }
             }
         }
+
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return CommandAvailability::NotHandled;
+        };
 
         match instance {
             ElementInstance::SelectableText(props) => {

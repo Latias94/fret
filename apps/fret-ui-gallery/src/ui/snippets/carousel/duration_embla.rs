@@ -60,6 +60,8 @@ fn slide(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
+    let controls_shell_px = Px(48.0);
+    let controls_shell_w = Px(max_w_xs.0 + controls_shell_px.0 * 2.0);
 
     // Embla duration: demonstrate that smaller durations settle faster for button navigation.
     // Note: drag release shaping uses Embla's hard-coded `baseDuration` (see workstream docs), so
@@ -348,8 +350,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .ignore_reduced_motion(true),
         )
         .api_snapshot_model(duration_fast_api_snapshot.clone())
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(LayoutRefinement::default().w_px(max_w_xs))
         .test_id("ui-gallery-carousel-duration-fast")
+        .into_element(cx);
+    let duration_fast = ui::container(move |_cx| vec![duration_fast])
+        .w_full()
+        .padding_px(controls_shell_px)
         .into_element(cx);
     let duration_slow = shadcn::Carousel::new(duration_items_slow)
         .opts(
@@ -359,8 +365,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .ignore_reduced_motion(true),
         )
         .api_snapshot_model(duration_slow_api_snapshot.clone())
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(LayoutRefinement::default().w_px(max_w_xs))
         .test_id("ui-gallery-carousel-duration-slow")
+        .into_element(cx);
+    let duration_slow = ui::container(move |_cx| vec![duration_slow])
+        .w_full()
+        .padding_px(controls_shell_px)
         .into_element(cx);
 
     cx.flex(
@@ -369,13 +379,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 &Theme::global(&*cx.app).snapshot(),
                 LayoutRefinement::default().w_full(),
             ),
-            direction: fret_core::Axis::Horizontal,
+            direction: fret_core::Axis::Vertical,
             justify: MainAlign::Start,
             align: CrossAlign::Start,
-            // The shadcn Carousel controls sit outside the viewport (`-left-12` / `-right-12`).
-            // When rendering multiple carousels side-by-side, keep enough horizontal spacing so
-            // the controls do not overlap and become unclickable.
-            gap: Px(96.0).into(),
+            // Keep a modest gap between the two comparison rows while preserving the full 320px
+            // carousel width inside each buffered shell.
+            gap: Px(24.0).into(),
             ..Default::default()
         },
         move |cx| {
@@ -478,12 +487,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 FlexProps {
                     layout: decl_style::layout_style(
                         &theme,
-                        // Carousel controls are positioned outside the viewport (`-left-12` /
-                        // `-right-12`). Keep overflow visible so the controls remain clickable.
                         LayoutRefinement::default()
                             .w_full()
-                            .max_w(max_w_xs)
-                            .overflow_visible(),
+                            .max_w(controls_shell_w)
+                            .mx_auto(),
                     ),
                     direction: fret_core::Axis::Vertical,
                     justify: MainAlign::Start,
@@ -593,8 +600,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         &theme,
                         LayoutRefinement::default()
                             .w_full()
-                            .max_w(max_w_xs)
-                            .overflow_visible(),
+                            .max_w(controls_shell_w)
+                            .mx_auto(),
                     ),
                     direction: fret_core::Axis::Vertical,
                     justify: MainAlign::Start,

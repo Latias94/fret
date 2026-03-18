@@ -92,8 +92,8 @@ impl View for DropShadowBasicsView {
         let enabled_state = cx.state().local_init(|| true);
         let stress_state = cx.state().local_init(|| false);
 
-        let enabled = cx.state().watch(&enabled_state).layout().value_or(true);
-        let stress = cx.state().watch(&stress_state).layout().value_or(false);
+        let enabled = enabled_state.layout(cx).value_or(true);
+        let stress = stress_state.layout(cx).value_or(false);
 
         let toolbar = ui::v_flex(|cx| {
             let row_shadow = ui::h_flex(|cx| {

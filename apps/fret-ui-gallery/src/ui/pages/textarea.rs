@@ -22,10 +22,19 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "No extra generic `compose()` / `asChild` surface is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that layering.",
         "Placeholder text is shown when the model is empty, and the resize affordance is available unless the textarea is disabled.",
     ]);
+    let notes = doc_layout::notes_block([
+        "This page mirrors the upstream Textarea docs first, then keeps `With Text` and `Label Association` as explicit Fret follow-ups.",
+        "Reach for plain `Textarea` when you only need multi-line editing; compose around it with `Field` parts or stacked actions instead of widening the textarea surface itself.",
+        "The most fragile outcomes here are resize-handle behavior, placeholder visibility, and label/control wiring, so stable `ui-gallery-textarea-*` ids are part of the regression surface.",
+    ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-textarea-api-reference")
         .description("Public surface summary and ownership notes.");
+    let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-textarea-notes")
+        .description("Usage guidance and parity notes.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Default textarea preview matching the upstream top-of-page demo.")
         .test_id_prefix("ui-gallery-textarea-demo")
@@ -81,6 +90,7 @@ pub(super) fn preview_textarea(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             api_reference,
             with_text,
             label,
+            notes,
         ],
     );
 

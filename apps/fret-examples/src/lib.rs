@@ -413,7 +413,8 @@ mod authoring_surface_policy_tests {
 
     fn assert_prefers_grouped_data_surface(src: &str) {
         assert!(
-            src.contains("cx.data().selector(")
+            src.contains("cx.data().selector_layout(")
+                || src.contains("cx.data().selector(")
                 || src.contains("cx.data().query(")
                 || src.contains("cx.data().query_async(")
                 || src.contains("cx.data().query_async_local(")
@@ -605,14 +606,35 @@ mod authoring_surface_policy_tests {
     fn todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(TODO_DEMO);
         assert_avoids_legacy_conversion_names(TODO_DEMO);
+        assert!(
+            TODO_DEMO
+                .contains("bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);")
+        );
+        assert!(TODO_DEMO.contains("fn bind_todo_actions("));
+        assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
+        assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
     }
 
     #[test]
-    fn simple_todo_demo_prefers_typed_row_helper_surface() {
-        assert!(SIMPLE_TODO_DEMO.contains("ui::for_each_keyed_with_cx("));
-        assert!(SIMPLE_TODO_DEMO.contains("fn todo_row("));
-        assert!(SIMPLE_TODO_DEMO.contains(") -> impl fret_ui_kit::IntoUiElement<App> + use<> {"));
-        assert!(!SIMPLE_TODO_DEMO.contains(") -> fret_ui::element::AnyElement {"));
+    fn simple_todo_demo_prefers_default_app_surface() {
+        assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
+        assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
+        assert!(SIMPLE_TODO_DEMO.contains("fn bind_todo_actions("));
+        assert!(SIMPLE_TODO_DEMO.contains(
+            "payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
+        ));
+        assert!(SIMPLE_TODO_DEMO.contains(
+            "payload_local_update_if::<act::Remove, Vec<TodoRow>>(todos_state, |rows, id| {"
+        ));
+        assert!(SIMPLE_TODO_DEMO.contains("ui_app_driver::UiAppDriver::new("));
+        assert!(
+            SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_init_window::<SimpleTodoView>,")
+        );
+        assert!(SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_view::<SimpleTodoView>,"));
+        assert!(!SIMPLE_TODO_DEMO.contains("declarative::RenderRootContext"));
+        assert!(!SIMPLE_TODO_DEMO.contains("CommandId"));
+        assert!(!SIMPLE_TODO_DEMO.contains("UiTree<App>"));
+        assert!(!SIMPLE_TODO_DEMO.contains("Model<"));
     }
 
     #[test]
@@ -689,20 +711,6 @@ mod authoring_surface_policy_tests {
     #[test]
     fn manual_ui_tree_examples_keep_root_wrappers_on_local_typed_helpers() {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
-            SIMPLE_TODO_DEMO,
-            &[
-                "fn simple_todo_page<C>(",
-                "cx: &mut fret_ui::ElementContext<'_, App>,",
-                "theme: fret_ui::ThemeSnapshot,",
-                "card: C,",
-                ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
-                "C: fret_ui_kit::IntoUiElement<App>,",
-                "ui::children![cx; simple_todo_page(cx, theme, card)]",
-            ],
-            &["let page = ui::container(|cx| {"],
-        );
-
-        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             CJK_CONFORMANCE_DEMO,
             &[
                 "fn cjk_conformance_page<C>(",
@@ -712,8 +720,12 @@ mod authoring_surface_policy_tests {
                 ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
                 "C: fret_ui_kit::IntoUiElement<App>,",
                 "ui::children![cx; cjk_conformance_page(cx, theme, card)]",
+                "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
-            &["let page = ui::container(|cx| {"],
+            &[
+                "let page = ui::container(|cx| {",
+                "ui::v_flex(move |_cx| [card])",
+            ],
         );
 
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
@@ -726,8 +738,12 @@ mod authoring_surface_policy_tests {
                 ") -> impl fret_ui_kit::IntoUiElement<App> + use<C>",
                 "C: fret_ui_kit::IntoUiElement<App>,",
                 "ui::children![cx; emoji_conformance_page(cx, theme, card)]",
+                "ui::v_flex(move |cx| ui::single(cx, card))",
             ],
-            &["let page = ui::container(|cx| {"],
+            &[
+                "let page = ui::container(|cx| {",
+                "ui::v_flex(move |_cx| [card])",
+            ],
         );
     }
 
@@ -988,8 +1004,9 @@ mod authoring_surface_policy_tests {
                 ") -> Ui",
                 "C: IntoUiElement<KernelApp>,",
                 "embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())",
+                "ui::v_flex(move |cx| ui::single(cx, viewport_card))",
             ],
-            &[],
+            &["ui::v_flex(move |cx| ui::children![cx; viewport_card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -1009,8 +1026,9 @@ mod authoring_surface_policy_tests {
                 "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
                 "C: IntoUiElement<KernelApp>,",
                 "query_page(cx.elements(), theme, card)",
+                "ui::v_flex(|cx| ui::single(cx, card))",
             ],
-            &[],
+            &["ui::v_flex(|cx| ui::children![cx; card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -1019,8 +1037,9 @@ mod authoring_surface_policy_tests {
                 "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
                 "C: IntoUiElement<KernelApp>,",
                 "query_page(cx.elements(), theme, card)",
+                "ui::v_flex(|cx| ui::single(cx, card))",
             ],
-            &[],
+            &["ui::v_flex(|cx| ui::children![cx; card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -1030,7 +1049,7 @@ mod authoring_surface_policy_tests {
                 "fn hello_world_compare_root(",
                 "cx: &mut UiCx<'_>,",
                 "panel_bg: Color,",
-                "children: Vec<AnyElement>,",
+                "children: Vec<AnyElement>)",
                 ") -> Ui",
                 "hello_world_compare_root(cx.elements(), panel_bg, children)",
             ],
@@ -1348,17 +1367,18 @@ mod authoring_surface_policy_tests {
             &[
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2IdentityWebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2IdentityWebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::inspector(cx, &controls).into_element(cx);",
-                "Self::lens(cx, &controls_for_lens).into_element(cx)",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);",
+                "Self::lens(cx, &stage_settings).into_element(cx)",
             ],
             &[
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2IdentityWebViewSettings) -> AnyElement",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2IdentityWebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1367,17 +1387,18 @@ mod authoring_surface_policy_tests {
             &[
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2WebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2WebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::inspector(cx, &controls).into_element(cx);",
-                "Self::lens(cx, &controls_for_lens).into_element(cx)",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);",
+                "Self::lens(cx, &stage_settings).into_element(cx)",
             ],
             &[
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2WebViewSettings) -> AnyElement",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2WebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1386,17 +1407,18 @@ mod authoring_surface_policy_tests {
             &[
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2LutWebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2LutWebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::inspector(cx, &controls).into_element(cx);",
-                "Self::lens(cx, &controls_for_lens).into_element(cx)",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::inspector(cx, &controls, &inspector_settings).into_element(cx);",
+                "Self::lens(cx, &stage_settings).into_element(cx)",
             ],
             &[
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2LutWebViewSettings) -> AnyElement",
+                "fn inspector(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2LutWebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1406,19 +1428,20 @@ mod authoring_surface_policy_tests {
                 "fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String,) -> impl IntoUiElement<App> + use<>",
                 "fn stage_tile(",
                 ") -> impl IntoUiElement<App> + use<>",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
-                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls,) -> impl IntoUiElement<App> + use<>",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2GlassChromeWebViewSettings,) -> impl IntoUiElement<App> + use<>",
+                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2GlassChromeWebViewSettings,) -> impl IntoUiElement<App> + use<>",
                 "Self::label_row(cx, \"Uv span\", format!(\"{uv_span:.2}\")).into_element(cx)",
                 "items.push(Self::stage_tile(",
                 ".into_element(cx),",
-                "let inspector = Self::controls_panel(cx, &controls).into_element(cx);",
-                "items.push(Self::lens(cx, &controls_for_stage).into_element(cx));",
+                "let view_settings = Self::view_settings(cx, &controls);",
+                "let inspector = Self::controls_panel(cx, &controls, &inspector_settings).into_element(cx);",
+                "items.push(Self::lens(cx, &stage_settings).into_element(cx));",
             ],
             &[
                 "fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String) -> AnyElement",
                 "fn stage_tile(cx: &mut ElementContext<'_, App>, color: fret_core::Color, left: Px, top: Px, w: Px, h: Px, corner_radius_px: Px,) -> AnyElement",
-                "fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
-                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement",
+                "fn lens(cx: &mut ElementContext<'_, App>, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
+                "fn controls_panel(cx: &mut ElementContext<'_, App>, controls: &DemoControls, view_settings: &CustomEffectV2GlassChromeWebViewSettings) -> AnyElement",
             ],
         );
 
@@ -1444,14 +1467,18 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0i64);",
                 "let step_state = cx.state().local_init(|| \"1\".to_string());",
-                "cx.actions().locals::<act::Inc>({",
-                "cx.actions().locals::<act::Dec>({",
+                "selector_layout(&step_state,",
+                "parse_step(step_text.as_str())",
+                ".locals_with((&count_state, &step_state))",
+                ".on::<act::Inc>(|tx, (count_state, step_state)| {",
+                ".on::<act::Dec>(|tx, (count_state, step_state)| {",
                 "cx.actions().local_set::<act::Reset, i64>(&count_state, 0);",
             ],
             &[
                 "cx.use_local_with(|| 0i64)",
                 "cx.on_action_notify_models::<act::Inc>",
                 "cx.on_action_notify_local_set::<act::Reset, i64>",
+                "let step_text = step_state.layout(cx).value_or_else(String::new);",
             ],
         );
 
@@ -1459,12 +1486,17 @@ mod authoring_surface_policy_tests {
             QUERY_DEMO,
             &[
                 "let fail_mode_state = cx.state().local_init(|| false);",
+                "let query_state = query_handle.read_layout(cx);",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
+                "cx.data().invalidate_query(demo_key());",
+                "cx.data().invalidate_query_namespace(key.namespace());",
                 "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
+                "with_query_client(",
                 "cx.use_local_with(|| false)",
+                "query_handle.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
             ],
@@ -1474,12 +1506,17 @@ mod authoring_surface_policy_tests {
             QUERY_ASYNC_TOKIO_DEMO,
             &[
                 "let fail_mode_state = cx.state().local_init(|| false);",
+                "let query_state = query_handle.read_layout(cx);",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
+                "cx.data().invalidate_query(demo_key());",
+                "cx.data().invalidate_query_namespace(key.namespace());",
                 "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
+                "with_query_client(",
                 "cx.use_local_with(|| false)",
+                "query_handle.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
             ],
@@ -1490,10 +1527,14 @@ mod authoring_surface_policy_tests {
             &[
                 "let draft_state = cx.state().local::<String>();",
                 "let next_id_state = cx.state().local_init(|| 4u64);",
-                "let todos = todos_state.layout(cx).value_or_default();",
-                "let draft_value = draft_state.layout(cx).value_or_default();",
-                "cx.actions().locals::<act::Add>({",
-                "cx.actions().locals::<act::ClearDone>({",
+                "let todos = todos_state.layout_value(cx);",
+                "let draft_value = draft_state.layout_value(cx);",
+                ".locals_with((draft_state, next_id_state, todos_state))",
+                ".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {",
+                "let text = tx.value(&draft_state).trim().to_string();",
+                "let id = tx.value(&next_id_state);",
+                ".locals_with(todos_state)",
+                ".on::<act::ClearDone>(|tx, todos_state| {",
                 "cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>(",
                 "cx.actions().payload_local_update_if::<act::Remove, Vec<TodoRow>>(",
             ],
@@ -1501,6 +1542,10 @@ mod authoring_surface_policy_tests {
                 "cx.use_local::<String>()",
                 "cx.on_action_notify_models::<act::Add>",
                 "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
+                "todos_state.layout(cx).value_or_default()",
+                "draft_state.layout(cx).value_or_default()",
+                "tx.value_or_else(&draft_state, String::new)",
+                "tx.value_or(&next_id_state, 1)",
             ],
         );
 
@@ -1508,7 +1553,7 @@ mod authoring_surface_policy_tests {
             EMBEDDED_VIEWPORT_DEMO,
             &[
                 "let size_preset_state = cx.state().local_init(|| 1usize);",
-                "let preset = cx.state().watch(&size_preset_state).layout().value_or_default();",
+                "let preset = size_preset_state.layout(cx).value_or_default();",
                 "cx.actions().local_set::<act::PickSize640, usize>(&size_preset_state, 0);",
             ],
             &[
@@ -1525,8 +1570,8 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0u32);",
                 "let enabled_state = cx.state().local_init(|| false);",
-                "let count = cx.state().watch(&count_state).layout().value_or_default();",
-                "let enabled = cx.state().watch(&enabled_state).paint().value_or_default();",
+                "let count = count_state.layout(cx).value_or_default();",
+                "let enabled = enabled_state.paint(cx).value_or_default();",
             ],
             &["cx.use_local_with(|| 0u32)", "cx.use_local_with(|| false)"],
         );
@@ -1536,7 +1581,7 @@ mod authoring_surface_policy_tests {
             &[
                 "let left_clicks = cx.state().local_init(|| 0u32);",
                 "let drag_offset = cx.state().local_init(Point::default);",
-                "let last_anchor_value = cx.state().watch(&last_context_menu_anchor).layout().value_or_default();",
+                "let last_anchor_value = last_context_menu_anchor.layout(cx).value_or_default();",
             ],
             &[
                 "cx.use_local_with(|| 0u32)",
@@ -1611,13 +1656,268 @@ mod authoring_surface_policy_tests {
             &[
                 "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
-                "cx.actions().payload::<act::ToggleCodeBlockExpand>().models({",
+                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({",
+                "let pending = self.st.pending_anchor.layout(cx).value_or_default();",
+                "let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();",
+                "let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();",
             ],
             &[
                 "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.on_action_notify_transient::<act::RefreshRemoteImages>",
-                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>",
+                "cx.watch_model(&self.st.pending_anchor)",
+                "cx.watch_model(&self.st.wrap_code)",
+                "cx.watch_model(&self.st.cap_code_height)",
             ],
+        );
+    }
+
+    #[test]
+    fn selected_element_context_examples_prefer_handle_first_tracked_model_reads() {
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            SIMPLE_TODO_DEMO,
+            &[
+                "let todos = todos_model.layout_in(cx).value_or_default();",
+                "let draft_value = draft_model.paint_in(cx).value_or_default();",
+                "if t.done.paint_in(cx).value_or_default() {",
+                "let done = item.done.paint_in(cx).value_or_default();",
+            ],
+            &[
+                "let todos = cx.watch_model(&todos_model).layout().value_or_default();",
+                "let draft_value = cx.watch_model(&draft_model).paint().value_or_default();",
+                "if cx.watch_model(&t.done).paint().value_or_default() {",
+                "let done = cx.watch_model(&item.done).paint().value_or_default();",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            ASYNC_PLAYGROUND_DEMO,
+            &[
+                "let selected = self.st.selected.layout_in(cx).value_or_default();",
+                "let dark = self.st.dark.layout_in(cx).value_or_default();",
+                "fn tracked_query_inputs(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> QueryKeyInputs {",
+                "let query_inputs = tracked_query_inputs(cx, st);",
+                "let tab = st.tabs.layout_in(cx).value_or_default();",
+                "let policy_settings: QueryPolicySettings = cx.data().selector(",
+                "config.fail_mode.layout_in(cx).value_or_default()",
+            ],
+            &[
+                "let selected = cx.watch_model(&self.st.selected).layout().value_or_default();",
+                "let dark = cx.watch_model(&self.st.dark).layout().value_or_default();",
+                "let search = cx.watch_model(&st.search_input).layout().value_or_default();",
+                "let symbol = cx.watch_model(&st.stock_symbol).layout().value_or_default();",
+                "let tab = cx.watch_model(&st.tabs).layout().value_or_default();",
+                "let stale_s = cx.watch_model(&config.stale_time_s).layout().value_or_default();",
+                "cx.watch_model(&config.fail_mode)",
+                "let search = st.search_input.layout_in(cx).value_or_default();",
+                "let symbol = st.stock_symbol.layout_in(cx).value_or_default();",
+                "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
+                "let cache_s = config.cache_time_s.layout_in(cx).value_or_default();",
+                "let keep_prev = config.keep_prev.layout_in(cx).value_or_default();",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            GENUI_DEMO,
+            &[
+                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);",
+                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);",
+                "st.genui_state",
+                ".layout_in(cx)",
+                ".read_ref(|v| {",
+                "st.action_queue",
+                "st.validation_state",
+                "let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);",
+            ],
+            &[
+                "cx.watch_model(&st.auto_apply_standard_actions)",
+                "cx.watch_model(&st.auto_fix_on_apply)",
+                "cx.watch_model(&st.genui_state)",
+                "cx.watch_model(&st.action_queue)",
+                "cx.watch_model(&st.validation_state)",
+                "cx.watch_model(&st.stream_patch_only)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_DEMO,
+            &[
+                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector(",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
+                "let use_non_filterable_input = cx.watch_model(&st.use_non_filterable_input)",
+                "let debug_input = cx.watch_model(&st.debug_input).layout().value_or(false);",
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "let use_non_filterable_input = st.use_non_filterable_input.layout_in(cx).value_or(false);",
+                "let sampling_value = st",
+                "let debug_input = st.debug_input.layout_in(cx).value_or(false);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_WEB_DEMO,
+            &[
+                "fn view_settings(",
+                "-> CustomEffectV2WebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_GLASS_CHROME_WEB_DEMO,
+            &[
+                "fn view_settings(",
+                "-> CustomEffectV2GlassChromeWebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_IDENTITY_WEB_DEMO,
+            &[
+                "fn view_settings(",
+                "-> CustomEffectV2IdentityWebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V2_LUT_WEB_DEMO,
+            &[
+                "fn view_settings(",
+                "-> CustomEffectV2LutWebViewSettings {",
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "let view_settings = Self::view_settings(cx, &controls);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "let enabled = controls.enabled.paint_in(cx).value_or(true);",
+                "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V3_DEMO,
+            &["let view_settings: CustomEffectV3ViewSettings = cx.data().selector("],
+            &[
+                "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
+                "let show_user0_probe = cx.watch_model(&st.show_user0_probe)",
+                "let use_non_filterable_user1 = cx.watch_model(&st.use_non_filterable_user1)",
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "let show_user0_probe = st.show_user0_probe.layout_in(cx).value_or(false);",
+                "let show_user1_probe = st.show_user1_probe.layout_in(cx).value_or(false);",
+                "let use_non_filterable_user0 = st.use_non_filterable_user0.layout_in(cx).value_or(false);",
+                "let use_non_filterable_user1 = st.use_non_filterable_user1.layout_in(cx).value_or(false);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            CUSTOM_EFFECT_V1_DEMO,
+            &[
+                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            POSTPROCESS_THEME_DEMO,
+            &["let view_settings: ThemePostprocessViewSettings = cx.data().selector("],
+            &[
+                "let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);",
+                "let compare = cx.watch_model(&self.st.compare).layout().value_or(true);",
+                "let theme = cx.watch_model(&self.st.theme).layout().value_or(Option::<Arc<str>>::None);",
+                "let retro_dither = cx.watch_model(&self.st.retro_dither).layout().value_or(true);",
+                "let enabled = self.st.enabled.layout_in(cx).value_or(true);",
+                "let compare = self.st.compare.layout_in(cx).value_or(true);",
+                "let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);",
+                "let retro_dither = self.st.retro_dither.layout_in(cx).value_or(true);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            LIQUID_GLASS_DEMO,
+            &[
+                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector(",
+                "let mode_settings: LiquidGlassModeSettings = cx.data().selector(",
+                "cx.observe_model(&show_fake_model, Invalidation::Layout);",
+            ],
+            &[
+                "cx.watch_model(model)",
+                "let show_fake = cx.watch_model(&st.show_fake).layout().value_or(true);",
+                "let custom_v3_source_group = cx",
+                "let use_backdrop = cx.watch_model(&st.use_backdrop).layout().value_or(true);",
+                "let show_fake = st.show_fake.layout_in(cx).value_or(true);",
+                "let show_warp = st.show_warp.layout_in(cx).value_or(true);",
+                "let show_warp_v2 = st.show_warp_v2.layout_in(cx).value_or(false);",
+                "let show_custom_v2 = st.show_custom_v2.layout_in(cx).value_or(false);",
+                "let show_custom_v3 = st.show_custom_v3.layout_in(cx).value_or(false);",
+                "let custom_v3_pair = st.custom_v3_pair.layout_in(cx).value_or(false);",
+                "let custom_v3_source_group = st.custom_v3_source_group.layout_in(cx).value_or(false);",
+                "let show_inspector = st.show_inspector.layout_in(cx).value_or(true);",
+                "let animate = st.animate.layout_in(cx).value_or(true);",
+                "let use_backdrop = st.use_backdrop.layout_in(cx).value_or(true);",
+                "let use_dither = st.use_dither.layout_in(cx).value_or(true);",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            LAUNCHER_UTILITY_WINDOW_DEMO,
+            &["let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector("],
+            &[
+                "let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);",
+                "cx.watch_model(&st.status)",
+                "let always_on_top = st.always_on_top.layout_in(cx).value_or(false);",
+                "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            WINDOW_HIT_TEST_PROBE_DEMO,
+            &["let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));"],
+            &["cx.watch_model(&st.status)"],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
+            &["let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));"],
+            &["cx.watch_model(&st.status)"],
         );
     }
 

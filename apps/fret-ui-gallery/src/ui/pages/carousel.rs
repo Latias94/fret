@@ -12,6 +12,7 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         let focus = snippets::focus_watch::render(cx);
         let basic = snippets::basic::render(cx);
         let usage = snippets::usage::render(cx);
+        let compact_builder = snippets::compact_builder::render(cx);
         let parts = snippets::parts::render(cx);
         let sizes_thirds = snippets::sizes_thirds::render(cx);
         let sizes = snippets::sizes::render(cx);
@@ -35,21 +36,37 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 "Upstream shadcn Carousel is built on Embla; Fret mirrors the authoring outcomes with an Embla-style headless engine plus a compact builder and a parts surface.",
                 "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret mirrors this via `CarouselItem::viewport_layout_breakpoint(tailwind::MD/LG, ...)`.",
                 "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start` (shadcn `-ml-*` + `pl-*`).",
-                "The extra sections below exist to keep engine + diagnostics coverage visible (loop downgrade, focus watch, duration, wheel gestures, etc.).",
+                "The follow-up sections below keep the Fret shorthand and the engine-facing regression harnesses visible without changing the upstream docs path.",
+            ]);
+        let fret_follow_ups = doc_layout::notes_block([
+                "The upstream shadcn docs stop after `RTL`; the sections below stay on the page to document Fret-specific authoring shortcuts and regression harnesses without diluting that docs path.",
+                "`Basic` remains a gallery follow-up baseline preview because the upstream docs jump straight from `Usage` into the `Sizes` examples instead of showing a separate single-slide baseline section.",
+                "`Plugin (Autoplay, Controlled)`, `Plugin (Autoplay, stopOnInteraction via focus)`, `Plugin (Autoplay, stopOnLastSnap)`, `Plugin (Autoplay, per-snap delays)`, and `Plugin (Wheel gestures)` remain follow-ups because the upstream docs only show the base autoplay plugin example.",
+                "`Compact Builder` keeps `Carousel::new(items)` visible for app code, `Parts` keeps the explicit adapter/diagnostics seam visible, and `Loop` is a dedicated `loop=true` preview that the upstream docs only imply through `Options`.",
+                "`Loop downgrade`, `Focus`, `Duration`, and `Expandable` remain gallery follow-ups because they primarily exist to keep Embla-style engine and motion regressions reviewable.",
             ]);
 
         let api_reference = doc_layout::notes_block([
                 "API reference: `ecosystem/fret-ui-shadcn/src/carousel.rs`.",
-                "`Carousel::new/items` is the compact builder path, while `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` are exposed through `Carousel::into_element_parts(...)` for upstream-shaped copyable examples.",
-                "`Usage` is the default compact builder path for common Fret call sites, while `Parts` remains the upstream-shaped copyable lane rather than an advanced escape hatch.",
-                "The docs-first examples below (`Basic`, `Sizes`, `Spacing`, `Orientation`, `Options`, `Loop`) and the ordinary diagnostics demos (`Demo`, `API`, `Focus`, `Duration`, autoplay/wheel examples) stay on that compact builder lane unless a snippet explicitly needs control-level parts for diagnostics or custom test IDs.",
+                "`CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext` keep the upstream-shaped copyable surface that matches the shadcn docs `Usage` story, while `Carousel::new/items` stays as the compact Fret shorthand for app call sites.",
+                "When the parts are already assembled eagerly, prefer `Carousel::into_element_parts_content(...)`; keep `into_element_parts(...)` for seams that genuinely need `cx` before landing.",
+                "`Usage` now mirrors the upstream docs-shaped parts lane, `Compact Builder` keeps the ergonomic Fret shorthand visible, and `Parts` remains the explicit adapter/diagnostics seam on that same copyable lane rather than an advanced escape hatch.",
+                "The docs-path examples below (`Sizes`, `Spacing`, `Orientation`, `Options`) and the docs-aligned previews (`Demo`, `API`, base autoplay plugin, `RTL`) still stay on the compact builder lane unless a snippet explicitly needs control-level parts or diagnostics-specific control IDs.",
+                "Docs-path snippets keep the upstream `w_full().max_w(...)` width lane on the carousel root itself; diagnostics follow-ups may switch to fixed-width shells (`w_px(...)`) when deterministic control geometry matters more than copyable docs parity.",
+                "For the common `setApi` docs outcome (slide counter / can-prev / can-next status), prefer `api_snapshot_model(...)`; reserve `api_handle_model(...)` + `CarouselEventCursor` for explicit event-stream examples such as `Events`.",
                 "Carousel chrome, buttons, and the Embla-style headless behaviors stay recipe-owned; surrounding width/height negotiation and breakpoint choices remain caller-owned.",
-                "No extra generic `compose()` / children surface is needed here because the parts authoring surface already maps to the upstream exports.",
+                "We intentionally do not add a generic heterogeneous children API here: the upstream-shaped usage lane plus the compact shorthand already cover the shadcn authoring shapes without reopening another default teaching surface.",
             ]);
         let about = DocSection::build(cx, "About", about)
             .description("Background, ownership notes, and why extra diagnostics sections exist.")
             .no_shell()
             .test_id_prefix("ui-gallery-carousel-about");
+        let fret_follow_ups = DocSection::build(cx, "Fret Follow-ups", fret_follow_ups)
+            .description(
+                "Why the page continues after the upstream docs path and how the follow-up sections are grouped.",
+            )
+            .no_shell()
+            .test_id_prefix("ui-gallery-carousel-follow-ups");
         let api_reference = DocSection::build(cx, "API Reference", api_reference)
             .description("Public surface summary and ownership notes.")
             .no_shell()
@@ -59,11 +76,19 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id_prefix("ui-gallery-carousel-demo")
             .code_rust_from_file_region(snippets::demo::SOURCE, "example");
         let usage = DocSection::build(cx, "Usage", usage)
-            .description("Default compact builder path for common Fret carousel call sites.")
+            .description(
+                "Upstream shadcn docs shape using `CarouselContent`, `CarouselItem`, `CarouselPrevious`, and `CarouselNext`.",
+            )
             .test_id_prefix("ui-gallery-carousel-usage")
             .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+        let compact_builder = DocSection::build(cx, "Compact Builder", compact_builder)
+            .description("Compact Fret shorthand for common app call sites: `Carousel::new(items)`.")
+            .test_id_prefix("ui-gallery-carousel-compact-builder")
+            .code_rust_from_file_region(snippets::compact_builder::SOURCE, "example");
         let parts = DocSection::build(cx, "Parts", parts)
-            .description("Upstream-shaped copyable parts surface aligned with shadcn/ui v4 exports.")
+            .description(
+                "Focused adapter example on the same upstream-shaped lane when callers want explicit part values or diagnostics-specific control IDs.",
+            )
             .test_id_prefix("ui-gallery-carousel-parts")
             .code_rust_from_file_region(snippets::parts::SOURCE, "example");
         let basic = DocSection::build(cx, "Basic", basic)
@@ -101,17 +126,17 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id_prefix("ui-gallery-carousel-options")
             .code_rust_from_file_region(snippets::options::SOURCE, "example");
         let api = DocSection::build(cx, "API", api)
-            .description("A carousel with a slide counter (shadcn `setApi`-style outcome) on the compact builder lane.")
+            .description("A carousel with a slide counter using the compact snapshot surface (`api_snapshot_model`) for the common shadcn `setApi`-style docs outcome.")
             .test_id_prefix("ui-gallery-carousel-api")
-            .code_rust_from_file_region(snippets::api::SOURCE, "example");
+            .code_rust_from_file_region(snippets::api::DOCS_SOURCE, "example");
         let events = DocSection::build(cx, "Events", events)
-            .description("Listen to select/reInit events (shadcn `api.on(...)`-style outcomes); this one keeps explicit parts because the diagnostics need control-level test IDs.")
+            .description("Listen to select/reInit events (`api_handle_model` + `CarouselEventCursor`, equivalent to shadcn `api.on(...)`); the status rows make the example self-verifying in Gallery, and the named controls stay only for diagnostics.")
             .test_id_prefix("ui-gallery-carousel-events")
-            .code_rust_from_file_region(snippets::events::SOURCE, "example");
+            .code_rust_from_file_region(snippets::events::DOCS_SOURCE, "example");
         let plugin = DocSection::build(cx, "Plugin (Autoplay)", plugin)
-            .description("Autoplay: 2000ms delay; hover pauses; interaction stops, still on the compact builder lane.")
+            .description("Autoplay docs parity: `plugins=[Autoplay(...)]` plus hover pause/reset; the self-drawn example maps the docs' DOM hover handlers onto a hover region while staying on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-plugin")
-            .code_rust_from_file_region(snippets::plugin_autoplay::SOURCE, "example");
+            .code_rust_from_file_region(snippets::plugin_autoplay::DOCS_SOURCE, "example");
         let plugin_controlled =
             DocSection::build(cx, "Plugin (Autoplay, Controlled)", plugin_controlled)
                 .description(
@@ -158,52 +183,55 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .code_rust_from_file_region(snippets::plugin_wheel_gestures::SOURCE, "example");
         let rtl = DocSection::build(cx, "RTL", rtl)
             .description(
-                "RTL carousel: set `DirectionProvider` and `CarouselOptions::direction(Rtl)` (shadcn `dir` + `opts.direction`). Prev/Next remain physically left/right (shadcn docs), while arrow direction adapts to RTL. This snippet keeps explicit parts because diagnostics need named RTL controls.",
+                "RTL carousel: keep `DirectionProvider` and `CarouselOptions::direction(Rtl)` aligned (shadcn docs `dir` + `opts.direction`). Prev/Next remain physically left/right, while arrow direction adapts to RTL; named controls stay only for diagnostics.",
             )
             .test_id_prefix("ui-gallery-carousel-rtl")
-            .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+            .code_rust_from_file_region(snippets::rtl::DOCS_SOURCE, "example");
         let loop_carousel = DocSection::build(cx, "Loop", loop_carousel)
-            .description("Seamless looping (`loop=true`) using the Embla-style headless engine on the compact builder lane.")
+            .description(
+                "Dedicated `loop=true` preview kept after the docs path so the looping behavior stays directly reviewable on the compact builder lane.",
+            )
             .test_id_prefix("ui-gallery-carousel-loop")
             .code_rust_from_file_region(snippets::loop_carousel::SOURCE, "example");
-        let loop_downgrade_cannot_loop =
-            DocSection::build(cx, "Loop downgrade (cannotLoop)", loop_downgrade_cannot_loop)
+        let loop_downgrade_cannot_loop = DocSection::build_diagnostics(
+            cx,
+            "Loop downgrade (cannotLoop)",
+            loop_downgrade_cannot_loop,
+        )
                 .description(
-                    "Requested `loop=true` but the slide set cannot loop; Embla downgrades to non-loop behavior.",
+                    "Engine follow-up: requested `loop=true` but the slide set cannot loop, so Embla downgrades to non-loop behavior.",
                 )
                 .test_id_prefix("ui-gallery-carousel-loop-downgrade-cannot-loop")
                 .code_rust_from_file_region(
                     snippets::loop_downgrade_cannot_loop::SOURCE,
                     "example",
                 );
-        let focus = DocSection::build(cx, "Focus", focus)
+        let focus = DocSection::build_diagnostics(cx, "Focus", focus)
             .description(
-                "`watch_focus=true`: Tab into an offscreen slide and scroll it into view (Embla engine enabled) on the compact builder lane.",
+                "Engine follow-up: `watch_focus=true` tabs into an offscreen slide and scrolls it into view (Embla engine enabled) on the compact builder lane.",
             )
             .test_id_prefix("ui-gallery-carousel-focus")
             .code_rust_from_file_region(snippets::focus_watch::SOURCE, "example");
-        let duration = DocSection::build(cx, "Duration (Embla)", duration)
+        let duration = DocSection::build_diagnostics(cx, "Duration (Embla)", duration)
             .description(
-                "Embla `duration` (integrator parameter) affects settle speed for button navigation (this demo ignores prefers-reduced-motion) on the compact builder lane.",
+                "Engine follow-up: Embla `duration` (integrator parameter) affects settle speed for button navigation; this demo ignores prefers-reduced-motion on purpose.",
             )
             .test_id_prefix("ui-gallery-carousel-duration")
             .code_rust_from_file_region(snippets::duration_embla::SOURCE, "example");
-        let expandable = DocSection::build(cx, "Expandable", expandable)
-            .description("Content-driven height changes (used by the motion pilot suite) on the compact builder lane.")
+        let expandable = DocSection::build_diagnostics(cx, "Expandable", expandable)
+            .description("Motion follow-up: content-driven height changes used by the motion pilot suite on the compact builder lane.")
             .test_id_prefix("ui-gallery-carousel-expandable")
             .code_rust_from_file_region(snippets::expandable::SOURCE, "example");
 
         let body = doc_layout::render_doc_page(
             cx,
             Some(
-                "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Basic/Sizes/Spacing/Orientation), Options, API, Events, Plugins, RTL, then keeps engine/diagnostics follow-ups explicit before `API Reference`.",
+                "Preview mirrors the shadcn Carousel docs path first: Demo, About, Usage, Examples (Sizes/Spacing/Orientation), Options, API, Events, Plugin, RTL. After that, Gallery keeps Fret-only follow-ups explicit: `Fret Follow-ups`, `Basic`, extra plugin variants, `Compact Builder`, `Parts`, a dedicated `Loop` preview, engine/motion diagnostics, then `API Reference`.",
             ),
             vec![
                 demo,
                 about,
                 usage,
-                parts,
-                basic,
                 sizes_thirds,
                 sizes,
                 spacing,
@@ -213,12 +241,16 @@ pub(super) fn preview_carousel(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
                 api,
                 events,
                 plugin,
+                rtl,
+                fret_follow_ups,
+                basic,
                 plugin_controlled,
                 plugin_stop_on_focus,
                 plugin_stop_on_last_snap,
                 plugin_delays,
                 plugin_wheel,
-                rtl,
+                compact_builder,
+                parts,
                 loop_carousel,
                 loop_downgrade_cannot_loop,
                 focus,

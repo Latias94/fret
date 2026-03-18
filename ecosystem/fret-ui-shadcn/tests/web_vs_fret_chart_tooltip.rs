@@ -142,6 +142,7 @@ fn assert_chart_tooltip_rect_matches_web(
     hide_label: bool,
     kind: shadcn::ChartTooltipContentKind,
     fixed_width_border_box: Option<Px>,
+    configure: impl FnOnce(shadcn::ChartTooltipContent) -> shadcn::ChartTooltipContent,
 ) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -199,16 +200,18 @@ fn assert_chart_tooltip_rect_matches_web(
     let label = Arc::<str>::from(format!("Golden:{web_name}:tooltip"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let mut tooltip = shadcn::ChartTooltipContent::new()
-            .label("Tue")
-            .indicator(indicator)
-            .hide_indicator(hide_indicator)
-            .hide_label(hide_label)
-            .kind(kind)
-            .items([
-                shadcn::ChartTooltipItem::new("Running", "380"),
-                shadcn::ChartTooltipItem::new("Swimming", "420"),
-            ]);
+        let mut tooltip = configure(
+            shadcn::ChartTooltipContent::new()
+                .label("Tue")
+                .indicator(indicator)
+                .hide_indicator(hide_indicator)
+                .hide_label(hide_label)
+                .kind(kind)
+                .items([
+                    shadcn::ChartTooltipItem::new("Running", "380"),
+                    shadcn::ChartTooltipItem::new("Swimming", "420"),
+                ]),
+        );
         if advanced_layout {
             tooltip = tooltip.test_id_prefix(label.clone());
         }
@@ -413,6 +416,7 @@ fn web_vs_fret_chart_tooltip_default_geometry_matches_web() {
         false,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| tooltip,
     );
 }
 
@@ -425,6 +429,7 @@ fn web_vs_fret_chart_tooltip_indicator_line_geometry_matches_web() {
         false,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| tooltip,
     );
 }
 
@@ -437,6 +442,7 @@ fn web_vs_fret_chart_tooltip_indicator_none_geometry_matches_web() {
         false,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| tooltip,
     );
 }
 
@@ -449,6 +455,7 @@ fn web_vs_fret_chart_tooltip_label_none_geometry_matches_web() {
         true,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| tooltip,
     );
 }
 
@@ -461,6 +468,7 @@ fn web_vs_fret_chart_tooltip_icons_geometry_matches_web() {
         true,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| tooltip,
     );
 }
 
@@ -473,6 +481,7 @@ fn web_vs_fret_chart_tooltip_label_custom_geometry_matches_web() {
         false,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| tooltip,
     );
 }
 
@@ -485,6 +494,15 @@ fn web_vs_fret_chart_tooltip_label_formatter_geometry_matches_web() {
         false,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| {
+            tooltip.label("2024-07-16").label_formatter(|context| {
+                let label = context.label.as_deref().unwrap_or_default();
+                match label {
+                    "2024-07-16" => Arc::<str>::from("July 16, 2024"),
+                    _ => Arc::<str>::from(label),
+                }
+            })
+        },
     );
 }
 
@@ -495,8 +513,15 @@ fn web_vs_fret_chart_tooltip_formatter_geometry_matches_web() {
         shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
-        shadcn::ChartTooltipContentKind::FormatterKcal,
+        shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| {
+            tooltip.formatter(|context| {
+                shadcn::ChartTooltipFormattedItem::from_item(&context.item)
+                    .value_suffix("kcal")
+                    .row_min_width(Px(130.0))
+            })
+        },
     );
 }
 
@@ -509,6 +534,7 @@ fn web_vs_fret_chart_tooltip_advanced_geometry_matches_web() {
         true,
         shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
         Some(Px(180.0)),
+        |tooltip| tooltip,
     );
 }
 
@@ -541,6 +567,7 @@ fn web_vs_fret_chart_tooltip_default_small_viewport_geometry_matches_web() {
         false,
         shadcn::ChartTooltipContentKind::Default,
         None,
+        |tooltip| tooltip,
     );
 }
 
@@ -553,6 +580,7 @@ fn web_vs_fret_chart_tooltip_advanced_small_viewport_geometry_matches_web() {
         true,
         shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
         Some(Px(180.0)),
+        |tooltip| tooltip,
     );
 }
 

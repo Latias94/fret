@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("rtl_demo.rs");
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::IntoUiElement;
@@ -12,6 +12,14 @@ use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
+
+mod act {
+    fret::payload_actions!([
+        CopyPaymentId(std::sync::Arc<str>) = "ui-gallery.data_table.rtl.copy_payment_id.v1",
+        ViewCustomer(std::sync::Arc<str>) = "ui-gallery.data_table.rtl.view_customer.v1",
+        ViewPaymentDetails(std::sync::Arc<str>) = "ui-gallery.data_table.rtl.view_payment_details.v1"
+    ]);
+}
 
 #[derive(Debug, Clone)]
 struct PaymentRow {
@@ -315,27 +323,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                         ),
                                         shadcn::DropdownMenuEntry::Item(
                                             shadcn::DropdownMenuItem::new(lang.copy_payment_id)
-                                                .on_select(
-                                                CommandId::new(Arc::<str>::from(format!(
-                                                    "ui_gallery.data_table.rtl.copy_payment_id.{}",
-                                                    payment_id
-                                                ))),
-                                            ),
+                                                .action(act::CopyPaymentId)
+                                                .action_payload(payment_id.clone()),
                                         ),
                                         shadcn::DropdownMenuEntry::Separator,
                                         shadcn::DropdownMenuEntry::Item(
                                             shadcn::DropdownMenuItem::new(lang.view_customer)
-                                                .on_select(CommandId::new(
-                                                    "ui_gallery.data_table.rtl.view_customer",
-                                                )),
+                                                .action(act::ViewCustomer)
+                                                .action_payload(payment_id.clone()),
                                         ),
                                         shadcn::DropdownMenuEntry::Item(
                                             shadcn::DropdownMenuItem::new(
                                                 lang.view_payment_details,
                                             )
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.rtl.view_payment_details",
-                                            )),
+                                            .action(act::ViewPaymentDetails)
+                                            .action_payload(payment_id.clone()),
                                         ),
                                     ]
                                 })

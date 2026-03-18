@@ -99,7 +99,7 @@ impl View for ImUiActionBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let count_state = cx.state().local::<u32>();
-        let count_value = cx.state().watch(&count_state).layout().value_or(0);
+        let count_value = count_state.layout(cx).value_or(0);
 
         cx.actions()
             .local_update::<act::Inc, u32>(&count_state, |v| {

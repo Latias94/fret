@@ -12,7 +12,7 @@ use crate::spec::{
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::card as snippets;
 
-const CARD_PAGE_INTRO: &str = "Displays a card with header, content, and footer. This page follows the upstream shadcn Card doc flow first (Demo, Usage, Size, Image, RTL), then adds Fret-specific regression sections.";
+const CARD_PAGE_INTRO: &str = "Displays a card with header, content, and footer. Preview mirrors the upstream shadcn Card docs path after `Installation`: `Demo`, `Usage`, `Size`, `Image`, `RTL`, and `API Reference`; Fret-only regression sections stay afterwards.";
 const CARD_CODE_REGION: &str = "example";
 
 struct CardDocSectionDiagnostics {
@@ -97,6 +97,20 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
             shell: false,
         },
         CardDocSectionDiagnostics {
+            title: "API Reference",
+            description: "Public surface summary and ownership notes.",
+            disable_flag: 0,
+            code_source: None,
+            shell: false,
+        },
+        CardDocSectionDiagnostics {
+            title: "Rich Title (Fret)",
+            description: "Copyable `card_title_children(...)` lane for attributed text and caller-owned title composition.",
+            disable_flag: 0,
+            code_source: Some(snippets::title_children::SOURCE),
+            shell: false,
+        },
+        CardDocSectionDiagnostics {
             title: "Compositions",
             description: "Spot-check slot combinations: header/content/footer permutations.",
             disable_flag: BISECT_DISABLE_CARD_SECTION_COMPOSITIONS,
@@ -161,7 +175,7 @@ pub(crate) fn card_doc_scaffold_metrics_json(bisect: u32) -> serde_json::Value {
         .then_some(CARD_PAGE_INTRO.len() as u64)
         .unwrap_or(0);
     serde_json::json!({
-        "card_doc_section_slots_total": 9u64,
+        "card_doc_section_slots_total": 11u64,
         "card_doc_visible_sections_count": visible_sections,
         "card_doc_visible_sections_with_code_count": visible_sections_with_code,
         "card_doc_visible_sections_with_shell_count": visible_sections_with_shell,
@@ -178,6 +192,14 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let bisect = ui_gallery_bisect_flags();
     let show_code_tabs = (bisect & BISECT_DISABLE_CARD_CODE_TABS) == 0;
     let show_intro = (bisect & BISECT_DISABLE_CARD_PAGE_INTRO) == 0;
+    let api_reference = doc_layout::notes_block([
+        "`card(...)` plus the slot helper family is the default copyable path; `Card::new([...])` remains the explicit raw/root collection surface.",
+        "`CardTitle::new(text)` stays the compact text lane, and `CardTitle::new_children(...)` / `card_title_children(...)` cover composable children when you need rich/selectable text or a caller-owned inline composition root.",
+        "`CardDescription::new(text)` and `card_description_children(...)` both scope description typography at the recipe level instead of pushing muted/body text styling to the call site.",
+        "`CardAction` remains the recipe-owned top-right header slot, while card width (`w-full`, `max-w-sm`, fixed px width) stays caller-owned via `refine_layout(...)` on the card root.",
+        "`CardFooter` direction/gap are the recipe-level knobs for the documented column/row outcomes; page/grid/container negotiation remains caller-owned and should not be baked into the Card recipe.",
+        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+    ]);
     let with_card_code = |section: DocSection, source: &'static str| {
         if show_code_tabs {
             section.code_rust_from_file_region(source, CARD_CODE_REGION)
@@ -237,6 +259,22 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .description("RTL login card aligned with the upstream translated example.");
         sections.push(with_card_code(section, snippets::rtl::SOURCE));
     }
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .test_id_root("ui-gallery-card-api-reference")
+        .test_id_prefix("ui-gallery-card-api-reference")
+        .no_shell()
+        .description("Public surface summary and ownership notes.");
+    sections.push(api_reference);
+    let rich_title = snippets::title_children::render(cx);
+    let rich_title = DocSection::build(cx, "Rich Title (Fret)", rich_title)
+        .test_id_root("ui-gallery-card-section-rich-title")
+        .test_id_prefix("ui-gallery-card-section-rich-title")
+        .no_shell()
+        .max_w(Px(980.0))
+        .description(
+            "Copyable `card_title_children(...)` lane for attributed text and caller-owned title composition.",
+        );
+    sections.push(with_card_code(rich_title, snippets::title_children::SOURCE));
     if (bisect & BISECT_DISABLE_CARD_SECTION_COMPOSITIONS) == 0 {
         let compositions = snippets::compositions::render(cx);
         let section = DocSection::build(cx, "Compositions", compositions)
@@ -273,6 +311,8 @@ pub(super) fn preview_card(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             "Grid/flex demo pages should put `w_full`, `min_w_0`, and `max_w(...)` on the page cell rather than baking them into the Card recipe.",
             "`CardFooter` now owns a fill-width + `min-w-0` inner row/column budget so footer-only text wraps against the card width instead of collapsing into one word per line.",
             "Default first-party teaching should prefer `card(...)` plus the slot helper family; `Card::build(...)` remains a lower-level builder option when call sites need explicit late child collection.",
+            "`Rich Title (Fret)` keeps the `card_title_children(...)` lane copyable on the default app-facing surface instead of making callers drop to `CardTitle::build(...)` for rich title content.",
+            "Gallery order now mirrors the upstream Card docs path through `API Reference` before appending Fret-only regression sections.",
             "The Image section now resolves its cover image from a gallery-owned logical package bundle, so the teaching surface reflects shipped asset ownership rather than inline demo RGBA buffers.",
         ]);
         sections.push(

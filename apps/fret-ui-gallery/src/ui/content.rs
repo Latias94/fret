@@ -538,7 +538,7 @@ fn page_preview(
         PAGE_BUTTON_GROUP => pages::preview_button_group(cx),
         PAGE_CALENDAR => pages::preview_calendar(cx, date_picker_month, date_picker_selected),
         PAGE_CAROUSEL => pages::preview_carousel(cx),
-        #[cfg(feature = "gallery-dev")]
+        #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
         PAGE_CHART => pages::preview_chart(cx),
         PAGE_CHECKBOX => pages::preview_checkbox(cx),
         PAGE_COLLAPSIBLE => pages::preview_collapsible(cx),

@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::advanced::prelude::*;
-use fret::component::prelude::*;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{MouseButton, Px, SemanticsRole};
 use fret_runtime::DefaultAction;
@@ -11,6 +10,7 @@ use fret_runtime::{
     WindowStyleRequest, WindowZLevel,
 };
 use fret_ui::ElementContext;
+use fret_ui::Invalidation;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SemanticsDecoration, SizeStyle};
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
@@ -69,6 +69,12 @@ struct LauncherUtilityWindowState {
     always_on_top: fret_runtime::Model<bool>,
     blink_timer: Option<TimerToken>,
     status: fret_runtime::Model<Arc<str>>,
+}
+
+#[derive(Clone)]
+struct LauncherUtilityWindowViewSettings {
+    always_on_top: bool,
+    status: Arc<str>,
 }
 
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowState {
@@ -189,11 +195,28 @@ fn view(
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
-    let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);
-    let status = cx
-        .watch_model(&st.status)
-        .layout()
-        .value_or_else(|| Arc::from("Idle"));
+    let always_on_top = st.always_on_top.clone();
+    let status = st.status.clone();
+    let always_on_top_deps = always_on_top.clone();
+    let status_deps = status.clone();
+    let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector(
+        move |cx| {
+            cx.observe_model(&always_on_top_deps, Invalidation::Layout);
+            cx.observe_model(&status_deps, Invalidation::Layout);
+            (
+                cx.app.models().revision(&always_on_top_deps).unwrap_or(0),
+                cx.app.models().revision(&status_deps).unwrap_or(0),
+            )
+        },
+        move |cx| LauncherUtilityWindowViewSettings {
+            always_on_top: cx.app.models().get_cloned(&always_on_top).unwrap_or(false),
+            status: cx
+                .app
+                .models()
+                .get_cloned(&status)
+                .unwrap_or_else(|| Arc::from("Idle")),
+        },
+    );
 
     let effective_style = cx
         .app
@@ -206,6 +229,7 @@ fn view(
         ),
         None => "effective: <unavailable>".to_string(),
     });
+    let header_view_settings = view_settings.clone();
 
     let header = cx.container(
         fret_ui::element::ContainerProps {
@@ -268,7 +292,7 @@ fn view(
                                 .on_click(CommandId::from(CMD_BLINK))
                                 .test_id(TEST_ID_BLINK)
                                 .into_element(cx),
-                            shadcn::Button::new(if always_on_top {
+                            shadcn::Button::new(if header_view_settings.always_on_top {
                                 "Always on top: on"
                             } else {
                                 "Always on top: off"
@@ -317,7 +341,7 @@ fn view(
                     .text_sm()
                     .test_id(TEST_ID_STYLE_TEXT)
                     .into_element(cx),
-                ui::text(status)
+                ui::text(view_settings.status)
                     .text_sm()
                     .text_color(ColorRef::Color(color_muted_foreground))
                     .into_element(cx),

@@ -3,8 +3,9 @@ pub const SOURCE: &str = include_str!("custom_cell_size.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_ui_headless::calendar::CalendarMonth;
+use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use std::sync::Arc;
 use time::Date;
 
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
@@ -29,11 +30,33 @@ fn today_from_env_or_now() -> Date {
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let today = today_from_env_or_now();
-    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(today));
-    let selected = cx.local_model_keyed("selected", || None::<Date>);
+    let range_start = Date::from_calendar_date(today.year(), time::Month::December, 8)
+        .expect("valid custom cell size start date");
+    let range_end = range_start + time::Duration::days(10);
+    let month = cx.local_model_keyed("month", || CalendarMonth::from_date(range_start));
+    let selected = cx.local_model_keyed("selected", || DateRangeSelection {
+        from: Some(range_start),
+        to: Some(range_end),
+    });
+    let day_button = shadcn::CalendarDayButton::new().supporting_text_by(|info| {
+        if !info.in_month {
+            return None;
+        }
 
-    shadcn::Calendar::new(month, selected)
+        let is_weekend = matches!(
+            info.date.weekday(),
+            time::Weekday::Saturday | time::Weekday::Sunday
+        );
+        Some(if is_weekend {
+            Arc::<str>::from("$120")
+        } else {
+            Arc::<str>::from("$100")
+        })
+    });
+
+    shadcn::CalendarRange::new(month, selected)
         .test_id_prefix("ui-gallery.calendar.custom-cell")
+        .day_button(day_button)
         .cell_size(Px(44.0))
         .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))

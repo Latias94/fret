@@ -50,6 +50,15 @@ struct RowItem {
     label: Arc<str>,
 }
 
+#[derive(Clone)]
+struct VirtualListViewSettings {
+    mode: Arc<str>,
+    tall_rows: bool,
+    reversed: bool,
+    index_keys: bool,
+    visible_only_keys: bool,
+}
+
 fn make_items(len: usize) -> Arc<Vec<RowItem>> {
     Arc::new(
         (0..len)
@@ -101,20 +110,22 @@ impl View for VirtualListBasicsView {
             .value_or_else(|| Arc::new(Vec::new()));
         let len = items.len();
 
-        let mode: Arc<str> = cx
-            .state()
-            .watch(&mode_state)
-            .layout()
-            .value_or_else(|| Some(Arc::from(MODE_MEASURED)))
-            .unwrap_or_else(|| Arc::from(MODE_MEASURED));
-        let tall_rows = cx.state().watch(&tall_rows_state).layout().value_or(false);
-        let reversed = cx.state().watch(&reversed_state).layout().value_or(false);
-        let index_keys = cx.state().watch(&index_keys_state).layout().value_or(false);
-        let visible_only_keys = cx
-            .state()
-            .watch(&visible_only_keys_state)
-            .layout()
-            .value_or(false);
+        let view_settings: VirtualListViewSettings = cx.data().selector_layout(
+            (
+                &mode_state,
+                &tall_rows_state,
+                &reversed_state,
+                &index_keys_state,
+                &visible_only_keys_state,
+            ),
+            |(mode, tall_rows, reversed, index_keys, visible_only_keys)| VirtualListViewSettings {
+                mode: mode.unwrap_or_else(|| Arc::from(MODE_MEASURED)),
+                tall_rows,
+                reversed,
+                index_keys,
+                visible_only_keys,
+            },
+        );
 
         // Virtual lists cache `index -> key` mappings and anchor bookkeeping. If the key mapping is
         // driven by more than just the items collection (e.g. `reversed`, `index_keys`), bump the
@@ -129,17 +140,17 @@ impl View for VirtualListBasicsView {
             .wrapping_add(index_keys_state.revision_in(store).unwrap_or(0))
             .wrapping_add(visible_only_keys_state.revision_in(store).unwrap_or(0));
 
-        let mut options = match mode.as_ref() {
+        let mut options = match view_settings.mode.as_ref() {
             MODE_FIXED => VirtualListOptions::fixed(Px(28.0), 10),
             MODE_KNOWN => {
-                let tall = tall_rows;
+                let tall = view_settings.tall_rows;
                 VirtualListOptions::known(Px(28.0), 10, move |index| row_height_at(index, tall))
             }
             _ => VirtualListOptions::new(Px(28.0), 10),
         };
         options.items_revision = items_revision;
         options.gap = Px(2.0);
-        if visible_only_keys {
+        if view_settings.visible_only_keys {
             options.key_cache = VirtualListKeyCacheMode::VisibleOnly;
         }
 
@@ -154,13 +165,14 @@ impl View for VirtualListBasicsView {
         };
 
         let key_at_items = Arc::clone(&items);
+        let key_settings = view_settings.clone();
         let key_at = move |index: usize| {
-            let mapped = if reversed {
+            let mapped = if key_settings.reversed {
                 len.saturating_sub(1).saturating_sub(index)
             } else {
                 index
             };
-            if index_keys {
+            if key_settings.index_keys {
                 index as fret_ui::ItemKey
             } else {
                 key_at_items
@@ -172,6 +184,7 @@ impl View for VirtualListBasicsView {
 
         let row_items = Arc::clone(&items);
         let theme_for_rows = theme.clone();
+        let row_settings = view_settings.clone();
         let list = cx
             .virtual_list_keyed_with_layout(
                 list_layout,
@@ -180,7 +193,7 @@ impl View for VirtualListBasicsView {
                 &self.scroll,
                 key_at,
                 move |cx, index| {
-                    let mapped = if reversed {
+                    let mapped = if row_settings.reversed {
                         len.saturating_sub(1).saturating_sub(index)
                     } else {
                         index
@@ -200,7 +213,8 @@ impl View for VirtualListBasicsView {
 
                     let mut row_layout = LayoutStyle::default();
                     row_layout.size.width = Length::Fill;
-                    row_layout.size.height = Length::Px(row_height_at(mapped, tall_rows));
+                    row_layout.size.height =
+                        Length::Px(row_height_at(mapped, row_settings.tall_rows));
 
                     let mut row = ui::container_props(
                         ContainerProps {
@@ -379,9 +393,10 @@ impl View for VirtualListBasicsView {
         .gap(Space::N3)
         .w_full();
 
+        let left_settings = view_settings.clone();
         let left = ui::v_flex_build(|cx, out| {
             out.push_ui(cx, controls);
-            if index_keys {
+            if left_settings.index_keys {
                 let alert = shadcn::Alert::new(ui::children![cx;
                     shadcn::AlertTitle::new("Index keys are intentionally wrong"),
                     shadcn::AlertDescription::new(

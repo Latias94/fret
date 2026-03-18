@@ -7,6 +7,15 @@ This file defines milestones for the workstream in `DESIGN.md`.
 This workstream should now be read as a **closeout / maintenance lane**, not the current main
 authoring lane.
 
+Coordination note on 2026-03-16:
+
+- read the settled app/component/advanced lane story from
+  `../authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+- this file now exists to record conversion/helper closure evidence against that settled lane
+  story, not to reopen tier design independently
+- remaining work here should stay limited to helper-tail cleanup, explicit raw-seam inventory,
+  source-gate maintenance, and low-noise wrapper cleanup
+
 Closeout note on 2026-03-15:
 
 - the broad `IntoUiElement<H>` migration is now effectively landed across the first-party compare
@@ -16,6 +25,10 @@ Closeout note on 2026-03-15:
 - follow-up work here should stay narrow: keep the explicit seam inventory accurate, keep source
   gates aligned, and avoid reopening broad root-builder invention unless one of those audited
   boundaries actually changes.
+- the current maintenance batch is now explicitly limited to low-noise wrapper cleanup:
+  single-child wrapper forwarders should use `ui::single(cx, child)` instead of
+  `ui::children![cx; child]`, and that pass is now landed on the shared cookbook scaffold, the
+  generated `todo` template shell, and the advanced `utility_window_materials_windows` example.
 
 Historical readout on 2026-03-14:
 

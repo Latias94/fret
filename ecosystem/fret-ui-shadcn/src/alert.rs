@@ -6,7 +6,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InsetEdge, Length, PositionStyle, SemanticsDecoration,
     SpacingLength,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 
 use fret_ui_kit::typography::scope_description_text;
@@ -16,6 +16,60 @@ use fret_ui_kit::{
 };
 
 const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
+
+fn alert_padding_x(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.padding_x")
+        .unwrap_or(Px(16.0))
+}
+
+fn alert_padding_y(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.padding_y")
+        .unwrap_or(Px(12.0))
+}
+
+fn alert_gap_x(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.gap_x")
+        .unwrap_or(Px(12.0))
+}
+
+fn alert_gap_y(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.gap_y")
+        .unwrap_or(Px(2.0))
+}
+
+fn alert_icon_size(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.icon_size")
+        .unwrap_or(Px(16.0))
+}
+
+fn alert_icon_offset_y(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.icon_offset_y")
+        .unwrap_or(Px(2.0))
+}
+
+fn alert_action_padding_right(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.action_padding_right")
+        .unwrap_or(Px(72.0))
+}
+
+fn alert_action_top(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.action_top")
+        .unwrap_or(Px(8.0))
+}
+
+fn alert_action_right(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.alert.action_right")
+        .unwrap_or(Px(8.0))
+}
 
 fn px_spacing_or_zero(length: SpacingLength) -> Px {
     match length {
@@ -95,6 +149,7 @@ impl AlertAction {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
+        let theme_snapshot = theme.snapshot();
         let has_explicit_width = self
             .layout
             .size
@@ -111,8 +166,8 @@ impl AlertAction {
             theme,
             LayoutRefinement::default()
                 .absolute()
-                .top(Space::N2)
-                .right(Space::N2)
+                .top_px(alert_action_top(&theme_snapshot))
+                .right_px(alert_action_right(&theme_snapshot))
                 .merge(self.layout),
         );
         if !has_explicit_width {
@@ -395,6 +450,13 @@ fn alert_with_patch<H: UiHost>(
     layout_override: LayoutRefinement,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
+    let padding_x = alert_padding_x(&theme);
+    let padding_y = alert_padding_y(&theme);
+    let gap_x = alert_gap_x(&theme);
+    let gap_y = alert_gap_y(&theme);
+    let icon_size = alert_icon_size(&theme);
+    let icon_offset_y = alert_icon_offset_y(&theme);
+    let action_padding_right = alert_action_padding_right(&theme);
     let has_action = children.iter().any(|child| {
         child
             .semantics_decoration
@@ -447,14 +509,14 @@ fn alert_with_patch<H: UiHost>(
         ChromeRefinement::default()
             .merge(ChromeRefinement {
                 padding: Some(PaddingRefinement {
-                    top: Some(MetricRef::Px(Px(8.0))),
+                    top: Some(MetricRef::Px(padding_y)),
                     right: Some(if has_action {
-                        MetricRef::Px(Px(72.0))
+                        MetricRef::Px(action_padding_right)
                     } else {
-                        MetricRef::Px(Px(10.0))
+                        MetricRef::Px(padding_x)
                     }),
-                    bottom: Some(MetricRef::Px(Px(8.0))),
-                    left: Some(MetricRef::Px(Px(10.0))),
+                    bottom: Some(MetricRef::Px(padding_y)),
+                    left: Some(MetricRef::Px(padding_x)),
                 }),
                 ..Default::default()
             })
@@ -468,23 +530,23 @@ fn alert_with_patch<H: UiHost>(
     );
 
     let body = ui::v_flex(move |_cx| body_children)
-        .gap(Space::N0p5)
+        .gap_px(gap_y)
         .layout(LayoutRefinement::default().w_full().flex_1().min_w_0())
         .into_element(cx);
 
     let main = if let Some(mut icon) = icon {
-        patch_svg_icon_to_inherit_current_color(&mut icon, fg, Px(16.0));
+        patch_svg_icon_to_inherit_current_color(&mut icon, fg, icon_size);
         let icon = cx.container(
             decl_style::container_props(
                 &theme,
                 ChromeRefinement::default(),
-                LayoutRefinement::default().mt(Space::N0p5),
+                LayoutRefinement::default().mt_px(icon_offset_y),
             ),
             move |_cx| [icon],
         );
 
         ui::h_flex(move |_cx| vec![icon, body])
-            .gap(Space::N2)
+            .gap_px(gap_x)
             .items_start()
             .layout(LayoutRefinement::default().w_full())
             .into_element(cx)
@@ -551,7 +613,7 @@ impl AlertTitle {
                 .font_weight(FontWeight::MEDIUM)
                 // Tailwind: `tracking-tight` ~= `-0.025em`.
                 .letter_spacing_em(-0.025)
-                .wrap(TextWrap::Word)
+                .truncate()
                 .into_element(cx),
             AlertTitleContent::Children(mut children) => {
                 for child in &mut children {
@@ -564,7 +626,7 @@ impl AlertTitle {
                         .line_height_px(line_height)
                         .font_weight(FontWeight::MEDIUM)
                         .letter_spacing_em(-0.025)
-                        .wrap(TextWrap::Word)
+                        .truncate()
                         .into_element(cx),
                     1 => children.pop().expect("children.len() == 1"),
                     _ => ui::v_flex(move |_cx| children)
@@ -583,6 +645,8 @@ fn patch_alert_text_style_recursive(
     px: Px,
     line_height: Px,
     weight: FontWeight,
+    wrap: TextWrap,
+    overflow: TextOverflow,
 ) {
     fn patch_text_style(
         style: &mut Option<fret_core::TextStyle>,
@@ -606,29 +670,36 @@ fn patch_alert_text_style_recursive(
     match &mut el.kind {
         ElementKind::Text(props) => {
             patch_text_style(&mut props.style, px, line_height, weight);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            props.wrap = wrap;
+            props.overflow = overflow;
         }
         ElementKind::StyledText(props) => {
             patch_text_style(&mut props.style, px, line_height, weight);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            props.wrap = wrap;
+            props.overflow = overflow;
         }
         ElementKind::SelectableText(props) => {
             patch_text_style(&mut props.style, px, line_height, weight);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            props.wrap = wrap;
+            props.overflow = overflow;
         }
         _ => {}
     }
 
     for child in &mut el.children {
-        patch_alert_text_style_recursive(child, px, line_height, weight);
+        patch_alert_text_style_recursive(child, px, line_height, weight, wrap, overflow);
     }
 }
 
 fn patch_alert_title_text_style_recursive(el: &mut AnyElement, px: Px, line_height: Px) {
-    patch_alert_text_style_recursive(el, px, line_height, FontWeight::MEDIUM);
+    patch_alert_text_style_recursive(
+        el,
+        px,
+        line_height,
+        FontWeight::MEDIUM,
+        TextWrap::None,
+        TextOverflow::Ellipsis,
+    );
 }
 
 #[derive(Debug)]
@@ -806,7 +877,7 @@ mod tests {
     }
 
     #[test]
-    fn alert_title_wraps_by_default_like_shadcn() {
+    fn alert_title_truncates_by_default_like_current_shadcn() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -826,8 +897,8 @@ mod tests {
             );
         };
 
-        assert_eq!(props.wrap, TextWrap::Word);
-        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
 
     #[test]
@@ -876,8 +947,8 @@ mod tests {
         assert_eq!(style.weight, FontWeight::MEDIUM);
         assert_eq!(style.line_height, Some(expected_line_height));
         assert_eq!(style.letter_spacing_em, Some(-0.025));
-        assert_eq!(props.wrap, TextWrap::Word);
-        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
 
     #[test]
@@ -969,8 +1040,8 @@ mod tests {
         assert_eq!(style.size, expected_px);
         assert_eq!(style.weight, FontWeight::MEDIUM);
         assert_eq!(style.line_height, Some(expected_line_height));
-        assert_eq!(props.wrap, TextWrap::Word);
-        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
 
     #[test]
@@ -1077,7 +1148,7 @@ mod tests {
         };
 
         assert_eq!(props.layout.position, PositionStyle::Absolute);
-        assert_eq!(props.layout.inset.top, InsetEdge::Px(Px(0.0)));
+        assert_eq!(props.layout.inset.top, InsetEdge::Px(Px(-4.0)));
         assert_eq!(props.layout.inset.right, InsetEdge::Px(Px(-64.0)));
     }
 
@@ -1102,10 +1173,10 @@ mod tests {
             );
         };
 
-        assert_eq!(props.padding.left, SpacingLength::Px(Px(10.0)));
-        assert_eq!(props.padding.right, SpacingLength::Px(Px(10.0)));
-        assert_eq!(props.padding.top, SpacingLength::Px(Px(8.0)));
-        assert_eq!(props.padding.bottom, SpacingLength::Px(Px(8.0)));
+        assert_eq!(props.padding.left, SpacingLength::Px(Px(16.0)));
+        assert_eq!(props.padding.right, SpacingLength::Px(Px(16.0)));
+        assert_eq!(props.padding.top, SpacingLength::Px(Px(12.0)));
+        assert_eq!(props.padding.bottom, SpacingLength::Px(Px(12.0)));
     }
 
     #[test]
@@ -1171,14 +1242,14 @@ mod tests {
         };
 
         assert_eq!(props.layout.position, PositionStyle::Absolute);
-        let theme = Theme::global(&app);
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(
             props.layout.inset.top,
-            InsetEdge::Px(MetricRef::space(Space::N2).resolve(theme))
+            InsetEdge::Px(alert_action_top(&theme))
         );
         assert_eq!(
             props.layout.inset.right,
-            InsetEdge::Px(MetricRef::space(Space::N2).resolve(theme))
+            InsetEdge::Px(alert_action_right(&theme))
         );
         assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
     }
@@ -1209,14 +1280,14 @@ mod tests {
         };
 
         assert_eq!(props.layout.position, PositionStyle::Absolute);
-        let theme = Theme::global(&app);
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(
             props.layout.inset.top,
-            InsetEdge::Px(MetricRef::space(Space::N2).resolve(theme))
+            InsetEdge::Px(alert_action_top(&theme))
         );
         assert_eq!(
             props.layout.inset.right,
-            InsetEdge::Px(MetricRef::space(Space::N2).resolve(theme))
+            InsetEdge::Px(alert_action_right(&theme))
         );
         assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
     }

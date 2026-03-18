@@ -19,6 +19,13 @@ Use this ordering unless the component clearly demands a different one:
 
 If sources disagree, document the chosen ordering in the change and keep the disagreement local to the component.
 
+Treat this as an axis-based ordering, not a blanket “one source wins everything” rule:
+
+- visual chrome / defaults / web composition → MUI tends to be the best first implementation reference,
+- semantics / state machine / touch / motion foundations → Compose Material3 tends to be the best first implementation reference,
+- taxonomy / UX intent / token direction → Material spec stays above both,
+- headless parts / a11y fallback patterns → Base UI stays supporting, not taxonomy-defining.
+
 
 ## 1.5) Default-style ownership (recipe vs call site)
 
@@ -145,9 +152,10 @@ Inspect these first when the same drift appears across multiple Material compone
 
 Use local snapshots only as optional convenience.
 
-Available pinned/local mirrors in this repo:
+Available pinned/local mirrors in this repo may include:
 
 - `repo-ref/material-ui`
+- `repo-ref/compose-multiplatform-core` (or an equivalent local Compose Multiplatform core mirror under a different folder name)
 - `repo-ref/base-ui`
 - `repo-ref/ui`
 - `repo-ref/primitives`
@@ -155,7 +163,8 @@ Available pinned/local mirrors in this repo:
 Notes:
 
 - `repo-ref/ui` and `repo-ref/primitives` are useful when a Material component reuses the same overlay/listbox/menu semantics already proven in shadcn/Radix work.
-- Compose Material3 is currently **not** mirrored under `repo-ref/` in this checkout; consult upstream source/docs directly when you need exact Compose behavior.
+- If the Compose mirror is present locally, prefer it over remote browsing for exact Compose behavior.
+- If the Compose mirror is absent in the current checkout, fall back to upstream source/docs and say so explicitly in the change notes.
 
 ## 5) Quick decision matrix
 
@@ -166,6 +175,8 @@ Notes:
 - **web composition / portal / popup behavior** → start with MUI Material UI.
 - **parts / headless accessibility patterns** → start with Base UI.
 - **Fret-side layering / gating / stable automation surfaces** → inspect the shadcn Select audit plus current Material recipes.
+
+When the change touches shared Material foundation code, inspect both the Compose-side and MUI-side references before choosing the abstraction boundary.
 
 ## 6) Questions to answer before coding
 

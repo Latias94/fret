@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("events.rs");
+pub const DOCS_SOURCE: &str = include_str!("events.docs.rs.txt");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -52,10 +52,14 @@ fn slide_card(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let max_w_xs = Px(320.0);
+    const EVENT_BASELINE_STABLE_FRAMES: usize = 2;
 
     let api_handle = cx.local_model_keyed("api_handle", || None::<shadcn::CarouselApi>);
     let api_cursor = cx.local_model_keyed("api_cursor", shadcn::CarouselEventCursor::default);
-    let cursor_synced = cx.local_model_keyed("cursor_synced", || false);
+    let events_armed = cx.local_model_keyed("events_armed", || false);
+    let baseline_reinit_generation =
+        cx.local_model_keyed("baseline_reinit_generation", || None::<u64>);
+    let baseline_stable_frames = cx.local_model_keyed("baseline_stable_frames", || 0usize);
     let select_seen = cx.local_model_keyed("select_seen", || false);
     let reinit_seen = cx.local_model_keyed("reinit_seen", || false);
     let selected_index = cx.local_model_keyed("selected_index", || 0usize);
@@ -63,43 +67,80 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // Upstream docs: `setApi` + `api.on("select"|"reInit", ...)`.
     // Fret: poll a cursor for the same outcomes.
     if let Some(api_now) = cx.watch_model(&api_handle).cloned().flatten() {
-        let mut cursor_now = cx.watch_model(&api_cursor).copied().unwrap_or_default();
-        let events = api_now.events_since(&mut *cx.app, &mut cursor_now);
-        let is_synced = cx.watch_model(&cursor_synced).copied().unwrap_or(false);
+        let snapshot = api_now.snapshot(&mut *cx.app);
+        let is_armed = cx.watch_model(&events_armed).copied().unwrap_or(false);
 
-        if !is_synced {
-            let _ = cx.app.models_mut().update(&api_cursor, |v| *v = cursor_now);
-            let _ = cx.app.models_mut().update(&cursor_synced, |v| *v = true);
-        } else if !events.is_empty() {
-            let mut select_seen_now = cx.watch_model(&select_seen).copied().unwrap_or(false);
-            let mut reinit_seen_now = cx.watch_model(&reinit_seen).copied().unwrap_or(false);
-            let mut selected_index_now = cx.watch_model(&selected_index).copied().unwrap_or(0);
+        if !is_armed {
+            let baseline_generation_now = cx
+                .watch_model(&baseline_reinit_generation)
+                .copied()
+                .flatten();
+            let stable_frames_now = cx
+                .watch_model(&baseline_stable_frames)
+                .copied()
+                .unwrap_or(0);
+            let baseline_matches = baseline_generation_now == Some(snapshot.reinit_generation);
+            let next_stable_frames = if snapshot.snap_count > 0 && baseline_matches {
+                stable_frames_now + 1
+            } else {
+                1
+            };
 
-            for ev in events {
-                match ev {
-                    shadcn::CarouselEvent::ReInit => {
-                        reinit_seen_now = true;
-                    }
-                    shadcn::CarouselEvent::Select { selected_index } => {
-                        select_seen_now = true;
-                        selected_index_now = selected_index;
+            let _ = cx.app.models_mut().update(&api_cursor, |v| {
+                *v = shadcn::CarouselEventCursor {
+                    select_generation: snapshot.select_generation,
+                    reinit_generation: snapshot.reinit_generation,
+                };
+            });
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&baseline_reinit_generation, |v| {
+                    *v = Some(snapshot.reinit_generation)
+                });
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&baseline_stable_frames, |v| *v = next_stable_frames);
+
+            if snapshot.snap_count > 0 && next_stable_frames >= EVENT_BASELINE_STABLE_FRAMES {
+                let _ = cx.app.models_mut().update(&events_armed, |v| *v = true);
+            }
+        } else {
+            let mut cursor_now = cx.watch_model(&api_cursor).copied().unwrap_or_default();
+            let events = api_now.events_since(&mut *cx.app, &mut cursor_now);
+
+            if !events.is_empty() {
+                let mut select_seen_now = cx.watch_model(&select_seen).copied().unwrap_or(false);
+                let mut reinit_seen_now = cx.watch_model(&reinit_seen).copied().unwrap_or(false);
+                let mut selected_index_now = cx.watch_model(&selected_index).copied().unwrap_or(0);
+
+                for ev in events {
+                    match ev {
+                        shadcn::CarouselEvent::ReInit => {
+                            reinit_seen_now = true;
+                        }
+                        shadcn::CarouselEvent::Select { selected_index } => {
+                            select_seen_now = true;
+                            selected_index_now = selected_index;
+                        }
                     }
                 }
-            }
 
-            let _ = cx.app.models_mut().update(&api_cursor, |v| *v = cursor_now);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&select_seen, |v| *v = select_seen_now);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&reinit_seen, |v| *v = reinit_seen_now);
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&selected_index, |v| *v = selected_index_now);
+                let _ = cx.app.models_mut().update(&api_cursor, |v| *v = cursor_now);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&select_seen, |v| *v = select_seen_now);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&reinit_seen, |v| *v = reinit_seen_now);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&selected_index, |v| *v = selected_index_now);
+            }
         }
     }
 
@@ -115,9 +156,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .api_handle_model(api_handle.clone())
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-events")
-        .into_element_parts(
+        .into_element_parts_content(
             cx,
-            |_cx| shadcn::CarouselContent::new(items),
+            shadcn::CarouselContent::new(items),
             shadcn::CarouselPrevious::new().test_id("ui-gallery-carousel-events-prev"),
             shadcn::CarouselNext::new().test_id("ui-gallery-carousel-events-next"),
         );

@@ -1,13 +1,16 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Post-v1 Endgame Summary
 
-Status: draft, post-v1 summary
-Last updated: 2026-03-12
+Status: closeout summary, archived post-v1 readout
+Last updated: 2026-03-16
 
 Related:
 
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_EXECUTION_CHECKLIST.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_SURFACE_SHORTLIST.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/V2_BEST_PRACTICE_GAP.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/HARD_DELETE_ENDGAME_INDEX.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_APP_ENTRY_RETAINED_SEAMS_AUDIT_2026-03-10.md`
@@ -35,25 +38,26 @@ The goal is to stop treating every remaining gap as the same kind of work.
 
 ## Executive summary
 
-The repo is no longer in a broad authoring-surface migration phase.
+The repo is no longer in a broad action-first authoring migration phase.
 
 Current state:
 
 1. the default path is converged enough to teach (`hello` -> `simple-todo` -> `todo`),
-2. the biggest remaining "write UI" feel gap is now the adjacent conversion-surface cleanup in
-   `docs/workstreams/into-element-surface-fearless-refactor-v1/`,
-3. keyed-list / build-sink density plus the canonical trio
-   (`simple_todo_v2_target`, `todo_demo`, scaffold template) should now be treated as a targeted
-   productization lane rather than pure maintenance,
-4. the local-state architecture question remains real, but it is no longer the next highest-value
-   day-to-day authoring improvement,
-5. the hard-delete track is now mostly about staged cleanup decisions rather than missing in-tree
-   migration.
+2. the adjacent conversion-surface cleanup in
+   `docs/workstreams/into-element-surface-fearless-refactor-v1/` is now also closed on its own
+   maintenance lane,
+3. the canonical-trio keyed-list / build-sink productization batch is landed and should stay
+   maintenance-only unless new cross-surface evidence reappears,
+4. the local-state architecture question remains real, but it is now a future separate question
+   rather than unfinished action-first migration work,
+5. the hard-delete track is now historical cleanup/retained-seam policy rather than missing
+   in-tree migration.
 
 In short:
 
-> v1 migration is effectively complete,
-> post-v1 is now productization + a small number of explicit endgame decisions.
+> v1 migration is closed,
+> and any future follow-on should reopen as a narrower lane rather than by keeping this workstream
+> active.
 
 ---
 
@@ -61,14 +65,14 @@ In short:
 
 | Track | Current state | Meaning |
 | --- | --- | --- |
-| Default path / onboarding taxonomy | Active productization track | Keep docs/templates/examples aligned on one obvious ladder. |
-| Conversion surface (`into-element`) | Active adjacent track | Highest-leverage remaining "write UI" gap; owned by the focused conversion-surface workstream. |
+| Default path / onboarding taxonomy | Closed baseline / maintenance | Keep docs/templates/examples aligned on one obvious ladder, but do not treat drift prevention as a reason to reopen the workstream. |
+| Conversion surface (`into-element`) | Closed adjacent lane / maintenance | Foundational conversion cleanup is landed; only explicit seam inventory and gate maintenance remain. |
 | Local-state default teaching path (`use_local*`) | Done for the default path | This is the recommended way to teach local state now. |
 | `AFA-postv1-002` builder-first seams | Maintenance mode | Reopen only if a new cross-surface host/root seam appears. |
-| `AFA-postv1-003` keyed-list / payload-row ergonomics | Reopened targeted productization track | Focus on keyed/list/build-sink density and keep the canonical trio aligned on one intended writing style. |
+| `AFA-postv1-003` keyed-list / payload-row ergonomics | Maintenance mode | The first productization batch is landed; reopen only with new evidence beyond the canonical trio. |
 | `AFA-postv1-004` invalidation ergonomics | Maintenance mode / policy complete | The default rule is stable; `notify()` stays an escape hatch. |
-| `AFA-postv1-001` local-state ergonomics | Open architectural question | The remaining gap is model-backed `LocalState<T>` vs a stronger plain-Rust/self-owned story. |
-| Hard-delete / quarantine track | Active cleanup track | Mostly sequencing/policy work, not broad migration work. |
+| `AFA-postv1-001` local-state ergonomics | Future separate architectural question | The remaining gap is model-backed `LocalState<T>` vs a stronger plain-Rust/self-owned story. |
+| Hard-delete / quarantine track | Historical cleanup + retained-seam policy | Useful archival guidance remains, but broad migration closure is already landed. |
 
 ---
 
@@ -111,7 +115,7 @@ The policy is now explicit:
 
 ---
 
-## What is still genuinely open
+## What remains as separate future work
 
 ### Local-state architecture
 
@@ -126,7 +130,7 @@ It is:
 > dirty/notify determinism?”
 
 That is a runtime/architecture question.
-It should not be hidden inside another helper pass.
+It should not be hidden inside another helper pass or used to keep this workstream "in progress".
 
 ### Productization
 
@@ -136,7 +140,8 @@ The default path still needs continuing product work:
 - keep comparison/advanced framing obvious,
 - keep the ladder stable as the first-contact story.
 
-This is now a higher-value track than adding more API names.
+This remains worthwhile product work, but it no longer belongs on the active status line of this
+closed workstream.
 
 ### Keyed-list / build-sink density on the canonical trio
 
@@ -152,11 +157,30 @@ Those surfaces are where users most directly judge whether Fret still feels heav
 writing ordinary dynamic UI.
 
 So this lane is no longer "done enough, ignore it".
-It is a narrow productization track:
+It is a narrow future productization/reference track:
 
 - keep those three surfaces aligned,
 - reduce visible keyed/list/build-sink friction where it repeats,
 - and avoid widening the helper surface beyond what those concrete examples justify.
+
+Correct refactor rule:
+
+- treat the canonical trio as the primary **evidence set for finding** default-path friction,
+  because that is where users most clearly feel day-to-day authoring density,
+- but do **not** treat canonical-trio pain by itself as sufficient reason to mint or widen a
+  shared public helper/API surface,
+- if the problem can be solved by existing helpers, tighter docs, source-policy cleanup, or
+  recipe/local helper adoption, do that first,
+- only promote a new shared surface when the same pressure repeats on at least one additional real
+  surface beyond the Todo compare set and still reads as default-path friction rather than as an
+  advanced/runtime-owned boundary.
+
+Operational note:
+
+- `SHARED_SURFACE_EVIDENCE_MATRIX_2026-03-16.md` is now the evidence basis for deciding whether a
+  remaining ceremony item can even enter shared public-surface discussion,
+- `POST_V1_EXECUTION_CHECKLIST.md` is now the execution-order note for what should happen before
+  any such reopen decision.
 
 ---
 
@@ -210,6 +234,8 @@ last grep-and-delete pass.
 ---
 
 ## Recommended next order
+
+The operational version of this order now lives in `POST_V1_EXECUTION_CHECKLIST.md`.
 
 1. keep the `into-element` conversion-surface cleanup moving as the highest-leverage remaining UI-authoring refactor,
 2. use `simple_todo_v2_target`, `todo_demo`, and the scaffold template as the canonical compare set for keyed/list/build-sink density,

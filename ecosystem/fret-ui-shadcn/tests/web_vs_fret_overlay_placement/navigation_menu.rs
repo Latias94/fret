@@ -1,5 +1,5 @@
-use fret_ui_shadcn::facade as shadcn;
 use super::*;
+use fret_ui_shadcn::facade as shadcn;
 
 #[test]
 fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls() {

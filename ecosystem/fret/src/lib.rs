@@ -38,8 +38,8 @@
 //!         Self
 //!     }
 //!
-//!     fn render(&mut self, _ui: &mut AppUi<'_, '_>) -> Ui {
-//!         shadcn::Label::new("Fret!").into()
+//!     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+//!         ui::single(cx, shadcn::Label::new("Fret!"))
 //!     }
 //! }
 //!
@@ -53,8 +53,12 @@
 //!
 //! Optional ecosystem extensions stay explicit:
 //!
-//! - enable `state` for grouped selector/query helpers on `AppUi`; when app code needs explicit
-//!   state helper nouns, use `fret::selector::{DepsBuilder, DepsSignature}` and
+//! - enable `state` for grouped selector/query helpers on `AppUi`; prefer
+//!   `cx.data().selector_layout(...)` for LocalState-first derived values, keep
+//!   `cx.data().query*(...)` plus `handle.read_layout(cx)` as the default query read path, and use
+//!   `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` when
+//!   app-facing query invalidation stays inside `AppUi`; when app code needs explicit state helper
+//!   nouns, use `fret::selector::ui::DepsBuilder`, `fret::selector::DepsSignature`, and
 //!   `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}` instead of expecting
 //!   those names from `fret::app::prelude::*`
 //! - enable `router` for `fret::router::{app::install, RouterUiStore, RouterOutlet, router_link, ...}`
@@ -80,14 +84,18 @@
 //! - enable `editor` for opt-in app-level replay of installed `fret-ui-editor` presets after the
 //!   `FretApp` shadcn auto-theme middleware resets the host theme
 //! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}` for the
-//!   curated default design-system surface; advanced environment / `UiServices` hooks stay on
+//!   curated default design-system surface; component families live on `shadcn::Button` /
+//!   `shadcn::Card`, `shadcn::app::*` and `shadcn::themes::*` are setup lanes rather than peer
+//!   discovery lanes, and advanced environment / `UiServices` hooks stay on
 //!   `fret::shadcn::raw::advanced::*`
 //! - use `fret::integration::InstallIntoApp` for reusable app-install bundles; small app-local
 //!   composition can also use `.setup((install_a, install_b))` while ordinary app code keeps
 //!   passing named installer functions to `.setup(...)` and keeps inline one-off closures or
 //!   runtime-captured config on `UiAppBuilder::setup_with(...)`
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 use std::path::PathBuf;
 
+#[cfg(feature = "desktop")]
 use crate::advanced::KernelApp;
 
 /// Canonical app-facing window identity alias for the default authoring surface.
@@ -491,6 +499,8 @@ pub mod app {
         pub use crate::app::App;
         #[cfg(feature = "shadcn")]
         pub use crate::shadcn;
+        #[cfg(feature = "state-query")]
+        pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::TrackedStateExt as _;
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
@@ -510,8 +520,8 @@ pub mod app {
     ///
     /// This intentionally stays off `fret::app::prelude::*` so default app autocomplete remains
     /// focused on native widget action slots. Import `use fret::app::AppActivateExt as _;`
-    /// explicitly at call sites that still need activation-only `.action(...)`, `.dispatch::<A>()`,
-    /// or `.listen(...)` sugar.
+    /// explicitly at call sites that still need activation-only `.action(...)`,
+    /// `.action_payload(...)`, or `.listen(...)` sugar.
     pub use crate::view::{AppActivateExt, AppActivateSurface};
 }
 
@@ -526,6 +536,7 @@ pub mod component {
         pub use fret_ui_kit::declarative::ElementContextThemeExt as _;
         pub use fret_ui_kit::declarative::GlobalWatchExt as _;
         pub use fret_ui_kit::declarative::ModelWatchExt as _;
+        pub use fret_ui_kit::declarative::TrackedModelExt as _;
         pub use fret_ui_kit::declarative::UiElementA11yExt as _;
         pub use fret_ui_kit::declarative::UiElementKeyContextExt as _;
         pub use fret_ui_kit::declarative::UiElementTestIdExt as _;
@@ -554,10 +565,12 @@ pub mod component {
 /// Optional selector integration surface for app code.
 ///
 /// This keeps the selector story explicit:
-/// - grouped default app data stays on `cx.data().selector(...)`,
+/// - grouped default app data stays on `cx.data().selector_layout(...)` for LocalState-first
+///   inputs, with raw `cx.data().selector(...)` kept explicit,
 /// - `fret-selector` remains the portable derived-state crate,
-/// - `fret::selector` gives app authors one explicit lane for dependency-signature nouns without
-///   widening `fret::app::prelude::*`.
+/// - `fret::selector` keeps selector-core nouns on the explicit lane, while the one app-facing UI
+///   dependency builder stays under `fret::selector::ui::DepsBuilder` instead of widening
+///   `fret::app::prelude::*`.
 #[cfg(feature = "state-selector")]
 pub mod selector {
     /// Raw selector-core exports for advanced or fully explicit use.
@@ -567,17 +580,17 @@ pub mod selector {
 
     /// Raw selector-UI adoption exports for advanced or fully explicit use.
     pub mod ui {
-        pub use fret_selector::ui::*;
+        pub use fret_selector::ui::DepsBuilder;
     }
 
-    pub use fret_selector::ui::DepsBuilder;
     pub use fret_selector::{DepsSignature, Selector};
 }
 
 /// Optional query integration surface for app code.
 ///
 /// This keeps the query story explicit:
-/// - grouped default app data stays on `cx.data().query*`,
+/// - grouped default app data stays on `cx.data().query*` plus
+///   `cx.data().invalidate_query*`,
 /// - `fret-query` remains the portable async resource crate,
 /// - `fret::query` gives app authors one curated import lane for `QueryKey` / `QueryPolicy` /
 ///   `QueryState`-style nouns without pulling those names into `fret::app::prelude::*`.
@@ -586,11 +599,6 @@ pub mod query {
     /// Raw query-core exports for advanced or fully explicit use.
     pub mod core {
         pub use fret_query::*;
-    }
-
-    /// Raw query-UI adoption exports for advanced or fully explicit use.
-    pub mod ui {
-        pub use fret_query::ui::*;
     }
 
     pub use fret_query::{
@@ -616,11 +624,6 @@ pub mod router {
         pub use fret_router::*;
     }
 
-    /// Raw router-UI adoption exports for advanced or fully explicit use.
-    pub mod ui {
-        pub use fret_router_ui::*;
-    }
-
     #[cfg(target_arch = "wasm32")]
     pub use fret_router::{HashHistoryAdapter, WebHistoryAdapter};
     pub use fret_router::{
@@ -633,8 +636,8 @@ pub mod router {
     };
     pub use fret_router_ui::{
         RouterLeafStatus, RouterLink, RouterLinkContextMenuAction, RouterLinkContextMenuItem,
-        RouterOutlet, RouterUiSnapshot, RouterUiStore, register_router_commands, router_link,
-        router_link_to, router_link_to_typed_route, router_link_to_typed_route_with_test_id,
+        RouterOutlet, RouterUiSnapshot, RouterUiStore, router_link, router_link_to,
+        router_link_to_typed_route, router_link_to_typed_route_with_test_id,
         router_link_to_with_test_id, router_link_with_props, router_link_with_test_id,
         router_outlet, router_outlet_with_test_id,
     };
@@ -699,9 +702,10 @@ pub mod docking {
 pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
     pub mod view {
-        pub use crate::view::{
-            ViewWindowState, view_init_window, view_record_engine_frame, view_view,
-        };
+        pub use crate::view::{ViewWindowState, view_init_window, view_view};
+
+        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+        pub use crate::view::view_record_engine_frame;
     }
 
     /// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
@@ -719,6 +723,17 @@ pub mod advanced {
         pub use crate::interop::embedded_viewport;
         pub use crate::interop::run_native_with_compat_driver;
     }
+    /// Explicit raw action-registration hooks kept on the advanced lane.
+    ///
+    /// This keeps raw notify/payload-notify registration discoverable for advanced/manual assembly
+    /// and host-owned integrations while leaving
+    /// `fret::app::prelude::*` focused on `cx.actions()`.
+    pub use crate::view::AppUiRawActionNotifyExt;
+    /// Explicit raw-model local-state hooks kept on the advanced lane.
+    ///
+    /// This keeps `use_state*` discoverable for advanced/manual assembly and intentional
+    /// `Model<T>`-centric code while leaving `fret::app::prelude::*` focused on
+    /// `LocalState<T>` / `cx.state().local*`.
     pub use crate::view::AppUiRawStateExt;
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::{UiAppBuilder, UiAppDriver};
@@ -929,6 +944,8 @@ pub mod advanced {
             EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
         };
         pub use crate::advanced::*;
+        #[cfg(feature = "state-query")]
+        pub use crate::view::QueryHandleReadLayoutExt as _;
         pub use crate::view::UiCxActionsExt as _;
         pub use crate::view::UiCxDataExt as _;
         pub use crate::view::{LocalState, TrackedStateExt, View};
@@ -940,6 +957,7 @@ pub mod advanced {
         pub use fret_runtime::{ActionId, TypedAction};
         pub use fret_ui::element::{HoverRegionProps, Length, SemanticsProps, TextProps};
         pub use fret_ui::{ElementContext, ThemeSnapshot, UiTree};
+        pub use fret_ui_kit::declarative::TrackedModelExt as _;
         #[cfg(feature = "icons")]
         pub use fret_ui_kit::declarative::icon;
     }
@@ -2633,12 +2651,20 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("pub mod router {"));
         assert!(public_surface.contains("pub mod app {"));
         assert!(public_surface.contains("pub fn install(app: &mut crate::app::App) {"));
+        assert!(!public_surface.contains("register_router_commands"));
         assert!(!public_surface.contains("pub fn install_app(app: &mut crate::app::App) {"));
+        assert!(!public_surface.contains("pub use fret_router_ui::*;"));
     }
 
     #[test]
     fn readme_and_rustdoc_expose_selector_and_query_as_explicit_optional_surfaces() {
-        assert!(CRATE_README.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(CRATE_README.contains("`cx.data().selector_layout(...)`"));
+        assert!(CRATE_README.contains("raw `cx.data().selector(...)`"));
+        assert!(CRATE_README.contains("`handle.read_layout(cx)`"));
+        assert!(CRATE_README.contains("`cx.data().invalidate_query(...)`"));
+        assert!(CRATE_README.contains("`cx.data().invalidate_query_namespace(...)`"));
+        assert!(CRATE_README.contains("`fret::selector::ui::DepsBuilder`"));
+        assert!(CRATE_README.contains("`fret::selector::DepsSignature`"));
         assert!(
             CRATE_README
                 .contains("`fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`")
@@ -2647,23 +2673,27 @@ mod authoring_surface_policy_tests {
         let rustdoc = crate_rustdoc();
         let selector_surface = selector_surface_source();
         let query_surface = query_surface_source();
-        assert!(rustdoc.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(rustdoc.contains("`fret::selector::ui::DepsBuilder`"));
+        assert!(rustdoc.contains("`fret::selector::DepsSignature`"));
         assert!(
             rustdoc.contains("`fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`")
         );
         assert!(selector_surface.contains("pub mod selector {"));
         assert!(selector_surface.contains("pub mod core {"));
         assert!(selector_surface.contains("pub mod ui {"));
+        assert!(!selector_surface.contains("pub use crate::view::LocalSelectorDepsBuilderExt;"));
         assert!(selector_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(selector_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(!selector_surface.contains("pub use fret_selector::ui::*;"));
         assert!(query_surface.contains("pub mod query {"));
         assert!(query_surface.contains("pub mod core {"));
-        assert!(query_surface.contains("pub mod ui {"));
+        assert!(!query_surface.contains("pub mod ui {"));
         assert!(query_surface.contains("pub use fret_query::{"));
         assert!(query_surface.contains("QueryKey, QueryPolicy"));
         assert!(query_surface.contains("QueryState,"));
         assert!(!app_prelude_exports_symbol("DepsBuilder"));
         assert!(!app_prelude_exports_symbol("DepsSignature"));
+        assert!(!app_prelude_exports_symbol("LocalSelectorDepsBuilderExt"));
         assert!(!app_prelude_exports_symbol("QueryKey"));
         assert!(!app_prelude_exports_symbol("QueryPolicy"));
         assert!(!app_prelude_exports_symbol("QueryHandle"));
@@ -2760,6 +2790,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_README.contains("`shadcn::app::install(...)`"));
         assert!(CRATE_README.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
         assert!(CRATE_README.contains("`shadcn::raw::*`"));
+        assert!(CRATE_README.contains("only first-contact component-family lane"));
+        assert!(CRATE_README.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes"));
         assert!(CRATE_README.contains("`fret::shadcn::raw::advanced::*`"));
         assert!(CRATE_README.contains("`fret_ui_shadcn::advanced::*`"));
 
@@ -2768,6 +2800,7 @@ mod authoring_surface_policy_tests {
         assert!(rustdoc.contains(
             "//! - use `fret::shadcn::{..., app::install, themes::apply_shadcn_new_york, raw::*}`"
         ));
+        assert!(rustdoc.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes"));
         assert!(rustdoc.contains("`fret::shadcn::raw::advanced::*`"));
         assert!(public_surface.contains("pub use fret_ui_shadcn::facade as shadcn;"));
         assert!(!public_surface.contains("pub use fret_ui_shadcn as shadcn;"));
@@ -2793,7 +2826,8 @@ mod authoring_surface_policy_tests {
     #[test]
     fn repo_docs_prefer_app_ui_language_for_golden_path() {
         assert!(DOCS_README.contains("`ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)"));
-        assert!(DOCS_README.contains("`cx.actions().payload::<A>()`"));
+        assert!(DOCS_README.contains("`on_payload_action_notify`"));
+        assert!(!DOCS_README.contains("`payload_locals::<A>(...)`"));
         assert!(!DOCS_README.contains("`ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)"));
         assert!(!DOCS_README.contains("ViewCx::on_payload_action*"));
     }
@@ -2803,6 +2837,8 @@ mod authoring_surface_policy_tests {
         assert!(DOCS_README.contains("`use fret::app::prelude::*;`"));
         assert!(DOCS_README.contains("`FretApp::new(...).window(...).view::<MyView>()?.run()`"));
         assert!(DOCS_README.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(!DOCS_README.contains("`.dispatch::<A>()`"));
+        assert!(!DOCS_README.contains("`.dispatch_payload::<A>(...)`"));
         assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!DOCS_README.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!DOCS_README.contains(".on_activate(cx.actions().listener("));
@@ -2816,10 +2852,22 @@ mod authoring_surface_policy_tests {
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
         assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
+        assert!(!FIRST_HOUR.contains("`.dispatch::<A>()`"));
+        assert!(!FIRST_HOUR.contains("`.dispatch_payload::<A>(...)`"));
         assert!(FIRST_HOUR.contains("`ui::single(cx, page(...))`"));
+        assert!(FIRST_HOUR.contains("When observing tracked state in views:"));
+        assert!(FIRST_HOUR.contains(
+            "Treat explicit `.into_element(cx)` / `AnyElement` seams as advanced helper or interop boundaries"
+        ));
         assert!(FIRST_HOUR.contains("use fret::children::UiElementSinkExt as _;"));
         assert!(!FIRST_HOUR.contains("run_view::<"));
         assert!(!FIRST_HOUR.contains("ViewCx::"));
+        assert!(!FIRST_HOUR.contains("When observing models (via `cx.watch_model(...)`):"));
+        assert!(
+            !FIRST_HOUR
+                .contains("Convert into `AnyElement` at the boundary via `.into_element(cx)`.")
+        );
+        assert!(!FIRST_HOUR.contains("cx.watch_model(&models.clicks)"));
         assert!(!FIRST_HOUR.contains("`fret_ui_shadcn::prelude::*`"));
     }
 
@@ -2857,8 +2905,12 @@ mod authoring_surface_policy_tests {
     #[test]
     fn usage_docs_prefer_grouped_app_ui_actions() {
         assert!(CRATE_USAGE_GUIDE.contains("start with `View` + `AppUi` + typed actions"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().models::<A>(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().payload_models::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().transient::<A>(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::app::LocalState`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::actions::CommandId`"));
@@ -2872,7 +2924,8 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::assets::{...}`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupPlan`"));
         assert!(CRATE_USAGE_GUIDE.contains("`AssetStartupMode`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::{DepsBuilder, DepsSignature}`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::ui::DepsBuilder`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::selector::DepsSignature`"));
         assert!(
             CRATE_USAGE_GUIDE.contains("`fret::query::{QueryKey, QueryPolicy, QueryState, ...}`")
         );
@@ -2897,16 +2950,24 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action(act::Save)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action_payload(act::Remove, payload)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(|host, acx| { ... })`"));
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::app::AppActivateExt as _;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().listen(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`tx.value(&local)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch_payload::<A>(payload)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch::<A>()`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().dispatch_payload::<A>(payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`UiCxActionsExt`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().selector_layout(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("raw `cx.data().selector(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().query(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`handle.read_layout(cx)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query_namespace(...)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
     }
@@ -2977,13 +3038,14 @@ mod authoring_surface_policy_tests {
 
     #[test]
     fn authoring_docs_prefer_grouped_app_ui_data_helpers() {
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector_layout(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().selector(deps, compute)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`handle.read_layout(cx)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().invalidate_query(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(|host, acx| { ... })`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`use fret::app::AppActivateExt as _;`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
@@ -2991,6 +3053,8 @@ mod authoring_surface_policy_tests {
             AUTHORING_GOLDEN_PATH_V2
                 .contains("`cx.actions().action_payload(act::RemoveTodo, todo.id)`")
         );
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_query(...)`"));
     }
@@ -2999,7 +3063,14 @@ mod authoring_surface_policy_tests {
     fn integration_docs_prefer_grouped_query_helpers_for_app_surface() {
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async(...)`"));
         assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().query_async_local(...)`"));
+        assert!(INTEGRATING_TOKIO_AND_REQWEST.contains("let state = handle.read_layout(cx);"));
+        assert!(
+            INTEGRATING_TOKIO_AND_REQWEST.contains("`cx.data().invalidate_query_namespace(...)`")
+        );
         assert!(INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().query_async(...)`"));
+        assert!(
+            INTEGRATING_SQLITE_AND_SQLX.contains("`cx.data().invalidate_query_namespace(...)`")
+        );
     }
 
     #[test]
@@ -3008,6 +3079,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::router::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`back_on_action()`"));
         assert!(CRATE_USAGE_GUIDE.contains("`forward_on_action()`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`use fret::advanced::AppUiRawActionNotifyExt as _;`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.on_action_notify::<...>(store.back_on_action())`"));
         assert!(CRATE_USAGE_GUIDE.contains("second default app runtime"));
     }
@@ -3133,11 +3205,20 @@ mod authoring_surface_policy_tests {
     fn todo_golden_path_keeps_icon_pack_setup_on_app_install_surface() {
         assert!(TODO_APP_GOLDEN_PATH.contains("`.setup(fret_icons_radix::app::install)`"));
         assert!(TODO_APP_GOLDEN_PATH.contains("`ui::single(cx, page(...))`"));
+        assert!(TODO_APP_GOLDEN_PATH.contains("When observing tracked state in views:"));
+        assert!(
+            TODO_APP_GOLDEN_PATH
+                .contains("selector dependencies now stay on\nthe LocalState-first teaching path")
+        );
+        assert!(!TODO_APP_GOLDEN_PATH.contains("`.dispatch::<A>()`"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("`.dispatch_payload::<A>(...)`"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".on_activate(cx.actions().listener("));
         assert!(!TODO_APP_GOLDEN_PATH.contains(".register_icon_pack("));
         assert!(!TODO_APP_GOLDEN_PATH.contains("IconRegistry"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("When observing models in views:"));
+        assert!(!TODO_APP_GOLDEN_PATH.contains("model handles cloned off those locals"));
     }
 
     #[test]
@@ -3179,13 +3260,23 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("only first-contact component-family discovery"));
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes")
+        );
         assert!(CRATE_USAGE_GUIDE.contains(
             "`fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`"
         ));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("`fret_ui_shadcn::advanced::*` is an implementation/debug lane")
+        );
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::raw::typography::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::apply_shadcn_new_york(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::app::*` and"));
+        assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::themes::*` are setup lanes"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::*`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret::shadcn::raw::advanced::*`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`fret_ui_shadcn::install_app(...)`"));
@@ -3199,8 +3290,6 @@ mod authoring_surface_policy_tests {
         assert!(
             SHADCN_DECLARATIVE_PROGRESS.contains("`widget.action_payload(act::Remove, payload)`")
         );
-        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch::<A>()`"));
-        assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(
             SHADCN_DECLARATIVE_PROGRESS
                 .contains("`fret::app::AppActivateSurface` / `AppActivateExt`")
@@ -3209,6 +3298,8 @@ mod authoring_surface_policy_tests {
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`UiCxActionsExt` / `UiCxDataExt`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("first-party"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("bridge table is intentionally empty"));
+        assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch::<A>()`"));
+        assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(SHADCN_DECLARATIVE_PROGRESS.contains("`fret_ui_shadcn::advanced::*`"));
         assert!(!SHADCN_DECLARATIVE_PROGRESS.contains("`shadcn::advanced::*`"));
         assert!(AUTHORING_SURFACE_TARGET_INTERFACE_STATE.contains("`fret_ui_shadcn::advanced`"));
@@ -3248,12 +3339,16 @@ mod authoring_surface_policy_tests {
         assert!(
             FEARLESS_REFACTORING.contains("Return `Ui` (the app-facing alias over `Elements`)")
         );
-        assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals::<A>(...)`"));
+        assert!(FEARLESS_REFACTORING.contains("`cx.actions().locals_with((...)).on::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().models::<A>(...)`"));
+        assert!(FEARLESS_REFACTORING.contains("`cx.actions().payload_models::<A>(...)`"));
         assert!(FEARLESS_REFACTORING.contains("`cx.actions().transient::<A>(...)`"));
+        assert!(!FEARLESS_REFACTORING.contains("`.dispatch::<A>()`"));
+        assert!(!FEARLESS_REFACTORING.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch::<"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().dispatch_payload::<"));
         assert!(!FEARLESS_REFACTORING.contains(".on_activate(cx.actions().listener("));
+        assert!(!FEARLESS_REFACTORING.contains("`payload_locals::<A>(...)`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_locals`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_models`"));
         assert!(!FEARLESS_REFACTORING.contains("`ViewCx::on_action_notify_transient`"));
@@ -3279,6 +3374,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("workspace_menu"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::declarative::icon;"));
         assert!(!app_prelude.contains("pub use crate::view::AppActivateExt as _;"));
+        assert!(app_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::TrackedStateExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(app_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
@@ -3296,6 +3392,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiHostBoundIntoElement;"));
         assert!(!app_prelude.contains("pub use fret_ui_kit::UiChildIntoElement;"));
         assert!(!app_prelude_exports_symbol("AppActivateExt"));
+        assert!(!app_prelude_exports_symbol("QueryHandleReadLayoutExt"));
         assert!(
             !app_prelude.contains("pub use crate::view::{AppActivateExt, AppActivateSurface};")
         );
@@ -3379,6 +3476,7 @@ mod authoring_surface_policy_tests {
         let advanced_prelude = advanced_prelude_source();
         assert!(LIB_RS.contains("pub use crate::{AppUi, Ui, UiCx};"));
         assert!(advanced_prelude_exports_symbol("KernelApp"));
+        assert!(advanced_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(advanced_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(advanced_prelude_exports_symbol("AppUi"));
         assert!(advanced_prelude_exports_symbol("Ui"));
@@ -3386,8 +3484,12 @@ mod authoring_surface_policy_tests {
         assert!(advanced_prelude_exports_symbol("ViewElements"));
         assert!(advanced_prelude_exports_symbol("ElementContext"));
         assert!(advanced_prelude_exports_symbol("UiTree"));
+        assert!(advanced_prelude.contains("pub use crate::view::QueryHandleReadLayoutExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxActionsExt as _;"));
         assert!(advanced_prelude.contains("pub use crate::view::UiCxDataExt as _;"));
+        assert!(
+            advanced_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
+        );
         assert!(advanced_prelude_exports_symbol("UiServices"));
         assert!(advanced_prelude_exports_symbol("TextProps"));
         assert!(!advanced_prelude.contains("pub use crate::component::prelude::*;"));
@@ -3397,6 +3499,7 @@ mod authoring_surface_policy_tests {
         assert!(!advanced_prelude_exports_symbol("UiHost"));
         assert!(!advanced_prelude_exports_symbol("AnyElement"));
         assert!(!advanced_prelude_exports_symbol("Model"));
+        assert!(!advanced_prelude_exports_symbol("TrackedModelExt"));
         assert!(!advanced_prelude_exports_symbol("ViewCx"));
         assert!(!advanced_prelude_exports_symbol("Elements"));
         assert!(
@@ -3406,6 +3509,11 @@ mod authoring_surface_policy_tests {
         assert!(!advanced_prelude.contains(
             "pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};"
         ));
+        assert!(
+            advanced_prelude
+                .contains("Explicit raw-model local-state hooks kept on the advanced lane.")
+        );
+        assert!(advanced_prelude.contains("while leaving `fret::app::prelude::*` focused on"));
     }
 
     #[test]
@@ -3667,8 +3775,10 @@ mod authoring_surface_policy_tests {
 
         assert!(public_surface.contains("pub mod selector {"));
         assert!(public_surface.contains("pub mod query {"));
+        assert!(!public_surface.contains("pub use crate::view::LocalSelectorDepsBuilderExt;"));
         assert!(public_surface.contains("pub use fret_selector::{DepsSignature, Selector};"));
         assert!(public_surface.contains("pub use fret_selector::ui::DepsBuilder;"));
+        assert!(!public_surface.contains("pub use fret_selector::ui::*;"));
         assert!(public_surface.contains("pub use fret_query::{"));
         assert!(public_surface.contains("CancellationToken, FutureSpawner, FutureSpawnerHandle"));
         assert!(
@@ -3678,6 +3788,8 @@ mod authoring_surface_policy_tests {
         assert!(public_surface.contains("QueryRetryOn, QueryRetryPolicy, QueryRetryState"));
         assert!(public_surface.contains("QuerySnapshotEntry, QueryState,"));
         assert!(public_surface.contains("QueryStatus, with_query_client,"));
+        assert!(!public_surface.contains("pub use fret_query::ui::*;"));
+        assert!(!public_surface.contains("pub use fret_router_ui::*;"));
     }
 
     #[test]
@@ -3698,6 +3810,7 @@ mod authoring_surface_policy_tests {
     #[test]
     fn app_prelude_omits_low_level_mechanism_types() {
         assert!(!app_prelude_exports_symbol("AppWindowId"));
+        assert!(!app_prelude_exports_symbol("AppUiRawActionNotifyExt"));
         assert!(!app_prelude_exports_symbol("AppUiRawStateExt"));
         assert!(!app_prelude_exports_symbol("Event"));
         assert!(!app_prelude_exports_symbol("ElementContext"));
@@ -3763,6 +3876,7 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("QueryPolicy"));
         assert!(!app_prelude_exports_symbol("DepsBuilder"));
         assert!(!app_prelude_exports_symbol("DepsSignature"));
+        assert!(!app_prelude_exports_symbol("LocalSelectorDepsBuilderExt"));
     }
 
     #[test]
@@ -3782,6 +3896,9 @@ mod authoring_surface_policy_tests {
         assert!(
             component_prelude
                 .contains("pub use fret_ui_kit::declarative::UiElementTestIdExt as _;")
+        );
+        assert!(
+            component_prelude.contains("pub use fret_ui_kit::declarative::TrackedModelExt as _;")
         );
         assert!(component_prelude_exports_symbol("UiBuilder"));
         assert!(component_prelude_exports_symbol("UiPatchTarget"));
@@ -3808,6 +3925,7 @@ mod authoring_surface_policy_tests {
         assert!(!component_prelude_exports_symbol("ElementContextThemeExt"));
         assert!(!component_prelude_exports_symbol("GlobalWatchExt"));
         assert!(!component_prelude_exports_symbol("ModelWatchExt"));
+        assert!(!component_prelude_exports_symbol("TrackedModelExt"));
         assert!(!component_prelude_exports_symbol("UiElementA11yExt"));
         assert!(!component_prelude_exports_symbol("UiElementKeyContextExt"));
         assert!(!component_prelude_exports_symbol("UiElementTestIdExt"));

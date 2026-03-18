@@ -77,12 +77,8 @@ impl View for CommandsKeymapBasicsView {
 
         let cmd: CommandId = act::TogglePanel.into();
 
-        let panel_open = cx.state().watch(&panel_open_state).layout().value_or(false);
-        let allow_command = cx
-            .state()
-            .watch(&allow_command_state)
-            .layout()
-            .value_or(true);
+        let panel_open = panel_open_state.layout_value(cx);
+        let allow_command = allow_command_state.layout_value(cx);
 
         let enabled = cx.action_is_enabled(&cmd);
         let enabled_label = if enabled { "Enabled" } else { "Disabled" };
@@ -219,18 +215,16 @@ impl View for CommandsKeymapBasicsView {
         cx.actions()
             .toggle_local_bool::<act::ToggleAllowCommand>(&allow_command_state);
 
-        cx.actions().locals::<act::TogglePanel>({
-            let panel_open_state = panel_open_state.clone();
-            let allow_command_state = allow_command_state.clone();
-            move |tx| {
-                let allowed = tx.value_or(&allow_command_state, true);
+        cx.actions()
+            .locals_with((&panel_open_state, &allow_command_state))
+            .on::<act::TogglePanel>(|tx, (panel_open_state, allow_command_state)| {
+                let allowed = tx.value(&allow_command_state);
                 if !allowed {
                     return false;
                 }
 
                 tx.update(&panel_open_state, |value| *value = !*value)
-            }
-        });
+            });
 
         cx.actions().availability::<act::TogglePanel>({
             let allow_command_state = allow_command_state.clone();

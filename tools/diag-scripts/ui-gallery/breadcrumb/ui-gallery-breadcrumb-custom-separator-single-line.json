@@ -145,6 +145,14 @@
       "type": "assert",
       "predicate": { "kind": "render_text_missing_glyphs_is", "missing_glyphs": 0 }
     },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-breadcrumb-custom-separator-single-line"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-breadcrumb-custom-separator-single-line"
+    },
     { "type": "wait_frames", "n": 2 }
   ]
 }

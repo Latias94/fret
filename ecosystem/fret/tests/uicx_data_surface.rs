@@ -2,6 +2,7 @@ const FRET_LIB_RS: &str = include_str!("../src/lib.rs");
 const VIEW_RS: &str = include_str!("../src/view.rs");
 const ASYNC_PLAYGROUND_DEMO: &str =
     include_str!("../../../apps/fret-examples/src/async_playground_demo.rs");
+const QUERY_DEMO: &str = include_str!("../../../apps/fret-examples/src/query_demo.rs");
 const QUERY_ASYNC_TOKIO_DEMO: &str =
     include_str!("../../../apps/fret-examples/src/query_async_tokio_demo.rs");
 const MARKDOWN_DEMO: &str = include_str!("../../../apps/fret-examples/src/markdown_demo.rs");
@@ -39,8 +40,15 @@ fn helper_heavy_examples_use_grouped_data_helpers() {
     assert!(ASYNC_PLAYGROUND_DEMO.contains("cx.data().query("));
     assert!(!ASYNC_PLAYGROUND_DEMO.contains("cx.use_query("));
 
+    assert!(QUERY_DEMO.contains("cx.data().invalidate_query("));
+    assert!(QUERY_DEMO.contains("cx.data().invalidate_query_namespace("));
+    assert!(!QUERY_DEMO.contains("with_query_client("));
+
     assert!(QUERY_ASYNC_TOKIO_DEMO.contains("cx.data().query_async("));
+    assert!(QUERY_ASYNC_TOKIO_DEMO.contains("cx.data().invalidate_query("));
+    assert!(QUERY_ASYNC_TOKIO_DEMO.contains("cx.data().invalidate_query_namespace("));
     assert!(!QUERY_ASYNC_TOKIO_DEMO.contains("cx.use_query_async("));
+    assert!(!QUERY_ASYNC_TOKIO_DEMO.contains("with_query_client("));
 
     assert!(MARKDOWN_DEMO.contains("cx.data().query("));
     assert!(MARKDOWN_DEMO.contains("cx.data().selector("));

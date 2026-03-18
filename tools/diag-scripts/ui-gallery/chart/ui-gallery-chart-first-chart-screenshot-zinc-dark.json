@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Chart first chart screenshot (zinc dark)",
+    "tags": ["ui-gallery", "chart", "zinc-dark", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Sets theme preset to zinc/dark.",
+      "Navigates to the Chart page.",
+      "Captures a screenshot of the First Chart section."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "chart",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-chart" } },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-chart" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-chart-first-chart" } },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 30 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-chart-first-chart" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "capture_screenshot", "label": "ui-gallery-chart-first-chart-zinc-dark" },
+    { "type": "capture_bundle", "label": "ui-gallery-chart-first-chart-zinc-dark" }
+  ]
+}

@@ -25,7 +25,7 @@ fn fret_dropdown_menu_tracks_trigger_when_underlay_scrolls() {
     let trigger_test_id = "scroll-underlay-trigger";
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-    use fret_ui_shadcn::facade::{DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
+        use fret_ui_shadcn::facade::{DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 
         let open = open.clone();
         let scroll_handle = scroll_handle.clone();

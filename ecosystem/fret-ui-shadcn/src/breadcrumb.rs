@@ -52,9 +52,9 @@ enum BreadcrumbItemKind {
 
 /// Separator renderer for a `Breadcrumb` list.
 ///
-/// Upstream `BreadcrumbSeparator` accepts `children` (so the separator can be customized). We keep a
-/// small typed surface that covers the upstream examples without forcing a `Fn` callback in the
-/// common case.
+/// The compact builder keeps a small typed surface for the common cases. The upstream-shaped
+/// primitives surface supports composable children when parity work needs the documented custom
+/// separator slot.
 #[derive(Debug, Clone)]
 pub enum BreadcrumbSeparator {
     ChevronRight,
@@ -1263,9 +1263,10 @@ pub mod primitives {
         },
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct BreadcrumbSeparator {
         kind: BreadcrumbSeparatorKind,
+        children: Vec<AnyElement>,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
     }
@@ -1274,9 +1275,55 @@ pub mod primitives {
         fn default() -> Self {
             Self {
                 kind: BreadcrumbSeparatorKind::default(),
+                children: Vec::new(),
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
             }
+        }
+    }
+
+    pub struct BreadcrumbSeparatorBuild<H, Children> {
+        separator: BreadcrumbSeparator,
+        children: Children,
+        _marker: PhantomData<fn() -> H>,
+    }
+
+    impl<H, Children> BreadcrumbSeparatorBuild<H, Children> {
+        fn new(separator: BreadcrumbSeparator, children: Children) -> Self {
+            Self {
+                separator,
+                children,
+                _marker: PhantomData,
+            }
+        }
+
+        pub fn kind(mut self, kind: BreadcrumbSeparatorKind) -> Self {
+            self.separator = self.separator.kind(kind);
+            self
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.separator = self.separator.refine_style(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.separator = self.separator.refine_layout(layout);
+            self
+        }
+    }
+
+    impl<H: UiHost, Children, I, TChild> BreadcrumbSeparatorBuild<H, Children>
+    where
+        Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = TChild>,
+        TChild: IntoUiElement<H>,
+    {
+        #[track_caller]
+        pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+            let built_children = (self.children)(cx);
+            let children = collect_landed_children(cx, built_children);
+            self.separator.children_raw(children).into_element(cx)
         }
     }
 
@@ -1287,6 +1334,24 @@ pub mod primitives {
 
         pub fn kind(mut self, kind: BreadcrumbSeparatorKind) -> Self {
             self.kind = kind;
+            self
+        }
+
+        pub fn children<H: UiHost, I, TChild, Children>(
+            self,
+            children: Children,
+        ) -> BreadcrumbSeparatorBuild<H, Children>
+        where
+            Children: FnOnce(&mut ElementContext<'_, H>) -> I,
+            I: IntoIterator<Item = TChild>,
+            TChild: IntoUiElement<H>,
+        {
+            BreadcrumbSeparatorBuild::new(self, children)
+        }
+
+        /// Explicit raw seam for pre-landed custom separator content.
+        pub fn children_raw(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+            self.children = children.into_iter().collect();
             self
         }
 
@@ -1302,23 +1367,15 @@ pub mod primitives {
 
         #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-            let (muted, props) = {
+            let (muted, base_props) = {
                 let theme = Theme::global(&*cx.app);
                 let (_fg, muted) = colors(theme);
-                let props = ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: fret_ui::element::Length::Px(Px(14.0)),
-                            height: fret_ui::element::Length::Px(Px(14.0)),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    ..decl_style::container_props(theme, self.chrome, self.layout)
-                };
+                let props = decl_style::container_props(theme, self.chrome, self.layout);
                 (muted, props)
             };
 
+            let children = self.children;
+            let has_custom_children = !children.is_empty();
             let dir = crate::direction::use_direction(cx, None);
             let (icon, size) = match self.kind {
                 BreadcrumbSeparatorKind::ChevronRight => {
@@ -1328,12 +1385,40 @@ pub mod primitives {
                 BreadcrumbSeparatorKind::Icon { icon, size } => (icon, size),
             };
 
-            // Upstream applies `[&>svg]:size-3.5` (14px) by default.
+            let mut custom_children = if has_custom_children {
+                Some(children)
+            } else {
+                None
+            };
+
+            let props = if has_custom_children {
+                base_props
+            } else {
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: fret_ui::element::Length::Px(size),
+                            height: fret_ui::element::Length::Px(size),
+                            ..Default::default()
+                        },
+                        ..base_props.layout
+                    },
+                    ..base_props
+                }
+            };
+
+            // Upstream applies `[&>svg]:size-3.5` (14px) by default. Custom children are caller-
+            // owned and inherit the muted foreground via current-color scope.
             let icon_el = decl_icon::icon_with(cx, icon, Some(size), Some(ColorRef::Color(muted)));
 
-            // Ensure the separator is a "leaf-sized" node in layouts that scan by size.
-            cx.container(props, move |_cx| vec![icon_el])
-                .attach_semantics(SemanticsDecoration::default().hidden(true))
+            cx.container(props, move |cx| {
+                if let Some(children) = custom_children.take() {
+                    current_color::scope_children(cx, ColorRef::Color(muted), move |_cx| children)
+                } else {
+                    vec![icon_el]
+                }
+            })
+            .attach_semantics(SemanticsDecoration::default().hidden(true))
         }
     }
 
@@ -1768,6 +1853,13 @@ mod tests {
         }
     }
 
+    fn any_text_eq(el: &AnyElement, expected: &str) -> bool {
+        match &el.kind {
+            fret_ui::element::ElementKind::Text(props) => props.text.as_ref() == expected,
+            _ => el.children.iter().any(|child| any_text_eq(child, expected)),
+        }
+    }
+
     #[test]
     fn breadcrumb_link_hover_color_tweens_instead_of_snapping() {
         use fret_runtime::FrameId;
@@ -1895,6 +1987,63 @@ mod tests {
         assert!(
             color_eq_eps(cf, fg, 1e-4),
             "expected hover color to settle to foreground; got cf={cf:?} fg={fg:?}"
+        );
+    }
+
+    #[test]
+    fn breadcrumb_separator_children_land_custom_content_and_stay_hidden() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(120.0)),
+        );
+
+        let saw_custom_separator = Rc::new(Cell::new(false));
+        let saw_custom_separator_out = Rc::clone(&saw_custom_separator);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-breadcrumb-separator-children",
+            move |cx| {
+                let separator = primitives::BreadcrumbSeparator::new()
+                    .children(|cx| [cx.text("/")])
+                    .into_element(cx)
+                    .test_id("breadcrumb-separator-custom-children");
+                saw_custom_separator_out.set(any_text_eq(&separator, "/"));
+                vec![separator]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            saw_custom_separator.get(),
+            "expected custom separator children to land inside the separator element tree"
+        );
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("breadcrumb-separator-custom-children"))
+            .expect("expected separator semantics node");
+        assert!(
+            node.flags.hidden,
+            "expected custom separator content to remain presentation-only in semantics"
         );
     }
 }

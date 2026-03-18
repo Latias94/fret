@@ -58,6 +58,15 @@ An old conversion name is eligible for deletion only when all of the following a
 
 ## Surface Lanes
 
+Closeout reading rule on 2026-03-16:
+
+- the remaining `In progress` rows below should now be read as helper-tail cleanup, explicit raw
+  seam inventory, and source-gate maintenance unless a newly changed boundary proves otherwise
+- they are **not** a standing invitation to reopen the public conversion taxonomy or invent a new
+  default root-builder family
+- the settled public model remains: `Ui` / `UiChild` on the app lane, `IntoUiElement<H>` on the
+  component lane, and explicit `AnyElement` / `Elements` only for intentional raw boundaries
+
 | Lane | Current surface | Target surface | Migration tactic | Delete trigger | Status | Evidence anchors |
 | --- | --- | --- | --- | --- | --- | --- |
 | App render return | `Ui = Elements` alias already exists, but raw `Elements` still appears in some checks and historical docs | keep `Ui` as the app-facing render alias | continue treating `Ui` as canonical and delete stale `Elements` teaching where it survives | default app docs/examples only teach `Ui` | Migrated | `ecosystem/fret/src/lib.rs`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md` |
@@ -77,7 +86,7 @@ helper-signature cleanup.
 | Family group | Default lane | Secondary lane | Target rule | Status | Evidence anchors |
 | --- | --- | --- | --- | --- | --- |
 | Menu/modal compose-root families | typed root builder + `compose()` | focused `Parts` / `build_parts(...)` / `into_element_parts(...)` follow-up | the copyable/default story should show exactly one root path, while lower-level adapter seams stay explicit and non-default | In progress | `docs/audits/shadcn-dropdown-menu.md`, `docs/audits/shadcn-context-menu.md`, `docs/audits/shadcn-dialog.md`, `docs/audits/shadcn-sheet.md`, `docs/audits/shadcn-alert-dialog.md`, `docs/audits/shadcn-drawer.md`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` |
-| Dual-lane families | compact typed lane | upstream-shaped copyable lane | both lanes are first-party and neither should be mislabeled as an advanced escape hatch; for `Carousel`, docs-first examples and ordinary diagnostics demos now stay on the compact builder lane, while only explicit parts/custom-control snippets remain on the upstream-shaped lane | In progress | `docs/audits/shadcn-carousel.md`, `docs/audits/shadcn-menubar.md`, `docs/audits/shadcn-navigation-menu.md`, `docs/audits/shadcn-pagination.md`, `apps/fret-ui-gallery/src/ui/pages/carousel.rs`, `apps/fret-ui-gallery/src/ui/pages/menubar.rs`, `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`, `apps/fret-ui-gallery/src/ui/pages/pagination.rs`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` |
+| Dual-lane families | compact typed lane | upstream-shaped copyable lane | both lanes are first-party and neither should be mislabeled as an advanced escape hatch; for `Carousel`, `Usage` now mirrors the upstream-shaped docs lane, `Compact Builder` stays as the Fret shorthand follow-up, docs-first examples and ordinary diagnostics demos stay on the compact builder lane, and only explicit parts/custom-control snippets remain on the targeted parts lane | In progress | `docs/audits/shadcn-carousel.md`, `docs/audits/shadcn-menubar.md`, `docs/audits/shadcn-navigation-menu.md`, `docs/audits/shadcn-pagination.md`, `apps/fret-ui-gallery/src/ui/pages/carousel.rs`, `apps/fret-ui-gallery/src/ui/pages/menubar.rs`, `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`, `apps/fret-ui-gallery/src/ui/pages/pagination.rs`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` |
 | Direct recipe root/bridge families | recipe-level root story | focused parts/patch seam only when the recipe really owns that seam | keep the direct recipe root story if it is already source-aligned; when typed root builder steps exist, first-party teaching should prefer the compact direct chain and keep `into_element_parts(...)` as the upstream-shaped adapter on the same lane; do not add `compose()` only for visual symmetry | In progress | `docs/audits/shadcn-select.md`, `docs/audits/shadcn-combobox.md`, `docs/audits/shadcn-command.md`, `docs/shadcn-declarative-progress.md`, `apps/fret-ui-gallery/src/ui/pages/select.rs`, `apps/fret-ui-gallery/src/ui/pages/combobox.rs`, `apps/fret-ui-gallery/src/ui/snippets/select/`, `apps/fret-ui-gallery/src/ui/snippets/combobox/`, `apps/fret-ui-gallery/src/ui/snippets/command/usage.rs`, `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` |
 
 Current pending queue:

@@ -148,7 +148,7 @@ Migration steps:
      `local.read_in(models, ...)` / `local.revision_in(models)` over leaking `local.model()` back into
      the default path.
    - For query resources, prefer reading the returned handle from the handle side as well:
-     `query_handle.layout(cx).value_or_else(QueryState::<T>::default)` instead of
+     `query_handle.read_layout(cx)` instead of
      `cx.watch_model(query_handle.model())...` at the teaching surface.
    - `cx.use_state::<T>()` remains available when you intentionally want the raw `Model<T>` handle,
      but it is no longer the first teaching-surface recommendation.
@@ -164,8 +164,8 @@ Migration steps:
      model/transient shorthands do not fit.
 4) Replace manual “force refresh” hacks with:
    - first-class tracked writes (`cx.on_action_notify_models::<A>(...)`,
-     `cx.on_action_notify_local_*`, or `LocalState::update_action(...)`) when the change itself is
-     the rerender reason,
+     `cx.on_action_notify_local_*`, or the grouped `cx.actions().local_*` helpers) when the
+     change itself is the rerender reason,
    - `cx.notify()` only for imperative/cache-boundary invalidation that is not represented by a
      tracked write, and/or
    - selector/query hooks that carry proper dependency observation.
@@ -187,9 +187,9 @@ entrypoints and treat the rest as convenience aliases:
    - Default only for local pressable/widget glue that is not worth promoting to a typed action.
    - Think: small internal widget activation, close buttons, immediate-mode/imui local affordances.
 
-Everything else (`on_action_notify_model_update`, `on_action_notify_model_set`,
-`on_action_notify_toggle_bool`, `on_activate_request_redraw`, ...) should be treated as optional
-shorthand, not as the first thing new users need to memorize.
+Everything else (raw `on_action_notify`, raw `on_payload_action_notify`,
+`on_activate_request_redraw`, ...) should be treated as optional advanced/reference surface, not as
+the first thing new users need to memorize.
 
 ### North-star vs landed v1
 
@@ -264,22 +264,22 @@ shadcn::Dialog::new(open.clone())
 ### Helper visibility policy (docs/templates)
 
 - Default onboarding material should teach only the three entrypoints above.
-- Keep raw `on_action` / `on_action_notify`, the single-model aliases, payload hooks, and
+- Keep raw `on_action_notify`, raw `on_payload_action_notify`, and
   redraw-oriented `on_activate_request_redraw*` helpers in advanced/reference material unless the
   example truly needs them.
 - A helper should graduate into first-contact docs/templates only after it solves repeated noise
   across multiple real demos/templates, not a single local call site.
 
-- Optional advanced shorthand for obviously single-model handlers (keep these out of first-contact teaching unless they are materially clearer):
+- The former single-model raw aliases were removed in the 2026-03-17 closeout because they no
+  longer had any surviving in-tree proofs. For model writes, prefer `on_action_notify_models` on
+  older migration surfaces or the grouped `cx.actions().models::<A>(...)` /
+  `locals_with((...)).on::<A>(...)` lanes on the current default surface.
 
 ```rust,ignore
-let count = cx.use_state::<u32>();
-cx.on_action_notify_model_update::<act::Click, u32>(count.clone(), |v| {
-    *v = v.saturating_add(1);
+cx.on_action_notify_models::<act::Click>({
+    let count = count.clone();
+    move |models| models.update(&count, |v| *v = v.saturating_add(1)).is_ok()
 });
-
-let open = cx.use_state::<bool>();
-cx.on_action_notify_toggle_bool::<act::TogglePanel>(open.clone());
 ```
 
 - For common multi-model flows, prefer `on_action_notify_models::<A>(|models| ...)`:
@@ -303,11 +303,11 @@ cx.on_action_notify_models::<act::Add>({
 Choosing the helper:
 
 - Start with `on_action_notify_models` unless you have a strong reason not to.
-- Use `on_action_notify_model_update` / `on_action_notify_model_set` / `on_action_notify_toggle_bool`
-  only when the single-model shape is obviously clearer than the generic `models` transaction.
+- If the handler mutates only one model, still start with `on_action_notify_models` unless you
+  truly need raw host access from `on_action_notify`.
 - Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
-- Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
-  custom effects) where the built-in shorthands do not fit.
+- Use `on_action_notify` for advanced host-only cases (focus, timers, clipboard, custom effects)
+  where the built-in shorthands do not fit.
   - Current intentional cookbook cases fall into four host-side categories:
     - `toast_basics`: imperative host integration (`Sonner` toast dispatch needs `UiActionHost` + window).
     - `router_basics` back/forward: router command availability sync on the host path.

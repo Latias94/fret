@@ -6,41 +6,42 @@ use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
-    let open_for_trigger = open.clone();
-    let open_for_children = open.clone();
 
-    shadcn::AlertDialog::new(open).into_element(
-        cx,
-        move |cx| {
-            shadcn::Button::new("Open")
-                .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open_for_trigger.clone())
-                .test_id("ui-gallery-alert-dialog-basic-trigger")
-                .into_element(cx)
-        },
-        move |cx| {
-            let header = shadcn::AlertDialogHeader::new(vec![
-                shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
-                shadcn::AlertDialogDescription::new(
-                    "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx);
-            let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
-                    .test_id("ui-gallery-alert-dialog-basic-cancel")
-                    .into_element(cx),
-                shadcn::AlertDialogAction::new("Continue", open_for_children.clone())
-                    .test_id("ui-gallery-alert-dialog-basic-action")
-                    .into_element(cx),
-            ])
-            .into_element(cx);
-
-            shadcn::AlertDialogContent::new(vec![header, footer])
-                .into_element(cx)
-                .test_id("ui-gallery-alert-dialog-basic-content")
-        },
-    )
+    shadcn::AlertDialog::new(open)
+        .children([
+            shadcn::AlertDialogPart::trigger(shadcn::AlertDialogTrigger::build(
+                shadcn::Button::new("Show Dialog")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-alert-dialog-basic-trigger"),
+            )),
+            shadcn::AlertDialogPart::content(
+                shadcn::AlertDialogContent::build(|cx, out| {
+                    out.push(
+                        shadcn::AlertDialogHeader::new([
+                            shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                                .into_element(cx),
+                            shadcn::AlertDialogDescription::new(
+                                "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    );
+                    out.push(
+                        shadcn::AlertDialogFooter::new([
+                            shadcn::AlertDialogCancel::from_scope("Cancel")
+                                .test_id("ui-gallery-alert-dialog-basic-cancel")
+                                .into_element(cx),
+                            shadcn::AlertDialogAction::from_scope("Continue")
+                                .test_id("ui-gallery-alert-dialog-basic-action")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    );
+                })
+                .test_id("ui-gallery-alert-dialog-basic-content"),
+            ),
+        ])
+        .into_element(cx)
 }
 // endregion: example

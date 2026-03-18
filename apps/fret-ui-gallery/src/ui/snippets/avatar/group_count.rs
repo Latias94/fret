@@ -53,27 +53,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             group_with_count(
                 cx,
                 avatar_image,
-                shadcn::AvatarSize::Sm,
-                "ui-gallery-avatar-group-count-sm",
-            )
-            .into_element(cx),
-            group_with_count(
-                cx,
-                avatar_image,
                 shadcn::AvatarSize::Default,
                 "ui-gallery-avatar-group-count-default",
             )
             .into_element(cx),
-            group_with_count(
-                cx,
-                avatar_image,
-                shadcn::AvatarSize::Lg,
-                "ui-gallery-avatar-group-count-lg",
-            )
-            .into_element(cx),
         ]
     })
-    .gap(Space::N4)
     .items_start()
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx)

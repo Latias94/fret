@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("input_group.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
+use fret_icons::IconId;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -70,35 +71,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::ComboboxItem::new("save-all", "Save All"),
         ])
         .trigger(shadcn::ComboboxTrigger::new().width_px(Px(220.0)))
-        .input(shadcn::ComboboxInput::new().placeholder("Search command"))
+        .input(
+            shadcn::ComboboxInput::new()
+                .placeholder("Search command")
+                .children([shadcn::InputGroupAddon::new([icon::icon(
+                    cx,
+                    IconId::new_static("lucide.search"),
+                )])
+                .align(shadcn::InputGroupAddonAlign::InlineStart)]),
+        )
         .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![
-            ui::h_row(|cx| {
-                vec![
-                    {
-                        let props = cx.with_theme(|theme| {
-                            decl_style::container_props(
-                                theme,
-                                ChromeRefinement::default()
-                                    .border_1()
-                                    .rounded(Radius::Sm)
-                                    .px(Space::N2)
-                                    .py(Space::N1),
-                                LayoutRefinement::default(),
-                            )
-                        });
-                        cx.container(props, |cx| {
-                            vec![shadcn::raw::typography::muted("Cmd").into_element(cx)]
-                        })
-                    },
-                    combo,
-                ]
-            })
-            .gap(Space::N2)
-            .items_center()
-            .into_element(cx),
+            combo,
             state_rows(cx, &value, &query, "ui-gallery-combobox-input-group").into_element(cx),
         ]
     })

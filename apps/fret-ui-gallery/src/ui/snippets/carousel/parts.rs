@@ -68,6 +68,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let items = (1..=5)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, basic_visual).into_element(cx)))
         .collect::<Vec<_>>();
+    let content = shadcn::CarouselContent::new(items);
+    let previous = shadcn::CarouselPrevious::new().test_id("ui-gallery-carousel-parts-previous");
+    let next = shadcn::CarouselNext::new().test_id("ui-gallery-carousel-parts-next");
 
     shadcn::Carousel::default()
         .refine_layout(
@@ -77,11 +80,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-parts")
-        .into_element_parts(
-            cx,
-            |_cx| shadcn::CarouselContent::new(items),
-            shadcn::CarouselPrevious::new(),
-            shadcn::CarouselNext::new(),
-        )
+        .into_element_parts(cx, |_cx| content, previous, next)
 }
 // endregion: example

@@ -17,6 +17,7 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region,
 };
 use fret_runtime::Model;
+use fret_ui::Invalidation;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
@@ -277,6 +278,14 @@ impl CustomEffectV2View {
     }
 }
 
+#[derive(Clone)]
+struct CustomEffectV2ViewSettings {
+    enabled: bool,
+    use_non_filterable_input: bool,
+    sampling_value: String,
+    debug_input: bool,
+}
+
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     let mut c = fret_ui_kit::colors::linear_from_hex_rgb(
         ((r as u32) << 16) | ((g as u32) << 8) | (b as u32),
@@ -286,8 +295,8 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    cx.watch_model(model)
-        .layout()
+    model
+        .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
         .ok()
         .unwrap_or(default)
@@ -316,33 +325,60 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
             .into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
-    let use_non_filterable_input = cx
-        .watch_model(&st.use_non_filterable_input)
-        .layout()
-        .value_or(false);
-    let input_image = if use_non_filterable_input {
+    let enabled = st.enabled.clone();
+    let use_non_filterable_input = st.use_non_filterable_input.clone();
+    let sampling = st.sampling.clone();
+    let debug_input = st.debug_input.clone();
+    let enabled_deps = enabled.clone();
+    let use_non_filterable_input_deps = use_non_filterable_input.clone();
+    let sampling_deps = sampling.clone();
+    let debug_input_deps = debug_input.clone();
+    let view_settings: CustomEffectV2ViewSettings = cx.data().selector(
+        move |cx| {
+            cx.observe_model(&enabled_deps, Invalidation::Layout);
+            cx.observe_model(&use_non_filterable_input_deps, Invalidation::Layout);
+            cx.observe_model(&sampling_deps, Invalidation::Layout);
+            cx.observe_model(&debug_input_deps, Invalidation::Layout);
+            (
+                cx.app.models().revision(&enabled_deps).unwrap_or(0),
+                cx.app
+                    .models()
+                    .revision(&use_non_filterable_input_deps)
+                    .unwrap_or(0),
+                cx.app.models().revision(&sampling_deps).unwrap_or(0),
+                cx.app.models().revision(&debug_input_deps).unwrap_or(0),
+            )
+        },
+        move |cx| CustomEffectV2ViewSettings {
+            enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
+            use_non_filterable_input: cx
+                .app
+                .models()
+                .get_cloned(&use_non_filterable_input)
+                .unwrap_or(false),
+            sampling_value: cx
+                .app
+                .models()
+                .get_cloned(&sampling)
+                .and_then(|v| v.as_ref().map(|s| s.to_string()))
+                .unwrap_or_else(|| "linear".to_string()),
+            debug_input: cx.app.models().get_cloned(&debug_input).unwrap_or(false),
+        },
+    );
+    let input_image = if view_settings.use_non_filterable_input {
         non_filterable_input_image
     } else {
         filterable_input_image
     };
-    let sampling_value = cx
-        .watch_model(&st.sampling)
-        .layout()
-        .read_ref(|v| v.clone())
-        .ok()
-        .and_then(|v| v.as_ref().map(|s| s.to_string()))
-        .unwrap_or_else(|| "linear".to_string());
     let uv_span = watch_first_f32(cx, &st.uv_span, 0.25);
     let input_strength = watch_first_f32(cx, &st.input_strength, 0.35);
     let rim_strength = watch_first_f32(cx, &st.rim_strength, 0.65);
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 10.0);
-    let debug_input = cx.watch_model(&st.debug_input).layout().value_or(false);
 
     let inspector = inspector(
         cx,
         st,
-        &sampling_value,
+        &view_settings.sampling_value,
         uv_span,
         input_strength,
         rim_strength,
@@ -351,15 +387,15 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV2State) ->
     .into_element(cx);
     let stage = stage(
         cx,
-        enabled,
+        view_settings.enabled,
         effect,
         input_image,
-        sampling_hint(&sampling_value),
+        sampling_hint(&view_settings.sampling_value),
         uv_span,
         input_strength,
         rim_strength,
         blur_radius_px,
-        debug_input,
+        view_settings.debug_input,
     )
     .into_element(cx);
 

@@ -38,8 +38,14 @@ Unless a document says otherwise:
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
-- Action-first authoring + view runtime refactor: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
-  - Current endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Action-first authoring + view runtime refactor (closed lane): `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+  - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+- Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+- Dataflow authoring surface (closed closeout lane for selector/query + ecosystem/router boundary conclusions): `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`
+- Action write surface (closed closeout lane for the default app-lane write budget): `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
+- App composition density follow-on (closeout / maintenance lane: M1 closed on a no-new-API verdict, M2 closed on grouped query invalidation, router excluded): `docs/workstreams/app-composition-density-follow-on-v1/DESIGN.md`, `docs/workstreams/app-composition-density-follow-on-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/app-composition-density-follow-on-v1/MILESTONES.md`, and `docs/workstreams/app-composition-density-follow-on-v1/TODO.md`
+- Local-state architecture follow-on (closed decision lane; reopen only with fresh cross-surface evidence): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+- Local-state facade boundary hardening (closed maintenance lane): `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/MILESTONES.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/TODO.md`, `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`, and `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
@@ -129,9 +135,37 @@ now taught as `LocalState` + view runtime + typed actions.
 - Workstream: `docs/workstreams/state-management-v1/state-management-v1.md` and `docs/workstreams/state-management-v1/state-management-v1-todo.md`
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
-  - Endgame summary: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
+  - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
   - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new simple-todo`, `cargo run -p fretboard -- new todo`
+- Dataflow authoring surface follow-on (closed selector/query closeout lane):
+  - Workstream: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
+  - Target state: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+  - Scope note: the selector/query posture and ecosystem/router boundary are closed there; write-side follow-on moved out
+- Action write surface follow-on (closed closeout lane for the default app-lane write budget):
+  - Workstream: `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`
+  - Target state: `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+  - Closeout: `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
+  - Scope note: the default app-lane `cx.actions()` write budget is now frozen there; selector/query/router stay out unless a new narrower follow-on reopens them separately
+  - Post-closeout retained-seam audit: `docs/workstreams/action-write-surface-fearless-refactor-v1/RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`
+  - Scope note: keep payload retained-seam dedup/delete-ready notes inside the original action-write folder unless the question expands beyond payload-surface residue
+- App composition density follow-on (closeout / maintenance lane):
+  - Workstream: `docs/workstreams/app-composition-density-follow-on-v1/DESIGN.md`
+  - Target state: `docs/workstreams/app-composition-density-follow-on-v1/TARGET_INTERFACE_STATE.md`
+  - Scope note: M1 is now closed on a no-new-API composition verdict, M2 is now closed on grouped `cx.data().invalidate_query*`, and remaining work is closeout / maintenance only
+- Local-state architecture (closed contract-decision lane):
+  - Workstream: `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`
+  - Closeout: `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+  - Purpose: record why the long-term `LocalState<T>` contract stays model-backed in v1, keep
+    `use_state` as the explicit raw-model seam, and name the evidence required before reopening a
+    narrower storage-model lane.
+- Local-state facade boundary hardening (closed narrow follow-on):
+  - Workstream: `docs/workstreams/local-state-facade-boundary-hardening-v1/DESIGN.md`
+  - Inventory: `docs/workstreams/local-state-facade-boundary-hardening-v1/SURFACE_INVENTORY_2026-03-16.md`
+  - Closeout: `docs/workstreams/local-state-facade-boundary-hardening-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+  - Purpose: translate the O1 decision into a hardened public facade by classifying `use_state`,
+    `LocalState::{model, clone_model}`, `LocalState::*_in(...)`, and helper-context bridge
+    surfaces without changing the storage model.
 - Recommended building blocks:
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `AppUi`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
@@ -139,14 +173,14 @@ now taught as `LocalState` + view runtime + typed actions.
 - Canonical startup/import reminder:
   - app-facing imports live under `use fret::app::prelude::*;`
   - default native startup uses `FretApp::new(...).window(...).view::<MyView>()?.run()`
-- Per-item/payload dispatch (advanced): `fret::payload_actions!` + `cx.actions().payload::<A>()` / `cx.actions().payload_locals::<A>(...)` (use when unit actions are not enough).
+- Keyed row payloads (default when rows are view-owned): `fret::payload_actions!` + `ui::for_each_keyed(...)` + `.action_payload(...)`, with `payload_local_update_if::<A>(...)` as the default row write path.
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
-  - `cx.actions().locals::<A>(|tx| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
-  - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
+  - `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
   - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
-- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - activation-only bridge via explicit `use fret::app::AppActivateExt as _;`; `.dispatch::<A>()` / `.dispatch_payload::<A>(...)` remain explicit aliases and raw `on_activate*` helper families stay component/advanced-oriented.
-  - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
+  - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
+- widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - use this only when a control exposes activation glue rather than a narrower widget-owned app-facing helper. Import `use fret::app::AppActivateExt as _;` explicitly for that bridge; raw `on_activate*` helper families stay component/advanced-oriented.
+  - Treat raw `on_action_notify` / `on_payload_action_notify` as advanced shorthands; `on_action`, `on_payload_action`, and the former single-model aliases are deleted, so keep first-contact docs and templates focused on the default entrypoints above plus keyed-row payload binding. The remaining in-tree examples are cookbook-only host-side categories (toasts, background scheduling, RAF effects).
 - Surface taxonomy:
   - **Default**: `hello`, `simple-todo`, `todo`, plus stable cookbook lessons
   - **Comparison**: `simple_todo_v2_target` and other evidence-oriented side-by-side samples
@@ -175,9 +209,10 @@ now taught as `LocalState` + view runtime + typed actions.
 11. `docs/dependency-policy.md` — dependency and MSRV policy (how we keep contracts portable).
 12. `docs/todo-tracker.md` — review-driven TODO list (action items linked back to ADRs).
 13. `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md` — one-page status view for what is done, what is maintenance mode, what is still architectural, and what remains on the hard-delete track.
-14. `docs/known-issues.md` — common diagnostics and current platform limitations.
-15. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
-16. ADR deep dives (pick by subsystem):
+14. `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md` and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md` — use these when the question is no longer default-path sugar, but the long-term storage/ownership contract behind `LocalState<T>` and why v1 closes on the current model-backed contract.
+15. `docs/known-issues.md` — common diagnostics and current platform limitations.
+16. Archived MVP planning docs (historical): `docs/archive/mvp.md`, `docs/archive/mvp/active-plan.md`, `docs/archive/mvp-archive.md`
+17. ADR deep dives (pick by subsystem):
    - UI execution model: `docs/adr/0028-declarative-elements-and-element-state.md`
    - Component authoring: `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
    - Ownership/data flow: `docs/adr/0031-app-owned-models-and-leasing-updates.md`
@@ -191,6 +226,8 @@ now taught as `LocalState` + view runtime + typed actions.
 
 - End-to-end demo wiring (effects → runner → render): [apps/fret-examples/src/components_gallery.rs](../apps/fret-examples/src/components_gallery.rs)
   - Run: `cargo run -p fretboard -- dev native --bin components_gallery`
+- Starter todo public proof surface (default app lane, no selector/query): [apps/fret-examples/src/simple_todo_demo.rs](../apps/fret-examples/src/simple_todo_demo.rs)
+  - Run: `cargo run -p fretboard -- dev native --bin simple_todo_demo`
 - Todo app “golden path” (shadcn + bootstrap): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin todo_demo`
 - Starter todo template generator: `cargo run -p fretboard -- new todo --name my-todo`

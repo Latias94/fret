@@ -12,7 +12,7 @@ use anyhow::Context as _;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
 use fret_runtime::Model;
 use fret_ui::element::{
     ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
@@ -185,10 +185,7 @@ impl MarkdownDemoView {
             return;
         };
 
-        let pending = cx
-            .watch_model(&self.st.pending_anchor)
-            .layout()
-            .value_or_default();
+        let pending = self.st.pending_anchor.layout(cx).value_or_default();
         let Some(fragment) = pending.as_deref() else {
             return;
         };
@@ -361,35 +358,27 @@ $$
         cx.actions()
             .transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
 
-        cx.actions()
-            .payload::<act::ToggleCodeBlockExpand>()
-            .models({
-                let expanded = self.st.expanded_code_blocks.clone();
-                move |models, id| {
-                    let _ = models.update(&expanded, |set| {
-                        if set.contains(&id) {
-                            set.remove(&id);
-                        } else {
-                            set.insert(id);
-                        }
-                    });
-                    true
-                }
-            });
+        cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({
+            let expanded = self.st.expanded_code_blocks.clone();
+            move |host, _action_cx, id| {
+                let _ = host.models_mut().update(&expanded, |set| {
+                    if set.contains(&id) {
+                        set.remove(&id);
+                    } else {
+                        set.insert(id);
+                    }
+                });
+                true
+            }
+        });
 
         self.st.anchor_regions.borrow_mut().clear();
 
         let theme = cx.theme_snapshot();
         let padding_md = theme.metric_token("metric.padding.md");
 
-        let wrap_enabled = cx
-            .watch_model(&self.st.wrap_code)
-            .layout()
-            .value_or_default();
-        let cap_enabled = cx
-            .watch_model(&self.st.cap_code_height)
-            .layout()
-            .value_or_default();
+        let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();
+        let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();
 
         let mut components = markdown::MarkdownComponents::<KernelApp>::default();
         components.on_link_activate = Some(Self::on_link_activate(self.st.pending_anchor.clone()));
@@ -496,9 +485,7 @@ $$
                     download_remote_image(src_for_fetch.as_ref())
                 });
 
-                let state = handle
-                    .layout_query(cx)
-                    .value_or_else(QueryState::<RemoteImageData>::default);
+                let state = handle.layout_query(cx).value_or_default();
 
                 match state.status {
                     QueryStatus::Idle | QueryStatus::Loading => return spinner_box(cx),

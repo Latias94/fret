@@ -297,8 +297,8 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    cx.watch_model(model)
-        .layout()
+    model
+        .layout_in(cx)
         .read_ref(|v| v.first().copied().unwrap_or(default))
         .ok()
         .unwrap_or(default)
@@ -310,7 +310,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut CustomEffectV1State) ->
             .into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
+    let enabled = st.enabled.layout_in(cx).value_or(true);
     let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 14.0);
     let blur_downsample = watch_first_f32(cx, &st.blur_downsample, 2.0);
     let refraction_height_px = watch_first_f32(cx, &st.refraction_height_px, 20.0);

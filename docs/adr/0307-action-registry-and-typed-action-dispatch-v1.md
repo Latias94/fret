@@ -89,6 +89,12 @@ Action dispatch semantics align with ADR 0020:
 Pointer-triggered UI events (e.g. button click) should dispatch actions through the same “command/action” pipeline,
 so keybindings, UI triggers, and the palette converge on the same handler semantics and diagnostics.
 
+Implementation contract note:
+
+- typed action authoring surfaces must install handlers into an owner-scoped action route lane,
+  distinct from the legacy generic command-hook slot, so multiple action surfaces can coexist on
+  the same dispatch node without overwriting one another.
+
 ### D4 — Availability is queryable and auditable
 
 Action availability must be queryable:

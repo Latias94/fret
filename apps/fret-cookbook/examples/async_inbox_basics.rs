@@ -6,11 +6,9 @@ use std::{
     time::Duration,
 };
 
+use fret::advanced::AppUiRawActionNotifyExt as _;
 use fret::app::prelude::*;
-use fret::{
-    icons::IconId,
-    style::{Size, Space},
-};
+use fret::{icons::IconId, style::Space};
 use fret_executor::{
     BackgroundTask, CancellationToken, Executors, Inbox, InboxConfig, InboxDrainer,
 };

@@ -16,14 +16,17 @@ default = []
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 gallery-ai = ["dep:fret-ui-ai"]
 gallery-web-ime-harness = ["fret-fonts/emoji"]
+gallery-chart = [
+    "dep:fret-chart",
+    "dep:delinea",
+]
 gallery-dev = [
     "gallery-ai",
+    "gallery-chart",
     "fret/ui-ai",
     "gallery-web-ime-harness",
     "dep:fret-ui-magic",
     "dep:fret-code-editor-view",
-    "dep:fret-chart",
-    "dep:delinea",
     "dep:fret-canvas",
     "dep:fret-node",
     "dep:fret-markdown",

@@ -1252,6 +1252,7 @@ impl WindowElementState {
             ));
             self.touch_state_key((element, TypeId::of::<crate::action::PointerActionHooks>()));
             self.touch_state_key((element, TypeId::of::<crate::action::KeyActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::action::ActionRouteHooks>()));
             self.touch_state_key((element, TypeId::of::<crate::action::CommandActionHooks>()));
             self.touch_state_key((
                 element,

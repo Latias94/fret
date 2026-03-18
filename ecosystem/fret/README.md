@@ -52,6 +52,18 @@ cargo run -p fretboard -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
+Keep the default authoring model intentionally small:
+
+- use `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state,
+- use `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
+- for view-owned keyed rows, bind payloads with `.action_payload(...)`, prefer
+  `payload_local_update_if::<A>(...)` as the default row-write path,
+- use `cx.actions().transient::<A>(...)` when the real effect must happen with `&mut App` in
+  `render()`,
+- drop to `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs,
+- keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only
+  surfaces that do not already expose a narrower widget-owned app-facing helper.
+
 ## Quick start (Cargo)
 
 With defaults (desktop + app):
@@ -125,8 +137,11 @@ signatures / command registration, import them intentionally from `fret::style::
 `fret::app::LocalState`, and `fret::actions::CommandId`.
 If app code needs explicit semantic-role nouns, import them from
 `fret::semantics::SemanticsRole` instead of expecting them from `fret::app::prelude::*`.
-If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story,
-import them intentionally from `fret::selector::{DepsBuilder, DepsSignature}` and
+If app code needs explicit selector/query helper nouns beyond the grouped `cx.data()` story
+(`cx.data().query*(...)`, `handle.read_layout(cx)`, `cx.data().invalidate_query(...)`,
+`cx.data().invalidate_query_namespace(...)`),
+import them intentionally from `fret::selector::ui::DepsBuilder`,
+`fret::selector::DepsSignature`, and
 `fret::query::{QueryError, QueryKey, QueryPolicy, QueryState, ...}`.
 For adaptive UI helpers such as breakpoints, safe-area insets, pointer/media preferences, or
 Tailwind breakpoint probes, use `fret::env::{...}` explicitly.
@@ -174,7 +189,12 @@ The same ordered builder surface now also includes compile-time/static entries t
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
 - `app`: recommended baseline for apps (shadcn).
-- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector(...)`, `cx.data().query(...)`) for the default app surface, plus the explicit `fret::selector::*` / `fret::query::*` secondary lanes when app code needs state helper nouns.
+- `state`: enable selector/query helpers on `AppUi` (`cx.data().selector_layout(...)` for
+  LocalState-first derived values, raw `cx.data().selector(...)` for explicit signatures, and
+  `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path, plus
+  `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` for grouped
+  app-lane query invalidation), plus the explicit `fret::selector::*` / `fret::query::*`
+  secondary lanes when app code needs state helper nouns.
 - `router`: enable the explicit app-level router surface (`fret::router::{app::install, RouterUiStore, RouterOutlet, ...}`).
 - `docking`: enable the explicit advanced docking surface (`fret::docking::{core::*, DockManager, handle_dock_op, ...}`).
 - `editor`: keep installed `fret-ui-editor` presets resilient to `FretApp` shadcn theme resets.
@@ -244,7 +264,9 @@ part of the default app prelude. The default design-system surface is similarly 
 `fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
 `shadcn::app::install(...)` for app wiring plus environment-aware host-theme syncing,
 `shadcn::themes::apply_shadcn_new_york(...)` for explicit one-shot/fixed presets, and
-`shadcn::raw::*` only when you intentionally need the full underlying crate surface. Environment /
+`shadcn::raw::*` only when you intentionally need the full underlying crate surface. Treat
+`shadcn::Button` / `shadcn::Card` as the only first-contact component-family lane:
+`shadcn::app::*` and `shadcn::themes::*` are setup lanes, not peer discovery lanes. Environment /
 `UiServices`-boundary hooks stay off the curated lane: if you only depend on `fret`, reach them
 through `fret::shadcn::raw::advanced::*`; if you depend on the recipe crate directly, use
 `fret_ui_shadcn::advanced::*`. Reusable ecosystem bundles can share the same
@@ -264,9 +286,12 @@ than asking apps to mirror internal bundle registrations. Icon packs are still i
 explicit `crate::app::install` seams backed by the global `IconRegistry`; reusable components
 should prefer semantic `IconId` / `ui.*` ids instead of baking one vendor pack into their public
 contract unless that dependency is intentionally explicit.
-The same explicit-lane rule applies to optional state helpers: keep grouped `cx.data().selector(...)`
-and `cx.data().query*` as the default app story, and import `DepsBuilder` / `QueryKey`-style nouns
-from `fret::selector::*` / `fret::query::*` only when app code actually needs to spell them.
+The same explicit-lane rule applies to optional state helpers: keep grouped
+`cx.data().selector_layout(...)` as the default LocalState-first selector story, keep raw
+`cx.data().selector(...)` for explicit shared `Model<T>` / global signatures, and keep
+`cx.data().query*` plus `handle.read_layout(cx)` as the default query story. Import
+`DepsBuilder` / `QueryKey`-style nouns from `fret::selector::*` / `fret::query::*` only when app
+code actually needs to spell them.
 Editor-themed apps can also opt into `fret`'s `editor` feature to make
 installed `fret-ui-editor` presets survive the default `FretApp` shadcn auto-theme replay; the
 actual editor widgets and presets still live in `fret-ui-editor`.

@@ -15,8 +15,10 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
-        "Modern upstream reference: `repo-ref/ui/apps/v4/registry/radix-vega/examples/alert-example.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx`.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs`.",
+        "Docs grouping reference: `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx` and `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx`.",
+        "Current chrome baseline: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert.tsx`.",
+        "Action-slot reference: `repo-ref/ui/apps/v4/registry/bases/radix/ui/alert.tsx` and `repo-ref/ui/apps/v4/registry/bases/radix/examples/alert-example.tsx`.",
         "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
         "Prefer `AlertTitle::new_children(...)` when the title needs attributed text or a precomposed child subtree.",
         "Prefer `AlertDescription::new_children(...)` when the description needs multiple paragraphs, lists, or rich text.",
@@ -32,7 +34,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-alert-basic")
         .code_rust_from_file_region(snippets::basic::SOURCE, "example");
     let demo = DocSection::build(cx, "With Icons", demo)
-        .description("Modern upstream icon patterns, including rich title/description content and long-text wrapping.")
+        .description("Docs-style icon/title/description permutations. Current new-york-v4 chrome truncates the title by default instead of teaching multi-line wrapping.")
         .test_id_prefix("ui-gallery-alert")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let destructive = DocSection::build(cx, "Destructive", destructive)
@@ -60,7 +62,7 @@ pub(super) fn preview_alert(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the modern shadcn/Radix example grouping first—Basic, With Icons, Destructive, With Actions—then adds Fret-specific copy-paste surfaces.",
+            "Page grouping follows the upstream alert docs, while the default chrome tracks the current new-york-v4 alert source. Fret-specific composable title/link surfaces stay in the later sections.",
         ),
         vec![
             basic,

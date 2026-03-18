@@ -157,8 +157,8 @@ impl View for CustomV1BasicsView {
             .unwrap_or(false);
         let supported_value = if caps_supported { 1.0 } else { 0.0 };
 
-        let enabled = cx.state().watch(&enabled_state).paint().value_or(true);
-        let strength = cx.state().watch(&strength_state).paint().value_or(0.35f32);
+        let enabled = enabled_state.paint(cx).value_or(true);
+        let strength = strength_state.paint(cx).value_or(0.35f32);
 
         let effect_id = cx
             .app

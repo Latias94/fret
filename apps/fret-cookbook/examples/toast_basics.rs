@@ -1,3 +1,4 @@
+use fret::advanced::AppUiRawActionNotifyExt as _;
 use fret::app::prelude::*;
 use fret::style::Space;
 use fret_ui::CommandAvailability;
@@ -62,13 +63,12 @@ impl View for ToastBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::DefaultToast>(|_host, _acx| {
-            CommandAvailability::Available
-        });
-        cx.on_action_availability::<act::SuccessToast>(|_host, _acx| {
-            CommandAvailability::Available
-        });
-        cx.on_action_availability::<act::DismissAll>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::DefaultToast>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::SuccessToast>(|_host, _acx| CommandAvailability::Available);
+        cx.actions()
+            .availability::<act::DismissAll>(|_host, _acx| CommandAvailability::Available);
 
         let buttons = ui::h_flex(|cx| {
             ui::children![

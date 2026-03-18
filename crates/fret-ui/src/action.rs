@@ -8,7 +8,7 @@ use fret_runtime::{
     ModelStore, PlatformTextInputQuery, PlatformTextInputQueryResult, TickId, TimerToken,
     Utf16Range, WeakModel,
 };
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::sync::Arc;
 
 /// Context passed to component-owned action handlers.
@@ -849,6 +849,106 @@ pub type OnCommand = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, CommandId)
 #[derive(Default)]
 pub(crate) struct CommandActionHooks {
     pub on_command: Option<OnCommand>,
+}
+
+#[derive(Clone)]
+pub(crate) struct ActionRouteOwnerHooks {
+    pub owner: TypeId,
+    pub on_command: Option<OnCommand>,
+    pub on_command_availability: Option<OnCommandAvailability>,
+}
+
+/// Owner-scoped action route hooks.
+///
+/// This lane is separate from the legacy generic command hook slot so app-facing typed action
+/// surfaces can coexist on the same element without overwriting one another.
+#[derive(Default, Clone)]
+pub(crate) struct ActionRouteHooks {
+    owners: Vec<ActionRouteOwnerHooks>,
+}
+
+impl ActionRouteHooks {
+    fn owner_mut(&mut self, owner: TypeId) -> &mut ActionRouteOwnerHooks {
+        if let Some(index) = self.owners.iter().position(|hooks| hooks.owner == owner) {
+            return &mut self.owners[index];
+        }
+        self.owners.push(ActionRouteOwnerHooks {
+            owner,
+            on_command: None,
+            on_command_availability: None,
+        });
+        self.owners
+            .last_mut()
+            .expect("action route owner slot must exist after insertion")
+    }
+
+    pub(crate) fn set_on_command(&mut self, owner: TypeId, handler: OnCommand) {
+        self.owner_mut(owner).on_command = Some(handler);
+    }
+
+    pub(crate) fn add_on_command(&mut self, owner: TypeId, handler: OnCommand) {
+        let hooks = self.owner_mut(owner);
+        hooks.on_command = match hooks.on_command.clone() {
+            None => Some(handler),
+            Some(prev) => {
+                let next = handler.clone();
+                Some(Arc::new(move |host, cx, command| {
+                    prev(host, cx, command.clone()) || next(host, cx, command)
+                }))
+            }
+        };
+    }
+
+    pub(crate) fn clear_on_command(&mut self, owner: TypeId) {
+        self.owner_mut(owner).on_command = None;
+    }
+
+    pub(crate) fn on_command_handlers(&self) -> Vec<OnCommand> {
+        self.owners
+            .iter()
+            .filter_map(|hooks| hooks.on_command.clone())
+            .collect()
+    }
+
+    pub(crate) fn set_on_command_availability(
+        &mut self,
+        owner: TypeId,
+        handler: OnCommandAvailability,
+    ) {
+        self.owner_mut(owner).on_command_availability = Some(handler);
+    }
+
+    pub(crate) fn add_on_command_availability(
+        &mut self,
+        owner: TypeId,
+        handler: OnCommandAvailability,
+    ) {
+        let hooks = self.owner_mut(owner);
+        hooks.on_command_availability = match hooks.on_command_availability.clone() {
+            None => Some(handler),
+            Some(prev) => {
+                let next = handler.clone();
+                Some(Arc::new(move |host, cx, command| {
+                    let availability = prev(host, cx.clone(), command.clone());
+                    if availability != crate::widget::CommandAvailability::NotHandled {
+                        return availability;
+                    }
+                    next(host, cx, command)
+                }))
+            }
+        };
+    }
+
+    pub(crate) fn clear_on_command_availability(&mut self, owner: TypeId) {
+        self.owner_mut(owner).on_command_availability = None;
+    }
+
+    pub(crate) fn on_command_availability_handlers(&self) -> Vec<OnCommandAvailability> {
+        self.owners
+            .iter()
+            .filter_map(|hooks| hooks.on_command_availability.clone())
+            .collect()
+    }
 }
 
 pub trait UiCommandAvailabilityActionHost {

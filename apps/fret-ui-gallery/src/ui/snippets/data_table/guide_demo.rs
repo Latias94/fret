@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("guide_demo.rs");
 
 // region: example
+use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::Model;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -11,6 +12,16 @@ use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::collections::HashMap;
 use std::sync::Arc;
+
+mod act {
+    fret::actions!([ToggleAllPageRows = "ui-gallery.data_table.guide.toggle_all_page_rows.v1"]);
+    fret::payload_actions!([
+        ToggleRowSelected(u64) = "ui-gallery.data_table.guide.toggle_row_selected.v1",
+        EditRow(u64) = "ui-gallery.data_table.guide.edit_row.v1",
+        CopyRow(u64) = "ui-gallery.data_table.guide.copy_row.v1",
+        DeleteRow(u64) = "ui-gallery.data_table.guide.delete_row.v1"
+    ]);
+}
 
 #[derive(Debug, Clone)]
 struct DemoProcessRow {
@@ -27,60 +38,54 @@ struct DemoProcessTableAssets {
     columns: Arc<[ColumnDef<DemoProcessRow>]>,
 }
 
-const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.select_all_page";
-const TOGGLE_ROW_SELECTED_ROUTE_PREFIX: &str = "ui_gallery.data_table.toggle_row_selected.";
-
-fn toggle_row_selected_command(row_id: u64) -> CommandId {
-    CommandId::new(Arc::<str>::from(format!(
-        "{TOGGLE_ROW_SELECTED_ROUTE_PREFIX}{row_id}"
-    )))
-}
-
-fn try_parse_toggle_row_selected(cmd: &CommandId) -> Option<u64> {
-    cmd.as_str()
-        .strip_prefix(TOGGLE_ROW_SELECTED_ROUTE_PREFIX)
-        .and_then(|suffix| suffix.parse::<u64>().ok())
-}
-
-fn wire_selection_commands<H: UiHost + 'static>(
-    cx: &mut ElementContext<'_, H>,
+fn bind_selection_actions(
+    cx: &mut UiCx<'_>,
     state: Model<TableState>,
     data: Arc<[DemoProcessRow]>,
     columns: Arc<[ColumnDef<DemoProcessRow>]>,
 ) {
-    cx.command_on_command_for(
-        cx.root_id(),
-        Arc::new(move |host, action_cx, command| {
-            let cmd = command.as_str();
-
-            let current = host
-                .models_mut()
+    cx.actions().models::<act::ToggleAllPageRows>({
+        let state = state.clone();
+        let data = data.clone();
+        let columns = columns.clone();
+        move |models| {
+            let current = models
                 .read(&state, |st| st.clone())
                 .ok()
                 .unwrap_or_default();
-
-            let table = Table::builder(data.as_ref())
+            let next = Table::builder(data.as_ref())
                 .columns(columns.as_ref().to_vec())
                 .get_row_key(|row, _index, _parent| RowKey(row.id))
                 .state(current)
-                .build();
+                .build()
+                .toggled_all_page_rows_selected(None);
 
-            let next = if cmd == CMD_SELECT_ALL_PAGE {
-                table.toggled_all_page_rows_selected(None)
-            } else if let Some(row_id) = try_parse_toggle_row_selected(&command) {
-                table.toggled_row_selected(RowKey(row_id), None, true)
-            } else {
-                return false;
-            };
-
-            let _ = host.models_mut().update(&state, |st| {
+            let _ = models.update(&state, |st| {
                 st.row_selection = next;
             });
-
-            host.request_redraw(action_cx.window);
             true
-        }),
-    );
+        }
+    });
+
+    cx.actions().payload_models::<act::ToggleRowSelected>({
+        move |models, row_id| {
+            let current = models
+                .read(&state, |st| st.clone())
+                .ok()
+                .unwrap_or_default();
+            let next = Table::builder(data.as_ref())
+                .columns(columns.as_ref().to_vec())
+                .get_row_key(|row, _index, _parent| RowKey(row.id))
+                .state(current)
+                .build()
+                .toggled_row_selected(RowKey(row_id), None, true);
+
+            let _ = models.update(&state, |st| {
+                st.row_selection = next;
+            });
+            true
+        }
+    });
 }
 
 fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>
@@ -203,7 +208,7 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
-    wire_selection_commands(
+    bind_selection_actions(
         cx,
         state.clone(),
         assets.data.clone(),
@@ -348,7 +353,7 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     shadcn::Checkbox::new_optional(model)
                         .a11y_label("Select all")
                         .test_id("ui-gallery-data-table-select-all")
-                        .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
+                        .action(act::ToggleAllPageRows)
                         .into_element(cx),
                 ])
             },
@@ -367,7 +372,8 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                     "ui-gallery-data-table-select-row-{}",
                                     row.id
                                 )))
-                                .on_click(toggle_row_selected_command(row.id))
+                                .action(act::ToggleRowSelected)
+                                .action_payload(row.id)
                                 .into_element(cx)
                         })
                     }
@@ -400,9 +406,8 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 "ui-gallery-data-table-row-actions-item-edit-{}",
                                                 row.id
                                             )))
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.row_actions.edit",
-                                            )),
+                                            .action(act::EditRow)
+                                            .action_payload(row.id),
                                     ),
                                     shadcn::DropdownMenuEntry::Item(
                                         shadcn::DropdownMenuItem::new("Make a copy")
@@ -410,9 +415,8 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 "ui-gallery-data-table-row-actions-item-copy-{}",
                                                 row.id
                                             )))
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.row_actions.copy",
-                                            )),
+                                            .action(act::CopyRow)
+                                            .action_payload(row.id),
                                     ),
                                     shadcn::DropdownMenuEntry::Separator,
                                     shadcn::DropdownMenuEntry::Item(
@@ -421,9 +425,8 @@ fn guide_demo_content(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                                 "ui-gallery-data-table-row-actions-item-delete-{}",
                                                 row.id
                                             )))
-                                            .on_select(CommandId::new(
-                                                "ui_gallery.data_table.row_actions.delete",
-                                            )),
+                                            .action(act::DeleteRow)
+                                            .action_payload(row.id),
                                     ),
                                 ]
                             });

@@ -1,7 +1,7 @@
 # Into-Element Surface — Target Interface State
 
-Status: target state for the pre-release conversion-surface reset
-Last updated: 2026-03-15
+Status: closeout target state for the pre-release conversion-surface reset
+Last updated: 2026-03-16
 
 This document records the intended end state for the authoring conversion surface.
 
@@ -11,6 +11,15 @@ It answers four concrete questions:
 2. Which conversion contract should reusable component authors use?
 3. Which raw types remain intentionally explicit?
 4. Which current public-looking names should disappear?
+
+Coordination note on 2026-03-16:
+
+- the top-level public lane split is no longer owned here; read it from
+  `../authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+- this file records the conversion/helper consequences of that settled lane story
+- remaining edits on this lane should stay limited to conversion/helper cleanup, explicit raw
+  boundaries, and source-policy guardrails
+- non-goal: do not use this file to reopen a new app/component taxonomy or root-builder family
 
 ## Public Surface Tiers
 
@@ -39,6 +48,8 @@ Default app-facing docs, templates, and examples should teach:
   body
 - pure page-shell helpers should stay fully late-landed and let `render(...)` own the final
   `ui::children![cx; helper(...)]` root conversion
+- when a render root or wrapper closure only forwards one typed child, prefer
+  `ui::single(cx, child)` over `ui::children![cx; child]`
 
 They should not teach:
 

@@ -29,6 +29,25 @@ pub fn button_group_with_separator<H: UiHost>(
 }
 
 #[allow(dead_code)]
+pub fn button_group_with_external_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> impl IntoUiElement<H> + use<H> {
+    let label = shadcn::Label::new("Formatting").into_element(cx);
+    let label_id = label.id;
+    let group = shadcn::ButtonGroup::new([
+        shadcn::Button::new("Bold").into(),
+        shadcn::Button::new("Italic").into(),
+    ])
+    .labelled_by_element(label_id)
+    .into_element(cx);
+
+    ui::v_flex(|_cx| vec![label, group])
+        .gap(Space::N2)
+        .items_start()
+        .into_element(cx)
+}
+
+#[allow(dead_code)]
 pub fn button_group_with_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> impl IntoUiElement<H> + use<H> {

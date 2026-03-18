@@ -58,42 +58,28 @@ impl View for FormBasicsView {
         let email_state = cx.state().local::<String>();
         let error_state = cx.state().local::<Option<String>>();
 
-        let name = cx
-            .state()
-            .watch(&name_state)
-            .layout()
-            .value_or_else(String::new);
-        let email = cx
-            .state()
-            .watch(&email_state)
-            .layout()
-            .value_or_else(String::new);
-        let error = cx.state().watch(&error_state).layout().value_or_default();
+        let name = name_state.layout_value(cx);
+        let email = email_state.layout_value(cx);
+        let error = error_state.layout_value(cx);
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 
-        cx.actions().locals::<act::Submit>({
-            let name_state = name_state.clone();
-            let email_state = email_state.clone();
-            let error_state = error_state.clone();
-            move |tx| {
-                let name = tx.value_or_else(&name_state, String::new);
-                let email = tx.value_or_else(&email_state, String::new);
+        cx.actions()
+            .locals_with((&name_state, &email_state, &error_state))
+            .on::<act::Submit>(|tx, (name_state, email_state, error_state)| {
+                let name = tx.value(&name_state);
+                let email = tx.value(&email_state);
                 let err = FormBasicsView::validate(&name, &email);
                 tx.set(&error_state, err)
-            }
-        });
+            });
 
-        cx.actions().locals::<act::Reset>({
-            let name_state = name_state.clone();
-            let email_state = email_state.clone();
-            let error_state = error_state.clone();
-            move |tx| {
+        cx.actions()
+            .locals_with((&name_state, &email_state, &error_state))
+            .on::<act::Reset>(|tx, (name_state, email_state, error_state)| {
                 let ok = tx.set(&name_state, String::new());
                 let ok = tx.set(&email_state, String::new()) && ok;
                 tx.set(&error_state, None) && ok
-            }
-        });
+            });
 
         cx.actions().availability::<act::Submit>({
             let name_state = name_state.clone();

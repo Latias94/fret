@@ -266,15 +266,15 @@ let key = QueryKey::<Vec<TodoRow>>::new("my_app.db.todos.v1", &epoch);
 
 **B) Keep the key stable and invalidate on epoch change (preferred for hot paths):**
 
+Inside `AppUi` / extracted `UiCx` helpers, prefer `cx.data().invalidate_query_namespace(...)`
+instead of spelling the raw query-client shell inline:
+
 ```rust
 let epoch = cx.watch_model(&db_epoch).paint().value_or_default();
 cx.root_state(|| 0u64, |last_epoch| {
     if *last_epoch != epoch {
         *last_epoch = epoch;
-        let _ = fret_query::with_query_client(cx.app, |client, _app| {
-            client.invalidate_namespace(TODOS_NS);
-        });
-        cx.app.request_redraw(cx.window);
+        cx.data().invalidate_query_namespace(TODOS_NS);
     }
 });
 

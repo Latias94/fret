@@ -32,6 +32,8 @@ pub(super) fn preview_combobox(
         "API reference: `ecosystem/fret-ui-shadcn/src/combobox.rs`.",
         "`Combobox::new(value, open)` plus the direct builder chain (`.trigger(...).input(...).clear(...).content(...)`) is the default recipe root lane, while `into_element_parts(...)` stays the focused upstream-shaped patch seam on that same lane rather than a separate `compose()` story.",
         "Combobox is intentionally a Popover + Command recipe surface; it already supports upstream-shaped authoring through `Combobox::into_element_parts(...)` with trigger/input/content patches, so the main parity gap here was usage clarity rather than missing mechanism work.",
+        "Upstream nested children composition maps to Fret's typed parts (`ComboboxContent::new([ComboboxContentPart::...])`) rather than arbitrary `AnyElement` children; keep that API narrow unless a concrete upstream outcome is blocked.",
+        "`Extras: Input Group` demonstrates typed `ComboboxInput::children([InputGroupAddon...])` composition for inline addons; keep that surface narrow instead of widening to generic arbitrary children.",
         "Multi-select chips is a recipe-level surface (`ComboboxChips`) built on top of Command + Popover primitives.",
         "For invalid visuals today, apply style overrides on trigger and pair with field-level error copy.",
         "When adding richer item/group APIs, keep test IDs stable so existing diag scripts remain reusable.",
@@ -75,8 +77,8 @@ pub(super) fn preview_combobox(
         )
         .code_rust_from_file_region(snippets::groups_with_separator::SOURCE, "example")
         .no_shell();
-    let trigger_button = DocSection::build(cx, "Trigger Button", trigger_button)
-        .description("Aligns Base UI combobox \"Popup\" recipe: a button-like trigger with the searchable listbox in the popover content.")
+    let trigger_button = DocSection::build(cx, "Popup", trigger_button)
+        .description("Matches the Base UI/shadcn popup recipe: a button-like trigger with the searchable listbox in the popover content.")
         .code_rust_from_file_region(snippets::trigger_button::SOURCE, "example")
         .no_shell();
     let multiple = DocSection::build(cx, "Multiple Selection", multiple)
@@ -101,7 +103,9 @@ pub(super) fn preview_combobox(
         .description("Disabled state should block open/selection and use muted styling.")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let input_group = DocSection::build(cx, "Extras: Input Group", input_group)
-        .description("Inline keybinding + input grouping example.")
+        .description(
+            "Typed `ComboboxInput` addon composition plus state rows for diagnostics coverage.",
+        )
         .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
     let rtl = DocSection::build(cx, "Extras: RTL", rtl)
         .description("All shadcn components should work under an RTL direction provider.")

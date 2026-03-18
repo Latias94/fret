@@ -162,7 +162,9 @@ Goal:
 
 Exit criteria:
 
-- grouped `cx.data().selector(...)` / `cx.data().query(...)` remains the official app-path story,
+- grouped `cx.data().selector_layout(...)` for LocalState-first selectors, raw
+  `cx.data().selector(...)` for explicit signatures, and `cx.data().query(...)` remain the
+  official app-path story,
 - a decision is made on `QueryAdapter`:
   - implemented for a real consumer, or
   - explicitly deferred with written rationale,

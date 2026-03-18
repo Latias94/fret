@@ -1,6 +1,6 @@
 ---
 name: fret-shadcn-source-alignment
-description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Use when user says \"align shadcn\", \"parity mismatch\", \"match Radix\", \"port shadcn v4\", or reports issues like \"items-stretch\", \"w-full\", \"hit box too big\", or layout/interaction drift. Maps fixes to the correct layer (mechanism vs policy vs recipe) and locks outcomes with focused tests and `fretboard diag` scripts."
+description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Default visual parity targets the current `new-york-v4` registry source unless the user names another style; semantics still follow Radix/Base UI. Use when user says \"align shadcn\", \"parity mismatch\", \"match Radix\", \"port shadcn v4\", or reports issues like \"items-stretch\", \"w-full\", \"hit box too big\", or layout/interaction drift. Maps fixes to the correct layer (mechanism vs policy vs recipe) and locks outcomes with focused tests and `fretboard diag` scripts."
 ---
 
 # Shadcn / Radix source alignment
@@ -24,8 +24,11 @@ description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Use w
 - Which mechanism axis is likely involved (overlay dismissal/focus restore/hit-testing/transform/clipping/breakpoints)?
 - What is the upstream source of truth (Radix docs vs shadcn composition/source)?
 - Which authoring surface is drifting: `fret` app-facing snippets, direct `fret_ui_shadcn` usage, or internal recipe code?
+- Which source axis is drifting: semantics, default chrome, docs page grouping, or app-facing teaching surface?
+- Is the user asking for a named visual style (`new-york-v4`, `radix-nova`, `base-nova`, etc.) or just “shadcn” in general?
 - Is this actually a public-surface drift (upstream prop-driven API vs Fret model-only authoring surface)?
 - Is this actually a conversion-surface drift (`Ui` / `UiChild` / unified component conversion trait) rather than a widget recipe mismatch?
+- Is this actually an authoring-seam drift (`compose()` vs `build_parts(...)` vs `into_element_parts(...)`) rather than a widget/runtime mismatch?
 - Which layer should own the change (mechanism vs policy vs recipe)?
 - What regression protection is required: unit test, parity harness case, and/or diag script?
 - Do we need a new stable `test_id` surface for automation?
@@ -36,9 +39,15 @@ description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Use w
 Defaults if unclear:
 
 - Treat interaction semantics as Radix truth.
-- Treat composition/sizing/tokens as shadcn truth.
+- Treat default visual chrome, slot spacing, and web-golden parity as the current `repo-ref/ui/apps/v4/registry/new-york-v4/ui/*` truth unless the user explicitly asks for another style.
+- Treat docs page grouping, example ordering, and user-facing teaching flow as `repo-ref/ui/apps/v4/content/docs/components/*`.
+- Treat `repo-ref/ui/apps/v4/registry/bases/radix/*` and `repo-ref/ui/apps/v4/registry/bases/base/*` as secondary docs-surface references and fallbacks when `new-york-v4` lacks the slot/variant or when the task explicitly targets the base/radix docs surface.
 - Treat first-party UI Gallery snippets as the in-tree exemplar surface when the mismatch is about how Fret code should be authored or taught.
 - Treat default-style ownership as a first-class decision: keep recipe defaults only for intrinsic component chrome/slot spacing, and keep page/container negotiation (`w-full`, `min-w-0`, `max-w-*`, `flex-1`, centering) caller-owned unless upstream puts it in the component source itself.
+- Treat authoring-seam naming as taxonomy work, not a reflex rename:
+  - `compose()` usually signals the default typed root lane,
+  - `build_parts(...)` / `into_element_parts(...)` usually signal adapter seams,
+  - if the only pain is "an eager parts value still has to be wrapped in a closure", prefer a narrow eager helper before considering a family-wide or repo-wide rename.
 - Add at least one gate.
 - When DOM-focused assumptions are involved, consult Base UI as an additional headless reference.
 
@@ -152,6 +161,23 @@ Run this check before adding app-side helpers or broad `IntoModel<T>` conversion
 If the complaint is "this snippet/helper still has to spell legacy conversion trait names", treat
 that as conversion-surface drift first, not widget parity.
 
+### 0.75) Classify the authoring seam before renaming helpers
+
+Do not rename `compose()` / `build_parts(...)` / `into_element_parts(...)` just because one
+component feels awkward.
+
+Audit the seam first:
+
+- default copyable root lane: often `compose()` or a direct builder chain
+- focused adapter lane: often `build_parts(...)` / `into_element_parts(...)`
+- eager-value friction: often best solved by a narrow helper (for example an eager-content variant)
+- custom trigger/render substitution is not automatically an adapter-seam case; if the default
+  composition builder already accepts a typed trigger value, keep the example on that `compose()`
+  lane instead of dropping to `build_parts(...)`
+
+Escalate to a family-wide or repo-wide rename only when multiple first-party teaching surfaces show
+the same confusion and a shared taxonomy decision is ready to be enforced.
+
 ### 0) Run the mechanism checklist first (don’t chase pixels yet)
 
 When shadcn “looks almost right”, the remaining drift is usually **mechanism** (overlay routing,
@@ -173,7 +199,7 @@ dismissal/focus, hit-testing, breakpoints), not styling. Before adding/adjusting
 
 If the mismatch is interaction policy (dismiss rules, focus restore, hover intent, menu navigation), it almost never belongs in `crates/fret-ui`.
 
-### 2) Pick the upstream reference stack explicitly
+### 2) Pick the upstream reference stack and precedence explicitly
 
 Use the right source for the right part of parity work:
 
@@ -182,6 +208,17 @@ Use the right source for the right part of parity work:
 - Floating UI → placement vocabulary and geometry outcomes
 - cmdk → command palette details
 - Base UI → additional headless/accessibility reference when DOM assumptions need translation
+- Current default shadcn visual baseline → `repo-ref/ui/apps/v4/registry/new-york-v4/ui/*` plus matching `goldens/shadcn-web/v4/new-york-v4/*`
+- Docs grouping / examples page structure → `repo-ref/ui/apps/v4/content/docs/components/*`
+- Base/radix docs surface and fallback recipe shape → `repo-ref/ui/apps/v4/registry/bases/radix/*` and `repo-ref/ui/apps/v4/registry/bases/base/*`
+
+Precedence rule:
+
+- If the user names a style variant, use that style as the visual/chrome source of truth.
+- If the user just says “align shadcn”, default visual/chrome work to current `new-york-v4`.
+- Keep semantics/a11y/focus/dismiss outcomes anchored to Radix + APG, with Base UI as the extra headless check when DOM assumptions need translation.
+- Keep docs-page parity anchored to the docs content pages, not to whichever registry style currently powers the default chrome.
+- When sources conflict, state which axis you are aligning before editing: `semantics`, `chrome`, `docs surface`, or `teaching surface`.
 
 See `references/reference-stack-and-renderer-notes.md` for the detailed mapping and renderer guidance.
 
@@ -288,6 +325,7 @@ Prefer bounded, fast gates:
 - Mixing “parity work” and “new design work” without leaving any regression protection behind.
 - Treating Base UI as a 1:1 “implementation port”: use it as a headless reference, then translate to Fret’s GPU-first renderer (semantics/hit-testing/focus routing).
 - Porting a prop-driven upstream widget as model-only in Fret, then normalizing the resulting per-row `Model<T>` or surrogate-button boilerplate in app code.
+- Renaming authoring seams repo-wide before proving that the real problem is taxonomy drift instead of one narrow eager-value cliff.
 - Deriving `Clone` on types that store `AnyElement` (move-only by contract); prefer move-only builders or store inputs (models/ids) rather than elements.
 
 ## Troubleshooting

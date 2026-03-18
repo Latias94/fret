@@ -107,6 +107,15 @@ struct CustomEffectV3View {
     st: State,
 }
 
+#[derive(Clone)]
+struct CustomEffectV3ViewSettings {
+    enabled: bool,
+    show_user0_probe: bool,
+    show_user1_probe: bool,
+    use_non_filterable_user0: bool,
+    use_non_filterable_user1: bool,
+}
+
 fn install_demo_theme(app: &mut KernelApp) {
     shadcn::themes::apply_shadcn_new_york(
         app,
@@ -371,29 +380,73 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         return vec![shadcn::raw::typography::h3(msg).into_element(cx)].into();
     };
 
-    let enabled = cx.watch_model(&st.enabled).layout().value_or(true);
-    let show_user0_probe = cx
-        .watch_model(&st.show_user0_probe)
-        .layout()
-        .value_or(false);
-    let show_user1_probe = cx
-        .watch_model(&st.show_user1_probe)
-        .layout()
-        .value_or(false);
-    let use_non_filterable_user0 = cx
-        .watch_model(&st.use_non_filterable_user0)
-        .layout()
-        .value_or(false);
-    let use_non_filterable_user1 = cx
-        .watch_model(&st.use_non_filterable_user1)
-        .layout()
-        .value_or(false);
-    let user0_image = if use_non_filterable_user0 {
+    let enabled = st.enabled.clone();
+    let show_user0_probe = st.show_user0_probe.clone();
+    let show_user1_probe = st.show_user1_probe.clone();
+    let use_non_filterable_user0 = st.use_non_filterable_user0.clone();
+    let use_non_filterable_user1 = st.use_non_filterable_user1.clone();
+    let enabled_deps = enabled.clone();
+    let show_user0_probe_deps = show_user0_probe.clone();
+    let show_user1_probe_deps = show_user1_probe.clone();
+    let use_non_filterable_user0_deps = use_non_filterable_user0.clone();
+    let use_non_filterable_user1_deps = use_non_filterable_user1.clone();
+    let view_settings: CustomEffectV3ViewSettings = cx.data().selector(
+        move |cx| {
+            cx.observe_model(&enabled_deps, Invalidation::Layout);
+            cx.observe_model(&show_user0_probe_deps, Invalidation::Layout);
+            cx.observe_model(&show_user1_probe_deps, Invalidation::Layout);
+            cx.observe_model(&use_non_filterable_user0_deps, Invalidation::Layout);
+            cx.observe_model(&use_non_filterable_user1_deps, Invalidation::Layout);
+            (
+                cx.app.models().revision(&enabled_deps).unwrap_or(0),
+                cx.app
+                    .models()
+                    .revision(&show_user0_probe_deps)
+                    .unwrap_or(0),
+                cx.app
+                    .models()
+                    .revision(&show_user1_probe_deps)
+                    .unwrap_or(0),
+                cx.app
+                    .models()
+                    .revision(&use_non_filterable_user0_deps)
+                    .unwrap_or(0),
+                cx.app
+                    .models()
+                    .revision(&use_non_filterable_user1_deps)
+                    .unwrap_or(0),
+            )
+        },
+        move |cx| CustomEffectV3ViewSettings {
+            enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
+            show_user0_probe: cx
+                .app
+                .models()
+                .get_cloned(&show_user0_probe)
+                .unwrap_or(false),
+            show_user1_probe: cx
+                .app
+                .models()
+                .get_cloned(&show_user1_probe)
+                .unwrap_or(false),
+            use_non_filterable_user0: cx
+                .app
+                .models()
+                .get_cloned(&use_non_filterable_user0)
+                .unwrap_or(false),
+            use_non_filterable_user1: cx
+                .app
+                .models()
+                .get_cloned(&use_non_filterable_user1)
+                .unwrap_or(false),
+        },
+    );
+    let user0_image = if view_settings.use_non_filterable_user0 {
         user0_non_filterable
     } else {
         user0_filterable
     };
-    let user1_image = if use_non_filterable_user1 {
+    let user1_image = if view_settings.use_non_filterable_user1 {
         user1_non_filterable
     } else {
         user1_filterable
@@ -402,13 +455,13 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
     let stage = stage(
         cx,
         st,
-        enabled,
-        show_user0_probe,
-        use_non_filterable_user0,
+        view_settings.enabled,
+        view_settings.show_user0_probe,
+        view_settings.use_non_filterable_user0,
         lens_effect,
         user0_probe_effect,
-        show_user1_probe,
-        use_non_filterable_user1,
+        view_settings.show_user1_probe,
+        view_settings.use_non_filterable_user1,
         user1_probe_effect,
         user01_probe_effect,
         user0_image,

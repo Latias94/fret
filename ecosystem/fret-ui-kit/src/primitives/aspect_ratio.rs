@@ -18,7 +18,7 @@ use crate::{ChromeRefinement, LayoutRefinement, Space};
 #[derive(Debug)]
 pub struct AspectRatio {
     ratio: f32,
-    child: AnyElement,
+    children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     overflow: Overflow,
@@ -26,9 +26,13 @@ pub struct AspectRatio {
 
 impl AspectRatio {
     pub fn new(ratio: f32, child: AnyElement) -> Self {
+        Self::new_children(ratio, [child])
+    }
+
+    pub fn new_children(ratio: f32, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             ratio,
-            child,
+            children: children.into_iter().collect(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             overflow: Overflow::Visible,
@@ -43,8 +47,21 @@ impl AspectRatio {
         Self::new(1.0, child)
     }
 
+    /// Starts a composable builder with multiple direct children and the upstream default ratio.
+    ///
+    /// This is useful for image + overlay compositions without forcing callers to introduce an
+    /// extra wrapper element first.
+    pub fn with_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self::new_children(1.0, children)
+    }
+
     pub fn ratio(mut self, ratio: f32) -> Self {
         self.ratio = ratio;
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 
@@ -85,9 +102,9 @@ impl AspectRatio {
                 .size_full(),
         );
 
-        let child = self.child;
+        let children = self.children;
         cx.container(props, move |cx| {
-            vec![cx.container(content_host, move |_cx| vec![child])]
+            vec![cx.container(content_host, move |_cx| children)]
         })
     }
 }
@@ -160,6 +177,55 @@ mod tests {
                 panic!("expected a container element");
             };
             assert_eq!(props.layout.aspect_ratio, Some(4.0 / 3.0));
+        });
+    }
+
+    #[test]
+    fn aspect_ratio_with_children_defaults_to_square_ratio() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let first = cx.text("a");
+            let second = cx.text("b");
+            let el = AspectRatio::with_children([first, second]).into_element(cx);
+
+            let ElementKind::Container(props) = &el.kind else {
+                panic!("expected a container element");
+            };
+            assert_eq!(props.layout.aspect_ratio, Some(1.0));
+        });
+    }
+
+    #[test]
+    fn aspect_ratio_preserves_multiple_direct_children_inside_content_host() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let first = cx.text("a");
+            let second = cx.text("b");
+            let el = AspectRatio::new_children(16.0 / 9.0, [first, second]).into_element(cx);
+
+            assert_eq!(
+                el.children.len(),
+                1,
+                "expected the absolute content host child"
+            );
+            let content_host = &el.children[0];
+            let ElementKind::Container(props) = &content_host.kind else {
+                panic!("expected a content host container");
+            };
+            assert_eq!(content_host.children.len(), 2);
+            assert_eq!(props.layout.overflow, Overflow::Visible);
         });
     }
 }
