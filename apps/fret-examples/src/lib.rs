@@ -1819,8 +1819,41 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             POSTPROCESS_THEME_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "compare: cx.state().local_init(|| true),",
+                "theme: cx",
+                ".local_init(|| Option::<Arc<str>>::Some(Arc::from(\"cyberpunk\"))),",
+                "theme_open: cx.state().local_init(|| false),",
+                "chromatic_offset_px: cx.state().local_init(|| vec![4.0]),",
+                "scanline_strength: cx.state().local_init(|| vec![0.32]),",
+                "scanline_spacing_px: cx.state().local_init(|| vec![3.0]),",
+                "vignette_strength: cx.state().local_init(|| vec![0.6]),",
+                "grain_strength: cx.state().local_init(|| vec![0.12]),",
+                "grain_scale: cx.state().local_init(|| vec![1.5]),",
+                "retro_pixel_scale: cx.state().local_init(|| vec![10.0]),",
+                "retro_dither: cx.state().local_init(|| true),",
+                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
+                ".local_set::<act::Reset, Option<Arc<str>>>(",
+                ".local_set::<act::Reset, Vec<f32>>(&st.chromatic_offset_px, vec![4.0]);",
+                ".local_set::<act::Reset, bool>(&st.retro_dither, true);",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "compare: app.models_mut().insert(true)",
+                ".insert(Option::<Arc<str>>::Some(Arc::from(\"cyberpunk\")))",
+                "theme_open: app.models_mut().insert(false)",
+                "chromatic_offset_px: app.models_mut().insert(vec![4.0])",
+                "scanline_strength: app.models_mut().insert(vec![0.32])",
+                "scanline_spacing_px: app.models_mut().insert(vec![3.0])",
+                "vignette_strength: app.models_mut().insert(vec![0.6])",
+                "grain_strength: app.models_mut().insert(vec![0.12])",
+                "grain_scale: app.models_mut().insert(vec![1.5])",
+                "retro_pixel_scale: app.models_mut().insert(vec![10.0])",
+                "retro_dither: app.models_mut().insert(true)",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
@@ -2067,8 +2100,19 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             POSTPROCESS_THEME_DEMO,
-            &["let view_settings: ThemePostprocessViewSettings = cx.data().selector("],
             &[
+                "let view_settings: ThemePostprocessViewSettings = cx.data().selector_layout(",
+                "&st.enabled,",
+                "&st.compare,",
+                "&st.theme,",
+                "&st.retro_dither",
+                "let enabled_model = st.enabled.clone_model();",
+                "let theme_model = st.theme.clone_model();",
+                "let theme_open_model = st.theme_open.clone_model();",
+                "let chromatic_model = st.chromatic_offset_px.clone_model();",
+            ],
+            &[
+                "let view_settings: ThemePostprocessViewSettings = cx.data().selector(",
                 "let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);",
                 "let compare = cx.watch_model(&self.st.compare).layout().value_or(true);",
                 "let theme = cx.watch_model(&self.st.theme).layout().value_or(Option::<Arc<str>>::None);",
@@ -2077,6 +2121,10 @@ mod authoring_surface_policy_tests {
                 "let compare = self.st.compare.layout_in(cx).value_or(true);",
                 "let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);",
                 "let retro_dither = self.st.retro_dither.layout_in(cx).value_or(true);",
+                "let enabled_model = st.enabled.clone();",
+                "let theme_model = st.theme.clone();",
+                "let theme_open_model = st.theme_open.clone();",
+                "let chromatic_model = st.chromatic_offset_px.clone();",
             ],
         );
 
