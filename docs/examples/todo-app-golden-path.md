@@ -23,7 +23,7 @@ Prefer an explicit ladder instead of starting with the full baseline on minute 1
 
 1. `hello` — the smallest runnable “Hello UI”
 2. `simple-todo` - **View runtime + typed actions + keyed lists** (no selectors/queries; current practical shape is `LocalState<Vec<_>>` + payload row actions for view-owned lists)
-3. `todo` — the current best-practice baseline (**selectors + queries**) once you need derived/async state
+3. `todo` — the richer third rung / selector-query baseline once you need derived or async state
 
 Templates (in this repository):
 
@@ -56,7 +56,10 @@ Related ADRs:
   - `fret-selector` (memoized derived state)
   - `fret-query` (async resource state + caching, TanStack Query-like)
 
-## Quick start (template)
+## Quick start (third-rung template)
+
+If this is your first Fret app, stop at `simple-todo` first. Generate `todo` only when you
+intentionally want selector/query on day 1.
 
 If you are working inside this repository, you can generate a runnable todo template:
 
@@ -200,7 +203,8 @@ struct TodoView;
 
 ## Three-layer state split (recommended)
 
-This section describes the **best-practice baseline** (`todo`) and the `cargo run -p fretboard -- new todo` scaffold template.
+This section describes the richer third rung (`todo`) and the `cargo run -p fretboard -- new todo`
+scaffold template.
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 

@@ -31,7 +31,8 @@ Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` grap
 2. `simple-todo` (template) — view runtime + typed actions + keyed lists (no selectors/queries;
    the current default path is `LocalState<Vec<_>>` + payload row actions for view-owned lists).
    - Generate: `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
-3. `todo` (template) — “best practice baseline” (selectors + queries).
+3. `todo` (template) — richer third rung once you need selectors + queries; not the default starter
+   scaffold.
    - Generate: `cargo run -p fretboard -- new todo --name my-todo`
    - Read: [docs/examples/todo-app-golden-path.md](./todo-app-golden-path.md)
    - Note: this template opts into `fret` feature `state` (selector/query helpers).

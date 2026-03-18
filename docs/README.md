@@ -228,9 +228,11 @@ now taught as `LocalState` + view runtime + typed actions.
   - Run: `cargo run -p fretboard -- dev native --bin components_gallery`
 - Starter todo public proof surface (default app lane, no selector/query): [apps/fret-examples/src/simple_todo_demo.rs](../apps/fret-examples/src/simple_todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin simple_todo_demo`
-- Todo app “golden path” (shadcn + bootstrap): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
+- Todo app “golden path” (richer third rung; shadcn + bootstrap + selector/query): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin todo_demo`
-- Starter todo template generator: `cargo run -p fretboard -- new todo --name my-todo`
+- Default starter template generator (second rung, no selector/query): `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
+  - Guide: [docs/first-hour.md](./first-hour.md)
+- Richer todo template generator (third rung, selectors + queries): `cargo run -p fretboard -- new todo --name my-todo`
   - Guide: [docs/examples/todo-app-golden-path.md](./examples/todo-app-golden-path.md)
 - Windows build speed note: prefer `fretboard dev native ...` (defaults to `--profile dev-fast` on Windows).
 - Docking + viewport + overlays conformance harness (ADR 0072): [apps/fret-examples/src/docking_arbitration_demo.rs](../apps/fret-examples/src/docking_arbitration_demo.rs)
