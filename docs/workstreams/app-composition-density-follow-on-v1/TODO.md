@@ -1,6 +1,6 @@
 # App Composition Density Follow-on v1 — TODO
 
-Status: closeout tracker
+Status: maintenance-only closeout tracker
 
 Companion docs:
 
@@ -41,24 +41,37 @@ Handoff note on 2026-03-18:
   - Do not reopen `cx.actions()` helper growth.
   - Do not widen `fret::app::prelude::*`.
   - Do not pull router into this lane.
-- [ ] Audit repeated app-shell composition density.
+- [x] Audit repeated app-shell composition density.
   - Inventory wrapper-only `container` / `v_flex` / `h_flex` / `ui::single` transport chains.
   - Classify each repeated pattern as:
     - docs/adoption discipline,
     - first-party wrapper rule,
     - or real shared helper gap.
   - Require at least one non-Todo proof surface before promoting any shared helper.
-- [ ] Audit repeated query invalidation shell.
+- [x] Audit repeated query invalidation shell.
   - Inventory default app-lane `with_query_client(...)` + redraw call sites.
   - Decide whether a grouped helper belongs on `cx.data()` or another app-facing authoring seam.
   - Keep `key` vs `namespace` explicit if a helper lands.
   - Keep raw `fret-query` ownership unchanged.
-- [ ] Keep router out of scope.
+- [x] Keep router out of scope.
   - Use `apps/fret-cookbook/examples/router_basics.rs` only as a boundary check.
   - If router later needs shorter app-shell ergonomics, open a router-specific lane instead.
-- [ ] Delete displaced first-contact wording once a better story lands.
-  - Because the repo is pre-release, prefer hard deletion over compatibility aliases.
-- [ ] Update docs/examples/templates/gates together for each landed batch.
+  - Closed on 2026-03-18:
+    - router remains an explicit adjacent seam,
+    - no default app-lane helper decision in this folder now depends on router pressure.
+- [x] Delete displaced first-contact wording once a better story lands.
+  - Closed on 2026-03-18:
+    - canonical docs/examples/templates now teach `ui::single(cx, child)` for the one-child
+      landing case,
+    - app-lane query invalidation now teaches
+      `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)`,
+    - raw `with_query_client(...)` is kept only as the explicit pure app/driver seam.
+- [x] Update docs/examples/templates/gates together for each landed batch.
+  - Closed on 2026-03-18:
+    - canonical examples/templates and the `ecosystem/fret/tests/*` source-policy checks now all
+      point at the same narrowed default app-lane story,
+    - remaining work in this folder is maintenance-only drift control rather than another
+      product-surface batch.
 
 ## M0 — Freeze the lane
 
@@ -79,7 +92,10 @@ Handoff note on 2026-03-18:
     - no new shared `fret` helper is justified,
     - cookbook scaffolds already cover the canonical default app lane,
     - remaining density is first-party example/scaffold discipline rather than framework surface debt.
-- [ ] Remove displaced first-contact wording from the affected docs/examples.
+- [x] Remove displaced first-contact wording from the affected docs/examples.
+  - Closed on 2026-03-18:
+    - the first-contact default app-lane surfaces now consistently teach the no-new-API M1
+      verdict for shell composition and the grouped M2 query invalidation posture.
 
 ## M2 — Query invalidation shell
 
@@ -94,13 +110,21 @@ Handoff note on 2026-03-18:
   - `apps/fret-examples/src/query_async_tokio_demo.rs`
   - `docs/integrating-sqlite-and-sqlx.md`
   - `docs/integrating-tokio-and-reqwest.md`
-- [ ] If a grouped helper does **not** land, record the explicit rationale and keep raw client
-  plumbing as an intentional advanced/app-shell seam instead of leaving the question implicit.
+- [x] Grouped-helper decision recorded.
+  - Closed on 2026-03-18:
+    - the grouped helper did land on `cx.data()`,
+    - the retained raw client plumbing is now explicitly documented as the pure app/driver seam
+      rather than as a missing default app-path helper.
 
 ## M3 — Delete and lock
 
-- [ ] Update docs indices and authoring guides to the chosen narrower story.
-- [ ] Refresh source-policy/tests that protect the default app-lane guidance.
-- [ ] Remove old first-contact wording from docs/examples/templates once the replacement is proven.
-- [ ] Record any consciously retained raw seam as explicit advanced/reference context rather than
+- [x] Update docs indices and authoring guides to the chosen narrower story.
+- [x] Refresh source-policy/tests that protect the default app-lane guidance.
+- [x] Remove old first-contact wording from docs/examples/templates once the replacement is proven.
+- [x] Record any consciously retained raw seam as explicit advanced/reference context rather than
   as a co-equal default path.
+  - Closed on 2026-03-18:
+    - grouped app-lane docs now teach `cx.data().invalidate_query*`,
+    - `crate-usage-guide`, canonical examples, and the `uicx_data_surface` /
+      `crate_usage_grouped_query_surface` tests lock the same posture,
+    - `with_query_client(...)` remains documented only for pure app/driver code.

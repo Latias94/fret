@@ -1,7 +1,7 @@
 # App Composition Density Follow-on v1 — Milestones
 
-Status: closeout tracker
-Last updated: 2026-03-17
+Status: maintenance-only closeout tracker
+Last updated: 2026-03-18
 
 Related:
 
@@ -16,7 +16,7 @@ Related:
 - Query async demo: `apps/fret-examples/src/query_async_tokio_demo.rs`
 - Router boundary check: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`
 
-## Current status snapshot (as of 2026-03-17)
+## Historical status snapshot (as of 2026-03-17)
 
 - **M0**: Met once this directory and the main docs indices land.
 - **M1**: Met. The audit found no new shared framework helper gap: cookbook already ships the
@@ -30,13 +30,38 @@ Related:
 - **M3**: Pending. If a narrower posture lands, docs/examples/templates/gates must delete the
   displaced first-contact wording together.
 
+Closeout note on 2026-03-18:
+
+- the post-M2 docs/examples/templates/gates alignment is now also closed,
+- canonical app-lane surfaces consistently teach:
+  - `ui::single(cx, child)` for one-child landing,
+  - grouped `cx.data().invalidate_query(...)` /
+    `cx.data().invalidate_query_namespace(...)` inside `AppUi` / extracted `UiCx`,
+  - raw `with_query_client(...)` only at the pure app/driver boundary,
+- existing source-policy checks already lock that posture:
+  - `ecosystem/fret/tests/uicx_data_surface.rs`
+  - `ecosystem/fret/tests/crate_usage_grouped_query_surface.rs`
+- this means M3 is now met and the workstream should be read as maintenance-only unless a new
+  default app-lane drift appears.
+
+## Current status snapshot (as of 2026-03-18)
+
+- **M0**: Met.
+- **M1**: Met. No new shared framework helper is justified for app-shell composition density; the
+  remaining pressure is first-party example/scaffold discipline.
+- **M2**: Met. Query invalidation is grouped on `cx.data().invalidate_query(...)` /
+  `cx.data().invalidate_query_namespace(...)` for `AppUi` / extracted `UiCx`, while raw
+  `with_query_client(...)` remains the pure app/driver seam.
+- **M3**: Met. Docs/examples/templates/gates now teach only the narrowed default story.
+
 Overall reading:
 
 - this started as the only open authoring follow-on after the read/write closeout lanes,
 - it stayed narrower than the earlier density lane,
 - M1 is now closed on a no-new-API verdict,
 - M2 is now closed on the grouped query invalidation shell,
-- and the remaining open question is only the final M3 delete/lock discipline.
+- M3 is now closed on docs/gates alignment,
+- and the remaining work is maintenance-only drift control.
 
 ## Milestone 0 — Freeze the lane
 
