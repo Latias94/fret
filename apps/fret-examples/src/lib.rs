@@ -382,6 +382,15 @@ mod authoring_surface_policy_tests {
         );
     }
 
+    fn assert_default_app_surface_prefers_local_state_first(src: &str) {
+        assert!(src.contains("cx.state().local"));
+        assert!(!src.contains("app.models_mut().insert("));
+        assert!(!src.contains("Model<"));
+        assert!(!src.contains("cx.use_local_with("));
+        assert!(!src.contains("cx.actions().models::<"));
+        assert!(!src.contains("cx.on_action_notify_models::<"));
+    }
+
     fn assert_avoids_legacy_conversion_names(src: &str) {
         assert!(!src.contains("UiIntoElement"));
         assert!(!src.contains("UiHostBoundIntoElement"));
@@ -668,6 +677,19 @@ mod authoring_surface_policy_tests {
         ));
         assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut UiCx<'_>,"));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
+    }
+
+    #[test]
+    fn canonical_default_app_examples_stay_local_state_first() {
+        for src in [
+            HELLO_COUNTER_DEMO,
+            QUERY_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            SIMPLE_TODO_DEMO,
+            TODO_DEMO,
+        ] {
+            assert_default_app_surface_prefers_local_state_first(src);
+        }
     }
 
     #[test]
