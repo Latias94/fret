@@ -437,8 +437,8 @@ Target rule:
 
 - the default app surface does not expose public flat `use_local*` helpers; those flows live
   under `cx.state()`.
-- raw `use_state(...)` / `use_state_keyed(...)` remain explicit advanced seams through
-  `AppUiRawStateExt`, not as direct `AppUi` methods.
+- raw `use_state(...)` remains the explicit advanced seam through `AppUiRawStateExt`, not as a
+  direct `AppUi` method; loop-safe raw state hooks use `cx.keyed(...)`.
 
 ### `ui.actions()`
 

@@ -784,15 +784,11 @@ pub struct AppUi<'cx, 'a, H: UiHost> {
 /// `fret::advanced::prelude::*`.
 ///
 /// Import it explicitly when advanced code still wants stable callsite-keyed `Model<T>`
-/// allocation rather than the grouped `cx.state().local*` surface.
+/// allocation rather than the grouped `cx.state().local*` surface. For loop/dynamic callsites,
+/// wrap `use_state::<T>()` in `cx.keyed(...)` instead of relying on a separate keyed alias.
 pub trait AppUiRawStateExt {
     #[track_caller]
     fn use_state<T>(&mut self) -> Model<T>
-    where
-        T: Any + Default;
-
-    #[track_caller]
-    fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
     where
         T: Any + Default;
 }
@@ -804,14 +800,6 @@ impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
         T: Any + Default,
     {
         self.use_state_with(T::default)
-    }
-
-    #[track_caller]
-    fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
-    where
-        T: Any + Default,
-    {
-        self.keyed(key, |cx| AppUiRawStateExt::use_state::<T>(cx))
     }
 }
 
@@ -1887,7 +1875,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
                     slot.calls_in_frame = slot.calls_in_frame.saturating_add(1);
                     if slot.calls_in_frame == 2 {
                         eprintln!(
-                            "use_state called multiple times per frame at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` or use `use_state_keyed(...)` to avoid state collisions",
+                            "use_state called multiple times per frame at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` to avoid state collisions",
                             callsite.file(),
                             callsite.line(),
                             callsite.column()
@@ -2731,6 +2719,7 @@ mod tests {
             .expect("view.rs test module marker should exist");
         assert!(!api_source.contains("pub fn use_state<"));
         assert!(!api_source.contains("pub fn use_state_keyed<"));
+        assert!(!api_source.contains("fn use_state_keyed<"));
         assert!(!api_source.contains("pub fn use_local<"));
         assert!(!api_source.contains("pub fn use_local_keyed<"));
         assert!(!api_source.contains("pub fn use_local_with<"));
