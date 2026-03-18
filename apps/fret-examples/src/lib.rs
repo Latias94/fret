@@ -1767,8 +1767,27 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "show_user0_probe: cx.state().local_init(|| false),",
+                "show_user1_probe: cx.state().local_init(|| false),",
+                "use_non_filterable_user0: cx.state().local_init(|| false),",
+                "use_non_filterable_user1: cx.state().local_init(|| false),",
+                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
+                ".local_set::<act::Reset, bool>(&st.show_user0_probe, false);",
+                ".local_set::<act::Reset, bool>(&st.show_user1_probe, false);",
+                ".local_set::<act::Reset, bool>(&st.use_non_filterable_user0, false);",
+                ".local_set::<act::Reset, bool>(&st.use_non_filterable_user1, false);",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "show_user0_probe: app.models_mut().insert(false)",
+                "show_user1_probe: app.models_mut().insert(false)",
+                "use_non_filterable_user0: app.models_mut().insert(false)",
+                "use_non_filterable_user1: app.models_mut().insert(false)",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
@@ -1844,11 +1863,11 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
-                "let selected = self.st.selected.layout_in(cx).value_or_default();",
-                "let dark = self.st.dark.layout_in(cx).value_or_default();",
-                "fn tracked_query_inputs(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> QueryKeyInputs {",
-                "let query_inputs = tracked_query_inputs(cx, st);",
-                "let tab = st.tabs.layout_in(cx).value_or_default();",
+                "let selected = locals.selected.layout_value(cx);",
+                "let dark = locals.dark.layout_value(cx);",
+                "fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {",
+                "let query_inputs = tracked_query_inputs(cx, &locals);",
+                "let tab = locals.tabs.layout_in(cx).value_or_default();",
                 "let policy_settings: QueryPolicySettings = cx.data().selector(",
                 "config.fail_mode.layout_in(cx).value_or_default()",
             ],
@@ -1982,11 +2001,19 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
-            &["let view_settings: CustomEffectV3ViewSettings = cx.data().selector("],
+            &[
+                "let view_settings: CustomEffectV3ViewSettings = cx.data().selector_layout(",
+                "&st.enabled,",
+                "&st.show_user0_probe,",
+                "&st.use_non_filterable_user1,",
+                "let enabled_model = st.enabled.clone_model();",
+                "let show_user0_probe_model = st.show_user0_probe.clone_model();",
+            ],
             &[
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let show_user0_probe = cx.watch_model(&st.show_user0_probe)",
                 "let use_non_filterable_user1 = cx.watch_model(&st.use_non_filterable_user1)",
+                "let view_settings: CustomEffectV3ViewSettings = cx.data().selector(",
                 "let enabled = st.enabled.layout_in(cx).value_or(true);",
                 "let show_user0_probe = st.show_user0_probe.layout_in(cx).value_or(false);",
                 "let show_user1_probe = st.show_user1_probe.layout_in(cx).value_or(false);",

@@ -18,7 +18,6 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
     write_rgba8_texture_region,
 };
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, LayoutStyle, Length, MainAlign,
@@ -94,18 +93,15 @@ impl DemoGlobals {
     }
 }
 
-#[derive(Debug)]
 struct State {
-    enabled: Model<bool>,
-    show_user0_probe: Model<bool>,
-    show_user1_probe: Model<bool>,
-    use_non_filterable_user0: Model<bool>,
-    use_non_filterable_user1: Model<bool>,
+    enabled: LocalState<bool>,
+    show_user0_probe: LocalState<bool>,
+    show_user1_probe: LocalState<bool>,
+    use_non_filterable_user0: LocalState<bool>,
+    use_non_filterable_user1: LocalState<bool>,
 }
 
-struct CustomEffectV3View {
-    st: State,
-}
+struct CustomEffectV3View;
 
 #[derive(Clone)]
 struct CustomEffectV3ViewSettings {
@@ -293,50 +289,37 @@ fn upload_user0_images(app: &mut KernelApp, context: &WgpuContext, renderer: &mu
 }
 
 impl State {
-    fn reset(models: &mut fret_runtime::ModelStore, st: &State) {
-        let _ = models.update(&st.enabled, |v| *v = true);
-        let _ = models.update(&st.show_user0_probe, |v| *v = false);
-        let _ = models.update(&st.show_user1_probe, |v| *v = false);
-        let _ = models.update(&st.use_non_filterable_user0, |v| *v = false);
-        let _ = models.update(&st.use_non_filterable_user1, |v| *v = false);
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            enabled: cx.state().local_init(|| true),
+            show_user0_probe: cx.state().local_init(|| false),
+            show_user1_probe: cx.state().local_init(|| false),
+            use_non_filterable_user0: cx.state().local_init(|| false),
+            use_non_filterable_user1: cx.state().local_init(|| false),
+        }
     }
 }
 
 impl View for CustomEffectV3View {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        Self {
-            st: State {
-                enabled: app.models_mut().insert(true),
-                show_user0_probe: app.models_mut().insert(false),
-                show_user1_probe: app.models_mut().insert(false),
-                use_non_filterable_user0: app.models_mut().insert(false),
-                use_non_filterable_user1: app.models_mut().insert(false),
-            },
-        }
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        cx.actions().models::<act::Reset>({
-            let st = self.clone_for_reset();
-            move |models| {
-                State::reset(models, &st);
-                true
-            }
-        });
+        let mut st = State::new(cx);
 
-        view(cx, &mut self.st)
-    }
-}
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.enabled, true);
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.show_user0_probe, false);
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.show_user1_probe, false);
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.use_non_filterable_user0, false);
+        cx.actions()
+            .local_set::<act::Reset, bool>(&st.use_non_filterable_user1, false);
 
-impl CustomEffectV3View {
-    fn clone_for_reset(&self) -> State {
-        State {
-            enabled: self.st.enabled.clone(),
-            show_user0_probe: self.st.show_user0_probe.clone(),
-            show_user1_probe: self.st.show_user1_probe.clone(),
-            use_non_filterable_user0: self.st.use_non_filterable_user0.clone(),
-            use_non_filterable_user1: self.st.use_non_filterable_user1.clone(),
-        }
+        view(cx, &mut st)
     }
 }
 
@@ -380,65 +363,26 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut State) -> ViewElements 
         return vec![shadcn::raw::typography::h3(msg).into_element(cx)].into();
     };
 
-    let enabled = st.enabled.clone();
-    let show_user0_probe = st.show_user0_probe.clone();
-    let show_user1_probe = st.show_user1_probe.clone();
-    let use_non_filterable_user0 = st.use_non_filterable_user0.clone();
-    let use_non_filterable_user1 = st.use_non_filterable_user1.clone();
-    let enabled_deps = enabled.clone();
-    let show_user0_probe_deps = show_user0_probe.clone();
-    let show_user1_probe_deps = show_user1_probe.clone();
-    let use_non_filterable_user0_deps = use_non_filterable_user0.clone();
-    let use_non_filterable_user1_deps = use_non_filterable_user1.clone();
-    let view_settings: CustomEffectV3ViewSettings = cx.data().selector(
-        move |cx| {
-            cx.observe_model(&enabled_deps, Invalidation::Layout);
-            cx.observe_model(&show_user0_probe_deps, Invalidation::Layout);
-            cx.observe_model(&show_user1_probe_deps, Invalidation::Layout);
-            cx.observe_model(&use_non_filterable_user0_deps, Invalidation::Layout);
-            cx.observe_model(&use_non_filterable_user1_deps, Invalidation::Layout);
-            (
-                cx.app.models().revision(&enabled_deps).unwrap_or(0),
-                cx.app
-                    .models()
-                    .revision(&show_user0_probe_deps)
-                    .unwrap_or(0),
-                cx.app
-                    .models()
-                    .revision(&show_user1_probe_deps)
-                    .unwrap_or(0),
-                cx.app
-                    .models()
-                    .revision(&use_non_filterable_user0_deps)
-                    .unwrap_or(0),
-                cx.app
-                    .models()
-                    .revision(&use_non_filterable_user1_deps)
-                    .unwrap_or(0),
-            )
-        },
-        move |cx| CustomEffectV3ViewSettings {
-            enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
-            show_user0_probe: cx
-                .app
-                .models()
-                .get_cloned(&show_user0_probe)
-                .unwrap_or(false),
-            show_user1_probe: cx
-                .app
-                .models()
-                .get_cloned(&show_user1_probe)
-                .unwrap_or(false),
-            use_non_filterable_user0: cx
-                .app
-                .models()
-                .get_cloned(&use_non_filterable_user0)
-                .unwrap_or(false),
-            use_non_filterable_user1: cx
-                .app
-                .models()
-                .get_cloned(&use_non_filterable_user1)
-                .unwrap_or(false),
+    let view_settings: CustomEffectV3ViewSettings = cx.data().selector_layout(
+        (
+            &st.enabled,
+            &st.show_user0_probe,
+            &st.show_user1_probe,
+            &st.use_non_filterable_user0,
+            &st.use_non_filterable_user1,
+        ),
+        |(
+            enabled,
+            show_user0_probe,
+            show_user1_probe,
+            use_non_filterable_user0,
+            use_non_filterable_user1,
+        )| CustomEffectV3ViewSettings {
+            enabled,
+            show_user0_probe,
+            show_user1_probe,
+            use_non_filterable_user0,
+            use_non_filterable_user1,
         },
     );
     let user0_image = if view_settings.use_non_filterable_user0 {
@@ -603,11 +547,11 @@ fn stage_controls(
     use_non_filterable_user0: bool,
     use_non_filterable_user1: bool,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let enabled_model = st.enabled.clone();
-    let show_user0_probe_model = st.show_user0_probe.clone();
-    let show_user1_probe_model = st.show_user1_probe.clone();
-    let use_non_filterable_user0_model = st.use_non_filterable_user0.clone();
-    let use_non_filterable_user1_model = st.use_non_filterable_user1.clone();
+    let enabled_model = st.enabled.clone_model();
+    let show_user0_probe_model = st.show_user0_probe.clone_model();
+    let show_user1_probe_model = st.show_user1_probe.clone_model();
+    let use_non_filterable_user0_model = st.use_non_filterable_user0.clone_model();
+    let use_non_filterable_user1_model = st.use_non_filterable_user1.clone_model();
 
     ui::h_row(move |cx| {
         let mut out: Vec<AnyElement> = Vec::new();
