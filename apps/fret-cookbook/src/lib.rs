@@ -376,8 +376,16 @@ mod authoring_surface_policy_tests {
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
+        assert!(QUERY_EXAMPLE.contains("cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)"));
+        assert!(QUERY_EXAMPLE.contains("transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY)"));
+        assert!(
+            QUERY_EXAMPLE
+                .contains("transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE)")
+        );
         assert!(QUERY_EXAMPLE.contains("cx.data().invalidate_query("));
         assert!(QUERY_EXAMPLE.contains("cx.data().invalidate_query_namespace("));
+        assert!(!QUERY_EXAMPLE.contains("local_set::<act::Invalidate, bool>"));
+        assert!(!QUERY_EXAMPLE.contains("invalidate_requested"));
         assert!(!QUERY_EXAMPLE.contains("handle.layout(cx).value_or_default()"));
         assert!(!QUERY_EXAMPLE.contains("cx.use_query("));
         assert!(!QUERY_EXAMPLE.contains("with_query_client("));

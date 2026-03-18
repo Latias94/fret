@@ -14,6 +14,9 @@ mod act {
     ]);
 }
 
+const TRANSIENT_INVALIDATE_KEY: u64 = 0xC00B_1001;
+const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xC00B_1002;
+
 const TEST_ID_ROOT: &str = "cookbook.query_basics.root";
 const TEST_ID_STATUS_BADGE: &str = "cookbook.query_basics.status.badge";
 const TEST_ID_MODE_BADGE: &str = "cookbook.query_basics.mode.badge";
@@ -43,15 +46,20 @@ impl View for QueryBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let fail_mode = cx.state().local::<bool>();
-        let invalidate_requested = cx.state().local::<bool>();
-        let invalidate_namespace_requested = cx.state().local::<bool>();
+
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY) {
+            cx.data().invalidate_query(demo_key());
+        }
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
+            cx.data().invalidate_query_namespace(QUERY_NS);
+        }
 
         cx.actions()
             .toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
         cx.actions()
-            .local_set::<act::Invalidate, bool>(&invalidate_requested, true);
+            .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.actions()
-            .local_set::<act::InvalidateNamespace, bool>(&invalidate_namespace_requested, true);
+            .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
         cx.actions()
             .availability::<act::ToggleErrorMode>(|_host, _acx| CommandAvailability::Available);
         cx.actions()
@@ -60,17 +68,6 @@ impl View for QueryBasicsView {
             .availability::<act::InvalidateNamespace>(|_host, _acx| CommandAvailability::Available);
 
         let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
-        let do_invalidate = invalidate_requested.layout(cx).value_or(false);
-        let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
-
-        if do_invalidate {
-            cx.data().invalidate_query(demo_key());
-            let _ = invalidate_requested.set_in(cx.app.models_mut(), false);
-        }
-        if do_invalidate_namespace {
-            cx.data().invalidate_query_namespace(QUERY_NS);
-            let _ = invalidate_namespace_requested.set_in(cx.app.models_mut(), false);
-        }
 
         let key = demo_key();
         let policy = QueryPolicy {
