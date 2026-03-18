@@ -32,6 +32,14 @@ fn generated_assets_builder_suffix(opts: ScaffoldOptions) -> &'static str {
     }
 }
 
+fn lucide_action_icon_import(opts: ScaffoldOptions) -> &'static str {
+    if matches!(opts.icon_pack, IconPack::Lucide) {
+        "    icons::{icon, IconId},\n"
+    } else {
+        ""
+    }
+}
+
 pub(super) fn template_gitignore() -> &'static str {
     r#"/target
 /.fret
@@ -266,6 +274,7 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
     let generated_assets_module = generated_assets_module_decl(opts);
     let builder_prefix = generated_assets_builder_prefix(opts);
     let builder_suffix = generated_assets_builder_suffix(opts);
+    let icon_import = lucide_action_icon_import(opts);
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 use std::time::Duration;
@@ -273,8 +282,7 @@ use std::time::Duration;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::{
-    icons::{icon, IconId},
-    query::{QueryKey, QueryPolicy, QueryStatus},
+__ICON_IMPORT__    query::{QueryKey, QueryPolicy, QueryStatus},
     style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
@@ -718,6 +726,7 @@ __BUILDER_SUFFIX__        .run()
         .replace("__GENERATED_ASSET_MODULE__", generated_assets_module)
         .replace("__BUILDER_PREFIX__", builder_prefix)
         .replace("__BUILDER_SUFFIX__", builder_suffix)
+        .replace("__ICON_IMPORT__", icon_import)
         .replace("__INSTALL_APP_BINDING__", install_app_binding)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
@@ -854,13 +863,14 @@ pub(super) fn simple_todo_template_main_rs(package_name: &str, opts: ScaffoldOpt
     let generated_assets_module = generated_assets_module_decl(opts);
     let builder_prefix = generated_assets_builder_prefix(opts);
     let builder_suffix = generated_assets_builder_suffix(opts);
+    let icon_import = lucide_action_icon_import(opts);
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
 
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::{
-    icons::{icon, IconId},
+__ICON_IMPORT__
     style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
@@ -1105,6 +1115,7 @@ __BUILDER_SUFFIX__        .run()
         .replace("__GENERATED_ASSET_MODULE__", generated_assets_module)
         .replace("__BUILDER_PREFIX__", builder_prefix)
         .replace("__BUILDER_SUFFIX__", builder_suffix)
+        .replace("__ICON_IMPORT__", icon_import)
         .replace("__INSTALL_APP_BINDING__", install_app_binding)
         .replace("__INSTALL_ICONS__", install_icons)
         .replace("__PALETTE_BUTTON__", palette_button)
@@ -1649,6 +1660,24 @@ mod tests {
         let todo = todo_template_main_rs("todo-app", options);
         assert!(todo.contains("fret_icons_radix::app::install(app);"));
         assert!(!todo.contains("fret_icons_radix::install_app(app);"));
+        assert!(!todo.contains("icons::{icon, IconId},"));
+
+        let simple = simple_todo_template_main_rs("simple-todo-app", options);
+        assert!(!simple.contains("icons::{icon, IconId},"));
+    }
+
+    #[test]
+    fn non_lucide_templates_omit_action_icon_imports() {
+        for icon_pack in [IconPack::Radix, IconPack::None] {
+            let mut options = opts();
+            options.icon_pack = icon_pack;
+
+            let todo = todo_template_main_rs("todo-app", options);
+            assert!(!todo.contains("icons::{icon, IconId},"));
+
+            let simple = simple_todo_template_main_rs("simple-todo-app", options);
+            assert!(!simple.contains("icons::{icon, IconId},"));
+        }
     }
 
     #[test]
