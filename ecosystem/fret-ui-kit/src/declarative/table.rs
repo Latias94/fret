@@ -2,9 +2,9 @@ use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, RingPlacement, RingStyle, ScrollAxis, ScrollProps, SemanticsProps, SpacerProps,
-    VirtualListOptions,
+    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow,
+    PointerRegionProps, PressableA11y, PressableProps, RingPlacement, RingStyle, ScrollAxis,
+    ScrollProps, SemanticsProps, SpacerProps, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy};
@@ -145,6 +145,193 @@ fn with_table_view_column_constraints<TData>(
             .collect();
     }
     col
+}
+
+fn retained_table_row_fill_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: Length::Fill,
+            ..Default::default()
+        },
+        flex: fret_ui::element::FlexItemStyle {
+            grow: 1.0,
+            shrink: 1.0,
+            basis: Length::Px(Px(0.0)),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn table_scroll_fill_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout.flex.grow = 1.0;
+    layout.flex.shrink = 1.0;
+    layout.flex.basis = Length::Px(Px(0.0));
+    layout
+}
+
+fn table_fixed_column_layout(col_w: Px) -> LayoutStyle {
+    LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: Length::Px(col_w),
+            min_width: Some(Length::Px(col_w)),
+            max_width: Some(Length::Px(col_w)),
+            ..Default::default()
+        },
+        flex: fret_ui::element::FlexItemStyle {
+            shrink: 0.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn table_fixed_column_fill_layout(col_w: Px) -> LayoutStyle {
+    let mut layout = table_fixed_column_layout(col_w);
+    layout.size.height = Length::Fill;
+    layout
+}
+
+fn table_wrap_horizontal_scroll<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    scroll_handle: Option<ScrollHandle>,
+    row: AnyElement,
+) -> AnyElement {
+    if let Some(scroll_handle) = scroll_handle {
+        cx.scroll(
+            ScrollProps {
+                axis: ScrollAxis::X,
+                scroll_handle: Some(scroll_handle),
+                layout: table_scroll_fill_layout(),
+                ..Default::default()
+            },
+            |_| vec![row],
+        )
+    } else {
+        row
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn retained_table_render_row_visuals<H: UiHost + 'static, TData: 'static>(
+    cx: &mut ElementContext<'_, H>,
+    data: Arc<[TData]>,
+    data_index: usize,
+    row_key: RowKey,
+    bg: Option<Color>,
+    props: TableViewProps,
+    border: Color,
+    cell_px: Px,
+    cell_py: Px,
+    key_handler: fret_ui::action::OnKeyDown,
+    columns: Arc<[ColumnDef<TData>]>,
+    col_widths: Arc<[Px]>,
+    cell_at: Arc<CellAt<H, TData>>,
+    row_cell_test_id_prefix: Option<Arc<str>>,
+    left_col_indices: Arc<[usize]>,
+    center_col_indices: Arc<[usize]>,
+    right_col_indices: Arc<[usize]>,
+    scroll_x: ScrollHandle,
+) -> AnyElement {
+    cx.key_on_key_down_for(cx.root_id(), key_handler);
+
+    cx.container(
+        ContainerProps {
+            background: bg,
+            layout: retained_table_row_fill_layout(),
+            ..Default::default()
+        },
+        move |cx| {
+            let render_row_group =
+                |cx: &mut ElementContext<'_, H>,
+                 col_indices: &[usize],
+                 scroll_x_for_group: Option<ScrollHandle>| {
+                    let columns = columns.clone();
+                    let col_widths = col_widths.clone();
+                    let cell_at = cell_at.clone();
+                    let row_cell_test_id_prefix = row_cell_test_id_prefix.clone();
+                    let data = data.clone();
+                    let props = props.clone();
+
+                    let row = ui::h_row(move |cx| {
+                        let original = &data[data_index];
+
+                        col_indices
+                            .iter()
+                            .map(|col_idx| {
+                                let col = &columns[*col_idx];
+                                let col_w = col_widths[*col_idx];
+                                let cell = (cell_at)(cx, col, original);
+
+                                let cell_test_id = row_cell_test_id_prefix.as_ref().map(|prefix| {
+                                    Arc::<str>::from(format!(
+                                        "{prefix}{row}-cell-{col}",
+                                        row = row_key.0,
+                                        col = col.id.as_ref()
+                                    ))
+                                });
+
+                                let cell = cx.container(
+                                    ContainerProps {
+                                        border: if props.optimize_grid_lines {
+                                            Edges::default()
+                                        } else {
+                                            Edges {
+                                                right: Px(1.0),
+                                                ..Default::default()
+                                            }
+                                        },
+                                        border_color: if props.optimize_grid_lines {
+                                            None
+                                        } else {
+                                            Some(border)
+                                        },
+                                        padding: Edges::symmetric(cell_px, cell_py).into(),
+                                        layout: table_fixed_column_layout(col_w),
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![cell],
+                                );
+
+                                if let Some(test_id) = cell_test_id {
+                                    cx.semantics(
+                                        SemanticsProps {
+                                            test_id: Some(test_id),
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![cell],
+                                    )
+                                } else {
+                                    cell
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .gap(Space::N0)
+                    .justify_start()
+                    .items_center()
+                    .into_element(cx);
+
+                    table_wrap_horizontal_scroll(cx, scroll_x_for_group, row)
+                };
+
+            let left = render_row_group(cx, left_col_indices.as_ref(), None);
+            let center = render_row_group(cx, center_col_indices.as_ref(), Some(scroll_x.clone()));
+            let right = render_row_group(cx, right_col_indices.as_ref(), None);
+
+            vec![
+                ui::h_row(|_cx| [left, center, right])
+                    .gap(Space::N0)
+                    .justify_start()
+                    .items_stretch()
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx),
+            ]
+        },
+    )
 }
 
 #[derive(Debug, Clone)]
@@ -749,7 +936,7 @@ mod tests {
 
         // VirtualList computes the visible window based on viewport metrics populated during layout,
         // so it takes two frames for the first set of rows to mount.
-        for _ in 0..2 {
+        for _ in 0..3 {
             let root = render(&mut ui, &mut app, &mut services);
             ui.set_root(root);
             ui.request_semantics_snapshot();
@@ -1282,6 +1469,210 @@ mod tests {
     }
 
     #[test]
+    fn table_virtualized_nested_pressable_remains_hittable_when_pointer_row_selection_disabled() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 3;
+        let state = app.models_mut().insert(state_value);
+        let child_activated = app.models_mut().insert(false);
+        let child_element: Rc<Cell<Option<fret_ui::GlobalElementId>>> = Rc::new(Cell::new(None));
+
+        let data = vec![0u32, 1u32, 2u32];
+        let columns = vec![
+            {
+                let mut col = ColumnDef::new("name");
+                col.size = 180.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("actions");
+                col.size = 80.0;
+                col
+            },
+        ];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            pointer_row_selection: false,
+            single_row_selection: true,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            let child_element = child_element.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, col, _sort| [cx.text(col.id.as_ref())],
+                    |cx, row, col| match col.id.as_ref() {
+                        "name" => [cx.text(format!("Row {}", row.index))],
+                        "actions" if row.index == 1 => {
+                            let child_element = child_element.clone();
+                            let child_activated = child_activated.clone();
+                            [cx.pressable_with_id(
+                                PressableProps {
+                                    focusable: false,
+                                    layout: LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Px(Px(24.0)),
+                                            height: Length::Px(Px(24.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        test_id: Some(Arc::<str>::from("table-test-child-button")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |cx, _st, id| {
+                                    child_element.set(Some(id));
+                                    let child_activated = child_activated.clone();
+                                    cx.pressable_on_activate(Arc::new(
+                                        move |host, _acx, _reason| {
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&child_activated, |value| *value = true);
+                                        },
+                                    ));
+                                    vec![cx.spacer(SpacerProps::default())]
+                                },
+                            )]
+                        }
+                        "actions" => [cx.text("-")],
+                        _ => [cx.text("?")],
+                    },
+                    None,
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let child_element = child_element
+            .get()
+            .expect("expected nested child pressable element");
+        let child_node = fret_ui::elements::node_for_element(&mut app, window, child_element)
+            .expect("expected nested child pressable node");
+        let child_bounds = ui
+            .debug_node_bounds(child_node)
+            .expect("expected nested child bounds");
+        assert!(
+            child_bounds.size.width.0 > 0.0 && child_bounds.size.height.0 > 0.0,
+            "expected nested child pressable to have non-zero bounds, got {child_bounds:?}"
+        );
+        let click_pos = Point::new(
+            Px(child_bounds.origin.x.0 + child_bounds.size.width.0 * 0.5),
+            Px(child_bounds.origin.y.0 + child_bounds.size.height.0 * 0.5),
+        );
+
+        let hit = ui.debug_hit_test_routing(click_pos);
+        let hit_node = hit.hit.expect("expected nested child hit");
+        let path = ui.debug_node_path(hit_node);
+        let child_path = ui.debug_node_path(child_node);
+        let child_path_debug = child_path
+            .iter()
+            .map(|node| {
+                (
+                    *node,
+                    ui.debug_node_bounds(*node),
+                    ui.debug_node_clips_hit_test(*node),
+                    ui.debug_node_can_scroll_descendant_into_view(*node),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&child_activated),
+            Some(true),
+            "expected nested child pressable to activate; hit={hit:?} path={path:?} child={child_node:?} child_path={child_path:?} child_path_debug={child_path_debug:?} child_bounds={child_bounds:?}"
+        );
+
+        let selection = app
+            .models()
+            .read(&state, |st| st.row_selection.clone())
+            .ok()
+            .unwrap_or_default();
+        assert!(
+            selection.is_empty(),
+            "expected nested child pressable click not to toggle row selection when pointer_row_selection=false"
+        );
+    }
+
+    #[test]
     fn table_virtualized_pointer_row_selection_policy_list_like() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1798,6 +2189,221 @@ mod tests {
 
         click_row(&mut ui, &mut app, &mut services, 2, Modifiers::default());
         assert_selected(&app, &[RowKey::from_index(2)]);
+    }
+
+    #[test]
+    fn table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled()
+     {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 3;
+        let state = app.models_mut().insert(state_value);
+        let child_activated = app.models_mut().insert(false);
+        let child_element: Rc<Cell<Option<fret_ui::GlobalElementId>>> = Rc::new(Cell::new(None));
+
+        let data: Arc<[u32]> = Arc::from(vec![0u32, 1u32, 2u32]);
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![
+            {
+                let mut col = ColumnDef::new("name");
+                col.size = 180.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("actions");
+                col.size = 80.0;
+                col
+            },
+        ]);
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            pointer_row_selection: false,
+            single_row_selection: true,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            let child_element = child_element.clone();
+            let child_activated = child_activated.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props.clone(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(
+                        move |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                            match col.id.as_ref() {
+                                "name" => crate::ui::text(format!("Row {row}")).into_element(cx),
+                                "actions" if *row == 1 => {
+                                    let child_element = child_element.clone();
+                                    let child_activated = child_activated.clone();
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            focusable: false,
+                                            layout: LayoutStyle {
+                                                size: fret_ui::element::SizeStyle {
+                                                    width: Length::Px(Px(24.0)),
+                                                    height: Length::Px(Px(24.0)),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                test_id: Some(Arc::<str>::from(
+                                                    "table-retained-test-child-button",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            child_element.set(Some(id));
+                                            let child_activated = child_activated.clone();
+                                            cx.pressable_on_activate(Arc::new(
+                                                move |host, _acx, _reason| {
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&child_activated, |value| {
+                                                            *value = true
+                                                        });
+                                                },
+                                            ));
+                                            vec![cx.spacer(SpacerProps::default())]
+                                        },
+                                    )
+                                }
+                                "actions" => cx.text("-"),
+                                _ => cx.text("?"),
+                            }
+                        },
+                    ),
+                    Some(Arc::<str>::from("table-retained-test-header-")),
+                    Some(Arc::<str>::from("table-retained-test-row-")),
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let child_element = child_element
+            .get()
+            .expect("expected nested child pressable element");
+        let child_node = fret_ui::elements::node_for_element(&mut app, window, child_element)
+            .expect("expected nested child pressable node");
+        let child_bounds = ui
+            .debug_node_bounds(child_node)
+            .expect("expected nested child bounds");
+        assert!(
+            child_bounds.size.width.0 > 0.0 && child_bounds.size.height.0 > 0.0,
+            "expected nested child pressable to have non-zero bounds, got {child_bounds:?}"
+        );
+        let click_pos = Point::new(
+            Px(child_bounds.origin.x.0 + child_bounds.size.width.0 * 0.5),
+            Px(child_bounds.origin.y.0 + child_bounds.size.height.0 * 0.5),
+        );
+
+        let hit = ui.debug_hit_test_routing(click_pos);
+        let hit_node = hit.hit.expect("expected nested child hit");
+        let path = ui.debug_node_path(hit_node);
+        let child_path = ui.debug_node_path(child_node);
+        let child_path_debug = child_path
+            .iter()
+            .map(|node| {
+                (
+                    *node,
+                    ui.debug_node_bounds(*node),
+                    ui.debug_node_clips_hit_test(*node),
+                    ui.debug_node_can_scroll_descendant_into_view(*node),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&child_activated),
+            Some(true),
+            "expected nested child pressable to activate; hit={hit:?} path={path:?} child={child_node:?} child_path={child_path:?} child_path_debug={child_path_debug:?} child_bounds={child_bounds:?}"
+        );
+
+        let selection = app
+            .models()
+            .read(&state, |st| st.row_selection.clone())
+            .ok()
+            .unwrap_or_default();
+        assert!(
+            selection.is_empty(),
+            "expected nested child pressable click not to toggle row selection when pointer_row_selection=false"
+        );
     }
 
     #[test]
@@ -2768,20 +3374,7 @@ where
                                                 } else {
                                                     Some(border)
                                                 },
-                                                layout: LayoutStyle {
-                                                    size: fret_ui::element::SizeStyle {
-                                                        width: Length::Px(col_w),
-                                                        min_width: Some(Length::Px(col_w)),
-                                                        max_width: Some(Length::Px(col_w)),
-                                                        height: Length::Fill,
-                                                        ..Default::default()
-                                                    },
-                                                    flex: fret_ui::element::FlexItemStyle {
-                                                        shrink: 0.0,
-                                                        ..Default::default()
-                                                    },
-                                                    ..Default::default()
-                                                },
+                                                layout: table_fixed_column_fill_layout(col_w),
                                                 ..Default::default()
                                             },
                                             move |cx| {
@@ -2944,27 +3537,7 @@ where
                         .items_center()
                         .into_element(cx);
 
-                        if let Some(scroll_x_for_group) = scroll_x_for_group {
-                            cx.scroll(
-                                ScrollProps {
-                                    axis: ScrollAxis::X,
-                                    scroll_handle: Some(scroll_x_for_group),
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout.size.height = Length::Fill;
-                                        layout.flex.grow = 1.0;
-                                        layout.flex.shrink = 1.0;
-                                        layout.flex.basis = Length::Px(Px(0.0));
-                                        layout
-                                    },
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![row],
-                            )
-                        } else {
-                            row
-                        }
+                        table_wrap_horizontal_scroll(cx, scroll_x_for_group, row)
                     };
 
                 vec![ui::h_row(|cx| {
@@ -2977,6 +3550,7 @@ where
                 .gap(Space::N0)
                 .justify_start()
                 .items_stretch()
+                .layout(LayoutRefinement::default().w_full())
                 .into_element(cx)]
             },
         )
@@ -3059,357 +3633,251 @@ where
         )
     });
 
-    let row_builder = {
-        let state = state.clone();
-        let entries = entries.clone();
-        let data = data.clone();
-        let visible_columns = visible_columns.clone();
-        let col_widths = col_widths.clone();
-        let cell_at = Arc::clone(&cell_at);
-        let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
-        let left_col_indices = left_col_indices.clone();
-        let center_col_indices = center_col_indices.clone();
-        let right_col_indices = right_col_indices.clone();
-        let scroll_x = scroll_x.clone();
-        let anchor_index_for_row_builder = anchor_index.clone();
+    let row_builder =
+        {
+            let state = state.clone();
+            let entries = entries.clone();
+            let data = data.clone();
+            let props = props.clone();
+            let visible_columns = visible_columns.clone();
+            let col_widths = col_widths.clone();
+            let cell_at = Arc::clone(&cell_at);
+            let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
+            let left_col_indices = left_col_indices.clone();
+            let center_col_indices = center_col_indices.clone();
+            let right_col_indices = right_col_indices.clone();
+            let scroll_x = scroll_x.clone();
+            let anchor_index_for_row_builder = anchor_index.clone();
 
-        move |key_handler: fret_ui::action::OnKeyDown, focus_target: GlobalElementId| {
-            let anchor_index_for_row = anchor_index_for_row_builder.clone();
-            Arc::new(move |cx: &mut ElementContext<'_, H>, i: usize| {
-                let entry = entries[i];
-                let row_key = entry.key;
-                let data_index = entry.data_index;
+            move |key_handler: fret_ui::action::OnKeyDown, focus_target: GlobalElementId| {
+                let anchor_index_for_row = anchor_index_for_row_builder.clone();
+                Arc::new(move |cx: &mut ElementContext<'_, H>, i: usize| {
+                    let entry = entries[i];
+                    let row_key = entry.key;
+                    let data_index = entry.data_index;
 
-                let selected = cx
-                    .watch_model(&state)
-                    .paint()
-                    .read_ref(|s| s.row_selection.contains(&row_key))
-                    .ok()
-                    .unwrap_or(false);
+                    let selected = cx
+                        .watch_model(&state)
+                        .paint()
+                        .read_ref(|s| s.row_selection.contains(&row_key))
+                        .ok()
+                        .unwrap_or(false);
 
-                let test_id = debug_row_test_id_prefix
-                    .as_ref()
-                    .map(|prefix| Arc::<str>::from(format!("{}{id}", prefix, id = row_key.0)));
+                    let test_id = debug_row_test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::<str>::from(format!("{}{id}", prefix, id = row_key.0)));
 
-                let state_model = state.clone();
-                let entries = entries.clone();
-                let anchor_index = anchor_index_for_row.clone();
-                let data_for_row = Arc::clone(&data);
-                let columns_for_row = Arc::clone(&visible_columns);
-                let col_widths_for_row = col_widths.clone();
-                let cell_at_for_row = Arc::clone(&cell_at);
-                let key_handler_for_row = key_handler.clone();
-                let focus_target_for_row = focus_target;
-                let row_cell_test_id_prefix = debug_row_test_id_prefix.clone();
-                let left_col_indices_for_row = left_col_indices.clone();
-                let center_col_indices_for_row = center_col_indices.clone();
-                let right_col_indices_for_row = right_col_indices.clone();
-                let scroll_x_for_row = scroll_x.clone();
+                    let state_model = state.clone();
+                    let entries = entries.clone();
+                    let anchor_index = anchor_index_for_row.clone();
+                    let data_for_row = Arc::clone(&data);
+                    let columns_for_row = Arc::clone(&visible_columns);
+                    let col_widths_for_row = col_widths.clone();
+                    let cell_at_for_row = Arc::clone(&cell_at);
+                    let key_handler_for_row = key_handler.clone();
+                    let focus_target_for_row = focus_target;
+                    let row_cell_test_id_prefix = debug_row_test_id_prefix.clone();
+                    let left_col_indices_for_row = left_col_indices.clone();
+                    let center_col_indices_for_row = center_col_indices.clone();
+                    let right_col_indices_for_row = right_col_indices.clone();
+                    let scroll_x_for_row = scroll_x.clone();
+                    let focus_target = focus_target_for_row;
+                    let single = props.single_row_selection;
+                    let policy = props.pointer_row_selection_policy;
+                    let pointer_row_selection_enabled =
+                        props.enable_row_selection && props.pointer_row_selection;
+                    let row_wrapper_layout = retained_table_row_fill_layout();
 
-                cx.pressable(
-                    PressableProps {
-                        enabled: true,
-                        focusable: false,
-                        a11y: PressableA11y {
-                            role: Some(SemanticsRole::ListItem),
-                            test_id,
-                            selected,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    move |cx, st| {
-                        let focus_target = focus_target_for_row;
-                        let row_key = row_key;
-                        let single = props.single_row_selection;
-                        let policy = props.pointer_row_selection_policy;
-                        let pointer_row_selection_enabled =
-                            props.enable_row_selection && props.pointer_row_selection;
+                    let render_row_visuals =
+                        |cx: &mut ElementContext<'_, H>, hovered: bool, pressed: bool| {
+                            let bg = if selected || pressed {
+                                Some(row_active_bg)
+                            } else if hovered {
+                                Some(row_hover_bg)
+                            } else {
+                                None
+                            };
 
-                        if pointer_row_selection_enabled
-                            && policy == PointerRowSelectionPolicy::ListLike
-                        {
-                            let anchor_index_for_pointer_down = anchor_index.clone();
-                            let row_key_for_anchor = row_key;
-                            cx.pressable_add_on_pointer_down(Arc::new(
-                                move |_host, action_cx, down| {
-                                    if down.button != fret_core::MouseButton::Left {
-                                        return PressablePointerDownResult::Continue;
-                                    }
-                                    if down.hit_pressable_target.is_some_and(|t| t != action_cx.target)
-                                    {
-                                        return PressablePointerDownResult::Continue;
-                                    }
-                                    let next_anchor = if down.modifiers.shift {
-                                        anchor_index_for_pointer_down
-                                            .get()
-                                            .or(Some(row_key_for_anchor))
-                                    } else {
-                                        Some(row_key_for_anchor)
-                                    };
-                                    anchor_index_for_pointer_down.set(next_anchor);
-                                    PressablePointerDownResult::Continue
-                                },
-                            ));
-                        }
-
-                        cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
-                            if up.button != fret_core::MouseButton::Left || !up.is_click {
-                                return PressablePointerUpResult::Continue;
-                            }
-                            if up.down_hit_pressable_target.is_some_and(|t| t != action_cx.target) {
-                                return PressablePointerUpResult::Continue;
-                            }
-                            host.request_focus(focus_target);
-                            if pointer_row_selection_enabled {
-                                let modifiers = up.modifiers;
-                                let mut range_keys: Option<Vec<RowKey>> = None;
-                                if policy == PointerRowSelectionPolicy::ListLike
-                                    && !single
-                                    && modifiers.shift
-                                {
-                                    let anchor_key = anchor_index.get().unwrap_or(row_key);
-                                    let anchor = entries
-                                        .iter()
-                                        .position(|entry| entry.key == anchor_key)
-                                        .unwrap_or(i);
-                                    let (a, b) = if anchor <= i {
-                                        (anchor, i)
-                                    } else {
-                                        (i, anchor)
-                                    };
-                                    let keys = entries
-                                        .iter()
-                                        .enumerate()
-                                        .filter_map(|(idx, entry)| {
-                                            (idx >= a && idx <= b).then_some(entry.key)
-                                        })
-                                        .collect::<Vec<_>>();
-                                    if !keys.is_empty() {
-                                        range_keys = Some(keys);
-                                    }
-                                }
-
-                                let anchor_index_for_update = anchor_index.clone();
-                                let _ = host.models_mut().update(&state_model, move |st| {
-                                    match policy {
-                                        PointerRowSelectionPolicy::Toggle => {
-                                            let selected = st.row_selection.contains(&row_key);
-                                            if single {
-                                                st.row_selection.clear();
-                                            }
-                                            if selected {
-                                                st.row_selection.remove(&row_key);
-                                            } else {
-                                                st.row_selection.insert(row_key);
-                                            }
-                                        }
-                                        PointerRowSelectionPolicy::ListLike => {
-                                            if let Some(range_keys) = range_keys.clone() {
-                                                if modifiers.ctrl || modifiers.meta {
-                                                    st.row_selection
-                                                        .extend(range_keys.iter().copied());
-                                                } else {
-                                                    st.row_selection.clear();
-                                                    st.row_selection
-                                                        .extend(range_keys.iter().copied());
-                                                }
-                                            } else if !single
-                                                && (modifiers.ctrl || modifiers.meta)
-                                            {
-                                                if st.row_selection.contains(&row_key) {
-                                                    st.row_selection.remove(&row_key);
-                                                } else {
-                                                    st.row_selection.insert(row_key);
-                                                }
-                                            } else {
-                                                st.row_selection.clear();
-                                                st.row_selection.insert(row_key);
-                                            }
-                                        }
-                                    }
-                                });
-                                if policy == PointerRowSelectionPolicy::ListLike {
-                                    let next_anchor = if modifiers.shift {
-                                        anchor_index_for_update.get().or(Some(row_key))
-                                    } else {
-                                        Some(row_key)
-                                    };
-                                    anchor_index_for_update.set(next_anchor);
-                                } else {
-                                    anchor_index_for_update.set(Some(row_key));
-                                }
-                            }
-                            host.request_redraw(action_cx.window);
-                            PressablePointerUpResult::SkipActivate
-                        }));
-
-	                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
-
-	                        let bg = if selected || st.pressed {
-	                            Some(row_active_bg)
-	                        } else if st.hovered {
-	                            Some(row_hover_bg)
-                        } else {
-                            None
+                            vec![retained_table_render_row_visuals(
+                                cx,
+                                data_for_row.clone(),
+                                data_index,
+                                row_key,
+                                bg,
+                                props.clone(),
+                                border,
+                                cell_px,
+                                cell_py,
+                                key_handler_for_row.clone(),
+                                columns_for_row.clone(),
+                                col_widths_for_row.clone(),
+                                cell_at_for_row.clone(),
+                                row_cell_test_id_prefix.clone(),
+                                left_col_indices_for_row.clone(),
+                                center_col_indices_for_row.clone(),
+                                right_col_indices_for_row.clone(),
+                                scroll_x_for_row.clone(),
+                            )]
                         };
 
-                        let original = &data_for_row[data_index];
-
-                        vec![cx.container(
-                            ContainerProps {
-                                background: bg,
-                                layout: LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    flex: fret_ui::element::FlexItemStyle {
-                                        grow: 1.0,
-                                        shrink: 1.0,
-                                        basis: Length::Px(Px(0.0)),
-                                        ..Default::default()
-                                    },
+                    if pointer_row_selection_enabled {
+                        cx.pressable(
+                            PressableProps {
+                                enabled: true,
+                                focusable: false,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::ListItem),
+                                    test_id,
+                                    selected,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
-                            move |cx| {
-                                vec![ui::h_row(move |cx| {
-                                        let render_row_group =
-                                            |cx: &mut ElementContext<'_, H>,
-                                             col_indices: &[usize],
-                                             scroll_x_for_group: Option<ScrollHandle>| {
-                                                let row = ui::h_row(|cx| {
-                                                    col_indices
-                                                             .iter()
-                                                             .map(|col_idx| {
-                                                                 let col = &columns_for_row[*col_idx];
-                                                                 let col_w = col_widths_for_row[*col_idx];
-                                                                 let cell =
-                                                                     (cell_at_for_row)(cx, col, original);
-
-                                                                let cell_test_id = row_cell_test_id_prefix
-                                                                    .as_ref()
-                                                                    .map(|prefix| {
-                                                                        Arc::<str>::from(format!(
-                                                                            "{prefix}{row}-cell-{col}",
-                                                                            row = row_key.0,
-                                                                            col = col.id.as_ref()
-                                                                        ))
-                                                                    });
-
-                                                                let cell = cx.container(
-                                                                    ContainerProps {
-                                                                        border: if props
-                                                                            .optimize_grid_lines
-                                                                        {
-                                                                            Edges::default()
-                                                                        } else {
-                                                                            Edges {
-                                                                                right: Px(1.0),
-                                                                                ..Default::default()
-                                                                            }
-                                                                        },
-                                                                        border_color: if props
-                                                                            .optimize_grid_lines
-                                                                        {
-                                                                            None
-                                                                        } else {
-                                                                            Some(border)
-                                                                        },
-                                                                        padding: Edges::symmetric(
-                                                                            cell_px, cell_py,
-                                                                        )
-                                                                        .into(),
-                                                                        layout: LayoutStyle {
-                                                                            size: fret_ui::element::SizeStyle {
-                                                                                width: Length::Px(col_w),
-                                                                                min_width: Some(Length::Px(col_w)),
-                                                                                max_width: Some(Length::Px(col_w)),
-                                                                                ..Default::default()
-                                                                            },
-                                                                            flex: fret_ui::element::FlexItemStyle {
-                                                                                shrink: 0.0,
-                                                                                ..Default::default()
-                                                                            },
-                                                                            ..Default::default()
-                                                                        },
-                                                                        ..Default::default()
-                                                                    },
-                                                                    move |_cx| vec![cell],
-                                                                );
-
-                                                                if let Some(test_id) = cell_test_id {
-                                                                    cx.semantics(
-                                                                        SemanticsProps {
-                                                                            test_id: Some(test_id),
-                                                                            ..Default::default()
-                                                                        },
-                                                                        move |_cx| vec![cell],
-                                                                    )
-                                                                } else {
-                                                                    cell
-                                                                }
-                                                             })
-                                                             .collect::<Vec<_>>()
-                                                })
-                                                .gap(Space::N0)
-                                                .justify_start()
-                                                .items_center()
-                                                .into_element(cx);
-
-                                                if let Some(scroll_x_for_group) = scroll_x_for_group {
-                                                    cx.scroll(
-                                                        ScrollProps {
-                                                            axis: ScrollAxis::X,
-                                                            scroll_handle: Some(scroll_x_for_group),
-                                                            layout: {
-                                                                let mut layout = LayoutStyle::default();
-                                                                layout.size.width = Length::Fill;
-                                                                layout.size.height = Length::Fill;
-                                                                layout.flex.grow = 1.0;
-                                                                layout.flex.shrink = 1.0;
-                                                                layout.flex.basis = Length::Px(Px(0.0));
-                                                                layout
-                                                            },
-                                                            ..Default::default()
-                                                        },
-                                                        |_| vec![row],
-                                                    )
-                                                } else {
-                                                    row
-                                                }
+                            move |cx, st| {
+                                if policy == PointerRowSelectionPolicy::ListLike {
+                                    let anchor_index_for_pointer_down = anchor_index.clone();
+                                    let row_key_for_anchor = row_key;
+                                    cx.pressable_add_on_pointer_down(Arc::new(
+                                        move |_host, action_cx, down| {
+                                            if down.button != fret_core::MouseButton::Left {
+                                                return PressablePointerDownResult::Continue;
+                                            }
+                                            if down
+                                                .hit_pressable_target
+                                                .is_some_and(|t| t != action_cx.target)
+                                            {
+                                                return PressablePointerDownResult::Continue;
+                                            }
+                                            let next_anchor = if down.modifiers.shift {
+                                                anchor_index_for_pointer_down
+                                                    .get()
+                                                    .or(Some(row_key_for_anchor))
+                                            } else {
+                                                Some(row_key_for_anchor)
                                             };
+                                            anchor_index_for_pointer_down.set(next_anchor);
+                                            PressablePointerDownResult::Continue
+                                        },
+                                    ));
+                                }
 
-                                        let left = render_row_group(
-                                            cx,
-                                            left_col_indices_for_row.as_ref(),
-                                            None,
-                                        );
-                                        let center = render_row_group(
-                                            cx,
-                                            center_col_indices_for_row.as_ref(),
-                                            Some(scroll_x_for_row.clone()),
-                                        );
-                                        let right = render_row_group(
-                                            cx,
-                                            right_col_indices_for_row.as_ref(),
-                                            None,
-                                        );
-                                        [left, center, right]
-                                    })
-                                    .gap(Space::N0)
-                                    .justify_start()
-                                    .items_stretch()
-                                    .into_element(cx)]
+                                cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                                    if up.button != fret_core::MouseButton::Left || !up.is_click {
+                                        return PressablePointerUpResult::Continue;
+                                    }
+                                    if up
+                                        .down_hit_pressable_target
+                                        .is_some_and(|t| t != action_cx.target)
+                                    {
+                                        return PressablePointerUpResult::Continue;
+                                    }
+                                    host.request_focus(focus_target);
+                                    let modifiers = up.modifiers;
+                                    let mut range_keys: Option<Vec<RowKey>> = None;
+                                    if policy == PointerRowSelectionPolicy::ListLike
+                                        && !single
+                                        && modifiers.shift
+                                    {
+                                        let anchor_key = anchor_index.get().unwrap_or(row_key);
+                                        let anchor = entries
+                                            .iter()
+                                            .position(|entry| entry.key == anchor_key)
+                                            .unwrap_or(i);
+                                        let (a, b) = if anchor <= i {
+                                            (anchor, i)
+                                        } else {
+                                            (i, anchor)
+                                        };
+                                        let keys = entries
+                                            .iter()
+                                            .enumerate()
+                                            .filter_map(|(idx, entry)| {
+                                                (idx >= a && idx <= b).then_some(entry.key)
+                                            })
+                                            .collect::<Vec<_>>();
+                                        if !keys.is_empty() {
+                                            range_keys = Some(keys);
+                                        }
+                                    }
+
+                                    let anchor_index_for_update = anchor_index.clone();
+                                    let _ = host.models_mut().update(&state_model, move |st| {
+                                        match policy {
+                                            PointerRowSelectionPolicy::Toggle => {
+                                                let selected = st.row_selection.contains(&row_key);
+                                                if single {
+                                                    st.row_selection.clear();
+                                                }
+                                                if selected {
+                                                    st.row_selection.remove(&row_key);
+                                                } else {
+                                                    st.row_selection.insert(row_key);
+                                                }
+                                            }
+                                            PointerRowSelectionPolicy::ListLike => {
+                                                if let Some(range_keys) = range_keys.clone() {
+                                                    if modifiers.ctrl || modifiers.meta {
+                                                        st.row_selection
+                                                            .extend(range_keys.iter().copied());
+                                                    } else {
+                                                        st.row_selection.clear();
+                                                        st.row_selection
+                                                            .extend(range_keys.iter().copied());
+                                                    }
+                                                } else if !single
+                                                    && (modifiers.ctrl || modifiers.meta)
+                                                {
+                                                    if st.row_selection.contains(&row_key) {
+                                                        st.row_selection.remove(&row_key);
+                                                    } else {
+                                                        st.row_selection.insert(row_key);
+                                                    }
+                                                } else {
+                                                    st.row_selection.clear();
+                                                    st.row_selection.insert(row_key);
+                                                }
+                                            }
+                                        }
+                                    });
+                                    if policy == PointerRowSelectionPolicy::ListLike {
+                                        let next_anchor = if modifiers.shift {
+                                            anchor_index_for_update.get().or(Some(row_key))
+                                        } else {
+                                            Some(row_key)
+                                        };
+                                        anchor_index_for_update.set(next_anchor);
+                                    } else {
+                                        anchor_index_for_update.set(Some(row_key));
+                                    }
+                                    host.request_redraw(action_cx.window);
+                                    PressablePointerUpResult::SkipActivate
+                                }));
+
+                                render_row_visuals(cx, st.hovered, st.pressed)
                             },
-                        )]
-                    },
-                )
-            })
-        }
-    };
+                        )
+                    } else {
+                        cx.semantics(
+                            SemanticsProps {
+                                layout: row_wrapper_layout,
+                                role: SemanticsRole::ListItem,
+                                test_id,
+                                selected,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![cx.hover_region(
+                                    HoverRegionProps {
+                                        layout: row_wrapper_layout,
+                                    },
+                                    move |cx, hovered| render_row_visuals(cx, hovered, false),
+                                )]
+                            },
+                        )
+                    }
+                })
+            }
+        };
 
     cx.semantics_with_id(
         SemanticsProps {
@@ -4804,7 +5272,7 @@ where
                     ..Default::default()
                 },
                 |cx| {
-                    vec![ui::v_stack(|cx| {
+                    vec![ui::v_flex(|cx| {
                                     let header = cx.container(
                                         ContainerProps {
                                             background: Some(header_bg),
@@ -6294,20 +6762,7 @@ where
                                                                                                         } else {
                                                                                                             Some(border)
                                                                                                         },
-                                                                                                        layout: LayoutStyle {
-                                                                                                                   size: fret_ui::element::SizeStyle {
-                                                                                                                       width: Length::Px(col_w),
-                                                                                                                        min_width: Some(Length::Px(col_w)),
-                                                                                                                        max_width: Some(Length::Px(col_w)),
-                                                                                                                       height: Length::Fill,
-                                                                                                                       ..Default::default()
-                                                                                                                   },
-                                                                                                                   flex: fret_ui::element::FlexItemStyle {
-                                                                                                                shrink: 0.0,
-                                                                                                                ..Default::default()
-                                                                                                            },
-                                                                                                            ..Default::default()
-                                                                                                        },
+                                                                                                        layout: table_fixed_column_fill_layout(col_w),
                                                                                                         ..Default::default()
                                                                                                     },
                                                                                                     |_| Vec::new(),
@@ -6352,20 +6807,14 @@ where
                                                                                                                     cell_py,
                                                                                                                 )
                                                                                                                 .into(),
-                                                                                                                layout: LayoutStyle {
-                                                                                                                    size: fret_ui::element::SizeStyle {
-                                                                                                                        width: Length::Px(col_w),
-                                                                                                                        min_width: Some(Length::Px(col_w)),
-                                                                                                                        max_width: Some(Length::Px(col_w)),
-                                                                                                                        height: Length::Fill,
-                                                                                                                        ..Default::default()
-                                                                                                                    },
-                                                                                                                    overflow: Overflow::Clip,
-                                                                                                                    flex: fret_ui::element::FlexItemStyle {
-                                                                                                                        shrink: 0.0,
-                                                                                                                        ..Default::default()
-                                                                                                                    },
-                                                                                                                    ..Default::default()
+                                                                                                                layout: {
+                                                                                                                    let mut layout =
+                                                                                                                        table_fixed_column_fill_layout(
+                                                                                                                            col_w,
+                                                                                                                        );
+                                                                                                                    layout.overflow =
+                                                                                                                        Overflow::Clip;
+                                                                                                                    layout
                                                                                                                 },
                                                                                                                 ..Default::default()
                                                                                                             },
@@ -6422,21 +6871,14 @@ where
                                                                                                     } else {
                                                                                                         Some(border)
                                                                                                     },
-                                                                                                    layout: LayoutStyle {
-                                                                                                       size: fret_ui::element::SizeStyle {
-                                                                                                           width: Length::Px(col_w),
-                                                                                                            min_width: Some(Length::Px(col_w)),
-                                                                                                            max_width: Some(Length::Px(col_w)),
-                                                                                                           height: Length::Fill,
-                                                                                                           ..Default::default()
-                                                                                                       },
-                                                                                                   overflow: Overflow::Clip,
-                                                                                                   flex: fret_ui::element::FlexItemStyle {
-                                                                                                       shrink: 0.0,
-                                                                                                       ..Default::default()
+                                                                                                    layout: {
+                                                                                                        let mut layout =
+                                                                                                            table_fixed_column_fill_layout(
+                                                                                                                col_w,
+                                                                                                            );
+                                                                                                        layout.overflow = Overflow::Clip;
+                                                                                                        layout
                                                                                                     },
-                                                                                                    ..Default::default()
-                                                                                                },
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             |cx| {
@@ -6461,32 +6903,9 @@ where
                                                                         .into_element(cx)
                                                                     };
 
-                                                                    if let Some(scroll_x) = scroll_x {
-                                                                        cx.scroll(
-                                                                            ScrollProps {
-                                                                                axis: ScrollAxis::X,
-                                                                                scroll_handle: Some(scroll_x),
-                                                                                layout: LayoutStyle {
-                                                                                    size: fret_ui::element::SizeStyle {
-                                                                                        width: Length::Fill,
-                                                                                        height: Length::Fill,
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    flex: fret_ui::element::FlexItemStyle {
-                                                                                        grow: 1.0,
-                                                                                        shrink: 1.0,
-                                                                                        basis: Length::Px(Px(0.0)),
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    ..Default::default()
-                                                                                },
-                                                                                ..Default::default()
-                                                                            },
-                                                                            |_| vec![row],
-                                                                        )
-                                                                    } else {
-                                                                        row
-                                                                    }
+                                                                    table_wrap_horizontal_scroll(
+                                                                        cx, scroll_x, row,
+                                                                    )
                                                                 };
 
                                                             out.push(ui::h_row(|cx| {
@@ -6580,8 +6999,9 @@ where
                                     }
 
                                     vec![header, body]
-                        },
-                    ).into_element(cx)]
+                        })
+                    .h_full()
+                    .into_element(cx)]
                 },
             )]
         },

@@ -144,9 +144,9 @@ Current gate for the curated recipe:
 
 Current gallery positioning:
 
-- `Default Recipe` is the intended baseline section.
-- `Advanced Reference`, `Advanced Guide`, and `Advanced RTL` are intentionally labeled as
-  non-default follow-up material.
+- `Default Recipe (Fret)` is the intended baseline section.
+- `Basic Table`, `Guide Demo`, `RTL`, and `Guide Outline` are intentionally guide-aligned
+  follow-up material rather than alternate defaults.
 
 ---
 

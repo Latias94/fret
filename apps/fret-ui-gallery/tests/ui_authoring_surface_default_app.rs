@@ -659,8 +659,8 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/context_menu.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo)",
-            "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Submenu\", submenu)",
             "DocSection::build(cx, \"Shortcuts\", shortcuts)",
             "DocSection::build(cx, \"Groups\", groups)",
@@ -670,11 +670,12 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Destructive\", destructive)",
             "DocSection::build(cx, \"Sides\", sides)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
-            "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Submenu\", submenu)",
             "DocSection::new(\"Shortcuts\", shortcuts)",
             "DocSection::new(\"Groups\", groups)",
@@ -684,7 +685,117 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Destructive\", destructive)",
             "DocSection::new(\"Sides\", sides)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
         ],
+    );
+}
+
+#[test]
+fn context_menu_default_snippets_prefer_the_typed_compose_root_lane() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/usage.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::ContextMenu::uncontrolled(cx)", ".compose()"],
+            &[],
+        );
+    }
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "No extra generic heterogeneous children API is currently warranted: the explicit `ContextMenuEntry` tree is the Fret-equivalent structured surface for upstream nested menu children, and a generic children lane would add hidden scope/collection contracts without unlocking new behavior."
+        ),
+        "src/ui/pages/context_menu.rs should record why ContextMenu stays on the explicit entry-tree surface instead of widening to a generic children API"
+    );
+}
+
+#[test]
+fn context_menu_docs_examples_keep_dashed_context_region_triggers() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[
+                "shadcn::AspectRatio::with_child(content)",
+                "DashPatternV1::new(Px(4.0), Px(4.0), Px(0.0))",
+            ],
+        );
+        let path = manifest_path(relative_path);
+        assert!(
+            !normalized.contains("shadcn::Button::new("),
+            "{} should keep the docs-like dashed context region instead of regressing to an outline button trigger",
+            path.display()
+        );
+    }
+
+    assert_normalized_markers_present(
+        "src/ui/snippets/context_menu/rtl.rs",
+        &[".content(shadcn::ContextMenuContent::new().side(shadcn::DropdownMenuSide::InlineEnd))"],
+    );
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "The RTL example now exercises logical-side placement directly: `ContextMenuContent::side(shadcn::DropdownMenuSide::InlineEnd)` matches the upstream Base UI docs while submenu chevrons still follow direction-provider parity."
+        ),
+        "src/ui/pages/context_menu.rs should record that the RTL example now uses logical `inline-end` placement directly"
+    );
+}
+
+#[test]
+fn context_menu_docs_examples_keep_pointer_aware_trigger_copy() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        assert_normalized_markers_present(
+            relative_path,
+            &[
+                "primary_pointer_is_coarse(cx, Invalidation::Layout, false)",
+                "Long press",
+            ],
+        );
+    }
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work."
+        ),
+        "src/ui/pages/context_menu.rs should record that docs-backed trigger copy now adapts to fine/coarse pointer capability"
     );
 }
 
@@ -4119,18 +4230,18 @@ fn data_table_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/data_table.rs",
         &[
-            "DocSection::build(cx, \"Default Recipe\", default_demo)",
-            "DocSection::build(cx, \"Advanced Reference\", basic_demo)",
-            "DocSection::build(cx, \"Advanced Guide\", guide_demo)",
-            "DocSection::build(cx, \"Advanced RTL\", rtl_demo)",
-            "DocSection::build(cx, \"Reference Outline\", code_preview)",
+            "DocSection::build(cx, \"Default Recipe (Fret)\", default_demo)",
+            "DocSection::build(cx, \"Basic Table\", basic_demo)",
+            "DocSection::build(cx, \"Guide Demo\", guide_demo)",
+            "DocSection::build(cx, \"RTL\", rtl_demo)",
+            "DocSection::build(cx, \"Guide Outline\", code_preview)",
         ],
         &[
-            "DocSection::new(\"Default Recipe\", default_demo)",
-            "DocSection::new(\"Advanced Reference\", basic_demo)",
-            "DocSection::new(\"Advanced Guide\", guide_demo)",
-            "DocSection::new(\"Advanced RTL\", rtl_demo)",
-            "DocSection::new(\"Reference Outline\", code_preview)",
+            "DocSection::new(\"Default Recipe (Fret)\", default_demo)",
+            "DocSection::new(\"Basic Table\", basic_demo)",
+            "DocSection::new(\"Guide Demo\", guide_demo)",
+            "DocSection::new(\"RTL\", rtl_demo)",
+            "DocSection::new(\"Guide Outline\", code_preview)",
         ],
     );
 }
