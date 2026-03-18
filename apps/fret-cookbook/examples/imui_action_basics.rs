@@ -10,7 +10,6 @@ use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};
-use fret_ui::CommandAvailability;
 use fret_ui_kit::imui::ButtonOptions;
 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 use serde_json::{Value, json};
@@ -105,9 +104,6 @@ impl View for ImUiActionBasicsView {
             .local_update::<act::Inc, u32>(&count_state, |v| {
                 *v = v.saturating_add(1);
             });
-
-        cx.actions()
-            .availability::<act::Inc>(|_host, _acx| CommandAvailability::Available);
 
         ui::v_flex(|cx| {
             let genui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {

@@ -4,7 +4,6 @@ use std::time::Duration;
 use fret::app::prelude::*;
 use fret::style::Space;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
-use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -60,13 +59,6 @@ impl View for QueryBasicsView {
             .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.actions()
             .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
-        cx.actions()
-            .availability::<act::ToggleErrorMode>(|_host, _acx| CommandAvailability::Available);
-        cx.actions()
-            .availability::<act::Invalidate>(|_host, _acx| CommandAvailability::Available);
-        cx.actions()
-            .availability::<act::InvalidateNamespace>(|_host, _acx| CommandAvailability::Available);
-
         let fail_mode_enabled = fail_mode.layout_value(cx);
 
         let key = demo_key();

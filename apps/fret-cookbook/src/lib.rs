@@ -225,6 +225,7 @@ mod authoring_surface_policy_tests {
         assert!(HELLO_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
         assert!(!HELLO_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
         assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
+        assert!(!HELLO_EXAMPLE.contains("availability::<act::Click>"));
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
         assert!(
@@ -369,6 +370,9 @@ mod authoring_surface_policy_tests {
         assert!(THEME_SWITCHING_EXAMPLE.contains("local_init(|| Some::<Arc<str>>"));
 
         assert!(TOAST_EXAMPLE.contains("on_action_notify::<act::DefaultToast>"));
+        assert!(!TOAST_EXAMPLE.contains("availability::<act::DefaultToast>"));
+        assert!(!TOAST_EXAMPLE.contains("availability::<act::SuccessToast>"));
+        assert!(!TOAST_EXAMPLE.contains("availability::<act::DismissAll>"));
 
         assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
@@ -402,6 +406,9 @@ mod authoring_surface_policy_tests {
         assert!(!QUERY_EXAMPLE.contains("with_query_client("));
         assert!(!QUERY_EXAMPLE.contains("fret_query::ui::QueryElementContextExt"));
         assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));
+        assert!(!QUERY_EXAMPLE.contains("availability::<act::ToggleErrorMode>"));
+        assert!(!QUERY_EXAMPLE.contains("availability::<act::Invalidate>"));
+        assert!(!QUERY_EXAMPLE.contains("availability::<act::InvalidateNamespace>"));
 
         assert!(ROUTER_EXAMPLE.contains("use fret::router::{"));
         assert!(ROUTER_EXAMPLE.contains("RouteCodec"));
@@ -445,6 +452,7 @@ mod authoring_surface_policy_tests {
         assert!(IMUI_ACTION_EXAMPLE.contains("cx.state().local_init(|| 0u32)"));
         assert!(IMUI_ACTION_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
         assert!(!IMUI_ACTION_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
+        assert!(!IMUI_ACTION_EXAMPLE.contains("availability::<act::Inc>"));
     }
 
     #[test]

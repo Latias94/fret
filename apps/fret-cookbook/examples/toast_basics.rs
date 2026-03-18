@@ -1,7 +1,6 @@
 use fret::advanced::AppUiRawActionNotifyExt as _;
 use fret::app::prelude::*;
 use fret::style::Space;
-use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -63,13 +62,6 @@ impl View for ToastBasicsView {
             }
         });
 
-        cx.actions()
-            .availability::<act::DefaultToast>(|_host, _acx| CommandAvailability::Available);
-        cx.actions()
-            .availability::<act::SuccessToast>(|_host, _acx| CommandAvailability::Available);
-        cx.actions()
-            .availability::<act::DismissAll>(|_host, _acx| CommandAvailability::Available);
-
         let buttons = ui::h_flex(|cx| {
             ui::children![
                 cx;
@@ -109,14 +101,11 @@ impl View for ToastBasicsView {
         .w_full()
         .max_w(Px(720.0));
 
-        let page = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
-        let toaster = shadcn::Toaster::new();
+        let mut root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
 
         // `Toaster` is layout-neutral but must be in the tree so toast layer + store are installed.
-        ui::stack(|cx| ui::children![cx; page, toaster])
-            .size_full()
-            .into_element(cx)
-            .into()
+        root.push(shadcn::Toaster::new().into_element(cx));
+        root.into()
     }
 }
 

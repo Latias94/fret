@@ -1,6 +1,5 @@
 use fret::app::prelude::*;
 use fret::style::Space;
-use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([Click = "cookbook.hello.click.v1"]);
@@ -42,9 +41,6 @@ impl View for HelloView {
                 *v = v.saturating_add(1);
                 println!("hello: clicked");
             });
-
-        cx.actions()
-            .availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
         ui::single(cx, hello_page(render_marker, count_value))
     }
