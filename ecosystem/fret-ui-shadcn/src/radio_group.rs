@@ -2115,6 +2115,19 @@ mod tests {
             app.models().get_cloned(&model).flatten().as_deref(),
             Some("monthly")
         );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus after clicking item label");
+        let focused_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .expect("focused node");
+        assert_eq!(focused_node.role, SemanticsRole::RadioButton);
+        assert_eq!(focused_node.label.as_deref(), Some("Monthly"));
+        assert_eq!(ui.focus(), Some(focused_node.id));
         let _ = root;
     }
 
