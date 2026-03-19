@@ -299,6 +299,15 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
 - Remaining legacy module-local helpers that still return `AnyElement`
   are now cleared on the shadcn lane; module-local root convenience helpers no longer add extra
   `-> AnyElement` surface beyond the explicitly documented raw/bridge seams above.
+- Selected public `Model<_>` seams that remain intentionally visible are now tracked by
+  `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/SHADCN_RAW_MODEL_ALLOWLIST_AUDIT_2026-03-19.md`
+  and guarded by `surface_policy_tests.rs`; new raw-model seams on managed/source-aligned lanes
+  should update that audit and gate together instead of silently widening the default authoring
+  surface.
+- That allowlist is for explicit controlled roots, controller/output handoff, and a small number
+  of specialized source-aligned seams. It is not a license to reintroduce raw `Model<_>`
+  constructors on compact/default shadcn paths that already have typed wrappers or narrow bridge
+  traits.
 
 This matters beyond local helper signatures: when a docs/page scaffold turns a still-typed preview
 into `AnyElement` too early, the exemplar surface starts teaching the wrong authoring pattern even

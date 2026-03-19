@@ -4,14 +4,17 @@ const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
 const ACCORDION_RS: &str = include_str!("accordion.rs");
 const ALERT_RS: &str = include_str!("alert.rs");
+const BUTTON_RS: &str = include_str!("button.rs");
 const AVATAR_RS: &str = include_str!("avatar.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
 const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
 const BUTTON_GROUP_RS: &str = include_str!("button_group.rs");
 const CALENDAR_RS: &str = include_str!("calendar.rs");
+const CALENDAR_HIJRI_RS: &str = include_str!("calendar_hijri.rs");
 const CALENDAR_MULTIPLE_RS: &str = include_str!("calendar_multiple.rs");
 const CALENDAR_RANGE_RS: &str = include_str!("calendar_range.rs");
 const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
+const CHART_RS: &str = include_str!("chart.rs");
 const CARD_RS: &str = include_str!("card.rs");
 const CAROUSEL_RS: &str = include_str!("carousel.rs");
 const EMPTY_RS: &str = include_str!("empty.rs");
@@ -21,6 +24,10 @@ const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
 const ALERT_DIALOG_RS: &str = include_str!("alert_dialog.rs");
 const COMMAND_RS: &str = include_str!("command.rs");
 const CONTEXT_MENU_RS: &str = include_str!("context_menu.rs");
+const DATA_GRID_CANVAS_RS: &str = include_str!("data_grid_canvas.rs");
+const DATA_TABLE_RS: &str = include_str!("data_table.rs");
+const DATA_TABLE_CONTROLS_RS: &str = include_str!("data_table_controls.rs");
+const DATA_TABLE_RECIPES_RS: &str = include_str!("data_table_recipes.rs");
 const DATE_PICKER_RS: &str = include_str!("date_picker.rs");
 const DATE_PICKER_WITH_PRESETS_RS: &str = include_str!("date_picker_with_presets.rs");
 const DATE_RANGE_PICKER_RS: &str = include_str!("date_range_picker.rs");
@@ -62,7 +69,9 @@ const SCROLL_AREA_RS: &str = include_str!("scroll_area.rs");
 const SWITCH_RS: &str = include_str!("switch.rs");
 const TABS_RS: &str = include_str!("tabs.rs");
 const EXTRAS_BANNER_RS: &str = include_str!("extras/banner.rs");
+const EXTRAS_RATING_RS: &str = include_str!("extras/rating.rs");
 const EXTRAS_TICKER_RS: &str = include_str!("extras/ticker.rs");
+const MEDIA_IMAGE_RS: &str = include_str!("media_image.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
@@ -130,6 +139,31 @@ fn public_anyelement_signatures(source: &str) -> Vec<String> {
         };
         let signature = &tail[..end];
         if signature.contains("-> AnyElement") {
+            out.push(signature.trim().to_owned());
+        }
+        rest = &tail[end..];
+    }
+
+    out
+}
+
+fn public_model_backed_fn_signatures(source: &str) -> Vec<String> {
+    let normalized = source.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut out = Vec::new();
+    let mut rest = normalized.as_str();
+
+    while let Some(start) = rest.find("pub fn ") {
+        let tail = &rest[start..];
+        let end_brace = tail.find('{');
+        let end_semi = tail.find(';');
+        let end = match (end_brace, end_semi) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => tail.len(),
+        };
+        let signature = &tail[..end];
+        if signature.contains("Model<") {
             out.push(signature.trim().to_owned());
         }
         rest = &tail[end..];
@@ -216,10 +250,8 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(
         README.contains("`advanced::*` is an explicit implementation/debug/source-alignment lane")
     );
-    assert!(
-        README
-            .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);")
-    );
+    assert!(README
+        .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);"));
     assert!(!README.contains("recipes/components stay under `fret_ui_shadcn::*`"));
     assert!(README.contains("`fret_ui_shadcn::raw::*` access stays the escape hatch"));
     assert!(README.contains("root component-family modules are crate-private"));
@@ -912,8 +944,8 @@ fn internal_menu_slot_wrappers_accept_unified_component_conversion_trait() {
 }
 
 #[test]
-fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_raw_seam_is_required()
- {
+fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_raw_seam_is_required(
+) {
     for (label, source, required_markers, forbidden_markers) in [
         (
             "accordion.rs",
@@ -1865,8 +1897,9 @@ fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
     );
 
     let normalized = normalize_ws(KBD_RS);
-    let required_markers =
-        ["pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement"];
+    let required_markers = [
+        "pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement",
+    ];
     let forbidden_markers = [
         "pub fn kbd_icon<H: UiHost>(icon: IconId) -> impl IntoUiElement<H>",
         "pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> impl IntoUiElement<H>",
@@ -1914,6 +1947,270 @@ fn combobox_surface_uses_generic_popover_anchor_builder_not_combobox_specific_ra
         assert!(
             popover_normalized.contains(&marker),
             "popover.rs should keep the generic builder-first anchor path available for combobox-style anchor overrides"
+        );
+    }
+}
+
+#[test]
+fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
+    for (label, source, expected_signatures) in [
+        (
+            "alert_dialog.rs",
+            ALERT_DIALOG_RS,
+            &[
+                "pub fn new<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn open_model(&self) -> Model<bool>",
+                "pub fn new(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self",
+                "pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "avatar.rs",
+            AVATAR_RS,
+            &[
+                "pub fn model(image: Model<Option<ImageId>>) -> Self",
+                "pub fn when_image_missing_model(mut self, image: Model<Option<ImageId>>) -> Self",
+            ][..],
+        ),
+        (
+            "button.rs",
+            BUTTON_RS,
+            &["pub fn toggle_model(mut self, model: fret_runtime::Model<bool>) -> Self"][..],
+        ),
+        (
+            "calendar.rs",
+            CALENDAR_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<Option<Date>>>, default_selected: Option<Date>, ) -> Self",
+                "pub fn close_on_select(mut self, open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "calendar_hijri.rs",
+            CALENDAR_HIJRI_RS,
+            &["pub fn new(month: Model<SolarHijriMonth>, selected: Model<Option<Date>>) -> Self"][..],
+        ),
+        (
+            "calendar_multiple.rs",
+            CALENDAR_MULTIPLE_RS,
+            &["pub fn close_on_select(mut self, open: Model<bool>) -> Self"][..],
+        ),
+        (
+            "calendar_range.rs",
+            CALENDAR_RANGE_RS,
+            &["pub fn close_on_select(mut self, open: Model<bool>) -> Self"][..],
+        ),
+        (
+            "carousel.rs",
+            CAROUSEL_RS,
+            &[
+                "pub fn api_snapshot_model(mut self, model: Model<CarouselApiSnapshot>) -> Self",
+                "pub fn api_handle_model(mut self, model: Model<Option<CarouselApi>>) -> Self",
+                "pub fn autoplay_api_handle_model(mut self, model: Model<Option<CarouselAutoplayApi>>) -> Self",
+                "pub fn slides_in_view_snapshot_model( mut self, model: Model<CarouselSlidesInViewSnapshot>, ) -> Self",
+            ][..],
+        ),
+        (
+            "chart.rs",
+            CHART_RS,
+            &[
+                "pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self",
+                "pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self",
+            ][..],
+        ),
+        (
+            "collapsible.rs",
+            COLLAPSIBLE_RS,
+            &[
+                "pub fn into_element_with_open_model<H: UiHost>( self, cx: &mut ElementContext<'_, H>, trigger: impl FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> AnyElement, content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
+                "pub fn new(open: Model<bool>, children: impl IntoIterator<Item = AnyElement>) -> Self",
+                "pub fn collapsible<H: UiHost, Trigger, Content, TriggerEl, ContentEl>( open: Model<bool>, trigger: Trigger, content: Content, ) -> CollapsibleBuild<H, Trigger, Content> where Trigger: FnOnce(&mut ElementContext<'_, H>, bool) -> TriggerEl, Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl, TriggerEl: IntoUiElement<H>, ContentEl: IntoUiElement<H>,",
+                "pub fn collapsible_uncontrolled<H: UiHost, Trigger, Content, TriggerEl, ContentEl>( default_open: bool, trigger: Trigger, content: Content, ) -> CollapsibleUncontrolledBuild<H, Trigger, Content> where Trigger: FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> TriggerEl, Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl, TriggerEl: IntoUiElement<H>, ContentEl: IntoUiElement<H>,",
+            ][..],
+        ),
+        (
+            "command.rs",
+            COMMAND_RS,
+            &[
+                "pub fn new(model: fret_runtime::Model<String>) -> Self",
+                "pub fn query_model(mut self, model: Model<String>) -> Self",
+                "pub fn highlight_query_model(mut self, model: Model<String>) -> Self",
+                "pub fn new(model: Model<String>, items: impl IntoIterator<Item = CommandItem>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, query: Option<Model<String>>, default_query: String, items: impl IntoIterator<Item = CommandItem>, ) -> Self",
+                "pub fn value(mut self, value: Option<Model<Option<Arc<str>>>>) -> Self",
+                "pub fn new( open: Model<bool>, query: Model<String>, items: impl IntoIterator<Item = CommandItem>, ) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, query: Option<Model<String>>, default_query: String, items: impl IntoIterator<Item = CommandItem>, ) -> Self",
+                "pub fn new_with_host_commands<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, query: Model<String>, ) -> Self",
+                "pub fn value(mut self, value: Option<Model<Option<Arc<str>>>>) -> Self",
+            ][..],
+        ),
+        (
+            "context_menu.rs",
+            CONTEXT_MENU_RS,
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
+                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
+                "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
+                "pub fn from_open(open: Model<bool>) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+            ][..],
+        ),
+        (
+            "data_grid_canvas.rs",
+            DATA_GRID_CANVAS_RS,
+            &["pub fn output_model(mut self, output: Model<DataGridCanvasOutput>) -> Self"][..],
+        ),
+        (
+            "data_table.rs",
+            DATA_TABLE_RS,
+            &[
+                "pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self",
+                "pub fn into_element_retained<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, debug_header_cell_test_id_prefix: Option<Arc<str>>, debug_row_test_id_prefix: Option<Arc<str>>, ) -> AnyElement where TData: 'static,",
+                "pub fn into_element<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
+                "pub fn into_element_with_header_cell<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, header_cell_at: impl Fn( &mut ElementContext<'_, H>, &ColumnDef<TData>, Option<bool>, ) -> Option<Vec<AnyElement>> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
+            ][..],
+        ),
+        (
+            "data_table_controls.rs",
+            DATA_TABLE_CONTROLS_RS,
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
+                "pub fn new( open: Model<bool>, items: impl IntoIterator<Item = DataTableViewOptionItem>, ) -> Self",
+                "pub fn new(model: Model<String>) -> Self",
+            ][..],
+        ),
+        (
+            "data_table_recipes.rs",
+            DATA_TABLE_RECIPES_RS,
+            &[
+                "pub fn new( state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, column_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, ) -> Self",
+                "pub fn faceted_filter_counts(mut self, counts: Model<HashMap<Arc<str>, usize>>) -> Self",
+                "pub fn new(state: Model<TableState>, output: Model<TableViewOutput>) -> Self",
+            ][..],
+        ),
+        (
+            "date_picker_with_presets.rs",
+            DATE_PICKER_WITH_PRESETS_RS,
+            &["pub fn preset_value_model(mut self, model: Model<Option<Arc<str>>>) -> Self"][..],
+        ),
+        (
+            "dialog.rs",
+            DIALOG_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "dropdown_menu.rs",
+            DROPDOWN_MENU_RS,
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
+                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
+                "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
+                "pub fn from_open(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+            ][..],
+        ),
+        (
+            "drawer.rs",
+            DRAWER_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn snap_point(mut self, snap_point: Model<Option<usize>>) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "extras/banner.rs",
+            EXTRAS_BANNER_RS,
+            &["pub fn visible_model(mut self, visible: Model<bool>) -> Self"][..],
+        ),
+        (
+            "extras/rating.rs",
+            EXTRAS_RATING_RS,
+            &["pub fn new(model: Model<u8>) -> Self"][..],
+        ),
+        (
+            "hover_card.rs",
+            HOVER_CARD_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl IntoUiElement<H>, content: impl Into<HoverCardContentArg>, ) -> Self",
+                "pub fn new_controllable_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: AnyElement, content: impl Into<HoverCardContentArg>, ) -> Self",
+                "pub fn open(mut self, open: Option<Model<bool>>) -> Self",
+            ][..],
+        ),
+        (
+            "input_group.rs",
+            INPUT_GROUP_RS,
+            &[
+                "pub fn new(model: Model<String>) -> Self",
+                "pub fn toggle_model(mut self, model: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "media_image.rs",
+            MEDIA_IMAGE_RS,
+            &["pub fn model(image: Model<Option<ImageId>>) -> Self"][..],
+        ),
+        (
+            "menubar.rs",
+            MENUBAR_RS,
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
+                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
+                "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
+            ][..],
+        ),
+        (
+            "popover.rs",
+            POPOVER_RS,
+            &[
+                "pub fn from_open(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl IntoUiElement<H>, content: impl IntoUiElement<H>, ) -> Self",
+                "pub fn from_open_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new_controllable_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: AnyElement, content: AnyElement, ) -> Self",
+            ][..],
+        ),
+        (
+            "sheet.rs",
+            SHEET_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            &[
+                "pub fn open(mut self, open: Option<Model<bool>>) -> Self",
+                "pub fn open_mobile(mut self, open_mobile: Option<Model<bool>>) -> Self",
+                "pub fn new(model: Model<String>) -> Self",
+            ][..],
+        ),
+        (
+            "tabs.rs",
+            TABS_RS,
+            &["pub fn new(model: Model<Option<Arc<str>>>) -> Self"][..],
+        ),
+    ] {
+        let actual = public_model_backed_fn_signatures(source)
+            .into_iter()
+            .map(|signature| normalize_ws(&signature))
+            .collect::<Vec<_>>();
+        let expected = expected_signatures
+            .iter()
+            .map(|signature| normalize_ws(signature))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            actual,
+            expected,
+            "{label} changed its selected public `Model<_>` seam budget; update the allowlist audit note and source-policy gate together"
         );
     }
 }
