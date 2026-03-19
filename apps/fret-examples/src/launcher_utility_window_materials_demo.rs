@@ -67,13 +67,13 @@ pub fn run() -> anyhow::Result<()> {
 
 struct LauncherUtilityWindowMaterialsState {
     window: AppWindowId,
-    status: fret_runtime::Model<Arc<str>>,
+    status: LocalState<Arc<str>>,
 }
 
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowMaterialsState {
     LauncherUtilityWindowMaterialsState {
         window,
-        status: app.models_mut().insert(Arc::from("Idle")),
+        status: LocalState::from_model(app.models_mut().insert(Arc::from("Idle"))),
     }
 }
 
@@ -109,9 +109,10 @@ fn on_command(
             ..Default::default()
         },
     }));
-    let _ = app.models_mut().update(&st.status, |v| {
-        *v = Arc::from(format!("Requested: {material:?}"));
-    });
+    let _ = st.status.set_in(
+        app.models_mut(),
+        Arc::from(format!("Requested: {material:?}")),
+    );
     app.request_redraw(window);
 }
 
@@ -123,7 +124,7 @@ fn view(
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
-    let status = st.status.layout_in(cx).value_or_else(|| Arc::from("Idle"));
+    let status = cx.data().selector_layout(&st.status, |status| status);
 
     let effective_style = cx
         .app

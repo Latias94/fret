@@ -2406,12 +2406,20 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LAUNCHER_UTILITY_WINDOW_DEMO,
-            &["let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector("],
+            &[
+                "always_on_top: LocalState<bool>,",
+                "status: LocalState<Arc<str>>,",
+                "let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector_layout(",
+                "(&st.always_on_top, &st.status),",
+            ],
             &[
                 "let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);",
                 "cx.watch_model(&st.status)",
                 "let always_on_top = st.always_on_top.layout_in(cx).value_or(false);",
                 "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+                "always_on_top: fret_runtime::Model<bool>,",
+                "status: fret_runtime::Model<Arc<str>>,",
+                "let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector(",
             ],
         );
 
@@ -2423,8 +2431,15 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
-            &["let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));"],
-            &["cx.watch_model(&st.status)"],
+            &[
+                "status: LocalState<Arc<str>>,",
+                "let status = cx.data().selector_layout(&st.status, |status| status);",
+            ],
+            &[
+                "cx.watch_model(&st.status)",
+                "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+                "status: fret_runtime::Model<Arc<str>>,",
+            ],
         );
     }
 
