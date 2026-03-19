@@ -1531,7 +1531,8 @@ mod tests {
         let mut shaper = ParleyShaper::new_without_system_fonts();
         let snapshot0 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot0.catalog_entries_build_count, 0,
+            snapshot0.catalog_entries_build_count(),
+            0,
             "expected no catalog builds before first enumeration"
         );
 
@@ -1542,11 +1543,12 @@ mod tests {
         );
         let snapshot1 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot1.catalog_entries_build_count, 1,
+            snapshot1.catalog_entries_build_count(),
+            1,
             "expected first cold enumeration to build the catalog exactly once"
         );
         assert!(
-            snapshot1.all_font_catalog_entries_cache_present,
+            snapshot1.all_font_catalog_entries_cache_present(),
             "expected catalog cache to be populated after first enumeration"
         );
 
@@ -1559,7 +1561,8 @@ mod tests {
         }
         let snapshot2 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot2.catalog_entries_build_count, 1,
+            snapshot2.catalog_entries_build_count(),
+            1,
             "expected repeated cached enumerations not to rebuild the catalog"
         );
 
@@ -1567,11 +1570,12 @@ mod tests {
         assert!(added > 0, "expected bundled fonts to load");
         let snapshot3 = shaper.font_db_diagnostics_snapshot();
         assert!(
-            !snapshot3.all_font_catalog_entries_cache_present,
+            !snapshot3.all_font_catalog_entries_cache_present(),
             "expected add_fonts to invalidate the catalog cache"
         );
         assert_eq!(
-            snapshot3.catalog_entries_build_count, 1,
+            snapshot3.catalog_entries_build_count(),
+            1,
             "expected invalidation alone not to rebuild the catalog"
         );
 
@@ -1584,7 +1588,8 @@ mod tests {
         );
         let snapshot4 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot4.catalog_entries_build_count, 2,
+            snapshot4.catalog_entries_build_count(),
+            2,
             "expected the first post-invalidation enumeration to rebuild exactly once"
         );
     }

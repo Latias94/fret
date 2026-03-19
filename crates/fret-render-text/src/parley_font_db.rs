@@ -10,13 +10,43 @@ use crate::FontVariableAxisMetadata;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ParleyShaperFontDbDiagnosticsSnapshot {
-    pub registered_font_blobs_count: u64,
-    pub registered_font_blobs_total_bytes: u64,
-    pub family_id_cache_entries: u64,
-    pub baseline_metrics_cache_entries: u64,
-    pub catalog_entries_build_count: u64,
-    pub all_font_names_cache_present: bool,
-    pub all_font_catalog_entries_cache_present: bool,
+    registered_font_blobs_count: u64,
+    registered_font_blobs_total_bytes: u64,
+    family_id_cache_entries: u64,
+    baseline_metrics_cache_entries: u64,
+    catalog_entries_build_count: u64,
+    all_font_names_cache_present: bool,
+    all_font_catalog_entries_cache_present: bool,
+}
+
+impl ParleyShaperFontDbDiagnosticsSnapshot {
+    pub fn registered_font_blobs_count(&self) -> u64 {
+        self.registered_font_blobs_count
+    }
+
+    pub fn registered_font_blobs_total_bytes(&self) -> u64 {
+        self.registered_font_blobs_total_bytes
+    }
+
+    pub fn family_id_cache_entries(&self) -> u64 {
+        self.family_id_cache_entries
+    }
+
+    pub fn baseline_metrics_cache_entries(&self) -> u64 {
+        self.baseline_metrics_cache_entries
+    }
+
+    pub fn catalog_entries_build_count(&self) -> u64 {
+        self.catalog_entries_build_count
+    }
+
+    pub fn all_font_names_cache_present(&self) -> bool {
+        self.all_font_names_cache_present
+    }
+
+    pub fn all_font_catalog_entries_cache_present(&self) -> bool {
+        self.all_font_catalog_entries_cache_present
+    }
 }
 
 pub(crate) struct ParleyFontDbState {
