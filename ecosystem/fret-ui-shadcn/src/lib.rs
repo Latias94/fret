@@ -109,6 +109,7 @@ mod menu_authoring;
 mod menubar;
 mod native_select;
 mod navigation_menu;
+mod optional_bool_model;
 mod optional_date_model;
 mod optional_float_value_model;
 mod optional_text_value_model;
@@ -240,6 +241,7 @@ pub mod raw {
     raw_module!(native_select);
     raw_module!(navigation_menu);
     raw_module!(optional_date_model);
+    raw_module!(optional_bool_model);
     raw_module!(optional_float_value_model);
     raw_module!(optional_text_value_model);
     raw_module!(pagination);
@@ -460,6 +462,7 @@ pub mod facade {
         NavigationMenuViewport, navigation_menu, navigation_menu_list,
         navigation_menu_trigger_style, navigation_menu_uncontrolled,
     };
+    pub use crate::optional_bool_model::IntoOptionalBoolModel;
     pub use crate::optional_date_model::IntoOptionalDateModel;
     pub use crate::optional_float_value_model::IntoOptionalFloatValueModel;
     pub use crate::optional_text_value_model::IntoOptionalTextValueModel;

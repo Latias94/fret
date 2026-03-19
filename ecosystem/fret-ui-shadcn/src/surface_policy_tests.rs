@@ -919,12 +919,16 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "accordion.rs",
             ACCORDION_RS,
             &[
-                "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn single(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn multiple(model: impl IntoTextVecModel) -> Self {",
+                "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
-                "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoTextVecModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = AccordionItem>,",
             ][..],
             &[
+                "pub fn single(model: Model<Option<Arc<str>>>) -> Self {",
+                "pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {",
                 "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
@@ -955,12 +959,16 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "checkbox.rs",
             CHECKBOX_RS,
             &[
-                "pub fn checkbox<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H>",
-                "pub fn checkbox_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H>",
+                "pub fn new(model: impl IntoBoolModel) -> Self {",
+                "pub fn new_optional(model: impl IntoOptionalBoolModel) -> Self {",
+                "pub fn checkbox<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
+                "pub fn checkbox_opt<H: UiHost, M: IntoOptionalBoolModel>( model: M, ) -> impl IntoUiElement<H> + use<H, M>",
             ][..],
             &[
                 "pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
                 "pub fn checkbox_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
+                "pub fn new(model: Model<bool>) -> Self {",
+                "pub fn new_optional(model: Model<Option<bool>>) -> Self {",
             ][..],
         ),
         (
@@ -1236,23 +1244,27 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             &[
                 "pub fn new(model: impl IntoBoolModel) -> Self {",
                 "pub fn switch<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
-                "pub fn switch_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H>",
+                "pub fn new_opt(model: impl IntoOptionalBoolModel) -> Self {",
+                "pub fn switch_opt<H: UiHost, M: IntoOptionalBoolModel>( model: M, ) -> impl IntoUiElement<H> + use<H, M>",
             ][..],
             &[
                 "pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
                 "pub fn switch_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
+                "pub fn new_opt(model: Model<Option<bool>>) -> Self {",
             ][..],
         ),
         (
             "toggle.rs",
             TOGGLE_RS,
             &[
-                "pub fn toggle<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, model: Model<bool>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
+                "pub fn new(model: impl IntoBoolModel) -> Self {",
+                "pub fn toggle<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, model: impl IntoBoolModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
                 "pub fn toggle_uncontrolled<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, default_pressed: bool, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
             ][..],
             &[
                 "pub fn toggle<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<bool>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
                 "pub fn toggle_uncontrolled<H: UiHost, I>( cx: &mut ElementContext<'_, H>, default_pressed: bool, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+                "pub fn new(model: Model<bool>) -> Self {",
             ][..],
         ),
         (
@@ -1260,9 +1272,10 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             TOGGLE_GROUP_RS,
             &[
                 "pub fn single(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn multiple(model: impl IntoTextVecModel) -> Self {",
                 "pub fn toggle_group_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
-                "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoTextVecModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = ToggleGroupItem>,",
             ][..],
             &[
@@ -1270,6 +1283,7 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {",
             ][..],
         ),
         (

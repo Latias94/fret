@@ -27,7 +27,9 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetStates, ui,
 };
 
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::overlay_motion;
+use crate::text_vec_model::IntoTextVecModel;
 
 fn border_color(theme: &ThemeSnapshot) -> Color {
     theme
@@ -750,10 +752,10 @@ pub mod composable {
     }
 
     impl AccordionRoot {
-        pub fn single(model: Model<Option<Arc<str>>>) -> Self {
+        pub fn single(model: impl IntoOptionalTextValueModel) -> Self {
             Self {
                 model: AccordionModel::Single {
-                    model: Some(model),
+                    model: Some(model.into_optional_text_value_model()),
                     default_value: None,
                     collapsible: false,
                 },
@@ -790,10 +792,10 @@ pub mod composable {
             }
         }
 
-        pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
+        pub fn multiple(model: impl IntoTextVecModel) -> Self {
             Self {
                 model: AccordionModel::Multiple {
-                    model: Some(model),
+                    model: Some(model.into_text_vec_model()),
                     default_value: Vec::new(),
                 },
                 items: Vec::new(),
@@ -1724,10 +1726,10 @@ impl std::fmt::Debug for Accordion {
 }
 
 impl Accordion {
-    pub fn single(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn single(model: impl IntoOptionalTextValueModel) -> Self {
         Self {
             model: AccordionModel::Single {
-                model: Some(model),
+                model: Some(model.into_optional_text_value_model()),
                 default_value: None,
                 collapsible: false,
             },
@@ -1759,10 +1761,10 @@ impl Accordion {
         }
     }
 
-    pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
+    pub fn multiple(model: impl IntoTextVecModel) -> Self {
         Self {
             model: AccordionModel::Multiple {
-                model: Some(model),
+                model: Some(model.into_text_vec_model()),
                 default_value: Vec::new(),
             },
             items: Vec::new(),
@@ -2146,7 +2148,7 @@ impl Accordion {
 /// Builder-preserving controlled helper for the common accordion authoring path.
 pub fn accordion_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
+    model: impl IntoOptionalTextValueModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> Accordion
 where
@@ -2170,7 +2172,7 @@ where
 /// Builder-preserving controlled helper for the common multi-open accordion path.
 pub fn accordion_multiple<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Vec<Arc<str>>>,
+    model: impl IntoTextVecModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> Accordion
 where
