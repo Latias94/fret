@@ -2101,14 +2101,21 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             TABLE_DEMO,
             &[
-                "use fret_ui_kit::declarative::TrackedModelExt as _;",
-                "let enable_grouping = enable_grouping_model.layout_in(cx).value_or(true);",
-                "let grouped_column_mode = grouped_column_mode_model.layout_in(cx).value_or_default();",
+                "use fret::advanced::prelude::LocalState;",
+                "view_options_open: LocalState<bool>,",
+                "enable_grouping: LocalState<bool>,",
+                "grouped_column_mode: LocalState<Option<Arc<str>>>,",
+                "let enable_grouping = enable_grouping.layout_in(cx).value_or(true);",
+                "let grouped_column_mode = grouped_column_mode.layout_in(cx).value_or_default();",
+                "let view_options_open = view_options_open.clone_model();",
             ],
             &[
                 "use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;",
                 "cx.watch_model(&enable_grouping_model)",
                 "cx.watch_model(&grouped_column_mode_model)",
+                "view_options_open: Model<bool>,",
+                "enable_grouping: Model<bool>,",
+                "grouped_column_mode: Model<Option<Arc<str>>>,",
             ],
         );
 

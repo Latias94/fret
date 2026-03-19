@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::advanced::prelude::LocalState;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
@@ -13,7 +14,6 @@ use fret_ui::element::{
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
-use fret_ui_kit::declarative::TrackedModelExt as _;
 use fret_ui_kit::headless::table::{
     ColumnPinningState, GroupedColumnMode, RowKey, TableState, create_column_helper,
 };
@@ -43,13 +43,13 @@ pub struct TableDemoWindowState {
     table_state: Model<TableState>,
     rows: Arc<[DemoRow]>,
     scroll: VirtualListScrollHandle,
-    view_options_open: Model<bool>,
-    enable_grouping: Model<bool>,
-    grouped_column_mode: Model<Option<Arc<str>>>,
-    header_menu_id_open: Model<bool>,
-    header_menu_name_open: Model<bool>,
-    header_menu_role_open: Model<bool>,
-    header_menu_score_open: Model<bool>,
+    view_options_open: LocalState<bool>,
+    enable_grouping: LocalState<bool>,
+    grouped_column_mode: LocalState<Option<Arc<str>>>,
+    header_menu_id_open: LocalState<bool>,
+    header_menu_name_open: LocalState<bool>,
+    header_menu_role_open: LocalState<bool>,
+    header_menu_score_open: LocalState<bool>,
     started_at: Instant,
     frame: u64,
     profile_frames_left: u64,
@@ -108,13 +108,15 @@ impl TableDemoDriver {
             table_state,
             rows,
             scroll: VirtualListScrollHandle::new(),
-            view_options_open: app.models_mut().insert(false),
-            enable_grouping: app.models_mut().insert(true),
-            grouped_column_mode: app.models_mut().insert(Some(Arc::from("reorder"))),
-            header_menu_id_open: app.models_mut().insert(false),
-            header_menu_name_open: app.models_mut().insert(false),
-            header_menu_role_open: app.models_mut().insert(false),
-            header_menu_score_open: app.models_mut().insert(false),
+            view_options_open: LocalState::from_model(app.models_mut().insert(false)),
+            enable_grouping: LocalState::from_model(app.models_mut().insert(true)),
+            grouped_column_mode: LocalState::from_model(
+                app.models_mut().insert(Some(Arc::from("reorder"))),
+            ),
+            header_menu_id_open: LocalState::from_model(app.models_mut().insert(false)),
+            header_menu_name_open: LocalState::from_model(app.models_mut().insert(false)),
+            header_menu_role_open: LocalState::from_model(app.models_mut().insert(false)),
+            header_menu_score_open: LocalState::from_model(app.models_mut().insert(false)),
             started_at,
             frame: 0,
             profile_frames_left,
@@ -304,8 +306,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
     let scroll = state.scroll.clone();
     let table_state = state.table_state.clone();
     let view_options_open = state.view_options_open.clone();
-    let enable_grouping_model = state.enable_grouping.clone();
-    let grouped_column_mode_model = state.grouped_column_mode.clone();
+    let enable_grouping_state = state.enable_grouping.clone();
+    let grouped_column_mode_state = state.grouped_column_mode.clone();
     let header_menu_id_open = state.header_menu_id_open.clone();
     let header_menu_name_open = state.header_menu_name_open.clone();
     let header_menu_role_open = state.header_menu_role_open.clone();
@@ -314,9 +316,6 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("table-demo", move |cx| {
                     cx.observe_model(&table_state, Invalidation::Layout);
-                    cx.observe_model(&view_options_open, Invalidation::Layout);
-                    cx.observe_model(&enable_grouping_model, Invalidation::Layout);
-                    cx.observe_model(&grouped_column_mode_model, Invalidation::Layout);
 
                     let (selected, sorting) = cx
                         .app
@@ -373,16 +372,16 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                     let rows = rows.clone();
                     let scroll = scroll.clone();
                     let table_state = table_state.clone();
-                    let view_options_open = view_options_open.clone();
-                    let enable_grouping_model = enable_grouping_model.clone();
-                    let grouped_column_mode_model = grouped_column_mode_model.clone();
-                    let header_menu_id_open = header_menu_id_open.clone();
-                    let header_menu_name_open = header_menu_name_open.clone();
-                    let header_menu_role_open = header_menu_role_open.clone();
-                    let header_menu_score_open = header_menu_score_open.clone();
+                    let view_options_open = view_options_open.clone_model();
+                    let enable_grouping = enable_grouping_state.clone();
+                    let grouped_column_mode = grouped_column_mode_state.clone();
+                    let header_menu_id_open = header_menu_id_open.clone_model();
+                    let header_menu_name_open = header_menu_name_open.clone_model();
+                    let header_menu_role_open = header_menu_role_open.clone_model();
+                    let header_menu_score_open = header_menu_score_open.clone_model();
 
-                    let enable_grouping = enable_grouping_model.layout_in(cx).value_or(true);
-                    let grouped_column_mode = grouped_column_mode_model.layout_in(cx).value_or_default();
+                    let enable_grouping = enable_grouping.layout_in(cx).value_or(true);
+                    let grouped_column_mode = grouped_column_mode.layout_in(cx).value_or_default();
                     let grouped_column_mode = match grouped_column_mode.as_deref() {
                         Some("remove") => GroupedColumnMode::Remove,
                         Some("none") => GroupedColumnMode::None,
@@ -436,9 +435,9 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                                                 let open = view_options_open.clone();
                                                 let open_for_trigger = open.clone();
                                                 let enable_grouping =
-                                                    enable_grouping_model.clone();
+                                                    enable_grouping_state.clone_model();
                                                 let grouped_column_mode =
-                                                    grouped_column_mode_model.clone();
+                                                    grouped_column_mode_state.clone_model();
 
                                                 vec![shadcn::DropdownMenu::from_open(open).build(
                                                     cx,
