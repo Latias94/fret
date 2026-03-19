@@ -1223,7 +1223,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.2",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1403,7 +1403,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1798,7 +1798,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
- "kurbo 0.11.3",
+ "kurbo 0.13.0",
  "rstar",
 ]
 
@@ -3280,7 +3280,7 @@ dependencies = [
  "libc",
  "log",
  "rustversion",
- "windows-link 0.1.3",
+ "windows-link 0.2.1",
  "windows-result 0.4.1",
 ]
 
@@ -4300,17 +4300,6 @@ dependencies = [
 
 [[package]]
 name = "kurbo"
-version = "0.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c62026ae44756f8a599ba21140f350303d4f08dcdcc71b5ad9c9bb8128c13c62"
-dependencies = [
- "arrayvec",
- "euclid",
- "smallvec",
-]
-
-[[package]]
-name = "kurbo"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7564e90fe3c0d5771e1f0bc95322b21baaeaa0d9213fa6a0b61c99f8b17b3bfb"
@@ -4564,9 +4553,9 @@ dependencies = [
 
 [[package]]
 name = "lyon"
-version = "1.0.16"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbcb7d54d54c8937364c9d41902d066656817dce1e03a44e5533afebd1ef4352"
+checksum = "bd0578bdecb7d6d88987b8b2b1e3a4e2f81df9d0ece1078623324a567904e7b7"
 dependencies = [
  "lyon_algorithms",
  "lyon_tessellation",
@@ -4574,9 +4563,9 @@ dependencies = [
 
 [[package]]
 name = "lyon_algorithms"
-version = "1.0.16"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4c0829e28c4f336396f250d850c3987e16ce6db057ffe047ce0dd54aab6b647"
+checksum = "9815fac08e6fd96733a11dce4f9d15a3f338e96a2e2311ee21e1b738efc2bc0f"
 dependencies = [
  "lyon_path",
  "num-traits",
@@ -4584,9 +4573,9 @@ dependencies = [
 
 [[package]]
 name = "lyon_geom"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e260b6de923e6e47adfedf6243013a7a874684165a6a277594ee3906021b2343"
+checksum = "4336502e29e32af93cf2dad2214ed6003c17ceb5bd499df77b1de663b9042b92"
 dependencies = [
  "arrayvec",
  "euclid",
@@ -4595,9 +4584,9 @@ dependencies = [
 
 [[package]]
 name = "lyon_path"
-version = "1.0.16"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aeca86bcfd632a15984ba029b539ffb811e0a70bf55e814ef8b0f54f506fdeb"
+checksum = "5c463f9c428b7fc5ec885dcd39ce4aa61e29111d0e33483f6f98c74e89d8621e"
 dependencies = [
  "lyon_geom",
  "num-traits",
@@ -4605,9 +4594,9 @@ dependencies = [
 
 [[package]]
 name = "lyon_tessellation"
-version = "1.0.16"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3f586142e1280335b1bc89539f7c97dd80f08fc43e9ab1b74ef0a42b04aa353"
+checksum = "05a35a7dd71b845ff317ce1834c4185506b79790294bde397df8d5c23031e357"
 dependencies = [
  "float_next_after",
  "lyon_path",
@@ -5041,7 +5030,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6680,7 +6669,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7493,7 +7482,7 @@ dependencies = [
  "getrandom 0.4.1",
  "once_cell",
  "rustix 1.1.3",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9238,7 +9227,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -72,7 +72,7 @@ renderdog-automation = "0.2.0"
 mimalloc = "0.1.48"
 tikv-jemallocator = "0.6.0"
 uuid = { version = "1", features = ["v4", "v5", "serde", "js"] }
-lyon = "1"
+lyon = "1.0.19"
 glam = "0.30"
 etagere = "0.2.15"
 resvg = { version = "0.47.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
@@ -83,7 +83,7 @@ windows = "0.62.2"
 virtualizer = "0.4.0"
 keyboard-types = { version = "0.8.3", features = ["serde"] }
 rstar = "0.12"
-kurbo = "0.11"
+kurbo = "0.13"
 pulldown-cmark = "0.13"
 mdstream = "0.2.0"
 mathjax_svg = "3.2.0"
