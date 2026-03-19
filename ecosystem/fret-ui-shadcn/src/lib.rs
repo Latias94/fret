@@ -68,6 +68,7 @@ mod card;
 mod carousel;
 mod chart;
 mod checkbox;
+mod checked_state_model;
 mod collapsible;
 mod collapsible_primitives;
 mod combobox;
@@ -206,6 +207,7 @@ pub mod raw {
     raw_module!(card);
     raw_module!(carousel);
     raw_module!(chart);
+    raw_module!(checked_state_model);
     raw_module!(checkbox);
     raw_module!(collapsible);
     raw_module!(collapsible_primitives);
@@ -352,6 +354,7 @@ pub mod facade {
         ChartTooltipLabelContext, chart_container, chart_context, use_chart,
     };
     pub use crate::checkbox::{Checkbox, checkbox};
+    pub use crate::checked_state_model::IntoCheckedStateModel;
     pub use crate::collapsible::primitives::{
         Collapsible as CollapsibleRoot, CollapsibleContent as CollapsibleContentPart,
         CollapsibleTrigger as CollapsibleTriggerPart,

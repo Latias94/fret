@@ -641,6 +641,24 @@ impl fret_ui_shadcn::facade::IntoOptionalBoolModel for &LocalState<Option<bool>>
 }
 
 #[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCheckedStateModel
+    for LocalState<fret_ui_kit::primitives::checkbox::CheckedState>
+{
+    fn into_checked_state_model(self) -> Model<fret_ui_kit::primitives::checkbox::CheckedState> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCheckedStateModel
+    for &LocalState<fret_ui_kit::primitives::checkbox::CheckedState>
+{
+    fn into_checked_state_model(self) -> Model<fret_ui_kit::primitives::checkbox::CheckedState> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoTextValueModel for LocalState<String> {
     fn into_text_value_model(self) -> Model<String> {
         self.clone_model()
