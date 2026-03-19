@@ -133,7 +133,7 @@ fn prepare_paint_palette(
 ) -> Option<Arc<[Option<fret_core::Color>]>> {
     resolved_spans.map(|spans| {
         let mut palette: Vec<Option<fret_core::Color>> = Vec::with_capacity(spans.len());
-        palette.extend(spans.iter().map(|span| span.fg));
+        palette.extend(spans.iter().map(ResolvedSpan::fg));
         Arc::<[Option<fret_core::Color>]>::from(palette)
     })
 }

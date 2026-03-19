@@ -49,8 +49,7 @@ pub use parley_shaper::{
 };
 pub use prepare_layout::{PreparedLayout, PreparedLine, prepare_layout_from_wrapped};
 pub use spans::{
-    ResolvedDecoration, ResolvedSpan, paint_span_for_text_range, resolve_spans_for_text,
-    sanitize_spans_for_text,
+    ResolvedSpan, paint_span_for_text_range, resolve_spans_for_text, sanitize_spans_for_text,
 };
 pub use wrapper::{WrappedLayout, wrap_with_constraints, wrap_with_constraints_measure_only};
 
