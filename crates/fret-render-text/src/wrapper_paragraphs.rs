@@ -260,7 +260,7 @@ fn push_paragraph_measure_only(
                 ),
                 None => shaper.shape_single_line_metrics(TextInputRef::plain(slice, base), scale),
             };
-            shaped.width = max_w;
+            shaped.set_width(max_w);
             out_ranges.push(paragraph_range);
             out_lines.push(shaped);
         }
@@ -346,7 +346,7 @@ pub(crate) fn wrap_none_ellipsis(
     };
 
     let full = shaper.shape_single_line(input, scale);
-    if full.width <= max_width_px + 0.5 {
+    if full.width() <= max_width_px + 0.5 {
         return WrappedSingleLineInternal {
             kept_end: text_len,
             line: full,
@@ -354,7 +354,7 @@ pub(crate) fn wrap_none_ellipsis(
     }
 
     let mut ellipsis = shaper.shape_single_line(TextInputRef::plain(ELLIPSIS, base), scale);
-    let ellipsis_w = ellipsis.width.max(0.0);
+    let ellipsis_w = ellipsis.width().max(0.0);
     let available = (max_width_px - ellipsis_w).max(0.0);
 
     let mut cut_end = cut_end_for_available(text, full.clusters(), available);
@@ -368,7 +368,7 @@ pub(crate) fn wrap_none_ellipsis(
     // contextual shaping scripts).
     let mut kept = shape_prefix(shaper, text, base, spans, cut_end, scale);
 
-    if kept.width > available + 0.5 {
+    if kept.width() > available + 0.5 {
         let cut2 = cut_end_for_available(&text[..cut_end], kept.clusters(), available);
         if cut2 < cut_end {
             cut_end = clamp_to_char_boundary(text, trim_trailing_whitespace(text, cut2));

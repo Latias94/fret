@@ -108,7 +108,7 @@ impl TextSystem {
                                 TextMeasureShapingEntry {
                                     text: Arc::<str>::from(text),
                                     spans: None,
-                                    width_px: line.width,
+                                    width_px: line.width(),
                                     baseline_px: line.baseline(),
                                     line_height_px: line.line_height(),
                                     clusters: clusters.clone(),
@@ -126,7 +126,7 @@ impl TextSystem {
                             }
                         }
 
-                        (line.width, line.baseline(), line.line_height(), clusters)
+                        (line.width(), line.baseline(), line.line_height(), clusters)
                     };
 
                     if width_px <= max_width_px + 0.5 {
@@ -149,7 +149,7 @@ impl TextSystem {
                     let mut line = self
                         .parley_shaper
                         .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
-                    let width_px = line.width;
+                    let width_px = line.width();
                     let baseline_px = line.baseline();
                     let line_height_px = line.line_height();
                     let _clusters = line.take_clusters();
@@ -331,7 +331,7 @@ impl TextSystem {
                                 TextMeasureShapingEntry {
                                     text: rich.text.clone(),
                                     spans: Some(rich.spans.clone()),
-                                    width_px: line.width,
+                                    width_px: line.width(),
                                     baseline_px: line.baseline(),
                                     line_height_px: line.line_height(),
                                     clusters: clusters.clone(),
@@ -349,7 +349,7 @@ impl TextSystem {
                             }
                         }
 
-                        (line.width, line.baseline(), line.line_height(), clusters)
+                        (line.width(), line.baseline(), line.line_height(), clusters)
                     };
 
                     if width_px <= max_width_px + 0.5 {
@@ -381,7 +381,7 @@ impl TextSystem {
                         },
                         scale,
                     );
-                    let width_px = line.width;
+                    let width_px = line.width();
                     let baseline_px = line.baseline();
                     let line_height_px = line.line_height();
                     let _clusters = line.take_clusters();

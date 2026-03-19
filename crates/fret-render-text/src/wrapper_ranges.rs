@@ -34,7 +34,7 @@ pub(crate) fn wrap_grapheme_range(
         let slice = &text[offset..end];
         let full = shape_slice(shaper, text, base, spans, offset..end, scale);
 
-        if full.width <= max_width_px + 0.5 {
+        if full.width() <= max_width_px + 0.5 {
             lines.push(full);
             line_ranges.push(offset..end);
             break;
@@ -52,7 +52,7 @@ pub(crate) fn wrap_grapheme_range(
         }
 
         let mut kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
-        if kept.width > max_width_px + 0.5 && cut_end > 0 {
+        if kept.width() > max_width_px + 0.5 && cut_end > 0 {
             let cut2 = cut_end_for_available(&slice[..cut_end], kept.clusters(), max_width_px);
             if cut2 > 0 && cut2 < cut_end {
                 cut_end = clamp_to_grapheme_boundary_down(slice, cut2);
@@ -106,7 +106,7 @@ pub(crate) fn wrap_grapheme_range_measure_only(
         let slice = &text[offset..end];
         let full = shape_slice_measure_only(shaper, text, base, spans, offset..end, scale);
 
-        if full.width <= max_width_px + 0.5 {
+        if full.width() <= max_width_px + 0.5 {
             lines.push(full);
             line_ranges.push(offset..end);
             break;
@@ -125,7 +125,7 @@ pub(crate) fn wrap_grapheme_range_measure_only(
 
         let mut kept =
             shape_slice_measure_only(shaper, text, base, spans, offset..(offset + cut_end), scale);
-        if kept.width > max_width_px + 0.5 && cut_end > 0 {
+        if kept.width() > max_width_px + 0.5 && cut_end > 0 {
             let cut2 = cut_end_for_available(&slice[..cut_end], kept.clusters(), max_width_px);
             if cut2 > 0 && cut2 < cut_end {
                 cut_end = clamp_to_grapheme_boundary_down(slice, cut2);

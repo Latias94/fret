@@ -235,7 +235,7 @@ impl ShapedCluster {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapedLineLayout {
-    pub width: f32,
+    width: f32,
     pub ascent: f32,
     pub descent: f32,
     pub ink_ascent: f32,
@@ -277,6 +277,14 @@ impl ShapedLineLayout {
 
     pub fn take_clusters(&mut self) -> Vec<ShapedCluster> {
         std::mem::take(&mut self.clusters)
+    }
+
+    pub fn width(&self) -> f32 {
+        self.width
+    }
+
+    pub(crate) fn set_width(&mut self, width: f32) {
+        self.width = width;
     }
 
     pub fn baseline(&self) -> f32 {
@@ -1777,7 +1785,7 @@ mod tests {
         let input = TextInputRef::plain("hello", &style);
 
         let layout = shaper.shape_single_line(input, 1.0);
-        assert!(layout.width >= 0.0);
+        assert!(layout.width() >= 0.0);
         assert!(!layout.glyphs().is_empty());
         assert!(!layout.clusters().is_empty());
     }

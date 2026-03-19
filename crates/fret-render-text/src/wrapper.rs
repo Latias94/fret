@@ -173,7 +173,7 @@ pub fn wrap_with_constraints_measure_only(
             ..
         } => {
             let mut line = shaper.shape_single_line_metrics(input, scale);
-            line.width = max_width.0 * scale;
+            line.set_width(max_width.0 * scale);
             WrappedLayout::new(
                 text_len,
                 text_len,
@@ -490,9 +490,9 @@ mod tests {
         assert_eq!(wrapped.lines.len(), 1);
         assert!(wrapped.kept_end < text.len());
         assert!(
-            wrapped.lines[0].width <= 80.0 + 0.5,
+            wrapped.lines[0].width() <= 80.0 + 0.5,
             "expected truncated line width to fit within constraints, got {}",
-            wrapped.lines[0].width
+            wrapped.lines[0].width()
         );
     }
 
@@ -572,7 +572,7 @@ mod tests {
             word.lines.len() >= 2,
             "expected the fixture text to wrap under the chosen width"
         );
-        let word_last = word.lines.last().unwrap().width;
+        let word_last = word.lines.last().unwrap().width();
 
         let balanced = wrap_with_constraints_measure_only(
             &mut shaper,
@@ -587,13 +587,16 @@ mod tests {
         );
 
         assert_eq!(balanced.lines.len(), word.lines.len());
-        let balanced_last = balanced.lines.last().unwrap().width;
+        let balanced_last = balanced.lines.last().unwrap().width();
         assert!(
             balanced_last + 0.5 >= word_last,
             "expected balanced wrap to avoid a shorter last line; word_last={word_last} balanced_last={balanced_last}"
         );
         assert!(
-            balanced.lines.iter().all(|l| l.width <= max_width.0 + 0.5),
+            balanced
+                .lines
+                .iter()
+                .all(|l| l.width() <= max_width.0 + 0.5),
             "expected balanced lines to respect max_width"
         );
     }
@@ -918,7 +921,7 @@ mod tests {
 
         assert_eq!(wrapped.lines.len(), 1);
         assert!(
-            wrapped.lines[0].width > 1.0,
+            wrapped.lines[0].width() > 1.0,
             "expected word-wrap to keep a single token unbroken and allow overflow"
         );
     }
@@ -964,18 +967,22 @@ mod tests {
         for (range, line) in wrapped.line_ranges.iter().zip(wrapped.lines.iter()) {
             let slice = &text[range.clone()];
             let expected = shaper.shape_single_line_metrics(TextInputRef::plain(slice, &base), 1.0);
-            let delta = (expected.width - line.width).abs();
+            let delta = (expected.width() - line.width()).abs();
             assert!(
                 delta <= 0.75,
                 "expected wrapped line width to match shaped slice; slice={:?} expected={} actual={} delta={}",
                 slice,
-                expected.width,
-                line.width,
+                expected.width(),
+                line.width(),
                 delta
             );
         }
 
-        let max_line_w = wrapped.lines.iter().map(|l| l.width).fold(0.0f32, f32::max);
+        let max_line_w = wrapped
+            .lines
+            .iter()
+            .map(|l| l.width())
+            .fold(0.0f32, f32::max);
         assert!(
             max_line_w > 0.0,
             "expected non-zero min-content width for non-empty text"
@@ -1269,7 +1276,7 @@ mod tests {
         assert_eq!(full.line_ranges, measure.line_ranges);
         assert_eq!(full.lines.len(), measure.lines.len());
         for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
-            assert!((a.width - b.width).abs() < 0.01);
+            assert!((a.width() - b.width()).abs() < 0.01);
             assert!((a.line_height() - b.line_height()).abs() < 0.01);
         }
         assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));
@@ -1308,7 +1315,7 @@ mod tests {
         assert_eq!(full.line_ranges, measure.line_ranges);
         assert_eq!(full.lines.len(), measure.lines.len());
         for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
-            assert!((a.width - b.width).abs() < 0.01);
+            assert!((a.width() - b.width()).abs() < 0.01);
             assert!((a.line_height() - b.line_height()).abs() < 0.01);
         }
         assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));

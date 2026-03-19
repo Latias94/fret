@@ -163,7 +163,7 @@ pub fn hit_test_x_from_stops(stops: &[(usize, Px)], x: Px) -> usize {
 pub(crate) fn shaped_line_visual_x_bounds_px(
     line: &crate::parley_shaper::ShapedLineLayout,
 ) -> (f32, f32) {
-    let fallback_max = line.width.max(0.0);
+    let fallback_max = line.width().max(0.0);
     if line.clusters().is_empty() {
         return (0.0, fallback_max);
     }
@@ -2079,14 +2079,14 @@ mod tests {
             slice,
             0,
             line_layout.clusters(),
-            line_layout.width,
+            line_layout.width(),
             1.0,
             kept_end,
         );
         let line = crate::line_layout::TextLineLayout::new(
             0,
             kept_end,
-            Px(line_layout.width),
+            Px(line_layout.width()),
             Px(0.0),
             Px(0.0),
             Px(10.0),
@@ -2098,7 +2098,7 @@ mod tests {
             line_clusters_from_shaped(0, line_layout.clusters()),
         );
 
-        let x = Px((line_layout.width - 1.0).max(0.0));
+        let x = Px((line_layout.width() - 1.0).max(0.0));
         let hit = hit_test_point_from_lines(&[line], Point::new(x, Px(5.0))).expect("hit test");
         assert_eq!(hit.index, kept_end);
     }
