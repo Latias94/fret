@@ -7,6 +7,7 @@
 //! `useDirection()`. In Fret we model the observable outcome via inherited state in
 //! `fret-ui-kit::primitives::direction`.
 
+use fret_ui::element::{AnyElement, Elements};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::primitives::direction as direction_prim;
 
@@ -26,6 +27,17 @@ impl DirectionProvider {
         Self { dir }
     }
 
+    /// Upstream-shaped alias for `dir`.
+    pub fn direction(mut self, dir: LayoutDirection) -> Self {
+        self.dir = dir;
+        self
+    }
+
+    /// Radix-shaped alias for `direction(...)`.
+    pub fn dir(self, dir: LayoutDirection) -> Self {
+        self.direction(dir)
+    }
+
     /// Runs `children` with `dir` installed as the inherited direction for the subtree.
     #[track_caller]
     pub fn into_element<H: UiHost>(
@@ -34,6 +46,33 @@ impl DirectionProvider {
         children: impl FnOnce(&mut ElementContext<'_, H>) -> fret_ui::element::AnyElement,
     ) -> fret_ui::element::AnyElement {
         direction_prim::with_direction_provider(cx, self.dir, children)
+    }
+
+    /// Runs `children` with `dir` installed and collects multiple siblings like other provider
+    /// surfaces in `fret-ui-shadcn`.
+    pub fn with<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements(cx, children).into_vec()
+    }
+
+    /// Multi-child provider surface for copyable docs/snippets.
+    pub fn with_elements<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        direction_prim::with_direction_provider(cx, self.dir, |cx| {
+            children(cx).into_iter().collect::<Elements>()
+        })
     }
 }
 
@@ -84,6 +123,24 @@ mod tests {
                 cx.text("rtl")
             });
 
+            assert_eq!(use_direction(cx, None), LayoutDirection::Ltr);
+        });
+    }
+
+    #[test]
+    fn direction_provider_with_collects_multiple_children_and_applies_scope() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "dir_provider", |cx| {
+            let children = DirectionProvider::new(LayoutDirection::Rtl)
+                .direction(LayoutDirection::Rtl)
+                .with(cx, |cx| {
+                    assert_eq!(use_direction(cx, None), LayoutDirection::Rtl);
+                    vec![cx.text("rtl-a"), cx.text("rtl-b")]
+                });
+
+            assert_eq!(children.len(), 2);
             assert_eq!(use_direction(cx, None), LayoutDirection::Ltr);
         });
     }

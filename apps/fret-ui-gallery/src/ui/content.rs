@@ -513,6 +513,7 @@ fn page_preview(
         PAGE_SELECT => pages::preview_select(cx),
         PAGE_COMBOBOX => pages::preview_combobox(cx, combobox_value, combobox_open, combobox_query),
         PAGE_DATE_PICKER => pages::preview_date_picker(cx),
+        PAGE_DIRECTION => pages::preview_direction(cx),
         PAGE_RESIZABLE => pages::preview_resizable(cx),
         PAGE_DATA_TABLE => pages::preview_data_table(cx),
         #[cfg(feature = "gallery-dev")]

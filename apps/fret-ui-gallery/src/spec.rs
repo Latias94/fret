@@ -372,6 +372,7 @@ pub(crate) const PAGE_FIELD: &str = "field";
 pub(crate) const PAGE_SELECT: &str = "select";
 pub(crate) const PAGE_COMBOBOX: &str = "combobox";
 pub(crate) const PAGE_DATE_PICKER: &str = "date_picker";
+pub(crate) const PAGE_DIRECTION: &str = "direction";
 pub(crate) const PAGE_RESIZABLE: &str = "resizable";
 pub(crate) const PAGE_DATA_TABLE: &str = "data_table";
 pub(crate) const PAGE_TABS: &str = "tabs";
@@ -645,6 +646,7 @@ pub(crate) const CMD_NAV_FIELD: &str = "ui_gallery.nav.select.field";
 pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
 pub(crate) const CMD_NAV_COMBOBOX: &str = "ui_gallery.nav.select.combobox";
 pub(crate) const CMD_NAV_DATE_PICKER: &str = "ui_gallery.nav.select.date_picker";
+pub(crate) const CMD_NAV_DIRECTION: &str = "ui_gallery.nav.select.direction";
 pub(crate) const CMD_NAV_RESIZABLE: &str = "ui_gallery.nav.select.resizable";
 pub(crate) const CMD_NAV_DATA_TABLE: &str = "ui_gallery.nav.select.data_table";
 pub(crate) const CMD_NAV_TABS: &str = "ui_gallery.nav.select.tabs";
@@ -2123,6 +2125,14 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn",
                 CMD_NAV_DATE_PICKER,
                 &["date", "calendar", "popover"],
+            ),
+            PageSpec::new(
+                PAGE_DIRECTION,
+                "Direction",
+                "Direction",
+                "fret-ui-shadcn",
+                CMD_NAV_DIRECTION,
+                &["direction", "rtl", "provider", "i18n"],
             ),
             PageSpec::new(
                 PAGE_DIALOG,
