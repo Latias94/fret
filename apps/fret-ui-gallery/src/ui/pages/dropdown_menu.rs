@@ -24,17 +24,22 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "Upstream docs path: `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx`.",
         "`DropdownMenu::uncontrolled(cx).compose().trigger(...).content(...).entries(...)` is now the default copyable root path, while `build_parts(...)` / `into_element_parts(...)` remain lower-level adapters for closure-driven or already-landed seams.",
+        "`DropdownMenuTrigger`, `DropdownMenuPortal`, `DropdownMenuContent`, and `DropdownMenuSub*` keep the shadcn/Base UI part names available without pushing menu policy down into `fret-ui`.",
         "`DropdownMenu::from_open(open)` stays as the explicit advanced seam when the caller already owns the open model; `new_controllable(cx, open, default_open)` still covers the broader controlled/uncontrolled contract.",
         "`DropdownMenuItem::shortcut(...)`, `DropdownMenuCheckboxItem::shortcut(...)`, and radio-item shortcut helpers are now the preferred copyable API for keyboard hints; `DropdownMenuShortcut` remains the explicit trailing escape hatch.",
         "`DropdownMenuCheckboxItem::from_checked(...)` / `.on_checked_change(...)` and `DropdownMenuRadioGroup::from_value(...)` / `.on_value_change(...)` now cover the upstream snapshot + callback path without forcing per-item `Model<_>` state.",
         "The new `compose()` builder keeps typed entries explicit while removing the root closure cliff, so extracted helpers can stay on the same typed authoring lane as the rest of the app surface.",
+        "No extra generic heterogeneous children API is currently warranted: the explicit `DropdownMenuEntry` tree is the Fret-equivalent structured surface for upstream nested menu children, and a generic children lane would add hidden scope/collection contracts without unlocking new behavior.",
     ]);
 
     let notes = doc_layout::notes_block([
-        "Preview follows the upstream shadcn Dropdown Menu docs (v4 Base UI) order first, then appends Fret-only follow-ups.",
+        "Preview now mirrors the upstream shadcn Dropdown Menu docs path first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
         "Mechanism parity is largely covered already: existing web-vs-fret chrome/placement gates and dropdown diag scripts cover placement, dismissal, focus restore, submenu routing, and safe-corridor behavior.",
+        "The lead `Demo` preview now keeps the official `dropdown-menu-demo.tsx` row order more closely, including the `Keyboard shortcuts` action and the ungrouped `GitHub` / `Support` / `API` rows after the second separator.",
         "The checkable examples now demonstrate snapshot + callback authoring, so simple menus do not need one `Model<bool>` per checkbox row.",
+        "The remaining docs examples now stay closer to the upstream base docs too: `Checkboxes` keeps the `w-40` panel, `Checkboxes Icons` uses the notification-preferences example, `Radio Group` keeps `w-32`, `Avatar` reuses the shared demo image/fallback pipeline, and `RTL` keeps the richer submenu + checkbox + radio + destructive logout shape.",
         "The `Parts` section is intentionally outside the upstream docs path: treat it as the advanced adapter surface for already-landed or closure-driven seams, while `Usage` now shows the default typed `compose()` root.",
+        "The explicit entry tree remains intentional, so the page records why we are not widening this family into a generic heterogeneous children API.",
         "Examples are snippet-backed, so preview and code stay in sync.",
         "Keep `ui-gallery-dropdown-menu-*` test IDs stable; multiple diag scripts depend on them.",
     ]);
@@ -77,11 +82,13 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-dropdown-menu-checkboxes")
         .code_rust_from_file_region(snippets::checkboxes::SOURCE, "example");
     let checkboxes_icons = DocSection::build(cx, "Checkboxes Icons", checkboxes_icons)
-        .description("Add icons to checkbox items without disturbing the indicator slot.")
+        .description(
+            "Add icons to notification checkbox items without disturbing the indicator slot.",
+        )
         .test_id_prefix("ui-gallery-dropdown-menu-checkboxes-icons")
         .code_rust_from_file_region(snippets::checkboxes_icons::SOURCE, "example");
     let radio_group = DocSection::build(cx, "Radio Group", radio_group)
-        .description("Use radio items for mutually exclusive choices.")
+        .description("Use radio items for mutually exclusive choices in the upstream `Panel Position` example.")
         .test_id_prefix("ui-gallery-dropdown-menu-radio-group")
         .code_rust_from_file_region(snippets::radio_group::SOURCE, "example");
     let radio_icons = DocSection::build(cx, "Radio Icons", radio_icons)
@@ -93,7 +100,9 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-dropdown-menu-destructive")
         .code_rust_from_file_region(snippets::destructive::SOURCE, "example");
     let avatar = DocSection::build(cx, "Avatar", avatar)
-        .description("An account menu triggered by an avatar-style button.")
+        .description(
+            "An account switcher dropdown triggered by an avatar, mirroring the base docs example.",
+        )
         .test_id_prefix("ui-gallery-dropdown-menu-avatar")
         .code_rust_from_file_region(snippets::avatar::SOURCE, "example");
     let complex = DocSection::build(cx, "Complex", complex)
@@ -101,7 +110,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-dropdown-menu-complex")
         .code_rust_from_file_region(snippets::complex::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("RTL layout keeps spacing, alignment, and submenu direction auditable.")
+        .description("RTL layout mirrors the richer base docs shape with nested submenus, toggles, radio options, and destructive logout.")
         .test_id_prefix("ui-gallery-dropdown-menu-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)
@@ -114,7 +123,7 @@ pub(super) fn preview_dropdown_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Dropdown Menu examples aligned with the upstream shadcn docs path, plus Fret-specific API and parts notes after the docs-aligned sections.",
+            "Dropdown Menu examples aligned with the upstream shadcn docs path first, followed by Fret-specific API guidance and advanced parts notes.",
         ),
         vec![
             demo,

@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("checkboxes.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::facade as shadcn;
 
 #[derive(Default, Clone)]
@@ -38,8 +38,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuContent::new()
                     .align(shadcn::DropdownMenuAlign::Start)
                     .side_offset(Px(4.0))
-                    // new-york-v4 dropdown-menu-checkboxes: `DropdownMenuContent className="w-56"`.
-                    .min_width(Px(224.0)),
+                    // base-nova dropdown-menu-checkboxes: `DropdownMenuContent className="w-40"`.
+                    .min_width(Px(160.0)),
             )
             .entries([shadcn::DropdownMenuGroup::new([
                 shadcn::DropdownMenuLabel::new("Appearance").into(),

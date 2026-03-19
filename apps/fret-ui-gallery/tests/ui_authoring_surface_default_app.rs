@@ -1042,6 +1042,23 @@ fn menu_snippets_keep_build_parts_only_for_the_intentional_parts_example() {
 }
 
 #[test]
+fn dropdown_menu_page_records_why_it_stays_on_the_explicit_entry_tree_surface() {
+    let page = read("src/ui/pages/dropdown_menu.rs");
+    assert!(
+        page.contains(
+            "No extra generic heterogeneous children API is currently warranted: the explicit `DropdownMenuEntry` tree is the Fret-equivalent structured surface for upstream nested menu children, and a generic children lane would add hidden scope/collection contracts without unlocking new behavior."
+        ),
+        "src/ui/pages/dropdown_menu.rs should record why DropdownMenu stays on the explicit entry-tree surface instead of widening to a generic children API"
+    );
+    assert!(
+        page.contains(
+            "The lead `Demo` preview now keeps the official `dropdown-menu-demo.tsx` row order more closely, including the `Keyboard shortcuts` action and the ungrouped `GitHub` / `Support` / `API` rows after the second separator."
+        ),
+        "src/ui/pages/dropdown_menu.rs should record the docs-surface alignment choices for the lead demo preview"
+    );
+}
+
+#[test]
 fn menu_pages_mark_adapter_surfaces_as_advanced_not_default() {
     let dropdown_page = read("src/ui/pages/dropdown_menu.rs");
     assert!(
@@ -1353,6 +1370,70 @@ fn dropdown_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Parts\", parts)",
         ],
+    );
+}
+
+#[test]
+fn dropdown_menu_remaining_examples_stay_base_docs_aligned() {
+    let checkboxes = read("src/ui/snippets/dropdown_menu/checkboxes.rs");
+    assert!(
+        checkboxes.contains(".min_width(Px(160.0))"),
+        "src/ui/snippets/dropdown_menu/checkboxes.rs should keep the base docs `w-40` content width"
+    );
+    assert!(
+        !checkboxes.contains(".min_width(Px(224.0))"),
+        "src/ui/snippets/dropdown_menu/checkboxes.rs should not drift back to the old `w-56` width"
+    );
+
+    let checkboxes_icons = read("src/ui/snippets/dropdown_menu/checkboxes_icons.rs");
+    assert!(
+        checkboxes_icons.contains("Button::new(\"Notifications\")")
+            && checkboxes_icons.contains("DropdownMenuLabel::new(\"Notification Preferences\")")
+            && checkboxes_icons.contains("\"Email notifications\"")
+            && checkboxes_icons.contains("\"SMS notifications\"")
+            && checkboxes_icons.contains("\"Push notifications\"")
+            && checkboxes_icons.contains("IconId::new_static(\"lucide.mail\")")
+            && checkboxes_icons.contains("IconId::new_static(\"lucide.message-square\")")
+            && checkboxes_icons.contains("IconId::new_static(\"lucide.bell\")")
+            && checkboxes_icons.contains(".min_width(Px(192.0))"),
+        "src/ui/snippets/dropdown_menu/checkboxes_icons.rs should stay aligned with the base docs notifications example, including labels, icons, and `w-48` width"
+    );
+
+    let radio_group = read("src/ui/snippets/dropdown_menu/radio_group.rs");
+    assert!(
+        radio_group.contains(".min_width(Px(128.0))"),
+        "src/ui/snippets/dropdown_menu/radio_group.rs should keep the base docs `w-32` content width"
+    );
+    assert!(
+        !radio_group.contains(".min_width(Px(224.0))"),
+        "src/ui/snippets/dropdown_menu/radio_group.rs should not drift back to the old `w-56` width"
+    );
+
+    let avatar = read("src/ui/snippets/dropdown_menu/avatar.rs");
+    assert!(
+        avatar.contains("demo_image(cx)")
+            && avatar.contains("AvatarImage::maybe(avatar_image)")
+            && avatar.contains(".when_image_missing(avatar_image)")
+            && avatar.contains(".delay_ms(120)"),
+        "src/ui/snippets/dropdown_menu/avatar.rs should keep the shared demo image + fallback pipeline from the upstream avatar example"
+    );
+    assert!(
+        !avatar.contains(".min_width(Px("),
+        "src/ui/snippets/dropdown_menu/avatar.rs should not reintroduce an explicit content width absent from the base docs example"
+    );
+
+    let rtl = read("src/ui/snippets/dropdown_menu/rtl.rs");
+    assert!(
+        rtl.contains("with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {")
+            && rtl.contains(".align(shadcn::DropdownMenuAlign::End)")
+            && rtl.contains(".min_width(Px(144.0))")
+            && rtl.contains("DropdownMenuSubTrigger::new(\"الحساب\")")
+            && rtl.contains("DropdownMenuSubTrigger::new(\"دعوة المستخدمين\")")
+            && rtl.contains("DropdownMenuSubTrigger::new(\"المزيد\")")
+            && rtl.contains("DropdownMenuCheckboxItem::from_checked(")
+            && rtl.contains("DropdownMenuRadioGroup::from_value(")
+            && rtl.contains("DropdownMenuItem::new(\"تسجيل الخروج\")"),
+        "src/ui/snippets/dropdown_menu/rtl.rs should keep the richer base docs RTL preview shape: submenu stack, checkbox section, radio group, end alignment, and destructive logout"
     );
 }
 

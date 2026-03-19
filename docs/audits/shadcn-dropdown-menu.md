@@ -75,6 +75,10 @@ Key upstream behaviors/surfaces:
   value is `true` (render-time gate, matching disabled-root expectations from Base UI/Radix family).
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
+- Note: No extra generic heterogeneous children API is planned right now; the explicit
+  `DropdownMenuEntry` tree is the intentional structured equivalent of upstream nested menu
+  children, and widening this family to generic children would add hidden scope/collection
+  contracts without unlocking new behavior.
 
 ### Keyboard navigation & typeahead
 
@@ -137,6 +141,22 @@ Notes on API mapping:
 - Pass: copyable first-party examples now prefer `.shortcut("...")` over manually composing
   `DropdownMenuShortcut`, while still keeping `DropdownMenuShortcut` available as the explicit
   trailing escape hatch.
+- Pass: UI Gallery page order now mirrors the upstream shadcn docs path first (`Demo`, `Usage`,
+  docs examples through `RTL`, then `API Reference`), with `Parts` and `Notes` kept as explicit
+  Fret follow-ups.
+- Pass: UI Gallery lead `Demo` now tracks the upstream `dropdown-menu-demo.tsx` row order more
+  closely, restoring the `Keyboard shortcuts` row and keeping the trailing `GitHub` / `Support` /
+  `API` items outside an unnecessary extra group wrapper.
+- Pass: The remaining UI Gallery docs examples now track the upstream base docs examples more
+  closely too:
+  - `checkboxes.rs` keeps the base `w-40` width.
+  - `checkboxes_icons.rs` now teaches the notification-preferences example (`Notifications`,
+    Email/SMS/Push, matching Lucide icons) instead of the old appearance/status-bar fork.
+  - `radio_group.rs` keeps the base `w-32` width.
+  - `avatar.rs` now uses the shared demo avatar image + fallback pipeline instead of a fallback-only
+    trigger.
+  - `rtl.rs` now keeps the richer upstream RTL shape (submenu stack, checkbox group, radio group,
+    destructive logout) rather than a two-row smoke preview.
 
 ## Validation
 

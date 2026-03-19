@@ -9,7 +9,6 @@
       "checkbox",
       "icons",
       "hover",
-      "disabled",
       "screenshots",
       "zinc-dark"
     ],
@@ -20,7 +19,7 @@
     "target_hints": [
       "Sets theme preset to zinc/dark.",
       "Starts UI Gallery on the Dropdown Menu page.",
-      "Opens the Checkboxes Icons menu and captures a hover-state screenshot to gate icon foreground inheritance."
+      "Opens the Checkboxes Icons menu and captures a hover-state screenshot to gate notification icon foreground inheritance."
     ]
   },
   "steps": [
@@ -73,16 +72,16 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-checkboxes-icons-status-bar" }
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-checkboxes-icons-email" }
       },
       "timeout_frames": 240
     },
     {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-checkboxes-icons-status-bar" }
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-checkboxes-icons-email" }
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-dropdown-menu-checkable-icons-checkboxes-zinc-dark" },
-    { "type": "capture_bundle", "label": "ui-gallery-dropdown-menu-checkable-icons-checkboxes-zinc-dark" }
+    { "type": "capture_screenshot", "label": "ui-gallery-dropdown-menu-checkable-icons-notifications-zinc-dark" },
+    { "type": "capture_bundle", "label": "ui-gallery-dropdown-menu-checkable-icons-notifications-zinc-dark" }
   ]
 }
