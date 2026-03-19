@@ -224,42 +224,9 @@ impl PropertyGroup {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Auto,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: SpacingLength::Px(Px(6.0)),
-                                    padding: Edges {
-                                        top: Px(density.padding_y.0 + 2.0),
-                                        right: density.padding_x,
-                                        bottom: Px(density.padding_y.0 + 2.0),
-                                        left: density.padding_x,
-                                    }
-                                    .into(),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    let mut out = Vec::new();
-                                    let header_text_style =
-                                        typography::as_control_text(TextStyle {
-                                            size: Px(12.0),
-                                            weight: fret_core::FontWeight::SEMIBOLD,
-                                            line_height: Some(header_height),
-                                            ..Default::default()
-                                        });
-                                    if let Some(icon) = disclosure_icon.clone() {
-                                        out.push(editor_icon(cx, density, icon, Some(Px(12.0))));
-                                    }
-                                    out.push(cx.text_props(TextProps {
+                            vec![
+                                cx.flex(
+                                    FlexProps {
                                         layout: LayoutStyle {
                                             size: SizeStyle {
                                                 width: Length::Fill,
@@ -268,21 +235,61 @@ impl PropertyGroup {
                                             },
                                             ..Default::default()
                                         },
-                                        text: label.clone(),
-                                        style: Some(header_text_style),
-                                        color: Some(header_fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Ellipsis,
-                                        align: TextAlign::Start,
-                                        ink_overflow: Default::default(),
-                                    }));
-                                    out.push(cx.spacer(SpacerProps::default()));
-                                    if let Some(actions) = actions {
-                                        out.push(actions);
-                                    }
-                                    out
-                                },
-                            )]
+                                        direction: Axis::Horizontal,
+                                        gap: SpacingLength::Px(Px(6.0)),
+                                        padding: Edges {
+                                            top: Px(density.padding_y.0 + 2.0),
+                                            right: density.padding_x,
+                                            bottom: Px(density.padding_y.0 + 2.0),
+                                            left: density.padding_x,
+                                        }
+                                        .into(),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        let mut out = Vec::new();
+                                        let header_text_style =
+                                            typography::as_control_text(TextStyle {
+                                                size: Px(12.0),
+                                                weight: fret_core::FontWeight::SEMIBOLD,
+                                                line_height: Some(header_height),
+                                                ..Default::default()
+                                            });
+                                        if let Some(icon) = disclosure_icon.clone() {
+                                            out.push(editor_icon(
+                                                cx,
+                                                density,
+                                                icon,
+                                                Some(Px(12.0)),
+                                            ));
+                                        }
+                                        out.push(cx.text_props(TextProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Auto,
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            text: label.clone(),
+                                            style: Some(header_text_style),
+                                            color: Some(header_fg),
+                                            wrap: TextWrap::None,
+                                            overflow: TextOverflow::Ellipsis,
+                                            align: TextAlign::Start,
+                                            ink_overflow: Default::default(),
+                                        }));
+                                        out.push(cx.spacer(SpacerProps::default()));
+                                        if let Some(actions) = actions {
+                                            out.push(actions);
+                                        }
+                                        out
+                                    },
+                                ),
+                            ]
                         },
                     )]
                 },

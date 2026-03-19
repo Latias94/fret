@@ -14,15 +14,15 @@ use fret_ui::element::{
     SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
 use fret_ui_kit::ColorRef;
+use fret_ui_kit::typography;
 
+use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
 use super::colors::editor_foreground;
 use super::icons::{editor_icon, editor_icon_with};
-use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
 use super::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
-use super::EditorDensity;
+use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 pub(crate) fn editor_input_group_frame<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

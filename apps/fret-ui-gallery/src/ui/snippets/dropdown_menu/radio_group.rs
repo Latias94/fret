@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("radio_group.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 

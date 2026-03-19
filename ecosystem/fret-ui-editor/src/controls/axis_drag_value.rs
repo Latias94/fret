@@ -28,23 +28,23 @@ use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::colors::{editor_invalid_border, editor_muted_foreground};
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
-    derived_test_id, editor_axis_segment, editor_icon_button_segment, editor_icon_segment,
-    editor_input_group_divider, editor_input_group_frame, editor_input_group_frame_with_overrides,
-    editor_input_group_inset, editor_input_group_row, editor_text_segment,
-    EditorInputGroupFrameOverrides,
+    EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
+    editor_icon_button_segment, editor_icon_segment, editor_input_group_divider,
+    editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
+    editor_input_group_row, editor_text_segment,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
-    arm_numeric_text_entry_focus_handoff, clear_numeric_error_when_draft_changes,
-    handle_numeric_text_entry_replace_key, numeric_text_entry_focus_state,
-    sync_numeric_text_entry_focus, sync_numeric_text_entry_focus_handoff,
-    NumericTextEntryFocusHandoffState,
+    NumericTextEntryFocusHandoffState, arm_numeric_text_entry_focus_handoff,
+    clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
+    numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
+    sync_numeric_text_entry_focus_handoff,
 };
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{
-    constrain_numeric_value, DragValueCore, DragValueCoreOptions, EditSessionOutcome,
-    NumericPresentation, NumericValueConstraints,
+    DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
+    NumericValueConstraints, constrain_numeric_value,
 };
 
 fn axis_drag_value_input_text_style(base: TextStyle, row_height: Px) -> TextStyle {
@@ -877,7 +877,7 @@ fn emit_axis_drag_value_outcome(
 
 #[cfg(test)]
 mod tests {
-    use super::{axis_drag_value_input_text_style, AxisDragValue};
+    use super::{AxisDragValue, axis_drag_value_input_text_style};
     use crate::primitives::NumericPresentation;
     use fret_app::App;
     use fret_core::{Color, Px, TextStyle};

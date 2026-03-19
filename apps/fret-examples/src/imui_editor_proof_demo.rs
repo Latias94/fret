@@ -8,8 +8,8 @@ use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
 use fret_core::{Color, PanelKind, Px, TextAlign};
 use fret_docking::{
-    runtime as dock_runtime, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
-    DockPanelRegistryBuilder, DockPanelRegistryService, ViewportPanel,
+    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
+    DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -36,8 +36,8 @@ use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::headless::text_assist::{
-    controller_with_active_item_id, input_owned_text_assist_expanded, TextAssistItem,
-    TextAssistMatch, TextAssistMatchMode,
+    TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
+    input_owned_text_assist_expanded,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);

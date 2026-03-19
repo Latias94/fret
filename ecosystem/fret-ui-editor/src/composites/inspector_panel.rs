@@ -21,12 +21,12 @@ use crate::controls::{
     EditorTextCancelBehavior, EditorTextSelectionBehavior, MiniSearchBox, MiniSearchBoxOptions,
     TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextFieldOptions,
 };
+use crate::primitives::EditorDensity;
 use crate::primitives::colors::{
     editor_panel_background, editor_panel_border, editor_panel_header_background,
     editor_panel_header_border,
 };
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
-use crate::primitives::EditorDensity;
 
 #[derive(Debug, Clone)]
 pub struct InspectorPanelSearchAssistOptions {

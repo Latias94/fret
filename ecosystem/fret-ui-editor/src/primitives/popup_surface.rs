@@ -1,10 +1,10 @@
 use fret_core::{Color, Corners, Px};
-use fret_ui::element::{ShadowLayerStyle, ShadowStyle};
 use fret_ui::Theme;
+use fret_ui::element::{ShadowLayerStyle, ShadowStyle};
 
+use super::EditorTokenKeys;
 use super::chrome::sanitize_editor_surface_bg;
 use super::colors::{editor_popup_background, editor_popup_border};
-use super::EditorTokenKeys;
 
 const DEFAULT_EDITOR_POPUP_RADIUS: Px = Px(8.0);
 const DEFAULT_EDITOR_POPUP_SHADOW_OFFSET_Y: Px = Px(6.0);
@@ -62,7 +62,7 @@ mod tests {
 
     use super::resolve_editor_popup_surface_chrome;
     use crate::primitives::EditorTokenKeys;
-    use crate::theme::{apply_editor_theme_preset_v1, EditorThemePresetV1};
+    use crate::theme::{EditorThemePresetV1, apply_editor_theme_preset_v1};
 
     #[test]
     fn overlay_popup_surface_adds_shadow() {
