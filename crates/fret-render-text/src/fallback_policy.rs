@@ -335,7 +335,7 @@ pub fn default_common_fallback_families(shaper: &ParleyShaper) -> &'static [&'st
     }
 }
 
-pub fn first_available_family_id(
+pub(crate) fn first_available_family_id(
     shaper: &mut ParleyShaper,
     candidates: &[&str],
 ) -> Option<ParleyFamilyId> {

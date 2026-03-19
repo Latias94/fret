@@ -3,7 +3,6 @@ use fret_core::{
     FontId, TextInputRef, TextLineHeightPolicy, TextShapingStyle, TextSlant, TextSpan, TextStyle,
 };
 use parley::FontContext;
-use parley::FontData;
 use parley::Layout;
 use parley::LayoutContext;
 use parley::fontique::{FamilyId, GenericFamily};
@@ -149,12 +148,54 @@ pub struct ParleyGlyph {
     pub x: f32,
     pub y: f32,
     pub advance: f32,
-    pub font: FontData,
+    pub font: GlyphFontData,
     pub font_size: f32,
     pub normalized_coords: Arc<[i16]>,
-    pub synthesis: parley::fontique::Synthesis,
+    pub synthesis: FontSynthesis,
     pub text_range: Range<usize>,
     pub is_rtl: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GlyphFontData {
+    inner: parley::FontData,
+}
+
+impl GlyphFontData {
+    fn from_parley(inner: parley::FontData) -> Self {
+        Self { inner }
+    }
+
+    pub fn data_id(&self) -> u64 {
+        self.inner.data.id()
+    }
+
+    pub fn face_index(&self) -> u32 {
+        self.inner.index
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        self.inner.data.data()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FontSynthesis {
+    pub embolden: bool,
+    /// Faux italic/oblique skew in degrees, clamped for stable cache identity.
+    pub skew_degrees: i8,
+}
+
+impl FontSynthesis {
+    fn from_parley(synthesis: parley::fontique::Synthesis) -> Self {
+        Self {
+            embolden: synthesis.embolden(),
+            skew_degrees: synthesis
+                .skew()
+                .unwrap_or(0.0)
+                .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -480,10 +521,10 @@ impl ParleyShaper {
         let mut run_x = metrics.offset;
         for run in line.runs() {
             let font = run.font();
-            let font_data = font.clone();
+            let font_data = GlyphFontData::from_parley(font.clone());
             let font_size = run.font_size();
             let normalized_coords: Arc<[i16]> = Arc::from(run.normalized_coords());
-            let synthesis = run.synthesis();
+            let synthesis = FontSynthesis::from_parley(run.synthesis());
 
             for cluster in run.visual_clusters() {
                 let cluster_range = cluster.text_range();
@@ -917,10 +958,10 @@ impl ParleyShaper {
             let mut run_x = metrics.offset;
             for run in line.runs() {
                 let font = run.font();
-                let font_data = font.clone();
+                let font_data = GlyphFontData::from_parley(font.clone());
                 let font_size = run.font_size();
                 let normalized_coords: Arc<[i16]> = Arc::from(run.normalized_coords());
-                let synthesis = run.synthesis();
+                let synthesis = FontSynthesis::from_parley(run.synthesis());
 
                 for cluster in run.visual_clusters() {
                     let cluster_range = cluster.text_range();

@@ -31,7 +31,10 @@ pub use font_trace::*;
 pub use geometry::*;
 pub use line_layout::*;
 pub use measure::*;
-pub use parley_shaper::*;
+pub use parley_shaper::{
+    FontSynthesis, GlyphFontData, ParleyGlyph, ParleyShaper, ParleyShaperFontDbDiagnosticsSnapshot,
+    ShapedCluster, ShapedLineLayout, run_system_font_rescan,
+};
 pub use prepare_layout::*;
 pub use spans::*;
 pub use wrapper::*;
