@@ -95,6 +95,18 @@ struct DemoControls {
     debug_input: Model<bool>,
 }
 
+impl DemoControls {
+    fn reset_in(&self, models: &mut fret_runtime::ModelStore) {
+        let _ = models.update(&self.enabled, |v| *v = true);
+        let _ = models.update(&self.mode, |v| *v = Some(Arc::from("backdrop")));
+        let _ = models.update(&self.quality, |v| *v = Some(Arc::from("high")));
+        let _ = models.update(&self.sampling, |v| *v = Some(Arc::from("linear")));
+        let _ = models.update(&self.uv_span, |v| *v = vec![1.0]);
+        let _ = models.update(&self.mix01, |v| *v = vec![0.65]);
+        let _ = models.update(&self.debug_input, |v| *v = false);
+    }
+}
+
 pub struct CustomEffectV2IdentityWebWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
@@ -219,28 +231,6 @@ impl CustomEffectV2IdentityWebDriver {
             "auto" => EffectQuality::Auto,
             _ => EffectQuality::Auto,
         }
-    }
-
-    fn reset_controls(app: &mut App, controls: &DemoControls) {
-        let _ = app.models_mut().update(&controls.enabled, |v| *v = true);
-        let _ = app
-            .models_mut()
-            .update(&controls.mode, |v| *v = Some(Arc::from("backdrop")));
-        let _ = app
-            .models_mut()
-            .update(&controls.quality, |v| *v = Some(Arc::from("high")));
-        let _ = app
-            .models_mut()
-            .update(&controls.sampling, |v| *v = Some(Arc::from("linear")));
-        let _ = app
-            .models_mut()
-            .update(&controls.uv_span, |v| *v = vec![1.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.mix01, |v| *v = vec![0.65]);
-        let _ = app
-            .models_mut()
-            .update(&controls.debug_input, |v| *v = false);
     }
 
     fn install_custom_effect_and_input(
@@ -512,14 +502,7 @@ impl CustomEffectV2IdentityWebDriver {
 
         let reset_controls = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
-            let models = host.models_mut();
-            let _ = models.update(&reset_controls.enabled, |v| *v = true);
-            let _ = models.update(&reset_controls.mode, |v| *v = Some(Arc::from("backdrop")));
-            let _ = models.update(&reset_controls.quality, |v| *v = Some(Arc::from("high")));
-            let _ = models.update(&reset_controls.sampling, |v| *v = Some(Arc::from("linear")));
-            let _ = models.update(&reset_controls.uv_span, |v| *v = vec![1.0]);
-            let _ = models.update(&reset_controls.mix01, |v| *v = vec![0.65]);
-            let _ = models.update(&reset_controls.debug_input, |v| *v = false);
+            reset_controls.reset_in(host.models_mut());
         });
 
         let mut layout = LayoutStyle::default();
@@ -977,7 +960,7 @@ fn handle_event(
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyR
     {
-        CustomEffectV2IdentityWebDriver::reset_controls(app, &state.controls);
+        state.controls.reset_in(app.models_mut());
         app.request_redraw(window);
     }
 
