@@ -20,7 +20,9 @@ mod wrapper_paragraphs;
 mod wrapper_ranges;
 mod wrapper_slices;
 
-pub use cache_keys::*;
+pub use cache_keys::{
+    TextBlobKey, TextMeasureKey, TextShapeKey, spans_paint_fingerprint, spans_shaping_fingerprint,
+};
 pub use cache_tuning::*;
 pub use decorations::*;
 pub use fallback_policy::{CommonFallbackMode, TextFallbackPolicyV1, common_fallback_stack_suffix};
@@ -28,9 +30,13 @@ pub use font_instance_key::*;
 pub use font_names::*;
 pub use font_stack::{GenericFamilyInjectionState, apply_font_families_inner};
 pub use font_trace::*;
-pub use geometry::*;
+pub use geometry::{
+    TextLineCluster, TextLineDecorationGeometry, TextLineGeometry, caret_rect_from_lines,
+    caret_stops_for_slice, caret_x_from_stops, hit_test_point_from_lines, hit_test_x_from_stops,
+    selection_rects_from_lines, selection_rects_from_lines_clipped,
+};
 pub use line_layout::*;
-pub use measure::*;
+pub use measure::TextMeasureCaches;
 pub use parley_shaper::{
     FontSynthesis, GlyphFontData, ParleyGlyph, ParleyShaper, ParleyShaperFontDbDiagnosticsSnapshot,
     ShapedCluster, ShapedLineLayout, run_system_font_rescan,

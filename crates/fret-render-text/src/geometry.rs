@@ -159,7 +159,9 @@ pub fn hit_test_x_from_stops(stops: &[(usize, Px)], x: Px) -> usize {
     best
 }
 
-pub fn shaped_line_visual_x_bounds_px(line: &crate::parley_shaper::ShapedLineLayout) -> (f32, f32) {
+pub(crate) fn shaped_line_visual_x_bounds_px(
+    line: &crate::parley_shaper::ShapedLineLayout,
+) -> (f32, f32) {
     let fallback_max = line.width.max(0.0);
     if line.clusters.is_empty() {
         return (0.0, fallback_max);
@@ -181,12 +183,12 @@ pub fn shaped_line_visual_x_bounds_px(line: &crate::parley_shaper::ShapedLineLay
     (min_x, max_x.max(min_x))
 }
 
-pub fn shaped_line_visual_width_px(line: &crate::parley_shaper::ShapedLineLayout) -> f32 {
+fn shaped_line_visual_width_px(line: &crate::parley_shaper::ShapedLineLayout) -> f32 {
     let (min_x, max_x) = shaped_line_visual_x_bounds_px(line);
     (max_x - min_x).max(0.0)
 }
 
-pub fn metrics_from_wrapped_lines(
+pub(crate) fn metrics_from_wrapped_lines(
     lines: &[crate::parley_shaper::ShapedLineLayout],
     scale: f32,
 ) -> TextMetrics {
@@ -228,7 +230,7 @@ pub fn metrics_from_wrapped_lines(
     }
 }
 
-pub fn metrics_for_uniform_lines(
+pub(crate) fn metrics_for_uniform_lines(
     max_w_px: f32,
     line_count: usize,
     baseline_px: f32,
