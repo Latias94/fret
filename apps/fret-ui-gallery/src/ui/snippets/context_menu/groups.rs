@@ -68,26 +68,62 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .content(shadcn::ContextMenuContent::new())
         .entries([
             shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
-                shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("My Account")),
+                shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("File")),
                 shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Profile")
-                        .action(CommandId::new("ui_gallery.context_menu.groups.profile")),
+                    shadcn::ContextMenuItem::new("New File")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.new_file"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘N").into_element(cx)),
                 ),
                 shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Billing")
-                        .action(CommandId::new("ui_gallery.context_menu.groups.billing")),
+                    shadcn::ContextMenuItem::new("Open File")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.open_file"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘O").into_element(cx)),
                 ),
-                shadcn::ContextMenuEntry::Separator,
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Save")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.save"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘S").into_element(cx)),
+                ),
             ])),
+            shadcn::ContextMenuEntry::Separator,
+            shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("Edit")),
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Undo")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.undo"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘Z").into_element(cx)),
+                ),
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Redo")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.redo"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⇧⌘Z").into_element(cx)),
+                ),
+            ])),
+            shadcn::ContextMenuEntry::Separator,
             shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
                 shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Team")
-                        .action(CommandId::new("ui_gallery.context_menu.groups.team")),
+                    shadcn::ContextMenuItem::new("Cut")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.cut"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘X").into_element(cx)),
                 ),
                 shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Subscription").action(CommandId::new(
-                        "ui_gallery.context_menu.groups.subscription",
-                    )),
+                    shadcn::ContextMenuItem::new("Copy")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.copy"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘C").into_element(cx)),
+                ),
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Paste")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.paste"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘V").into_element(cx)),
+                ),
+            ])),
+            shadcn::ContextMenuEntry::Separator,
+            shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Delete")
+                        .action(CommandId::new("ui_gallery.context_menu.groups.delete"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌫").into_element(cx))
+                        .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive),
                 ),
             ])),
         ])

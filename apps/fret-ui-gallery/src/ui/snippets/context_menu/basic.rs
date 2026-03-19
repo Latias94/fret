@@ -66,28 +66,26 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             "ui-gallery-context-menu-basic-trigger",
         ))
         .content(shadcn::ContextMenuContent::new())
-        .entries([
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Profile")
-                    .action(CommandId::new("ui_gallery.context_menu.basic.profile"))
-                    .test_id("ui-gallery-context-menu-basic-profile"),
-            ),
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Billing")
-                    .action(CommandId::new("ui_gallery.context_menu.basic.billing"))
-                    .test_id("ui-gallery-context-menu-basic-billing"),
-            ),
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Team")
-                    .action(CommandId::new("ui_gallery.context_menu.basic.team"))
-                    .test_id("ui-gallery-context-menu-basic-team"),
-            ),
-            shadcn::ContextMenuEntry::Separator,
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Subscription")
-                    .action(CommandId::new("ui_gallery.context_menu.basic.subscription")),
-            ),
-        ])
+        .entries([shadcn::ContextMenuEntry::Group(
+            shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Back")
+                        .action(CommandId::new("ui_gallery.context_menu.basic.back"))
+                        .test_id("ui-gallery-context-menu-basic-back"),
+                ),
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Forward")
+                        .disabled(true)
+                        .action(CommandId::new("ui_gallery.context_menu.basic.forward"))
+                        .test_id("ui-gallery-context-menu-basic-forward"),
+                ),
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Reload")
+                        .action(CommandId::new("ui_gallery.context_menu.basic.reload"))
+                        .test_id("ui-gallery-context-menu-basic-reload"),
+                ),
+            ]),
+        )])
         .test_id("ui-gallery-context-menu-basic")
 }
 // endregion: example

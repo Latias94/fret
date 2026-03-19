@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("destructive.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
+use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::{Invalidation, Theme};
 use fret_ui_kit::IntoUiElement;
@@ -67,19 +68,25 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ))
         .content(shadcn::ContextMenuContent::new())
         .entries([
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Rename")
-                    .action(CommandId::new("ui_gallery.context_menu.destructive.rename")),
-            ),
+            shadcn::ContextMenuGroup::new([
+                shadcn::ContextMenuItem::new("Edit")
+                    .leading_icon(IconId::new_static("lucide.pencil"))
+                    .action(CommandId::new("ui_gallery.context_menu.destructive.edit"))
+                    .into(),
+                shadcn::ContextMenuItem::new("Share")
+                    .leading_icon(IconId::new_static("lucide.share"))
+                    .action(CommandId::new("ui_gallery.context_menu.destructive.share"))
+                    .into(),
+            ])
+            .into(),
             shadcn::ContextMenuEntry::Separator,
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Delete project")
-                    .action(CommandId::new(
-                        "ui_gallery.context_menu.destructive.delete_project",
-                    ))
-                    .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive)
-                    .test_id("ui-gallery-context-menu-destructive-delete"),
-            ),
+            shadcn::ContextMenuGroup::new([shadcn::ContextMenuItem::new("Delete")
+                .leading_icon(IconId::new_static("lucide.trash"))
+                .action(CommandId::new("ui_gallery.context_menu.destructive.delete"))
+                .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive)
+                .test_id("ui-gallery-context-menu-destructive-delete")
+                .into()])
+            .into(),
         ])
         .test_id("ui-gallery-context-menu-destructive")
 }

@@ -67,23 +67,60 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ))
         .content(shadcn::ContextMenuContent::new())
         .entries([
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Open")
-                    .action(CommandId::new("ui_gallery.context_menu.submenu.open"))
-                    .test_id("ui-gallery-context-menu-submenu-open"),
-            ),
+            shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuItem::new("Copy")
+                    .action(CommandId::new("ui_gallery.context_menu.submenu.copy"))
+                    .trailing(shadcn::ContextMenuShortcut::new("⌘C").into_element(cx))
+                    .test_id("ui-gallery-context-menu-submenu-copy")
+                    .into(),
+                shadcn::ContextMenuItem::new("Cut")
+                    .action(CommandId::new("ui_gallery.context_menu.submenu.cut"))
+                    .trailing(shadcn::ContextMenuShortcut::new("⌘X").into_element(cx))
+                    .into(),
+            ])
+            .into(),
             shadcn::ContextMenuSub::new(
-                shadcn::ContextMenuSubTrigger::new("More tools")
+                shadcn::ContextMenuSubTrigger::new("More Tools")
                     .refine(|item| item.test_id("ui-gallery-context-menu-submenu-more-tools")),
                 shadcn::ContextMenuSubContent::new(vec![
-                    shadcn::ContextMenuItem::new("Rename")
-                        .action(CommandId::new("ui_gallery.context_menu.submenu.rename"))
-                        .test_id("ui-gallery-context-menu-submenu-rename")
-                        .into(),
-                    shadcn::ContextMenuItem::new("Duplicate")
-                        .action(CommandId::new("ui_gallery.context_menu.submenu.duplicate"))
-                        .test_id("ui-gallery-context-menu-submenu-duplicate")
-                        .into(),
+                    shadcn::ContextMenuGroup::new(vec![
+                        shadcn::ContextMenuItem::new("Save Page...")
+                            .action(CommandId::new("ui_gallery.context_menu.submenu.save_page"))
+                            .test_id("ui-gallery-context-menu-submenu-save-page")
+                            .into(),
+                        shadcn::ContextMenuItem::new("Create Shortcut...")
+                            .action(CommandId::new(
+                                "ui_gallery.context_menu.submenu.create_shortcut",
+                            ))
+                            .test_id("ui-gallery-context-menu-submenu-create-shortcut")
+                            .into(),
+                        shadcn::ContextMenuItem::new("Name Window...")
+                            .action(CommandId::new(
+                                "ui_gallery.context_menu.submenu.name_window",
+                            ))
+                            .test_id("ui-gallery-context-menu-submenu-name-window")
+                            .into(),
+                    ])
+                    .into(),
+                    shadcn::ContextMenuSeparator::new().into(),
+                    shadcn::ContextMenuGroup::new(vec![
+                        shadcn::ContextMenuItem::new("Developer Tools")
+                            .action(CommandId::new(
+                                "ui_gallery.context_menu.submenu.developer_tools",
+                            ))
+                            .test_id("ui-gallery-context-menu-submenu-developer-tools")
+                            .into(),
+                    ])
+                    .into(),
+                    shadcn::ContextMenuSeparator::new().into(),
+                    shadcn::ContextMenuGroup::new(vec![
+                        shadcn::ContextMenuItem::new("Delete")
+                            .action(CommandId::new("ui_gallery.context_menu.submenu.delete"))
+                            .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive)
+                            .test_id("ui-gallery-context-menu-submenu-delete")
+                            .into(),
+                    ])
+                    .into(),
                 ]),
             )
             .into_entry(),

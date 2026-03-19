@@ -102,7 +102,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-context-menu-checkboxes-status-bar.chrome-trailing"
+          "id": "ui-gallery-context-menu-checkboxes-status-bar.chrome-indicator"
         }
       },
       "timeout_frames": 240
@@ -113,11 +113,11 @@
         "kind": "bounds_non_overlapping",
         "a": {
           "kind": "test_id",
-          "id": "ui-gallery-context-menu-checkboxes-status-bar.chrome-label"
+          "id": "ui-gallery-context-menu-checkboxes-status-bar.chrome-indicator"
         },
         "b": {
           "kind": "test_id",
-          "id": "ui-gallery-context-menu-checkboxes-status-bar.chrome-trailing"
+          "id": "ui-gallery-context-menu-checkboxes-status-bar.chrome-label"
         },
         "eps_px": 0.5
       },

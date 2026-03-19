@@ -74,7 +74,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-back" }
       },
       "timeout_frames": 600
     },
@@ -84,7 +84,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-context-menu-basic-profile.chrome"
+          "id": "ui-gallery-context-menu-basic-back.chrome"
         }
       },
       "timeout_frames": 600
@@ -93,8 +93,8 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_approx_equal",
-        "a": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" },
-        "b": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile.chrome" },
+        "a": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-back" },
+        "b": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-back.chrome" },
         "eps_px": 1.0
       }
     },

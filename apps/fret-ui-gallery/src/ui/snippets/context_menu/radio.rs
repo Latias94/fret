@@ -59,8 +59,10 @@ fn trigger_surface<H: UiHost>(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let theme_mode = cx.local_model(|| Some(Arc::<str>::from("system")));
-    let theme_mode_now = cx.watch_model(&theme_mode).layout().cloned().flatten();
+    let selected_person = cx.local_model(|| Some(Arc::<str>::from("pedro")));
+    let selected_person_now = cx.watch_model(&selected_person).layout().cloned().flatten();
+    let selected_theme = cx.local_model(|| Some(Arc::<str>::from("light")));
+    let selected_theme_now = cx.watch_model(&selected_theme).layout().cloned().flatten();
 
     shadcn::ContextMenu::uncontrolled(cx)
         .content_test_id("ui-gallery-context-menu-radio-content")
@@ -71,29 +73,66 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             "ui-gallery-context-menu-radio-trigger",
         ))
         .content(shadcn::ContextMenuContent::new())
-        .entries([shadcn::ContextMenuEntry::RadioGroup(
-            shadcn::ContextMenuRadioGroup::from_value(theme_mode_now)
-                .on_value_change({
-                    let theme_mode = theme_mode.clone();
-                    move |host, _action_cx, value| {
-                        let _ = host
-                            .models_mut()
-                            .update(&theme_mode, |selected| *selected = Some(value));
-                    }
-                })
-                .item(
-                    shadcn::ContextMenuRadioItemSpec::new("system", "System")
-                        .action(CommandId::new("ui_gallery.context_menu.radio.theme.system")),
-                )
-                .item(
-                    shadcn::ContextMenuRadioItemSpec::new("light", "Light")
-                        .action(CommandId::new("ui_gallery.context_menu.radio.theme.light")),
-                )
-                .item(
-                    shadcn::ContextMenuRadioItemSpec::new("dark", "Dark")
-                        .action(CommandId::new("ui_gallery.context_menu.radio.theme.dark")),
+        .entries([
+            shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("People")),
+                shadcn::ContextMenuEntry::RadioGroup(
+                    shadcn::ContextMenuRadioGroup::from_value(selected_person_now)
+                        .on_value_change({
+                            let selected_person = selected_person.clone();
+                            move |host, _action_cx, value| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&selected_person, |selected| *selected = Some(value));
+                            }
+                        })
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("pedro", "Pedro Duarte")
+                                .action(CommandId::new(
+                                    "ui_gallery.context_menu.radio.people.pedro",
+                                ))
+                                .test_id("ui-gallery-context-menu-radio-person-pedro"),
+                        )
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("colm", "Colm Tuite")
+                                .action(CommandId::new("ui_gallery.context_menu.radio.people.colm"))
+                                .test_id("ui-gallery-context-menu-radio-person-colm"),
+                        ),
                 ),
-        )])
+            ])),
+            shadcn::ContextMenuEntry::Separator,
+            shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("Theme")),
+                shadcn::ContextMenuEntry::RadioGroup(
+                    shadcn::ContextMenuRadioGroup::from_value(selected_theme_now)
+                        .on_value_change({
+                            let selected_theme = selected_theme.clone();
+                            move |host, _action_cx, value| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&selected_theme, |selected| *selected = Some(value));
+                            }
+                        })
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("light", "Light")
+                                .action(CommandId::new("ui_gallery.context_menu.radio.theme.light"))
+                                .test_id("ui-gallery-context-menu-radio-theme-light"),
+                        )
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("dark", "Dark")
+                                .action(CommandId::new("ui_gallery.context_menu.radio.theme.dark"))
+                                .test_id("ui-gallery-context-menu-radio-theme-dark"),
+                        )
+                        .item(
+                            shadcn::ContextMenuRadioItemSpec::new("system", "System")
+                                .action(CommandId::new(
+                                    "ui_gallery.context_menu.radio.theme.system",
+                                ))
+                                .test_id("ui-gallery-context-menu-radio-theme-system"),
+                        ),
+                ),
+            ])),
+        ])
         .test_id("ui-gallery-context-menu-radio")
 }
 // endregion: example

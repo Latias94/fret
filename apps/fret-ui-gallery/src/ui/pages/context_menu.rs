@@ -33,6 +33,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "This pass mainly fixes teaching-surface drift: docs-aligned snippets now prefer the same typed `compose()` root lane instead of mixing older `build(...)` roots into the default examples.",
         "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work.",
         "The RTL example now exercises logical-side placement directly: `ContextMenuContent::side(shadcn::DropdownMenuSide::InlineEnd)` matches the upstream Base UI docs while submenu chevrons still follow direction-provider parity.",
+        "The RTL preview now stays closer to the upstream Base UI example shape too: dual submenus, checkbox toggles, and a radio group all render under `LayoutDirection::Rtl` while keeping the explicit `inline-end` teaching point.",
         "The explicit entry tree remains intentional, so the page records why we are not widening this family into a generic heterogeneous children API.",
         "Examples are snippet-backed: preview and code stay in sync.",
         "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
@@ -89,7 +90,7 @@ pub(super) fn preview_context_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-context-menu-sides")
         .code_rust_from_file_region(snippets::sides::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("RTL layout now demonstrates logical `inline-end` placement plus submenu direction parity.")
+        .description("RTL layout keeps logical `inline-end` placement while mirroring the richer upstream preview structure.")
         .test_id_prefix("ui-gallery-context-menu-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 

@@ -86,7 +86,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .trigger(trigger)
         .content(
             shadcn::ContextMenuContent::new()
-                .min_width(Px(208.0))
+                .min_width(Px(192.0))
                 .submenu_min_width(Px(176.0)),
         )
         .entries_with(move |cx| {

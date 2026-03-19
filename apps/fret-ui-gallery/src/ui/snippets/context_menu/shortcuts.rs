@@ -68,28 +68,35 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .content(shadcn::ContextMenuContent::new())
         .entries_with(|cx| {
             vec![
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Open file")
-                        .action(CommandId::new(
-                            "ui_gallery.context_menu.shortcuts.open_file",
-                        ))
-                        .trailing(shadcn::ContextMenuShortcut::new("Cmd+O").into_element(cx))
-                        .test_id("ui-gallery-context-menu-shortcuts-open-file"),
-                ),
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Save file")
-                        .action(CommandId::new(
-                            "ui_gallery.context_menu.shortcuts.save_file",
-                        ))
-                        .trailing(shadcn::ContextMenuShortcut::new("Cmd+S").into_element(cx)),
-                ),
-                shadcn::ContextMenuEntry::Item(
-                    shadcn::ContextMenuItem::new("Close tab")
-                        .action(CommandId::new(
-                            "ui_gallery.context_menu.shortcuts.close_tab",
-                        ))
-                        .trailing(shadcn::ContextMenuShortcut::new("Cmd+W").into_element(cx)),
-                ),
+                shadcn::ContextMenuGroup::new(vec![
+                    shadcn::ContextMenuItem::new("Back")
+                        .action(CommandId::new("ui_gallery.context_menu.shortcuts.back"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘[").into_element(cx))
+                        .test_id("ui-gallery-context-menu-shortcuts-back")
+                        .into(),
+                    shadcn::ContextMenuItem::new("Forward")
+                        .action(CommandId::new("ui_gallery.context_menu.shortcuts.forward"))
+                        .disabled(true)
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘]").into_element(cx))
+                        .into(),
+                    shadcn::ContextMenuItem::new("Reload")
+                        .action(CommandId::new("ui_gallery.context_menu.shortcuts.reload"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘R").into_element(cx))
+                        .into(),
+                ])
+                .into(),
+                shadcn::ContextMenuSeparator::new().into(),
+                shadcn::ContextMenuGroup::new(vec![
+                    shadcn::ContextMenuItem::new("Save")
+                        .action(CommandId::new("ui_gallery.context_menu.shortcuts.save"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⌘S").into_element(cx))
+                        .into(),
+                    shadcn::ContextMenuItem::new("Save As...")
+                        .action(CommandId::new("ui_gallery.context_menu.shortcuts.save_as"))
+                        .trailing(shadcn::ContextMenuShortcut::new("⇧⌘S").into_element(cx))
+                        .into(),
+                ])
+                .into(),
             ]
         })
         .test_id("ui-gallery-context-menu-shortcuts")

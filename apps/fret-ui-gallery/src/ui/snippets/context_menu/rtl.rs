@@ -4,12 +4,22 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
+use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::{Invalidation, Theme};
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::primary_pointer_is_coarse;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use std::sync::Arc;
+
+#[derive(Default, Clone)]
+struct RtlMenuState {
+    show_bookmarks: bool,
+    show_full_urls: bool,
+    person: Option<Arc<str>>,
+}
 
 fn trigger_surface<H: UiHost>(
     fine_label: &'static str,
@@ -57,7 +67,18 @@ fn trigger_surface<H: UiHost>(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+    let menu_state = cx.local_model(|| RtlMenuState {
+        show_bookmarks: true,
+        show_full_urls: false,
+        person: Some(Arc::<str>::from("pedro")),
+    });
+    let menu_state_now = cx
+        .watch_model(&menu_state)
+        .layout()
+        .cloned()
+        .unwrap_or_default();
+
+    with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
         shadcn::ContextMenu::uncontrolled(cx)
             .content_test_id("ui-gallery-context-menu-rtl-content")
             .compose()
@@ -66,52 +87,224 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "Long press here",
                 "ui-gallery-context-menu-rtl-trigger",
             ))
-            .content(shadcn::ContextMenuContent::new().side(shadcn::DropdownMenuSide::InlineEnd))
-            .entries_with(|cx| {
-                vec![
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Open")
-                            .action(CommandId::new("ui_gallery.context_menu.rtl.open"))
-                            .test_id("ui-gallery-context-menu-rtl-item-open")
-                            .trailing(shadcn::ContextMenuShortcut::new("⌘O").into_element(cx)),
-                    ),
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Settings")
-                            .action(CommandId::new("ui_gallery.context_menu.rtl.settings"))
-                            .test_id("ui-gallery-context-menu-rtl-item-settings")
-                            .trailing(shadcn::ContextMenuShortcut::new("⌘,").into_element(cx)),
-                    ),
-                    shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("More")
-                            .test_id("ui-gallery-context-menu-rtl-item-more")
-                            .submenu([
-                                shadcn::ContextMenuEntry::Item(
-                                    shadcn::ContextMenuItem::new("Sub Alpha")
-                                        .action(CommandId::new(
-                                            "ui_gallery.context_menu.rtl.sub_alpha",
-                                        ))
-                                        .test_id("ui-gallery-context-menu-rtl-item-sub-alpha"),
-                                ),
-                                shadcn::ContextMenuEntry::Item(
-                                    shadcn::ContextMenuItem::new("Sub Beta")
-                                        .action(CommandId::new(
-                                            "ui_gallery.context_menu.rtl.sub_beta",
-                                        ))
-                                        .test_id("ui-gallery-context-menu-rtl-item-sub-beta"),
-                                ),
-                            ]),
-                    ),
-                    shadcn::ContextMenuEntry::Separator,
-                    shadcn::ContextMenuEntry::Item(
-                        shadcn::ContextMenuItem::new("Delete")
-                            .action(CommandId::new("ui_gallery.context_menu.rtl.delete"))
-                            .test_id("ui-gallery-context-menu-rtl-item-delete")
-                            .variant(
-                                shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
+            .content(
+                shadcn::ContextMenuContent::new()
+                    .side(shadcn::DropdownMenuSide::InlineEnd)
+                    .min_width(Px(192.0))
+                    .submenu_min_width(Px(176.0)),
+            )
+            .entries_with({
+                let menu_state = menu_state.clone();
+                move |cx| {
+                    vec![
+                        shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Navigation")
+                                    .test_id("ui-gallery-context-menu-rtl-item-navigation")
+                                    .submenu([
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Back")
+                                                        .leading_icon(IconId::new_static(
+                                                            "lucide.arrow-left",
+                                                        ))
+                                                        .action(CommandId::new(
+                                                            "ui_gallery.context_menu.rtl.back",
+                                                        ))
+                                                        .test_id(
+                                                            "ui-gallery-context-menu-rtl-item-back",
+                                                        )
+                                                        .trailing(
+                                                            shadcn::ContextMenuShortcut::new("⌘[")
+                                                                .into_element(cx),
+                                                        ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Forward")
+                                                        .leading_icon(IconId::new_static(
+                                                            "lucide.arrow-right",
+                                                        ))
+                                                        .disabled(true)
+                                                        .action(CommandId::new(
+                                                            "ui_gallery.context_menu.rtl.forward",
+                                                        ))
+                                                        .test_id(
+                                                            "ui-gallery-context-menu-rtl-item-forward",
+                                                        )
+                                                        .trailing(
+                                                            shadcn::ContextMenuShortcut::new("⌘]")
+                                                                .into_element(cx),
+                                                        ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Reload")
+                                                        .leading_icon(IconId::new_static(
+                                                            "lucide.rotate-cw",
+                                                        ))
+                                                        .action(CommandId::new(
+                                                            "ui_gallery.context_menu.rtl.reload",
+                                                        ))
+                                                        .test_id(
+                                                            "ui-gallery-context-menu-rtl-item-reload",
+                                                        )
+                                                        .trailing(
+                                                            shadcn::ContextMenuShortcut::new("⌘R")
+                                                                .into_element(cx),
+                                                        ),
+                                                ),
+                                            ]),
+                                        ),
+                                    ]),
                             ),
-                    ),
-                ]
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("More Tools")
+                                    .test_id("ui-gallery-context-menu-rtl-item-more-tools")
+                                    .submenu([
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Save Page...")
+                                                        .action(CommandId::new(
+                                                            "ui_gallery.context_menu.rtl.save_page",
+                                                        ))
+                                                        .test_id(
+                                                            "ui-gallery-context-menu-rtl-item-save-page",
+                                                        ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new(
+                                                        "Create Shortcut...",
+                                                    )
+                                                    .action(CommandId::new(
+                                                        "ui_gallery.context_menu.rtl.create_shortcut",
+                                                    ))
+                                                    .test_id(
+                                                        "ui-gallery-context-menu-rtl-item-create-shortcut",
+                                                    ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Name Window...")
+                                                        .action(CommandId::new(
+                                                            "ui_gallery.context_menu.rtl.name_window",
+                                                        ))
+                                                        .test_id(
+                                                            "ui-gallery-context-menu-rtl-item-name-window",
+                                                        ),
+                                                ),
+                                            ]),
+                                        ),
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Developer Tools")
+                                                        .action(CommandId::new(
+                                                            "ui_gallery.context_menu.rtl.developer_tools",
+                                                        ))
+                                                        .test_id(
+                                                            "ui-gallery-context-menu-rtl-item-developer-tools",
+                                                        ),
+                                                ),
+                                            ]),
+                                        ),
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Delete")
+                                                        .action(CommandId::new(
+                                                            "ui_gallery.context_menu.rtl.delete",
+                                                        ))
+                                                        .test_id(
+                                                            "ui-gallery-context-menu-rtl-item-delete",
+                                                        )
+                                                        .variant(
+                                                            shadcn::raw::context_menu::ContextMenuItemVariant::Destructive,
+                                                        ),
+                                                ),
+                                            ]),
+                                        ),
+                                    ]),
+                            ),
+                        ])),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                            shadcn::ContextMenuEntry::CheckboxItem(
+                                shadcn::ContextMenuCheckboxItem::from_checked(
+                                    menu_state_now.show_bookmarks,
+                                    "Show Bookmarks",
+                                )
+                                .on_checked_change({
+                                    let menu_state = menu_state.clone();
+                                    move |host, _action_cx, checked| {
+                                        let _ = host.models_mut().update(&menu_state, |state| {
+                                            state.show_bookmarks = checked;
+                                        });
+                                    }
+                                })
+                                .action(CommandId::new(
+                                    "ui_gallery.context_menu.rtl.show_bookmarks",
+                                ))
+                                .test_id("ui-gallery-context-menu-rtl-item-show-bookmarks"),
+                            ),
+                            shadcn::ContextMenuEntry::CheckboxItem(
+                                shadcn::ContextMenuCheckboxItem::from_checked(
+                                    menu_state_now.show_full_urls,
+                                    "Show Full URLs",
+                                )
+                                .on_checked_change({
+                                    let menu_state = menu_state.clone();
+                                    move |host, _action_cx, checked| {
+                                        let _ = host.models_mut().update(&menu_state, |state| {
+                                            state.show_full_urls = checked;
+                                        });
+                                    }
+                                })
+                                .action(CommandId::new(
+                                    "ui_gallery.context_menu.rtl.show_full_urls",
+                                ))
+                                .test_id("ui-gallery-context-menu-rtl-item-show-full-urls"),
+                            ),
+                        ])),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                            shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new(
+                                "People",
+                            )),
+                            shadcn::ContextMenuEntry::RadioGroup(
+                                shadcn::ContextMenuRadioGroup::from_value(
+                                    menu_state_now.person.clone(),
+                                )
+                                .on_value_change({
+                                    let menu_state = menu_state.clone();
+                                    move |host, _action_cx, value| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&menu_state, |state| state.person = Some(value));
+                                    }
+                                })
+                                .item(
+                                    shadcn::ContextMenuRadioItemSpec::new(
+                                        "pedro",
+                                        "Pedro Duarte",
+                                    )
+                                    .action(CommandId::new(
+                                        "ui_gallery.context_menu.rtl.person.pedro",
+                                    ))
+                                    .test_id("ui-gallery-context-menu-rtl-item-person-pedro"),
+                                )
+                                .item(
+                                    shadcn::ContextMenuRadioItemSpec::new("colm", "Colm Tuite")
+                                        .action(CommandId::new(
+                                            "ui_gallery.context_menu.rtl.person.colm",
+                                        ))
+                                        .test_id("ui-gallery-context-menu-rtl-item-person-colm"),
+                                ),
+                            ),
+                        ])),
+                    ]
+                }
             })
     })
     .test_id("ui-gallery-context-menu-rtl")

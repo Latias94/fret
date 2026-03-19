@@ -193,7 +193,8 @@ pub fn context_menu_touch_long_press_on_pointer_down(
         after: CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY,
         repeat: None,
     });
-    false
+    host.capture_pointer();
+    true
 }
 
 pub fn context_menu_touch_long_press_on_pointer_move(
@@ -460,7 +461,7 @@ mod tests {
                 hit_pressable_target: None,
             },
         );
-        assert!(!handled);
+        assert!(handled);
 
         let effects = host.app.flush_effects();
         let token = effects.iter().find_map(|effect| match effect {

@@ -66,7 +66,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-back" }
       },
       "timeout_frames": 240
     },

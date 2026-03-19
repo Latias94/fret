@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("icons.rs");
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_core::scene::DashPatternV1;
+use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::{Invalidation, Theme};
 use fret_ui_kit::IntoUiElement;
@@ -67,25 +68,37 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ))
         .content(shadcn::ContextMenuContent::new())
         .entries([
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Profile")
-                    .action(CommandId::new("ui_gallery.context_menu.icons.profile"))
-                    .leading_icon(IconId::new_static("lucide.user"))
-                    .test_id("ui-gallery-context-menu-icons-profile"),
-            ),
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Settings")
-                    .action(CommandId::new("ui_gallery.context_menu.icons.settings"))
-                    .leading_icon(IconId::new_static("lucide.settings"))
-                    .test_id("ui-gallery-context-menu-icons-settings"),
-            ),
             shadcn::ContextMenuEntry::Separator,
-            shadcn::ContextMenuEntry::Item(
-                shadcn::ContextMenuItem::new("Download")
-                    .action(CommandId::new("ui_gallery.context_menu.icons.download"))
-                    .leading_icon(IconId::new_static("lucide.download"))
-                    .test_id("ui-gallery-context-menu-icons-download"),
-            ),
+            shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Copy")
+                        .action(CommandId::new("ui_gallery.context_menu.icons.copy"))
+                        .leading_icon(IconId::new_static("lucide.copy"))
+                        .test_id("ui-gallery-context-menu-icons-copy"),
+                ),
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Cut")
+                        .action(CommandId::new("ui_gallery.context_menu.icons.cut"))
+                        .leading_icon(IconId::new_static("lucide.scissors"))
+                        .test_id("ui-gallery-context-menu-icons-cut"),
+                ),
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Paste")
+                        .action(CommandId::new("ui_gallery.context_menu.icons.paste"))
+                        .leading_icon(IconId::new_static("lucide.clipboard-paste"))
+                        .test_id("ui-gallery-context-menu-icons-paste"),
+                ),
+            ])),
+            shadcn::ContextMenuEntry::Separator,
+            shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
+                shadcn::ContextMenuEntry::Item(
+                    shadcn::ContextMenuItem::new("Delete")
+                        .action(CommandId::new("ui_gallery.context_menu.icons.delete"))
+                        .leading_icon(IconId::new_static("lucide.trash"))
+                        .variant(shadcn::raw::context_menu::ContextMenuItemVariant::Destructive)
+                        .test_id("ui-gallery-context-menu-icons-delete"),
+                ),
+            ])),
         ])
         .test_id("ui-gallery-context-menu-icons")
 }
