@@ -318,7 +318,7 @@ Evidence anchors (verified in-tree as of 2026-03-08):
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (third `use_local` prototype; now also mirrors the builder-first composition experiment for the async query path with the same late-landing card tree while keeping transient invalidation and Tokio-backed async spawning, and query state reads stay on `QueryHandle<T>` via `query_handle.layout(cx).value_*`)
 - `apps/fret-ui-gallery/src/ui/snippets/collapsible/demo.rs` (gallery snippet now uses the uncontrolled `Collapsible::default_open(false)` path directly; this case no longer counts as a model-centered contract blocker)
 - `apps/fret-examples/src/embedded_viewport_demo.rs` (advanced demo now keeps its view-local `size_preset` on `cx.state().local_init(...)` + `layout_value(...)` + `cx.actions().local_set(...)`, while embedded viewport interop state and render-time effects stay on the explicit runtime path)
-- `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (advanced/manual web harness; reset button uses `on_activate_request_redraw` while the control bag intentionally stays on explicit `Model<T>`)
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
 - `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the approved advanced `on_action_notify` teaching-surface exceptions and keeps `fret-examples` plus ui-gallery pages/snippets on the zero-exception path)
