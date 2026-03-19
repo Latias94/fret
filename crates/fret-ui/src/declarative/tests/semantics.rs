@@ -40,6 +40,51 @@ fn declarative_text_sets_semantics_label() {
 }
 
 #[test]
+fn declarative_styled_text_sets_semantics_label() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let text: Arc<str> = Arc::from("Hello styled declarative");
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-styled-text",
+        |cx| {
+            vec![cx.styled_text_props(crate::element::StyledTextProps::new(
+                fret_core::AttributedText::new(
+                    Arc::clone(&text),
+                    Arc::from([fret_core::TextSpan::new(text.len())]),
+                ),
+            ))]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .any(|n| n.role == fret_core::SemanticsRole::Text
+                && n.label.as_deref() == Some(text.as_ref())),
+        "expected a StyledText semantics node with label"
+    );
+}
+
+#[test]
 fn selectable_text_emits_inline_link_spans_in_semantics_snapshot() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
