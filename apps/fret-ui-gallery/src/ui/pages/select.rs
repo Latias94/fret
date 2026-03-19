@@ -17,6 +17,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .test_id("ui-gallery-select-demo")
     };
     let label = snippets::label::render(cx);
+    let field_association = snippets::field_association::render(cx);
     let diag_surface = snippets::diag_surface::render(cx);
     let align_item = snippets::align_item_with_trigger::render(cx);
     let groups = snippets::groups::render(cx);
@@ -42,6 +43,10 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Use `FieldLabel::for_control` + `Select::control_id` so label clicks route to the trigger and open the popup.")
         .test_id_prefix("ui-gallery-select-label")
         .code_rust_from_file_region(snippets::label::SOURCE, "example");
+    let field_association = DocSection::build(cx, "Field Builder Association", field_association)
+        .description("Inside `Field::build(...)`, Select can inherit the field-local label + description association without explicit ids.")
+        .test_id_prefix("ui-gallery-select-field-association")
+        .code_rust_from_file_region(snippets::field_association::SOURCE, "example");
     let diag_surface = DocSection::build(cx, "Diag Surface", diag_surface)
         .description("Long-list surface with stable test_ids used by diagnostics scripts.")
         .test_id_prefix("ui-gallery-select-diag-surface")
@@ -79,6 +84,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![
             demo,
             label,
+            field_association,
             diag_surface,
             align_item,
             groups,
