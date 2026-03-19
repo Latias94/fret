@@ -1212,20 +1212,15 @@ Implementation note on 2026-03-13:
   `apps/fret-examples/src/drop_shadow_demo.rs` (`card<H>(...)`),
   `apps/fret-examples/src/markdown_demo.rs` (`render_image_placeholder<H>(...)`),
   `apps/fret-examples/src/liquid_glass_demo.rs` (`lens_panel<H>(...)`),
-  `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
-  (`lens`, `inspector`),
-  `apps/fret-examples/src/custom_effect_v2_web_demo.rs`
-  (`lens`, `inspector`),
-  `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs`
-  (`lens`, `inspector`),
-  and `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
-  (`label_row`, `lens`, `controls_panel`),
   `apps/fret-cookbook/examples/customv1_basics.rs`
   (`panel_shell(...)`, `preview_content(...)`),
   `apps/fret-cookbook/examples/drop_shadow_basics.rs` (`shadow_card(...)`),
   and `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
   (`render_image_preview(...)`)
   now return `impl IntoUiElement<...>`.
+- the manual/web `custom_effect_v2_*_web_demo` family now also follows the same typed helper-return
+  rule for reusable helpers (`lens`, `inspector`, `label_row`, `controls_panel`), but those files
+  remain advanced/manual harness evidence rather than default app-lane teaching surfaces.
 - `apps/fret-examples/src/hello_world_compare_demo.rs` now keeps its local `swatch(...)` closure
   off raw landed returns by default; it lands explicitly only where the surrounding child array
   wants raw elements.
@@ -1369,13 +1364,14 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
 - `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...)` is now treated as
   an intentional raw retained seam rather than migration debt: it owns
   `RetainedSubtreeProps::new::<KernelApp>(...)` and `cached_subtree_with(...)` landing.
-- selected default-app WebGPU examples now also keep reusable helpers off raw landed returns by
-  default:
+- selected WebGPU manual/web harness examples now also keep reusable helpers off raw landed returns
+  by default:
   `custom_effect_v2_identity_web_demo`, `custom_effect_v2_web_demo`,
   `custom_effect_v2_lut_web_demo`, and `custom_effect_v2_glass_chrome_web_demo`
   now use `impl IntoUiElement<fret_app::App> + use<>` for non-raw helper composition, with
   explicit `.into_element(cx)` reserved for stage child arrays, overlay child collections, and
-  other concrete raw landing seams.
+  other concrete raw landing seams. This is advanced/manual harness closure, not default
+  app-lane proof.
 - selected UI Gallery AI doc pages now keep page-local helpers on the default app-facing child
   surface:
   `ai_persona_demo.rs`, `ai_commit_demo.rs`, `ai_context_demo.rs`,

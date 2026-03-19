@@ -179,11 +179,14 @@ fn helper(cx: &mut UiCx<'_>) -> impl fret_ui_kit::IntoUiElement<fret_app::App> +
   so Gallery/default-app snippets should spell `fret_app::App` when they need the concrete host
   type.
 - current first-party examples on that lane now include
-  `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs::{lens, inspector}`,
-  `apps/fret-examples/src/custom_effect_v2_web_demo.rs::{lens, inspector}`,
-  `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs::{lens, inspector}`, and
-  `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs::{label_row, lens,
-  controls_panel}`.
+  `apps/fret-examples/src/custom_effect_v3_demo.rs::{stage, stage_controls, animated_backdrop,
+  lens_row, lens_shell}`,
+  `apps/fret-examples/src/postprocess_theme_demo.rs::{inspector, stage, stage_body,
+  stage_cards}`, and
+  `apps/fret-examples/src/liquid_glass_demo.rs::lens_panel<H>(...)`.
+- the `custom_effect_v2_*_web_demo` family also follows the same typed helper-return rule inside
+  manual `UiTree` / web harness code, but those files are advanced/manual surfaces rather than
+  default app-lane proof examples.
 - `apps/fret-examples/src/assets_demo.rs::assets_page(...)` now also follows that rule:
   the advanced asset-cache demo keeps `render_image_panel(...)` / `render_svg_panel(...)` on typed
   helper returns and moves the final root-page landing into `assets_page(cx, ...) -> Ui` instead

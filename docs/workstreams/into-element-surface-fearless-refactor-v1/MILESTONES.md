@@ -981,10 +981,12 @@ Exit criteria:
   `retained_canvas_helpers_keep_raw_landing_seams` continues to record
   `chart_interactions_basics.rs::chart_canvas(...) -> AnyElement` as the one explicit retained
   bridge seam on that lane.
-- the examples helper-return lane is now also tightened on the default-app side:
+- the examples helper-return lane is now also tightened across both the default app-facing lane and
+  selected advanced/manual harnesses:
   `apps/fret-examples/src/{custom_effect_v2_identity_web_demo,custom_effect_v2_web_demo,custom_effect_v2_lut_web_demo,custom_effect_v2_glass_chrome_web_demo}.rs`
   now keep `stage_tile(...)` on `impl IntoUiElement<App> + use<>` and move the explicit
-  `.into_element(cx)` seam back to the stage `Vec<AnyElement>` assembly site, while
+  `.into_element(cx)` seam back to the stage `Vec<AnyElement>` assembly site on those manual/web
+  harnesses, while
   `apps/fret-examples/src/async_playground_demo.rs::catalog_item(...)` now likewise returns
   `impl IntoUiElement<KernelApp> + use<>` and lands explicitly at the `out.push(...)` sink.
   `apps/fret-examples/src/lib.rs` now records those helpers in source-policy tests so they do not
