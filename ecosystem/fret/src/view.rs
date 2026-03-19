@@ -757,6 +757,38 @@ impl fret_ui_shadcn::facade::IntoOptionalDateModel for &LocalState<Option<time::
 }
 
 #[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoSolarHijriMonthModel
+    for LocalState<fret_ui_shadcn::facade::SolarHijriMonth>
+{
+    fn into_solar_hijri_month_model(self) -> Model<fret_ui_shadcn::facade::SolarHijriMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoSolarHijriMonthModel
+    for &LocalState<fret_ui_shadcn::facade::SolarHijriMonth>
+{
+    fn into_solar_hijri_month_model(self) -> Model<fret_ui_shadcn::facade::SolarHijriMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoU8ValueModel for LocalState<u8> {
+    fn into_u8_value_model(self) -> Model<u8> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoU8ValueModel for &LocalState<u8> {
+    fn into_u8_value_model(self) -> Model<u8> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoDateRangeSelectionModel
     for LocalState<fret_ui_kit::headless::calendar::DateRangeSelection>
 {

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
 use crate::rtl;
+use crate::text_value_model::IntoTextValueModel;
 use fret_core::{
     Axis, Color, Corners, CursorIcon, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole,
     TextOverflow, TextWrap,
@@ -114,9 +115,9 @@ impl std::fmt::Debug for InputGroup {
 }
 
 impl InputGroup {
-    pub fn new(model: Model<String>) -> Self {
+    pub fn new(model: impl IntoTextValueModel) -> Self {
         Self {
-            model,
+            model: model.into_text_value_model(),
             control: InputGroupControlKind::Input,
             test_id: None,
             control_test_id: None,

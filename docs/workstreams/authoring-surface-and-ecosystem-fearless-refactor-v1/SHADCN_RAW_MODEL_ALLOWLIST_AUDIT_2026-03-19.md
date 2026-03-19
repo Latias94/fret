@@ -21,6 +21,8 @@ Recent fearless-shrink batches converted many default shadcn entry points away f
 - `IntoFloatValueModel`
 - `IntoOptionalFloatValueModel`
 - `IntoFloatVecModel`
+- `IntoSolarHijriMonthModel`
+- `IntoU8ValueModel`
 
 That creates a maintenance question:
 
@@ -84,7 +86,6 @@ Audited files:
 - `command.rs`
 - `context_menu.rs`
 - `dropdown_menu.rs`
-- `input_group.rs`
 - `menubar.rs`
 - `tabs.rs`
 
@@ -153,22 +154,17 @@ Rule:
 
 ### 5. Narrow specialized surfaces that should reopen only with evidence
 
-These are still public and currently allowed, but they should not be treated as proof that more raw
-`Model<_>` surface is desirable.
+This bucket is now smaller than when the note was first written:
 
-Audited files:
+- `InputGroup::new(...)`
+- `SidebarInput::new(...)`
+- `CalendarHijri::new(...)`
+- `Rating::new(...)`
 
-- `calendar_hijri.rs`
-- `extras/rating.rs`
-- `input_group.rs`
-- `sidebar.rs`
+have already moved onto narrow bridge traits and are no longer part of the raw-model allowlist.
 
-Why these stay for now:
-
-- they already own specialized state semantics,
-- they are not currently part of the compact starter/golden-path story,
-- there is not yet enough repeated first-party pressure to justify a new bridge trait or a deeper
-  redesign.
+What remains in this class should still not be treated as proof that more raw `Model<_>` surface is
+desirable.
 
 Rule:
 

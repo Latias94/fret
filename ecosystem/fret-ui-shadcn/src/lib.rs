@@ -132,6 +132,7 @@ mod shortcut_hint;
 mod sidebar;
 mod skeleton;
 mod slider;
+mod solar_hijri_month_model;
 mod sonner;
 mod spinner;
 #[cfg(any(feature = "state-selector", feature = "state-query"))]
@@ -148,6 +149,7 @@ mod toggle;
 mod toggle_group;
 mod tooltip;
 mod typography;
+mod u8_value_model;
 
 #[cfg(feature = "app-integration")]
 pub mod advanced;
@@ -258,6 +260,7 @@ pub mod raw {
     raw_module!(sidebar);
     raw_module!(skeleton);
     raw_module!(slider);
+    raw_module!(solar_hijri_month_model);
     raw_module!(sonner);
     raw_module!(spinner);
     #[cfg(any(feature = "state-selector", feature = "state-query"))]
@@ -272,6 +275,7 @@ pub mod raw {
     raw_module!(toggle_group);
     raw_module!(tooltip);
     raw_module!(typography);
+    raw_module!(u8_value_model);
     pub use ::fret_ui_kit::declarative::icon;
     pub use ::fret_ui_kit::declarative::style as decl_style;
     pub use ::fret_ui_kit::ui;
@@ -508,6 +512,7 @@ pub mod facade {
     };
     pub use crate::skeleton::Skeleton;
     pub use crate::slider::{Slider, slider};
+    pub use crate::solar_hijri_month_model::IntoSolarHijriMonthModel;
     pub use crate::sonner::{
         Sonner, ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastMessageOptions,
         ToastOffset, ToastPosition, ToastPromise, ToastPromiseAsyncOptions, ToastPromiseHandle,
@@ -544,7 +549,9 @@ pub mod facade {
         Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipProvider, TooltipSide,
         TooltipTrigger,
     };
+    pub use crate::u8_value_model::IntoU8ValueModel;
     pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
+    pub use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
     pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 
     /// Default high-performance data grid surface (canvas-rendered).

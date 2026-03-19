@@ -250,8 +250,10 @@ fn curated_facade_keeps_app_theme_and_raw_seams_explicit() {
     assert!(
         README.contains("`advanced::*` is an explicit implementation/debug/source-alignment lane")
     );
-    assert!(README
-        .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);"));
+    assert!(
+        README
+            .contains("let _button = shadcn::Button::new(\"Save\").leading_icon(ids::ui::SEARCH);")
+    );
     assert!(!README.contains("recipes/components stay under `fret_ui_shadcn::*`"));
     assert!(README.contains("`fret_ui_shadcn::raw::*` access stays the escape hatch"));
     assert!(README.contains("root component-family modules are crate-private"));
@@ -944,8 +946,8 @@ fn internal_menu_slot_wrappers_accept_unified_component_conversion_trait() {
 }
 
 #[test]
-fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_raw_seam_is_required(
-) {
+fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_raw_seam_is_required()
+ {
     for (label, source, required_markers, forbidden_markers) in [
         (
             "accordion.rs",
@@ -1017,9 +1019,11 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "input_group.rs",
             INPUT_GROUP_RS,
             &[
+                "impl InputGroup { pub fn new(model: impl IntoTextValueModel) -> Self {",
                 "pub fn input_group<H: UiHost>(group: InputGroup) -> impl IntoUiElement<H> + use<H> {",
             ][..],
             &[
+                "pub fn new(model: Model<String>) -> Self {",
                 "pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement",
             ][..],
         ),
@@ -1080,6 +1084,15 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             &[
                 "pub fn new(month: Model<CalendarMonth>, selected: Model<DateRangeSelection>) -> Self {",
             ][..],
+        ),
+        (
+            "calendar_hijri.rs",
+            CALENDAR_HIJRI_RS,
+            &[
+                "pub fn new(month: impl IntoSolarHijriMonthModel, selected: impl IntoOptionalDateModel) -> Self {",
+            ][..],
+            &["pub fn new(month: Model<SolarHijriMonth>, selected: Model<Option<Date>>) -> Self {"]
+                [..],
         ),
         (
             "navigation_menu.rs",
@@ -1338,6 +1351,18 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = TabsItem>,",
                 "pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = TabsItem>,",
             ][..],
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            &["impl SidebarInput { pub fn new(model: impl IntoTextValueModel) -> Self {"][..],
+            &["pub fn new(model: Model<String>) -> Self {"][..],
+        ),
+        (
+            "extras/rating.rs",
+            EXTRAS_RATING_RS,
+            &["impl Rating { pub fn new(model: impl IntoU8ValueModel) -> Self {"][..],
+            &["pub fn new(model: Model<u8>) -> Self {"][..],
         ),
     ] {
         let normalized = normalize_ws(source);
@@ -1897,9 +1922,8 @@ fn kbd_icon_stays_an_explicit_raw_helper_for_kbd_child_lists() {
     );
 
     let normalized = normalize_ws(KBD_RS);
-    let required_markers = [
-        "pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement",
-    ];
+    let required_markers =
+        ["pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement"];
     let forbidden_markers = [
         "pub fn kbd_icon<H: UiHost>(icon: IconId) -> impl IntoUiElement<H>",
         "pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> impl IntoUiElement<H>",
@@ -1987,11 +2011,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
                 "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<Option<Date>>>, default_selected: Option<Date>, ) -> Self",
                 "pub fn close_on_select(mut self, open: Model<bool>) -> Self",
             ][..],
-        ),
-        (
-            "calendar_hijri.rs",
-            CALENDAR_HIJRI_RS,
-            &["pub fn new(month: Model<SolarHijriMonth>, selected: Model<Option<Date>>) -> Self"][..],
         ),
         (
             "calendar_multiple.rs",
@@ -2131,11 +2150,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             &["pub fn visible_model(mut self, visible: Model<bool>) -> Self"][..],
         ),
         (
-            "extras/rating.rs",
-            EXTRAS_RATING_RS,
-            &["pub fn new(model: Model<u8>) -> Self"][..],
-        ),
-        (
             "hover_card.rs",
             HOVER_CARD_RS,
             &[
@@ -2147,10 +2161,7 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
         (
             "input_group.rs",
             INPUT_GROUP_RS,
-            &[
-                "pub fn new(model: Model<String>) -> Self",
-                "pub fn toggle_model(mut self, model: Model<bool>) -> Self",
-            ][..],
+            &["pub fn toggle_model(mut self, model: Model<bool>) -> Self"][..],
         ),
         (
             "media_image.rs",
@@ -2190,7 +2201,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             &[
                 "pub fn open(mut self, open: Option<Model<bool>>) -> Self",
                 "pub fn open_mobile(mut self, open_mobile: Option<Model<bool>>) -> Self",
-                "pub fn new(model: Model<String>) -> Self",
             ][..],
         ),
         (
@@ -2208,8 +2218,7 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
             .map(|signature| normalize_ws(signature))
             .collect::<Vec<_>>();
         assert_eq!(
-            actual,
-            expected,
+            actual, expected,
             "{label} changed its selected public `Model<_>` seam budget; update the allowlist audit note and source-policy gate together"
         );
     }

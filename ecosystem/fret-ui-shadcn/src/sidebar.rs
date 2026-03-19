@@ -41,6 +41,7 @@ use crate::overlay_motion;
 use crate::separator::SeparatorOrientation;
 use crate::sheet::{Sheet, SheetContent, SheetSide};
 use crate::skeleton::Skeleton;
+use crate::text_value_model::IntoTextValueModel;
 use crate::tooltip::{Tooltip, TooltipAlign, TooltipContent, TooltipProvider, TooltipSide};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -1649,9 +1650,9 @@ pub struct SidebarInput {
 }
 
 impl SidebarInput {
-    pub fn new(model: Model<String>) -> Self {
+    pub fn new(model: impl IntoTextValueModel) -> Self {
         Self {
-            model,
+            model: model.into_text_value_model(),
             a11y_label: None,
             placeholder: None,
             disabled: false,

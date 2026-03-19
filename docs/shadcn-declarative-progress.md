@@ -308,6 +308,10 @@ This tracker follows the repo-wide authoring reset and the focused conversion-su
   of specialized source-aligned seams. It is not a license to reintroduce raw `Model<_>`
   constructors on compact/default shadcn paths that already have typed wrappers or narrow bridge
   traits.
+- Follow-up shrink now also covers several previously-audited specialized constructors:
+  `InputGroup::new(...)`, `SidebarInput::new(...)`, `CalendarHijri::new(...)`, and
+  `extras::Rating::new(...)` now use narrow bridge traits instead of forcing raw `Model<_>`
+  handles on the public constructor surface.
 
 This matters beyond local helper signatures: when a docs/page scaffold turns a still-typed preview
 into `AnyElement` too early, the exemplar surface starts teaching the wrong authoring pattern even
