@@ -16,10 +16,7 @@ impl TextSystem {
         face_usage: &mut HashMap<FontFaceKey, (u32, u32)>,
         lines: &mut Vec<TextLine>,
     ) {
-        let PreparedLine {
-            layout,
-            glyphs: prepared_glyphs,
-        } = prepared_line;
+        let (layout, prepared_glyphs) = prepared_line.into_parts();
         lines.push(layout);
         self.materialize_prepared_line_glyphs(
             prepared_glyphs,

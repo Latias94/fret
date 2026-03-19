@@ -284,7 +284,11 @@ mod tests {
             scale,
             snap_vertical,
         );
-        let lines: Vec<_> = prepared.lines.iter().map(|l| l.layout.clone()).collect();
+        let lines: Vec<_> = prepared
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
+            .collect();
 
         let ppem = style.size.0 * scale;
         let metrics_px = decoration_metrics_px_for_font_bytes(
@@ -347,7 +351,7 @@ mod tests {
                 "expected decoration to stay within the text box (top)"
             );
             assert!(
-                d.rect.origin.y.0 + d.rect.size.height.0 <= prepared.metrics.size.height.0 + 1e-3,
+                d.rect.origin.y.0 + d.rect.size.height.0 <= prepared.metrics().size.height.0 + 1e-3,
                 "expected decoration to stay within the text box (bottom)"
             );
         }

@@ -643,9 +643,9 @@ mod tests {
         constraints: TextConstraints,
     ) -> Vec<crate::line_layout::TextLineLayout> {
         prepare_layout_for_test(shaper, text, style, constraints)
-            .lines
-            .into_iter()
-            .map(|l| l.layout)
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
             .collect()
     }
 
@@ -681,9 +681,9 @@ mod tests {
         constraints: TextConstraints,
     ) -> Vec<crate::line_layout::TextLineLayout> {
         prepare_layout_for_attributed_test(shaper, text, base, spans, constraints)
-            .lines
-            .into_iter()
-            .map(|l| l.layout)
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
             .collect()
     }
 
@@ -823,22 +823,22 @@ mod tests {
         let baseline_for = |shaper: &mut ParleyShaper, text: &str| -> (Px, Px) {
             let prepared = prepare_layout_for_test(shaper, text, &style, constraints);
             assert_eq!(
-                prepared.metrics.size.height,
+                prepared.metrics().size.height,
                 Px(18.0),
                 "expected fixed line box height to remain stable for text={text:?}"
             );
             assert!(
-                !prepared.lines.is_empty(),
+                !prepared.lines().is_empty(),
                 "expected at least one line for text={text:?}"
             );
             assert_eq!(
-                prepared.lines[0].layout.height,
+                prepared.lines()[0].layout().height,
                 Px(18.0),
                 "expected first line height to match fixed line box for text={text:?}"
             );
             (
-                prepared.metrics.baseline,
-                prepared.lines[0].layout.y_baseline,
+                prepared.metrics().baseline,
+                prepared.lines()[0].layout().y_baseline,
             )
         };
 
@@ -1112,18 +1112,22 @@ mod tests {
 
         let prepared = prepare_layout_for_test(&mut shaper, "", &style, constraints);
         assert!(
-            prepared.metrics.size.height.0 > 0.1,
+            prepared.metrics().size.height.0 > 0.1,
             "expected empty string to have non-zero metrics height, got {:?}",
-            prepared.metrics
+            prepared.metrics()
         );
         assert!(
-            prepared.metrics.baseline.0 >= 0.0
-                && prepared.metrics.baseline.0 <= prepared.metrics.size.height.0 + 0.01,
+            prepared.metrics().baseline.0 >= 0.0
+                && prepared.metrics().baseline.0 <= prepared.metrics().size.height.0 + 0.01,
             "expected empty string baseline to be within the metrics box, got {:?}",
-            prepared.metrics
+            prepared.metrics()
         );
 
-        let lines: Vec<_> = prepared.lines.into_iter().map(|l| l.layout).collect();
+        let lines: Vec<_> = prepared
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
+            .collect();
         assert!(!lines.is_empty(), "expected at least one line layout");
         assert!(
             lines[0].height.0 > 0.1,

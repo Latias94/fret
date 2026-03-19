@@ -11,17 +11,83 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct PreparedLine {
-    pub layout: TextLineLayout,
-    pub glyphs: Vec<ParleyGlyph>,
+    layout: TextLineLayout,
+    glyphs: Vec<ParleyGlyph>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PreparedLayout {
-    pub kept_end: usize,
-    pub metrics: TextMetrics,
-    pub lines: Vec<PreparedLine>,
-    pub first_line_caret_stops: Vec<(usize, Px)>,
-    pub missing_glyphs: u32,
+    kept_end: usize,
+    metrics: TextMetrics,
+    lines: Vec<PreparedLine>,
+    first_line_caret_stops: Vec<(usize, Px)>,
+    missing_glyphs: u32,
+}
+
+impl PreparedLine {
+    fn new(layout: TextLineLayout, glyphs: Vec<ParleyGlyph>) -> Self {
+        Self { layout, glyphs }
+    }
+
+    pub fn layout(&self) -> &TextLineLayout {
+        &self.layout
+    }
+
+    pub fn glyphs(&self) -> &[ParleyGlyph] {
+        &self.glyphs
+    }
+
+    pub fn into_parts(self) -> (TextLineLayout, Vec<ParleyGlyph>) {
+        (self.layout, self.glyphs)
+    }
+}
+
+impl PreparedLayout {
+    fn new(
+        kept_end: usize,
+        metrics: TextMetrics,
+        lines: Vec<PreparedLine>,
+        first_line_caret_stops: Vec<(usize, Px)>,
+        missing_glyphs: u32,
+    ) -> Self {
+        Self {
+            kept_end,
+            metrics,
+            lines,
+            first_line_caret_stops,
+            missing_glyphs,
+        }
+    }
+
+    pub fn kept_end(&self) -> usize {
+        self.kept_end
+    }
+
+    pub fn metrics(&self) -> TextMetrics {
+        self.metrics
+    }
+
+    pub fn lines(&self) -> &[PreparedLine] {
+        &self.lines
+    }
+
+    pub fn first_line_caret_stops(&self) -> &[(usize, Px)] {
+        &self.first_line_caret_stops
+    }
+
+    pub fn missing_glyphs(&self) -> u32 {
+        self.missing_glyphs
+    }
+
+    pub fn into_parts(self) -> (usize, TextMetrics, Vec<PreparedLine>, Vec<(usize, Px)>, u32) {
+        (
+            self.kept_end,
+            self.metrics,
+            self.lines,
+            self.first_line_caret_stops,
+            self.missing_glyphs,
+        )
+    }
 }
 
 fn align_offset_px_for_line(
@@ -194,10 +260,7 @@ pub fn prepare_layout_from_wrapped(
             clusters,
         );
 
-        out_lines.push(PreparedLine {
-            layout,
-            glyphs: line.glyphs,
-        });
+        out_lines.push(PreparedLine::new(layout, line.glyphs));
 
         line_top_px += line_height_px;
     }
@@ -206,8 +269,8 @@ pub fn prepare_layout_from_wrapped(
     if out_lines.is_empty() {
         let caret_stops = vec![(0, Px(0.0))];
         first_line_caret_stops = caret_stops.clone();
-        out_lines.push(PreparedLine {
-            layout: TextLineLayout::new(
+        out_lines.push(PreparedLine::new(
+            TextLineLayout::new(
                 0,
                 0,
                 Px(0.0),
@@ -221,15 +284,15 @@ pub fn prepare_layout_from_wrapped(
                 caret_stops,
                 Arc::from([]),
             ),
-            glyphs: Vec::new(),
-        });
+            Vec::new(),
+        ));
     }
 
-    PreparedLayout {
+    PreparedLayout::new(
         kept_end,
         metrics,
-        lines: out_lines,
+        out_lines,
         first_line_caret_stops,
         missing_glyphs,
-    }
+    )
 }
