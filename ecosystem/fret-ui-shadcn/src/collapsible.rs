@@ -21,6 +21,7 @@ use fret_ui_kit::{
     UiSupportsLayout,
 };
 
+use crate::bool_model::IntoBoolModel;
 use crate::overlay_motion;
 
 fn apply_disabled_to_trigger(mut trigger: AnyElement, disabled: bool) -> AnyElement {
@@ -71,7 +72,8 @@ impl std::fmt::Debug for Collapsible {
 }
 
 impl Collapsible {
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
+        let open = open.into_bool_model();
         Self {
             open: Some(open),
             default_open: false,

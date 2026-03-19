@@ -27,6 +27,7 @@ use fret_ui_kit::{
     OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
+use crate::bool_model::IntoBoolModel;
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 use fret_ui_kit::typography::scope_description_text;
@@ -315,7 +316,8 @@ impl std::fmt::Debug for Dialog {
 }
 
 impl Dialog {
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
+        let open = open.into_bool_model();
         Self {
             open,
             overlay_closable: true,

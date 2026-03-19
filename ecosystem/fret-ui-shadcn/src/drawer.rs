@@ -43,6 +43,7 @@ use fret_ui_kit::{
     UiSupportsChrome, UiSupportsLayout, ui,
 };
 
+use crate::bool_model::IntoBoolModel;
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnSnapPointChange = Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>;
 
@@ -1011,7 +1012,8 @@ impl std::fmt::Debug for Drawer {
 }
 
 impl Drawer {
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
+        let open = open.into_bool_model();
         Self {
             open: open.clone(),
             side: DrawerSide::Bottom,

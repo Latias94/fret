@@ -564,6 +564,15 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn overlay_example_prefers_local_state_bool_root_bridges_over_clone_model() {
+        assert!(OVERLAY_EXAMPLE.contains("shadcn::Dialog::new(&dialog_open_state)"));
+        assert!(
+            !OVERLAY_EXAMPLE
+                .contains("let dialog_open_for_dialog = dialog_open_state.clone_model();")
+        );
+    }
+
+    #[test]
     fn shared_scaffold_prefers_app_surface_for_cookbook_page_shells() {
         assert!(SCAFFOLD.contains("use fret::app::prelude::*;"));
         assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space, Theme};"));

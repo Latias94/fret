@@ -1090,6 +1090,38 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "collapsible.rs",
+            COLLAPSIBLE_RS,
+            &[
+                "impl Collapsible { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open: Some(open),",
+            ][..],
+            &["impl Collapsible { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "dialog.rs",
+            DIALOG_RS,
+            &[
+                "impl Dialog { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open, overlay_closable: true,",
+            ][..],
+            &["impl Dialog { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "drawer.rs",
+            DRAWER_RS,
+            &[
+                "impl Drawer { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open: open.clone(),",
+            ][..],
+            &["impl Drawer { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "sheet.rs",
+            SHEET_RS,
+            &[
+                "impl Sheet { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open, side: SheetSide::default(),",
+            ][..],
+            &["impl Sheet { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
             "select.rs",
             SELECT_RS,
             &[

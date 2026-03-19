@@ -86,7 +86,6 @@ impl View for OverlayBasicsView {
         cx.actions()
             .availability::<act::BumpUnderlay>(|_host, _acx| CommandAvailability::Available);
 
-        let dialog_open_for_dialog = dialog_open_state.clone_model();
         let dialog_open_for_footer = dialog_open_state.clone_model();
         let dialog_open_for_close = dialog_open_state.clone_model();
 
@@ -108,7 +107,7 @@ impl View for OverlayBasicsView {
             .map(|seq| format_sequence(Platform::current(), &seq))
             .unwrap_or_else(|| "Unbound".to_string());
 
-        let dialog = shadcn::Dialog::new(dialog_open_for_dialog).into_element(
+        let dialog = shadcn::Dialog::new(&dialog_open_state).into_element(
             cx,
             move |cx| {
                 let content = ui::v_flex(|cx| {
