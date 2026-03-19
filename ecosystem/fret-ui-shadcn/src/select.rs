@@ -1,3 +1,5 @@
+use crate::bool_model::IntoBoolModel;
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
 use crate::test_id::{attach_test_id, attach_test_id_suffix, test_id_slug};
@@ -1323,10 +1325,10 @@ pub struct Select {
 }
 
 impl Select {
-    pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {
         Self {
-            model,
-            open,
+            model: model.into_optional_text_value_model(),
+            open: open.into_bool_model(),
             on_value_change: None,
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),

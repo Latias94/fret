@@ -155,17 +155,15 @@ impl EmojiConformanceDriver {
 
                 let controls = ui::h_flex(|cx| {
                     [
-                        shadcn::Select::new(
-                            emoji_font_override.clone_model(),
-                            emoji_font_override_open.clone_model(),
-                        )
-                        .value(
-                            shadcn::SelectValue::new().placeholder("Force emoji font (optional)"),
-                        )
-                        .items(items)
-                        .ui()
-                        .w_px(Px(280.0))
-                        .into_element(cx),
+                        shadcn::Select::new(&emoji_font_override, &emoji_font_override_open)
+                            .value(
+                                shadcn::SelectValue::new()
+                                    .placeholder("Force emoji font (optional)"),
+                            )
+                            .items(items)
+                            .ui()
+                            .w_px(Px(280.0))
+                            .into_element(cx),
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Outline)
                             .on_click(CommandId::new(CMD_EMOJI_FONT_RESET))

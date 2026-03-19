@@ -905,6 +905,27 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn select_examples_prefer_local_state_bridges_over_clone_model() {
+        assert!(
+            ASYNC_PLAYGROUND_DEMO.contains(
+                "shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)"
+            )
+        );
+        assert!(!ASYNC_PLAYGROUND_DEMO.contains("config.cancel_mode.open.clone_model()"));
+
+        assert!(FORM_DEMO.contains("shadcn::Select::new(&role, &role_open)"));
+        assert!(
+            !FORM_DEMO.contains("shadcn::Select::new(role.clone_model(), role_open.clone_model())")
+        );
+
+        assert!(
+            EMOJI_CONFORMANCE_DEMO
+                .contains("shadcn::Select::new(&emoji_font_override, &emoji_font_override_open)")
+        );
+        assert!(!EMOJI_CONFORMANCE_DEMO.contains("emoji_font_override_open.clone_model()"));
+    }
+
+    #[test]
     fn manual_components_gallery_uses_app_ui_render_root_bridge() {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             COMPONENTS_GALLERY_DEMO,
@@ -1889,6 +1910,7 @@ mod authoring_surface_policy_tests {
                 "shadcn::Tabs::new(&locals.tabs)",
                 "shadcn::Switch::new(&config.keep_prev)",
                 "shadcn::Switch::new(&config.fail_mode)",
+                "shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)",
                 "shadcn::Input::new(&locals.namespace_input)",
                 "shadcn::Input::new(&locals.search_input)",
                 "shadcn::Input::new(&locals.stock_symbol)",
@@ -1912,6 +1934,7 @@ mod authoring_surface_policy_tests {
                 "shadcn::Tabs::new(locals.tabs.clone_model())",
                 "shadcn::Switch::new(config.keep_prev.clone_model())",
                 "shadcn::Switch::new(config.fail_mode.clone_model())",
+                "config.cancel_mode.open.clone_model()",
             ],
         );
 

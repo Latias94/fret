@@ -796,17 +796,14 @@ fn policy_editor(
         .a11y_label("Force failures")
         .into_element(cx);
 
-    let cancel_mode = shadcn::Select::new(
-        config.cancel_mode.value.clone_model(),
-        config.cancel_mode.open.clone_model(),
-    )
-    .a11y_label("Cancel mode")
-    .value(shadcn::SelectValue::new().placeholder("Cancel mode"))
-    .items([
-        shadcn::SelectItem::new("cancel", "Cancel inflight"),
-        shadcn::SelectItem::new("keep", "Keep inflight"),
-    ])
-    .into_element(cx);
+    let cancel_mode = shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)
+        .a11y_label("Cancel mode")
+        .value(shadcn::SelectValue::new().placeholder("Cancel mode"))
+        .items([
+            shadcn::SelectItem::new("cancel", "Cancel inflight"),
+            shadcn::SelectItem::new("keep", "Keep inflight"),
+        ])
+        .into_element(cx);
 
     ui::v_flex(|cx| {
         [

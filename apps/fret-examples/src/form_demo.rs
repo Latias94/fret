@@ -306,7 +306,7 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                         form_state.clone_model(),
                         "role",
                         vec![
-                            shadcn::Select::new(role.clone_model(), role_open.clone_model())
+                            shadcn::Select::new(&role, &role_open)
                                 .a11y_label("Role")
                                 .value(shadcn::SelectValue::new().placeholder("Pick a role"))
                                 .items([

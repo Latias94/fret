@@ -30,6 +30,7 @@ const KBD_RS: &str = include_str!("kbd.rs");
 const MENUBAR_RS: &str = include_str!("menubar.rs");
 const NAVIGATION_MENU_RS: &str = include_str!("navigation_menu.rs");
 const NATIVE_SELECT_RS: &str = include_str!("native_select.rs");
+const SELECT_RS: &str = include_str!("select.rs");
 const PAGINATION_RS: &str = include_str!("pagination.rs");
 const POPOVER_RS: &str = include_str!("popover.rs");
 const SEPARATOR_RS: &str = include_str!("separator.rs");
@@ -1019,11 +1020,20 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "native_select.rs",
             NATIVE_SELECT_RS,
             &[
-                "pub fn native_select(model: Model<Option<Arc<str>>>, open: Model<bool>) -> NativeSelect {",
+                "pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {",
+                "pub fn native_select( model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel, ) -> NativeSelect {",
             ][..],
             &[
                 "pub fn native_select<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, open: Model<bool>, placeholder: Arc<str>, options: &[NativeSelectOption], optgroups: &[NativeSelectOptGroup], control_id: Option<ControlId>, test_id_prefix: Option<Arc<str>>, trigger_test_id: Option<Arc<str>>, a11y_label: Option<Arc<str>>, aria_invalid: bool, disabled: bool, size: NativeSelectSize, chrome: ChromeRefinement, layout: LayoutRefinement, ) -> AnyElement",
             ][..],
+        ),
+        (
+            "select.rs",
+            SELECT_RS,
+            &[
+                "pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {",
+            ][..],
+            &[][..],
         ),
         (
             "kbd.rs",
