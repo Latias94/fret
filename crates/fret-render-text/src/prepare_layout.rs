@@ -122,14 +122,15 @@ fn clusters_for_line(
 
     let mut out: Vec<TextLineCluster> = Vec::with_capacity(line_clusters.len());
     for c in line_clusters {
-        let start = (line_range.start + c.text_range.start).min(kept_end);
-        let end = (line_range.start + c.text_range.end).min(kept_end);
+        let text_range = c.text_range();
+        let start = (line_range.start + text_range.start).min(kept_end);
+        let end = (line_range.start + text_range.end).min(kept_end);
         if start >= end {
             continue;
         }
 
-        let x0 = ((c.x0 + line_align_offset_px) / scale).max(0.0);
-        let x1 = ((c.x1 + line_align_offset_px) / scale).max(0.0);
+        let x0 = ((c.x0() + line_align_offset_px) / scale).max(0.0);
+        let x1 = ((c.x1() + line_align_offset_px) / scale).max(0.0);
         let x0 = if x0.is_finite() { Px(x0) } else { Px(0.0) };
         let x1 = if x1.is_finite() { Px(x1) } else { Px(0.0) };
 
@@ -137,7 +138,7 @@ fn clusters_for_line(
             text_range: start..end,
             x0,
             x1,
-            is_rtl: c.is_rtl,
+            is_rtl: c.is_rtl(),
         });
     }
 

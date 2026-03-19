@@ -388,12 +388,12 @@ pub(crate) fn wrap_none_ellipsis(
     }));
 
     let mut clusters: Vec<ShapedCluster> = kept.clusters;
-    clusters.push(ShapedCluster {
-        text_range: empty_range_at(cut_end),
-        x0: ellipsis_start_x,
-        x1: ellipsis_start_x + ellipsis_w,
-        is_rtl: false,
-    });
+    clusters.push(ShapedCluster::new(
+        empty_range_at(cut_end),
+        ellipsis_start_x,
+        ellipsis_start_x + ellipsis_w,
+        false,
+    ));
 
     WrappedSingleLineInternal {
         kept_end: cut_end,

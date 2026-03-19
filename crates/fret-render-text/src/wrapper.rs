@@ -458,7 +458,7 @@ mod tests {
             wrapped.lines[0]
                 .clusters
                 .iter()
-                .any(|c| c.text_range == (wrapped.kept_end..wrapped.kept_end)),
+                .any(|c| c.text_range() == (wrapped.kept_end..wrapped.kept_end)),
             "expected a synthetic zero-length cluster for ellipsis mapping"
         );
 

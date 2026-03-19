@@ -200,10 +200,37 @@ impl FontSynthesis {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapedCluster {
-    pub text_range: Range<usize>,
-    pub x0: f32,
-    pub x1: f32,
-    pub is_rtl: bool,
+    text_range: Range<usize>,
+    x0: f32,
+    x1: f32,
+    is_rtl: bool,
+}
+
+impl ShapedCluster {
+    pub fn new(text_range: Range<usize>, x0: f32, x1: f32, is_rtl: bool) -> Self {
+        Self {
+            text_range,
+            x0,
+            x1,
+            is_rtl,
+        }
+    }
+
+    pub fn text_range(&self) -> Range<usize> {
+        self.text_range.clone()
+    }
+
+    pub fn x0(&self) -> f32 {
+        self.x0
+    }
+
+    pub fn x1(&self) -> f32 {
+        self.x1
+    }
+
+    pub fn is_rtl(&self) -> bool {
+        self.is_rtl
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -550,12 +577,12 @@ impl ParleyShaper {
                 }
 
                 run_x = cluster_x0 + cluster.advance();
-                clusters.push(ShapedCluster {
-                    text_range: cluster_range,
-                    x0: cluster_x0,
-                    x1: run_x,
-                    is_rtl: cluster.is_rtl(),
-                });
+                clusters.push(ShapedCluster::new(
+                    cluster_range,
+                    cluster_x0,
+                    run_x,
+                    cluster.is_rtl(),
+                ));
             }
         }
 
@@ -781,12 +808,12 @@ impl ParleyShaper {
                 let cluster_range = cluster.text_range();
                 let cluster_x0 = run_x;
                 run_x = cluster_x0 + cluster.advance();
-                clusters.push(ShapedCluster {
-                    text_range: cluster_range,
-                    x0: cluster_x0,
-                    x1: run_x,
-                    is_rtl: cluster.is_rtl(),
-                });
+                clusters.push(ShapedCluster::new(
+                    cluster_range,
+                    cluster_x0,
+                    run_x,
+                    cluster.is_rtl(),
+                ));
             }
         }
 
@@ -992,12 +1019,12 @@ impl ParleyShaper {
                     }
 
                     run_x = cluster_x0 + cluster.advance();
-                    clusters.push(ShapedCluster {
-                        text_range: adjusted_range,
-                        x0: cluster_x0,
-                        x1: run_x,
-                        is_rtl: cluster.is_rtl(),
-                    });
+                    clusters.push(ShapedCluster::new(
+                        adjusted_range,
+                        cluster_x0,
+                        run_x,
+                        cluster.is_rtl(),
+                    ));
                 }
             }
 

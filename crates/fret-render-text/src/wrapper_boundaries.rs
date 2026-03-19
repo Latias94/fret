@@ -10,20 +10,20 @@ pub(crate) fn wrap_grapheme_cut_end(
 ) -> usize {
     let mut cut_end = 0usize;
     for c in clusters {
-        if c.text_range.start >= text.len() {
+        if c.text_range().start >= text.len() {
             continue;
         }
-        if c.x1 > max_width_px + 0.5 {
+        if c.x1() > max_width_px + 0.5 {
             break;
         }
-        cut_end = cut_end.max(c.text_range.end.min(text.len()));
+        cut_end = cut_end.max(c.text_range().end.min(text.len()));
     }
     cut_end
 }
 
 pub(crate) fn first_cluster_end(text: &str, clusters: &[ShapedCluster]) -> usize {
     for c in clusters {
-        let end = c.text_range.end.min(text.len());
+        let end = c.text_range().end.min(text.len());
         if end > 0 {
             return end;
         }
@@ -45,8 +45,8 @@ pub(crate) fn cut_end_for_available(
 ) -> usize {
     let mut cut_end = 0usize;
     for c in clusters {
-        if c.x1 <= available + 0.5 {
-            cut_end = cut_end.max(c.text_range.end.min(text.len()));
+        if c.x1() <= available + 0.5 {
+            cut_end = cut_end.max(c.text_range().end.min(text.len()));
         }
     }
     cut_end
@@ -123,29 +123,30 @@ pub(crate) fn hit_test_x(
         return (0, CaretAffinity::Downstream);
     }
 
-    if x.is_nan() || x <= clusters[0].x0 {
+    if x.is_nan() || x <= clusters[0].x0() {
         return (0, CaretAffinity::Downstream);
     }
 
     for c in clusters {
-        if x > c.x1 {
+        if x > c.x1() {
             continue;
         }
-        if c.text_range.start == c.text_range.end {
-            return (c.text_range.start, CaretAffinity::Downstream);
+        let text_range = c.text_range();
+        if text_range.start == text_range.end {
+            return (text_range.start, CaretAffinity::Downstream);
         }
-        let mid = c.x0 + (c.x1 - c.x0) * 0.5;
+        let mid = c.x0() + (c.x1() - c.x0()) * 0.5;
         let left_half = x <= mid;
-        if c.is_rtl {
+        if c.is_rtl() {
             if left_half {
-                return (c.text_range.end, CaretAffinity::Upstream);
+                return (text_range.end, CaretAffinity::Upstream);
             }
-            return (c.text_range.start, CaretAffinity::Downstream);
+            return (text_range.start, CaretAffinity::Downstream);
         }
         if left_half {
-            return (c.text_range.start, CaretAffinity::Downstream);
+            return (text_range.start, CaretAffinity::Downstream);
         }
-        return (c.text_range.end, CaretAffinity::Upstream);
+        return (text_range.end, CaretAffinity::Upstream);
     }
 
     (text_len, CaretAffinity::Downstream)
