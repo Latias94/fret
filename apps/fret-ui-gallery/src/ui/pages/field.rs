@@ -147,7 +147,9 @@ shadcn::field_set(|cx| {
         .description("Horizontal Field orientation keeps checkbox + label aligned.")
         .code_rust_from_file_region(snippets::checkbox::SOURCE, "example");
     let radio = DocSection::build(cx, "Radio", radio)
-        .description("RadioGroup nested under Field for label copy.")
+        .description(
+            "RadioGroup keeps its compact recipe defaults while `RadioGroupItem::children(...)` and per-item `control_id(...)` hooks let callers mirror upstream-style separate field labels.",
+        )
         .code_rust_from_file_region(snippets::radio::SOURCE, "example");
     let switch = DocSection::build(cx, "Switch", switch)
         .description("Switch composed with title + description.")

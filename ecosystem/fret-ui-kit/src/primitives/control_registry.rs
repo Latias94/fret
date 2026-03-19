@@ -48,6 +48,7 @@ pub enum ControlAction {
     ToggleBool(Model<bool>),
     ToggleOptionalBool(Model<Option<bool>>),
     ToggleCheckedState(Model<CheckedState>),
+    SetOptionalArcStr(Model<Option<Arc<str>>>, Arc<str>),
     DispatchCommand {
         command: CommandId,
         payload: Option<ControlPayloadFactory>,
@@ -67,6 +68,11 @@ impl fmt::Debug for ControlAction {
             ControlAction::ToggleCheckedState(model) => {
                 f.debug_tuple("ToggleCheckedState").field(model).finish()
             }
+            ControlAction::SetOptionalArcStr(model, value) => f
+                .debug_tuple("SetOptionalArcStr")
+                .field(model)
+                .field(value)
+                .finish(),
             ControlAction::DispatchCommand { command, payload } => f
                 .debug_struct("DispatchCommand")
                 .field("command", command)
@@ -98,6 +104,12 @@ impl ControlAction {
                 let _ = host
                     .models_mut()
                     .update(model, |v: &mut CheckedState| *v = v.toggle());
+            }
+            ControlAction::SetOptionalArcStr(model, value) => {
+                let value = value.clone();
+                let _ = host
+                    .models_mut()
+                    .update(model, |v: &mut Option<Arc<str>>| *v = Some(value.clone()));
             }
             ControlAction::DispatchCommand { command, payload } => {
                 host.record_pending_command_dispatch_source(cx, command, ActivateReason::Pointer);
