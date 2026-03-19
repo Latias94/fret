@@ -1209,15 +1209,15 @@ mod tests {
         let first = &wrapped.lines[0];
         for (i, line) in wrapped.lines.iter().enumerate() {
             assert!(
-                (line.line_height - 18.0).abs() < 0.01,
+                (line.line_height() - 18.0).abs() < 0.01,
                 "expected fixed strut line_height=18px; line[{i}] line_height={}",
-                line.line_height
+                line.line_height()
             );
             assert!(
-                (line.baseline - first.baseline).abs() < 0.01,
+                (line.baseline() - first.baseline()).abs() < 0.01,
                 "expected strut baseline to be stable across fallback glyphs; line[{i}] baseline={} first={}",
-                line.baseline,
-                first.baseline
+                line.baseline(),
+                first.baseline()
             );
         }
     }
@@ -1270,7 +1270,7 @@ mod tests {
         assert_eq!(full.lines.len(), measure.lines.len());
         for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
             assert!((a.width - b.width).abs() < 0.01);
-            assert!((a.line_height - b.line_height).abs() < 0.01);
+            assert!((a.line_height() - b.line_height()).abs() < 0.01);
         }
         assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));
     }
@@ -1309,7 +1309,7 @@ mod tests {
         assert_eq!(full.lines.len(), measure.lines.len());
         for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
             assert!((a.width - b.width).abs() < 0.01);
-            assert!((a.line_height - b.line_height).abs() < 0.01);
+            assert!((a.line_height() - b.line_height()).abs() < 0.01);
         }
         assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));
     }

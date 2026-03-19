@@ -156,13 +156,13 @@ pub fn prepare_layout_from_wrapped(
 
     let first_baseline_px = wrapped_lines
         .first()
-        .map(|l| l.baseline.max(0.0))
+        .map(|l| l.baseline().max(0.0))
         .unwrap_or(0.0);
     let first_baseline_px = if snap_vertical && let Some(first) = wrapped_lines.first() {
         let top_px = 0.0_f32;
-        let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+        let bottom_px = (top_px + first.line_height().max(0.0)).round().max(top_px);
         let height_px = (bottom_px - top_px).max(0.0);
-        (top_px + first.baseline.max(0.0))
+        (top_px + first.baseline().max(0.0))
             .round()
             .clamp(top_px, top_px + height_px)
     } else {
@@ -186,8 +186,8 @@ pub fn prepare_layout_from_wrapped(
             line_top_px = line_top_px.round();
         }
 
-        let line_height_px_raw = line.line_height.max(0.0);
-        let line_baseline_px_raw = line.baseline.max(0.0);
+        let line_height_px_raw = line.line_height().max(0.0);
+        let line_baseline_px_raw = line.baseline().max(0.0);
 
         let (line_height_px, baseline_pos_px) = if snap_vertical {
             let bottom_px = (line_top_px + line_height_px_raw).round().max(line_top_px);

@@ -240,8 +240,8 @@ pub struct ShapedLineLayout {
     pub descent: f32,
     pub ink_ascent: f32,
     pub ink_descent: f32,
-    pub baseline: f32,
-    pub line_height: f32,
+    baseline: f32,
+    line_height: f32,
     glyphs: Vec<ParleyGlyph>,
     clusters: Vec<ShapedCluster>,
 }
@@ -277,6 +277,14 @@ impl ShapedLineLayout {
 
     pub fn take_clusters(&mut self) -> Vec<ShapedCluster> {
         std::mem::take(&mut self.clusters)
+    }
+
+    pub fn baseline(&self) -> f32 {
+        self.baseline
+    }
+
+    pub fn line_height(&self) -> f32 {
+        self.line_height
     }
 
     pub fn glyphs(&self) -> &[ParleyGlyph] {

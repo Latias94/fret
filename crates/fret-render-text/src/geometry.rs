@@ -195,12 +195,12 @@ pub(crate) fn metrics_from_wrapped_lines(
 ) -> TextMetrics {
     let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
 
-    let mut first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+    let mut first_baseline_px = lines.first().map(|l| l.baseline().max(0.0)).unwrap_or(0.0);
     if snap_vertical && let Some(first) = lines.first() {
         let top_px = 0.0_f32;
-        let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+        let bottom_px = (top_px + first.line_height().max(0.0)).round().max(top_px);
         let height_px = (bottom_px - top_px).max(0.0);
-        first_baseline_px = (top_px + first.baseline.max(0.0))
+        first_baseline_px = (top_px + first.baseline().max(0.0))
             .round()
             .clamp(top_px, top_px + height_px);
     }
@@ -211,14 +211,14 @@ pub(crate) fn metrics_from_wrapped_lines(
         let mut top_px = 0.0_f32;
         for line in lines {
             max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
-            let bottom_px = (top_px + line.line_height.max(0.0)).round().max(top_px);
+            let bottom_px = (top_px + line.line_height().max(0.0)).round().max(top_px);
             top_px = bottom_px;
         }
         total_h_px = top_px;
     } else {
         for line in lines {
             max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
-            total_h_px += line.line_height.max(0.0);
+            total_h_px += line.line_height().max(0.0);
         }
     }
 
