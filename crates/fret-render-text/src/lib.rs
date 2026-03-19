@@ -23,27 +23,36 @@ mod wrapper_slices;
 pub use cache_keys::{
     TextBlobKey, TextMeasureKey, TextShapeKey, spans_paint_fingerprint, spans_shaping_fingerprint,
 };
-pub use cache_tuning::*;
-pub use decorations::*;
+pub use cache_tuning::{
+    measure_shaping_cache_entries, measure_shaping_cache_min_text_len_bytes,
+    released_blob_cache_entries,
+};
+pub use decorations::{
+    TextDecoration, TextDecorationKind, TextDecorationMetricsPx,
+    decoration_metrics_px_for_font_bytes, decorations_for_lines,
+};
 pub use fallback_policy::{CommonFallbackMode, TextFallbackPolicyV1, common_fallback_stack_suffix};
-pub use font_instance_key::*;
-pub use font_names::*;
+pub use font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
+pub use font_names::best_family_name_from_font_bytes;
 pub use font_stack::{GenericFamilyInjectionState, apply_font_families_inner};
-pub use font_trace::*;
+pub use font_trace::{FontTraceFamilyResolved, FontTraceState};
 pub use geometry::{
     TextLineCluster, TextLineDecorationGeometry, TextLineGeometry, caret_rect_from_lines,
     caret_stops_for_slice, caret_x_from_stops, hit_test_point_from_lines, hit_test_x_from_stops,
     selection_rects_from_lines, selection_rects_from_lines_clipped,
 };
-pub use line_layout::*;
+pub use line_layout::TextLineLayout;
 pub use measure::TextMeasureCaches;
 pub use parley_shaper::{
     FontSynthesis, GlyphFontData, ParleyGlyph, ParleyShaper, ParleyShaperFontDbDiagnosticsSnapshot,
     ShapedCluster, ShapedLineLayout, run_system_font_rescan,
 };
-pub use prepare_layout::*;
-pub use spans::*;
-pub use wrapper::*;
+pub use prepare_layout::{PreparedLayout, PreparedLine, prepare_layout_from_wrapped};
+pub use spans::{
+    ResolvedDecoration, ResolvedSpan, paint_span_for_text_range, resolve_spans_for_text,
+    sanitize_spans_for_text,
+};
+pub use wrapper::{WrappedLayout, wrap_with_constraints, wrap_with_constraints_measure_only};
 
 #[inline]
 pub fn effective_text_scale_factor(scale_factor: f32) -> f32 {
