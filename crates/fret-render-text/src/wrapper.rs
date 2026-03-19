@@ -65,7 +65,7 @@ impl WrappedLayout {
             return (0, CaretAffinity::Downstream);
         };
 
-        let (idx_local, affinity) = hit_test_x(&line.clusters, x, range.len());
+        let (idx_local, affinity) = hit_test_x(line.clusters(), x, range.len());
         let mut idx = range.start.saturating_add(idx_local);
         if idx > self.kept_end {
             idx = self.kept_end;
@@ -456,7 +456,7 @@ mod tests {
         assert!(wrapped.kept_end < text.len());
         assert!(
             wrapped.lines[0]
-                .clusters
+                .clusters()
                 .iter()
                 .any(|c| c.text_range() == (wrapped.kept_end..wrapped.kept_end)),
             "expected a synthetic zero-length cluster for ellipsis mapping"

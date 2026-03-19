@@ -210,7 +210,7 @@ pub fn prepare_layout_from_wrapped(
         let line_align_offset = Px(line_align_offset_px / scale);
 
         let clusters = clusters_for_line(
-            &line.clusters,
+            line.clusters(),
             range.clone(),
             kept_end,
             line_align_offset_px,
@@ -220,7 +220,7 @@ pub fn prepare_layout_from_wrapped(
         let mut caret_stops = caret_stops_for_slice(
             slice,
             range.start,
-            &line.clusters,
+            line.clusters(),
             line_visual_width_px.max(0.0),
             scale,
             kept_end,

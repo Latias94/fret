@@ -164,13 +164,13 @@ pub(crate) fn shaped_line_visual_x_bounds_px(
     line: &crate::parley_shaper::ShapedLineLayout,
 ) -> (f32, f32) {
     let fallback_max = line.width.max(0.0);
-    if line.clusters.is_empty() {
+    if line.clusters().is_empty() {
         return (0.0, fallback_max);
     }
 
     let mut min_x = f32::INFINITY;
     let mut max_x = f32::NEG_INFINITY;
-    for c in &line.clusters {
+    for c in line.clusters() {
         let a = c.x0();
         let b = c.x1();
         min_x = min_x.min(a.min(b));
@@ -2068,7 +2068,7 @@ mod tests {
         let line_layout = &wrapped.lines()[0];
         assert!(
             line_layout
-                .clusters
+                .clusters()
                 .iter()
                 .any(|c| c.text_range() == (kept_end..kept_end)),
             "expected a synthetic zero-length cluster at kept_end for ellipsis mapping"
@@ -2078,7 +2078,7 @@ mod tests {
         let caret_stops = super::caret_stops_for_slice(
             slice,
             0,
-            &line_layout.clusters,
+            line_layout.clusters(),
             line_layout.width,
             1.0,
             kept_end,
@@ -2095,7 +2095,7 @@ mod tests {
             Px(0.0),
             Px(0.0),
             caret_stops,
-            line_clusters_from_shaped(0, &line_layout.clusters),
+            line_clusters_from_shaped(0, line_layout.clusters()),
         );
 
         let x = Px((line_layout.width - 1.0).max(0.0));

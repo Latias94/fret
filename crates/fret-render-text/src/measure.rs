@@ -189,9 +189,10 @@ impl TextMeasureCaches {
                         hit.clusters.clone(),
                     )
                 } else {
-                    let line =
+                    let mut line =
                         shaper.shape_single_line_metrics(TextInputRef::plain(text, style), scale);
-                    let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+                    let clusters: Arc<[parley_shaper::ShapedCluster]> =
+                        Arc::from(line.take_clusters());
 
                     let existed = self
                         .measure_shaping_cache
@@ -238,12 +239,12 @@ impl TextMeasureCaches {
                     metrics_from_wrapped_lines(wrapped.lines(), scale)
                 }
             } else {
-                let line =
+                let mut line =
                     shaper.shape_single_line_metrics(TextInputRef::plain(text, style), scale);
                 let width_px = line.width;
                 let baseline_px = line.baseline;
                 let line_height_px = line.line_height;
-                let _clusters = line.clusters;
+                let _clusters = line.take_clusters();
 
                 if width_px <= max_width_px + 0.5 {
                     metrics_for_uniform_lines(
@@ -429,7 +430,7 @@ impl TextMeasureCaches {
                         hit.clusters.clone(),
                     )
                 } else {
-                    let line = shaper.shape_single_line_metrics(
+                    let mut line = shaper.shape_single_line_metrics(
                         TextInputRef::Attributed {
                             text: rich.text.as_ref(),
                             base: base_style,
@@ -437,7 +438,8 @@ impl TextMeasureCaches {
                         },
                         scale,
                     );
-                    let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+                    let clusters: Arc<[parley_shaper::ShapedCluster]> =
+                        Arc::from(line.take_clusters());
 
                     let existed = self
                         .measure_shaping_cache
@@ -488,7 +490,7 @@ impl TextMeasureCaches {
                     metrics_from_wrapped_lines(wrapped.lines(), scale)
                 }
             } else {
-                let line = shaper.shape_single_line_metrics(
+                let mut line = shaper.shape_single_line_metrics(
                     TextInputRef::Attributed {
                         text,
                         base: base_style,
@@ -499,7 +501,7 @@ impl TextMeasureCaches {
                 let width_px = line.width;
                 let baseline_px = line.baseline;
                 let line_height_px = line.line_height;
-                let _clusters = line.clusters;
+                let _clusters = line.take_clusters();
 
                 if width_px <= max_width_px + 0.5 {
                     metrics_for_uniform_lines(
