@@ -1494,7 +1494,7 @@ mod tests {
         assert!(
             !entries0
                 .iter()
-                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+                .any(|e| e.family().eq_ignore_ascii_case("Inter")),
             "expected catalog entries to be empty of Inter before adding bundled fonts"
         );
 
@@ -1516,7 +1516,7 @@ mod tests {
         assert!(
             entries1
                 .iter()
-                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+                .any(|e| e.family().eq_ignore_ascii_case("Inter")),
             "expected catalog entries to include Inter after adding bundled fonts"
         );
         assert_eq!(
@@ -1583,7 +1583,7 @@ mod tests {
         assert!(
             entries1
                 .iter()
-                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+                .any(|e| e.family().eq_ignore_ascii_case("Inter")),
             "expected rebuilt catalog to include bundled fonts after invalidation"
         );
         let snapshot4 = shaper.font_db_diagnostics_snapshot();
@@ -1957,7 +1957,7 @@ mod tests {
         let mut shaper = ParleyShaper::new();
         let entries = shaper.all_font_catalog_entries();
         assert!(
-            entries.iter().all(|e| !e.is_monospace_candidate),
+            entries.iter().all(|e| !e.is_monospace_candidate()),
             "expected monospace candidates to be suppressed when probe is disabled"
         );
 

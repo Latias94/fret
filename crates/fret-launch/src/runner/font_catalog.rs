@@ -24,21 +24,32 @@ impl RendererFontEnvironmentHost for fret_render::Renderer {
     fn all_font_catalog_entries_runtime(&mut self) -> Vec<FontCatalogEntry> {
         self.all_font_catalog_entries()
             .into_iter()
-            .map(|e| FontCatalogEntry {
-                family: e.family,
-                has_variable_axes: e.has_variable_axes,
-                known_variable_axes: e.known_variable_axes,
-                variable_axes: e
-                    .variable_axes
-                    .into_iter()
-                    .map(|a| fret_runtime::FontVariableAxisInfo {
-                        tag: a.tag,
-                        min_bits: a.min_bits,
-                        max_bits: a.max_bits,
-                        default_bits: a.default_bits,
-                    })
-                    .collect(),
-                is_monospace_candidate: e.is_monospace_candidate,
+            .map(|entry| {
+                let (
+                    family,
+                    has_variable_axes,
+                    known_variable_axes,
+                    variable_axes,
+                    is_monospace_candidate,
+                ) = entry.into_parts();
+                FontCatalogEntry {
+                    family,
+                    has_variable_axes,
+                    known_variable_axes,
+                    variable_axes: variable_axes
+                        .into_iter()
+                        .map(|axis| {
+                            let (tag, min_bits, max_bits, default_bits) = axis.into_parts();
+                            fret_runtime::FontVariableAxisInfo {
+                                tag,
+                                min_bits,
+                                max_bits,
+                                default_bits,
+                            }
+                        })
+                        .collect(),
+                    is_monospace_candidate,
+                }
             })
             .collect()
     }

@@ -64,19 +64,106 @@ pub fn effective_text_scale_factor(scale_factor: f32) -> f32 {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FontCatalogEntryMetadata {
-    pub family: String,
-    pub has_variable_axes: bool,
-    pub known_variable_axes: Vec<String>,
-    pub variable_axes: Vec<FontVariableAxisMetadata>,
-    pub is_monospace_candidate: bool,
+    family: String,
+    has_variable_axes: bool,
+    known_variable_axes: Vec<String>,
+    variable_axes: Vec<FontVariableAxisMetadata>,
+    is_monospace_candidate: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FontVariableAxisMetadata {
-    pub tag: String,
-    pub min_bits: u32,
-    pub max_bits: u32,
-    pub default_bits: u32,
+    tag: String,
+    min_bits: u32,
+    max_bits: u32,
+    default_bits: u32,
+}
+
+impl FontCatalogEntryMetadata {
+    pub fn new(
+        family: String,
+        has_variable_axes: bool,
+        known_variable_axes: Vec<String>,
+        variable_axes: Vec<FontVariableAxisMetadata>,
+        is_monospace_candidate: bool,
+    ) -> Self {
+        Self {
+            family,
+            has_variable_axes,
+            known_variable_axes,
+            variable_axes,
+            is_monospace_candidate,
+        }
+    }
+
+    pub fn family(&self) -> &str {
+        &self.family
+    }
+
+    pub fn has_variable_axes(&self) -> bool {
+        self.has_variable_axes
+    }
+
+    pub fn known_variable_axes(&self) -> &[String] {
+        &self.known_variable_axes
+    }
+
+    pub fn variable_axes(&self) -> &[FontVariableAxisMetadata] {
+        &self.variable_axes
+    }
+
+    pub fn is_monospace_candidate(&self) -> bool {
+        self.is_monospace_candidate
+    }
+
+    pub fn into_parts(
+        self,
+    ) -> (
+        String,
+        bool,
+        Vec<String>,
+        Vec<FontVariableAxisMetadata>,
+        bool,
+    ) {
+        (
+            self.family,
+            self.has_variable_axes,
+            self.known_variable_axes,
+            self.variable_axes,
+            self.is_monospace_candidate,
+        )
+    }
+}
+
+impl FontVariableAxisMetadata {
+    pub fn new(tag: String, min_bits: u32, max_bits: u32, default_bits: u32) -> Self {
+        Self {
+            tag,
+            min_bits,
+            max_bits,
+            default_bits,
+        }
+    }
+
+    pub fn tag(&self) -> &str {
+        &self.tag
+    }
+
+    pub fn min_bits(&self) -> u32 {
+        self.min_bits
+    }
+
+    pub fn max_bits(&self) -> u32 {
+        self.max_bits
+    }
+
+    pub fn default_bits(&self) -> u32 {
+        self.default_bits
+    }
+
+    pub fn into_parts(self) -> (String, u32, u32, u32) {
+        (self.tag, self.min_bits, self.max_bits, self.default_bits)
+    }
 }
 
 #[derive(Debug, Clone)]

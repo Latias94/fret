@@ -304,11 +304,13 @@ impl ParleyFontDbState {
                     font.axes()
                         .iter()
                         .take(64)
-                        .map(|axis| FontVariableAxisMetadata {
-                            tag: axis_tag_string(axis.tag.to_be_bytes()),
-                            min_bits: axis.min.to_bits(),
-                            max_bits: axis.max.to_bits(),
-                            default_bits: axis.default.to_bits(),
+                        .map(|axis| {
+                            FontVariableAxisMetadata::new(
+                                axis_tag_string(axis.tag.to_be_bytes()),
+                                axis.min.to_bits(),
+                                axis.max.to_bits(),
+                                axis.default.to_bits(),
+                            )
                         })
                         .collect::<Vec<_>>()
                 })
@@ -327,13 +329,13 @@ impl ParleyFontDbState {
                     .unwrap_or(false)
             };
 
-            out.push(FontCatalogEntryMetadata {
+            out.push(FontCatalogEntryMetadata::new(
                 family,
                 has_variable_axes,
                 known_variable_axes,
                 variable_axes,
                 is_monospace_candidate,
-            });
+            ));
         }
 
         self.all_font_catalog_entries_cache = Some(out.clone());
