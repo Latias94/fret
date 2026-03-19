@@ -47,7 +47,9 @@ Legend:
 | `Toggle` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | Partial | Yes | Yes | Yes | No | No | Label click now mirrors toggle activation via the registry; UI Gallery / diag coverage is still pending. |
 | `ToggleGroup` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | Partial | Yes | N/A | N/A | No | No | Focus target is the group's tab-stop item. |
 | `Combobox` | `ecosystem/fret-ui-shadcn/src/combobox.rs` | Partial | Yes | Yes | Yes | No | No | Suppresses dynamic label fallback when `control_id` is set. |
-| `DatePicker` | `ecosystem/fret-ui-shadcn/src/date_picker.rs` (+ `button.rs`) | Partial | Yes | Yes | Yes | No | No | Uses `Button::control_id(...)` for trigger association. |
+| `DatePicker` | `ecosystem/fret-ui-shadcn/src/date_picker.rs` (+ `button.rs`) | Partial | Yes | Yes | Yes | Yes | No | Uses `Button::control_id(...)` for trigger association; UI Gallery label demo exists, dedicated diag gate is still pending. |
+| `DateRangePicker` | `ecosystem/fret-ui-shadcn/src/date_range_picker.rs` (+ `button.rs`) | Partial | Yes | Yes | Yes | No | No | Matches `DatePicker` trigger semantics and derives `{prefix}-trigger` / `-content` / `-calendar` anchors. |
+| `DatePickerWithPresets` | `ecosystem/fret-ui-shadcn/src/date_picker_with_presets.rs` (+ `button.rs`, `select.rs`) | Partial | Yes | Yes | Yes | No | No | Outer trigger is the form control; derived prefixes also flow into the inner `Select` and `Calendar`. |
 
 ## Evidence anchors
 
@@ -60,6 +62,9 @@ Legend:
   - `ecosystem/fret-ui-shadcn/src/select.rs`
   - `ecosystem/fret-ui-shadcn/src/slider.rs`
   - `ecosystem/fret-ui-shadcn/src/radio_group.rs`
+  - `ecosystem/fret-ui-shadcn/src/date_picker.rs`
+  - `ecosystem/fret-ui-shadcn/src/date_range_picker.rs`
+  - `ecosystem/fret-ui-shadcn/src/date_picker_with_presets.rs`
   - `ecosystem/fret-ui-shadcn/src/field.rs`
 - UI Gallery demos + scripts (new in this workstream):
   - `apps/fret-ui-gallery/src/ui/snippets/select/label.rs`

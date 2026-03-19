@@ -9,8 +9,9 @@
 | `Combobox` | UI Gallery demo + diag script | `apps/fret-ui-gallery` + `tools/diag-scripts` | `focus_is` on trigger |
 | `CommandPalette` | Add shared `test_id_prefix(...)` convenience surface | `ecosystem/fret-ui-shadcn` | derived `input/listbox/item-/heading-` ids |
 | `DropdownMenu` / `Menubar` | Normalize menu trigger/content/item prefix conventions | `ecosystem/fret-ui-shadcn` | stable trigger/content/item ids in diagnostics |
-| `DatePicker` | UI Gallery demo + diag script | `apps/fret-ui-gallery` + `tools/diag-scripts` | `focus_is` on trigger |
-| `DateRangePicker` | `control_id` wiring (if used as a form control) | `ecosystem/fret-ui-shadcn` | label click focuses trigger(s) |
+| `DatePicker` | Dedicated label-association diag script | `apps/fret-ui-gallery` + `tools/diag-scripts` | `focus_is` on trigger |
+| `DateRangePicker` | UI Gallery label demo + diag script | `apps/fret-ui-gallery` + `tools/diag-scripts` | `focus_is` on trigger |
+| `DatePickerWithPresets` | UI Gallery label demo + diag script | `apps/fret-ui-gallery` + `tools/diag-scripts` | `focus_is` on trigger |
 | `InputOTP` | decide mapping (first cell vs active cell) | `ecosystem/fret-ui-shadcn` | label click focuses active cell |
 
 ## Refactor opportunities (after gates exist)
