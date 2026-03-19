@@ -22,11 +22,11 @@ impl TextSystem {
                         usage.font_data_id, usage.face_index
                     )
                 });
-            families.push(FontTraceFamilyResolved {
+            families.push(FontTraceFamilyResolved::new(
                 family,
-                glyphs: usage.glyphs,
-                missing_glyphs: usage.missing_glyphs,
-            });
+                usage.glyphs,
+                usage.missing_glyphs,
+            ));
         }
         self.font_runtime.font_trace.maybe_record(
             text,
