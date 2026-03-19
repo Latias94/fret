@@ -234,7 +234,7 @@ pub fn prepare_layout_from_wrapped(
             first_line_caret_stops = caret_stops.clone();
         }
 
-        for g in line.glyphs.iter_mut() {
+        for g in line.glyphs_mut().iter_mut() {
             if g.id == 0 {
                 missing_glyphs = missing_glyphs.saturating_add(1);
             }
@@ -258,7 +258,7 @@ pub fn prepare_layout_from_wrapped(
             clusters,
         );
 
-        out_lines.push(PreparedLine::new(layout, line.glyphs));
+        out_lines.push(PreparedLine::new(layout, line.take_glyphs()));
 
         line_top_px += line_height_px;
     }

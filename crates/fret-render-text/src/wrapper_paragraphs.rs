@@ -353,7 +353,7 @@ pub(crate) fn wrap_none_ellipsis(
         };
     }
 
-    let ellipsis = shaper.shape_single_line(TextInputRef::plain(ELLIPSIS, base), scale);
+    let mut ellipsis = shaper.shape_single_line(TextInputRef::plain(ELLIPSIS, base), scale);
     let ellipsis_w = ellipsis.width.max(0.0);
     let available = (max_width_px - ellipsis_w).max(0.0);
 
@@ -380,8 +380,8 @@ pub(crate) fn wrap_none_ellipsis(
     let ellipsis_start_x = (max_width_px - ellipsis_w).max(0.0);
 
     let mut clusters: Vec<ShapedCluster> = kept.take_clusters();
-    let mut glyphs: Vec<ParleyGlyph> = kept.glyphs;
-    glyphs.extend(ellipsis.glyphs.into_iter().map(|mut g| {
+    let mut glyphs: Vec<ParleyGlyph> = kept.take_glyphs();
+    glyphs.extend(ellipsis.take_glyphs().into_iter().map(|mut g| {
         g.x += ellipsis_start_x;
         g.text_range = empty_range_at(cut_end);
         g.is_rtl = false;

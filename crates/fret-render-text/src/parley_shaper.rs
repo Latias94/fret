@@ -242,7 +242,7 @@ pub struct ShapedLineLayout {
     pub ink_descent: f32,
     pub baseline: f32,
     pub line_height: f32,
-    pub glyphs: Vec<ParleyGlyph>,
+    glyphs: Vec<ParleyGlyph>,
     clusters: Vec<ShapedCluster>,
 }
 
@@ -277,6 +277,18 @@ impl ShapedLineLayout {
 
     pub fn take_clusters(&mut self) -> Vec<ShapedCluster> {
         std::mem::take(&mut self.clusters)
+    }
+
+    pub fn glyphs(&self) -> &[ParleyGlyph] {
+        &self.glyphs
+    }
+
+    pub fn glyphs_mut(&mut self) -> &mut [ParleyGlyph] {
+        &mut self.glyphs
+    }
+
+    pub fn take_glyphs(&mut self) -> Vec<ParleyGlyph> {
+        std::mem::take(&mut self.glyphs)
     }
 }
 
@@ -1758,7 +1770,7 @@ mod tests {
 
         let layout = shaper.shape_single_line(input, 1.0);
         assert!(layout.width >= 0.0);
-        assert!(!layout.glyphs.is_empty());
+        assert!(!layout.glyphs().is_empty());
         assert!(!layout.clusters().is_empty());
     }
 

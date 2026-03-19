@@ -145,7 +145,7 @@ pub fn wrap_with_constraints(
 
 /// Wraps text for measurement only.
 ///
-/// The returned `lines[*].glyphs` is intentionally empty to avoid per-glyph work in layout.
+/// The returned `lines[*].glyphs()` is intentionally empty to avoid per-glyph work in layout.
 pub fn wrap_with_constraints_measure_only(
     shaper: &mut ParleyShaper,
     input: TextInputRef<'_>,
@@ -767,7 +767,7 @@ mod tests {
         let Some(font_a) = a
             .lines
             .first()
-            .and_then(|l| l.glyphs.first())
+            .and_then(|l| l.glyphs().first())
             .map(|g| g.font_size)
         else {
             panic!("expected shaped glyphs for scale=1.0");
@@ -775,7 +775,7 @@ mod tests {
         let Some(font_b) = b
             .lines
             .first()
-            .and_then(|l| l.glyphs.first())
+            .and_then(|l| l.glyphs().first())
             .map(|g| g.font_size)
         else {
             panic!("expected shaped glyphs for scale=0.5");
@@ -1272,7 +1272,7 @@ mod tests {
             assert!((a.width - b.width).abs() < 0.01);
             assert!((a.line_height - b.line_height).abs() < 0.01);
         }
-        assert!(measure.lines.iter().all(|l| l.glyphs.is_empty()));
+        assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));
     }
 
     #[test]
@@ -1311,7 +1311,7 @@ mod tests {
             assert!((a.width - b.width).abs() < 0.01);
             assert!((a.line_height - b.line_height).abs() < 0.01);
         }
-        assert!(measure.lines.iter().all(|l| l.glyphs.is_empty()));
+        assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));
     }
 
     #[test]
