@@ -93,6 +93,8 @@ mod empty;
 mod experimental;
 mod extras;
 mod field;
+mod float_value_model;
+mod float_vec_model;
 mod form;
 mod hover_card;
 mod input;
@@ -108,6 +110,7 @@ mod menubar;
 mod native_select;
 mod navigation_menu;
 mod optional_date_model;
+mod optional_float_value_model;
 mod optional_text_value_model;
 mod overlay_motion;
 mod pagination;
@@ -222,6 +225,8 @@ pub mod raw {
     raw_module!(experimental);
     raw_module!(extras);
     raw_module!(field);
+    raw_module!(float_value_model);
+    raw_module!(float_vec_model);
     raw_module!(form);
     raw_module!(hover_card);
     raw_module!(input);
@@ -235,6 +240,7 @@ pub mod raw {
     raw_module!(native_select);
     raw_module!(navigation_menu);
     raw_module!(optional_date_model);
+    raw_module!(optional_float_value_model);
     raw_module!(optional_text_value_model);
     raw_module!(pagination);
     raw_module!(popover);
@@ -410,6 +416,8 @@ pub mod facade {
         FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle, field_group,
         field_set,
     };
+    pub use crate::float_value_model::IntoFloatValueModel;
+    pub use crate::float_vec_model::IntoFloatVecModel;
     pub use crate::form::{
         Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
         FormMessage, form,
@@ -453,6 +461,7 @@ pub mod facade {
         navigation_menu_trigger_style, navigation_menu_uncontrolled,
     };
     pub use crate::optional_date_model::IntoOptionalDateModel;
+    pub use crate::optional_float_value_model::IntoOptionalFloatValueModel;
     pub use crate::optional_text_value_model::IntoOptionalTextValueModel;
     pub use crate::pagination::{
         Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,

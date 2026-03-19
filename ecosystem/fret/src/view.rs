@@ -669,6 +669,48 @@ impl fret_ui_shadcn::facade::IntoTextVecModel for &LocalState<Vec<Arc<str>>> {
 }
 
 #[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatValueModel for LocalState<f32> {
+    fn into_float_value_model(self) -> Model<f32> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatValueModel for &LocalState<f32> {
+    fn into_float_value_model(self) -> Model<f32> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalFloatValueModel for LocalState<Option<f32>> {
+    fn into_optional_float_value_model(self) -> Model<Option<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalFloatValueModel for &LocalState<Option<f32>> {
+    fn into_optional_float_value_model(self) -> Model<Option<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatVecModel for LocalState<Vec<f32>> {
+    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatVecModel for &LocalState<Vec<f32>> {
+    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoCalendarMonthModel
     for LocalState<fret_ui_kit::headless::calendar::CalendarMonth>
 {

@@ -332,13 +332,13 @@ fn inspector(
     let theme_model = st.theme.clone_model();
     let theme_open_model = st.theme_open.clone_model();
 
-    let chromatic_model = st.chromatic_offset_px.clone_model();
-    let scanline_strength_model = st.scanline_strength.clone_model();
-    let scanline_spacing_model = st.scanline_spacing_px.clone_model();
-    let vignette_model = st.vignette_strength.clone_model();
-    let grain_strength_model = st.grain_strength.clone_model();
-    let grain_scale_model = st.grain_scale.clone_model();
-    let retro_pixel_scale_model = st.retro_pixel_scale.clone_model();
+    let chromatic_state = st.chromatic_offset_px.clone();
+    let scanline_strength_state = st.scanline_strength.clone();
+    let scanline_spacing_state = st.scanline_spacing_px.clone();
+    let vignette_state = st.vignette_strength.clone();
+    let grain_strength_state = st.grain_strength.clone();
+    let grain_scale_state = st.grain_scale.clone();
+    let retro_pixel_scale_state = st.retro_pixel_scale.clone();
     let retro_dither_model = st.retro_dither.clone_model();
 
     let mut layout = LayoutStyle::default();
@@ -470,31 +470,31 @@ fn inspector(
                         shadcn::Separator::new().into_element(cx),
                         retro_pixel_row,
                         retro_dither_row,
-                        shadcn::Slider::new(chromatic_model.clone())
+                        shadcn::Slider::new(chromatic_state.clone())
                             .range(0.0, 6.0)
                             .step(0.25)
                             .into_element(cx),
-                        shadcn::Slider::new(vignette_model.clone())
+                        shadcn::Slider::new(vignette_state.clone())
                             .range(0.0, 0.9)
                             .step(0.01)
                             .into_element(cx),
-                        shadcn::Slider::new(scanline_strength_model.clone())
+                        shadcn::Slider::new(scanline_strength_state.clone())
                             .range(0.0, 0.5)
                             .step(0.01)
                             .into_element(cx),
-                        shadcn::Slider::new(scanline_spacing_model.clone())
+                        shadcn::Slider::new(scanline_spacing_state.clone())
                             .range(1.0, 10.0)
                             .step(0.25)
                             .into_element(cx),
-                        shadcn::Slider::new(grain_strength_model.clone())
+                        shadcn::Slider::new(grain_strength_state.clone())
                             .range(0.0, 0.2)
                             .step(0.01)
                             .into_element(cx),
-                        shadcn::Slider::new(grain_scale_model.clone())
+                        shadcn::Slider::new(grain_scale_state.clone())
                             .range(0.25, 6.0)
                             .step(0.05)
                             .into_element(cx),
-                        shadcn::Slider::new(retro_pixel_scale_model.clone())
+                        shadcn::Slider::new(retro_pixel_scale_state.clone())
                             .range(2.0, 24.0)
                             .step(1.0)
                             .into_element(cx),

@@ -703,15 +703,15 @@ fn inspector(
     let theme = Theme::global(&*cx.app).snapshot();
 
     let enabled_model = st.enabled.clone_model();
-    let blur_radius_model = st.blur_radius_px.clone_model();
-    let blur_downsample_model = st.blur_downsample.clone_model();
-    let refraction_height_model = st.refraction_height_px.clone_model();
-    let refraction_amount_model = st.refraction_amount_px.clone_model();
-    let depth_effect_model = st.depth_effect.clone_model();
-    let chromatic_model = st.chromatic_aberration.clone_model();
-    let corner_radius_model = st.corner_radius_px.clone_model();
-    let grain_strength_model = st.grain_strength.clone_model();
-    let grain_scale_model = st.grain_scale.clone_model();
+    let blur_radius_state = st.blur_radius_px.clone();
+    let blur_downsample_state = st.blur_downsample.clone();
+    let refraction_height_state = st.refraction_height_px.clone();
+    let refraction_amount_state = st.refraction_amount_px.clone();
+    let depth_effect_state = st.depth_effect.clone();
+    let chromatic_state = st.chromatic_aberration.clone();
+    let corner_radius_state = st.corner_radius_px.clone();
+    let grain_strength_state = st.grain_strength.clone();
+    let grain_scale_state = st.grain_scale.clone();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(360.0));
@@ -765,7 +765,7 @@ fn inspector(
                             "Blur radius (px)",
                             format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
                         ),
-                        shadcn::Slider::new(blur_radius_model.clone())
+                        shadcn::Slider::new(blur_radius_state.clone())
                             .range(0.0, 48.0)
                             .step(0.5)
                             .into_element(cx),
@@ -778,7 +778,7 @@ fn inspector(
                     let v = blur_downsample.round().clamp(1.0, 4.0) as u32;
                     [
                         label_row(cx, "Blur downsample", format!("{v}x")),
-                        shadcn::Slider::new(blur_downsample_model.clone())
+                        shadcn::Slider::new(blur_downsample_state.clone())
                             .range(1.0, 4.0)
                             .step(1.0)
                             .into_element(cx),
@@ -794,7 +794,7 @@ fn inspector(
                             "Refraction height (px)",
                             format!("{:.1}", refraction_height_px.clamp(0.0, 64.0)),
                         ),
-                        shadcn::Slider::new(refraction_height_model.clone())
+                        shadcn::Slider::new(refraction_height_state.clone())
                             .range(0.0, 64.0)
                             .step(0.5)
                             .into_element(cx),
@@ -810,7 +810,7 @@ fn inspector(
                             "Refraction amount (px)",
                             format!("{:.1}", refraction_amount_px.clamp(0.0, 32.0)),
                         ),
-                        shadcn::Slider::new(refraction_amount_model.clone())
+                        shadcn::Slider::new(refraction_amount_state.clone())
                             .range(0.0, 24.0)
                             .step(0.25)
                             .into_element(cx),
@@ -822,7 +822,7 @@ fn inspector(
                 let depth_effect_row = ui::v_flex(move |cx| {
                     [
                         label_row(cx, "Depth effect", format!("{depth_effect:.2}")),
-                        shadcn::Slider::new(depth_effect_model.clone())
+                        shadcn::Slider::new(depth_effect_state.clone())
                             .range(0.0, 1.0)
                             .step(0.01)
                             .into_element(cx),
@@ -838,7 +838,7 @@ fn inspector(
                             "Chromatic aberration",
                             format!("{chromatic_aberration:.2}"),
                         ),
-                        shadcn::Slider::new(chromatic_model.clone())
+                        shadcn::Slider::new(chromatic_state.clone())
                             .range(0.0, 1.0)
                             .step(0.01)
                             .into_element(cx),
@@ -854,7 +854,7 @@ fn inspector(
                             "Corner radius (px)",
                             format!("{:.1}", corner_radius_px.clamp(0.0, 64.0)),
                         ),
-                        shadcn::Slider::new(corner_radius_model.clone())
+                        shadcn::Slider::new(corner_radius_state.clone())
                             .range(0.0, 48.0)
                             .step(0.5)
                             .into_element(cx),
@@ -866,7 +866,7 @@ fn inspector(
                 let grain_strength_row = ui::v_flex(move |cx| {
                     [
                         label_row(cx, "Grain strength", format!("{grain_strength:.2}")),
-                        shadcn::Slider::new(grain_strength_model.clone())
+                        shadcn::Slider::new(grain_strength_state.clone())
                             .range(0.0, 0.2)
                             .step(0.01)
                             .into_element(cx),
@@ -878,7 +878,7 @@ fn inspector(
                 let grain_scale_row = ui::v_flex(move |cx| {
                     [
                         label_row(cx, "Grain scale", format!("{grain_scale:.2}")),
-                        shadcn::Slider::new(grain_scale_model.clone())
+                        shadcn::Slider::new(grain_scale_state.clone())
                             .range(0.25, 6.0)
                             .step(0.05)
                             .into_element(cx),

@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
 use crate::direction::LayoutDirection;
+use crate::float_value_model::IntoFloatValueModel;
+use crate::float_vec_model::IntoFloatVecModel;
+use crate::optional_float_value_model::IntoOptionalFloatValueModel;
 use fret_core::{Edges, Px, SemanticsOrientation, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -42,9 +45,9 @@ pub struct Progress {
 }
 
 impl Progress {
-    pub fn new(model: Model<f32>) -> Self {
+    pub fn new(model: impl IntoFloatValueModel) -> Self {
         Self {
-            model: ProgressModel::Determinate(model),
+            model: ProgressModel::Determinate(model.into_float_value_model()),
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
@@ -58,9 +61,9 @@ impl Progress {
     ///
     /// When the value is `None`, the indicator renders as 0% (matching shadcn/ui's
     /// `value || 0` behavior).
-    pub fn new_opt(model: Model<Option<f32>>) -> Self {
+    pub fn new_opt(model: impl IntoOptionalFloatValueModel) -> Self {
         Self {
-            model: ProgressModel::Optional(model),
+            model: ProgressModel::Optional(model.into_optional_float_value_model()),
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
@@ -73,9 +76,9 @@ impl Progress {
     /// Creates a progress indicator driven by the first entry in a values model.
     ///
     /// This is primarily useful for parity with slider-style value models (`Vec<f32>`).
-    pub fn new_values_first(model: Model<Vec<f32>>) -> Self {
+    pub fn new_values_first(model: impl IntoFloatVecModel) -> Self {
         Self {
-            model: ProgressModel::ValuesFirst(model),
+            model: ProgressModel::ValuesFirst(model.into_float_vec_model()),
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
@@ -259,7 +262,7 @@ impl Progress {
     }
 }
 
-pub fn progress<H: UiHost>(model: Model<f32>) -> impl IntoUiElement<H> + use<H> {
+pub fn progress<H: UiHost, M: IntoFloatValueModel>(model: M) -> impl IntoUiElement<H> + use<H, M> {
     Progress::new(model)
 }
 

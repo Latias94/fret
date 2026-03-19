@@ -2250,6 +2250,10 @@ mod authoring_surface_policy_tests {
                 "let enabled_model = st.enabled.clone_model();",
                 "let sampling_model = st.sampling.clone_model();",
                 "let sampling_open_model = st.sampling_open.clone_model();",
+                "let uv_span_state = st.uv_span.clone();",
+                "let input_strength_state = st.input_strength.clone();",
+                "let rim_strength_state = st.rim_strength.clone();",
+                "let blur_radius_state = st.blur_radius_px.clone();",
             ],
             &[
                 "let view_settings: CustomEffectV2ViewSettings = cx.data().selector(",
@@ -2264,6 +2268,10 @@ mod authoring_surface_policy_tests {
                 "let enabled_model = st.enabled.clone();",
                 "let sampling_model = st.sampling.clone();",
                 "let sampling_open_model = st.sampling_open.clone();",
+                "let uv_span_model = st.uv_span.clone_model();",
+                "let input_strength_model = st.input_strength.clone_model();",
+                "let rim_strength_model = st.rim_strength.clone_model();",
+                "let blur_radius_model = st.blur_radius_px.clone_model();",
             ],
         );
 
@@ -2408,13 +2416,13 @@ mod authoring_surface_policy_tests {
                 "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "let enabled = st.enabled.layout_in(cx).value_or(true);",
                 "let enabled_model = st.enabled.clone_model();",
-                "let blur_radius_model = st.blur_radius_px.clone_model();",
+                "let blur_radius_state = st.blur_radius_px.clone();",
             ],
             &[
                 "cx.watch_model(model)",
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let enabled_model = st.enabled.clone();",
-                "let blur_radius_model = st.blur_radius_px.clone();",
+                "let blur_radius_model = st.blur_radius_px.clone_model();",
             ],
         );
 
@@ -2429,7 +2437,7 @@ mod authoring_surface_policy_tests {
                 "let enabled_model = st.enabled.clone_model();",
                 "let theme_model = st.theme.clone_model();",
                 "let theme_open_model = st.theme_open.clone_model();",
-                "let chromatic_model = st.chromatic_offset_px.clone_model();",
+                "let chromatic_state = st.chromatic_offset_px.clone();",
             ],
             &[
                 "let view_settings: ThemePostprocessViewSettings = cx.data().selector(",
@@ -2444,7 +2452,7 @@ mod authoring_surface_policy_tests {
                 "let enabled_model = st.enabled.clone();",
                 "let theme_model = st.theme.clone();",
                 "let theme_open_model = st.theme_open.clone();",
-                "let chromatic_model = st.chromatic_offset_px.clone();",
+                "let chromatic_model = st.chromatic_offset_px.clone_model();",
             ],
         );
 
@@ -2458,13 +2466,14 @@ mod authoring_surface_policy_tests {
                 "let mode_settings: LiquidGlassModeSettings = cx.data().selector_layout(",
                 "&st.custom_v3_source_group,",
                 "let show_fake_switch_model = st.show_fake.clone_model();",
-                "let lens_radius_model = st.lens_radius_px.clone_model();",
+                "let lens_radius_state = st.lens_radius_px.clone();",
             ],
             &[
                 "cx.watch_model(model)",
                 "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector(",
                 "let mode_settings: LiquidGlassModeSettings = cx.data().selector(",
                 "cx.observe_model(&show_fake_model, Invalidation::Layout);",
+                "let lens_radius_model = st.lens_radius_px.clone_model();",
                 "let show_fake = st.show_fake.layout_in(cx).value_or(true);",
                 "let show_warp = st.show_warp.layout_in(cx).value_or(true);",
                 "let show_warp_v2 = st.show_warp_v2.layout_in(cx).value_or(false);",

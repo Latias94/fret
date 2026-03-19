@@ -660,33 +660,33 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
     let custom_v3_source_group_switch_model = st.custom_v3_source_group.clone_model();
     let show_inspector_switch_model = st.show_inspector.clone_model();
     let animate_switch_model = st.animate.clone_model();
-    let phase_speed_model = st.phase_speed.clone_model();
+    let phase_speed_state = st.phase_speed.clone();
     let use_backdrop_switch_model = st.use_backdrop.clone_model();
     let use_dither_switch_model = st.use_dither.clone_model();
 
-    let warp_strength_model = st.warp_strength_px.clone_model();
-    let warp_scale_model = st.warp_scale_px.clone_model();
-    let warp_phase_model = st.warp_phase.clone_model();
-    let warp_chroma_model = st.warp_chroma_px.clone_model();
+    let warp_strength_state = st.warp_strength_px.clone();
+    let warp_scale_state = st.warp_scale_px.clone();
+    let warp_phase_state = st.warp_phase.clone();
+    let warp_chroma_state = st.warp_chroma_px.clone();
 
-    let lens_radius_model = st.lens_radius_px.clone_model();
+    let lens_radius_state = st.lens_radius_px.clone();
 
-    let custom_edge_model = st.custom_edge_falloff_px.clone_model();
-    let custom_rim_model = st.custom_rim_strength.clone_model();
-    let custom_shadow_model = st.custom_shadow_strength.clone_model();
-    let custom_grain_model = st.custom_grain_strength.clone_model();
-    let custom_grain_scale_model = st.custom_grain_scale.clone_model();
+    let custom_edge_state = st.custom_edge_falloff_px.clone();
+    let custom_rim_state = st.custom_rim_strength.clone();
+    let custom_shadow_state = st.custom_shadow_strength.clone();
+    let custom_grain_state = st.custom_grain_strength.clone();
+    let custom_grain_scale_state = st.custom_grain_scale.clone();
 
-    let custom_v3_dispersion_model = st.custom_v3_dispersion.clone_model();
-    let custom_v3_bevel_strength_model = st.custom_v3_bevel_strength.clone_model();
-    let custom_v3_bevel_angle_model = st.custom_v3_bevel_angle_deg.clone_model();
-    let custom_v3_bevel_secondary_model = st.custom_v3_bevel_secondary.clone_model();
+    let custom_v3_dispersion_state = st.custom_v3_dispersion.clone();
+    let custom_v3_bevel_strength_state = st.custom_v3_bevel_strength.clone();
+    let custom_v3_bevel_angle_state = st.custom_v3_bevel_angle_deg.clone();
+    let custom_v3_bevel_secondary_state = st.custom_v3_bevel_secondary.clone();
 
-    let blur_radius_model = st.blur_radius_px.clone_model();
-    let blur_downsample_model = st.blur_downsample.clone_model();
-    let saturation_model = st.saturation.clone_model();
-    let brightness_model = st.brightness.clone_model();
-    let contrast_model = st.contrast.clone_model();
+    let blur_radius_state = st.blur_radius_px.clone();
+    let blur_downsample_state = st.blur_downsample.clone();
+    let saturation_state = st.saturation.clone();
+    let brightness_state = st.brightness.clone();
+    let contrast_state = st.contrast.clone();
 
     let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector_layout(
         (
@@ -1625,7 +1625,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Lens radius (px)",
                                             format!("{lens_radius_px:.1}"),
                                         ),
-                                        shadcn::Slider::new(lens_radius_model.clone())
+                                        shadcn::Slider::new(lens_radius_state.clone())
                                             .range(0.0, 64.0)
                                             .step(0.5)
                                             .into_element(cx),
@@ -1641,7 +1641,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Warp strength (px)",
                                             format!("{warp_strength_px:.1}"),
                                         ),
-                                        shadcn::Slider::new(warp_strength_model.clone())
+                                        shadcn::Slider::new(warp_strength_state.clone())
                                             .range(0.0, BackdropWarpV1::MAX_STRENGTH_PX.0)
                                             .step(0.25)
                                             .into_element(cx),
@@ -1653,7 +1653,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let warp_scale_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Warp scale (px)", format!("{warp_scale_px:.0}")),
-                                        shadcn::Slider::new(warp_scale_model.clone())
+                                        shadcn::Slider::new(warp_scale_state.clone())
                                             .range(BackdropWarpV1::MIN_SCALE_PX.0, 256.0)
                                             .step(1.0)
                                             .into_element(cx),
@@ -1669,7 +1669,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Chromatic aberration (px)",
                                             format!("{warp_chroma_px:.2}"),
                                         ),
-                                        shadcn::Slider::new(warp_chroma_model.clone())
+                                        shadcn::Slider::new(warp_chroma_state.clone())
                                             .range(
                                                 0.0,
                                                 BackdropWarpV1::MAX_CHROMATIC_ABERRATION_PX.0,
@@ -1688,7 +1688,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 edge falloff (px)",
                                             format!("{custom_edge_falloff_px:.1}"),
                                         ),
-                                        shadcn::Slider::new(custom_edge_model.clone())
+                                        shadcn::Slider::new(custom_edge_state.clone())
                                             .range(0.0, 64.0)
                                             .step(0.25)
                                             .into_element(cx),
@@ -1704,7 +1704,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 rim strength",
                                             format!("{custom_rim_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_rim_model.clone())
+                                        shadcn::Slider::new(custom_rim_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1720,7 +1720,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 shadow strength",
                                             format!("{custom_shadow_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_shadow_model.clone())
+                                        shadcn::Slider::new(custom_shadow_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1736,7 +1736,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 grain strength",
                                             format!("{custom_grain_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_grain_model.clone())
+                                        shadcn::Slider::new(custom_grain_state.clone())
                                             .range(0.0, 0.25)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1752,7 +1752,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 grain scale",
                                             format!("{custom_grain_scale:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_grain_scale_model.clone())
+                                        shadcn::Slider::new(custom_grain_scale_state.clone())
                                             .range(0.25, 6.0)
                                             .step(0.05)
                                             .into_element(cx),
@@ -1768,7 +1768,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV3 bevel strength",
                                             format!("{custom_v3_bevel_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_v3_bevel_strength_model.clone())
+                                        shadcn::Slider::new(custom_v3_bevel_strength_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx)
@@ -1787,7 +1787,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV3 bevel light angle (deg)",
                                             format!("{custom_v3_bevel_angle_deg:.0}"),
                                         ),
-                                        shadcn::Slider::new(custom_v3_bevel_angle_model.clone())
+                                        shadcn::Slider::new(custom_v3_bevel_angle_state.clone())
                                             .range(0.0, 360.0)
                                             .step(1.0)
                                             .into_element(cx)
@@ -1807,7 +1807,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             format!("{custom_v3_bevel_secondary:.2}"),
                                         ),
                                         shadcn::Slider::new(
-                                            custom_v3_bevel_secondary_model.clone(),
+                                            custom_v3_bevel_secondary_state.clone(),
                                         )
                                         .range(0.0, 1.0)
                                         .step(0.01)
@@ -1827,7 +1827,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV3 dispersion",
                                             format!("{custom_v3_dispersion:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_v3_dispersion_model.clone())
+                                        shadcn::Slider::new(custom_v3_dispersion_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx)
@@ -1842,7 +1842,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let phase_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Phase", format!("{phase:.2}")),
-                                        shadcn::Slider::new(warp_phase_model.clone())
+                                        shadcn::Slider::new(warp_phase_state.clone())
                                             .range(0.0, 12.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1854,7 +1854,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let speed_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Phase speed", format!("{phase_speed:.2}")),
-                                        shadcn::Slider::new(phase_speed_model.clone())
+                                        shadcn::Slider::new(phase_speed_state.clone())
                                             .range(0.0, 2.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1870,7 +1870,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Blur radius (px)",
                                             format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
                                         ),
-                                        shadcn::Slider::new(blur_radius_model.clone())
+                                        shadcn::Slider::new(blur_radius_state.clone())
                                             .range(0.0, 48.0)
                                             .step(0.5)
                                             .into_element(cx),
@@ -1882,7 +1882,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let downsample_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Blur downsample", format!("{blur_downsample}x")),
-                                        shadcn::Slider::new(blur_downsample_model.clone())
+                                        shadcn::Slider::new(blur_downsample_state.clone())
                                             .range(1.0, 4.0)
                                             .step(1.0)
                                             .into_element(cx),
@@ -1894,7 +1894,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let sat_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Saturation", format!("{saturation:.2}")),
-                                        shadcn::Slider::new(saturation_model.clone())
+                                        shadcn::Slider::new(saturation_state.clone())
                                             .range(0.6, 1.8)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1906,7 +1906,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let bright_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Brightness", format!("{brightness:.2}")),
-                                        shadcn::Slider::new(brightness_model.clone())
+                                        shadcn::Slider::new(brightness_state.clone())
                                             .range(0.8, 1.3)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1918,7 +1918,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let contrast_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Contrast", format!("{contrast:.2}")),
-                                        shadcn::Slider::new(contrast_model.clone())
+                                        shadcn::Slider::new(contrast_state.clone())
                                             .range(0.8, 1.3)
                                             .step(0.01)
                                             .into_element(cx),

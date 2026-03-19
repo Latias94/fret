@@ -994,9 +994,13 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
         (
             "input_otp.rs",
             INPUT_OTP_RS,
-            &["pub fn input_otp<H: UiHost>(otp: InputOtp) -> impl IntoUiElement<H> + use<H> {"][..],
+            &[
+                "impl InputOtp { pub fn new(model: impl IntoTextValueModel) -> Self {",
+                "pub fn input_otp<H: UiHost>(otp: InputOtp) -> impl IntoUiElement<H> + use<H> {",
+            ][..],
             &[
                 "pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> AnyElement",
+                "pub fn new(model: Model<String>) -> Self {",
             ][..],
         ),
         (
@@ -1054,7 +1058,9 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
         (
             "combobox.rs",
             COMBOBOX_RS,
-            &["pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {"][..],
+            &[
+                "pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {",
+            ][..],
             &["pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {"][..],
         ),
         (
@@ -1157,9 +1163,17 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
         (
             "progress.rs",
             PROGRESS_RS,
-            &["pub fn progress<H: UiHost>(model: Model<f32>) -> impl IntoUiElement<H> + use<H>"][..],
+            &[
+                "pub fn new(model: impl IntoFloatValueModel) -> Self {",
+                "pub fn new_opt(model: impl IntoOptionalFloatValueModel) -> Self {",
+                "pub fn new_values_first(model: impl IntoFloatVecModel) -> Self {",
+                "pub fn progress<H: UiHost, M: IntoFloatValueModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
+            ][..],
             &[
                 "pub fn progress<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<f32>) -> AnyElement",
+                "pub fn new(model: Model<f32>) -> Self {",
+                "pub fn new_opt(model: Model<Option<f32>>) -> Self {",
+                "pub fn new_values_first(model: Model<Vec<f32>>) -> Self {",
             ][..],
         ),
         (
@@ -1180,10 +1194,12 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "resizable.rs",
             RESIZABLE_RS,
             &[
-                "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ResizablePanelGroup where I: IntoIterator<Item = ResizableEntry>,",
+                "pub fn new(model: impl IntoFloatVecModel) -> Self {",
+                "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoFloatVecModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ResizablePanelGroup where I: IntoIterator<Item = ResizableEntry>,",
             ][..],
             &[
                 "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ResizableEntry>,",
+                "pub fn new(model: Model<Vec<f32>>) -> Self {",
             ][..],
         ),
         (
@@ -1205,9 +1221,13 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
         (
             "slider.rs",
             SLIDER_RS,
-            &["pub fn slider(model: Model<Vec<f32>>) -> Slider {"][..],
+            &[
+                "pub fn new(model: impl IntoFloatVecModel) -> Self {",
+                "pub fn slider(model: impl IntoFloatVecModel) -> Slider {",
+            ][..],
             &[
                 "pub fn slider<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, orientation: radix_slider::SliderOrientation, dir: Option<radix_direction::LayoutDirection>, inverted: bool, min: f32, max: f32, step: f32, min_steps_between_thumbs: u32, disabled: bool, control_id: Option<ControlId>, a11y_label: Option<Arc<str>>, test_id: Option<Arc<str>>, on_value_commit: Option<OnValueCommit>, chrome: ChromeRefinement, layout: LayoutRefinement, style: SliderStyle, ) -> AnyElement",
+                "pub fn new(model: Model<Vec<f32>>) -> Self {",
             ][..],
         ),
         (

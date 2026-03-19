@@ -715,10 +715,10 @@ fn inspector(
     let non_filterable_model = st.use_non_filterable_input.clone_model();
     let sampling_model = st.sampling.clone_model();
     let sampling_open_model = st.sampling_open.clone_model();
-    let uv_span_model = st.uv_span.clone_model();
-    let input_strength_model = st.input_strength.clone_model();
-    let rim_strength_model = st.rim_strength.clone_model();
-    let blur_radius_model = st.blur_radius_px.clone_model();
+    let uv_span_state = st.uv_span.clone();
+    let input_strength_state = st.input_strength.clone();
+    let rim_strength_state = st.rim_strength.clone();
+    let blur_radius_state = st.blur_radius_px.clone();
     let debug_model = st.debug_input.clone_model();
 
     let mut layout = LayoutStyle::default();
@@ -788,7 +788,7 @@ fn inspector(
                         "Input UV span",
                         format!("{:.2}", uv_span.clamp(0.05, 1.0)),
                     ),
-                    shadcn::Slider::new(uv_span_model.clone())
+                    shadcn::Slider::new(uv_span_state.clone())
                         .range(0.05, 1.0)
                         .step(0.01)
                         .into_element(cx),
@@ -804,7 +804,7 @@ fn inspector(
                         "Input strength",
                         format!("{:.2}", input_strength.clamp(0.0, 1.0)),
                     ),
-                    shadcn::Slider::new(input_strength_model.clone())
+                    shadcn::Slider::new(input_strength_state.clone())
                         .range(0.0, 1.0)
                         .step(0.01)
                         .into_element(cx),
@@ -820,7 +820,7 @@ fn inspector(
                         "Rim strength",
                         format!("{:.2}", rim_strength.clamp(0.0, 1.0)),
                     ),
-                    shadcn::Slider::new(rim_strength_model.clone())
+                    shadcn::Slider::new(rim_strength_state.clone())
                         .range(0.0, 1.0)
                         .step(0.01)
                         .into_element(cx),
@@ -836,7 +836,7 @@ fn inspector(
                         "Backdrop blur (px)",
                         format!("{:.1}", blur_radius_px.clamp(0.0, 48.0)),
                     ),
-                    shadcn::Slider::new(blur_radius_model.clone())
+                    shadcn::Slider::new(blur_radius_state.clone())
                         .range(0.0, 32.0)
                         .step(0.5)
                         .into_element(cx),
