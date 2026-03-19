@@ -1103,11 +1103,14 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn new( model: impl IntoOptionalTextValueModel, children: impl IntoIterator<Item = AnyElement>, ) -> Self {",
+                "pub fn child(model: impl IntoOptionalTextValueModel, child: AnyElement) -> Self {",
             ][..],
             &[
                 "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
+                "pub fn child(model: Model<Option<Arc<str>>>, child: AnyElement) -> Self {",
             ][..],
         ),
         (

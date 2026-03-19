@@ -164,6 +164,7 @@ This bucket is now smaller than when the note was first written:
 - `DataTableViewOptionItem::new(...)`
 - `DataTableViewOptions::new(...)`
 - `Checkbox::new_tristate(...)`
+- `NavigationMenuLink::{new, child}(...)`
 
 have already moved onto narrow bridge traits and are no longer part of the raw-model allowlist.
 
