@@ -51,6 +51,7 @@ cookbook-diag = ["fret/diagnostics", "fret-bootstrap/diagnostics"]
 cookbook-assets = ["dep:fret-assets", "dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
+cookbook-date-picker = ["dep:fret-ui-kit"]
 cookbook-image-assets = ["dep:fret-ui-assets"]
 cookbook-query = ["fret/state-query"]
 cookbook-router = ["fret/router"]
@@ -110,6 +111,10 @@ required-features = ["cookbook-renderer"]
 [[example]]
 name = "data_table_basics"
 required-features = ["cookbook-table"]
+
+[[example]]
+name = "date_picker_basics"
+required-features = ["cookbook-date-picker"]
 
 [[example]]
 name = "image_asset_cache_basics"

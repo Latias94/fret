@@ -35,7 +35,7 @@ pub mod viewport_overlay;
 mod wgpu_report_store;
 
 pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};
-pub use error::RenderError;
+pub use error::{RenderError, SurfaceAcquireError};
 pub use fret_core::ImageColorSpace;
 pub use fret_render_core::{
     RenderTargetAlphaMode, RenderTargetColorEncoding, RenderTargetColorPrimaries,
@@ -251,10 +251,10 @@ fn create_wgpu_instance_with_backends(backends: wgpu::Backends) -> wgpu::Instanc
     }
     backend_options = backend_options.with_env();
 
-    wgpu::Instance::new(&wgpu::InstanceDescriptor {
+    wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends,
         backend_options,
-        ..Default::default()
+        ..wgpu::InstanceDescriptor::new_without_display_handle()
     })
 }
 
