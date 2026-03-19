@@ -374,7 +374,7 @@ fn header_bar(
         .text_sm()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let slow_switch = shadcn::Switch::new(locals.global_slow.clone_model())
+    let slow_switch = shadcn::Switch::new(&locals.global_slow)
         .a11y_label("Simulate slow network")
         .into_element(cx);
     let slow_row = ui::h_flex(|_cx| [slow_label, slow_switch])
@@ -641,7 +641,7 @@ fn main_panel(
             .into_element(cx)
     };
 
-    let tabs = shadcn::Tabs::new(locals.tabs.clone_model())
+    let tabs = shadcn::Tabs::new(&locals.tabs)
         .content_fill_remaining(true)
         .items([
             shadcn::TabsItem::new("sync", "Sync", [sync_panel]),
@@ -784,7 +784,7 @@ fn policy_editor(
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let keep_prev = shadcn::Switch::new(config.keep_prev.clone_model())
+    let keep_prev = shadcn::Switch::new(&config.keep_prev)
         .a11y_label("Keep previous data while loading")
         .into_element(cx);
 
@@ -792,7 +792,7 @@ fn policy_editor(
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let fail = shadcn::Switch::new(config.fail_mode.clone_model())
+    let fail = shadcn::Switch::new(&config.fail_mode)
         .a11y_label("Force failures")
         .into_element(cx);
 

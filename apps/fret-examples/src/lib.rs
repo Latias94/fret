@@ -1885,8 +1885,10 @@ mod authoring_surface_policy_tests {
                 "let namespace_input = locals.namespace_input.layout_value(cx);",
                 ".locals_with((&locals.selected, &locals.namespace_input))",
                 "cx.actions().toggle_local_bool::<act::ToggleTheme>(&locals.dark);",
-                "shadcn::Switch::new(locals.global_slow.clone_model())",
-                "shadcn::Tabs::new(locals.tabs.clone_model())",
+                "shadcn::Switch::new(&locals.global_slow)",
+                "shadcn::Tabs::new(&locals.tabs)",
+                "shadcn::Switch::new(&config.keep_prev)",
+                "shadcn::Switch::new(&config.fail_mode)",
                 "shadcn::Input::new(&locals.namespace_input)",
                 "shadcn::Input::new(&locals.search_input)",
                 "shadcn::Input::new(&locals.stock_symbol)",
@@ -1906,6 +1908,10 @@ mod authoring_surface_policy_tests {
                 "cx.actions().models::<act::SelectTip>({",
                 "cx.actions().models::<act::ToggleTheme>({",
                 "cx.on_action_notify_transient::<act::InvalidateSelected>",
+                "shadcn::Switch::new(locals.global_slow.clone_model())",
+                "shadcn::Tabs::new(locals.tabs.clone_model())",
+                "shadcn::Switch::new(config.keep_prev.clone_model())",
+                "shadcn::Switch::new(config.fail_mode.clone_model())",
             ],
         );
 

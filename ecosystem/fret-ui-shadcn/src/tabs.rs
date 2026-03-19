@@ -36,6 +36,7 @@ use fret_ui_kit::{
     resolve_override_slot_opt, ui,
 };
 
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::overlay_motion;
 
 #[derive(Debug, Default, Clone)]
@@ -1520,9 +1521,9 @@ impl std::fmt::Debug for Tabs {
 }
 
 impl Tabs {
-    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel) -> Self {
         Self {
-            model: Some(model),
+            model: Some(model.into_optional_text_value_model()),
             default_value: None,
             items: Vec::new(),
             disabled: false,
@@ -2860,7 +2861,7 @@ impl Tabs {
 /// Builder-preserving controlled helper for the common tabs authoring path.
 pub fn tabs<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
+    model: impl IntoOptionalTextValueModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> Tabs
 where

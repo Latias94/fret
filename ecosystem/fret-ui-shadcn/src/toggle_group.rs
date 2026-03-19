@@ -23,6 +23,7 @@ use fret_ui_kit::{
     resolve_override_slot_opt,
 };
 
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::test_id::test_id_slug;
 use crate::toggle::{ToggleSize, ToggleVariant};
 
@@ -343,10 +344,10 @@ impl std::fmt::Debug for ToggleGroup {
 }
 
 impl ToggleGroup {
-    pub fn single(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn single(model: impl IntoOptionalTextValueModel) -> Self {
         Self {
             model: ToggleGroupModel::Single {
-                model: Some(model),
+                model: Some(model.into_optional_text_value_model()),
                 default_value: None,
             },
             items: Vec::new(),
@@ -1025,7 +1026,7 @@ impl ToggleGroup {
 /// Builder-preserving controlled helper for the common single-select toggle-group path.
 pub fn toggle_group_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
+    model: impl IntoOptionalTextValueModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> ToggleGroup
 where

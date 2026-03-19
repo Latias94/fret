@@ -55,6 +55,7 @@ mod alert_dialog;
 mod aspect_ratio;
 mod avatar;
 mod badge;
+mod bool_model;
 mod breadcrumb;
 mod button;
 mod button_group;
@@ -103,6 +104,7 @@ mod menu_authoring;
 mod menubar;
 mod native_select;
 mod navigation_menu;
+mod optional_text_value_model;
 mod overlay_motion;
 mod pagination;
 mod popover;
@@ -182,6 +184,7 @@ pub mod raw {
     raw_module!(avatar);
     raw_module!(badge);
     raw_module!(breadcrumb);
+    raw_module!(bool_model);
     raw_module!(button);
     raw_module!(button_group);
     raw_module!(calendar);
@@ -223,6 +226,7 @@ pub mod raw {
     raw_module!(menubar);
     raw_module!(native_select);
     raw_module!(navigation_menu);
+    raw_module!(optional_text_value_model);
     raw_module!(pagination);
     raw_module!(popover);
     raw_module!(progress);
@@ -286,6 +290,7 @@ pub mod facade {
     pub use crate::badge::{
         Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants,
     };
+    pub use crate::bool_model::IntoBoolModel;
     pub use crate::breadcrumb::primitives::{
         Breadcrumb as BreadcrumbRoot, BreadcrumbEllipsis, BreadcrumbItem as BreadcrumbItemPart,
         BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
@@ -435,6 +440,7 @@ pub mod facade {
         NavigationMenuViewport, navigation_menu, navigation_menu_list,
         navigation_menu_trigger_style, navigation_menu_uncontrolled,
     };
+    pub use crate::optional_text_value_model::IntoOptionalTextValueModel;
     pub use crate::pagination::{
         Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
         PaginationLinkSize, PaginationNext, PaginationPrevious, pagination, pagination_content,

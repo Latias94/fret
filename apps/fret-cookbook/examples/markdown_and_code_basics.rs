@@ -92,7 +92,7 @@ impl View for MarkdownAndCodeBasicsView {
         // Keep the "Copy" affordance visible in scripts/screenshots without requiring hover.
         components.code_block_ui.copy_button_on_hover = false;
 
-        let wrap_toggle = shadcn::ToggleGroup::single(wrap_state.clone_model())
+        let wrap_toggle = shadcn::ToggleGroup::single(&wrap_state)
             .items([
                 shadcn::ToggleGroupItem::new(WRAP_SCROLL_X, [cx.text("Scroll X")])
                     .a11y_label("Scroll horizontally")
@@ -104,8 +104,7 @@ impl View for MarkdownAndCodeBasicsView {
             .refine_layout(LayoutRefinement::default().flex_none())
             .test_id(TEST_ID_WRAP);
 
-        let cap_switch =
-            shadcn::Switch::new(cap_height_state.clone_model()).test_id(TEST_ID_CAP_HEIGHT);
+        let cap_switch = shadcn::Switch::new(&cap_height_state).test_id(TEST_ID_CAP_HEIGHT);
 
         let reset = shadcn::Button::new("Reset sample")
             .variant(shadcn::ButtonVariant::Secondary)

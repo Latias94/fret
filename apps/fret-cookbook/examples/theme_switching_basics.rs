@@ -88,7 +88,7 @@ impl View for ThemeSwitchingBasicsView {
         .gap(Space::N2)
         .items_center();
 
-        let scheme_toggle = shadcn::ToggleGroup::single(scheme_state.clone_model())
+        let scheme_toggle = shadcn::ToggleGroup::single(&scheme_state)
             .items([
                 shadcn::ToggleGroupItem::new(SCHEME_LIGHT, [cx.text("Light")])
                     .a11y_label("Light")

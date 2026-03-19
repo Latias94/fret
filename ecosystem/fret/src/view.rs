@@ -613,6 +613,20 @@ impl<T: Any> TrackedStateExt<T> for Model<T> {
 }
 
 #[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoBoolModel for LocalState<bool> {
+    fn into_bool_model(self) -> Model<bool> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoBoolModel for &LocalState<bool> {
+    fn into_bool_model(self) -> Model<bool> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoTextValueModel for LocalState<String> {
     fn into_text_value_model(self) -> Model<String> {
         self.clone_model()
@@ -622,6 +636,20 @@ impl fret_ui_shadcn::facade::IntoTextValueModel for LocalState<String> {
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoTextValueModel for &LocalState<String> {
     fn into_text_value_model(self) -> Model<String> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalTextValueModel for LocalState<Option<Arc<str>>> {
+    fn into_optional_text_value_model(self) -> Model<Option<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalTextValueModel for &LocalState<Option<Arc<str>>> {
+    fn into_optional_text_value_model(self) -> Model<Option<Arc<str>>> {
         self.clone_model()
     }
 }

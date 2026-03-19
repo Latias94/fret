@@ -301,7 +301,7 @@ impl View for VirtualListBasicsView {
             }
         });
 
-        let mode_toggle = shadcn::ToggleGroup::single(mode_state.clone_model())
+        let mode_toggle = shadcn::ToggleGroup::single(&mode_state)
             .items([
                 shadcn::ToggleGroupItem::new(MODE_MEASURED, [cx.text("Measured")])
                     .a11y_label("Measured virtualization")
@@ -327,7 +327,7 @@ impl View for VirtualListBasicsView {
                 ui::h_flex(|cx| {
                     ui::children![cx;
                         shadcn::Label::new("Tall rows:"),
-                        shadcn::Switch::new(tall_rows_state.clone_model()).test_id(TEST_ID_TALL_ROWS),
+                        shadcn::Switch::new(&tall_rows_state).test_id(TEST_ID_TALL_ROWS),
                     ]
                 })
                 .gap(Space::N2)
@@ -335,7 +335,7 @@ impl View for VirtualListBasicsView {
                 ui::h_flex(|cx| {
                     ui::children![cx;
                         shadcn::Label::new("Reversed:"),
-                        shadcn::Switch::new(reversed_state.clone_model()).test_id(TEST_ID_REVERSED),
+                        shadcn::Switch::new(&reversed_state).test_id(TEST_ID_REVERSED),
                     ]
                 })
                 .gap(Space::N2)
@@ -343,7 +343,7 @@ impl View for VirtualListBasicsView {
                 ui::h_flex(|cx| {
                     ui::children![cx;
                         shadcn::Label::new("Use index keys (bad):"),
-                        shadcn::Switch::new(index_keys_state.clone_model()).test_id(TEST_ID_INDEX_KEYS),
+                        shadcn::Switch::new(&index_keys_state).test_id(TEST_ID_INDEX_KEYS),
                     ]
                 })
                 .gap(Space::N2)
@@ -351,7 +351,7 @@ impl View for VirtualListBasicsView {
                 ui::h_flex(|cx| {
                     ui::children![cx;
                         shadcn::Label::new("Key cache: visible only"),
-                        shadcn::Switch::new(visible_only_keys_state.clone_model())
+                        shadcn::Switch::new(&visible_only_keys_state)
                             .test_id(TEST_ID_VISIBLE_ONLY_KEYS),
                     ]
                 })

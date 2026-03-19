@@ -389,6 +389,8 @@ mod authoring_surface_policy_tests {
 
         assert!(THEME_SWITCHING_EXAMPLE.contains("use fret_app::Effect;"));
         assert!(THEME_SWITCHING_EXAMPLE.contains("local_init(|| Some::<Arc<str>>"));
+        assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::ToggleGroup::single(&scheme_state)"));
+        assert!(!THEME_SWITCHING_EXAMPLE.contains("scheme_state.clone_model()"));
 
         assert!(TOAST_EXAMPLE.contains("on_action_notify::<act::DefaultToast>"));
         assert!(!TOAST_EXAMPLE.contains("availability::<act::DefaultToast>"));
@@ -400,7 +402,9 @@ mod authoring_surface_policy_tests {
 
         assert!(VIRTUAL_LIST_EXAMPLE.contains("use fret_runtime::Model;"));
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".items"));
-        assert!(VIRTUAL_LIST_EXAMPLE.contains("let items = self.items.layout(cx).value_or_default();"));
+        assert!(
+            VIRTUAL_LIST_EXAMPLE.contains("let items = self.items.layout(cx).value_or_default();")
+        );
         assert!(VIRTUAL_LIST_EXAMPLE.contains(".selector_layout("));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains(".watch(cx)"));
         assert!(!VIRTUAL_LIST_EXAMPLE.contains("watch(&mode_state)"));
@@ -498,6 +502,10 @@ mod authoring_surface_policy_tests {
         );
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("let source = source_state.layout_value(cx);"));
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("local_set::<act::Reset, String>"));
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::ToggleGroup::single(&wrap_state)"));
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::Switch::new(&cap_height_state)"));
+        assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("wrap_state.clone_model()"));
+        assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("cap_height_state.clone_model()"));
         assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("watch(&wrap_state)"));
         assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("source_state.layout(cx).value_or_default()"));
 
@@ -510,6 +518,39 @@ mod authoring_surface_policy_tests {
         assert!(IMUI_ACTION_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
         assert!(!IMUI_ACTION_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
         assert!(!IMUI_ACTION_EXAMPLE.contains("availability::<act::Inc>"));
+    }
+
+    #[test]
+    fn common_shadcn_control_examples_prefer_local_state_bridges_over_clone_model() {
+        assert!(THEME_SWITCHING_EXAMPLE.contains("shadcn::ToggleGroup::single(&scheme_state)"));
+        assert!(!THEME_SWITCHING_EXAMPLE.contains("scheme_state.clone_model()"));
+
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::ToggleGroup::single(&wrap_state)"));
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::Switch::new(&cap_height_state)"));
+        assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("wrap_state.clone_model()"));
+        assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("cap_height_state.clone_model()"));
+
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("shadcn::ToggleGroup::single(&mode_state)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(&tall_rows_state)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(&reversed_state)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(&index_keys_state)"));
+        assert!(VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(&visible_only_keys_state)"));
+        assert!(
+            !VIRTUAL_LIST_EXAMPLE.contains("shadcn::ToggleGroup::single(mode_state.clone_model())")
+        );
+        assert!(
+            !VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(tall_rows_state.clone_model())")
+        );
+        assert!(
+            !VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(reversed_state.clone_model())")
+        );
+        assert!(
+            !VIRTUAL_LIST_EXAMPLE.contains("shadcn::Switch::new(index_keys_state.clone_model())")
+        );
+        assert!(
+            !VIRTUAL_LIST_EXAMPLE
+                .contains("shadcn::Switch::new(visible_only_keys_state.clone_model())")
+        );
     }
 
     #[test]

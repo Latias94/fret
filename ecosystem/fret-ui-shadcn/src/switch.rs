@@ -27,6 +27,7 @@ use fret_ui_kit::{
     WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
 
+use crate::bool_model::IntoBoolModel;
 use crate::overlay_motion;
 
 const SWITCH_THUMB_TRANSITION_EASE: fret_ui_kit::headless::easing::CubicBezier =
@@ -205,9 +206,9 @@ enum SwitchModel {
 }
 
 impl Switch {
-    pub fn new(model: Model<bool>) -> Self {
+    pub fn new(model: impl IntoBoolModel) -> Self {
         Self {
-            model: SwitchModel::Determinate(model),
+            model: SwitchModel::Determinate(model.into_bool_model()),
             size: SwitchSize::Default,
             disabled: false,
             aria_invalid: false,
@@ -758,7 +759,7 @@ impl Switch {
     }
 }
 
-pub fn switch<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H> {
+pub fn switch<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M> {
     Switch::new(model)
 }
 

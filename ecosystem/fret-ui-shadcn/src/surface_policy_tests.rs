@@ -1093,7 +1093,8 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "switch.rs",
             SWITCH_RS,
             &[
-                "pub fn switch<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H>",
+                "pub fn new(model: impl IntoBoolModel) -> Self {",
+                "pub fn switch<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
                 "pub fn switch_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H>",
             ][..],
             &[
@@ -1117,7 +1118,8 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "toggle_group.rs",
             TOGGLE_GROUP_RS,
             &[
-                "pub fn toggle_group_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn single(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn toggle_group_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = ToggleGroupItem>,",
@@ -1141,7 +1143,8 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "tabs.rs",
             TABS_RS,
             &[
-                "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
+                "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
                 "pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
             ][..],
             &[
