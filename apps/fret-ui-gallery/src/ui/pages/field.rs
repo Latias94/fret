@@ -36,7 +36,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
     let accessibility = doc_layout::notes_block([
         "Use `field_set(...)` + `FieldLegend` to group related controls for assistive technologies.",
-        "Associate labels via `FieldLabel::for_control(...)` plus matching control ids; when parts need a shared field-local association context (for example `Field + Select`), use `Field::build(...)`.",
+        "Associate labels via `FieldLabel::for_control(...)` plus matching control ids; when parts need a shared field-local association context, use `Field::build(...)`.",
         "Use `FieldError` immediately after the control or inside `FieldContent`, and pair invalid styling with control-level `aria_invalid(true)`.",
         "Use `FieldSeparator` sparingly so grouped sections remain understandable to screen readers.",
     ]);
@@ -53,6 +53,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
         "Field page now mirrors the upstream docs path first, then adds one explicit Fret teaching seam: Composable Labels via `FieldLabel::wrap(...)`.",
         "The Select example now uses `Field::build(...)` so Fret can preserve the upstream label + control + description order without forcing explicit ids into the snippet.",
+        "`Field::build(...)` now also supports `Input` / `Textarea` auto association, but this page keeps explicit-id text-field examples so the default teaching surface stays closer to the upstream docs.",
         "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
         "The current audit points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
         "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules, `RadioGroupItemVariant::ChoiceCard`, or wrapped card-style labels via `FieldLabel::wrap(...)`.",
