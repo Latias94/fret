@@ -5,6 +5,7 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::field as snippets;
 
 pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    let demo = snippets::demo::render(cx);
     let input = snippets::input::render(cx);
     let textarea = snippets::textarea::render(cx);
     let select = snippets::select::render(cx);
@@ -42,16 +43,16 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and `responsive` layouts.",
         "`field_set(...)` and `field_group(...)` are the default first-party grouped authoring entrypoints; `FieldSet` / `FieldGroup` remain the underlying typed recipe surface when direct builder access is useful.",
         "`FieldLegend` and `FieldSeparator` cover semantic grouping labels and section separation.",
-        "`FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, and `FieldError` cover the documented content slots without needing an extra generic children / compose API.",
+        "`FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, and `FieldError` cover the default typed slot path; when a richer wrapper is needed, keep using `FieldLabel::wrap(...)` and the typed `Field::build(...)` / `field_group(...)` builders instead of dropping to raw `AnyElement` seams too early.",
         "Width ownership stays deliberate: `FieldDescription` keeps recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` keep intrinsic-width defaults unless the surrounding `Field` orientation or call site requests full width.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
-        "Field page now mirrors the upstream docs path first: Usage, Anatomy, Form, the example set through Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
+        "Field page now mirrors the upstream docs path first: Demo, Usage, Anatomy, Form, the example set through Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
         "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
-        "No mechanism bug is indicated here; the current work is docs/public-surface parity and source-of-truth cleanup toward the base docs/examples.",
-        "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules or wrapped card-style labels.",
+        "The current audit points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
+        "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules, `RadioGroupItemVariant::ChoiceCard`, or wrapped card-style labels via `FieldLabel::wrap(...)`.",
     ]);
     let form = DocSection::build(cx, "Form", form)
         .no_shell()
@@ -68,6 +69,9 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .description("API reference pointers and stability guidance.")
         .test_id_prefix("ui-gallery-field-notes");
+    let demo = DocSection::build(cx, "Demo", demo)
+        .description("Overview composition aligned with the upstream `field-demo` preview.")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .description("Copyable minimal imports plus a representative fieldset composition.")
         .code_rust(
@@ -148,7 +152,9 @@ shadcn::field_set(|cx| {
         .description("Switch composed with title + description.")
         .code_rust_from_file_region(snippets::switch::SOURCE, "example");
     let choice_card = DocSection::build(cx, "Choice Card", choice_card)
-        .description("Choice-card radios combine FieldContent with rich labels.")
+        .description(
+            "Choice-card radios keep whole-card activation; use `FieldLabel::wrap(...)` on other control families when you want arbitrary card-style labels.",
+        )
         .code_rust_from_file_region(snippets::choice_card::SOURCE, "example");
     let field_group = DocSection::build(cx, "Field Group", field_group)
         .description("FieldGroup provides separators and checkbox-group composition.")
@@ -169,9 +175,10 @@ shadcn::field_set(|cx| {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Field docs order first: Usage, Anatomy, Form, Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
+            "Preview follows shadcn Field docs order first: Demo, Usage, Anatomy, Form, Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
         ),
         vec![
+            demo,
             usage,
             anatomy,
             form,

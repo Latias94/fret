@@ -1,5 +1,6 @@
 pub mod checkbox;
 pub mod choice_card;
+pub mod demo;
 pub mod field_group;
 pub mod fieldset;
 pub mod input;
