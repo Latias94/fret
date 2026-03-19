@@ -83,12 +83,22 @@ Interaction contract:
       tighter popup silhouette/elevation than the default preset without reopening per-control local
       tuning. Shared popup/property surface fallback order now also lives in
       `primitives::colors`, so composite surfaces stop duplicating their own editor-vs-shared token
-      ladders. Remaining work: keep pruning residual per-control chrome heuristics and only widen
-      the popup token set again if a real second geometry family appears.
+      ladders. `TextAssistField` and `EnumSelect` now also share a narrower internal popup-list row
+      grammar (`primitives::popup_list`) for row gap/radius/text style, active/disabled palette,
+      content-height budgeting, and popup placement margins instead of carrying one more set of
+      duplicated popup-list heuristics each. The focused popup screenshot gates were rerun on
+      2026-03-18 against that shared seam (`name-assist-popup-r2`, `enum-select-reveal-r2`) and
+      still show stable row highlight, density, and placement. Remaining work: keep pruning
+      residual per-control chrome heuristics, and only widen the popup token set again if a real
+      second geometry family appears.
 - [~] `EER-BASE-112` Define and land inspector/property layout grammar:
       shared `InspectorLayoutMetrics` now feed `PropertyRow`, `PropertyGrid`,
       `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`, and the row grammar is now
-      explicit (`label -> value -> reset slot -> status/actions slot`). Trailing affordances now
+      explicit (`label -> value -> reset slot -> status/actions slot`). The promoted
+      `imui_editor_proof_demo` now also routes its resettable drag-value / material-slider /
+      advanced-position proof rows back through `row_cx.row_options`, so proof-local reset
+      affordances stop bypassing the shared slot widths that the real inspector lane grammar uses.
+      Trailing affordances now
       converge on a row-height-square baseline across property-row reset buttons, joined-input
       clear/remove segments, and gradient-row icon actions. Empty reset/status lanes now collapse
       when unused, and the shared default value-lane cap was widened in the screenshot-reviewed
@@ -108,9 +118,11 @@ Interaction contract:
       dense imgui-like preset now also has a first dedicated calibration pass for that same tail
       grammar (`PROPERTY_TRAILING_GAP=3`, `PROPERTY_STATUS_SLOT_WIDTH=48`) so dense overview rows
       stop keeping more right-lane slack than the updated default baseline.
-      Remaining work: calibrate any dense-mode overrides from screenshot review rather than ad-hoc
-      per-demo tweaks, and only lift more than that shared text-style seam into a reusable editor
-      primitive if a second real readout layout family appears.
+      Fresh default/dense screenshot reruns on 2026-03-18 kept those shared lane caps stable after
+      the popup-list seam landed too. Remaining work: keep dense-mode overrides driven by
+      screenshot review rather than ad-hoc per-demo tweaks, and only lift more than that shared
+      text-style seam into a reusable editor primitive if a second real readout layout family
+      appears.
 - [x] `EER-BASE-113` Make typed-edit, focus, active, and invalid states visually explicit across
       numeric, text, and select-like controls.
       `EditorWidgetVisuals` now owns a shared semantic layer for typed-edit and invalid field
@@ -139,9 +151,18 @@ Interaction contract:
       makes the proof surface materially easier to scan when diagnostics rows are populated. The
       dense screenshot proof was rerun after a dense-only tail calibration pass and now confirms
       the tighter right-lane treatment survives the compact preset as well.
+      The default proof rerun on 2026-03-18 also keeps resettable proof rows on the shared
+      property-row lane grammar instead of letting proof-local `PropertyRow` defaults drift from the
+      real inspector caps. The same pass now also shortens non-empty proof-local readout wording
+      (`Commit` / `Cancel`, `N lines`, `N chars`) so populated diagnostic rows stay visibly
+      subordinate to the editable controls they describe. The matching
+      `imgui_like_dense` screenshot proof was rerun on 2026-03-18 as well and still fits that
+      shorter wording without reopening right-lane crowding. A fresh same-day rerun against the
+      current worktree (`editor-components-default-r4`, `editor-components-dense-r3`) kept those
+      proof captures stable after popup-list unification as well.
       Remaining work: keep these compositions stable while token/layout cleanup continues, extend
-      the same review discipline to adjacent proof surfaces, and do one more density pass on the
-      remaining non-empty proof readouts.
+      the same review discipline to adjacent proof surfaces, and land the current proof/popup
+      closure as reviewable grouped commits before resuming component promotion.
 - [x] `EER-BASE-115` Add screenshot/diag coverage for the neutral default editor baseline.
       The default screenshot proof now exists via
       `tools/diag-scripts/ui-editor/imui/imui-editor-proof-editor-components-screenshots-default.json`,

@@ -118,6 +118,8 @@ Deliverables:
 - focused popup screenshot/diag evidence across the other real popup consumers as well, so
   trigger-owned select lists and color-edit popovers share the same review discipline instead of
   depending on ad-hoc manual screenshots,
+- one explicit grouped-closeout boundary for popup-list grammar and proof lane/readout cleanup, so
+  Phase B can be reviewed and landed without dragging unrelated editor experiments along with it,
 - focused diag coverage for default buffered blur commit plus the first editor opt-in blur
   exceptions (`Cancel` for inline rename, `PreserveDraft` for multiline notes), alongside
   multiline explicit commit and Escape cancel on the promoted proof surface,
@@ -159,6 +161,8 @@ Exit gates:
 - popup-capable secondary widgets no longer inherit a light host `popover` surface against the dark
   editor baseline, and the anchored-overlay/select/color popup paths are backed by focused
   screenshot/bundle/layout evidence instead of only behavioral scripts,
+- the remaining Phase B diff can be split into reviewable popup-list vs proof-lane/readout groups
+  without carrying unrelated formatting or exploratory churn,
 - repeated-control identity coverage exists on a promoted loop-built surface rather than only in
   local reasoning or code comments,
 - and this workstream can point to clear proof/gate evidence for baseline correctness.

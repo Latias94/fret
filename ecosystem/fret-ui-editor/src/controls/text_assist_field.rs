@@ -17,7 +17,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Corners, Edges, Px, SemanticsRole, Size, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, Px, SemanticsRole, Size, TextAlign};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost, UiFocusActionHost};
 use fret_ui::element::{
@@ -33,21 +33,20 @@ use fret_ui_kit::headless::text_assist::{
     input_owned_text_assist_key_handler, input_owned_text_assist_semantics,
 };
 use fret_ui_kit::primitives::{popper, popper_content};
-use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use super::{TextField, TextFieldAssistiveSemantics, TextFieldOptions};
-use crate::primitives::colors::{editor_accent, editor_foreground, editor_muted_foreground};
+use crate::primitives::colors::editor_muted_foreground;
+use crate::primitives::popup_list::{
+    EditorPopupListRowState, editor_popup_list_content_height,
+    editor_popup_list_default_max_content_height, editor_popup_list_row_gap,
+    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_row_text_style,
+    editor_popup_list_surface_padding, editor_popup_side_offset, editor_popup_window_margin,
+};
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 use crate::primitives::style::EditorStyle;
 
-const TEXT_ASSIST_ROW_GAP: Px = Px(2.0);
 const TEXT_ASSIST_ROOT_GAP: Px = Px(6.0);
-const TEXT_ASSIST_SURFACE_PADDING: Px = Px(4.0);
-const TEXT_ASSIST_ROW_RADIUS: Px = Px(6.0);
-const TEXT_ASSIST_POPUP_SIDE_OFFSET: Px = Px(4.0);
-const TEXT_ASSIST_POPUP_WINDOW_MARGIN: Px = Px(8.0);
-const TEXT_ASSIST_POPUP_MAX_VISIBLE_ROWS: usize = 6;
 
 pub type OnTextAssistFieldAccept =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, TextAssistMatch) + 'static>;
@@ -372,20 +371,17 @@ fn render_text_assist_panel<H: UiHost>(
     }
 
     let is_overlay_surface = matches!(options.surface, TextAssistFieldSurface::AnchoredOverlay);
-    let (density, popup_chrome, active_bg, active_fg, row_fg, muted_fg) = {
+    let (density, popup_chrome) = {
         let theme = Theme::global(&*cx.app);
         let style = EditorStyle::resolve(theme);
         (
             style.density,
             resolve_editor_popup_surface_chrome(theme, is_overlay_surface),
-            editor_accent(theme),
-            theme.color_token("accent-foreground"),
-            editor_foreground(theme),
-            editor_muted_foreground(theme),
         )
     };
 
-    let content_height = text_assist_content_height(density.row_height, controller.visible().len());
+    let content_height =
+        editor_popup_list_content_height(density.row_height, controller.visible().len());
     let max_content_height = text_assist_max_content_height(
         options.surface,
         options.max_list_height,
@@ -394,7 +390,7 @@ fn render_text_assist_panel<H: UiHost>(
     let viewport_height = max_content_height
         .map(|max_height| Px(content_height.0.min(max_height.0)))
         .unwrap_or(content_height);
-    let surface_height = Px(viewport_height.0 + TEXT_ASSIST_SURFACE_PADDING.0 * 2.0);
+    let surface_height = Px(viewport_height.0 + editor_popup_list_surface_padding().0 * 2.0);
     let item_test_id_prefix = options
         .item_test_id_prefix
         .clone()
@@ -456,17 +452,16 @@ fn render_text_assist_panel<H: UiHost>(
                     cx.pressable_add_on_activate(on_activate);
 
                     let hovered = st.hovered || st.hovered_raw;
-                    let row_bg = if is_active || hovered {
-                        Some(active_bg)
-                    } else {
-                        None
-                    };
-                    let row_label = if entry.disabled {
-                        muted_fg
-                    } else if is_active || hovered {
-                        active_fg
-                    } else {
-                        row_fg
+                    let row_palette = {
+                        let theme = Theme::global(&*cx.app);
+                        editor_popup_list_row_palette(
+                            theme,
+                            hovered,
+                            EditorPopupListRowState {
+                                active: is_active,
+                                disabled: entry.disabled,
+                            },
+                        )
                     };
 
                     vec![cx.container(
@@ -480,8 +475,8 @@ fn render_text_assist_panel<H: UiHost>(
                                 ..Default::default()
                             },
                             padding: Edges::symmetric(density.padding_x, Px(0.0)).into(),
-                            background: row_bg,
-                            corner_radii: Corners::all(TEXT_ASSIST_ROW_RADIUS),
+                            background: row_palette.bg,
+                            corner_radii: Corners::all(editor_popup_list_row_radius()),
                             ..Default::default()
                         },
                         move |cx| {
@@ -495,12 +490,8 @@ fn render_text_assist_panel<H: UiHost>(
                                     ..Default::default()
                                 },
                                 text: entry.label.clone(),
-                                style: Some(typography::as_control_text(TextStyle {
-                                    size: Px(12.0),
-                                    line_height: Some(density.row_height),
-                                    ..Default::default()
-                                })),
-                                color: Some(row_label),
+                                style: Some(editor_popup_list_row_text_style(density.row_height)),
+                                color: Some(row_palette.fg),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Ellipsis,
                                 align: TextAlign::Start,
@@ -562,7 +553,7 @@ fn render_text_assist_panel<H: UiHost>(
                             ..Default::default()
                         },
                         direction: Axis::Vertical,
-                        gap: TEXT_ASSIST_ROW_GAP.into(),
+                        gap: editor_popup_list_row_gap().into(),
                         padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
@@ -594,7 +585,7 @@ fn render_text_assist_panel<H: UiHost>(
                 vec![cx.container(
                     ContainerProps {
                         layout: panel_layout,
-                        padding: Edges::all(TEXT_ASSIST_SURFACE_PADDING).into(),
+                        padding: Edges::all(editor_popup_list_surface_padding()).into(),
                         background: Some(popup_chrome.bg),
                         border: Edges::all(Px(1.0)),
                         border_color: Some(popup_chrome.border),
@@ -632,15 +623,15 @@ fn request_text_assist_overlay<H: UiHost>(
     let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
         cx,
         Invalidation::Layout,
-        TEXT_ASSIST_POPUP_WINDOW_MARGIN,
+        editor_popup_window_margin(),
     );
     let placement = popper::PopperContentPlacement::new(
         popper::LayoutDirection::Ltr,
         Side::Bottom,
         Align::Start,
-        TEXT_ASSIST_POPUP_SIDE_OFFSET,
+        editor_popup_side_offset(),
     )
-    .with_collision_padding(Edges::all(TEXT_ASSIST_POPUP_WINDOW_MARGIN));
+    .with_collision_padding(Edges::all(editor_popup_window_margin()));
     let desired = Size::new(anchor.size.width, surface_height);
     let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
     cx.diagnostics_record_overlay_placement_placed_rect(
@@ -719,23 +710,14 @@ fn should_render_inline_empty_label(
         && visible_count == 0
 }
 
-fn text_assist_content_height(row_height: Px, visible_count: usize) -> Px {
-    let row_count = visible_count as f32;
-    let gaps = visible_count.saturating_sub(1) as f32;
-    Px(row_count * row_height.0 + gaps * TEXT_ASSIST_ROW_GAP.0)
-}
-
 fn text_assist_max_content_height(
     surface: TextAssistFieldSurface,
     max_list_height: Option<Px>,
     row_height: Px,
 ) -> Option<Px> {
     max_list_height.or_else(|| {
-        matches!(surface, TextAssistFieldSurface::AnchoredOverlay).then(|| {
-            let rows = TEXT_ASSIST_POPUP_MAX_VISIBLE_ROWS as f32;
-            let gaps = TEXT_ASSIST_POPUP_MAX_VISIBLE_ROWS.saturating_sub(1) as f32;
-            Px(rows * row_height.0 + gaps * TEXT_ASSIST_ROW_GAP.0)
-        })
+        matches!(surface, TextAssistFieldSurface::AnchoredOverlay)
+            .then(|| editor_popup_list_default_max_content_height(row_height))
     })
 }
 

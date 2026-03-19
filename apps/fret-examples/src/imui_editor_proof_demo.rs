@@ -125,8 +125,8 @@ fn authoring_parity_blend_presentation() -> NumericPresentation<f64> {
 
 fn edit_session_outcome_label(outcome: EditSessionOutcome) -> &'static str {
     match outcome {
-        EditSessionOutcome::Committed => "Committed",
-        EditSessionOutcome::Canceled => "Canceled",
+        EditSessionOutcome::Committed => "Commit",
+        EditSessionOutcome::Canceled => "Cancel",
     }
 }
 
@@ -220,7 +220,13 @@ fn proof_compact_readout<H: UiHost>(
 fn committed_line_count_label(text: &str) -> String {
     let lines = text.lines().count();
     let noun = if lines == 1 { "line" } else { "lines" };
-    format!("{lines} {noun} committed")
+    format!("{lines} {noun}")
+}
+
+fn committed_char_count_label(text: &str) -> String {
+    let chars = text.chars().count();
+    let noun = if chars == 1 { "char" } else { "chars" };
+    format!("{chars} {noun}")
 }
 
 fn editor_text_assist_state_label(
@@ -979,7 +985,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .cloned()
                                                                 .unwrap_or_default();
                                                             let readout =
-                                                                format!("{} chars committed", committed.chars().count());
+                                                                committed_char_count_label(
+                                                                    &committed,
+                                                                );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 readout,
@@ -1361,15 +1369,21 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.drag-value-reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Opacity"),
                                                             |cx| {
                                                                 let outcome_model =
@@ -1455,15 +1469,21 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.material.roughness.reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Roughness"),
                                                             |cx| {
                                                                 Slider::from_presentation(
@@ -1511,15 +1531,21 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.material.metallic.reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Metallic"),
                                                             |cx| {
                                                                 Slider::from_presentation(
@@ -1842,15 +1868,21 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.advanced.position.reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Position"),
                                                             |cx| {
                                                                 let outcome_model =
@@ -3364,13 +3396,17 @@ mod tests {
             committed_line_count_label(
                 "Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n"
             ),
-            "3 lines committed"
+            "3 lines"
         );
-        assert_eq!(
-            committed_line_count_label("Line A\nLine B"),
-            "2 lines committed"
-        );
-        assert_eq!(committed_line_count_label("Solo"), "1 line committed");
-        assert_eq!(committed_line_count_label(""), "0 lines committed");
+        assert_eq!(committed_line_count_label("Line A\nLine B"), "2 lines");
+        assert_eq!(committed_line_count_label("Solo"), "1 line");
+        assert_eq!(committed_line_count_label(""), "0 lines");
+    }
+
+    #[test]
+    fn committed_char_count_label_tracks_password_readout() {
+        assert_eq!(committed_char_count_label(""), "0 chars");
+        assert_eq!(committed_char_count_label("a"), "1 char");
+        assert_eq!(committed_char_count_label("abc"), "3 chars");
     }
 }
