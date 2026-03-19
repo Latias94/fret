@@ -1164,6 +1164,20 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "data_table_controls.rs",
+            DATA_TABLE_CONTROLS_RS,
+            &[
+                "pub fn new(checked: impl IntoBoolModel, label: impl Into<Arc<str>>) -> Self {",
+                "pub fn new( open: impl IntoBoolModel, items: impl IntoIterator<Item = DataTableViewOptionItem>, ) -> Self {",
+                "pub fn new(model: impl IntoTextValueModel) -> Self {",
+            ][..],
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {",
+                "pub fn new( open: Model<bool>, items: impl IntoIterator<Item = DataTableViewOptionItem>, ) -> Self {",
+                "pub fn new(model: Model<String>) -> Self {",
+            ][..],
+        ),
+        (
             "collapsible.rs",
             COLLAPSIBLE_RS,
             &[
@@ -2091,15 +2105,6 @@ fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
                 "pub fn into_element_retained<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, debug_header_cell_test_id_prefix: Option<Arc<str>>, debug_row_test_id_prefix: Option<Arc<str>>, ) -> AnyElement where TData: 'static,",
                 "pub fn into_element<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
                 "pub fn into_element_with_header_cell<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, header_cell_at: impl Fn( &mut ElementContext<'_, H>, &ColumnDef<TData>, Option<bool>, ) -> Option<Vec<AnyElement>> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
-            ][..],
-        ),
-        (
-            "data_table_controls.rs",
-            DATA_TABLE_CONTROLS_RS,
-            &[
-                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
-                "pub fn new( open: Model<bool>, items: impl IntoIterator<Item = DataTableViewOptionItem>, ) -> Self",
-                "pub fn new(model: Model<String>) -> Self",
             ][..],
         ),
         (

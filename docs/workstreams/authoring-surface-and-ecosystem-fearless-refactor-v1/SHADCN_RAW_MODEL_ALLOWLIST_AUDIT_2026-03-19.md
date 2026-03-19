@@ -112,7 +112,6 @@ Audited files:
 - `chart.rs`
 - `data_grid_canvas.rs`
 - `data_table.rs`
-- `data_table_controls.rs`
 - `data_table_recipes.rs`
 - `date_picker_with_presets.rs`
 - `extras/banner.rs`
@@ -160,6 +159,9 @@ This bucket is now smaller than when the note was first written:
 - `SidebarInput::new(...)`
 - `CalendarHijri::new(...)`
 - `Rating::new(...)`
+- `DataTableGlobalFilterInput::new(...)`
+- `DataTableViewOptionItem::new(...)`
+- `DataTableViewOptions::new(...)`
 
 have already moved onto narrow bridge traits and are no longer part of the raw-model allowlist.
 

@@ -4,9 +4,11 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::bool_model::IntoBoolModel;
 use crate::button::{Button, ButtonVariant};
 use crate::dropdown_menu::{DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry};
 use crate::input::Input;
+use crate::text_value_model::IntoTextValueModel;
 
 #[derive(Debug, Clone)]
 pub struct DataTableRowState {
@@ -55,10 +57,10 @@ pub struct DataTableViewOptionItem {
 }
 
 impl DataTableViewOptionItem {
-    pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {
+    pub fn new(checked: impl IntoBoolModel, label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
-            checked,
+            checked: checked.into_bool_model(),
             disabled: false,
         }
     }
@@ -77,11 +79,11 @@ pub struct DataTableViewOptions {
 
 impl DataTableViewOptions {
     pub fn new(
-        open: Model<bool>,
+        open: impl IntoBoolModel,
         items: impl IntoIterator<Item = DataTableViewOptionItem>,
     ) -> Self {
         Self {
-            open,
+            open: open.into_bool_model(),
             items: items.into_iter().collect(),
         }
     }
@@ -119,9 +121,9 @@ pub struct DataTableGlobalFilterInput {
 }
 
 impl DataTableGlobalFilterInput {
-    pub fn new(model: Model<String>) -> Self {
+    pub fn new(model: impl IntoTextValueModel) -> Self {
         Self {
-            model,
+            model: model.into_text_value_model(),
             placeholder: Arc::from("Filter..."),
         }
     }

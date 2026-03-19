@@ -489,7 +489,7 @@ Additional pass-through subcomponents also opt into `ui()` (not tracked individu
 - Card: `CardHeader/CardContent/CardFooter/CardTitle/CardDescription`.
 - Command: `CommandEmpty/CommandList/CommandShortcut` (plus `CommandDialog` as Patch-only).
 - Field/Item/Pagination: `FieldSet/FieldLegend/FieldLabel/FieldTitle/FieldDescription/FieldError/FieldSeparator/FieldGroup/FieldContent`, `ItemGroup/ItemHeader/ItemContent/ItemTitle/ItemDescription/ItemMedia/ItemActions/ItemFooter/ItemSeparator`, `PaginationContent/PaginationItem/PaginationLink/PaginationPrevious/PaginationNext/PaginationEllipsis`.
-- Data table controls: `DataTableGlobalFilterInput/DataTableViewOptions`.
+- Data table controls: `DataTableGlobalFilterInput/DataTableViewOptions` now follow the same narrow bridge direction as `Input` / `Toggle`-style roots (`IntoTextValueModel` / `IntoBoolModel`) instead of requiring raw `Model<_>` handles on their compact constructors.
 - Sonner: `Toaster`.
 - Table: `TableHeader/TableBody/TableFooter/TableRow/TableHead/TableCaption`.
 - Wrappers: `PopoverTrigger/PopoverAnchor/TooltipTrigger/TooltipAnchor/HoverCardTrigger/HoverCardAnchor/DrawerTrigger`.
