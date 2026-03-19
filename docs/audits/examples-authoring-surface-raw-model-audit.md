@@ -166,8 +166,9 @@ Reason:
   explicit root rendering,
 - the state is stored outside the render function and then read from explicit render/event
   pipelines,
-- many of them still use raw `selector(...)` because the dependencies are manual `Model<T>` handles,
-  not render-owned `LocalState<T>`.
+- some of them now use `render_root_with_app_ui(...)` plus `LocalState<T>` bridges, while others
+  intentionally stay on explicit `Model<T>` bags plus grouped `selector_model_paint(...)` reads
+  because the surface itself is still a manual driver/runtime harness.
 
 Evidence:
 
@@ -202,9 +203,13 @@ Audit judgment:
   `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`,
   `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`, and
   `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` now prove the other remaining seam:
-  low-level WebGPU/web inspector demos can keep explicit driver-owned `Model<T>` bags while moving
-  repeated derived inspector reads onto one grouped helper surface instead of raw
-  `selector(...)` dependency boilerplate at each callsite.
+  low-level WebGPU/web inspector demos can stay on explicit driver-owned `Model<T>` bags without
+  pretending to be default app-lane `LocalState<T>` examples.
+- Those `custom_effect_v2_*` web demos do not currently use
+  `fret::advanced::view::render_root_with_app_ui(...)` or `LocalState::from_model(...)`.
+- Their current closure point is narrower and intentional: grouped `selector_model_paint(...)`
+  reads for derived inspector settings plus bag-owned helper methods for repeated writes
+  (`DemoControls::reset_in(...)`), instead of ad hoc repeated `models.update(...)` blocks.
 
 ### B2) Window/runtime interop harnesses
 
@@ -259,10 +264,12 @@ Current status:
 
 - closed for the current in-tree `custom_effect_v2_*` web examples.
 - the family now converges on one shared grouped selector helper for explicit `Model<T>` bags
-  rather than four copies of raw `selector(...)` dependency/revision scaffolding.
+  rather than four copies of raw dependency/revision scaffolding.
+- the family also converges on bag-owned reset helpers instead of repeating the same
+  `models.update(...)` sequences in both event handlers and button callbacks.
 - this keeps the right boundary intact: these demos are still low-level WebGPU/web harnesses, but
-  their inspector-derived reads no longer need bespoke boilerplate at every `view_settings(...)`
-  callsite.
+  their inspector-derived reads and repeated control writes no longer need bespoke boilerplate at
+  every callsite.
 
 ## What Should Stay Locked
 
