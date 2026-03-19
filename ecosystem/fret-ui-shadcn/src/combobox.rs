@@ -2,7 +2,9 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::bool_model::IntoBoolModel;
 use crate::direction::LayoutDirection;
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -906,7 +908,9 @@ impl Combobox {
         self
     }
 
-    pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {
+        let model = model.into_optional_text_value_model();
+        let open = open.into_bool_model();
         Self {
             model,
             open,

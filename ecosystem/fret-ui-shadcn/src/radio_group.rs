@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::direction::LayoutDirection;
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -211,9 +212,9 @@ pub struct RadioGroup {
 }
 
 impl RadioGroup {
-    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel) -> Self {
         Self {
-            model: Some(model),
+            model: Some(model.into_optional_text_value_model()),
             default_value: None,
             items: Vec::new(),
             disabled: false,
@@ -879,7 +880,10 @@ impl RadioGroup {
 }
 
 /// Builder-preserving controlled helper for the common radio-group authoring path.
-pub fn radio_group(model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>) -> RadioGroup {
+pub fn radio_group(
+    model: impl IntoOptionalTextValueModel,
+    items: Vec<RadioGroupItem>,
+) -> RadioGroup {
     let mut group = RadioGroup::new(model);
     for item in items {
         group = group.item(item);

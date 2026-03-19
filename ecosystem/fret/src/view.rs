@@ -655,6 +655,20 @@ impl fret_ui_shadcn::facade::IntoOptionalTextValueModel for &LocalState<Option<A
 }
 
 #[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoTextVecModel for LocalState<Vec<Arc<str>>> {
+    fn into_text_vec_model(self) -> Model<Vec<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoTextVecModel for &LocalState<Vec<Arc<str>>> {
+    fn into_text_vec_model(self) -> Model<Vec<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoCalendarMonthModel
     for LocalState<fret_ui_kit::headless::calendar::CalendarMonth>
 {

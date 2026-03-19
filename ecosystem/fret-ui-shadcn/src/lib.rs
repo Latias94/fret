@@ -137,6 +137,7 @@ mod table;
 mod tabs;
 mod text_edit_context_menu;
 mod text_value_model;
+mod text_vec_model;
 mod textarea;
 mod toast;
 mod toggle;
@@ -517,6 +518,7 @@ pub mod facade {
         text_selection_context_menu_controllable, text_selection_context_menu_entries,
     };
     pub use crate::text_value_model::IntoTextValueModel;
+    pub use crate::text_vec_model::IntoTextVecModel;
     pub use crate::textarea::{Textarea, textarea};
     pub use crate::toggle::{
         Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggle_uncontrolled,

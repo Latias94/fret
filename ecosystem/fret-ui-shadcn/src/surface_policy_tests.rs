@@ -54,6 +54,7 @@ const TOOLTIP_RS: &str = include_str!("tooltip.rs");
 const TYPOGRAPHY_RS: &str = include_str!("typography.rs");
 const CHECKBOX_RS: &str = include_str!("checkbox.rs");
 const COMBOBOX_RS: &str = include_str!("combobox.rs");
+const COMBOBOX_CHIPS_RS: &str = include_str!("combobox_chips.rs");
 const PROGRESS_RS: &str = include_str!("progress.rs");
 const RADIO_GROUP_RS: &str = include_str!("radio_group.rs");
 const RESIZABLE_RS: &str = include_str!("resizable.rs");
@@ -1040,13 +1041,27 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "navigation_menu.rs",
             NAVIGATION_MENU_RS,
             &[
-                "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
             ][..],
             &[
                 "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
             ][..],
+        ),
+        (
+            "combobox.rs",
+            COMBOBOX_RS,
+            &["pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {"][..],
+            &["pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "combobox_chips.rs",
+            COMBOBOX_CHIPS_RS,
+            &["pub fn new(values: impl IntoTextVecModel, open: impl IntoBoolModel) -> Self {"][..],
+            &["pub fn new(values: Model<Vec<Arc<str>>>, open: Model<bool>) -> Self {"][..],
         ),
         (
             "native_select.rs",
@@ -1151,12 +1166,14 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "radio_group.rs",
             RADIO_GROUP_RS,
             &[
-                "pub fn radio_group(model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>) -> RadioGroup {",
+                "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn radio_group( model: impl IntoOptionalTextValueModel, items: Vec<RadioGroupItem>, ) -> RadioGroup {",
                 "pub fn radio_group_uncontrolled<T: Into<Arc<str>>>( default_value: Option<T>, items: Vec<RadioGroupItem>, ) -> RadioGroup {",
             ][..],
             &[
                 "pub fn radio_group<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>, ) -> AnyElement",
                 "pub fn radio_group_uncontrolled<H: UiHost, T: Into<Arc<str>>>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, items: Vec<RadioGroupItem>, ) -> AnyElement",
+                "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
             ][..],
         ),
         (

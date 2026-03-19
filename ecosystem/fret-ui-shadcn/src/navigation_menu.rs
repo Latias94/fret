@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use fret_core::Transform2D;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, PointerType, Px, Rect, SemanticsRole,
@@ -1090,9 +1091,9 @@ impl std::fmt::Debug for NavigationMenu {
 }
 
 impl NavigationMenu {
-    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel) -> Self {
         Self {
-            model: Some(model),
+            model: Some(model.into_optional_text_value_model()),
             default_value: None,
             items: Vec::new(),
             disabled: false,
@@ -2576,7 +2577,7 @@ impl NavigationMenu {
 /// Builder-preserving controlled helper for the common navigation-menu root path.
 pub fn navigation_menu<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
+    model: impl IntoOptionalTextValueModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NavigationMenu
 where
