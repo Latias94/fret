@@ -60,6 +60,8 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Any touched docs/examples build or type-check if compile-checked in the relevant crate.
 - Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls.
 - Recent web custom-effect helpers (`custom_effect_v2_identity_web_demo`, `custom_effect_v2_glass_chrome_web_demo`, `custom_effect_v3_web_demo`) now also expose explicit `build_fn_driver()` entrypoints.
+  This is launch-surface evidence for advanced/manual web harnesses, not default app-lane
+  authoring guidance.
 - Recent low-risk demos (`first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`) now also run through `FnDriver`-backed entrypoints.
 - Single-window UI demos (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) now also use pure `FnDriver` hooks instead of keeping local compat impls.
 - Medium-complexity desktop demos (`plot_stress_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `workspace_shell_demo`) now also run through pure `FnDriver` hook assembly, reducing the remaining direct `WinitAppDriver` example inventory to eight without expanding launch surface area.

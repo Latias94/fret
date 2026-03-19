@@ -260,6 +260,8 @@ Interpretation update:
 - the latest remaining web custom-effect helpers now teach `FnDriver` directly, so the
   advanced helper posture is tighter than the raw `impl WinitAppDriver` inventory alone
   suggests.
+- those web custom-effect helpers are still advanced/manual harnesses; this checkpoint is about
+  launch posture only and should not be read as default app-lane authoring evidence.
 - remaining in-file direct trait impls cluster around multi-window/hot-reload/accessibility
   or engine-frame customization examples; that is migration debt and review surface, not a
   demonstrated `FnDriver` capability gap.
