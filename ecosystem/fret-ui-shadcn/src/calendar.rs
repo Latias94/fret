@@ -24,6 +24,8 @@ use fret_ui_kit::{
 };
 use time::{Date, OffsetDateTime, Weekday};
 
+use crate::calendar_month_model::IntoCalendarMonthModel;
+use crate::optional_date_model::IntoOptionalDateModel;
 use crate::rtl;
 use crate::select::{Select, SelectItem, SelectPosition};
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
@@ -499,10 +501,10 @@ impl std::fmt::Debug for Calendar {
 }
 
 impl Calendar {
-    pub fn new(month: Model<CalendarMonth>, selected: Model<Option<Date>>) -> Self {
+    pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel) -> Self {
         Self {
-            month,
-            selected,
+            month: month.into_calendar_month_model(),
+            selected: selected.into_optional_date_model(),
             number_of_months: 1,
             locale: CalendarLocale::default(),
             caption_layout: CalendarCaptionLayout::default(),

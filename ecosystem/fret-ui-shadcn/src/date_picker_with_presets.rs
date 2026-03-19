@@ -18,8 +18,11 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement
 use fret_ui_kit::{WidgetStateProperty, ui};
 use time::{Date, Duration, OffsetDateTime, Weekday};
 
+use crate::bool_model::IntoBoolModel;
 use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
 use crate::calendar::Calendar;
+use crate::calendar_month_model::IntoCalendarMonthModel;
+use crate::optional_date_model::IntoOptionalDateModel;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 use crate::select::{Select, SelectItem, SelectPosition, SelectValue};
 
@@ -65,14 +68,14 @@ impl std::fmt::Debug for DatePickerWithPresets {
 
 impl DatePickerWithPresets {
     pub fn new(
-        open: Model<bool>,
-        month: Model<CalendarMonth>,
-        selected: Model<Option<Date>>,
+        open: impl IntoBoolModel,
+        month: impl IntoCalendarMonthModel,
+        selected: impl IntoOptionalDateModel,
     ) -> Self {
         Self {
-            open,
-            month,
-            selected,
+            open: open.into_bool_model(),
+            month: month.into_calendar_month_model(),
+            selected: selected.into_optional_date_model(),
             control_id: None,
             test_id_prefix: None,
             preset_value: None,

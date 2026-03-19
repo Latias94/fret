@@ -554,6 +554,16 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn date_picker_example_prefers_local_state_bridges_over_clone_model() {
+        assert!(
+            DATE_PICKER_EXAMPLE
+                .contains("shadcn::DatePicker::new(&open_state, &month_state, &selected_state)")
+        );
+        assert!(!DATE_PICKER_EXAMPLE.contains("selected_state.clone_model()"));
+        assert!(!DATE_PICKER_EXAMPLE.contains("open_state.clone_model()"));
+    }
+
+    #[test]
     fn shared_scaffold_prefers_app_surface_for_cookbook_page_shells() {
         assert!(SCAFFOLD.contains("use fret::app::prelude::*;"));
         assert!(SCAFFOLD.contains("use fret::style::{ColorRef, Space, Theme};"));

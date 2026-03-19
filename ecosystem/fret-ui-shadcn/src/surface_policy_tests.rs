@@ -8,6 +8,9 @@ const AVATAR_RS: &str = include_str!("avatar.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
 const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
 const BUTTON_GROUP_RS: &str = include_str!("button_group.rs");
+const CALENDAR_RS: &str = include_str!("calendar.rs");
+const CALENDAR_MULTIPLE_RS: &str = include_str!("calendar_multiple.rs");
+const CALENDAR_RANGE_RS: &str = include_str!("calendar_range.rs");
 const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
 const CARD_RS: &str = include_str!("card.rs");
 const CAROUSEL_RS: &str = include_str!("carousel.rs");
@@ -18,6 +21,9 @@ const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
 const ALERT_DIALOG_RS: &str = include_str!("alert_dialog.rs");
 const COMMAND_RS: &str = include_str!("command.rs");
 const CONTEXT_MENU_RS: &str = include_str!("context_menu.rs");
+const DATE_PICKER_RS: &str = include_str!("date_picker.rs");
+const DATE_PICKER_WITH_PRESETS_RS: &str = include_str!("date_picker_with_presets.rs");
+const DATE_RANGE_PICKER_RS: &str = include_str!("date_range_picker.rs");
 const DIALOG_RS: &str = include_str!("dialog.rs");
 const DRAWER_RS: &str = include_str!("drawer.rs");
 const DROPDOWN_MENU_RS: &str = include_str!("dropdown_menu.rs");
@@ -1005,6 +1011,32 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "calendar.rs",
+            CALENDAR_RS,
+            &[
+                "pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel) -> Self {",
+            ][..],
+            &["pub fn new(month: Model<CalendarMonth>, selected: Model<Option<Date>>) -> Self {"][..],
+        ),
+        (
+            "calendar_multiple.rs",
+            CALENDAR_MULTIPLE_RS,
+            &[
+                "pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoDateVecModel) -> Self {",
+            ][..],
+            &["pub fn new(month: Model<CalendarMonth>, selected: Model<Vec<Date>>) -> Self {"][..],
+        ),
+        (
+            "calendar_range.rs",
+            CALENDAR_RANGE_RS,
+            &[
+                "pub fn new( month: impl IntoCalendarMonthModel, selected: impl IntoDateRangeSelectionModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new(month: Model<CalendarMonth>, selected: Model<DateRangeSelection>) -> Self {",
+            ][..],
+        ),
+        (
             "navigation_menu.rs",
             NAVIGATION_MENU_RS,
             &[
@@ -1025,6 +1057,36 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
             &[
                 "pub fn native_select<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, open: Model<bool>, placeholder: Arc<str>, options: &[NativeSelectOption], optgroups: &[NativeSelectOptGroup], control_id: Option<ControlId>, test_id_prefix: Option<Arc<str>>, trigger_test_id: Option<Arc<str>>, a11y_label: Option<Arc<str>>, aria_invalid: bool, disabled: bool, size: NativeSelectSize, chrome: ChromeRefinement, layout: LayoutRefinement, ) -> AnyElement",
+            ][..],
+        ),
+        (
+            "date_picker.rs",
+            DATE_PICKER_RS,
+            &[
+                "pub fn new( open: impl IntoBoolModel, month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<Option<Date>>, ) -> Self {",
+            ][..],
+        ),
+        (
+            "date_picker_with_presets.rs",
+            DATE_PICKER_WITH_PRESETS_RS,
+            &[
+                "pub fn new( open: impl IntoBoolModel, month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<Option<Date>>, ) -> Self {",
+            ][..],
+        ),
+        (
+            "date_range_picker.rs",
+            DATE_RANGE_PICKER_RS,
+            &[
+                "pub fn new( open: impl IntoBoolModel, month: impl IntoCalendarMonthModel, selected: impl IntoDateRangeSelectionModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<DateRangeSelection>, ) -> Self {",
             ][..],
         ),
         (

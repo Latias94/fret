@@ -17,8 +17,11 @@ use fret_ui_kit::{
 };
 use time::{Date, OffsetDateTime, Weekday};
 
+use crate::bool_model::IntoBoolModel;
 use crate::button::{Button, ButtonStyle, ButtonVariant};
 use crate::calendar::Calendar;
+use crate::calendar_month_model::IntoCalendarMonthModel;
+use crate::optional_date_model::IntoOptionalDateModel;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 
 #[derive(Clone)]
@@ -59,14 +62,14 @@ impl std::fmt::Debug for DatePicker {
 
 impl DatePicker {
     pub fn new(
-        open: Model<bool>,
-        month: Model<CalendarMonth>,
-        selected: Model<Option<Date>>,
+        open: impl IntoBoolModel,
+        month: impl IntoCalendarMonthModel,
+        selected: impl IntoOptionalDateModel,
     ) -> Self {
         Self {
-            open,
-            month,
-            selected,
+            open: open.into_bool_model(),
+            month: month.into_calendar_month_model(),
+            selected: selected.into_optional_date_model(),
             control_id: None,
             test_id_prefix: None,
             week_start: Weekday::Sunday,

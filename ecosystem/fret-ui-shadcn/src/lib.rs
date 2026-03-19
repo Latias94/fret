@@ -61,6 +61,7 @@ mod button;
 mod button_group;
 mod calendar;
 mod calendar_hijri;
+mod calendar_month_model;
 mod calendar_multiple;
 mod calendar_range;
 mod card;
@@ -82,6 +83,8 @@ mod data_table_recipes;
 mod date_picker;
 mod date_picker_with_presets;
 mod date_range_picker;
+mod date_range_selection_model;
+mod date_vec_model;
 mod dialog;
 mod direction;
 mod drawer;
@@ -104,6 +107,7 @@ mod menu_authoring;
 mod menubar;
 mod native_select;
 mod navigation_menu;
+mod optional_date_model;
 mod optional_text_value_model;
 mod overlay_motion;
 mod pagination;
@@ -187,6 +191,7 @@ pub mod raw {
     raw_module!(bool_model);
     raw_module!(button);
     raw_module!(button_group);
+    raw_module!(calendar_month_model);
     raw_module!(calendar);
     raw_module!(calendar_hijri);
     raw_module!(calendar_multiple);
@@ -203,6 +208,8 @@ pub mod raw {
     raw_module!(context_menu);
     raw_module!(data_grid_canvas);
     raw_module!(data_table);
+    raw_module!(date_range_selection_model);
+    raw_module!(date_vec_model);
     raw_module!(date_picker);
     raw_module!(date_picker_with_presets);
     raw_module!(date_range_picker);
@@ -226,6 +233,7 @@ pub mod raw {
     raw_module!(menubar);
     raw_module!(native_select);
     raw_module!(navigation_menu);
+    raw_module!(optional_date_model);
     raw_module!(optional_text_value_model);
     raw_module!(pagination);
     raw_module!(popover);
@@ -306,6 +314,7 @@ pub mod facade {
     };
     pub use crate::calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
     pub use crate::calendar_hijri::CalendarHijri;
+    pub use crate::calendar_month_model::IntoCalendarMonthModel;
     pub use crate::calendar_multiple::CalendarMultiple;
     pub use crate::calendar_range::CalendarRange;
     pub use crate::card::{
@@ -369,6 +378,8 @@ pub mod facade {
     pub use crate::date_picker::DatePicker;
     pub use crate::date_picker_with_presets::DatePickerWithPresets;
     pub use crate::date_range_picker::DateRangePicker;
+    pub use crate::date_range_selection_model::IntoDateRangeSelectionModel;
+    pub use crate::date_vec_model::IntoDateVecModel;
     pub use crate::dialog::{
         Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
         DialogOverlay, DialogPart, DialogPortal, DialogTitle, DialogTrigger,
@@ -440,6 +451,7 @@ pub mod facade {
         NavigationMenuViewport, navigation_menu, navigation_menu_list,
         navigation_menu_trigger_style, navigation_menu_uncontrolled,
     };
+    pub use crate::optional_date_model::IntoOptionalDateModel;
     pub use crate::optional_text_value_model::IntoOptionalTextValueModel;
     pub use crate::pagination::{
         Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,

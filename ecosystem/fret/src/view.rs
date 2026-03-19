@@ -654,6 +654,74 @@ impl fret_ui_shadcn::facade::IntoOptionalTextValueModel for &LocalState<Option<A
     }
 }
 
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCalendarMonthModel
+    for LocalState<fret_ui_kit::headless::calendar::CalendarMonth>
+{
+    fn into_calendar_month_model(self) -> Model<fret_ui_kit::headless::calendar::CalendarMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCalendarMonthModel
+    for &LocalState<fret_ui_kit::headless::calendar::CalendarMonth>
+{
+    fn into_calendar_month_model(self) -> Model<fret_ui_kit::headless::calendar::CalendarMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalDateModel for LocalState<Option<time::Date>> {
+    fn into_optional_date_model(self) -> Model<Option<time::Date>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalDateModel for &LocalState<Option<time::Date>> {
+    fn into_optional_date_model(self) -> Model<Option<time::Date>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateRangeSelectionModel
+    for LocalState<fret_ui_kit::headless::calendar::DateRangeSelection>
+{
+    fn into_date_range_selection_model(
+        self,
+    ) -> Model<fret_ui_kit::headless::calendar::DateRangeSelection> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateRangeSelectionModel
+    for &LocalState<fret_ui_kit::headless::calendar::DateRangeSelection>
+{
+    fn into_date_range_selection_model(
+        self,
+    ) -> Model<fret_ui_kit::headless::calendar::DateRangeSelection> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateVecModel for LocalState<Vec<time::Date>> {
+    fn into_date_vec_model(self) -> Model<Vec<time::Date>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateVecModel for &LocalState<Vec<time::Date>> {
+    fn into_date_vec_model(self) -> Model<Vec<time::Date>> {
+        self.clone_model()
+    }
+}
+
 #[cfg(feature = "state-query")]
 impl<T: 'static> TrackedStateExt<fret_query::QueryState<T>> for fret_query::QueryHandle<T> {
     fn watch<'watch, 'view_cx, 'a, H: UiHost>(

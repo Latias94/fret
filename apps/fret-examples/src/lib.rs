@@ -926,6 +926,25 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn date_picker_examples_prefer_local_state_bridges_over_clone_model() {
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&week_start_monday)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&show_outside_days)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&disable_outside_days)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&disable_weekends)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&disabled)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::DatePicker::new(&open, &month, &selected)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Calendar::new(&month, &selected)"));
+        assert!(!DATE_PICKER_DEMO.contains("week_start_monday.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("show_outside_days.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("disable_outside_days.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("disable_weekends.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("disabled.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("open.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("month.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("selected.clone_model()"));
+    }
+
+    #[test]
     fn manual_components_gallery_uses_app_ui_render_root_bridge() {
         assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
             COMPONENTS_GALLERY_DEMO,

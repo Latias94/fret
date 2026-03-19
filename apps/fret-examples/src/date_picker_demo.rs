@@ -267,23 +267,23 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                 |cx| {
                     vec![
                         cx.text("week start monday"),
-                        shadcn::Switch::new(week_start_monday.clone_model())
+                        shadcn::Switch::new(&week_start_monday)
                             .a11y_label("Week starts on Monday")
                             .into_element(cx),
                         cx.text("show outside days"),
-                        shadcn::Switch::new(show_outside_days.clone_model())
+                        shadcn::Switch::new(&show_outside_days)
                             .a11y_label("Show outside days")
                             .into_element(cx),
                         cx.text("disable outside days"),
-                        shadcn::Switch::new(disable_outside_days.clone_model())
+                        shadcn::Switch::new(&disable_outside_days)
                             .a11y_label("Disable outside days")
                             .into_element(cx),
                         cx.text("disable weekends"),
-                        shadcn::Switch::new(disable_weekends.clone_model())
+                        shadcn::Switch::new(&disable_weekends)
                             .a11y_label("Disable weekends")
                             .into_element(cx),
                         cx.text("disabled"),
-                        shadcn::Switch::new(disabled.clone_model())
+                        shadcn::Switch::new(&disabled)
                             .a11y_label("Disable date picker")
                             .into_element(cx),
                     ]
@@ -297,15 +297,11 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                     Weekday::Sunday
                 };
 
-                let mut picker = shadcn::DatePicker::new(
-                    open.clone_model(),
-                    month.clone_model(),
-                    selected.clone_model(),
-                )
-                .week_start(week_start)
-                .show_outside_days(show_outside_days_value)
-                .disable_outside_days(disable_outside_days_value)
-                .disabled(disabled_value);
+                let mut picker = shadcn::DatePicker::new(&open, &month, &selected)
+                    .week_start(week_start)
+                    .show_outside_days(show_outside_days_value)
+                    .disable_outside_days(disable_outside_days_value)
+                    .disabled(disabled_value);
 
                 if disable_weekends_value {
                     picker = picker.disabled_by(|d| {
@@ -323,7 +319,7 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                     Weekday::Sunday
                 };
 
-                let mut cal = shadcn::Calendar::new(month.clone_model(), selected.clone_model())
+                let mut cal = shadcn::Calendar::new(&month, &selected)
                     .week_start(week_start)
                     .show_outside_days(show_outside_days_value)
                     .disable_outside_days(disable_outside_days_value);

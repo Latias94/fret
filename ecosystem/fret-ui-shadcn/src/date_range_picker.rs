@@ -13,8 +13,11 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement
 use fret_ui_kit::{WidgetStateProperty, ui};
 use time::{Date, Weekday};
 
+use crate::bool_model::IntoBoolModel;
 use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
+use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::calendar_range::CalendarRange;
+use crate::date_range_selection_model::IntoDateRangeSelectionModel;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
@@ -56,14 +59,14 @@ impl std::fmt::Debug for DateRangePicker {
 
 impl DateRangePicker {
     pub fn new(
-        open: Model<bool>,
-        month: Model<CalendarMonth>,
-        selected: Model<DateRangeSelection>,
+        open: impl IntoBoolModel,
+        month: impl IntoCalendarMonthModel,
+        selected: impl IntoDateRangeSelectionModel,
     ) -> Self {
         Self {
-            open,
-            month,
-            selected,
+            open: open.into_bool_model(),
+            month: month.into_calendar_month_model(),
+            selected: selected.into_date_range_selection_model(),
             control_id: None,
             test_id_prefix: None,
             placeholder: Arc::from("Pick a date"),
