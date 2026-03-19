@@ -2151,6 +2151,43 @@ mod tests {
     }
 
     #[test]
+    fn gallery_empty_demo_keeps_upstream_action_row_and_link_separation() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_EMPTY);
+
+        for target in [
+            "ui-gallery-empty-demo-actions",
+            "ui-gallery-empty-demo-create-project",
+            "ui-gallery-empty-demo-import-project",
+            "ui-gallery-empty-demo-learn-more",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let actions = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-actions");
+        let create = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-create-project");
+        let import = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-import-project");
+        let learn_more = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-learn-more");
+
+        let create_center_y = create.origin.y.0 + create.size.height.0 * 0.5;
+        let import_center_y = import.origin.y.0 + import.size.height.0 * 0.5;
+        let create_right = create.origin.x.0 + create.size.width.0;
+        let actions_bottom = actions.origin.y.0 + actions.size.height.0;
+
+        assert!(
+            (create_center_y - import_center_y).abs() <= 2.0,
+            "expected Empty demo actions to stay on the same row: actions={actions:?} create={create:?} import={import:?}"
+        );
+        assert!(
+            create_right <= import.origin.x.0 + 2.0,
+            "expected Empty demo primary action to remain before the secondary action without overlap: actions={actions:?} create={create:?} import={import:?}"
+        );
+        assert!(
+            learn_more.origin.y.0 >= actions_bottom + 6.0,
+            "expected Empty demo link CTA to stay separated below the action row: actions={actions:?} learn_more={learn_more:?}"
+        );
+    }
+
+    #[test]
     fn gallery_input_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INPUT);
 

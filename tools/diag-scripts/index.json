@@ -5511,6 +5511,19 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-empty-demo-actions-layout-sidecar",
+      "path": "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-actions-layout-sidecar.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-file-tree-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll.json",
       "required_capabilities": [],

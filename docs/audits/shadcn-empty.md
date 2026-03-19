@@ -27,9 +27,9 @@ in-repo web goldens that currently gate visual geometry.
 
 ### Authoring surface
 
-- Pass: `Empty::new([...])` plus `EmptyHeader`, `EmptyMedia`, `EmptyTitle`, `EmptyDescription`, and `EmptyContent` matches the upstream slot model directly.
+- Pass: `Empty::new([...])` plus `EmptyHeader`, `EmptyMedia`, `EmptyTitle`, `EmptyDescription`, and `EmptyContent` matches the upstream slot model directly, and the gallery `Usage` snippet now teaches that eager compound-children lane first.
 - Pass: `EmptyMedia::variant(...)` covers the documented `default` and `icon` variants without widening the public surface.
-- Pass: no extra generic `asChild` / `compose()` helper is needed here; the current children-based slot API already matches the upstream composition story.
+- Pass: no extra generic `asChild` / `compose()` helper is needed here; the current children-based slot API already matches the upstream composition story, and CTA link semantics can stay button-owned through `ButtonRender::Link`.
 
 ### Layout & default-style ownership
 
@@ -41,6 +41,7 @@ in-repo web goldens that currently gate visual geometry.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream Empty docs path first: `Demo`, `Usage`, the example set through `RTL`, and `API Reference`.
+- Pass: the gallery `Demo` and `RTL` snippets now follow the upstream `new-york-v4` teaching shape more closely: folder-code icon media, a centered two-button action row, and a semantic link CTA.
 - Pass: the old gallery `Notes` section is replaced by an explicit `API Reference` section that records ownership and source-of-truth decisions.
 - Pass: no mechanism-layer gap was identified in this pass; the work here is docs parity plus documenting the current recipe/golden ownership choice.
 
@@ -49,4 +50,5 @@ in-repo web goldens that currently gate visual geometry.
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --test empty_responsive_padding empty_padding_switches_at_md_using_container_queries -- --exact`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --test web_vs_fret_layout empty::web_vs_fret_layout_empty_geometry_matches_web_fixtures -- --exact`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --test web_vs_fret_layout empty::web_vs_fret_layout_empty_icon_geometry_matches_web -- --exact`
+- `CARGO_TARGET_DIR=target-codex-avatar cargo nextest run -p fret-ui-gallery gallery_empty_demo_keeps_upstream_action_row_and_link_separation -- --exact`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
