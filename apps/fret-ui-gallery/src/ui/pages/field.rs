@@ -36,12 +36,13 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
     let accessibility = doc_layout::notes_block([
         "Use `field_set(...)` + `FieldLegend` to group related controls for assistive technologies.",
-        "Associate labels via `FieldLabel::for_control(...)` plus matching control ids (or wrap rich choice-card content with `FieldLabel::wrap(...)`).",
+        "Associate labels via `FieldLabel::for_control(...)` plus matching control ids; when parts need a shared field-local association context (for example `Field + Select`), use `Field::build(...)`.",
         "Use `FieldError` immediately after the control or inside `FieldContent`, and pair invalid styling with control-level `aria_invalid(true)`.",
         "Use `FieldSeparator` sparingly so grouped sections remain understandable to screen readers.",
     ]);
     let api_reference = doc_layout::notes_block([
         "`Field::new([...])` is the core wrapper for a single field; `orientation(...)` covers the documented `vertical`, `horizontal`, and `responsive` layouts.",
+        "`Field::build(...)` is the composable children lane when parts should share field-local association state without manually threading ids.",
         "`field_set(...)` and `field_group(...)` are the default first-party grouped authoring entrypoints; `FieldSet` / `FieldGroup` remain the underlying typed recipe surface when direct builder access is useful.",
         "`FieldLegend` and `FieldSeparator` cover semantic grouping labels and section separation.",
         "`FieldContent`, `FieldLabel`, `FieldTitle`, `FieldDescription`, and `FieldError` cover the default typed slot path; when a richer wrapper is needed, keep using `FieldLabel::wrap(...)` and the typed `Field::build(...)` / `field_group(...)` builders instead of dropping to raw `AnyElement` seams too early.",
@@ -51,6 +52,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
         "Field page now mirrors the upstream docs path first, then adds one explicit Fret teaching seam: Composable Labels via `FieldLabel::wrap(...)`.",
+        "The Select example now uses `Field::build(...)` so Fret can preserve the upstream label + control + description order without forcing explicit ids into the snippet.",
         "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
         "The current audit points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
         "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules, `RadioGroupItemVariant::ChoiceCard`, or wrapped card-style labels via `FieldLabel::wrap(...)`.",
@@ -135,7 +137,7 @@ shadcn::field_set(|cx| {
         .description("Textarea field with explicit height and helper copy.")
         .code_rust_from_file_region(snippets::textarea::SOURCE, "example");
     let select = DocSection::build(cx, "Select", select)
-        .description("Select composed inside a Field shell.")
+        .description("Select composed inside a Field shell via `Field::build(...)`, matching the upstream authoring order without explicit ids.")
         .code_rust_from_file_region(snippets::select::SOURCE, "example");
     let slider = DocSection::build(cx, "Slider", slider)
         .description("Non-text controls should still use FieldTitle/Description for context.")

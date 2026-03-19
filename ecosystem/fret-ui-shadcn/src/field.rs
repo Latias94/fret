@@ -190,6 +190,30 @@ fn subtree_has_flex_grow(element: &AnyElement) -> bool {
     element.children.iter().any(subtree_has_flex_grow)
 }
 
+fn attach_described_by_to_control(
+    element: &mut AnyElement,
+    control_element: fret_ui::GlobalElementId,
+    described_by_element: fret_ui::GlobalElementId,
+) -> bool {
+    if element.id == control_element {
+        let decoration =
+            SemanticsDecoration::default().described_by_element(described_by_element.0);
+        element.semantics_decoration = Some(match element.semantics_decoration.take() {
+            Some(existing) => existing.merge(decoration),
+            None => decoration,
+        });
+        return true;
+    }
+
+    for child in &mut element.children {
+        if attach_described_by_to_control(child, control_element, described_by_element) {
+            return true;
+        }
+    }
+
+    false
+}
+
 #[cfg(test)]
 fn kind_layout(kind: &ElementKind) -> Option<&LayoutStyle> {
     match kind {
@@ -1145,7 +1169,9 @@ impl FieldLabel {
         };
 
         let wrap_children = self.children;
-        let Some(for_control) = self.for_control else {
+        let Some(for_control) =
+            field_state_prim::use_field_control_id_in_scope(cx, self.for_control.clone())
+        else {
             let align = match crate::direction::use_direction(cx, None) {
                 LayoutDirection::Rtl => TextAlign::End,
                 LayoutDirection::Ltr => TextAlign::Start,
@@ -1465,7 +1491,9 @@ impl FieldDescription {
             Some(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT),
         );
 
-        if let Some(for_control) = self.for_control {
+        if let Some(for_control) =
+            field_state_prim::use_field_control_id_in_scope(cx, self.for_control)
+        {
             let control_registry = control_registry_model(cx);
             let _ = cx.app.models_mut().update(&control_registry, |reg| {
                 reg.register_description(
@@ -1567,7 +1595,9 @@ impl FieldError {
                     .live_atomic(true),
             );
 
-        if let Some(for_control) = self.for_control {
+        if let Some(for_control) =
+            field_state_prim::use_field_control_id_in_scope(cx, self.for_control)
+        {
             let control_registry = control_registry_model(cx);
             let _ = cx.app.models_mut().update(&control_registry, |reg| {
                 reg.register_error(
@@ -2025,8 +2055,50 @@ where
 
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let children =
-            collect_built_field_children(cx, self.build.expect("expected field build closure"));
+        let field_state = field_state_prim::FieldState {
+            invalid: self.invalid,
+            disabled: self.disabled,
+        };
+        let auto_control_id = cx.named("shadcn.field.control_association", |cx| {
+            ControlId::from(format!("shadcn.field.{}", cx.root_id().0))
+        });
+        let control_registry = control_registry_model(cx);
+        let mut children = field_state_prim::with_field_state_provider(cx, field_state, |cx| {
+            field_state_prim::with_field_control_association_provider(
+                cx,
+                Some(auto_control_id.clone()),
+                |cx| {
+                    collect_built_field_children(
+                        cx,
+                        self.build.expect("expected field build closure"),
+                    )
+                },
+            )
+        });
+        let described_by_target = cx
+            .app
+            .models()
+            .read(&control_registry, |reg| {
+                reg.control_for(cx.window, &auto_control_id).map(|control| {
+                    (
+                        control.element,
+                        reg.described_by_for(cx.window, &auto_control_id),
+                    )
+                })
+            })
+            .ok()
+            .flatten()
+            .and_then(|(control_element, described_by_element)| {
+                described_by_element
+                    .map(|described_by_element| (control_element, described_by_element))
+            });
+        if let Some((control_element, described_by_element)) = described_by_target {
+            for child in &mut children {
+                if attach_described_by_to_control(child, control_element, described_by_element) {
+                    break;
+                }
+            }
+        }
         Field::new(children)
             .orientation(self.orientation)
             .invalid(self.invalid)
