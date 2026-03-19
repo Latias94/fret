@@ -15,6 +15,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let radio = snippets::radio::render(cx);
     let switch = snippets::switch::render(cx);
     let choice_card = snippets::choice_card::render(cx);
+    let composable_label = snippets::composable_label::render(cx);
     let field_group = snippets::field_group::render(cx);
     let rtl = snippets::rtl::render(cx);
     let responsive = snippets::responsive::render(cx);
@@ -49,7 +50,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/field.rs` (Field, FieldSet, FieldGroup, FieldLabel, FieldDescription, FieldSeparator).",
-        "Field page now mirrors the upstream docs path first: Demo, Usage, Anatomy, Form, the example set through Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
+        "Field page now mirrors the upstream docs path first, then adds one explicit Fret teaching seam: Composable Labels via `FieldLabel::wrap(...)`.",
         "Each section keeps a stable `test_id` so diag scripts can target specific examples.",
         "The current audit points to docs/public-surface drift rather than a `fret-ui` mechanism bug: the upstream layout semantics are already covered by the existing field web-parity tests.",
         "`FieldTitle` and plain `FieldLabel` keep upstream-like intrinsic width defaults; full-width behavior belongs to `Field` orientation rules, `RadioGroupItemVariant::ChoiceCard`, or wrapped card-style labels via `FieldLabel::wrap(...)`.",
@@ -153,9 +154,14 @@ shadcn::field_set(|cx| {
         .code_rust_from_file_region(snippets::switch::SOURCE, "example");
     let choice_card = DocSection::build(cx, "Choice Card", choice_card)
         .description(
-            "Choice-card radios keep whole-card activation; use `FieldLabel::wrap(...)` on other control families when you want arbitrary card-style labels.",
+            "Choice-card radios keep whole-card activation on the recipe surface and stay close to the upstream radio-card teaching surface.",
         )
         .code_rust_from_file_region(snippets::choice_card::SOURCE, "example");
+    let composable_label = DocSection::build(cx, "Composable Labels", composable_label)
+        .description(
+            "Use `FieldLabel::wrap(...)` when a richer subtree should behave like one clickable label for a non-radio control.",
+        )
+        .code_rust_from_file_region(snippets::composable_label::SOURCE, "example");
     let field_group = DocSection::build(cx, "Field Group", field_group)
         .description("FieldGroup provides separators and checkbox-group composition.")
         .code_rust_from_file_region(snippets::field_group::SOURCE, "example");
@@ -175,7 +181,7 @@ shadcn::field_set(|cx| {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Field docs order first: Demo, Usage, Anatomy, Form, Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
+            "Preview follows shadcn Field docs order first, then adds one Fret-specific authoring seam: Demo, Usage, Anatomy, Form, Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Composable Labels, Field Group, RTL, Responsive Layout, Validation and Errors, Accessibility, and API Reference.",
         ),
         vec![
             demo,
@@ -191,6 +197,7 @@ shadcn::field_set(|cx| {
             radio,
             switch,
             choice_card,
+            composable_label,
             field_group,
             rtl,
             responsive,

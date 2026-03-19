@@ -1,5 +1,6 @@
 pub mod checkbox;
 pub mod choice_card;
+pub mod composable_label;
 pub mod demo;
 pub mod field_group;
 pub mod fieldset;
