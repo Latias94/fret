@@ -235,7 +235,7 @@ impl TextMeasureCaches {
                         TextInputRef::plain(text, style),
                         normalized_constraints,
                     );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    metrics_from_wrapped_lines(wrapped.lines(), scale)
                 }
             } else {
                 let line =
@@ -259,7 +259,7 @@ impl TextMeasureCaches {
                         TextInputRef::plain(text, style),
                         normalized_constraints,
                     );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    metrics_from_wrapped_lines(wrapped.lines(), scale)
                 }
             }
         } else {
@@ -271,7 +271,7 @@ impl TextMeasureCaches {
                 TextInputRef::plain(text, style),
                 normalized_constraints,
             );
-            metrics_from_wrapped_lines(&wrapped.lines, scale)
+            metrics_from_wrapped_lines(wrapped.lines(), scale)
         };
 
         let bucket = self.measure_cache.entry(key).or_default();
@@ -485,7 +485,7 @@ impl TextMeasureCaches {
                         },
                         normalized_constraints,
                     );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    metrics_from_wrapped_lines(wrapped.lines(), scale)
                 }
             } else {
                 let line = shaper.shape_single_line_metrics(
@@ -519,7 +519,7 @@ impl TextMeasureCaches {
                         },
                         normalized_constraints,
                     );
-                    metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    metrics_from_wrapped_lines(wrapped.lines(), scale)
                 }
             }
         } else {
@@ -532,7 +532,7 @@ impl TextMeasureCaches {
                 },
                 normalized_constraints,
             );
-            metrics_from_wrapped_lines(&wrapped.lines, scale)
+            metrics_from_wrapped_lines(wrapped.lines(), scale)
         };
 
         let bucket = self.measure_cache.entry(key).or_default();

@@ -143,7 +143,7 @@ impl TextSystem {
                             TextInputRef::plain(text, style),
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 } else {
                     let line = self
@@ -168,7 +168,7 @@ impl TextSystem {
                             TextInputRef::plain(text, style),
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 }
             } else {
@@ -177,7 +177,7 @@ impl TextSystem {
                     TextInputRef::plain(text, style),
                     normalized_constraints,
                 );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
+                metrics_from_wrapped_lines(wrapped.lines(), scale)
             };
 
             let bucket = self.measure_cache.entry(key).or_default();
@@ -370,7 +370,7 @@ impl TextSystem {
                             },
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 } else {
                     let line = self.parley_shaper.shape_single_line_metrics(
@@ -404,7 +404,7 @@ impl TextSystem {
                             },
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 }
             } else {
@@ -418,7 +418,7 @@ impl TextSystem {
                     },
                     normalized_constraints,
                 );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
+                metrics_from_wrapped_lines(wrapped.lines(), scale)
             };
 
             let bucket = self.measure_cache.entry(key).or_default();

@@ -2074,11 +2074,11 @@ mod tests {
             constraints,
         );
 
-        assert_eq!(wrapped.lines.len(), 1);
-        let kept_end = wrapped.kept_end;
+        assert_eq!(wrapped.lines().len(), 1);
+        let kept_end = wrapped.kept_end();
         assert!(kept_end < text.len());
 
-        let line_layout = &wrapped.lines[0];
+        let line_layout = &wrapped.lines()[0];
         assert!(
             line_layout
                 .clusters

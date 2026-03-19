@@ -15,13 +15,47 @@ use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WrappedLayout {
-    pub text_len: usize,
-    pub kept_end: usize,
-    pub line_ranges: Vec<Range<usize>>,
-    pub lines: Vec<ShapedLineLayout>,
+    text_len: usize,
+    kept_end: usize,
+    line_ranges: Vec<Range<usize>>,
+    lines: Vec<ShapedLineLayout>,
 }
 
 impl WrappedLayout {
+    pub(crate) fn new(
+        text_len: usize,
+        kept_end: usize,
+        line_ranges: Vec<Range<usize>>,
+        lines: Vec<ShapedLineLayout>,
+    ) -> Self {
+        Self {
+            text_len,
+            kept_end,
+            line_ranges,
+            lines,
+        }
+    }
+
+    pub fn text_len(&self) -> usize {
+        self.text_len
+    }
+
+    pub fn kept_end(&self) -> usize {
+        self.kept_end
+    }
+
+    pub fn line_ranges(&self) -> &[Range<usize>] {
+        &self.line_ranges
+    }
+
+    pub fn lines(&self) -> &[ShapedLineLayout] {
+        &self.lines
+    }
+
+    pub fn into_parts(self) -> (usize, usize, Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+        (self.text_len, self.kept_end, self.line_ranges, self.lines)
+    }
+
     #[allow(dead_code)]
     pub fn hit_test_x(&self, line_index: usize, x: f32) -> (usize, CaretAffinity) {
         let Some(line) = self.lines.get(line_index) else {
@@ -67,15 +101,15 @@ pub fn wrap_with_constraints(
             ..
         } => {
             let out = wrap_none_ellipsis(shaper, input, text_len, max_width.0 * scale, scale);
-            WrappedLayout {
+            WrappedLayout::new(
                 text_len,
-                kept_end: out.kept_end,
-                line_ranges: vec![Range {
+                out.kept_end,
+                vec![Range {
                     start: 0,
                     end: out.kept_end,
                 }],
-                lines: vec![out.line],
-            }
+                vec![out.line],
+            )
         }
         TextConstraints {
             max_width: Some(max_width),
@@ -97,15 +131,15 @@ pub fn wrap_with_constraints(
             wrap: TextWrap::Grapheme,
             ..
         } => wrap_grapheme(shaper, input, text_len, max_width.0 * scale, scale),
-        _ => WrappedLayout {
+        _ => WrappedLayout::new(
             text_len,
-            kept_end: text_len,
-            line_ranges: vec![Range {
+            text_len,
+            vec![Range {
                 start: 0,
                 end: text_len,
             }],
-            lines: vec![shaper.shape_single_line(input, scale)],
-        },
+            vec![shaper.shape_single_line(input, scale)],
+        ),
     }
 }
 
@@ -140,15 +174,15 @@ pub fn wrap_with_constraints_measure_only(
         } => {
             let mut line = shaper.shape_single_line_metrics(input, scale);
             line.width = max_width.0 * scale;
-            WrappedLayout {
+            WrappedLayout::new(
                 text_len,
-                kept_end: text_len,
-                line_ranges: vec![Range {
+                text_len,
+                vec![Range {
                     start: 0,
                     end: text_len,
                 }],
-                lines: vec![line],
-            }
+                vec![line],
+            )
         }
         TextConstraints {
             max_width: Some(max_width),
@@ -170,15 +204,15 @@ pub fn wrap_with_constraints_measure_only(
             wrap: TextWrap::Grapheme,
             ..
         } => wrap_grapheme_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
-        _ => WrappedLayout {
+        _ => WrappedLayout::new(
             text_len,
-            kept_end: text_len,
-            line_ranges: vec![Range {
+            text_len,
+            vec![Range {
                 start: 0,
                 end: text_len,
             }],
-            lines: vec![shaper.shape_single_line_metrics(input, scale)],
-        },
+            vec![shaper.shape_single_line_metrics(input, scale)],
+        ),
     }
 }
 
@@ -219,12 +253,7 @@ fn wrap_word(
     let (line_ranges, lines) =
         wrap_word_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_word_break(
@@ -242,12 +271,7 @@ fn wrap_word_break(
     let (line_ranges, lines) =
         wrap_word_break_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_grapheme(
@@ -265,12 +289,7 @@ fn wrap_grapheme(
     let (line_ranges, lines) =
         wrap_grapheme_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 pub(crate) fn wrap_word_measure_only(
@@ -288,12 +307,7 @@ pub(crate) fn wrap_word_measure_only(
     let (line_ranges, lines) =
         wrap_word_range_measure_only(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_word_break_measure_only(
@@ -318,12 +332,7 @@ fn wrap_word_break_measure_only(
         scale,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_grapheme_measure_only(
@@ -348,12 +357,7 @@ fn wrap_grapheme_measure_only(
         scale,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 #[cfg(test)]

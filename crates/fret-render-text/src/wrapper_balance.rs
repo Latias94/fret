@@ -14,7 +14,7 @@ pub(crate) fn balanced_word_wrap_width_px(
     }
 
     let baseline = wrap_word_measure_only(shaper, input, text_len, max_width_px, scale);
-    let line_count = baseline.lines.len();
+    let line_count = baseline.lines().len();
     if line_count <= 1 {
         return max_width_px;
     }
@@ -36,7 +36,7 @@ pub(crate) fn balanced_word_wrap_width_px(
     let mut hi = max_width_px;
 
     if wrap_word_measure_only(shaper, input, text_len, hi, scale)
-        .lines
+        .lines()
         .len()
         > line_count
     {
@@ -50,7 +50,7 @@ pub(crate) fn balanced_word_wrap_width_px(
         }
 
         let mid_lines = wrap_word_measure_only(shaper, input, text_len, mid, scale)
-            .lines
+            .lines()
             .len();
         if mid_lines <= line_count {
             hi = mid;

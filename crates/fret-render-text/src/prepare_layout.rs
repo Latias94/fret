@@ -146,19 +146,18 @@ fn clusters_for_line(
 
 pub fn prepare_layout_from_wrapped(
     text: &str,
-    mut wrapped: WrappedLayout,
+    wrapped: WrappedLayout,
     constraints: TextConstraints,
     scale: f32,
     snap_vertical: bool,
 ) -> PreparedLayout {
-    let kept_end = wrapped.kept_end;
+    let (_, kept_end, line_ranges, mut wrapped_lines) = wrapped.into_parts();
 
-    let first_baseline_px = wrapped
-        .lines
+    let first_baseline_px = wrapped_lines
         .first()
         .map(|l| l.baseline.max(0.0))
         .unwrap_or(0.0);
-    let first_baseline_px = if snap_vertical && let Some(first) = wrapped.lines.first() {
+    let first_baseline_px = if snap_vertical && let Some(first) = wrapped_lines.first() {
         let top_px = 0.0_f32;
         let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
         let height_px = (bottom_px - top_px).max(0.0);
@@ -169,19 +168,17 @@ pub fn prepare_layout_from_wrapped(
         first_baseline_px
     };
 
-    let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
+    let metrics = metrics_from_wrapped_lines(&wrapped_lines, scale);
 
-    let mut out_lines: Vec<PreparedLine> = Vec::with_capacity(wrapped.lines.len().max(1));
+    let mut out_lines: Vec<PreparedLine> = Vec::with_capacity(wrapped_lines.len().max(1));
     let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
     let mut missing_glyphs: u32 = 0;
 
     let mut line_top_px = 0.0_f32;
 
-    for (i, (range, mut line)) in wrapped
-        .line_ranges
-        .iter()
-        .cloned()
-        .zip(wrapped.lines.drain(..))
+    for (i, (range, mut line)) in line_ranges
+        .into_iter()
+        .zip(wrapped_lines.drain(..))
         .enumerate()
     {
         if snap_vertical {

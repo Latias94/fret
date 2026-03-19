@@ -63,12 +63,7 @@ pub(crate) fn wrap_with_newlines(
         &mut lines,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 pub(crate) fn wrap_with_newlines_measure_only(
@@ -120,12 +115,7 @@ pub(crate) fn wrap_with_newlines_measure_only(
         &mut lines,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 #[allow(clippy::too_many_arguments)]
