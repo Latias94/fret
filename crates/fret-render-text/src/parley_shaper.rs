@@ -236,10 +236,10 @@ impl ShapedCluster {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapedLineLayout {
     width: f32,
-    pub ascent: f32,
-    pub descent: f32,
-    pub ink_ascent: f32,
-    pub ink_descent: f32,
+    ascent: f32,
+    descent: f32,
+    ink_ascent: f32,
+    ink_descent: f32,
     baseline: f32,
     line_height: f32,
     glyphs: Vec<ParleyGlyph>,
@@ -285,6 +285,22 @@ impl ShapedLineLayout {
 
     pub(crate) fn set_width(&mut self, width: f32) {
         self.width = width;
+    }
+
+    pub fn ascent(&self) -> f32 {
+        self.ascent
+    }
+
+    pub fn descent(&self) -> f32 {
+        self.descent
+    }
+
+    pub fn ink_ascent(&self) -> f32 {
+        self.ink_ascent
+    }
+
+    pub fn ink_descent(&self) -> f32 {
+        self.ink_descent
     }
 
     pub fn baseline(&self) -> f32 {
