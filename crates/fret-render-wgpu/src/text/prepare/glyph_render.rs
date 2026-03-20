@@ -43,7 +43,11 @@ impl TextSystem {
         y_bin: u8,
     ) -> Option<parley::swash::scale::image::Image> {
         let mut scaler = self.build_prepared_glyph_scaler(glyph)?;
-        render_prepared_glyph_image_from_scaler(&mut scaler, glyph_id, x_bin, y_bin)
+        super::render_glyph_image(
+            super::glyph_render_at_bins(x_bin, y_bin),
+            &mut scaler,
+            glyph_id,
+        )
     }
 
     fn build_prepared_glyph_scaler<'a>(
@@ -66,22 +70,4 @@ pub(super) fn prepared_glyph_has_normalized_coords(glyph: &ParleyGlyph) -> bool 
 
 fn prepared_glyph_normalized_coords(glyph: &ParleyGlyph) -> Option<&[i16]> {
     prepared_glyph_has_normalized_coords(glyph).then_some(glyph.normalized_coords())
-}
-
-fn render_prepared_glyph_image_at_bins(
-    scaler: &mut parley::swash::scale::Scaler<'_>,
-    glyph_id: u16,
-    x_bin: u8,
-    y_bin: u8,
-) -> Option<parley::swash::scale::image::Image> {
-    super::glyph_render_at_bins(x_bin, y_bin).render(scaler, glyph_id)
-}
-
-fn render_prepared_glyph_image_from_scaler(
-    scaler: &mut parley::swash::scale::Scaler<'_>,
-    glyph_id: u16,
-    x_bin: u8,
-    y_bin: u8,
-) -> Option<parley::swash::scale::image::Image> {
-    render_prepared_glyph_image_at_bins(scaler, glyph_id, x_bin, y_bin)
 }

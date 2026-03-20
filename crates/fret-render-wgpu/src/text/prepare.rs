@@ -121,6 +121,14 @@ pub(super) fn glyph_render_at_bins(x_bin: u8, y_bin: u8) -> parley::swash::scale
     render
 }
 
+pub(super) fn render_glyph_image(
+    render: parley::swash::scale::Render<'_>,
+    scaler: &mut parley::swash::scale::Scaler<'_>,
+    glyph_id: u16,
+) -> Option<parley::swash::scale::image::Image> {
+    render.render(scaler, glyph_id)
+}
+
 pub(super) fn font_ref_from_face_bytes<'a>(
     font_bytes: &'a [u8],
     face_index: u32,
