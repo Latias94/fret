@@ -4,7 +4,7 @@ use fret_render_text::{FontFaceKey, TextDecoration};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub(crate) struct GlyphInstance {
+pub(super) struct GlyphInstance {
     /// Logical-space rect relative to the text baseline origin.
     rect: [f32; 4],
     paint_span: Option<u16>,

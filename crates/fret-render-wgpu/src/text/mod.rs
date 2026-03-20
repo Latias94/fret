@@ -41,6 +41,7 @@ use self::atlas::GlyphKey;
 use self::atlas_epoch::TextAtlasEpochState;
 use self::atlas_runtime_state::TextAtlasRuntimeState;
 use self::blob_state::TextBlobState;
+pub(crate) use self::blobs::TextBlobRenderData;
 use self::face_cache::TextFaceCacheState;
 use self::font_runtime_state::TextFontRuntimeState;
 use self::frame_perf::TextFramePerfState;
@@ -52,8 +53,8 @@ pub use self::types::TextFontFamilyConfig;
 #[cfg(test)]
 pub(crate) use self::types::subpixel_mask_to_alpha;
 pub(crate) use self::types::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot, TextFontFaceUsage};
-pub(crate) use self::types::{GlyphInstance, GlyphQuadKind, TextLine};
-use self::types::{TextBlob, TextShape};
+use self::types::{GlyphInstance, TextBlob, TextShape};
+pub(crate) use self::types::{GlyphQuadKind, TextLine};
 
 pub struct TextSystem {
     parley_shaper: ParleyShaper,

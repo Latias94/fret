@@ -180,7 +180,7 @@ impl TextSystem {
             ^ self.atlas_runtime.subpixel_atlas.revision().rotate_left(2)
     }
 
-    pub(crate) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
+    pub(super) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
         let atlas = self.atlas_runtime.atlas(glyph.kind());
 
         let entry = atlas.entry(glyph.key)?;

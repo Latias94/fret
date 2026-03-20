@@ -1,6 +1,99 @@
-use super::{GlyphInstance, TextBlob, TextDecoration, TextSystem};
-use fret_core::TextBlobId;
+use super::{GlyphInstance, GlyphQuadKind, TextBlob, TextDecoration, TextSystem};
+use fret_core::{Color, TextBlobId, geometry::Px};
 use std::sync::Arc;
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TextRenderGlyph {
+    kind: GlyphQuadKind,
+    rect: [f32; 4],
+    paint_span: Option<u16>,
+    atlas_page: u16,
+    uv: [f32; 4],
+}
+
+impl TextRenderGlyph {
+    fn new(
+        kind: GlyphQuadKind,
+        rect: [f32; 4],
+        paint_span: Option<u16>,
+        atlas_page: u16,
+        uv: [f32; 4],
+    ) -> Self {
+        Self {
+            kind,
+            rect,
+            paint_span,
+            atlas_page,
+            uv,
+        }
+    }
+
+    pub(crate) fn kind(&self) -> GlyphQuadKind {
+        self.kind
+    }
+
+    pub(crate) fn rect(&self) -> [f32; 4] {
+        self.rect
+    }
+
+    pub(crate) fn paint_span(&self) -> Option<u16> {
+        self.paint_span
+    }
+
+    pub(crate) fn atlas_page(&self) -> u16 {
+        self.atlas_page
+    }
+
+    pub(crate) fn uv(&self) -> [f32; 4] {
+        self.uv
+    }
+}
+
+pub(crate) struct TextBlobRenderData<'a> {
+    text_system: &'a TextSystem,
+    glyphs: &'a [GlyphInstance],
+    baseline: Px,
+    decorations: &'a [TextDecoration],
+    paint_palette: Option<&'a [Option<Color>]>,
+}
+
+impl<'a> TextBlobRenderData<'a> {
+    fn new(text_system: &'a TextSystem, blob: &'a TextBlob) -> Self {
+        let shape = blob.shape();
+        Self {
+            text_system,
+            glyphs: shape.glyphs(),
+            baseline: shape.metrics().baseline,
+            decorations: blob.decorations(),
+            paint_palette: blob.paint_palette(),
+        }
+    }
+
+    pub(crate) fn baseline(&self) -> Px {
+        self.baseline
+    }
+
+    pub(crate) fn decorations(&self) -> &'a [TextDecoration] {
+        self.decorations
+    }
+
+    pub(crate) fn paint_palette(&self) -> Option<&'a [Option<Color>]> {
+        self.paint_palette
+    }
+
+    pub(crate) fn glyphs(&'a self) -> impl Iterator<Item = TextRenderGlyph> + 'a {
+        self.glyphs.iter().filter_map(|glyph| {
+            let (atlas_page, uv) = self.text_system.glyph_uv_for_instance(glyph)?;
+            Some(TextRenderGlyph::new(
+                glyph.kind(),
+                glyph.rect(),
+                glyph.paint_span(),
+                atlas_page,
+                uv,
+            ))
+        })
+    }
+}
 
 impl TextSystem {
     pub(super) fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
@@ -11,23 +104,8 @@ impl TextSystem {
         Some(self.blob(id)?.shape())
     }
 
-    pub(crate) fn render_data_for_blob(
-        &self,
-        id: TextBlobId,
-    ) -> Option<(
-        &[GlyphInstance],
-        fret_core::geometry::Px,
-        &[TextDecoration],
-        Option<&[Option<fret_core::Color>]>,
-    )> {
-        let blob = self.blob(id)?;
-        let shape = blob.shape();
-        Some((
-            shape.glyphs(),
-            shape.metrics().baseline,
-            blob.decorations(),
-            blob.paint_palette(),
-        ))
+    pub(crate) fn render_data_for_blob(&self, id: TextBlobId) -> Option<TextBlobRenderData<'_>> {
+        Some(TextBlobRenderData::new(self, self.blob(id)?))
     }
 
     #[cfg(test)]
