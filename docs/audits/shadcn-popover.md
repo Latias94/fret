@@ -47,6 +47,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   callers that already own the open model.
 - Pass: Trigger/content composition matches the shadcn mental model: trigger element + portal-like
   content element.
+- Pass: The typed compound-parts lane now covers both sides of that composition:
+  `PopoverTrigger::build(...)` for the trigger and `PopoverContent::build(cx, ...)` for
+  late-landing content children.
 - Pass: `PopoverTrigger` now toggles `open` by default (shadcn/Radix trigger-like behavior), and
   supports opt-out via `PopoverTrigger::auto_toggle(false)` for controlled/manual flows.
 - Pass: Upstream exports `PopoverAnchor`; Fret provides `PopoverAnchor` and supports custom anchor

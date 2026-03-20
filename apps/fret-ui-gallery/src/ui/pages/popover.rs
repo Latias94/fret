@@ -15,13 +15,13 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Popover::side(...)` and `Popover::align(...)` cover the placement vocabulary documented by Radix/shadcn.",
         "`side_offset(...)` and `align_offset(...)` are available when placement needs fine-grained tuning beyond the default popper gap.",
-        "`PopoverContent::refine_layout(...)` remains the caller-owned path for explicit widths such as the default 288px example or the wider form demo.",
+        "`PopoverContent::build(cx, ...)` pairs with `PopoverTrigger::build(...)` for the typed compound-parts lane, while `PopoverContent::refine_layout(...)` remains the caller-owned path for explicit widths such as the default 288px example or the wider form demo.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/popover.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx` and Radix Popover docs.",
         "Preview mirrors the shadcn Popover docs path after `Installation`: `Demo`, `Usage`, `Basic`, `Align`, `With Form`, `RTL`, and `API Reference`.",
-        "Default recipe-level root authoring now uses `Popover::new(cx, trigger, content)`, while anchor-aware sizing and detached-trigger cases still use the explicit advanced seams (`from_open(...).into_element_with(...)` / `into_element_with_anchor(...)`).",
+        "Default recipe-level root authoring now uses `Popover::new(cx, trigger, content)`, while `PopoverTrigger::build(...)` and `PopoverContent::build(cx, ...)` cover the typed compound-parts lane; anchor-aware sizing and detached-trigger cases still use the explicit advanced seams (`from_open(...).into_element_with(...)` / `into_element_with_anchor(...)`).",
         "Keep content width explicit (for example `w-72` / 288px in default content, or 320px in the form demo) for predictable layout.",
         "For dense input rows, prefer `Field` / `FieldGroup` recipes to keep spacing consistent with other form surfaces.",
     ]);
@@ -37,7 +37,9 @@ pub(super) fn preview_popover(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable shadcn-style composition reference for Popover.")
+        .description(
+            "Copyable shadcn-style composition reference using typed trigger/content parts.",
+        )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let basic = DocSection::build(cx, "Basic", basic)
         .test_id_prefix("ui-gallery-popover-basic")

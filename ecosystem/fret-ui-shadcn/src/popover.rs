@@ -1452,6 +1452,22 @@ impl PopoverContent {
         }
     }
 
+    /// Builder-first variant that late-lands popover content children at `into_element(cx)` time.
+    #[track_caller]
+    pub fn build<H: UiHost, I, F, T>(cx: &mut ElementContext<'_, H>, f: F) -> Self
+    where
+        F: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        let children = f(cx)
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect::<Vec<_>>();
+
+        Self::new(children)
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -1836,11 +1852,34 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let content = PopoverContent::new(vec![ui::raw_text("tip").into_element(cx)]);
+            let content = PopoverContent::build(cx, |_cx| [ui::raw_text("tip")]);
             let popover = Popover::new(cx, PopoverTrigger::build(Button::new("trigger")), content)
                 .into_element(cx);
 
             assert_eq!(popover.id, popover.id);
+        });
+    }
+
+    #[test]
+    fn popover_content_build_accepts_late_landed_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content =
+                PopoverContent::build(cx, |_cx| [crate::card::Card::build(|_cx, _out| {})])
+                    .into_element(cx);
+
+            assert!(matches!(content.kind, ElementKind::Container(_)));
+            assert_eq!(content.children.len(), 1);
+            assert!(matches!(
+                content.children[0].kind,
+                ElementKind::Container(_)
+            ));
         });
     }
 

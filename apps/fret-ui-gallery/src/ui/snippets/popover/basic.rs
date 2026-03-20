@@ -15,11 +15,12 @@ where
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let content = shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
-        shadcn::PopoverTitle::new("Dimensions").into_element(cx),
-        shadcn::PopoverDescription::new("Set the dimensions for the layer.").into_element(cx),
-    ])
-    .into_element(cx)])
+    let content = shadcn::PopoverContent::build(cx, |cx| {
+        [shadcn::PopoverHeader::new([
+            shadcn::PopoverTitle::new("Dimensions").into_element(cx),
+            shadcn::PopoverDescription::new("Set the dimensions for the layer.").into_element(cx),
+        ])]
+    })
     .test_id("ui-gallery-popover-basic-panel");
 
     let popover = shadcn::Popover::new(
