@@ -8,6 +8,7 @@ Companion docs:
 - `DESIGN.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
+- `SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md`
 
 ## Current checklist
 
@@ -19,7 +20,7 @@ Companion docs:
 - [x] Land the first query semantic helper batch.
 - [x] Adopt that batch on first-party proof surfaces.
 - [x] Add tests/gates for the new posture.
-- [ ] Audit selector borrowed-input pressure before proposing a selector API change.
+- [x] Audit selector borrowed-input pressure before proposing a selector API change.
 
 Execution note on 2026-03-20:
 
@@ -32,7 +33,8 @@ Execution note on 2026-03-20:
   - `apps/fret-examples/src/lib.rs`
 - that batch intentionally stops at semantic projections such as status text/predicates and
   refreshing detection
-- selector borrowed-input density remains the next design question in this lane
+- selector borrowed-input density is now audited on a no-new-API verdict; reopen only with
+  stronger non-Todo proof
 
 ## Standing rules
 

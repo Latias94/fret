@@ -8,6 +8,7 @@ Related:
 - `DESIGN.md`
 - `TARGET_INTERFACE_STATE.md`
 - `TODO.md`
+- `SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md`
 
 ## Milestone 0 — Freeze scope
 
@@ -50,6 +51,12 @@ Deliverables:
 - either:
   - a no-new-API verdict, or
   - one narrow borrowed-compute direction
+
+Current 2026-03-20 reading:
+
+- this milestone is currently met on a no-new-API verdict;
+- the Todo scaffold remains the strongest pressure point, but the rest of the audited app-facing
+  selector sites do not yet justify reopening the public selector surface.
 
 ## Milestone 3 — Lock docs and gates
 

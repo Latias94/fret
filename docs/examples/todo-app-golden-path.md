@@ -322,6 +322,9 @@ use fret::query::{QueryKey, QueryPolicy};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
 let state = handle.read_layout(cx);
+
+let status_label = state.status.as_str();
+let is_refreshing = state.is_refreshing();
 ```
 
 To invalidate/refetch from app logic:

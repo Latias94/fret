@@ -282,7 +282,7 @@ use std::time::Duration;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::{
-__ICON_IMPORT__    query::{QueryKey, QueryPolicy, QueryStatus},
+__ICON_IMPORT__    query::{QueryKey, QueryPolicy},
     style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},
 };
 
@@ -451,24 +451,24 @@ impl View for TodoView {
 
         let tip_state = tip_handle.read_layout(cx);
 
-        let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
-            QueryStatus::Idle | QueryStatus::Loading => (Arc::from("Tip: loading…"), "muted-foreground"),
-            QueryStatus::Error => {
-                let err = tip_state
-                    .error
-                    .as_ref()
-                    .map(|e| e.to_string())
-                    .unwrap_or_else(|| String::from("unknown error"));
-                (Arc::from(format!("Tip error: {err}")), "destructive")
-            }
-            QueryStatus::Success => {
-                let text = tip_state
-                    .data
-                    .as_ref()
-                    .map(|d| d.text.clone())
-                    .unwrap_or_else(|| Arc::<str>::from("<no tip>"));
-                (text, "muted-foreground")
-            }
+        let (tip_text, tip_color_key): (Arc<str>, &'static str) = if tip_state.is_loading()
+            || tip_state.is_idle()
+        {
+            (Arc::from("Tip: loading…"), "muted-foreground")
+        } else if tip_state.is_error() {
+            let err = tip_state
+                .error
+                .as_ref()
+                .map(|e| e.to_string())
+                .unwrap_or_else(|| String::from("unknown error"));
+            (Arc::from(format!("Tip error: {err}")), "destructive")
+        } else {
+            let text = tip_state
+                .data
+                .as_ref()
+                .map(|d| d.text.clone())
+                .unwrap_or_else(|| Arc::<str>::from("<no tip>"));
+            (text, "muted-foreground")
         };
 
         let progress = shadcn::Badge::new(format!("{}/{} done", derived.completed, derived.total))
@@ -1474,7 +1474,10 @@ mod tests {
         assert!(src.contains("cx.data().query("));
         assert!(src.contains("let tip_state = tip_handle.read_layout(cx);"));
         assert!(!src.contains("tip_handle.layout(cx).value_or_default()"));
-        assert!(src.contains("query::{QueryKey, QueryPolicy, QueryStatus},"));
+        assert!(src.contains("query::{QueryKey, QueryPolicy},"));
+        assert!(src.contains("if tip_state.is_loading()"));
+        assert!(src.contains("|| tip_state.is_idle()"));
+        assert!(src.contains("} else if tip_state.is_error() {"));
         assert!(!src.contains("selector::{DepsBuilder, LocalDepsBuilderExt as _},"));
         assert!(!src.contains("deps.local_layout_rev(&todos_state);"));
         assert!(!src.contains("deps.local_layout_rev(&filter_state);"));
