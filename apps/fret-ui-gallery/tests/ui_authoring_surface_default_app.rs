@@ -7015,7 +7015,6 @@ fn selected_control_snippets_prefer_field_group_wrapper_family() {
 fn selected_radio_group_snippets_prefer_field_set_wrapper_family() {
     for relative_path in [
         "src/ui/snippets/radio_group/fieldset.rs",
-        "src/ui/snippets/radio_group/extras.rs",
         "src/ui/snippets/radio_group/invalid.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
@@ -7613,11 +7612,9 @@ fn radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/radio_group/demo.rs",
             "src/ui/snippets/radio_group/description.rs",
             "src/ui/snippets/radio_group/disabled.rs",
-            "src/ui/snippets/radio_group/extras.rs",
             "src/ui/snippets/radio_group/fieldset.rs",
             "src/ui/snippets/radio_group/invalid.rs",
             "src/ui/snippets/radio_group/label.rs",
-            "src/ui/snippets/radio_group/plans.rs",
             "src/ui/snippets/radio_group/rtl.rs",
             "src/ui/snippets/radio_group/usage.rs",
         ],
