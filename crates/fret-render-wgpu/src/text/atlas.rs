@@ -241,6 +241,21 @@ struct PendingUpload {
     data: Vec<u8>,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct PaddedGlyphSize {
+    w_pad: u32,
+    h_pad: u32,
+    size: etagere::Size,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct AllocatedAtlasSlot {
+    page_index: usize,
+    alloc_id: etagere::AllocId,
+    x: u32,
+    y: u32,
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct GlyphAtlasPerfSnapshot {
     pub(super) uploads: u64,
@@ -478,7 +493,7 @@ impl GlyphAtlas {
             !self.pages.is_empty(),
             "glyph atlas has no pages; bind_group() is only valid after at least one insert"
         );
-        let idx = (page as usize).min(self.pages.len().saturating_sub(1));
+        let idx = self.page_index(page);
         &self.pages[idx].bind_group
     }
 
@@ -577,38 +592,46 @@ impl GlyphAtlas {
     }
 
     pub(super) fn get(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
-        let Some(hit) = self.glyphs.get_mut(&key) else {
-            self.perf_frame.misses = self.perf_frame.misses.saturating_add(1);
+        let Some(hit) = self.touch_existing(key, epoch) else {
+            self.record_miss();
             return None;
         };
-        self.perf_frame.hits = self.perf_frame.hits.saturating_add(1);
-        hit.last_used_epoch = epoch;
-        let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
-        self.pages[idx].last_used_epoch = epoch;
-        Some(*hit)
+        Some(hit)
     }
 
     fn inc_live_ref(&mut self, key: GlyphKey) {
-        let Some(entry) = self.glyphs.get_mut(&key) else {
-            return;
-        };
-        if entry.live_refs == 0 {
-            let idx = (entry.page as usize).min(self.pages.len().saturating_sub(1));
+        let mut page_to_increment = None;
+        {
+            let Some(entry) = self.glyphs.get_mut(&key) else {
+                return;
+            };
+            if entry.live_refs == 0 {
+                page_to_increment = Some(entry.page);
+            }
+            entry.live_refs = entry.live_refs.saturating_add(1);
+        }
+        if let Some(page) = page_to_increment {
+            let idx = self.page_index(page);
             self.pages[idx].live_glyph_refs = self.pages[idx].live_glyph_refs.saturating_add(1);
         }
-        entry.live_refs = entry.live_refs.saturating_add(1);
     }
 
     fn dec_live_ref(&mut self, key: GlyphKey) {
-        let Some(entry) = self.glyphs.get_mut(&key) else {
-            return;
-        };
-        if entry.live_refs == 0 {
-            return;
+        let mut page_to_decrement = None;
+        {
+            let Some(entry) = self.glyphs.get_mut(&key) else {
+                return;
+            };
+            if entry.live_refs == 0 {
+                return;
+            }
+            entry.live_refs -= 1;
+            if entry.live_refs == 0 {
+                page_to_decrement = Some(entry.page);
+            }
         }
-        entry.live_refs -= 1;
-        if entry.live_refs == 0 {
-            let idx = (entry.page as usize).min(self.pages.len().saturating_sub(1));
+        if let Some(page) = page_to_decrement {
+            let idx = self.page_index(page);
             if self.pages[idx].live_glyph_refs > 0 {
                 self.pages[idx].live_glyph_refs -= 1;
             }
@@ -653,7 +676,7 @@ impl GlyphAtlas {
             .used_px
             .saturating_sub(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
 
-        let page_idx = (victim_entry.page as usize).min(self.pages.len().saturating_sub(1));
+        let page_idx = self.page_index(victim_entry.page);
         self.pages[page_idx]
             .allocator
             .deallocate(victim_entry.alloc_id);
@@ -804,93 +827,34 @@ impl GlyphAtlas {
         data: Vec<u8>,
         epoch: u64,
     ) -> Result<GlyphAtlasEntry, GlyphAtlasInsertError> {
-        if let Some(hit) = self.glyphs.get_mut(&key) {
-            self.perf_frame.hits = self.perf_frame.hits.saturating_add(1);
-            hit.last_used_epoch = epoch;
-            let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
-            self.pages[idx].last_used_epoch = epoch;
-            return Ok(*hit);
+        if let Some(hit) = self.touch_existing(key, epoch) {
+            return Ok(hit);
         }
-        self.perf_frame.misses = self.perf_frame.misses.saturating_add(1);
+        self.record_miss();
 
-        let pad = self.padding_px;
-        let w_pad = w.saturating_add(pad.saturating_mul(2));
-        let h_pad = h.saturating_add(pad.saturating_mul(2));
-        if w == 0 || h == 0 || w_pad == 0 || h_pad == 0 || w_pad > self.width || h_pad > self.height
-        {
-            self.perf_frame.too_large = self.perf_frame.too_large.saturating_add(1);
-            return Err(GlyphAtlasInsertError::TooLarge);
-        }
-
-        let size = etagere::Size::new(w_pad as i32, h_pad as i32);
-
-        if self.pages.is_empty() && !self.try_grow_pages() {
-            self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
-            return Err(GlyphAtlasInsertError::OutOfSpace);
-        }
+        let padded = self.padded_size_for_insert(w, h)?;
+        self.ensure_page_available()?;
 
         let mut guard = 0_u32;
         loop {
             guard = guard.saturating_add(1);
             if guard >= 128 {
-                self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
-                return Err(GlyphAtlasInsertError::OutOfSpace);
+                return Err(self.out_of_space_error());
             }
 
-            for (page_index, page) in self.pages.iter_mut().enumerate() {
-                let Some(allocation) = page.allocator.allocate(size) else {
-                    continue;
-                };
-
-                let Ok(base_x) = u32::try_from(allocation.rectangle.min.x) else {
-                    page.allocator.deallocate(allocation.id);
-                    continue;
-                };
-                let Ok(base_y) = u32::try_from(allocation.rectangle.min.y) else {
-                    page.allocator.deallocate(allocation.id);
-                    continue;
-                };
-
-                let x = base_x.saturating_add(pad);
-                let y = base_y.saturating_add(pad);
-
-                page.pending.push(PendingUpload {
-                    x,
-                    y,
-                    w,
-                    h,
-                    bytes_per_pixel,
-                    data,
-                });
-                page.last_used_epoch = epoch;
-
-                self.perf_frame.inserts = self.perf_frame.inserts.saturating_add(1);
-                self.perf_frame.pending_uploads = self.perf_frame.pending_uploads.saturating_add(1);
-                self.perf_frame.pending_upload_bytes =
-                    self.perf_frame.pending_upload_bytes.saturating_add(
-                        u64::from(w)
-                            .saturating_mul(u64::from(h))
-                            .saturating_mul(u64::from(bytes_per_pixel)),
-                    );
-                self.used_px = self
-                    .used_px
-                    .saturating_add(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
-
-                let entry = GlyphAtlasEntry {
-                    page: page_index as u16,
-                    alloc_id: allocation.id,
-                    x,
-                    y,
+            if let Some(slot) = self.try_allocate_slot(padded.size) {
+                return Ok(self.insert_allocated_glyph(
+                    key,
+                    slot,
+                    padded,
                     w,
                     h,
                     placement_left,
                     placement_top,
-                    live_refs: 0,
-                    last_used_epoch: epoch,
-                };
-                self.glyphs.insert(key, entry);
-                self.revision = self.revision.saturating_add(1);
-                return Ok(entry);
+                    bytes_per_pixel,
+                    data,
+                    epoch,
+                ));
             }
 
             if self.try_grow_pages() {
@@ -902,8 +866,143 @@ impl GlyphAtlas {
             if self.evict_lru_unreferenced_page() {
                 continue;
             }
-            self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
-            return Err(GlyphAtlasInsertError::OutOfSpace);
+            return Err(self.out_of_space_error());
         }
+    }
+
+    fn page_index(&self, page: u16) -> usize {
+        debug_assert!(!self.pages.is_empty());
+        (page as usize).min(self.pages.len().saturating_sub(1))
+    }
+
+    fn touch_existing(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
+        let hit = self.glyphs.get_mut(&key)?;
+        self.perf_frame.hits = self.perf_frame.hits.saturating_add(1);
+        hit.last_used_epoch = epoch;
+        let page = hit.page;
+        let entry = *hit;
+        let idx = self.page_index(page);
+        self.pages[idx].last_used_epoch = epoch;
+        Some(entry)
+    }
+
+    fn record_miss(&mut self) {
+        self.perf_frame.misses = self.perf_frame.misses.saturating_add(1);
+    }
+
+    fn too_large_error(&mut self) -> GlyphAtlasInsertError {
+        self.perf_frame.too_large = self.perf_frame.too_large.saturating_add(1);
+        GlyphAtlasInsertError::TooLarge
+    }
+
+    fn out_of_space_error(&mut self) -> GlyphAtlasInsertError {
+        self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
+        GlyphAtlasInsertError::OutOfSpace
+    }
+
+    fn padded_size_for_insert(
+        &mut self,
+        w: u32,
+        h: u32,
+    ) -> Result<PaddedGlyphSize, GlyphAtlasInsertError> {
+        let pad = self.padding_px;
+        let w_pad = w.saturating_add(pad.saturating_mul(2));
+        let h_pad = h.saturating_add(pad.saturating_mul(2));
+        if w == 0 || h == 0 || w_pad == 0 || h_pad == 0 || w_pad > self.width || h_pad > self.height
+        {
+            return Err(self.too_large_error());
+        }
+
+        Ok(PaddedGlyphSize {
+            w_pad,
+            h_pad,
+            size: etagere::Size::new(w_pad as i32, h_pad as i32),
+        })
+    }
+
+    fn ensure_page_available(&mut self) -> Result<(), GlyphAtlasInsertError> {
+        if self.pages.is_empty() && !self.try_grow_pages() {
+            return Err(self.out_of_space_error());
+        }
+        Ok(())
+    }
+
+    fn try_allocate_slot(&mut self, size: etagere::Size) -> Option<AllocatedAtlasSlot> {
+        let pad = self.padding_px;
+        for (page_index, page) in self.pages.iter_mut().enumerate() {
+            let Some(allocation) = page.allocator.allocate(size) else {
+                continue;
+            };
+
+            let Ok(base_x) = u32::try_from(allocation.rectangle.min.x) else {
+                page.allocator.deallocate(allocation.id);
+                continue;
+            };
+            let Ok(base_y) = u32::try_from(allocation.rectangle.min.y) else {
+                page.allocator.deallocate(allocation.id);
+                continue;
+            };
+
+            return Some(AllocatedAtlasSlot {
+                page_index,
+                alloc_id: allocation.id,
+                x: base_x.saturating_add(pad),
+                y: base_y.saturating_add(pad),
+            });
+        }
+        None
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn insert_allocated_glyph(
+        &mut self,
+        key: GlyphKey,
+        slot: AllocatedAtlasSlot,
+        padded: PaddedGlyphSize,
+        w: u32,
+        h: u32,
+        placement_left: i32,
+        placement_top: i32,
+        bytes_per_pixel: u32,
+        data: Vec<u8>,
+        epoch: u64,
+    ) -> GlyphAtlasEntry {
+        let page = &mut self.pages[slot.page_index];
+        page.pending.push(PendingUpload {
+            x: slot.x,
+            y: slot.y,
+            w,
+            h,
+            bytes_per_pixel,
+            data,
+        });
+        page.last_used_epoch = epoch;
+
+        self.perf_frame.inserts = self.perf_frame.inserts.saturating_add(1);
+        self.perf_frame.pending_uploads = self.perf_frame.pending_uploads.saturating_add(1);
+        self.perf_frame.pending_upload_bytes = self.perf_frame.pending_upload_bytes.saturating_add(
+            u64::from(w)
+                .saturating_mul(u64::from(h))
+                .saturating_mul(u64::from(bytes_per_pixel)),
+        );
+        self.used_px = self
+            .used_px
+            .saturating_add(u64::from(padded.w_pad).saturating_mul(u64::from(padded.h_pad)));
+
+        let entry = GlyphAtlasEntry {
+            page: slot.page_index as u16,
+            alloc_id: slot.alloc_id,
+            x: slot.x,
+            y: slot.y,
+            w,
+            h,
+            placement_left,
+            placement_top,
+            live_refs: 0,
+            last_used_epoch: epoch,
+        };
+        self.glyphs.insert(key, entry);
+        self.revision = self.revision.saturating_add(1);
+        entry
     }
 }
