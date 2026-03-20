@@ -92,12 +92,7 @@ impl TextSystem {
     }
 
     pub(super) fn ensure_glyph_in_atlas(&mut self, key: GlyphKey, epoch: u64) {
-        let already_present = match key.kind {
-            GlyphQuadKind::Mask => self.atlas_runtime.mask_atlas.get(key, epoch).is_some(),
-            GlyphQuadKind::Color => self.atlas_runtime.color_atlas.get(key, epoch).is_some(),
-            GlyphQuadKind::Subpixel => self.atlas_runtime.subpixel_atlas.get(key, epoch).is_some(),
-        };
-        if already_present {
+        if self.atlas_runtime.get(key, epoch).is_some() {
             return;
         }
 
@@ -172,45 +167,15 @@ impl TextSystem {
             return;
         }
 
-        let data = image.data;
-
-        match key.kind {
-            GlyphQuadKind::Mask => {
-                let _ = self.atlas_runtime.mask_atlas.get_or_insert(
-                    key,
-                    image.placement.width,
-                    image.placement.height,
-                    image.placement.left,
-                    image.placement.top,
-                    bytes_per_pixel,
-                    data,
-                    epoch,
-                );
-            }
-            GlyphQuadKind::Color => {
-                let _ = self.atlas_runtime.color_atlas.get_or_insert(
-                    key,
-                    image.placement.width,
-                    image.placement.height,
-                    image.placement.left,
-                    image.placement.top,
-                    bytes_per_pixel,
-                    data,
-                    epoch,
-                );
-            }
-            GlyphQuadKind::Subpixel => {
-                let _ = self.atlas_runtime.subpixel_atlas.get_or_insert(
-                    key,
-                    image.placement.width,
-                    image.placement.height,
-                    image.placement.left,
-                    image.placement.top,
-                    bytes_per_pixel,
-                    data,
-                    epoch,
-                );
-            }
-        }
+        let _ = self.atlas_runtime.get_or_insert(
+            key,
+            image.placement.width,
+            image.placement.height,
+            image.placement.left,
+            image.placement.top,
+            bytes_per_pixel,
+            image.data,
+            epoch,
+        );
     }
 }

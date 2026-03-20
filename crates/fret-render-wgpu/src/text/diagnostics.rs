@@ -182,10 +182,8 @@ impl TextSystem {
     }
 
     pub(super) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
-        let atlas = self.atlas_runtime.atlas_for_key(glyph.key);
-
-        let entry = atlas.entry(glyph.key)?;
-        let (w, h) = atlas.dimensions();
+        let entry = self.atlas_runtime.entry(glyph.key)?;
+        let (w, h) = self.atlas_runtime.dimensions_for_key(glyph.key);
         let w = w as f32;
         let h = h as f32;
         if w <= 0.0 || h <= 0.0 {

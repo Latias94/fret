@@ -10,10 +10,8 @@ use fret_render_text::{
 use std::sync::Arc;
 
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
-    let atlas = text.atlas_runtime.atlas_for_key(key);
-    let entry = atlas.entry(key).expect("expected atlas entry after ensure");
-    atlas
-        .pending_upload_bytes_for_entry(entry)
+    text.atlas_runtime
+        .pending_upload_bytes_for_key(key)
         .expect("expected pending upload for ensured glyph")
 }
 
@@ -944,7 +942,7 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
         for key in color_glyphs {
             text.ensure_glyph_in_atlas(key, epoch);
             assert!(
-                text.atlas_runtime.color_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.get(key, epoch).is_some(),
                 "expected color glyph to be present in color atlas after ensure ({label})"
             );
         }
@@ -1025,11 +1023,11 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
             text.ensure_glyph_in_atlas(key, epoch);
             match key.kind {
                 super::GlyphQuadKind::Mask => assert!(
-                    text.atlas_runtime.mask_atlas.get(key, epoch).is_some(),
+                    text.atlas_runtime.get(key, epoch).is_some(),
                     "expected mask glyph to be present in mask atlas after ensure ({label})"
                 ),
                 super::GlyphQuadKind::Subpixel => assert!(
-                    text.atlas_runtime.subpixel_atlas.get(key, epoch).is_some(),
+                    text.atlas_runtime.get(key, epoch).is_some(),
                     "expected subpixel glyph to be present in subpixel atlas after ensure ({label})"
                 ),
                 super::GlyphQuadKind::Color => {}
@@ -1137,11 +1135,11 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
         text.ensure_glyph_in_atlas(key, epoch);
         match key.kind {
             super::GlyphQuadKind::Mask => assert!(
-                text.atlas_runtime.mask_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.get(key, epoch).is_some(),
                 "expected ensured CJK glyph to be present in the mask atlas"
             ),
             super::GlyphQuadKind::Subpixel => assert!(
-                text.atlas_runtime.subpixel_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.get(key, epoch).is_some(),
                 "expected ensured CJK glyph to be present in the subpixel atlas"
             ),
             super::GlyphQuadKind::Color => {}
@@ -1445,7 +1443,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
         for key in color_keys {
             text.ensure_glyph_in_atlas(key, epoch);
             assert!(
-                text.atlas_runtime.color_atlas.get(key, epoch).is_some(),
+                text.atlas_runtime.get(key, epoch).is_some(),
                 "expected ensured emoji glyph to be present in the color atlas ({label})"
             );
         }
