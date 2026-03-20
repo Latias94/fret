@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
-use fret::advanced::view::ViewWindowState;
+use fret::advanced::view::{UiCxDataExt as _, ViewWindowState};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
@@ -247,6 +247,65 @@ fn editor_text_assist_state_label(
     }
 
     format!("Expanded ({visible_count} matches)")
+}
+
+#[derive(Clone)]
+struct EditorTextAssistReadout {
+    state_label: String,
+    active_label: String,
+}
+
+#[derive(Clone)]
+struct AuthoringParitySharedStateReadout {
+    name_line: String,
+    value_line: String,
+    blend_line: String,
+    enabled_line: String,
+    shading_line: String,
+}
+
+fn editor_text_assist_readout(
+    cx: &mut UiCx<'_>,
+    items: Arc<[TextAssistItem]>,
+    query_model: &Model<String>,
+    dismissed_query_model: &Model<String>,
+    active_item_id_model: &Model<Option<Arc<str>>>,
+) -> EditorTextAssistReadout {
+    cx.data().selector_model_paint(
+        (query_model, dismissed_query_model, active_item_id_model),
+        move |(query, dismissed_query, active_item_id)| {
+            let controller = controller_with_active_item_id(
+                items.as_ref(),
+                &query,
+                active_item_id.as_ref(),
+                TextAssistMatchMode::Prefix,
+                false,
+            );
+            let visible_count = if query.trim().is_empty() {
+                0
+            } else {
+                controller.visible().len()
+            };
+            let expanded =
+                input_owned_text_assist_expanded(&query, &dismissed_query, visible_count);
+
+            EditorTextAssistReadout {
+                state_label: editor_text_assist_state_label(
+                    &query,
+                    &dismissed_query,
+                    visible_count,
+                ),
+                active_label: if expanded {
+                    controller
+                        .active_match()
+                        .map(|entry| entry.label.as_ref().to_string())
+                        .unwrap_or_else(|| "None".to_string())
+                } else {
+                    "None".to_string()
+                },
+            }
+        },
+    )
 }
 
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
@@ -1075,50 +1134,29 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let name_assist_items =
+                                                        editor_demo_name_assist_items(cx);
+                                                    let name_assist_readout =
+                                                        editor_text_assist_readout(
+                                                            cx,
+                                                            name_assist_items,
+                                                            &editor_name_assist_model,
+                                                            &editor_name_assist_dismissed_query_model,
+                                                            &editor_name_assist_active_item_model,
+                                                        );
+                                                    let name_assist_state =
+                                                        name_assist_readout.state_label.clone();
+                                                    let name_assist_active =
+                                                        name_assist_readout.active_label.clone();
+
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Assist state"),
-                                                        |cx| {
-                                                            let query = cx
-                                                                .watch_model(&editor_name_assist_model)
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let dismissed_query = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_dismissed_query_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let active_item_id = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_active_item_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or(None);
-                                                            let items = editor_demo_name_assist_items(cx);
-                                                            let controller = controller_with_active_item_id(
-                                                                items.as_ref(),
-                                                                &query,
-                                                                active_item_id.as_ref(),
-                                                                TextAssistMatchMode::Prefix,
-                                                                false,
-                                                            );
-                                                            let visible_count = if query.trim().is_empty() {
-                                                                0
-                                                            } else {
-                                                                controller.visible().len()
-                                                            };
-                                                            let state = editor_text_assist_state_label(
-                                                                &query,
-                                                                &dismissed_query,
-                                                                visible_count,
-                                                            );
+                                                        move |cx| {
+                                                            let state = name_assist_state.clone();
                                                             proof_compact_readout(
                                                                 cx,
                                                                 state,
@@ -1136,52 +1174,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Active assist"),
-                                                        |cx| {
-                                                            let query = cx
-                                                                .watch_model(&editor_name_assist_model)
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let dismissed_query = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_dismissed_query_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let active_item_id = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_active_item_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or(None);
-                                                            let items = editor_demo_name_assist_items(cx);
-                                                            let controller = controller_with_active_item_id(
-                                                                items.as_ref(),
-                                                                &query,
-                                                                active_item_id.as_ref(),
-                                                                TextAssistMatchMode::Prefix,
-                                                                false,
-                                                            );
-                                                            let visible_count = if query.trim().is_empty() {
-                                                                0
-                                                            } else {
-                                                                controller.visible().len()
-                                                            };
-                                                            let expanded = input_owned_text_assist_expanded(
-                                                                &query,
-                                                                &dismissed_query,
-                                                                visible_count,
-                                                            );
-                                                            let active_label = if expanded {
-                                                                controller
-                                                                    .active_match()
-                                                                    .map(|entry| entry.label.as_ref().to_string())
-                                                                    .unwrap_or_else(|| "None".to_string())
-                                                            } else {
-                                                                "None".to_string()
-                                                            };
+                                                        move |cx| {
+                                                            let active_label =
+                                                                name_assist_active.clone();
                                                             proof_compact_readout(
                                                                 cx,
                                                                 active_label,
@@ -2284,37 +2279,37 @@ fn render_authoring_parity_shared_state(
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let name = cx
-        .get_model_cloned(&name_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let value = cx
-        .get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let blend = cx
-        .get_model_copied(&slider_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let enabled = cx
-        .get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)
-        .unwrap_or(false);
-    let shading = cx
-        .get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)
-        .unwrap_or(None);
-
-    let name_line = if name.trim().is_empty() {
-        "shared name: <empty>".to_string()
-    } else {
-        format!("shared name: {name}")
-    };
-    let value_line = format!("shared value: {value:.3}");
-    let blend_line = format!("shared blend: {:.0}%", blend * 100.0);
-    let enabled_line = format!("shared enabled: {enabled}");
-    let shading_line = match shading.as_deref() {
-        Some("lit") => "shared mode: lit (Lit)".to_string(),
-        Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
-        Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
-        Some(other) => format!("shared mode: {other}"),
-        None => "shared mode: <none>".to_string(),
-    };
+    let shared = cx.data().selector_model_paint(
+        (
+            &name_model,
+            &drag_value_model,
+            &slider_model,
+            &enabled_model,
+            &shading_model,
+        ),
+        |(name, value, blend, enabled, shading)| AuthoringParitySharedStateReadout {
+            name_line: if name.trim().is_empty() {
+                "shared name: <empty>".to_string()
+            } else {
+                format!("shared name: {name}")
+            },
+            value_line: format!("shared value: {value:.3}"),
+            blend_line: format!("shared blend: {:.0}%", blend * 100.0),
+            enabled_line: format!("shared enabled: {enabled}"),
+            shading_line: match shading.as_deref() {
+                Some("lit") => "shared mode: lit (Lit)".to_string(),
+                Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
+                Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
+                Some(other) => format!("shared mode: {other}"),
+                None => "shared mode: <none>".to_string(),
+            },
+        },
+    );
+    let name_line = shared.name_line;
+    let value_line = shared.value_line;
+    let blend_line = shared.blend_line;
+    let enabled_line = shared.enabled_line;
+    let shading_line = shared.shading_line;
 
     fret_ui_kit::ui::v_flex_build(move |cx, out| {
         let name_line_row = name_line.clone();

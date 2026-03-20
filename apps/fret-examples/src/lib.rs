@@ -2405,6 +2405,31 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_EDITOR_PROOF_DEMO,
+            &[
+                "struct EditorTextAssistReadout {",
+                "struct AuthoringParitySharedStateReadout {",
+                "fn editor_text_assist_readout(",
+                "cx.data().selector_model_paint(",
+                "(query_model, dismissed_query_model, active_item_id_model),",
+                "let name_assist_items = editor_demo_name_assist_items(cx);",
+                "let name_assist_readout = editor_text_assist_readout(",
+                "let shared = cx.data().selector_model_paint(",
+                "(&name_model, &drag_value_model, &slider_model, &enabled_model, &shading_model,)",
+            ],
+            &[
+                "let query = cx.watch_model(&editor_name_assist_model)",
+                "let dismissed_query = cx.watch_model(&editor_name_assist_dismissed_query_model)",
+                "let active_item_id = cx.watch_model(&editor_name_assist_active_item_model)",
+                ".get_model_cloned(&name_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&slider_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)",
+                ".get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
             &[
                 "let view_settings: CustomEffectV3ViewSettings = cx.data().selector_layout(",
