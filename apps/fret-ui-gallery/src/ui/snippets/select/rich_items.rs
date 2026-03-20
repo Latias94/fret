@@ -10,8 +10,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model_keyed("value", || Some(Arc::<str>::from("$")));
     let open = cx.local_model_keyed("open", || false);
 
-    let currencies: &[(&'static str, &'static str)] =
-        &[("$", "US Dollar"), ("€", "Euro"), ("£", "British Pound"), ("¥", "Japanese Yen")];
+    let currencies: &[(&'static str, &'static str)] = &[
+        ("$", "US Dollar"),
+        ("€", "Euro"),
+        ("£", "British Pound"),
+        ("¥", "Japanese Yen"),
+    ];
 
     let entries: Vec<shadcn::SelectEntry> = vec![
         shadcn::SelectGroup::new(currencies.iter().map(|(value, label)| {
