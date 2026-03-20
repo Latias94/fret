@@ -744,18 +744,11 @@ impl GlyphAtlas {
             return false;
         };
 
-        let pad = self.padding_px;
-        let w_pad = victim_entry.w.saturating_add(pad.saturating_mul(2));
-        let h_pad = victim_entry.h.saturating_add(pad.saturating_mul(2));
-        self.used_px = self
-            .used_px
-            .saturating_sub(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
-
         let page_idx = self.page_index(victim_entry.page);
         self.pages[page_idx]
             .allocator
             .deallocate(victim_entry.alloc_id);
-        self.glyphs.remove(&victim_key);
+        let _ = self.remove_glyph_entry(victim_key);
         self.perf.evicted_glyphs = self.perf.evicted_glyphs.saturating_add(1);
         self.revision = self.revision.saturating_add(1);
         self.perf_frame.evict_glyphs = self.perf_frame.evict_glyphs.saturating_add(1);
@@ -795,20 +788,13 @@ impl GlyphAtlas {
             .iter()
             .filter_map(|(k, e)| (e.page == victim_page).then_some(*k))
             .collect();
-        let pad = self.padding_px;
         self.perf.evicted_pages = self.perf.evicted_pages.saturating_add(1);
         self.perf.evicted_page_glyphs = self
             .perf
             .evicted_page_glyphs
             .saturating_add(keys_to_remove.len() as u64);
         for k in keys_to_remove {
-            if let Some(entry) = self.glyphs.remove(&k) {
-                let w_pad = entry.w.saturating_add(pad.saturating_mul(2));
-                let h_pad = entry.h.saturating_add(pad.saturating_mul(2));
-                self.used_px = self
-                    .used_px
-                    .saturating_sub(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
-            }
+            let _ = self.remove_glyph_entry(k);
         }
 
         self.revision = self.revision.saturating_add(1);
@@ -967,6 +953,25 @@ impl GlyphAtlas {
         self.try_grow_pages()
             || self.evict_lru_unreferenced_glyph()
             || self.evict_lru_unreferenced_page()
+    }
+
+    fn remove_glyph_entry(&mut self, key: GlyphKey) -> Option<GlyphAtlasEntry> {
+        let entry = self.glyphs.remove(&key)?;
+        self.release_entry_area(entry);
+        Some(entry)
+    }
+
+    fn release_entry_area(&mut self, entry: GlyphAtlasEntry) {
+        self.used_px = self
+            .used_px
+            .saturating_sub(self.padded_entry_area_px(entry));
+    }
+
+    fn padded_entry_area_px(&self, entry: GlyphAtlasEntry) -> u64 {
+        let pad = self.padding_px;
+        let w_pad = entry.w.saturating_add(pad.saturating_mul(2));
+        let h_pad = entry.h.saturating_add(pad.saturating_mul(2));
+        u64::from(w_pad).saturating_mul(u64::from(h_pad))
     }
 
     fn try_allocate_slot(&mut self, size: etagere::Size) -> Option<AllocatedAtlasSlot> {
