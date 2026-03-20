@@ -1237,6 +1237,8 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             PROGRESS_RS,
             &[
                 "pub fn new(model: impl IntoFloatValueModel) -> Self {",
+                "pub fn from_value(value: f32) -> Self {",
+                "pub fn from_optional_value(value: Option<f32>) -> Self {",
                 "pub fn new_opt(model: impl IntoOptionalFloatValueModel) -> Self {",
                 "pub fn new_values_first(model: impl IntoFloatVecModel) -> Self {",
                 "pub fn progress<H: UiHost, M: IntoFloatValueModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
@@ -1244,6 +1246,7 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             &[
                 "pub fn progress<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<f32>) -> AnyElement",
                 "pub fn new(model: Model<f32>) -> Self {",
+                "pub fn from_value(value: Model<f32>) -> Self {",
                 "pub fn new_opt(model: Model<Option<f32>>) -> Self {",
                 "pub fn new_values_first(model: Model<Vec<f32>>) -> Self {",
             ][..],
