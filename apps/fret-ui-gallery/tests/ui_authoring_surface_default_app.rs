@@ -1869,6 +1869,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/field/anatomy.rs",
             "src/ui/snippets/field/checkbox.rs",
             "src/ui/snippets/field/choice_card.rs",
             "src/ui/snippets/field/field_group.rs",
@@ -1881,6 +1882,7 @@ fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/field/slider.rs",
             "src/ui/snippets/field/switch.rs",
             "src/ui/snippets/field/textarea.rs",
+            "src/ui/snippets/field/usage.rs",
             "src/ui/snippets/field/validation_and_errors.rs",
         ],
         &[
@@ -7019,10 +7021,27 @@ fn selected_radio_group_snippets_prefer_builder_preserving_helpers() {
 
 #[test]
 fn field_page_usage_prefers_field_wrapper_family() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/pages/field.rs",
-        &["shadcn::field_set(|cx| {", "shadcn::field_group(|cx| {"],
-        &["shadcn::FieldSet::new(", "shadcn::FieldGroup::new("],
+    let page = read("src/ui/pages/field.rs");
+    let usage = read("src/ui/snippets/field/usage.rs");
+    assert!(
+        usage.contains("shadcn::field_set(|cx| {"),
+        "src/ui/snippets/field/usage.rs should keep the docs-aligned wrapper-family usage lane"
+    );
+    assert!(
+        usage.contains("shadcn::field_group(|cx| {"),
+        "src/ui/snippets/field/usage.rs should keep the grouped docs-aligned wrapper-family usage lane"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::usage::SOURCE, \"example\")"),
+        "src/ui/pages/field.rs should show the Usage section from a real snippet file"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::anatomy::SOURCE, \"example\")"),
+        "src/ui/pages/field.rs should show the Anatomy section from a real snippet file"
+    );
+    assert!(
+        !page.contains(".code_rust("),
+        "src/ui/pages/field.rs should avoid page-local hand-written Rust strings for docs-facing sections"
     );
 }
 

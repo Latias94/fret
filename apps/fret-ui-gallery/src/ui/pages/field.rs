@@ -6,6 +6,8 @@ use crate::ui::snippets::field as snippets;
 
 pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
+    let anatomy = snippets::anatomy::render(cx);
     let input = snippets::input::render(cx);
     let textarea = snippets::textarea::render(cx);
     let select = snippets::select::render(cx);
@@ -21,11 +23,11 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let responsive = snippets::responsive::render(cx);
     let validation_and_errors = snippets::validation_and_errors::render(cx);
 
-    let usage = doc_layout::muted_full_width(
+    let usage_notes = doc_layout::muted_full_width(
         cx,
         "Import the Field parts and compose them as needed (examples below mirror the upstream docs).",
     );
-    let anatomy = doc_layout::muted_full_width(
+    let anatomy_notes = doc_layout::muted_full_width(
         cx,
         "A typical Field groups a label + control + optional helper/error text.",
     );
@@ -68,6 +70,7 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Keyboard, labeling, grouping, and invalid-state guidance.");
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
+        .test_id_prefix("ui-gallery-field-api-reference")
         .description("Public surface summary and ownership notes.");
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
@@ -76,61 +79,20 @@ pub(super) fn preview_field(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Overview composition aligned with the upstream `field-demo` preview.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = ui::v_stack(|cx| vec![usage.into_element(cx), usage_notes.into_element(cx)])
+        .gap(Space::N3)
+        .items_start();
     let usage = DocSection::build(cx, "Usage", usage)
         .description("Copyable minimal imports plus a representative fieldset composition.")
-        .code_rust(
-            r#"use fret::ui;
-use fret_ui_shadcn::{facade as shadcn, prelude::*};
-
-let full_name = cx.local_model_keyed("full_name", String::new);
-let newsletter = cx.local_model_keyed("newsletter", || false);
-
-shadcn::field_set(|cx| {
-    ui::children![cx;
-        shadcn::FieldLegend::new("Profile"),
-        shadcn::FieldDescription::new("This appears on invoices and emails."),
-        shadcn::field_group(|cx| {
-            ui::children![cx;
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("Full name")
-                        .for_control("profile-name")
-                        .into_element(cx),
-                    shadcn::Input::new(full_name)
-                        .control_id("profile-name")
-                        .placeholder("Evil Rabbit")
-                        .into_element(cx),
-                ]),
-                shadcn::Field::new([
-                    shadcn::FieldContent::new([
-                        shadcn::FieldLabel::new("Subscribe to the newsletter")
-                            .for_control("newsletter")
-                            .into_element(cx),
-                        shadcn::FieldDescription::new("Receive product updates by email.")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::Switch::new(newsletter)
-                        .control_id("newsletter")
-                        .into_element(cx),
-                ])
-                .orientation(shadcn::FieldOrientation::Horizontal),
-            ]
-        }),
-    ]
-})
-.into_element(cx);"#,
-        );
+        .test_id_prefix("ui-gallery-field-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let anatomy = ui::v_stack(|cx| vec![anatomy.into_element(cx), anatomy_notes.into_element(cx)])
+        .gap(Space::N3)
+        .items_start();
     let anatomy = DocSection::build(cx, "Anatomy", anatomy)
         .description("Aligns with the upstream shadcn Field anatomy section.")
-        .code_rust(
-            r#"Field::new([
-    FieldLabel::new("Label").into_element(cx),
-    /* Input / Select / Switch / ... */,
-    FieldDescription::new("Optional helper text.").into_element(cx),
-    FieldError::new("Validation message.").into_element(cx),
-])
-.into_element(cx);"#,
-        );
+        .test_id_prefix("ui-gallery-field-anatomy")
+        .code_rust_from_file_region(snippets::anatomy::SOURCE, "example");
     let input = DocSection::build(cx, "Input", input)
         .description("Basic text inputs with labels + helper copy.")
         .code_rust_from_file_region(snippets::input::SOURCE, "example");

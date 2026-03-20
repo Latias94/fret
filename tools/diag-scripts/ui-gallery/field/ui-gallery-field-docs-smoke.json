@@ -64,6 +64,28 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-field-usage-tabs-trigger-preview"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-field-anatomy-tabs-trigger-preview"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-field-input" }
       },
       "timeout_frames": 600
@@ -81,6 +103,17 @@
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-field-composable-label" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-field-api-reference-content"
+        }
       },
       "timeout_frames": 600
     },
