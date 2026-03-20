@@ -145,7 +145,7 @@ fn style_for_strut_metrics(style: &TextStyle) -> Option<TextStyle> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParleyGlyph {
     id: u32,
-    pub x: f32,
+    x: f32,
     pub y: f32,
     advance: f32,
     font: GlyphFontData,
@@ -163,6 +163,10 @@ impl ParleyGlyph {
 
     pub fn advance(&self) -> f32 {
         self.advance
+    }
+
+    pub fn x(&self) -> f32 {
+        self.x
     }
 
     pub fn font(&self) -> &GlyphFontData {
@@ -195,6 +199,10 @@ impl ParleyGlyph {
 
     pub(crate) fn set_text_range(&mut self, text_range: Range<usize>) {
         self.text_range = text_range;
+    }
+
+    pub(crate) fn set_x(&mut self, x: f32) {
+        self.x = x;
     }
 }
 

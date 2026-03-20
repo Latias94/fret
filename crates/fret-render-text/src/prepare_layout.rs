@@ -238,7 +238,7 @@ pub fn prepare_layout_from_wrapped(
             if g.id() == 0 {
                 missing_glyphs = missing_glyphs.saturating_add(1);
             }
-            g.x += line_align_offset_px;
+            g.set_x(g.x() + line_align_offset_px);
             g.y += line_offset_px;
             let glyph_range = g.text_range();
             g.set_text_range((range.start + glyph_range.start)..(range.start + glyph_range.end));

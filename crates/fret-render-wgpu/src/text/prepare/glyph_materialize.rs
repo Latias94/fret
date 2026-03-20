@@ -125,7 +125,7 @@ fn prepared_glyph_instance(
 }
 
 fn prepared_glyph_origin_bins(glyph: &ParleyGlyph) -> (i32, u8, i32, u8) {
-    let (x, x_bin) = super::super::atlas::subpixel_bin_q4(glyph.x);
+    let (x, x_bin) = super::super::atlas::subpixel_bin_q4(glyph.x());
     let (y, y_bin) = super::super::atlas::subpixel_bin_y(glyph.y);
     (x, x_bin, y, y_bin)
 }
