@@ -52,7 +52,7 @@ impl TextSystem {
         self.face_cache
             .font_data_by_face
             .entry((font_data_id, face_index))
-            .or_insert_with(|| glyph.font.clone());
+            .or_insert_with(|| glyph.font().clone());
     }
 
     fn cache_prepared_glyph_instance_coords(&mut self, glyph: &ParleyGlyph, face_key: FontFaceKey) {
@@ -96,7 +96,7 @@ fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u
 }
 
 fn prepared_glyph_font_identity(glyph: &ParleyGlyph) -> (u64, u32) {
-    (glyph.font.data_id(), glyph.font.face_index())
+    (glyph.font().data_id(), glyph.font().face_index())
 }
 
 fn prepared_glyph_variation_key(glyph: &ParleyGlyph) -> u64 {

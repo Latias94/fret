@@ -68,7 +68,7 @@ impl TextSystem {
 }
 
 fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::FontRef<'a>> {
-    parley::swash::FontRef::from_index(glyph.font.bytes(), glyph.font.face_index() as usize)
+    parley::swash::FontRef::from_index(glyph.font().bytes(), glyph.font().face_index() as usize)
 }
 
 fn prepared_glyph_scaler_size(glyph: &ParleyGlyph) -> f32 {
