@@ -1668,6 +1668,7 @@ fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input_group/text.rs",
             "src/ui/snippets/input_group/textarea.rs",
             "src/ui/snippets/input_group/tooltip.rs",
+            "src/ui/snippets/input_group/usage.rs",
         ],
         &[
             "use fret::{UiChild, UiCx};",
@@ -1756,6 +1757,14 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
             "Prefer the high-level `InputGroup::new(model)` shorthand for first-party app code; keep the part-based surface for direct shadcn docs parity when you explicitly want addon/control parts."
         ),
         "src/ui/pages/input_group.rs should keep the compact shorthand as the first-party usage lane"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::usage::SOURCE, \"example\")"),
+        "src/ui/pages/input_group.rs should show the compact shorthand Usage section from a real snippet file"
+    );
+    assert!(
+        !page.contains(".code_rust("),
+        "src/ui/pages/input_group.rs should avoid page-local hand-written Rust strings for Usage"
     );
     assert!(
         page.contains(
