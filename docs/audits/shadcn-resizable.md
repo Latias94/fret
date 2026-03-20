@@ -31,8 +31,10 @@ This audit compares Fret's shadcn-aligned `Resizable` recipe against the upstrea
 - Pass: `ResizablePanel`, `ResizableHandle`, and `ResizablePanelGroup::axis(...)` match the upstream
   parts surface closely enough for copyable shadcn-style examples.
 - Pass: `ResizableHandle::with_handle(true)` and layout refinement hooks cover the important recipe outcomes.
+- Pass: `resizable_panel_group(cx, model, |cx| ..)` is already the first-party composable root lane for
+  UI Gallery snippets; it preserves ordered panel/handle composition while keeping root-level builder knobs.
 - Note: Because this component is already expressed as explicit parts, Fret does not need an additional
-  generic `compose()` builder here.
+  generic `compose()` or broader children API here.
 
 ### Interaction & layout parity
 
@@ -42,10 +44,20 @@ This audit compares Fret's shadcn-aligned `Resizable` recipe against the upstrea
 - Pass: `ResizablePanelGroup` owns the upstream `w-full h-full` + orientation flex behavior, while `ResizablePanel` stays a runtime-sized wrapper and outer bordered demo shells remain caller-owned.
 - Pass: Gallery examples already cover nested groups, handle visuals, and RTL hit-testing smoke checks.
 
+### UI Gallery docs surface
+
+- Fix landed: the page root now exposes `ui-gallery-page-resizable`, matching the existing diag scripts and
+  layout sweep contract while preserving the older `ui-gallery-resizable` component root marker.
+- Fix landed: section ordering now follows the upstream docs flow (`Demo`, `Usage`, `Vertical`, `Handle`,
+  `RTL`) instead of presenting `Handle` before `Vertical`.
+- Pass: the remaining notes now explicitly document the authoring-surface conclusion that no extra generic
+  composable children API is needed.
+
 ## Conclusion
 
 - Result: This component does not currently point to a missing mechanism-layer gap.
 - Result: Default-style ownership looks correct: group fill sizing + handle chrome are recipe-owned, while surrounding card/border shells remain caller-owned.
+- Result: The main drift was on the UI Gallery teaching/automation surface, not the mechanism layer.
 - Result: The main missing piece was regression coverage for the gallery/docs-aligned example set.
 - Result: Follow-up work should focus on concrete keyboard or hit-testing regressions only if they appear.
 

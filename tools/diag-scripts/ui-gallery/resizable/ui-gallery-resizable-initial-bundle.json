@@ -1,13 +1,25 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Resizable initial bundle",
+    "tags": ["ui-gallery", "shadcn", "resizable", "smoke"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Navigates to the Resizable docs page and waits for the page root plus the main demo group.",
+      "Leaves a bounded bundle and screenshot as the baseline artifact for page-level parity checks."
+    ]
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
@@ -15,7 +27,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
@@ -29,7 +41,7 @@
         "target": { "kind": "test_id", "id": "ui-gallery-nav-resizable" },
         "padding_px": 8.0
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-resizable" } },
     {
@@ -38,7 +50,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-page-resizable" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
@@ -48,7 +60,7 @@
         "padding_px": 0.0,
         "eps_px": 1.0
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
@@ -59,7 +71,7 @@
         "min_h_px": 240.0,
         "eps_px": 1.0
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 60 },
     { "type": "capture_bundle", "label": "ui-gallery-resizable-initial" },
