@@ -380,8 +380,8 @@ fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDe
                     let header_menu_role_open = header_menu_role_open.clone_model();
                     let header_menu_score_open = header_menu_score_open.clone_model();
 
-                    let enable_grouping = enable_grouping.layout_in(cx).value_or(true);
-                    let grouped_column_mode = grouped_column_mode.layout_in(cx).value_or_default();
+                    let enable_grouping = enable_grouping.layout_value_in(cx);
+                    let grouped_column_mode = grouped_column_mode.layout_value_in(cx);
                     let grouped_column_mode = match grouped_column_mode.as_deref() {
                         Some("remove") => GroupedColumnMode::Remove,
                         Some("none") => GroupedColumnMode::None,

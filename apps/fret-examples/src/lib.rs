@@ -2168,8 +2168,8 @@ mod authoring_surface_policy_tests {
                 "view_options_open: LocalState<bool>,",
                 "enable_grouping: LocalState<bool>,",
                 "grouped_column_mode: LocalState<Option<Arc<str>>>,",
-                "let enable_grouping = enable_grouping.layout_in(cx).value_or(true);",
-                "let grouped_column_mode = grouped_column_mode.layout_in(cx).value_or_default();",
+                "let enable_grouping = enable_grouping.layout_value_in(cx);",
+                "let grouped_column_mode = grouped_column_mode.layout_value_in(cx);",
                 "let view_options_open = view_options_open.clone_model();",
             ],
             &[
@@ -2221,8 +2221,8 @@ mod authoring_surface_policy_tests {
                 "editor_text: LocalState<String>,",
                 "stream_text: LocalState<String>,",
                 "stream_patch_only: LocalState<bool>,",
-                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);",
-                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);",
+                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_value_in(cx);",
+                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_value_in(cx);",
                 "let auto_apply_model = st.auto_apply_standard_actions.clone_model();",
                 "let auto_fix_model = st.auto_fix_on_apply.clone_model();",
                 "st.genui_state",
@@ -2230,7 +2230,7 @@ mod authoring_surface_policy_tests {
                 ".read_ref(|v| {",
                 "st.action_queue",
                 "st.validation_state",
-                "let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);",
+                "let stream_patch_only = st.stream_patch_only.layout_value_in(cx);",
                 "let stream_patch_only_model = st.stream_patch_only.clone_model();",
                 "shadcn::Textarea::new(&editor_model)",
                 "shadcn::Textarea::new(&stream_model)",
@@ -2258,7 +2258,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
                 "let view_settings: CustomEffectV2ViewSettings = cx.data().selector_layout(",
                 "&st.enabled,",
                 "&st.use_non_filterable_input,",
@@ -2430,8 +2430,8 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V1_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
+                "let enabled = st.enabled.layout_value_in(cx);",
                 "let enabled_model = st.enabled.clone_model();",
                 "let blur_radius_state = st.blur_radius_px.clone();",
             ],
@@ -2476,7 +2476,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LIQUID_GLASS_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
                 "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector_layout(",
                 "&st.show_fake,",
                 "&st.custom_v3_pair,",

@@ -280,11 +280,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
-    model
-        .layout_in(cx)
-        .read_ref(|v| v.first().copied().unwrap_or(default))
-        .ok()
-        .unwrap_or(default)
+    model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn sampling_hint(value: &str) -> ImageSamplingHint {
