@@ -325,6 +325,10 @@ fn editor_text_field_readout(
         })
 }
 
+fn editor_string_model_readout(cx: &mut UiCx<'_>, model: &Model<String>) -> String {
+    cx.data().selector_model_paint(model, |value| value)
+}
+
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
     named_demo_state(
         cx,
@@ -1102,13 +1106,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         ),
                                                         |cx| cx.text("Committed"),
                                                         |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_buffered_name_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                            let committed = editor_string_model_readout(
+                                                                cx,
+                                                                &editor_buffered_name_model,
+                                                            );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 committed,
@@ -1203,13 +1204,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         ),
                                                         |cx| cx.text("Accepted assist"),
                                                         |cx| {
-                                                            let accepted = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_accepted_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                            let accepted = editor_string_model_readout(
+                                                                cx,
+                                                                &editor_name_assist_accepted_model,
+                                                            );
                                                             let readout = if accepted.trim().is_empty() {
                                                                 "None".to_string()
                                                             } else {
@@ -1437,12 +1435,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_drag_value_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_drag_value_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -1922,12 +1918,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_position_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_position_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -2048,12 +2042,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_transform_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_transform_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
