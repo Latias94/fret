@@ -46,8 +46,12 @@ This audit compares Fret's shadcn-aligned `Resizable` recipe against the upstrea
 
 ### UI Gallery docs surface
 
-- Fix landed: the page root now exposes `ui-gallery-page-resizable`, matching the existing diag scripts and
-  layout sweep contract while preserving the older `ui-gallery-resizable` component root marker.
+- Fix landed: diag scripts and the layout sweep now anchor to concrete resizable surfaces
+  (`ui-gallery-resizable-demo`, `ui-gallery-resizable-handle`, `ui-gallery-resizable-panels`)
+  instead of depending on a page-wrapper contract.
+- Fix landed: the launch-smoke script now treats `ui-gallery-resizable-demo-title` as the
+  visibility anchor instead of requiring the whole `ui-gallery-resizable-demo` section wrapper to
+  fit inside the window; the wrapper is legitimately taller than the viewport in the default gallery shell.
 - Fix landed: section ordering now follows the upstream docs flow (`Demo`, `Usage`, `Vertical`, `Handle`,
   `RTL`) instead of presenting `Handle` before `Vertical`.
 - Pass: the remaining notes now explicitly document the authoring-surface conclusion that no extra generic

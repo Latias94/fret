@@ -621,22 +621,24 @@
       "type": "wait_until"
     },
     {
-      "button": "left",
+      "max_move_px": 2.0,
+      "stable_frames": 2,
       "target": {
         "id": "ui-gallery-nav-resizable",
         "kind": "test_id"
       },
-      "type": "click"
+      "timeout_frames": 900,
+      "type": "click_stable"
     },
     {
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-page-resizable",
+          "id": "ui-gallery-resizable-demo",
           "kind": "test_id"
         }
       },
-      "timeout_frames": 240,
+      "timeout_frames": 900,
       "type": "wait_until"
     },
     {
@@ -645,11 +647,11 @@
         "kind": "bounds_within_window",
         "padding_px": 0.0,
         "target": {
-          "id": "ui-gallery-page-resizable",
+          "id": "ui-gallery-resizable-demo-title",
           "kind": "test_id"
         }
       },
-      "timeout_frames": 240,
+      "timeout_frames": 900,
       "type": "wait_until"
     },
     {

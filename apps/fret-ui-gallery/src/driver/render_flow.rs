@@ -2142,10 +2142,10 @@ mod tests {
     #[test]
     fn gallery_resizable_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page(PAGE_RESIZABLE);
-        let page_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-page-resizable");
+        let page_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-resizable");
         assert!(
             page_bounds.size.width.0 > 0.0 && page_bounds.size.height.0 > 0.0,
-            "expected Resizable page root to render with non-zero bounds: bounds={page_bounds:?}"
+            "expected Resizable component root to render with non-zero bounds: bounds={page_bounds:?}"
         );
 
         for target in [
