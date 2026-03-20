@@ -4,6 +4,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context;
 use fret_render::{RenderError, SurfaceState, WgpuContext};
+#[cfg(target_os = "macos")]
+use objc2_metal::MTLDevice as _;
 use serde_json::json;
 use winit::application::ApplicationHandler;
 use winit::dpi::LogicalSize;
@@ -559,7 +561,7 @@ fn current_metal_allocated_size_bytes(device: &wgpu::Device) -> Option<u64> {
     unsafe {
         device
             .as_hal::<wgpu::hal::api::Metal>()
-            .map(|device| device.raw_device().current_allocated_size() as u64)
+            .map(|device| device.raw_device().currentAllocatedSize() as u64)
     }
 }
 

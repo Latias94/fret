@@ -6,6 +6,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
+#[cfg(target_os = "macos")]
+use objc2_metal::MTLDevice as _;
 
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
@@ -2049,7 +2051,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     context
                                         .device
                                         .as_hal::<wgpu::hal::api::Metal>()
-                                        .map(|dev| dev.raw_device().current_allocated_size() as u64)
+                                        .map(|dev| dev.raw_device().currentAllocatedSize() as u64)
                                 };
                                 #[cfg(not(target_os = "macos"))]
                                 let metal_current_allocated_size_bytes: Option<u64> = None;
