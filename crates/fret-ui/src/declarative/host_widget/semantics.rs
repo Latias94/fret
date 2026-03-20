@@ -16,6 +16,10 @@ impl ElementHostWidget {
                 cx.set_role(SemanticsRole::Text);
                 cx.set_label(props.text.as_ref().to_string());
             }
+            ElementInstance::StyledText(props) => {
+                cx.set_role(SemanticsRole::Text);
+                cx.set_label(props.rich.text.as_ref().to_string());
+            }
             ElementInstance::SelectableText(props) => {
                 cx.set_role(SemanticsRole::Text);
                 let text = props.rich.text.as_ref();

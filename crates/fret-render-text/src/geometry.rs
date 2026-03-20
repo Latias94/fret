@@ -51,13 +51,13 @@ pub fn caret_stops_for_slice(
 
     let last_cluster_end = clusters
         .iter()
-        .map(|c| c.text_range.end)
+        .map(|c| c.text_range().end)
         .max()
         .unwrap_or(0)
         .min(slice.len());
     let effective_line_width_px = clusters
         .iter()
-        .flat_map(|c| [c.x0, c.x1])
+        .flat_map(|c| [c.x0(), c.x1()])
         .fold(line_width_px, |acc, x| acc.max(x.max(0.0)));
 
     let mut cluster_i = 0usize;
@@ -67,58 +67,59 @@ pub fn caret_stops_for_slice(
             continue;
         }
 
-        while cluster_i + 1 < clusters.len() && clusters[cluster_i].text_range.end < b {
+        while cluster_i + 1 < clusters.len() && clusters[cluster_i].text_range().end < b {
             cluster_i = cluster_i.saturating_add(1);
         }
 
-        let x = if b <= clusters[0].text_range.start {
+        let x = if b <= clusters[0].text_range().start {
             let first = &clusters[0];
-            if first.is_rtl {
-                first.x1.max(0.0)
+            if first.is_rtl() {
+                first.x1().max(0.0)
             } else {
-                first.x0.max(0.0)
+                first.x0().max(0.0)
             }
         } else if b > last_cluster_end {
             let last = clusters.last().unwrap_or(&clusters[0]);
-            if last.is_rtl {
+            if last.is_rtl() {
                 0.0
             } else {
                 effective_line_width_px
             }
         } else if cluster_i >= clusters.len() {
             let last = clusters.last().unwrap_or(&clusters[0]);
-            if last.is_rtl {
+            if last.is_rtl() {
                 0.0
             } else {
                 line_width_px.max(0.0)
             }
         } else {
             let c = &clusters[cluster_i];
-            let start = c.text_range.start.min(slice.len());
-            let end = c.text_range.end.min(slice.len());
+            let text_range = c.text_range();
+            let start = text_range.start.min(slice.len());
+            let end = text_range.end.min(slice.len());
 
             if start == end {
-                c.x0.max(0.0)
+                c.x0().max(0.0)
             } else if b <= start {
-                if c.is_rtl {
-                    c.x1.max(0.0)
+                if c.is_rtl() {
+                    c.x1().max(0.0)
                 } else {
-                    c.x0.max(0.0)
+                    c.x0().max(0.0)
                 }
             } else if b >= end {
-                if c.is_rtl {
-                    c.x0.max(0.0)
+                if c.is_rtl() {
+                    c.x0().max(0.0)
                 } else {
-                    c.x1.max(0.0)
+                    c.x1().max(0.0)
                 }
             } else {
                 let denom = (end - start) as f32;
                 let mut t = ((b - start) as f32 / denom).clamp(0.0, 1.0);
-                if c.is_rtl {
+                if c.is_rtl() {
                     t = 1.0 - t;
                 }
-                let w = (c.x1 - c.x0).max(0.0);
-                (c.x0 + w * t).max(0.0)
+                let w = (c.x1() - c.x0()).max(0.0);
+                (c.x0() + w * t).max(0.0)
             }
         };
 
@@ -159,17 +160,19 @@ pub fn hit_test_x_from_stops(stops: &[(usize, Px)], x: Px) -> usize {
     best
 }
 
-pub fn shaped_line_visual_x_bounds_px(line: &crate::parley_shaper::ShapedLineLayout) -> (f32, f32) {
-    let fallback_max = line.width.max(0.0);
-    if line.clusters.is_empty() {
+pub(crate) fn shaped_line_visual_x_bounds_px(
+    line: &crate::parley_shaper::ShapedLineLayout,
+) -> (f32, f32) {
+    let fallback_max = line.width().max(0.0);
+    if line.clusters().is_empty() {
         return (0.0, fallback_max);
     }
 
     let mut min_x = f32::INFINITY;
     let mut max_x = f32::NEG_INFINITY;
-    for c in &line.clusters {
-        let a = c.x0;
-        let b = c.x1;
+    for c in line.clusters() {
+        let a = c.x0();
+        let b = c.x1();
         min_x = min_x.min(a.min(b));
         max_x = max_x.max(a.max(b));
     }
@@ -181,23 +184,23 @@ pub fn shaped_line_visual_x_bounds_px(line: &crate::parley_shaper::ShapedLineLay
     (min_x, max_x.max(min_x))
 }
 
-pub fn shaped_line_visual_width_px(line: &crate::parley_shaper::ShapedLineLayout) -> f32 {
+fn shaped_line_visual_width_px(line: &crate::parley_shaper::ShapedLineLayout) -> f32 {
     let (min_x, max_x) = shaped_line_visual_x_bounds_px(line);
     (max_x - min_x).max(0.0)
 }
 
-pub fn metrics_from_wrapped_lines(
+pub(crate) fn metrics_from_wrapped_lines(
     lines: &[crate::parley_shaper::ShapedLineLayout],
     scale: f32,
 ) -> TextMetrics {
     let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
 
-    let mut first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+    let mut first_baseline_px = lines.first().map(|l| l.baseline().max(0.0)).unwrap_or(0.0);
     if snap_vertical && let Some(first) = lines.first() {
         let top_px = 0.0_f32;
-        let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+        let bottom_px = (top_px + first.line_height().max(0.0)).round().max(top_px);
         let height_px = (bottom_px - top_px).max(0.0);
-        first_baseline_px = (top_px + first.baseline.max(0.0))
+        first_baseline_px = (top_px + first.baseline().max(0.0))
             .round()
             .clamp(top_px, top_px + height_px);
     }
@@ -208,14 +211,14 @@ pub fn metrics_from_wrapped_lines(
         let mut top_px = 0.0_f32;
         for line in lines {
             max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
-            let bottom_px = (top_px + line.line_height.max(0.0)).round().max(top_px);
+            let bottom_px = (top_px + line.line_height().max(0.0)).round().max(top_px);
             top_px = bottom_px;
         }
         total_h_px = top_px;
     } else {
         for line in lines {
             max_w_px = max_w_px.max(shaped_line_visual_width_px(line));
-            total_h_px += line.line_height.max(0.0);
+            total_h_px += line.line_height().max(0.0);
         }
     }
 
@@ -228,7 +231,7 @@ pub fn metrics_from_wrapped_lines(
     }
 }
 
-pub fn metrics_for_uniform_lines(
+pub(crate) fn metrics_for_uniform_lines(
     max_w_px: f32,
     line_count: usize,
     baseline_px: f32,
@@ -641,9 +644,9 @@ mod tests {
         constraints: TextConstraints,
     ) -> Vec<crate::line_layout::TextLineLayout> {
         prepare_layout_for_test(shaper, text, style, constraints)
-            .lines
-            .into_iter()
-            .map(|l| l.layout)
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
             .collect()
     }
 
@@ -679,9 +682,9 @@ mod tests {
         constraints: TextConstraints,
     ) -> Vec<crate::line_layout::TextLineLayout> {
         prepare_layout_for_attributed_test(shaper, text, base, spans, constraints)
-            .lines
-            .into_iter()
-            .map(|l| l.layout)
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
             .collect()
     }
 
@@ -705,12 +708,12 @@ mod tests {
         let mut x = 0.0_f32;
         for (start, ch) in text.char_indices() {
             let end = start + ch.len_utf8();
-            out.push(crate::parley_shaper::ShapedCluster {
-                text_range: start..end,
-                x0: x,
-                x1: x + advance,
-                is_rtl: is_synthetic_rtl_char(ch),
-            });
+            out.push(crate::parley_shaper::ShapedCluster::new(
+                start..end,
+                x,
+                x + advance,
+                is_synthetic_rtl_char(ch),
+            ));
             x += advance;
         }
         out
@@ -722,11 +725,12 @@ mod tests {
     ) -> Arc<[TextLineCluster]> {
         let mut out: Vec<TextLineCluster> = Vec::with_capacity(clusters.len());
         for c in clusters {
+            let text_range = c.text_range();
             out.push(TextLineCluster {
-                text_range: (base_offset + c.text_range.start)..(base_offset + c.text_range.end),
-                x0: Px(c.x0.max(0.0)),
-                x1: Px(c.x1.max(0.0)),
-                is_rtl: c.is_rtl,
+                text_range: (base_offset + text_range.start)..(base_offset + text_range.end),
+                x0: Px(c.x0().max(0.0)),
+                x1: Px(c.x1().max(0.0)),
+                is_rtl: c.is_rtl(),
             });
         }
         Arc::from(out)
@@ -821,22 +825,22 @@ mod tests {
         let baseline_for = |shaper: &mut ParleyShaper, text: &str| -> (Px, Px) {
             let prepared = prepare_layout_for_test(shaper, text, &style, constraints);
             assert_eq!(
-                prepared.metrics.size.height,
+                prepared.metrics().size.height,
                 Px(18.0),
                 "expected fixed line box height to remain stable for text={text:?}"
             );
             assert!(
-                !prepared.lines.is_empty(),
+                !prepared.lines().is_empty(),
                 "expected at least one line for text={text:?}"
             );
             assert_eq!(
-                prepared.lines[0].layout.height,
+                prepared.lines()[0].layout().height,
                 Px(18.0),
                 "expected first line height to match fixed line box for text={text:?}"
             );
             (
-                prepared.metrics.baseline,
-                prepared.lines[0].layout.y_baseline,
+                prepared.metrics().baseline,
+                prepared.lines()[0].layout().y_baseline,
             )
         };
 
@@ -856,12 +860,12 @@ mod tests {
 
     #[test]
     fn caret_stops_for_slice_interpolates_within_cluster_ltr() {
-        let clusters = vec![crate::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: false,
-        }];
+        let clusters = vec![crate::parley_shaper::ShapedCluster::new(
+            0..4,
+            0.0,
+            40.0,
+            false,
+        )];
 
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
         let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
@@ -875,12 +879,12 @@ mod tests {
 
     #[test]
     fn caret_stops_for_slice_interpolates_within_cluster_rtl() {
-        let clusters = vec![crate::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: true,
-        }];
+        let clusters = vec![crate::parley_shaper::ShapedCluster::new(
+            0..4,
+            0.0,
+            40.0,
+            true,
+        )];
 
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
         let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
@@ -894,12 +898,12 @@ mod tests {
 
     #[test]
     fn selection_rects_for_rtl_line_has_positive_width() {
-        let clusters = vec![crate::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: true,
-        }];
+        let clusters = vec![crate::parley_shaper::ShapedCluster::new(
+            0..4,
+            0.0,
+            40.0,
+            true,
+        )];
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
         let line = crate::line_layout::TextLineLayout::new(
             0,
@@ -925,12 +929,12 @@ mod tests {
 
     #[test]
     fn hit_test_point_for_rtl_line_maps_left_edge_to_logical_end() {
-        let clusters = vec![crate::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: true,
-        }];
+        let clusters = vec![crate::parley_shaper::ShapedCluster::new(
+            0..4,
+            0.0,
+            40.0,
+            true,
+        )];
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
         let line = crate::line_layout::TextLineLayout::new(
             0,
@@ -1004,24 +1008,9 @@ mod tests {
         // logical order of the text ranges.
         let text = "aaa אבג def";
         let clusters = vec![
-            crate::parley_shaper::ShapedCluster {
-                text_range: 0..4, // "aaa "
-                x0: 0.0,
-                x1: 40.0,
-                is_rtl: false,
-            },
-            crate::parley_shaper::ShapedCluster {
-                text_range: 4..11, // "אבג "
-                x0: 70.0,
-                x1: 110.0,
-                is_rtl: true,
-            },
-            crate::parley_shaper::ShapedCluster {
-                text_range: 11..14, // "def"
-                x0: 40.0,
-                x1: 70.0,
-                is_rtl: false,
-            },
+            crate::parley_shaper::ShapedCluster::new(0..4, 0.0, 40.0, false), // "aaa "
+            crate::parley_shaper::ShapedCluster::new(4..11, 70.0, 110.0, true),
+            crate::parley_shaper::ShapedCluster::new(11..14, 40.0, 70.0, false), // "def"
         ];
 
         let stops = super::caret_stops_for_slice(text, 0, &clusters, 110.0, 1.0, text.len());
@@ -1069,12 +1058,12 @@ mod tests {
         ];
 
         for (text, label) in cases {
-            let clusters = vec![crate::parley_shaper::ShapedCluster {
-                text_range: 0..text.len(),
-                x0: 0.0,
-                x1: 40.0,
-                is_rtl: false,
-            }];
+            let clusters = vec![crate::parley_shaper::ShapedCluster::new(
+                0..text.len(),
+                0.0,
+                40.0,
+                false,
+            )];
 
             let stops = super::caret_stops_for_slice(text, 0, &clusters, 40.0, 1.0, text.len());
             let indices: Vec<usize> = stops.iter().map(|(idx, _)| *idx).collect();
@@ -1110,18 +1099,22 @@ mod tests {
 
         let prepared = prepare_layout_for_test(&mut shaper, "", &style, constraints);
         assert!(
-            prepared.metrics.size.height.0 > 0.1,
+            prepared.metrics().size.height.0 > 0.1,
             "expected empty string to have non-zero metrics height, got {:?}",
-            prepared.metrics
+            prepared.metrics()
         );
         assert!(
-            prepared.metrics.baseline.0 >= 0.0
-                && prepared.metrics.baseline.0 <= prepared.metrics.size.height.0 + 0.01,
+            prepared.metrics().baseline.0 >= 0.0
+                && prepared.metrics().baseline.0 <= prepared.metrics().size.height.0 + 0.01,
             "expected empty string baseline to be within the metrics box, got {:?}",
-            prepared.metrics
+            prepared.metrics()
         );
 
-        let lines: Vec<_> = prepared.lines.into_iter().map(|l| l.layout).collect();
+        let lines: Vec<_> = prepared
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
+            .collect();
         assert!(!lines.is_empty(), "expected at least one line layout");
         assert!(
             lines[0].height.0 > 0.1,
@@ -1989,12 +1982,12 @@ mod tests {
 
     #[test]
     fn rtl_multiline_hit_test_maps_line_edges_to_logical_ends() {
-        let clusters = vec![crate::parley_shaper::ShapedCluster {
-            text_range: 0..4,
-            x0: 0.0,
-            x1: 40.0,
-            is_rtl: true,
-        }];
+        let clusters = vec![crate::parley_shaper::ShapedCluster::new(
+            0..4,
+            0.0,
+            40.0,
+            true,
+        )];
 
         let stops0 = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
         let line0 = crate::line_layout::TextLineLayout::new(
@@ -2068,16 +2061,16 @@ mod tests {
             constraints,
         );
 
-        assert_eq!(wrapped.lines.len(), 1);
-        let kept_end = wrapped.kept_end;
+        assert_eq!(wrapped.lines().len(), 1);
+        let kept_end = wrapped.kept_end();
         assert!(kept_end < text.len());
 
-        let line_layout = &wrapped.lines[0];
+        let line_layout = &wrapped.lines()[0];
         assert!(
             line_layout
-                .clusters
+                .clusters()
                 .iter()
-                .any(|c| c.text_range == (kept_end..kept_end)),
+                .any(|c| c.text_range() == (kept_end..kept_end)),
             "expected a synthetic zero-length cluster at kept_end for ellipsis mapping"
         );
 
@@ -2085,15 +2078,15 @@ mod tests {
         let caret_stops = super::caret_stops_for_slice(
             slice,
             0,
-            &line_layout.clusters,
-            line_layout.width,
+            line_layout.clusters(),
+            line_layout.width(),
             1.0,
             kept_end,
         );
         let line = crate::line_layout::TextLineLayout::new(
             0,
             kept_end,
-            Px(line_layout.width),
+            Px(line_layout.width()),
             Px(0.0),
             Px(0.0),
             Px(10.0),
@@ -2102,10 +2095,10 @@ mod tests {
             Px(0.0),
             Px(0.0),
             caret_stops,
-            line_clusters_from_shaped(0, &line_layout.clusters),
+            line_clusters_from_shaped(0, line_layout.clusters()),
         );
 
-        let x = Px((line_layout.width - 1.0).max(0.0));
+        let x = Px((line_layout.width() - 1.0).max(0.0));
         let hit = hit_test_point_from_lines(&[line], Point::new(x, Px(5.0))).expect("hit test");
         assert_eq!(hit.index, kept_end);
     }

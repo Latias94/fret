@@ -37,9 +37,11 @@ Active tracker highlights:
 - Foundation closure tracker (P0 cross-workstream milestones): `docs/workstreams/foundation-closure-p0/foundation-closure-p0.md` (TODOs: `docs/workstreams/foundation-closure-p0/foundation-closure-p0-todo.md`).
 - Authoring surface + ecosystem reset (pre-release, no-compat cleanup): `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/MIGRATION_MATRIX.md`.
 - Ecosystem integration traits budget (install/catalog/router/docking/query seams): `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`, `docs/workstreams/ecosystem-integration-traits-v1/TODO.md`, `docs/workstreams/ecosystem-integration-traits-v1/MILESTONES.md`, `docs/workstreams/ecosystem-integration-traits-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/ecosystem-integration-traits-v1/MIGRATION_MATRIX.md`.
-- Into-element surface cleanup (follow-on to the authoring reset; conversion vocabulary collapse): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
-- Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
+- Into-element surface cleanup (closed closeout lane for conversion vocabulary collapse and typed first-party teaching surfaces): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`.
+- Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, and the post-closeout Todo/scaffold interpretation addendum `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO_LADDER_AUDIT_2026-03-20.md`.
 - Dataflow authoring surface (closed closeout lane for selector/query + ecosystem/router boundary conclusions): `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`.
+- Selector/query authoring density (closed closeout lane after the narrow selector/query density follow-on landed): `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TODO.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md`, and `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`.
+- View-locals authoring (closed closeout lane for grouped view-owned `LocalState<T>` organization): `docs/workstreams/view-locals-authoring-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TODO.md`, and `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`.
 - Action write surface (closed closeout lane for the default app-lane write budget): `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`, and `docs/workstreams/action-write-surface-fearless-refactor-v1/RETAINED_PAYLOAD_SURFACE_AUDIT_2026-03-17.md`.
 - App composition density follow-on (closeout / maintenance lane for the default app-lane composition/query shell follow-on): `docs/workstreams/app-composition-density-follow-on-v1/DESIGN.md`, `docs/workstreams/app-composition-density-follow-on-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/app-composition-density-follow-on-v1/MILESTONES.md`, and `docs/workstreams/app-composition-density-follow-on-v1/TODO.md`.
 - Local-state architecture follow-on (closed decision lane): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`.
@@ -49,7 +51,7 @@ Current pre-release authoring cleanup sequence:
 
 1. `authoring-surface-and-ecosystem-fearless-refactor-v1` shrinks the app/component/advanced lanes and the default teaching surface.
 2. `ecosystem-integration-traits-v1` locks the ecosystem trait budget for install/catalog/router/docking/query seams.
-3. `into-element-surface-fearless-refactor-v1` finishes the remaining conversion-surface cleanup so curated first-party examples, including shadcn/UI Gallery surfaces, converge on one authoring vocabulary.
+3. `into-element-surface-fearless-refactor-v1` finished the remaining conversion-surface cleanup so curated first-party examples, including shadcn/UI Gallery surfaces, converge on one authoring vocabulary.
 4. `authoring-density-reduction-fearless-refactor-v1` closes the shorter default-path teaching
    surface and locks it with docs/gates.
 5. `local-state-architecture-fearless-refactor-v1` documented the separate follow-on decision
@@ -73,8 +75,14 @@ The next authoring-focused lane is intentionally narrower:
 9. `app-composition-density-follow-on-v1` now reads as a narrow closeout lane:
    M1 closes on a no-new-API composition verdict, M2 closes on grouped app-lane query
    invalidation, and only M3 maintenance/lock work remains.
+10. `selector-query-authoring-density-fearless-refactor-v1` reopens only the remaining
+    selector/query default-path density after the earlier closeouts froze ownership and router
+    boundaries.
+11. `view-locals-authoring-fearless-refactor-v1` then closes the remaining grouped view-owned
+    `LocalState<T>` organization question on the default app lane without adding new framework APIs
+    or reopening storage-model design.
 
-Current execution stance on 2026-03-17:
+Current execution stance on 2026-03-20:
 
 - `dataflow-authoring-surface-fearless-refactor-v1` = closed closeout lane:
   selector/query conclusions and ecosystem/router boundary notes are locked there; do not reopen
@@ -87,6 +95,12 @@ Current execution stance on 2026-03-17:
 - `app-composition-density-follow-on-v1` = closeout / maintenance lane:
   M1 and M2 are now closed; keep the lane limited to source-gate/docs lockstep and reopen only if
   fresh cross-surface evidence shows a new default app-lane gap beyond first-party drift.
+- `selector-query-authoring-density-fearless-refactor-v1` = closed closeout lane:
+  keep the shipped query semantic projections and the no-new-API selector verdict; reopen only if
+  fresh cross-surface evidence exceeds the closed closeout audit.
+- `view-locals-authoring-fearless-refactor-v1` = closed closeout lane:
+  keep the shipped `1-2 inline / 3+ bundle` rule and the no-new-API verdict; reopen only if
+  fresh cross-surface evidence exceeds the closeout audit.
 - `authoring-surface-and-ecosystem-fearless-refactor-v1` = closeout lane:
   keep deleting stale aliases, tightening gates, and cleaning docs, but do not reopen broad
   surface redesign here.
@@ -120,13 +134,17 @@ Recommended order from here:
    inventories/gates aligned as maintenance rather than reopening broad redesign,
 4. keep `app-composition-density-follow-on-v1` in closeout / maintenance mode unless new
    cross-surface evidence appears,
-5. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
+5. keep `view-locals-authoring-fearless-refactor-v1` closed unless fresh cross-surface evidence
+   shows that the shipped grouped-locals rule is no longer sufficient,
+6. keep `selector-query-authoring-density-fearless-refactor-v1` closed unless fresh cross-surface
+   evidence exceeds the shipped closeout audit,
+7. keep the default authoring closeout lanes stable rather than reopening helper growth from stale
    wording drift,
-6. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
+8. keep `local-state-architecture-fearless-refactor-v1` closed on the O1 decision rather than
    treating it as another open-ended state-surface lane,
-7. keep `local-state-facade-boundary-hardening-v1` closed unless fresh evidence shows that wording
+9. keep `local-state-facade-boundary-hardening-v1` closed unless fresh evidence shows that wording
    and current gates are no longer sufficient,
-8. only reopen storage-model refactors if fresh evidence can name both the bottleneck and the
+10. only reopen storage-model refactors if fresh evidence can name both the bottleneck and the
    proof surfaces + gates in advance.
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.

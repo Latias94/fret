@@ -94,7 +94,7 @@ Coordination rule on 2026-03-16:
      - the taught tracked-read wording is now `state.layout(cx).value_*` /
        `state.paint(cx).value_*`,
       - the taught keyed-row payload write wording is now
-        `cx.actions().payload_local_update_if::<A, _>(...)`,
+        `cx.actions().local(&rows_state).payload_update_if::<A>(...)`,
       - the narrow single-child late-landing wording is now `ui::single(cx, child)` for root or
         wrapper closures that only forward one typed subtree,
       - the next batch should stay focused on keyed/list/default child-collection ergonomics and
@@ -437,19 +437,19 @@ Target rule:
 
 - the default app surface does not expose public flat `use_local*` helpers; those flows live
   under `cx.state()`.
-- raw `use_state(...)` / `use_state_keyed(...)` remain explicit advanced seams through
-  `AppUiRawStateExt`, not as direct `AppUi` methods.
+- raw `use_state(...)` remains the explicit advanced seam through `AppUiRawStateExt`, not as a
+  direct `AppUi` method; loop-safe raw state hooks use `cx.keyed(...)`.
 
 ### `ui.actions()`
 
 Target operations:
 
-- `local_update::<A>(&state, ...)`
-- `local_set::<A, T>(&state, value)`
-- `toggle_local_bool::<A>(&state)`
+- `local(&state).update::<A>(...)`
+- `local(&state).set::<A>(value)`
+- `local(&state).toggle_bool::<A>()`
 - `models::<A>(|models| ...)`
 - `locals_with((...)).on::<A>(|tx, (...)| ...)`
-- `payload_local_update_if::<A>(&state, |value, payload| ...)`
+- `local(&state).payload_update_if::<A>(|value, payload| ...)`
 - `transient::<A>(...)`
 - `availability::<A>(...)`
 

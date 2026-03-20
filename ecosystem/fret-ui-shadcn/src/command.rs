@@ -3524,6 +3524,10 @@ pub struct CommandDialog {
     query: Model<String>,
     entries: Vec<CommandEntry>,
     a11y_label: Option<Arc<str>>,
+    input_test_id: Option<Arc<str>>,
+    list_test_id: Option<Arc<str>>,
+    test_id_item_prefix: Option<Arc<str>>,
+    test_id_heading_prefix: Option<Arc<str>>,
     disabled: bool,
     should_filter: bool,
     filter: Option<CommandPaletteFilterFn>,
@@ -3547,6 +3551,22 @@ impl std::fmt::Debug for CommandDialog {
             .field("query", &"<model>")
             .field("entries_len", &self.entries.len())
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field(
+                "input_test_id",
+                &self.input_test_id.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
+                "list_test_id",
+                &self.list_test_id.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
+                "test_id_item_prefix",
+                &self.test_id_item_prefix.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
+                "test_id_heading_prefix",
+                &self.test_id_heading_prefix.as_ref().map(|s| s.as_ref()),
+            )
             .field("disabled", &self.disabled)
             .field("should_filter", &self.should_filter)
             .field("filter", &self.filter.is_some())
@@ -3584,6 +3604,10 @@ impl CommandDialog {
             query,
             entries: items.into_iter().map(CommandEntry::Item).collect(),
             a11y_label: None,
+            input_test_id: None,
+            list_test_id: None,
+            test_id_item_prefix: None,
+            test_id_heading_prefix: None,
             disabled: false,
             should_filter: true,
             filter: None,
@@ -3630,6 +3654,10 @@ impl CommandDialog {
             query,
             entries: command_entries_from_host_commands(cx),
             a11y_label: None,
+            input_test_id: None,
+            list_test_id: None,
+            test_id_item_prefix: None,
+            test_id_heading_prefix: None,
             disabled: false,
             should_filter: true,
             filter: None,
@@ -3654,6 +3682,26 @@ impl CommandDialog {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id_input(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.input_test_id = Some(id.into());
+        self
+    }
+
+    pub fn list_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.list_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn test_id_item_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_item_prefix = Some(prefix.into());
+        self
+    }
+
+    pub fn test_id_heading_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_heading_prefix = Some(prefix.into());
         self
     }
 
@@ -3787,6 +3835,10 @@ impl CommandDialog {
         let a11y_label = self
             .a11y_label
             .unwrap_or_else(|| Arc::from("Command palette"));
+        let input_test_id = self.input_test_id;
+        let list_test_id = self.list_test_id;
+        let test_id_item_prefix = self.test_id_item_prefix;
+        let test_id_heading_prefix = self.test_id_heading_prefix;
         let disabled = self.disabled;
         let should_filter = self.should_filter;
         let filter = self.filter;
@@ -3991,6 +4043,22 @@ impl CommandDialog {
                     let filter = filter.clone();
                     palette = palette
                         .filter(move |value, search, keywords| filter(value, search, keywords));
+                }
+
+                if let Some(input_test_id) = input_test_id.as_ref() {
+                    palette = palette.test_id_input(input_test_id.clone());
+                }
+
+                if let Some(list_test_id) = list_test_id.as_ref() {
+                    palette = palette.list_test_id(list_test_id.clone());
+                }
+
+                if let Some(test_id_item_prefix) = test_id_item_prefix.as_ref() {
+                    palette = palette.test_id_item_prefix(test_id_item_prefix.clone());
+                }
+
+                if let Some(test_id_heading_prefix) = test_id_heading_prefix.as_ref() {
+                    palette = palette.test_id_heading_prefix(test_id_heading_prefix.clone());
                 }
 
                 let palette = palette.into_element(cx);
@@ -5216,6 +5284,71 @@ mod tests {
         assert!(ids.iter().copied().any(|id| id == "cmd-item-alpha"));
 
         let _ = root;
+    }
+
+    #[test]
+    fn command_dialog_test_id_builders_forward_to_palette_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::new());
+        let bounds = bounds();
+        let mut services = FakeServices::default();
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-dialog-test-ids",
+            |cx| {
+                vec![
+                    CommandDialog::new(open.clone(), query.clone(), Vec::new())
+                        .entries(vec![
+                            CommandGroup::new([CommandItem::new("Alpha")])
+                                .heading("Settings")
+                                .into(),
+                        ])
+                        .test_id_input("cmd-dialog-input")
+                        .list_test_id("cmd-dialog-listbox")
+                        .test_id_item_prefix("cmd-dialog-item-")
+                        .test_id_heading_prefix("cmd-dialog-heading-")
+                        .into_element(cx, |cx| crate::button::Button::new("Open").into_element(cx)),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "cmd-dialog-input"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-dialog-listbox"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-dialog-item-alpha"));
+        assert!(
+            ids.iter()
+                .copied()
+                .any(|id| id == "cmd-dialog-heading-settings")
+        );
     }
 
     #[test]

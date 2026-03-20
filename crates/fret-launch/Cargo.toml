@@ -65,6 +65,7 @@ block2 = { version = "0.6.1", optional = true }
 keyboard-types.workspace = true
 objc.workspace = true
 objc2 = { version = "0.6.3", features = ["relax-sign-encoding"] }
+objc2-metal.workspace = true
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSEvent", "NSMenu", "NSMenuItem", "NSResponder", "NSScreen"] }
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSString", "objc2-core-foundation"] }
 

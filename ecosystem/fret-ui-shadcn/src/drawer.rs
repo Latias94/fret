@@ -2,28 +2,29 @@
 //!
 //! Fret currently models drawers as a `Sheet` that defaults to the `Bottom` side.
 
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextAlign, Transform2D,
 };
-use fret_runtime::{Model, TickId};
+use fret_runtime::{Model, ModelStore, TickId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, MarginEdge, MarginEdges,
     PointerRegionProps, RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
-use fret_ui_headless::snap_points as headless_snap_points;
 
 use crate::layout as shadcn_layout;
 use crate::sheet::Sheet;
 pub use crate::sheet::{
-    SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
+    SheetDescription as DrawerDescription, SheetModalMode as DrawerModalMode,
+    SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
 
 pub type DrawerDirection = DrawerSide;
@@ -35,13 +36,16 @@ use fret_ui_kit::declarative::motion_value::{
     MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Space, UiPatch, UiPatchTarget,
     UiSupportsChrome, UiSupportsLayout, ui,
 };
 
+use crate::bool_model::IntoBoolModel;
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnSnapPointChange = Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>;
 
 const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
@@ -90,16 +94,114 @@ pub enum DrawerSnapPoint {
 }
 
 fn normalize_snap_points(points: Vec<DrawerSnapPoint>) -> Vec<f32> {
-    let mut out: Vec<f32> = points
-        .into_iter()
-        .filter_map(|p| match p {
+    let mut out = Vec::new();
+    for point in points {
+        let Some(fraction) = (match point {
             DrawerSnapPoint::Fraction(f) if f.is_finite() && f > 0.0 => Some(f.min(1.0)),
             _ => None,
-        })
-        .collect();
-    out.sort_by(|a, b| a.total_cmp(b));
-    out.dedup_by(|a, b| (*a - *b).abs() < f32::EPSILON);
+        }) else {
+            continue;
+        };
+        if out
+            .iter()
+            .any(|existing: &f32| (*existing - fraction).abs() < f32::EPSILON)
+        {
+            continue;
+        }
+        out.push(fraction);
+    }
     out
+}
+
+fn drawer_default_snap_point_index(points: &[f32], explicit_index: Option<usize>) -> Option<usize> {
+    if points.is_empty() {
+        return None;
+    }
+    if let Some(index) = explicit_index.filter(|index| *index < points.len()) {
+        return Some(index);
+    }
+    points
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.total_cmp(b))
+        .map(|(index, _)| index)
+}
+
+fn drawer_resolve_snap_point_index(
+    points: &[f32],
+    explicit_default_index: Option<usize>,
+    requested_index: Option<usize>,
+) -> Option<usize> {
+    requested_index
+        .filter(|index| *index < points.len())
+        .or_else(|| drawer_default_snap_point_index(points, explicit_default_index))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct DrawerResolvedSnapTarget {
+    model_index: usize,
+    visible: Px,
+    offset: Px,
+}
+
+fn drawer_resolved_snap_targets(
+    points: &[f32],
+    drawer_height: Px,
+    window_height: Px,
+) -> Vec<DrawerResolvedSnapTarget> {
+    points
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(model_index, fraction)| {
+            let desired_visible = Px((window_height.0 * fraction).max(0.0));
+            let visible = Px(desired_visible.0.min(drawer_height.0).max(0.0));
+            let offset = Px((drawer_height.0 - visible.0).max(0.0));
+            DrawerResolvedSnapTarget {
+                model_index,
+                visible,
+                offset,
+            }
+        })
+        .collect()
+}
+
+fn drawer_resolved_snap_target_for_index(
+    targets: &[DrawerResolvedSnapTarget],
+    index: usize,
+) -> Option<DrawerResolvedSnapTarget> {
+    targets
+        .iter()
+        .copied()
+        .find(|target| target.model_index == index)
+}
+
+fn drawer_resolved_snap_target_closest_by_offset(
+    targets: &[DrawerResolvedSnapTarget],
+    offset: Px,
+) -> Option<DrawerResolvedSnapTarget> {
+    targets.iter().copied().min_by(|a, b| {
+        let da = (a.offset.0 - offset.0).abs();
+        let db = (b.offset.0 - offset.0).abs();
+        da.total_cmp(&db)
+    })
+}
+
+fn drawer_set_snap_point_with_callback(
+    models: &mut ModelStore,
+    model: &Model<Option<usize>>,
+    on_change: Option<&OnSnapPointChange>,
+    next: Option<usize>,
+) -> bool {
+    let current = models.get_cloned(model).unwrap_or(None);
+    if current == next {
+        return false;
+    }
+    let _ = models.update(model, |value| *value = next);
+    if let Some(on_change) = on_change {
+        on_change(next);
+    }
+    true
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -107,9 +209,59 @@ struct DrawerSideProviderState {
     current: DrawerSide,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct DrawerNestedChildState {
+    open: bool,
+    swiping: bool,
+    swipe_progress: f32,
+    frontmost_height: Px,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct DrawerNestedAggregateState {
+    has_open_child: bool,
+    nested_swiping: bool,
+    swipe_progress: f32,
+    frontmost_height: Px,
+}
+
+#[derive(Debug, Clone, Default)]
+struct DrawerNestedRegistry {
+    children: HashMap<GlobalElementId, DrawerNestedChildState>,
+}
+
+impl DrawerNestedRegistry {
+    fn aggregate(&self) -> DrawerNestedAggregateState {
+        let mut out = DrawerNestedAggregateState::default();
+        for state in self.children.values().copied() {
+            if state.open {
+                out.has_open_child = true;
+                out.frontmost_height = Px(out.frontmost_height.0.max(state.frontmost_height.0));
+            }
+            if state.swiping {
+                out.nested_swiping = true;
+            }
+            out.swipe_progress = out.swipe_progress.max(state.swipe_progress);
+        }
+        out
+    }
+}
+
+#[derive(Debug, Clone)]
+struct DrawerNestedProviderState {
+    registry: Model<DrawerNestedRegistry>,
+}
+
 fn inherited_drawer_side<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<DrawerSide> {
     cx.provided::<DrawerSideProviderState>()
         .map(|st| st.current)
+}
+
+fn inherited_drawer_nested_registry<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<Model<DrawerNestedRegistry>> {
+    cx.provided::<DrawerNestedProviderState>()
+        .map(|st| st.registry.clone())
 }
 
 fn drawer_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> DrawerSide {
@@ -123,6 +275,70 @@ fn with_drawer_side_provider<H: UiHost, R>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
     cx.provide(DrawerSideProviderState { current: side }, f)
+}
+
+#[track_caller]
+fn with_drawer_nested_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    registry: Model<DrawerNestedRegistry>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    cx.provide(DrawerNestedProviderState { registry }, f)
+}
+
+fn drawer_nested_registry_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<DrawerNestedRegistry> {
+    cx.local_model_keyed("drawer_nested_registry", DrawerNestedRegistry::default)
+}
+
+fn drawer_nested_registry_set_child_state(
+    models: &mut ModelStore,
+    registry: &Model<DrawerNestedRegistry>,
+    child_id: GlobalElementId,
+    next: DrawerNestedChildState,
+) -> bool {
+    let mut changed = false;
+    let _ = models.update(registry, |state| {
+        let current = state.children.get(&child_id).copied().unwrap_or_default();
+        if current == next {
+            return;
+        }
+        changed = true;
+        if next == DrawerNestedChildState::default() {
+            state.children.remove(&child_id);
+        } else {
+            state.children.insert(child_id, next);
+        }
+    });
+    changed
+}
+
+fn drawer_nested_self_state(
+    is_open: bool,
+    dragging: bool,
+    offset: Px,
+    drawer_height: Px,
+    nested: DrawerNestedAggregateState,
+) -> DrawerNestedChildState {
+    let own_progress = if is_open && dragging && drawer_height.0 > 0.0 {
+        (offset.0 / drawer_height.0).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let frontmost_height = if nested.has_open_child {
+        nested.frontmost_height
+    } else if is_open {
+        drawer_height
+    } else {
+        Px(0.0)
+    };
+    DrawerNestedChildState {
+        open: is_open,
+        swiping: dragging || nested.nested_swiping,
+        swipe_progress: nested.swipe_progress.max(own_progress),
+        frontmost_height,
+    }
 }
 
 fn drawer_drag_snap_height(drawer_height: Px, window_height: Px, side: DrawerSide) -> Px {
@@ -774,7 +990,10 @@ pub struct Drawer {
     inner: Sheet,
     drag_to_dismiss: bool,
     snap_points: Option<Vec<f32>>,
+    snap_point: Option<Model<Option<usize>>>,
     default_snap_point_index: Option<usize>,
+    snap_to_sequential_points: bool,
+    on_snap_point_change: Option<OnSnapPointChange>,
 }
 
 impl std::fmt::Debug for Drawer {
@@ -784,13 +1003,17 @@ impl std::fmt::Debug for Drawer {
             .field("side", &self.side)
             .field("drag_to_dismiss", &self.drag_to_dismiss)
             .field("snap_points", &self.snap_points.as_ref().map(|v| v.len()))
+            .field("snap_point", &self.snap_point.as_ref().map(|_| "<model>"))
             .field("default_snap_point_index", &self.default_snap_point_index)
+            .field("snap_to_sequential_points", &self.snap_to_sequential_points)
+            .field("on_snap_point_change", &self.on_snap_point_change.is_some())
             .finish()
     }
 }
 
 impl Drawer {
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
+        let open = open.into_bool_model();
         Self {
             open: open.clone(),
             side: DrawerSide::Bottom,
@@ -800,7 +1023,10 @@ impl Drawer {
                 .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION),
             drag_to_dismiss: true,
             snap_points: None,
+            snap_point: None,
             default_snap_point_index: None,
+            snap_to_sequential_points: false,
+            on_snap_point_change: None,
         }
     }
 
@@ -825,6 +1051,40 @@ impl Drawer {
         self
     }
 
+    /// Base UI-compatible alias.
+    ///
+    /// When `true`, outside pointer press does not dismiss the drawer.
+    /// This is equivalent to `overlay_closable(false)`.
+    pub fn disable_pointer_dismissal(mut self, disable: bool) -> Self {
+        self.inner = self.inner.disable_pointer_dismissal(disable);
+        self
+    }
+
+    /// Enables or disables the modal overlay barrier.
+    ///
+    /// Default: `true`.
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.inner = self.inner.modal(modal);
+        self
+    }
+
+    /// Sets the drawer modal policy in one call.
+    ///
+    /// This is the closest Fret equivalent to Base UI's `modal={true | false | 'trap-focus'}`
+    /// root prop while keeping the policy in the recipe layer.
+    pub fn modal_mode(mut self, mode: DrawerModalMode) -> Self {
+        self.inner = self.inner.modal_mode(mode);
+        self
+    }
+
+    /// Base UI-style trap-focus mode.
+    ///
+    /// This traps Tab focus inside the drawer while leaving outside pointer interaction enabled.
+    pub fn modal_trap_focus(mut self, trap: bool) -> Self {
+        self.inner = self.inner.modal_trap_focus(trap);
+        self
+    }
+
     pub fn overlay_color(mut self, overlay_color: fret_core::Color) -> Self {
         self.inner = self.inner.overlay_color(overlay_color);
         self
@@ -836,6 +1096,16 @@ impl Drawer {
     /// shadcn/Vaul while keeping the underlying mechanism surface unchanged.
     pub fn compose<H: UiHost>(self) -> DrawerComposition<H> {
         DrawerComposition::new(self)
+    }
+
+    /// Returns a part-children builder for root-level authoring that is closer to upstream nested
+    /// children composition while still lowering into the existing recipe-layer slots.
+    pub fn children<H: UiHost, I, P>(self, parts: I) -> DrawerChildren<H>
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<DrawerPart<H>>,
+    {
+        DrawerChildren::new(self, parts)
     }
 
     /// Host-bound builder-first helper that late-lands the trigger/content at the root call site.
@@ -919,11 +1189,36 @@ impl Drawer {
         self
     }
 
+    /// Sets the active snap point model (Base UI `snapPoint`).
+    ///
+    /// The model stores an authored snap-point index into the `snap_points(...)` list. When the
+    /// model is `None` or out of range, the drawer falls back to `default_snap_point(...)` or the
+    /// largest authored snap point.
+    pub fn snap_point(mut self, snap_point: Model<Option<usize>>) -> Self {
+        self.snap_point = Some(snap_point);
+        self
+    }
+
     /// Overrides which snap point is used as the initial "open" position.
     ///
     /// When unset, the largest snap point is used (most open), matching typical Vaul usage.
     pub fn default_snap_point(mut self, index: usize) -> Self {
         self.default_snap_point_index = Some(index);
+        self
+    }
+
+    /// Disables velocity-based snap skipping so a drag only advances one snap point at a time.
+    pub fn snap_to_sequential_points(mut self, enabled: bool) -> Self {
+        self.snap_to_sequential_points = enabled;
+        self
+    }
+
+    /// Called when the active snap point changes due to drawer-owned interactions or close reset.
+    pub fn on_snap_point_change(
+        mut self,
+        on_snap_point_change: impl Fn(Option<usize>) + Send + Sync + 'static,
+    ) -> Self {
+        self.on_snap_point_change = Some(Arc::new(on_snap_point_change));
         self
     }
 
@@ -1000,7 +1295,17 @@ impl Drawer {
         let side = self.side;
         let drag_to_dismiss = self.drag_to_dismiss;
         let snap_points = self.snap_points.clone();
+        let snap_point_model = snap_points.as_ref().map(|points| {
+            controllable_state::use_controllable_model(cx, self.snap_point.clone(), || {
+                drawer_default_snap_point_index(points, self.default_snap_point_index)
+            })
+            .model()
+        });
         let default_snap_point_index = self.default_snap_point_index;
+        let snap_to_sequential_points = self.snap_to_sequential_points;
+        let on_snap_point_change = self.on_snap_point_change.clone();
+        let parent_nested_registry = inherited_drawer_nested_registry(cx);
+        let drawer_instance_id = cx.keyed_slot_id("drawer_nested_instance");
 
         let mut inner = self
             .inner
@@ -1016,26 +1321,63 @@ impl Drawer {
         }
 
         inner.into_element(cx, trigger, move |cx| {
-            let content = with_drawer_side_provider(cx, side, |cx| content(cx));
-            if !drag_to_dismiss || side != DrawerSide::Bottom {
-                return content;
-            }
-
+            let nested_registry = drawer_nested_registry_model(cx);
+            let content = with_drawer_nested_provider(cx, nested_registry.clone(), |cx| {
+                with_drawer_side_provider(cx, side, |cx| content(cx))
+            });
             let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
-            let (runtime, offset_model, was_open) = drawer_drag_models(cx);
             let viewport_bounds = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
             let window_height =
                 fret_ui_kit::OverlayController::last_known_window_bounds(cx.app, cx.window)
                     .unwrap_or(viewport_bounds)
                     .size
                     .height;
+            let content_bounds = cx.last_bounds_for_element(content.id);
+            let drawer_frontmost_height = content_bounds
+                .as_ref()
+                .map(|bounds| drawer_drag_snap_height(bounds.size.height, window_height, side))
+                .unwrap_or(Px(0.0));
+            let nested_aggregate = cx
+                .watch_model(&nested_registry)
+                .layout()
+                .cloned()
+                .unwrap_or_default()
+                .aggregate();
+
+            if !drag_to_dismiss || side != DrawerSide::Bottom {
+                if let Some(parent_registry) = parent_nested_registry.as_ref() {
+                    let self_state = drawer_nested_self_state(
+                        is_open,
+                        false,
+                        Px(0.0),
+                        drawer_frontmost_height,
+                        nested_aggregate,
+                    );
+                    let _ = drawer_nested_registry_set_child_state(
+                        cx.app.models_mut(),
+                        parent_registry,
+                        drawer_instance_id,
+                        self_state,
+                    );
+                }
+                return content;
+            }
+
+            let (runtime, offset_model, was_open) = drawer_drag_models(cx);
             let _ = cx.app.models_mut().update(&runtime, |st| {
                 st.window_height = window_height;
                 st.viewport_height = viewport_bounds.size.height;
+                st.has_nested_open_drawer = nested_aggregate.has_open_child;
+                st.nested_swiping = nested_aggregate.nested_swiping;
+                st.nested_swipe_progress = nested_aggregate.swipe_progress;
+                st.nested_frontmost_height = nested_aggregate.frontmost_height;
             });
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
+            let requested_snap_point_index = snap_point_model
+                .as_ref()
+                .and_then(|model| cx.watch_model(model).layout().cloned().flatten());
 
-            if let Some(bounds) = cx.last_bounds_for_element(content.id) {
+            if let Some(bounds) = content_bounds.as_ref() {
                 let drawer_h = drawer_drag_snap_height(bounds.size.height, window_height, side);
                 let _ = cx.app.models_mut().update(&runtime, |st| {
                     if st.drawer_height != drawer_h {
@@ -1044,12 +1386,28 @@ impl Drawer {
                 });
             }
 
+            if !is_open && was_open {
+                if let (Some(points), Some(model)) =
+                    (snap_points.as_ref(), snap_point_model.as_ref())
+                {
+                    let default_index =
+                        drawer_default_snap_point_index(points, default_snap_point_index);
+                    let _ = drawer_set_snap_point_with_callback(
+                        cx.app.models_mut(),
+                        model,
+                        on_snap_point_change.as_ref(),
+                        default_index,
+                    );
+                }
+            }
+
             if is_open && !was_open {
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = Px(0.0));
                 if has_snap_points {
                     let _ = cx.app.models_mut().update(&runtime, |st| {
                         st.needs_snap_init = true;
                         st.settling = false;
+                        st.applied_snap_point_index = None;
                     });
                 }
             }
@@ -1059,10 +1417,17 @@ impl Drawer {
                 let _ = cx.app.models_mut().update(&runtime, |st| {
                     st.needs_snap_init = false;
                     st.settling = false;
+                    st.applied_snap_point_index = None;
                 });
             }
 
             if is_open && has_snap_points {
+                let points = snap_points.as_ref().expect("snap points");
+                let resolved_snap_point_index = drawer_resolve_snap_point_index(
+                    points,
+                    default_snap_point_index,
+                    requested_snap_point_index,
+                );
                 let needs_init = cx
                     .app
                     .models()
@@ -1071,30 +1436,62 @@ impl Drawer {
                     .unwrap_or(false);
 
                 if needs_init {
-                    if let Some(bounds) = cx.last_bounds_for_element(content.id) {
+                    if let Some(bounds) = content_bounds.as_ref() {
                         let drawer_h =
                             drawer_drag_snap_height(bounds.size.height, window_height, side);
-                        let _ = cx
-                            .app
-                            .models_mut()
-                            .update(&runtime, |st| st.drawer_height = drawer_h);
-                        let points = snap_points.as_ref().expect("snap points");
-                        let mut idx = default_snap_point_index
-                            .unwrap_or_else(|| points.len().saturating_sub(1));
-                        if idx >= points.len() {
-                            idx = points.len().saturating_sub(1);
-                        }
-                        let fraction = points.get(idx).copied().unwrap_or(1.0);
-                        let desired_visible = Px((window_height.0 * fraction).max(0.0));
-                        let visible = Px(desired_visible.0.min(drawer_h.0).max(0.0));
-                        let desired_offset = Px((drawer_h.0 - visible.0).max(0.0));
-
-                        let _ = cx.app.models_mut().update(&offset_model, |v| {
-                            *v = desired_offset;
-                        });
+                        let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
                         let _ = cx.app.models_mut().update(&runtime, |st| {
-                            st.needs_snap_init = false;
+                            st.drawer_height = drawer_h;
                         });
+
+                        if let Some(target) = resolved_snap_point_index.and_then(|index| {
+                            drawer_resolved_snap_target_for_index(&targets, index)
+                        }) {
+                            let _ = cx.app.models_mut().update(&offset_model, |v| {
+                                *v = target.offset;
+                            });
+                            let _ = cx.app.models_mut().update(&runtime, |st| {
+                                st.needs_snap_init = false;
+                                st.applied_snap_point_index = Some(target.model_index);
+                            });
+                        } else {
+                            let _ = cx.app.models_mut().update(&runtime, |st| {
+                                st.needs_snap_init = false;
+                                st.applied_snap_point_index = None;
+                            });
+                        }
+                    }
+                } else if let Some(bounds) = content_bounds.as_ref() {
+                    let drawer_h = drawer_drag_snap_height(bounds.size.height, window_height, side);
+                    let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
+                    let runtime_snapshot = cx.app.models().get_copied(&runtime).unwrap_or_default();
+                    if !runtime_snapshot.dragging
+                        && resolved_snap_point_index != runtime_snapshot.applied_snap_point_index
+                    {
+                        if let Some(target) = resolved_snap_point_index.and_then(|index| {
+                            drawer_resolved_snap_target_for_index(&targets, index)
+                        }) {
+                            let current_offset =
+                                cx.app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+                            if (current_offset.0 - target.offset.0).abs() > 0.5 {
+                                let _ = cx.app.models_mut().update(&runtime, |st| {
+                                    st.settling = true;
+                                    st.settle_to = target.offset;
+                                    st.settle_seq = st.settle_seq.saturating_add(1).max(1);
+                                    st.settle_velocity = 0.0;
+                                    st.applied_snap_point_index = Some(target.model_index);
+                                });
+                            } else {
+                                let _ = cx.app.models_mut().update(&offset_model, |v| {
+                                    *v = target.offset;
+                                });
+                                let _ = cx.app.models_mut().update(&runtime, |st| {
+                                    st.settling = false;
+                                    st.settle_velocity = 0.0;
+                                    st.applied_snap_point_index = Some(target.model_index);
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -1138,12 +1535,42 @@ impl Drawer {
                 }
             }
 
+            let runtime_snapshot = cx.app.models().get_copied(&runtime).unwrap_or_default();
+            if let Some(parent_registry) = parent_nested_registry.as_ref() {
+                let drawer_height_for_parent = if runtime_snapshot.drawer_height.0 > 0.0 {
+                    runtime_snapshot.drawer_height
+                } else {
+                    drawer_frontmost_height
+                };
+                let self_state = drawer_nested_self_state(
+                    is_open,
+                    runtime_snapshot.dragging,
+                    offset,
+                    drawer_height_for_parent,
+                    nested_aggregate,
+                );
+                let _ = drawer_nested_registry_set_child_state(
+                    cx.app.models_mut(),
+                    parent_registry,
+                    drawer_instance_id,
+                    self_state,
+                );
+            }
+
             let transform = Transform2D::translation(Point::new(Px(0.0), offset));
 
             let runtime_for_down = runtime.clone();
             let offset_for_down = offset_model.clone();
             let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, _cx, down| {
                 if !is_open || down.button != MouseButton::Left {
+                    return false;
+                }
+                let has_nested_open_drawer = host
+                    .models_mut()
+                    .read(&runtime_for_down, |st| st.has_nested_open_drawer)
+                    .ok()
+                    .unwrap_or(false);
+                if has_nested_open_drawer {
                     return false;
                 }
 
@@ -1215,12 +1642,25 @@ impl Drawer {
             let runtime_for_up = runtime.clone();
             let offset_for_up = offset_model.clone();
             let snap_points_for_up = snap_points.clone();
+            let snap_point_model_for_up = snap_point_model.clone();
+            let on_snap_point_change_for_up = on_snap_point_change.clone();
             let inertia_bounce_spring = shadcn_drawer_inertia_bounce_spring_description(&*cx.app);
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, up| {
-                let Ok((dragging, stored_velocity, stored_drawer_h)) =
-                    host.models_mut().read(&runtime_for_up, |st| {
-                        (st.dragging, st.velocity, st.drawer_height)
-                    })
+                let Ok((
+                    dragging,
+                    stored_velocity,
+                    stored_drawer_h,
+                    stored_start_offset,
+                    applied_snap_point_index,
+                )) = host.models_mut().read(&runtime_for_up, |st| {
+                    (
+                        st.dragging,
+                        st.velocity,
+                        st.drawer_height,
+                        st.start_offset,
+                        st.applied_snap_point_index,
+                    )
+                })
                 else {
                     return false;
                 };
@@ -1269,22 +1709,13 @@ impl Drawer {
                     .unwrap_or(false);
                 if has_snap_points {
                     let points = snap_points_for_up.as_ref().expect("snap points");
+                    let targets = drawer_resolved_snap_targets(points, drawer_h, window_height);
 
-                    let mut min_visible = None::<Px>;
-                    let mut targets: Vec<Px> = Vec::new();
-                    for fraction in points {
-                        let desired_visible = Px((window_height.0 * *fraction).max(0.0));
-                        let visible = Px(desired_visible.0.min(drawer_h.0).max(0.0));
-                        if visible.0 > 0.0 {
-                            min_visible = Some(match min_visible {
-                                Some(prev) => Px(prev.0.min(visible.0)),
-                                None => visible,
-                            });
-                        }
-                        let target_offset = Px((drawer_h.0 - visible.0).max(0.0));
-                        targets.push(target_offset);
-                    }
-                    targets.push(Px(0.0));
+                    let min_visible = targets
+                        .iter()
+                        .map(|target| target.visible)
+                        .filter(|visible| visible.0 > 0.0)
+                        .min_by(|a, b| a.0.total_cmp(&b.0));
 
                     let close_threshold = min_visible
                         .map(|v| Px((drawer_h.0 - v.0 * 0.5).max(DRAWER_DRAG_DISMISS_MIN_PX)))
@@ -1300,16 +1731,109 @@ impl Drawer {
                         let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
-                        let nearest =
-                            headless_snap_points::closest_value_px(&targets, projected_offset)
-                                .unwrap_or(Px(0.0));
+                        let nearest = if snap_to_sequential_points {
+                            let mut ordered_targets = targets.clone();
+                            ordered_targets.sort_by(|a, b| a.offset.0.total_cmp(&b.offset.0));
+
+                            let current_target = applied_snap_point_index
+                                .and_then(|index| {
+                                    drawer_resolved_snap_target_for_index(&ordered_targets, index)
+                                })
+                                .or_else(|| {
+                                    drawer_resolved_snap_target_closest_by_offset(
+                                        &ordered_targets,
+                                        stored_start_offset,
+                                    )
+                                });
+                            let mut target = drawer_resolved_snap_target_closest_by_offset(
+                                &ordered_targets,
+                                projected_offset,
+                            )
+                            .or_else(|| ordered_targets.first().copied())
+                            .expect("snap target");
+                            let drag_delta = offset.0 - stored_start_offset.0;
+                            let drag_direction = if drag_delta > 0.5 {
+                                1isize
+                            } else if drag_delta < -0.5 {
+                                -1isize
+                            } else {
+                                0
+                            };
+                            let velocity_direction =
+                                if velocity >= DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC {
+                                    1isize
+                                } else if velocity <= -DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC {
+                                    -1isize
+                                } else {
+                                    0
+                                };
+
+                            if drag_direction != 0 && drag_direction == velocity_direction {
+                                if let Some(current_target) = current_target {
+                                    if let Some(current_sorted_index) = ordered_targets
+                                        .iter()
+                                        .position(|candidate| *candidate == current_target)
+                                    {
+                                        let adjacent_index = if drag_direction > 0 {
+                                            current_sorted_index
+                                                .saturating_add(1)
+                                                .min(ordered_targets.len().saturating_sub(1))
+                                        } else {
+                                            current_sorted_index.saturating_sub(1)
+                                        };
+                                        if adjacent_index != current_sorted_index {
+                                            let adjacent_target = ordered_targets[adjacent_index];
+                                            let should_force_adjacent = if drag_direction > 0 {
+                                                offset.0 < adjacent_target.offset.0
+                                            } else {
+                                                offset.0 > adjacent_target.offset.0
+                                            };
+                                            if should_force_adjacent {
+                                                target = adjacent_target;
+                                            }
+                                        } else if drag_direction > 0 {
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&offset_for_up, |v| *v = Px(0.0));
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&open_for_up, |v| *v = false);
+                                            let _ =
+                                                host.models_mut().update(&runtime_for_up, |st| {
+                                                    st.dragging = false;
+                                                });
+                                            host.release_pointer_capture();
+                                            host.request_redraw(_cx.window);
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                            target
+                        } else {
+                            drawer_resolved_snap_target_closest_by_offset(
+                                &targets,
+                                projected_offset,
+                            )
+                            .expect("snap target")
+                        };
+
+                        if let Some(model) = snap_point_model_for_up.as_ref() {
+                            let _ = drawer_set_snap_point_with_callback(
+                                host.models_mut(),
+                                model,
+                                on_snap_point_change_for_up.as_ref(),
+                                Some(nearest.model_index),
+                            );
+                        }
 
                         let _ = host.models_mut().update(&runtime_for_up, |st| {
                             st.settling = true;
-                            st.settle_to = nearest;
+                            st.settle_to = nearest.offset;
                             st.settle_seq = st.settle_seq.saturating_add(1).max(1);
                             st.settle_velocity = velocity;
                             st.dragging = false;
+                            st.applied_snap_point_index = Some(nearest.model_index);
                         });
                         host.release_pointer_capture();
                         host.request_redraw(_cx.window);
@@ -1365,6 +1889,201 @@ impl Drawer {
 
 /// Recipe-level builder for composing a drawer from shadcn-style parts.
 type DrawerDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+type DrawerDeferredTrigger<H> =
+    Box<dyn FnOnce(&mut ElementContext<'_, H>) -> DrawerTrigger + 'static>;
+
+/// Root-level part adapter for shadcn-style `Drawer` children composition.
+///
+/// This stays in the recipe layer. It does not widen the mechanism contract in `fret-ui`; it only
+/// collects authored parts and lowers them into the existing trigger/content slot surface.
+pub enum DrawerPart<H: UiHost> {
+    Trigger(DrawerDeferredTrigger<H>),
+    Portal(DrawerPortal),
+    Overlay(DrawerOverlay),
+    Content(DrawerDeferredContent<H>),
+}
+
+impl<H: UiHost> std::fmt::Debug for DrawerPart<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("DrawerPart::Trigger(<deferred>)"),
+            Self::Portal(portal) => f.debug_tuple("DrawerPart::Portal").field(portal).finish(),
+            Self::Overlay(overlay) => f.debug_tuple("DrawerPart::Overlay").field(overlay).finish(),
+            Self::Content(_) => f.write_str("DrawerPart::Content(<deferred>)"),
+        }
+    }
+}
+
+impl<H: UiHost> DrawerPart<H> {
+    pub fn trigger<T>(trigger: T) -> Self
+    where
+        T: DrawerCompositionTriggerArg<H> + 'static,
+    {
+        Self::Trigger(Box::new(move |cx| trigger.into_drawer_trigger(cx)))
+    }
+
+    pub fn portal(portal: DrawerPortal) -> Self {
+        Self::Portal(portal)
+    }
+
+    pub fn overlay(overlay: DrawerOverlay) -> Self {
+        Self::Overlay(overlay)
+    }
+
+    pub fn content<T>(content: T) -> Self
+    where
+        T: IntoUiElement<H> + 'static,
+    {
+        Self::Content(Box::new(move |cx| content.into_element(cx)))
+    }
+
+    pub fn content_with(
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        Self::Content(Box::new(content))
+    }
+}
+
+impl<H: UiHost> From<DrawerTrigger> for DrawerPart<H> {
+    fn from(value: DrawerTrigger) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost + 'static, T> From<DrawerTriggerBuild<H, T>> for DrawerPart<H>
+where
+    T: IntoUiElement<H> + 'static,
+{
+    fn from(value: DrawerTriggerBuild<H, T>) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost> From<DrawerPortal> for DrawerPart<H> {
+    fn from(value: DrawerPortal) -> Self {
+        Self::portal(value)
+    }
+}
+
+impl<H: UiHost> From<DrawerOverlay> for DrawerPart<H> {
+    fn from(value: DrawerOverlay) -> Self {
+        Self::overlay(value)
+    }
+}
+
+impl<H: UiHost> From<DrawerContent> for DrawerPart<H> {
+    fn from(value: DrawerContent) -> Self {
+        Self::content(value)
+    }
+}
+
+impl<H: UiHost + 'static, B> From<DrawerContentBuild<H, B>> for DrawerPart<H>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>) + 'static,
+{
+    fn from(value: DrawerContentBuild<H, B>) -> Self {
+        Self::content(value)
+    }
+}
+
+/// Part-children builder for root-level `Drawer` composition.
+///
+/// This is the closest Fret recipe surface to upstream nested children today:
+/// collect `DrawerPart`s, then late-land them at the root call site.
+pub struct DrawerChildren<H: UiHost> {
+    drawer: Drawer,
+    parts: Vec<DrawerPart<H>>,
+}
+
+impl<H: UiHost> std::fmt::Debug for DrawerChildren<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut trigger = 0usize;
+        let mut portal = 0usize;
+        let mut overlay = 0usize;
+        let mut content = 0usize;
+
+        for part in &self.parts {
+            match part {
+                DrawerPart::Trigger(_) => trigger += 1,
+                DrawerPart::Portal(_) => portal += 1,
+                DrawerPart::Overlay(_) => overlay += 1,
+                DrawerPart::Content(_) => content += 1,
+            }
+        }
+
+        f.debug_struct("DrawerChildren")
+            .field("drawer", &self.drawer)
+            .field("trigger_parts", &trigger)
+            .field("portal_parts", &portal)
+            .field("overlay_parts", &overlay)
+            .field("content_parts", &content)
+            .finish()
+    }
+}
+
+impl<H: UiHost> DrawerChildren<H> {
+    pub fn new<I, P>(drawer: Drawer, parts: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<DrawerPart<H>>,
+    {
+        Self {
+            drawer,
+            parts: parts.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut trigger: Option<DrawerDeferredTrigger<H>> = None;
+        let mut portal = DrawerPortal::new();
+        let mut overlay = DrawerOverlay::new();
+        let mut content: Option<DrawerDeferredContent<H>> = None;
+
+        for part in self.parts {
+            match part {
+                DrawerPart::Trigger(next) => {
+                    assert!(
+                        trigger.replace(next).is_none(),
+                        "Drawer::children(...) accepts at most one DrawerTrigger"
+                    );
+                }
+                DrawerPart::Portal(next) => {
+                    portal = next;
+                }
+                DrawerPart::Overlay(next) => {
+                    overlay = next;
+                }
+                DrawerPart::Content(next) => {
+                    assert!(
+                        content.replace(next).is_none(),
+                        "Drawer::children(...) accepts at most one DrawerContent"
+                    );
+                }
+            }
+        }
+
+        let trigger =
+            trigger.expect("Drawer::children(...) requires one DrawerTrigger-compatible part");
+        let content =
+            content.expect("Drawer::children(...) requires one DrawerContent-compatible part");
+
+        self.drawer.into_element_parts(
+            cx,
+            move |cx| trigger(cx),
+            portal,
+            overlay,
+            move |cx| content(cx),
+        )
+    }
+}
+
+impl<H: UiHost> IntoUiElement<H> for DrawerChildren<H> {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        DrawerChildren::into_element(self, cx)
+    }
+}
 
 enum DrawerCompositionContent<H: UiHost> {
     Eager(AnyElement),
@@ -1501,12 +2220,17 @@ struct DrawerDragRuntime {
     start: Point,
     start_offset: Px,
     drawer_height: Px,
+    has_nested_open_drawer: bool,
+    nested_swiping: bool,
+    nested_swipe_progress: f32,
+    nested_frontmost_height: Px,
     window_height: Px,
     viewport_height: Px,
     last_tick: TickId,
     last_offset: Px,
     velocity: f32,
     needs_snap_init: bool,
+    applied_snap_point_index: Option<usize>,
     settling: bool,
     settle_to: Px,
     settle_seq: u64,
@@ -1520,12 +2244,17 @@ impl Default for DrawerDragRuntime {
             start: Point::new(Px(0.0), Px(0.0)),
             start_offset: Px(0.0),
             drawer_height: Px(0.0),
+            has_nested_open_drawer: false,
+            nested_swiping: false,
+            nested_swipe_progress: 0.0,
+            nested_frontmost_height: Px(0.0),
             window_height: Px(0.0),
             viewport_height: Px(0.0),
             last_tick: TickId(0),
             last_offset: Px(0.0),
             velocity: 0.0,
             needs_snap_init: false,
+            applied_snap_point_index: None,
             settling: false,
             settle_to: Px(0.0),
             settle_seq: 0,
@@ -1726,7 +2455,7 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_runtime::FrameId;
+    use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
@@ -1736,6 +2465,21 @@ mod tests {
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
     use fret_ui_kit::ui::UiElementSinkExt as _;
+
+    fn scene_contains_full_window_solid_quad(
+        scene: &fret_core::Scene,
+        bounds: Rect,
+        color: fret_core::Color,
+    ) -> bool {
+        scene.ops().iter().any(|op| {
+            matches!(
+                op,
+                fret_core::SceneOp::Quad {
+                    rect, background, ..
+                } if *rect == bounds && background.paint == fret_core::Paint::Solid(color).into()
+            )
+        })
+    }
 
     #[test]
     fn drawer_trigger_build_push_ui_accepts_late_landed_child() {
@@ -1758,11 +2502,52 @@ mod tests {
         });
     }
 
+    #[test]
+    fn drawer_content_build_accepts_builder_first_sections() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                DrawerContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        DrawerHeader::build(|cx, out| {
+                            out.push_ui(cx, DrawerTitle::new("Title"));
+                        }),
+                    );
+                    out.push_ui(
+                        cx,
+                        DrawerFooter::build(|cx, out| {
+                            out.push_ui(cx, crate::button::Button::new("Close"));
+                        }),
+                    );
+                })
+                .test_id("content")
+                .into_element(cx)
+            });
+
+        assert!(matches!(
+            element.kind,
+            fret_ui::element::ElementKind::Container(_)
+        ));
+    }
+
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    fn apply_command_effects(ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices) {
+        let effects = app.flush_effects();
+        for effect in effects {
+            let Effect::Command { window: _, command } = effect else {
+                continue;
+            };
+            let _ = ui.dispatch_command(app, services, &command);
+        }
     }
 
     fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
@@ -1781,6 +2566,249 @@ mod tests {
             ElementKind::Text(props) => Some(props),
             _ => None,
         }
+    }
+
+    #[derive(Clone, Default)]
+    struct DrawerSnapHarnessState {
+        runtime_model: Rc<RefCell<Option<Model<DrawerDragRuntime>>>>,
+        offset_model: Rc<RefCell<Option<Model<Px>>>>,
+        drawer_content_id: Rc<RefCell<Option<GlobalElementId>>>,
+    }
+
+    fn drawer_snap_test_points() -> Vec<DrawerSnapPoint> {
+        vec![
+            DrawerSnapPoint::Fraction(0.25),
+            DrawerSnapPoint::Fraction(0.5),
+            DrawerSnapPoint::Fraction(0.75),
+        ]
+    }
+
+    fn render_snap_drawer_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: &Model<bool>,
+        snap_point: Option<&Model<Option<usize>>>,
+        default_snap_point_index: Option<usize>,
+        snap_to_sequential_points: bool,
+        on_snap_point_change: Option<OnSnapPointChange>,
+        state: &DrawerSnapHarnessState,
+    ) {
+        let open_for_drawer = open.clone();
+        let snap_point_for_drawer = snap_point.cloned();
+        let on_snap_point_change_for_drawer = on_snap_point_change.clone();
+        let runtime_model_cell = state.runtime_model.clone();
+        let offset_model_cell = state.offset_model.clone();
+        let drawer_content_id_cell = state.drawer_content_id.clone();
+
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let mut drawer =
+                    Drawer::new(open_for_drawer).snap_points(drawer_snap_test_points());
+                if let Some(snap_point) = snap_point_for_drawer.clone() {
+                    drawer = drawer.snap_point(snap_point);
+                }
+                if let Some(index) = default_snap_point_index {
+                    drawer = drawer.default_snap_point(index);
+                }
+                if snap_to_sequential_points {
+                    drawer = drawer.snap_to_sequential_points(true);
+                }
+                if let Some(on_snap_point_change) = on_snap_point_change_for_drawer.clone() {
+                    drawer = drawer.on_snap_point_change(move |index| on_snap_point_change(index));
+                }
+
+                let drawer = drawer.into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                        *runtime_model_cell.borrow_mut() = Some(runtime);
+                        *offset_model_cell.borrow_mut() = Some(offset_model);
+
+                        let content = DrawerContent::new(vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Px(Px(800.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )])
+                        .into_element(cx);
+                        *drawer_content_id_cell.borrow_mut() = Some(content.id);
+                        content
+                    },
+                );
+
+                vec![drawer]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    #[derive(Clone, Default)]
+    struct NestedDrawerHarnessState {
+        parent_runtime_model: Rc<RefCell<Option<Model<DrawerDragRuntime>>>>,
+        parent_offset_model: Rc<RefCell<Option<Model<Px>>>>,
+        parent_content_id: Rc<RefCell<Option<GlobalElementId>>>,
+        child_runtime_model: Rc<RefCell<Option<Model<DrawerDragRuntime>>>>,
+        child_offset_model: Rc<RefCell<Option<Model<Px>>>>,
+        child_content_id: Rc<RefCell<Option<GlobalElementId>>>,
+    }
+
+    fn render_nested_drawer_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        parent_open: &Model<bool>,
+        child_open: &Model<bool>,
+        state: &NestedDrawerHarnessState,
+    ) {
+        let parent_open_for_drawer = parent_open.clone();
+        let child_open_for_drawer = child_open.clone();
+        let parent_runtime_model_cell = state.parent_runtime_model.clone();
+        let parent_offset_model_cell = state.parent_offset_model.clone();
+        let parent_content_id_cell = state.parent_content_id.clone();
+        let child_runtime_model_cell = state.child_runtime_model.clone();
+        let child_offset_model_cell = state.child_offset_model.clone();
+        let child_content_id_cell = state.child_content_id.clone();
+
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let parent_drawer = Drawer::new(parent_open_for_drawer).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                        *parent_runtime_model_cell.borrow_mut() = Some(runtime);
+                        *parent_offset_model_cell.borrow_mut() = Some(offset_model);
+
+                        let child_trigger = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(96.0));
+                                    layout.size.height = Length::Px(Px(32.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |_cx, _st| Vec::new(),
+                        );
+                        let child_drawer = Drawer::new(child_open_for_drawer.clone())
+                            .modal(false)
+                            .into_element(
+                                cx,
+                                |_cx| child_trigger,
+                                move |cx| {
+                                    let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                                    *child_runtime_model_cell.borrow_mut() = Some(runtime);
+                                    *child_offset_model_cell.borrow_mut() = Some(offset_model);
+
+                                    let content = DrawerContent::new(vec![cx.container(
+                                        ContainerProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Px(Px(140.0)),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |_cx| Vec::new(),
+                                    )])
+                                    .into_element(cx);
+                                    *child_content_id_cell.borrow_mut() = Some(content.id);
+                                    content
+                                },
+                            );
+
+                        let content = DrawerContent::new(vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Px(Px(360.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            ),
+                            child_drawer,
+                        ])
+                        .into_element(cx);
+                        *parent_content_id_cell.borrow_mut() = Some(content.id);
+                        content
+                    },
+                );
+
+                vec![parent_drawer]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
+    }
+
+    fn shadcn_settle_frames() -> usize {
+        fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4
     }
 
     #[test]
@@ -2317,6 +3345,54 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
+    #[test]
+    fn drawer_children_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-drawer-children-content-with-from-scope",
+            |cx| {
+                let trigger =
+                    DrawerTrigger::new(crate::button::Button::new("Open").into_element(cx));
+
+                vec![
+                    Drawer::new(open.clone())
+                        .children([
+                            DrawerPart::trigger(trigger),
+                            DrawerPart::portal(DrawerPortal::new()),
+                            DrawerPart::overlay(DrawerOverlay::new()),
+                            DrawerPart::content_with(|cx| {
+                                let close = DrawerClose::from_scope().into_element(cx);
+                                DrawerContent::new(vec![close]).into_element(cx)
+                            }),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
     fn render_drawer_frame_with_underlay(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -2770,6 +3846,423 @@ mod tests {
     }
 
     #[test]
+    fn drawer_disable_pointer_dismissal_alias_maps_overlay_closable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let underlay = {
+                    let underlay_activated = underlay_activated.clone();
+                    cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_set_bool(&underlay_activated, true);
+                            Vec::new()
+                        },
+                    )
+                };
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let drawer = Drawer::new(open.clone())
+                    .disable_pointer_dismissal(true)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Px(Px(20.0)),
+                                            height: Length::Px(Px(20.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            )
+                        },
+                    );
+
+                vec![underlay, drawer]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let point = Point::new(Px(4.0), Px(4.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while pointer dismissal is disabled"
+        );
+    }
+
+    #[test]
+    fn drawer_modal_trap_focus_traps_tab_but_keeps_outside_click_through() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let drawer_content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let focusable_a_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let focusable_b_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let trigger_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let scrim_color = fret_core::Color {
+            r: 0.09,
+            g: 0.41,
+            b: 0.32,
+            a: 0.34,
+        };
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+                OverlayController::begin_frame(app, window);
+
+                let open = open.clone();
+                let underlay_id = underlay_id.clone();
+                let drawer_content_id = drawer_content_id.clone();
+                let focusable_a_id = focusable_a_id.clone();
+                let focusable_b_id = focusable_b_id.clone();
+                let trigger_id = trigger_id.clone();
+                let underlay_activated = underlay_activated.clone();
+
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "drawer-trap-focus",
+                    |cx| {
+                        let underlay_id = underlay_id.clone();
+                        let underlay_activated = underlay_activated.clone();
+                        let underlay = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                underlay_id.set(Some(id));
+                                cx.pressable_set_bool(&underlay_activated, true);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let trigger_id = trigger_id.clone();
+                        let open_for_trigger = open.clone();
+                        let open_for_drawer = open.clone();
+                        let trigger = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                trigger_id.set(Some(id));
+                                cx.pressable_toggle_bool(&open_for_trigger);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let drawer_content_id = drawer_content_id.clone();
+                        let focusable_a_id = focusable_a_id.clone();
+                        let focusable_b_id = focusable_b_id.clone();
+                        let drawer = Drawer::new(open_for_drawer)
+                            .overlay_color(scrim_color)
+                            .modal_trap_focus(true)
+                            .into_element(
+                                cx,
+                                |_cx| trigger,
+                                move |cx| {
+                                    let a = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(180.0));
+                                                layout.size.height = Length::Px(Px(44.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            focusable_a_id.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+
+                                    let b = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(180.0));
+                                                layout.size.height = Length::Px(Px(44.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            focusable_b_id.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+
+                                    let content = DrawerContent::new(vec![a, b]).into_element(cx);
+                                    drawer_content_id.set(Some(content.id));
+                                    content
+                                },
+                            );
+
+                        vec![underlay, drawer]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let trigger_element = trigger_id.get().expect("trigger id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let trigger_center = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 2;
+        for i in 0..settle_frames {
+            render_frame(&mut ui, &mut app, &mut services, 3 + i as u64);
+        }
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(
+            scene_contains_full_window_solid_quad(&scene, bounds, scrim_color),
+            "expected trap-focus drawer to keep painting the configured overlay color as a visual scrim"
+        );
+
+        let underlay_element = underlay_id.get().expect("underlay id");
+        let content_element = drawer_content_id.get().expect("drawer content id");
+        let a_id = focusable_a_id.get().expect("focusable a id");
+        let b_id = focusable_b_id.get().expect("focusable b id");
+        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
+            .expect("underlay node");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let a_node = fret_ui::elements::node_for_element(&mut app, window, a_id).expect("a node");
+        let b_node = fret_ui::elements::node_for_element(&mut app, window, b_id).expect("b node");
+        let focused = ui.focus().expect("focused popup root");
+        let mut focused_is_content_ancestor = false;
+        let mut current = Some(content_node);
+        while let Some(node) = current {
+            if node == focused {
+                focused_is_content_ancestor = true;
+                break;
+            }
+            current = ui.node_parent(node);
+        }
+        assert!(
+            focused_is_content_ancestor,
+            "expected trap-focus drawer to focus a popup-root ancestor of the content"
+        );
+        assert_ne!(Some(focused), Some(a_node));
+        assert_ne!(Some(focused), Some(b_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+        apply_command_effects(&mut ui, &mut app, &mut services);
+        assert_ne!(ui.focus(), Some(underlay_node));
+        assert!(
+            ui.focus() == Some(a_node) || ui.focus() == Some(b_node),
+            "trap-focus drawer should keep focus inside content"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(true));
+    }
+
+    #[test]
     fn drawer_drag_dismiss_closes_open_model_when_past_threshold() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3020,6 +4513,395 @@ mod tests {
     }
 
     #[test]
+    fn drawer_nested_open_blocks_parent_drag_start() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_runtime_model = state
+            .parent_runtime_model
+            .borrow()
+            .clone()
+            .expect("parent runtime model captured");
+        let parent_offset_model = state
+            .parent_offset_model
+            .borrow()
+            .clone()
+            .expect("parent offset model captured");
+        let parent_content_id = state
+            .parent_content_id
+            .borrow()
+            .clone()
+            .expect("parent content id captured");
+        let parent_runtime = app
+            .models()
+            .get_copied(&parent_runtime_model)
+            .expect("parent runtime snapshot");
+        assert!(
+            parent_runtime.has_nested_open_drawer,
+            "expected parent drawer runtime to observe an open nested drawer"
+        );
+
+        let parent_dialog =
+            visual_bounds_for_element(&mut app, window, parent_content_id).expect("parent visual");
+        let start = Point::new(
+            Px(parent_dialog.origin.x.0 + parent_dialog.size.width.0 * 0.5),
+            Px(parent_dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 + 80.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let parent_offset = app
+            .models()
+            .get_copied(&parent_offset_model)
+            .unwrap_or(Px(0.0));
+        assert!(
+            parent_offset.0.abs() < 0.5,
+            "expected nested child to block parent drag initiation, got offset {parent_offset:?}"
+        );
+    }
+
+    #[test]
+    fn drawer_nested_close_restores_parent_drag_start() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let _ = app.models_mut().update(&child_open, |value| *value = false);
+        for _ in 0..2 {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_runtime_model = state
+            .parent_runtime_model
+            .borrow()
+            .clone()
+            .expect("parent runtime model captured");
+        let parent_offset_model = state
+            .parent_offset_model
+            .borrow()
+            .clone()
+            .expect("parent offset model captured");
+        let parent_content_id = state
+            .parent_content_id
+            .borrow()
+            .clone()
+            .expect("parent content id captured");
+        let parent_runtime = app
+            .models()
+            .get_copied(&parent_runtime_model)
+            .expect("parent runtime snapshot");
+        assert!(
+            !parent_runtime.has_nested_open_drawer,
+            "expected parent drag arbitration to clear once the nested drawer closes"
+        );
+
+        let parent_dialog =
+            visual_bounds_for_element(&mut app, window, parent_content_id).expect("parent visual");
+        let start = Point::new(
+            Px(parent_dialog.origin.x.0 + parent_dialog.size.width.0 * 0.5),
+            Px(parent_dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 + 80.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let parent_offset = app
+            .models()
+            .get_copied(&parent_offset_model)
+            .unwrap_or(Px(0.0));
+        assert!(
+            parent_offset.0 > 1.0,
+            "expected parent drag initiation to resume after nested close, got offset {parent_offset:?}"
+        );
+    }
+
+    #[test]
+    fn drawer_nested_open_updates_parent_frontmost_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_runtime_model = state
+            .parent_runtime_model
+            .borrow()
+            .clone()
+            .expect("parent runtime model captured");
+        let parent_runtime = app
+            .models()
+            .get_copied(&parent_runtime_model)
+            .expect("parent runtime snapshot");
+        assert!(
+            parent_runtime.has_nested_open_drawer,
+            "expected parent runtime to record an open nested child"
+        );
+        assert!(
+            parent_runtime.nested_swipe_progress == 0.0,
+            "expected nested swipe progress to stay idle without an active nested drag"
+        );
+        assert!(
+            parent_runtime.nested_frontmost_height.0 > 0.0,
+            "expected parent runtime to keep the frontmost nested drawer height"
+        );
+    }
+
+    #[test]
+    fn drawer_nested_non_modal_child_drag_routes_to_child_layer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let parent_open = app.models_mut().insert(true);
+        let child_open = app.models_mut().insert(true);
+        let state = NestedDrawerHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(600.0)),
+        );
+
+        let mut frame = FrameId(1);
+        for _ in 0..shadcn_settle_frames() {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_nested_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &parent_open,
+                &child_open,
+                &state,
+            );
+        }
+
+        let parent_offset_model = state
+            .parent_offset_model
+            .borrow()
+            .clone()
+            .expect("parent offset model captured");
+        let child_offset_model = state
+            .child_offset_model
+            .borrow()
+            .clone()
+            .expect("child offset model captured");
+        let child_content_id = state
+            .child_content_id
+            .borrow()
+            .clone()
+            .expect("child content id captured");
+
+        let child_dialog =
+            visual_bounds_for_element(&mut app, window, child_content_id).expect("child visual");
+        let start = Point::new(
+            Px(child_dialog.origin.x.0 + child_dialog.size.width.0 * 0.5),
+            Px(child_dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 + 80.0));
+
+        let child_node = fret_ui::elements::node_for_element(&mut app, window, child_content_id)
+            .expect("child node");
+        let child_layer = ui.node_layer(child_node).expect("child layer");
+        let pre_hit = ui.debug_hit_test(start);
+        let pre_hit_node = pre_hit.hit.expect("pre-hit node");
+        let pre_hit_layer = ui.node_layer(pre_hit_node);
+        assert!(
+            pre_hit_layer == Some(child_layer),
+            "expected nested child drag start to hit child layer; start={start:?} hit={pre_hit:?} hit_layer={pre_hit_layer:?} child_layer={child_layer:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let parent_offset = app
+            .models()
+            .get_copied(&parent_offset_model)
+            .unwrap_or(Px(0.0));
+        let child_offset = app
+            .models()
+            .get_copied(&child_offset_model)
+            .unwrap_or(Px(0.0));
+        assert!(
+            child_offset.0 > 1.0,
+            "expected nested child drag to update child offset, got {child_offset:?}"
+        );
+        assert!(
+            parent_offset.0.abs() < 0.5,
+            "expected nested child drag to avoid parent offset changes, got {parent_offset:?}"
+        );
+    }
+
+    #[test]
     fn drawer_snap_points_settle_to_nearest_point_on_release() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3027,84 +4909,14 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(true);
-        let runtime_model_cell: Rc<RefCell<Option<Model<DrawerDragRuntime>>>> =
-            Rc::new(RefCell::new(None));
-        let offset_model_cell: Rc<RefCell<Option<Model<Px>>>> = Rc::new(RefCell::new(None));
-        let drawer_content_id_cell: Rc<RefCell<Option<GlobalElementId>>> =
-            Rc::new(RefCell::new(None));
+        let snap_point = app.models_mut().insert(Some(2usize));
+        let state = DrawerSnapHarnessState::default();
 
         let mut services = FakeServices::default();
         let b = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(600.0)),
         );
-
-        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
-            let open_for_drawer = open.clone();
-            let runtime_model_cell_for_drawer = runtime_model_cell.clone();
-            let offset_model_cell_for_drawer = offset_model_cell.clone();
-            let drawer_content_id_for_drawer = drawer_content_id_cell.clone();
-
-            OverlayController::begin_frame(app, window);
-            let root =
-                fret_ui::declarative::render_root(ui, app, services, window, b, "test", |cx| {
-                    let trigger = cx.pressable(
-                        PressableProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Px(Px(120.0));
-                                layout.size.height = Length::Px(Px(40.0));
-                                layout
-                            },
-                            enabled: true,
-                            focusable: true,
-                            ..Default::default()
-                        },
-                        |_cx, _st| Vec::new(),
-                    );
-
-                    let drawer = Drawer::new(open_for_drawer)
-                        .snap_points(vec![
-                            DrawerSnapPoint::Fraction(0.25),
-                            DrawerSnapPoint::Fraction(0.5),
-                            DrawerSnapPoint::Fraction(0.75),
-                        ])
-                        .into_element(
-                            cx,
-                            |_cx| trigger,
-                            move |cx| {
-                                let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
-                                *runtime_model_cell_for_drawer.borrow_mut() = Some(runtime);
-                                *offset_model_cell_for_drawer.borrow_mut() = Some(offset_model);
-
-                                let content = DrawerContent::new(vec![cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Px(Px(800.0)),
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    |_cx| Vec::new(),
-                                )])
-                                .into_element(cx);
-                                *drawer_content_id_for_drawer.borrow_mut() = Some(content.id);
-                                content
-                            },
-                        );
-
-                    vec![drawer]
-                });
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, b);
-            ui.layout_all(app, services, b, 1.0);
-            let mut scene = fret_core::Scene::default();
-            ui.paint_all(app, services, b, &mut scene, 1.0);
-        };
 
         let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
             crate::overlay_motion::SHADCN_MOTION_DURATION_500,
@@ -3114,20 +4926,35 @@ mod tests {
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
             frame = FrameId(frame.0.saturating_add(1));
-            render_frame(&mut ui, &mut app, &mut services);
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                false,
+                None,
+                &state,
+            );
         }
 
-        let drawer_content_id = drawer_content_id_cell
+        let drawer_content_id = state
+            .drawer_content_id
             .borrow()
             .clone()
             .expect("drawer content id captured");
 
-        let offset_model = offset_model_cell
+        let offset_model = state
+            .offset_model
             .borrow()
             .clone()
             .expect("offset model captured");
         let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
-        let runtime_model = runtime_model_cell
+        let runtime_model = state
+            .runtime_model
             .borrow()
             .clone()
             .expect("runtime model captured");
@@ -3184,17 +5011,25 @@ mod tests {
             }),
         );
 
-        let offset_model = offset_model_cell
-            .borrow()
-            .clone()
-            .expect("offset model captured");
         let expected = Px(180.0);
 
         let mut settled = false;
         for _ in 0..120 {
             app.set_frame_id(frame);
             frame = FrameId(frame.0.saturating_add(1));
-            render_frame(&mut ui, &mut app, &mut services);
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                false,
+                None,
+                &state,
+            );
 
             let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
             if (offset.0 - expected.0).abs() < 1.0 {
@@ -3212,6 +5047,290 @@ mod tests {
             settled,
             "expected offset to settle near {expected:?}, got {offset:?} (window_height={:?}, viewport_height={:?}, drawer_height={:?})",
             runtime.window_height, runtime.viewport_height, runtime.drawer_height,
+        );
+        assert_eq!(
+            app.models().get_cloned(&snap_point).unwrap_or(None),
+            Some(1),
+            "expected drag release to update the snap-point model to the nearest authored index",
+        );
+    }
+
+    #[test]
+    fn drawer_snap_point_model_initializes_to_controlled_index_on_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let snap_point = app.models_mut().insert(Some(1usize));
+        let state = DrawerSnapHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                false,
+                None,
+                &state,
+            );
+        }
+
+        let offset_model = state
+            .offset_model
+            .borrow()
+            .clone()
+            .expect("offset model captured");
+        let runtime_model = state
+            .runtime_model
+            .borrow()
+            .clone()
+            .expect("runtime model captured");
+        let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+        let runtime = app
+            .models()
+            .get_copied(&runtime_model)
+            .expect("runtime snapshot");
+
+        assert!(
+            (offset.0 - 180.0).abs() < 1.0,
+            "expected controlled snap point index 1 to initialize near 180px offset, got {offset:?}",
+        );
+        assert_eq!(
+            runtime.applied_snap_point_index,
+            Some(1),
+            "expected runtime to track the controlled active snap-point index",
+        );
+    }
+
+    #[test]
+    fn drawer_close_resets_snap_point_model_to_default_index() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let snap_point = app.models_mut().insert(Some(2usize));
+        let state = DrawerSnapHarnessState::default();
+        let events: Arc<Mutex<Vec<Option<usize>>>> = Arc::new(Mutex::new(Vec::new()));
+        let on_snap_point_change: OnSnapPointChange = {
+            let events = events.clone();
+            Arc::new(move |index| {
+                events.lock().expect("snap-point events").push(index);
+            })
+        };
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                Some(1),
+                false,
+                Some(on_snap_point_change.clone()),
+                &state,
+            );
+        }
+
+        let _ = app.models_mut().update(&open, |value| *value = false);
+        app.set_frame_id(frame);
+        render_snap_drawer_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            &open,
+            Some(&snap_point),
+            Some(1),
+            false,
+            Some(on_snap_point_change.clone()),
+            &state,
+        );
+
+        assert_eq!(
+            app.models().get_cloned(&snap_point).unwrap_or(None),
+            Some(1),
+            "expected close transition to restore the default snap-point index",
+        );
+        assert_eq!(
+            events.lock().expect("snap-point events").as_slice(),
+            &[Some(1)],
+            "expected close reset to emit a single snap-point change callback",
+        );
+    }
+
+    #[test]
+    fn drawer_snap_to_sequential_points_advances_one_step_per_drag() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let snap_point = app.models_mut().insert(Some(0usize));
+        let state = DrawerSnapHarnessState::default();
+
+        let mut services = FakeServices::default();
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(600.0)),
+        );
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                true,
+                None,
+                &state,
+            );
+        }
+
+        let drawer_content_id = state
+            .drawer_content_id
+            .borrow()
+            .clone()
+            .expect("drawer content id captured");
+        let offset_model = state
+            .offset_model
+            .borrow()
+            .clone()
+            .expect("offset model captured");
+        let dialog =
+            visual_bounds_for_element(&mut app, window, drawer_content_id).expect("drawer visual");
+        let start = Point::new(
+            Px(dialog.origin.x.0 + dialog.size.width.0 * 0.5),
+            Px(dialog.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 - 220.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: start,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: end,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_cloned(&snap_point).unwrap_or(None),
+            Some(1),
+            "expected sequential snap mode to advance only to the adjacent snap-point index",
+        );
+
+        let expected = Px(180.0);
+        let mut settled = false;
+        for _ in 0..120 {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+            render_snap_drawer_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                &open,
+                Some(&snap_point),
+                None,
+                true,
+                None,
+                &state,
+            );
+
+            let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+            if (offset.0 - expected.0).abs() < 1.0 {
+                settled = true;
+                break;
+            }
+        }
+
+        let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+        assert!(
+            settled,
+            "expected sequential snap mode to settle near {expected:?}, got {offset:?}",
         );
     }
 

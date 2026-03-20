@@ -48,7 +48,7 @@ impl View for PayloadActionsView {
                 },
             ]
         });
-        let rows_snapshot = rows_state.layout(cx).value_or_default();
+        let rows_snapshot = rows_state.layout_value(cx);
 
         let rows_el = ui::v_flex(|cx| {
             ui::for_each_keyed(
@@ -80,7 +80,8 @@ impl View for PayloadActionsView {
         .test_id(TEST_ID_ROWS);
 
         cx.actions()
-            .payload_local_update_if::<act::Remove, Vec<Row>>(&rows_state, |rows, id| {
+            .local(&rows_state)
+            .payload_update_if::<act::Remove>(|rows, id| {
                 let before = rows.len();
                 rows.retain(|row| row.id != id);
                 rows.len() != before

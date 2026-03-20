@@ -509,13 +509,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     gfx.last_surface_error = Some(err.clone());
                 }
                 match err {
-                    wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated => {
+                    fret_render::SurfaceAcquireError::Lost
+                    | fret_render::SurfaceAcquireError::Outdated => {
                         let (w, h) = gfx.surface_state.size();
                         gfx.surface_state.resize(&gfx.ctx.device, w, h);
                     }
-                    wgpu::SurfaceError::Timeout => {}
-                    wgpu::SurfaceError::OutOfMemory => panic!("wgpu surface out of memory"),
-                    wgpu::SurfaceError::Other => {}
+                    fret_render::SurfaceAcquireError::Timeout => {}
+                    fret_render::SurfaceAcquireError::OutOfMemory => {
+                        panic!("wgpu surface out of memory")
+                    }
+                    fret_render::SurfaceAcquireError::Other => {}
                 }
                 return;
             }

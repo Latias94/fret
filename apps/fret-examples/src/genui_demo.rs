@@ -397,13 +397,13 @@ struct GenUiState {
     validation_state: Model<ValidationStateV1>,
     action_queue: Model<GenUiActionQueue>,
     queue_summary: Option<Arc<str>>,
-    auto_apply_standard_actions: Model<bool>,
-    auto_fix_on_apply: Model<bool>,
+    auto_apply_standard_actions: LocalState<bool>,
+    auto_fix_on_apply: LocalState<bool>,
     auto_fix_summary: Option<Arc<str>>,
-    editor_text: Model<String>,
+    editor_text: LocalState<String>,
     editor_error: Option<Arc<str>>,
-    stream_text: Model<String>,
-    stream_patch_only: Model<bool>,
+    stream_text: LocalState<String>,
+    stream_patch_only: LocalState<bool>,
     stream_summary: Option<Arc<str>>,
     stream_error: Option<Arc<str>>,
 }
@@ -457,13 +457,13 @@ impl GenUiView {
             validation_state: app.models_mut().insert(ValidationStateV1::default()),
             action_queue: app.models_mut().insert(GenUiActionQueue::default()),
             queue_summary: None,
-            auto_apply_standard_actions: app.models_mut().insert(true),
-            auto_fix_on_apply: app.models_mut().insert(true),
+            auto_apply_standard_actions: LocalState::from_model(app.models_mut().insert(true)),
+            auto_fix_on_apply: LocalState::from_model(app.models_mut().insert(true)),
             auto_fix_summary: None,
-            editor_text: app.models_mut().insert(SPEC_JSON.to_string()),
+            editor_text: LocalState::from_model(app.models_mut().insert(SPEC_JSON.to_string())),
             editor_error: None,
-            stream_text: app.models_mut().insert(String::new()),
-            stream_patch_only: app.models_mut().insert(false),
+            stream_text: LocalState::from_model(app.models_mut().insert(String::new())),
+            stream_patch_only: LocalState::from_model(app.models_mut().insert(false)),
             stream_summary: None,
             stream_error: None,
         }
@@ -478,10 +478,9 @@ impl GenUiView {
                 state.queue_summary = None;
             }
             Msg::ApplyQueuedActions => {
-                let auto_apply = app
-                    .models()
-                    .get_copied(&state.auto_apply_standard_actions)
-                    .unwrap_or(true);
+                let auto_apply = state
+                    .auto_apply_standard_actions
+                    .value_in_or(app.models(), true);
                 let invocations = app
                     .models()
                     .read(&state.action_queue, |q| q.invocations.clone())
@@ -634,9 +633,9 @@ impl GenUiView {
                     .update(&state.action_queue, |q| q.invocations.clear());
             }
             Msg::SetAutoApply(value) => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.auto_apply_standard_actions, |v| *v = value);
+                let _ = state
+                    .auto_apply_standard_actions
+                    .set_in(app.models_mut(), value);
                 if value {
                     let _ = app
                         .models_mut()
@@ -651,10 +650,9 @@ impl GenUiView {
                 }
             }
             Msg::AutoApplyToggled => {
-                let enabled = app
-                    .models()
-                    .get_copied(&state.auto_apply_standard_actions)
-                    .unwrap_or(true);
+                let enabled = state
+                    .auto_apply_standard_actions
+                    .value_in_or(app.models(), true);
                 if enabled {
                     let _ = app
                         .models_mut()
@@ -680,17 +678,10 @@ impl GenUiView {
                 state.queue_summary = None;
             }
             Msg::ApplyEditorSpec => {
-                let text = app
-                    .models()
-                    .read(&state.editor_text, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
+                let text = state.editor_text.value_in_or_default(app.models());
                 match serde_json::from_str::<SpecV1>(&text) {
                     Ok(spec) => {
-                        let auto_fix = app
-                            .models()
-                            .get_copied(&state.auto_fix_on_apply)
-                            .unwrap_or(true);
+                        let auto_fix = state.auto_fix_on_apply.value_in_or(app.models(), true);
                         let (spec, fixups) = maybe_auto_fix_spec(auto_fix, &spec);
                         state.spec = spec;
                         state.editor_error = None;
@@ -708,7 +699,7 @@ impl GenUiView {
                         if auto_fix {
                             let pretty = serde_json::to_string_pretty(&state.spec)
                                 .unwrap_or_else(|_| "<spec>".to_string());
-                            let _ = app.models_mut().update(&state.editor_text, |s| *s = pretty);
+                            let _ = state.editor_text.set_in(app.models_mut(), pretty);
                         }
                     }
                     Err(err) => {
@@ -717,23 +708,16 @@ impl GenUiView {
                 }
             }
             Msg::ResetEditor => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.editor_text, |s| *s = SPEC_JSON.to_string());
+                let _ = state
+                    .editor_text
+                    .set_in(app.models_mut(), SPEC_JSON.to_string());
                 state.editor_error = None;
                 state.auto_fix_summary = None;
                 state.queue_summary = None;
             }
             Msg::ApplyStream => {
-                let text = app
-                    .models()
-                    .read(&state.stream_text, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
-                let patch_only = app
-                    .models()
-                    .get_copied(&state.stream_patch_only)
-                    .unwrap_or(false);
+                let text = state.stream_text.value_in_or_default(app.models());
+                let patch_only = state.stream_patch_only.value_in_or(app.models(), false);
 
                 let mut compiler = MixedSpecStreamCompiler::new(MixedStreamOptions {
                     mode: if patch_only {
@@ -765,10 +749,7 @@ impl GenUiView {
                 let value = compiler.into_result();
                 match serde_json::from_value::<SpecV1>(value) {
                     Ok(spec) => {
-                        let auto_fix = app
-                            .models()
-                            .get_copied(&state.auto_fix_on_apply)
-                            .unwrap_or(true);
+                        let auto_fix = state.auto_fix_on_apply.value_in_or(app.models(), true);
                         let (spec, fixups) = maybe_auto_fix_spec(auto_fix, &spec);
                         state.spec = spec;
                         state.editor_error = None;
@@ -792,7 +773,7 @@ impl GenUiView {
 
                         let pretty = serde_json::to_string_pretty(&state.spec)
                             .unwrap_or_else(|_| "<spec>".to_string());
-                        let _ = app.models_mut().update(&state.editor_text, |s| *s = pretty);
+                        let _ = state.editor_text.set_in(app.models_mut(), pretty);
                     }
                     Err(err) => {
                         state.stream_error =
@@ -801,10 +782,8 @@ impl GenUiView {
                 }
             }
             Msg::ResetStream => {
-                let _ = app.models_mut().update(&state.stream_text, |s| s.clear());
-                let _ = app
-                    .models_mut()
-                    .update(&state.stream_patch_only, |v| *v = false);
+                let _ = state.stream_text.set_in(app.models_mut(), String::new());
+                let _ = state.stream_patch_only.set_in(app.models_mut(), false);
                 state.stream_summary = None;
                 state.stream_error = None;
                 state.auto_fix_summary = None;
@@ -897,11 +876,11 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let apply_queue_cmd_toolbar = apply_queue_cmd.clone();
     let apply_queue_cmd_banner = apply_queue_cmd.clone();
 
-    let auto_apply_model = st.auto_apply_standard_actions.clone();
-    let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);
+    let auto_apply_model = st.auto_apply_standard_actions.clone_model();
+    let auto_apply_enabled = st.auto_apply_standard_actions.layout_value_in(cx);
 
-    let auto_fix_model = st.auto_fix_on_apply.clone();
-    let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);
+    let auto_fix_model = st.auto_fix_on_apply.clone_model();
+    let _auto_fix_enabled = st.auto_fix_on_apply.layout_value_in(cx);
 
     let count_label: Arc<str> = st
         .genui_state
@@ -1181,8 +1160,8 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let auto_fix_summary = st.auto_fix_summary.clone();
     let queue_summary = st.queue_summary.clone();
     let stream_model = st.stream_text.clone();
-    let stream_patch_only_model = st.stream_patch_only.clone();
-    let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);
+    let stream_patch_only_model = st.stream_patch_only.clone_model();
+    let stream_patch_only = st.stream_patch_only.layout_value_in(cx);
     let stream_summary = st.stream_summary.clone();
     let stream_error = st.stream_error.clone();
 
@@ -1317,7 +1296,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
             );
         }
         editor_children.push(
-            shadcn::Textarea::new(editor_model.clone())
+            shadcn::Textarea::new(&editor_model)
                 .a11y_label("Spec editor")
                 .min_height(Px(280.0))
                 .into_element(cx),
@@ -1387,7 +1366,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
             .into_element(cx),
         );
         stream_children.push(
-            shadcn::Textarea::new(stream_model.clone())
+            shadcn::Textarea::new(&stream_model)
                 .a11y_label("Mixed stream input")
                 .min_height(Px(220.0))
                 .into_element(cx),

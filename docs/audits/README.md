@@ -27,6 +27,7 @@ For current priorities and milestones, prefer:
 
 - API ergonomics: `docs/audits/api-ergonomics-audit.md`
 - Action availability coverage: `docs/audits/action-availability-coverage.md`
+- Examples raw-model boundary audit: `docs/audits/examples-authoring-surface-raw-model-audit.md`
 - Charts: `docs/audits/echarts-alignment.md`, `docs/delinea-echarts-alignment.md`
 - Plot alignment: `docs/audits/implot-alignment.md`, `docs/audits/implot3d-alignment.md`
 - Text system comparison (Fret vs Zed): `docs/audits/text-system-fret-vs-zed.md`

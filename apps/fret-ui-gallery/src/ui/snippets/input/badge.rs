@@ -12,20 +12,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let label = ui::h_row(|cx| {
         vec![
             shadcn::FieldLabel::new("Webhook URL").into_element(cx),
-            shadcn::Badge::new("Recommended")
+            shadcn::Badge::new("Beta")
                 .variant(shadcn::BadgeVariant::Secondary)
                 .into_element(cx),
         ]
     })
     .gap(Space::N2)
+    .justify_between()
     .items_center()
+    .w_full()
     .into_element(cx);
 
     shadcn::Field::new([
         label,
         shadcn::Input::new(value)
             .a11y_label("Webhook URL")
-            .placeholder("https://example.com/webhook")
+            .placeholder("https://api.example.com/webhook")
             .into_element(cx),
     ])
     .refine_layout(max_w_sm)

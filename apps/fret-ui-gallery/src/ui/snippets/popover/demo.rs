@@ -56,7 +56,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .items_start()
     .layout(LayoutRefinement::default().w_full());
 
-    let content = shadcn::PopoverContent::new(ui::children![cx; header, fields])
+    let content = shadcn::PopoverContent::build(cx, |cx| ui::children![cx; header, fields])
         .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
         .test_id("ui-gallery-popover-demo-panel");
 

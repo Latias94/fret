@@ -1,3 +1,4 @@
+use fret::component::prelude::*;
 use fret::{FretApp, advanced::prelude::*, shadcn};
 use fret_core::scene::{EffectChain, EffectMode, EffectStep};
 
@@ -36,10 +37,7 @@ impl View for EffectsLayerBasicsView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let effect_kind = cx
-            .watch_model(&self.effect)
-            .layout()
-            .value_or(EffectKind::None);
+        let effect_kind = self.effect.layout(cx).value_or(EffectKind::None);
 
         cx.actions().models::<act::None>({
             let effect = self.effect.clone();

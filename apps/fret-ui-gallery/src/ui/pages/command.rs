@@ -10,10 +10,22 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let basic_dialog = snippets::basic::render(cx);
     let shortcuts_section = snippets::shortcuts::render(cx);
     let action_first_view_runtime = snippets::action_first_view::render(cx);
+    let behavior_demos = snippets::behavior_demos::render(cx);
     let groups_palette = snippets::groups::render(cx);
     let scrollable_palette = snippets::scrollable::render(cx);
     let rtl = snippets::rtl::render(cx);
     let loading_palette = snippets::loading::render(cx);
+    let about = doc_layout::notes_block([
+        "shadcn's `Command` is built on `cmdk`: focus stays in the input while the active row is exposed through active-descendant semantics.",
+        "Use `CommandPalette` for embedded filtering/search surfaces, and `CommandDialog` for global discovery overlays such as Ctrl/Cmd+P.",
+        "Filtering and ranking use the visible label plus optional `value` and `keywords`, so cmdk-style fuzzy matching stays available without depending on DOM internals.",
+    ]);
+    let api_reference = doc_layout::notes_block([
+        "`command(...)` is the direct visual shell helper, while `CommandPalette::new(query, items)` and `.entries(...)` are the default embedded interactive lane for first-party Fret code.",
+        "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, close-on-select behavior, and open-change reason hooks for global command menus.",
+        "`CommandItem` owns row-level affordances such as `leading_icon(...)`, `shortcut(...)`, `keywords(...)`, `checkmark(...)`, `force_mount(...)`, and `children(...)`.",
+        "A fully composable split `Command` + `CommandInput` + `CommandList` children API is still deferred: promoting it would require an explicit shared context contract for query, active row, and selection rather than ad-hoc glue.",
+    ]);
 
     let notes_stack = doc_layout::notes_block([
         "Use `CommandDialog` for global discovery (Ctrl/Cmd+P), and keep `CommandPalette` embedded for local filtering surfaces.",
@@ -24,6 +36,14 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     ]);
     let notes_stack =
         DocSection::build(cx, "Notes", notes_stack).test_id_prefix("ui-gallery-command-notes");
+    let about = DocSection::build(cx, "About", about)
+        .no_shell()
+        .test_id_prefix("ui-gallery-command-about")
+        .description("Outcome-level cmdk/shadcn semantics summary.");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-command-api-reference")
+        .description("Authoring lanes, ownership notes, and the current children-API decision.");
     let docs_demo = DocSection::build(cx, "Demo", docs_demo_palette)
         .test_id_prefix("ui-gallery-command-docs-demo")
         .descriptions([
@@ -34,7 +54,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let usage = DocSection::build(cx, "Usage", usage_palette)
         .test_id_prefix("ui-gallery-command-usage")
         .descriptions([
-            "This mirrors shadcn's docs structure (`Command` + `CommandInput` + `CommandList`) using Fret's `CommandPalette` recipe.",
+            "This covers the same embedded search outcome as the shadcn `Usage` block, but the default copyable Fret lane is `CommandPalette::new(...)` rather than literal split-children composition.",
             "Keep root chrome recipe-owned, but keep width caps such as `max-w-sm` caller-owned at the usage site.",
         ])
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
@@ -45,12 +65,21 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-command-shortcuts")
         .code_rust_from_file_region(snippets::shortcuts::SOURCE, "example");
     let groups = DocSection::build(cx, "Groups", groups_palette)
+        .test_id_prefix("ui-gallery-command-groups")
         .code_rust_from_file_region(snippets::groups::SOURCE, "example");
     let scrollable = DocSection::build(cx, "Scrollable", scrollable_palette)
         .test_id_prefix("ui-gallery-command-scrollable")
         .code_rust_from_file_region(snippets::scrollable::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
+        .test_id_prefix("ui-gallery-command-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let behavior_demos = DocSection::build(cx, "Behavior Demos", behavior_demos)
+        .test_id_prefix("ui-gallery-command-behavior-demos")
+        .descriptions([
+            "Fret-only follow-up coverage for cmdk behaviors that do not map 1:1 to a single shadcn docs example.",
+            "This keeps `disablePointerSelection`, controlled active value, `shouldFilter=false`, and `forceMount` demos explicit without overloading the docs-aligned examples above.",
+        ])
+        .code_rust_from_file_region(snippets::behavior_demos::SOURCE, "example");
     let loading = DocSection::build(cx, "Loading", loading_palette)
         .test_id_prefix("ui-gallery-command-loading")
         .descriptions([
@@ -71,16 +100,19 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Command docs order (Demo, Usage, Basic, Shortcuts, Groups, Scrollable, RTL), plus Fret-specific Loading and Action-first sections.",
+            "Preview follows shadcn Command docs order after skipping `Installation`: Demo, About, Usage, Basic, Shortcuts, Groups, Scrollable, RTL, API Reference. Fret-specific Behavior Demos, Loading, and Action-first sections stay explicit follow-ups.",
         ),
         vec![
             docs_demo,
+            about,
             usage,
             basic,
             shortcuts,
             groups,
             scrollable,
             rtl,
+            api_reference,
+            behavior_demos,
             loading,
             action_first_view_runtime,
             notes_stack,

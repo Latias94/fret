@@ -7,29 +7,22 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let last_action = super::last_action_model(cx);
     let query = cx.local_model(String::new);
-    let on_select = super::on_select_for_last_action(last_action.clone());
+    let noop: fret_ui::action::OnActivate = Arc::new(|_host, _action_cx, _reason| {});
 
     let entries: Vec<shadcn::CommandEntry> = vec![
         shadcn::CommandGroup::new([
-            shadcn::CommandItem::new("Calendar")
-                .on_select_action(on_select(Arc::from("command.usage.calendar"))),
-            shadcn::CommandItem::new("Search Emoji")
-                .on_select_action(on_select(Arc::from("command.usage.search-emoji"))),
-            shadcn::CommandItem::new("Calculator")
-                .on_select_action(on_select(Arc::from("command.usage.calculator"))),
+            shadcn::CommandItem::new("Calendar").on_select_action(noop.clone()),
+            shadcn::CommandItem::new("Search Emoji").on_select_action(noop.clone()),
+            shadcn::CommandItem::new("Calculator").on_select_action(noop.clone()),
         ])
         .heading("Suggestions")
         .into(),
         shadcn::CommandSeparator::new().into(),
         shadcn::CommandGroup::new([
-            shadcn::CommandItem::new("Profile")
-                .on_select_action(on_select(Arc::from("command.usage.profile"))),
-            shadcn::CommandItem::new("Billing")
-                .on_select_action(on_select(Arc::from("command.usage.billing"))),
-            shadcn::CommandItem::new("Settings")
-                .on_select_action(on_select(Arc::from("command.usage.settings"))),
+            shadcn::CommandItem::new("Profile").on_select_action(noop.clone()),
+            shadcn::CommandItem::new("Billing").on_select_action(noop.clone()),
+            shadcn::CommandItem::new("Settings").on_select_action(noop.clone()),
         ])
         .heading("Settings")
         .into(),

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("sticky_footer.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
@@ -55,24 +56,32 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .viewport_test_id("ui-gallery-dialog-sticky-footer-viewport")
             .into_element(cx);
 
-            shadcn::DialogContent::new(ui::children![
-                cx;
-                shadcn::DialogHeader::new(ui::children![
-                    cx;
-                    shadcn::DialogTitle::new("Sticky Footer"),
-                    shadcn::DialogDescription::new(
-                        "The footer remains visible while the content area scrolls.",
-                    )
-                ]),
-                scroll_body,
-                shadcn::DialogFooter::new(ui::children![
-                    cx;
-                    shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(open.clone()),
-                    shadcn::Button::new("Save changes"),
-                ]),
-            ])
+            shadcn::DialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::DialogHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::DialogTitle::new("Sticky Footer"));
+                        out.push_ui(
+                            cx,
+                            shadcn::DialogDescription::new(
+                                "The footer remains visible while the content area scrolls.",
+                            ),
+                        );
+                    }),
+                );
+                out.push(scroll_body);
+                out.push_ui(
+                    cx,
+                    shadcn::DialogFooter::build(|cx, out| {
+                        let close = shadcn::DialogClose::from_scope().build(
+                            cx,
+                            shadcn::Button::new("Close").variant(shadcn::ButtonVariant::Outline),
+                        );
+                        out.push(close);
+                        out.push_ui(cx, shadcn::Button::new("Save changes"));
+                    }),
+                );
+            })
             .into_element(cx)
             .test_id("ui-gallery-dialog-sticky-footer-content")
         },

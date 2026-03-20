@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("side.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -64,25 +65,35 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .min_w_0()
                             .min_h_0()
                             .flex_1(),
-                    );
+                        );
                     cx.container(props, move |_cx| vec![fields])
                 };
-                shadcn::SheetContent::new([
-                    shadcn::SheetHeader::new([
-                        shadcn::SheetTitle::new("Edit profile").into_element(cx),
-                        shadcn::SheetDescription::new(
-                            "Make changes to your profile here. Click save when you're done.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    fields,
-                    shadcn::SheetFooter::new([shadcn::Button::new("Save changes")
-                        .toggle_model(save_open.clone())
-                        .test_id(format!("ui-gallery-sheet-side-{id}-save"))
-                        .into_element(cx)])
-                    .into_element(cx),
-                ])
+                shadcn::SheetContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        shadcn::SheetHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::SheetTitle::new("Edit profile"));
+                            out.push_ui(
+                                cx,
+                                shadcn::SheetDescription::new(
+                                    "Make changes to your profile here. Click save when you're done.",
+                                ),
+                            );
+                        }),
+                    );
+                    out.push(fields);
+                    out.push_ui(
+                        cx,
+                        shadcn::SheetFooter::build(|cx, out| {
+                            out.push_ui(
+                                cx,
+                                shadcn::Button::new("Save changes")
+                                    .toggle_model(save_open.clone())
+                                    .test_id(format!("ui-gallery-sheet-side-{id}-save")),
+                            );
+                        }),
+                    );
+                })
                 .into_element(cx)
                 .test_id(format!("ui-gallery-sheet-side-{id}-content"))
             },

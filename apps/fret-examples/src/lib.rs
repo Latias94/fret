@@ -139,6 +139,8 @@ pub mod echarts_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod echarts_multi_grid_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod editor_notes_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod embedded_viewport_demo;
@@ -269,11 +271,13 @@ mod authoring_surface_policy_tests {
     const CUSTOM_EFFECT_V2_WEB_DEMO: &str = include_str!("custom_effect_v2_web_demo.rs");
     const CONTAINER_QUERIES_DOCKING_DEMO: &str = include_str!("container_queries_docking_demo.rs");
     const CUSTOM_EFFECT_V3_DEMO: &str = include_str!("custom_effect_v3_demo.rs");
+    const DATE_PICKER_DEMO: &str = include_str!("date_picker_demo.rs");
     const DOCKING_ARBITRATION_DEMO: &str = include_str!("docking_arbitration_demo.rs");
     const DOCKING_DEMO: &str = include_str!("docking_demo.rs");
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
     const ECHARTS_DEMO: &str = include_str!("echarts_demo.rs");
     const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
+    const EDITOR_NOTES_DEMO: &str = include_str!("editor_notes_demo.rs");
     const EMPTY_IDLE_DEMO: &str = include_str!("empty_idle_demo.rs");
     const EMOJI_CONFORMANCE_DEMO: &str = include_str!("emoji_conformance_demo.rs");
     const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
@@ -283,6 +287,7 @@ mod authoring_surface_policy_tests {
         include_str!("external_video_imports_avf_demo.rs");
     const EXTERNAL_VIDEO_IMPORTS_MF_DEMO: &str = include_str!("external_video_imports_mf_demo.rs");
     const EXTRAS_MARQUEE_PERF_DEMO: &str = include_str!("extras_marquee_perf_demo.rs");
+    const FORM_DEMO: &str = include_str!("form_demo.rs");
     const GENUI_DEMO: &str = include_str!("genui_demo.rs");
     const HELLO_COUNTER_DEMO: &str = include_str!("hello_counter_demo.rs");
     const HELLO_WORLD_COMPARE_DEMO: &str = include_str!("hello_world_compare_demo.rs");
@@ -305,9 +310,11 @@ mod authoring_surface_policy_tests {
     const QUERY_DEMO: &str = include_str!("query_demo.rs");
     const SIMPLE_TODO_DEMO: &str = include_str!("simple_todo_demo.rs");
     const SONNER_DEMO: &str = include_str!("sonner_demo.rs");
+    const TABLE_DEMO: &str = include_str!("table_demo.rs");
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
+    const WORKSPACE_SHELL_DEMO: &str = include_str!("workspace_shell_demo.rs");
 
     fn collect_rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
         for entry in std::fs::read_dir(dir).unwrap() {
@@ -355,21 +362,37 @@ mod authoring_surface_policy_tests {
         );
     }
 
-    fn assert_uses_default_app_surface(src: &str) {
+    fn assert_uses_default_app_surface_with_page(src: &str, page_fn: &str, call_site: &str) {
         assert!(src.contains("use fret::app::prelude::*;"));
         assert!(!src.contains("advanced::prelude::*"));
         assert!(!src.contains("KernelApp"));
         assert!(!src.contains("AppWindowId"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
-        assert!(src.contains("ui::single(cx, todo_page(theme, card))"));
-        assert!(
-            src.contains(
-                "fn todo_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild"
-            )
-        );
-        assert!(!src.contains("fn todo_page(cx: &mut UiCx<'_>,"));
+        let page_sig =
+            format!("fn {page_fn}(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild");
+        let legacy_page_sig = format!("fn {page_fn}(cx: &mut UiCx<'_>,");
+        assert!(src.contains(call_site));
+        assert!(src.contains(&page_sig));
+        assert!(!src.contains(&legacy_page_sig));
         assert!(!src.contains("let card = card.into_element(cx);"));
-        assert!(!src.contains("todo_page(theme, card).into_element(cx).into()"));
+        assert!(!src.contains(&format!("{page_fn}(theme, card).into_element(cx).into()")));
+    }
+
+    fn assert_uses_default_app_surface(src: &str) {
+        assert_uses_default_app_surface_with_page(
+            src,
+            "todo_page",
+            "ui::single(cx, todo_page(theme, card))",
+        );
+    }
+
+    fn assert_default_app_surface_prefers_local_state_first(src: &str) {
+        assert!(src.contains("cx.state().local"));
+        assert!(!src.contains("app.models_mut().insert("));
+        assert!(!src.contains("Model<"));
+        assert!(!src.contains("cx.use_local_with("));
+        assert!(!src.contains("cx.actions().models::<"));
+        assert!(!src.contains("cx.on_action_notify_models::<"));
     }
 
     fn assert_avoids_legacy_conversion_names(src: &str) {
@@ -423,6 +446,11 @@ mod authoring_surface_policy_tests {
         assert!(!src.contains("cx.use_query("));
         assert!(!src.contains("cx.use_query_async("));
         assert!(!src.contains("cx.use_query_async_local("));
+    }
+
+    fn assert_prefers_fret_query_facade(src: &str) {
+        assert!(src.contains("use fret::query::{"));
+        assert!(!src.contains("use fret_query::{"));
     }
 
     fn assert_shadcn_surface_is_curated(src: &str) {
@@ -591,8 +619,6 @@ mod authoring_surface_policy_tests {
             MARKDOWN_DEMO,
             NODE_GRAPH_DEMO,
             POSTPROCESS_THEME_DEMO,
-            QUERY_ASYNC_TOKIO_DEMO,
-            QUERY_DEMO,
             TEXT_HEAVY_MEMORY_DEMO,
             WINDOW_HIT_TEST_PROBE_DEMO,
         ] {
@@ -604,11 +630,10 @@ mod authoring_surface_policy_tests {
     fn todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(TODO_DEMO);
         assert_avoids_legacy_conversion_names(TODO_DEMO);
-        assert!(
-            TODO_DEMO
-                .contains("bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);")
-        );
-        assert!(TODO_DEMO.contains("fn bind_todo_actions("));
+        assert!(TODO_DEMO.contains("struct TodoLocals {"));
+        assert!(TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
+        assert!(TODO_DEMO.contains("locals.bind_actions(cx);"));
+        assert!(TODO_DEMO.contains("fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {"));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
     }
@@ -617,13 +642,12 @@ mod authoring_surface_policy_tests {
     fn simple_todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
-        assert!(SIMPLE_TODO_DEMO.contains("fn bind_todo_actions("));
-        assert!(SIMPLE_TODO_DEMO.contains(
-            "payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
-        assert!(SIMPLE_TODO_DEMO.contains(
-            "payload_local_update_if::<act::Remove, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
+        assert!(SIMPLE_TODO_DEMO.contains("struct TodoLocals {"));
+        assert!(SIMPLE_TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
+        assert!(SIMPLE_TODO_DEMO.contains("locals.bind_actions(cx);"));
+        assert!(SIMPLE_TODO_DEMO.contains(".local(&self.todos)"));
+        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
+        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Remove>(|rows, id| {"));
         assert!(SIMPLE_TODO_DEMO.contains("ui_app_driver::UiAppDriver::new("));
         assert!(
             SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_init_window::<SimpleTodoView>,")
@@ -636,6 +660,18 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn query_demos_prefer_default_app_surface() {
+        for src in [QUERY_DEMO, QUERY_ASYNC_TOKIO_DEMO] {
+            assert_uses_default_app_surface_with_page(
+                src,
+                "query_page",
+                "ui::single(cx, query_page(theme, card))",
+            );
+            assert_avoids_legacy_conversion_names(src);
+        }
+    }
+
+    #[test]
     fn hello_counter_demo_prefers_root_helper_surface() {
         assert!(HELLO_COUNTER_DEMO.contains("ui::single(cx, hello_counter_page(theme, card))"));
         assert!(HELLO_COUNTER_DEMO.contains(
@@ -643,6 +679,19 @@ mod authoring_surface_policy_tests {
         ));
         assert!(!HELLO_COUNTER_DEMO.contains("fn hello_counter_page(cx: &mut UiCx<'_>,"));
         assert!(!HELLO_COUNTER_DEMO.contains(".test_id(TEST_ID_ROOT).into_element(cx).into()"));
+    }
+
+    #[test]
+    fn canonical_default_app_examples_stay_local_state_first() {
+        for src in [
+            HELLO_COUNTER_DEMO,
+            QUERY_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            SIMPLE_TODO_DEMO,
+            TODO_DEMO,
+        ] {
+            assert_default_app_surface_prefers_local_state_first(src);
+        }
     }
 
     #[test]
@@ -746,6 +795,178 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn manual_form_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            FORM_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "form_state: LocalState<FormState>,",
+                "let root = render_root_with_app_ui(",
+                "let (submit_count, valid, dirty) = form_state.layout(cx).read_ref(",
+                "let status_text = status.layout_value(cx);",
+            ],
+            &[
+                "form_state: Model<FormState>,",
+                ".render_root(\"form-demo\", move |cx| {",
+                "cx.observe_model(&form_state, Invalidation::Layout);",
+                "cx.app.models().read(&form_state, |st| {",
+                "cx.app.models().read(&status, |v| Arc::clone(v))",
+                "status.layout(cx).value_or_else(|| Arc::from(\"Idle\"));",
+            ],
+        );
+    }
+
+    #[test]
+    fn manual_date_picker_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            DATE_PICKER_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "open: LocalState<bool>,",
+                "month: LocalState<CalendarMonth>,",
+                "let root = render_root_with_app_ui(",
+                "let open_value = open.layout_value(cx);",
+                "let selected_value = selected.layout_value(cx);",
+                "let month_label: Arc<str> = month.layout(cx).read_ref(",
+            ],
+            &[
+                "open: Model<bool>,",
+                ".render_root(\"date-picker-demo\", move |cx| {",
+                "cx.observe_model(&open, Invalidation::Layout);",
+                "cx.app.models().get_copied(&open)",
+                "cx.app.models().read(&month, |m| format!(\"{:?} {}\", m.month, m.year))",
+                "open.layout(cx).copied_or(false)",
+                "selected.layout(cx).value_or_default()",
+            ],
+        );
+    }
+
+    #[test]
+    fn manual_sonner_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            SONNER_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "last_action: LocalState<Arc<str>>,",
+                "let root = render_root_with_app_ui(",
+                "let last_action_value = last_action.layout_value(cx);",
+            ],
+            &[
+                "last_action: Model<Arc<str>>,",
+                ".render_root(\"sonner-demo\", |cx| {",
+                "cx.observe_model(&last_action, Invalidation::Layout);",
+                "cx.app.models().get_cloned(&last_action)",
+                "last_action.layout(cx).value_or_else(",
+            ],
+        );
+    }
+
+    #[test]
+    fn manual_ime_smoke_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            IME_SMOKE_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "input_single: LocalState<String>,",
+                "last_ime: LocalState<Arc<str>>,",
+                "let root = render_root_with_app_ui(",
+                "let last = last_ime.paint_value(cx);",
+            ],
+            &[
+                "input_single: Model<String>,",
+                "last_ime: Model<Arc<str>>,",
+                ".render_root(\"ime-smoke\",",
+                "cx.observe_model(&last_ime, Invalidation::Paint);",
+                "cx.app.models().read(&last_ime, |v| v.clone())",
+                "last_ime.paint(cx).value_or_else(",
+            ],
+        );
+    }
+
+    #[test]
+    fn manual_emoji_conformance_demo_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            EMOJI_CONFORMANCE_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "emoji_font_override: LocalState<Option<Arc<str>>>,",
+                "emoji_font_override_open: LocalState<bool>,",
+                "let root = render_root_with_app_ui(",
+                "let selected_emoji_font = emoji_font_override.layout_value(cx);",
+            ],
+            &[
+                "emoji_font_override: Model<Option<Arc<str>>>,",
+                ".render_root(\"emoji-conformance\", |cx| {",
+                "cx.observe_model(&emoji_font_override, Invalidation::Layout);",
+                "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+                "emoji_font_override.layout(cx).value_or_default()",
+            ],
+        );
+    }
+
+    #[test]
+    fn select_examples_prefer_local_state_bridges_over_clone_model() {
+        assert!(
+            ASYNC_PLAYGROUND_DEMO.contains(
+                "shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)"
+            )
+        );
+        assert!(!ASYNC_PLAYGROUND_DEMO.contains("config.cancel_mode.open.clone_model()"));
+
+        assert!(FORM_DEMO.contains("shadcn::Select::new(&role, &role_open)"));
+        assert!(
+            !FORM_DEMO.contains("shadcn::Select::new(role.clone_model(), role_open.clone_model())")
+        );
+
+        assert!(
+            EMOJI_CONFORMANCE_DEMO
+                .contains("shadcn::Select::new(&emoji_font_override, &emoji_font_override_open)")
+        );
+        assert!(!EMOJI_CONFORMANCE_DEMO.contains("emoji_font_override_open.clone_model()"));
+    }
+
+    #[test]
+    fn date_picker_examples_prefer_local_state_bridges_over_clone_model() {
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&week_start_monday)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&show_outside_days)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&disable_outside_days)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&disable_weekends)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Switch::new(&disabled)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::DatePicker::new(&open, &month, &selected)"));
+        assert!(DATE_PICKER_DEMO.contains("shadcn::Calendar::new(&month, &selected)"));
+        assert!(!DATE_PICKER_DEMO.contains("week_start_monday.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("show_outside_days.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("disable_outside_days.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("disable_weekends.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("disabled.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("open.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("month.clone_model()"));
+        assert!(!DATE_PICKER_DEMO.contains("selected.clone_model()"));
+    }
+
+    #[test]
+    fn manual_components_gallery_uses_app_ui_render_root_bridge() {
+        assert_manual_ui_tree_helpers_prefer_typed_root_helpers(
+            COMPONENTS_GALLERY_DEMO,
+            &[
+                "app_ui_root: AppUiRenderRootState,",
+                "let root = render_root_with_app_ui(",
+                "let selected = tree_state.layout(cx).read_ref(|s| s.selected).ok().flatten();",
+                "let checkbox_value = checkbox.layout(cx).copied_or(false);",
+                "let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();",
+                "let last_action_value = last_action.layout(cx).value_or_else(",
+            ],
+            &[
+                ".render_root(\"components-gallery\", |cx| {",
+                "cx.observe_model(&tree_state, Invalidation::Layout);",
+                "cx.app.models().get_copied(&checkbox).unwrap_or(false);",
+                "cx.app.models().get_cloned(&last_action);",
+                "cx.app.models().read(&emoji_font_override, |v| v.clone())",
+            ],
+        );
+    }
+
+    #[test]
     fn imui_editor_proof_non_raw_helpers_prefer_typed_return_signatures() {
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_editor_name_assist_surface("));
         assert!(IMUI_EDITOR_PROOF_DEMO.contains("fn render_authoring_parity_surface("));
@@ -839,6 +1060,18 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
+    fn app_facing_query_examples_prefer_fret_query_facade() {
+        for src in [
+            ASYNC_PLAYGROUND_DEMO,
+            MARKDOWN_DEMO,
+            QUERY_ASYNC_TOKIO_DEMO,
+            QUERY_DEMO,
+        ] {
+            assert_prefers_fret_query_facade(src);
+        }
+    }
+
+    #[test]
     fn examples_source_tree_prefers_curated_shadcn_facade_imports() {
         for path in examples_rust_sources() {
             if path.ends_with("src/lib.rs") {
@@ -901,6 +1134,33 @@ mod authoring_surface_policy_tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn examples_source_tree_avoids_raw_action_notify_helpers() {
+        let mut raw_action_notify_files = Vec::new();
+
+        for path in examples_rust_sources() {
+            if path.ends_with("src/lib.rs") {
+                continue;
+            }
+
+            let source = std::fs::read_to_string(&path).unwrap();
+            let uses_raw_action_notify_trait =
+                source.contains("use fret::advanced::AppUiRawActionNotifyExt as _;");
+            let uses_raw_action_notify = source.contains("cx.on_action_notify::<");
+            let uses_raw_payload_action_notify = source.contains("cx.on_payload_action_notify::<");
+
+            if uses_raw_action_notify_trait
+                || uses_raw_action_notify
+                || uses_raw_payload_action_notify
+            {
+                raw_action_notify_files
+                    .push(path.file_name().unwrap().to_string_lossy().into_owned());
+            }
+        }
+
+        assert_eq!(raw_action_notify_files, Vec::<String>::new());
     }
 
     #[test]
@@ -1016,28 +1276,6 @@ mod authoring_surface_policy_tests {
                 "genui_page(cx, theme, left, right)",
             ],
             &["let page = ui::container(move |cx| {"],
-        );
-
-        assert_advanced_helpers_prefer_uicx(
-            QUERY_DEMO,
-            &[
-                "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
-                "C: IntoUiElement<KernelApp>,",
-                "query_page(cx.elements(), theme, card)",
-                "ui::v_flex(|cx| ui::single(cx, card))",
-            ],
-            &["ui::v_flex(|cx| ui::children![cx; card])"],
-        );
-
-        assert_advanced_helpers_prefer_uicx(
-            QUERY_ASYNC_TOKIO_DEMO,
-            &[
-                "fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui",
-                "C: IntoUiElement<KernelApp>,",
-                "query_page(cx.elements(), theme, card)",
-                "ui::v_flex(|cx| ui::single(cx, card))",
-            ],
-            &["ui::v_flex(|cx| ui::children![cx; card])"],
         );
 
         assert_advanced_helpers_prefer_uicx(
@@ -1465,18 +1703,21 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0i64);",
                 "let step_state = cx.state().local_init(|| \"1\".to_string());",
+                "let count = count_state.layout_value(cx);",
                 "selector_layout(&step_state,",
                 "parse_step(step_text.as_str())",
                 ".locals_with((&count_state, &step_state))",
                 ".on::<act::Inc>(|tx, (count_state, step_state)| {",
                 ".on::<act::Dec>(|tx, (count_state, step_state)| {",
-                "cx.actions().local_set::<act::Reset, i64>(&count_state, 0);",
+                "cx.actions().local(&count_state).set::<act::Reset>(0);",
             ],
             &[
                 "cx.use_local_with(|| 0i64)",
                 "cx.on_action_notify_models::<act::Inc>",
                 "cx.on_action_notify_local_set::<act::Reset, i64>",
+                "let count = count_state.layout(cx).value_or(0);",
                 "let step_text = step_state.layout(cx).value_or_else(String::new);",
+                "tx.value_or_else(&step_state, || \"1\".to_string())",
             ],
         );
 
@@ -1484,17 +1725,25 @@ mod authoring_surface_policy_tests {
             QUERY_DEMO,
             &[
                 "let fail_mode_state = cx.state().local_init(|| false);",
+                "let fail_mode = fail_mode_state.layout_value(cx);",
                 "let query_state = query_handle.read_layout(cx);",
+                "let status_label = query_state.status.as_str();",
+                "let info_line = if query_state.is_refreshing() {",
+                "let error_color = if query_state.has_error() {",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
                 "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().local(&fail_mode_state)",
+                ".toggle_bool::<act::ToggleFailMode>();",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
                 "with_query_client(",
                 "cx.use_local_with(|| false)",
                 "query_handle.layout(cx).value_or_default()",
+                "let status_label = match query_state.status {",
+                "QueryStatus::Loading if query_state.data.is_some() =>",
+                "fail_mode_state.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
             ],
@@ -1504,17 +1753,25 @@ mod authoring_surface_policy_tests {
             QUERY_ASYNC_TOKIO_DEMO,
             &[
                 "let fail_mode_state = cx.state().local_init(|| false);",
+                "let fail_mode = fail_mode_state.layout_value(cx);",
                 "let query_state = query_handle.read_layout(cx);",
+                "let status_label = query_state.status.as_str();",
+                "let info_line = if query_state.is_refreshing() {",
+                "let error_color = if query_state.has_error() {",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
                 "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().local(&fail_mode_state)",
+                ".toggle_bool::<act::ToggleFailMode>();",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
                 "with_query_client(",
                 "cx.use_local_with(|| false)",
                 "query_handle.layout(cx).value_or_default()",
+                "let status_label = match query_state.status {",
+                "QueryStatus::Loading if query_state.data.is_some() =>",
+                "fail_mode_state.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
             ],
@@ -1523,20 +1780,23 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             TODO_DEMO,
             &[
-                "let draft_state = cx.state().local::<String>();",
-                "let next_id_state = cx.state().local_init(|| 4u64);",
-                "let todos = todos_state.layout_value(cx);",
-                "let draft_value = draft_state.layout_value(cx);",
-                ".locals_with((draft_state, next_id_state, todos_state))",
-                ".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {",
-                "let text = tx.value(&draft_state).trim().to_string();",
-                "let id = tx.value(&next_id_state);",
-                ".locals_with(todos_state)",
-                ".on::<act::ClearDone>(|tx, todos_state| {",
-                "cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>(",
-                "cx.actions().payload_local_update_if::<act::Remove, Vec<TodoRow>>(",
+                "struct TodoLocals {",
+                "let locals = TodoLocals::new(cx);",
+                "locals.bind_actions(cx);",
+                "let todos = locals.todos.layout_value(cx);",
+                "let draft_value = locals.draft.layout_value(cx);",
+                ".locals_with((&self.draft, &self.next_id, &self.todos))",
+                ".on::<act::Add>(|tx, (draft, next_id, todos)| {",
+                "let text = tx.value(&draft).trim().to_string();",
+                "let id = tx.value(&next_id);",
+                ".locals_with(&self.todos)",
+                ".on::<act::ClearDone>(|tx, todos| {",
+                "cx.actions().local(&self.todos)",
+                ".payload_update_if::<act::Toggle>(|rows, id| {",
+                ".payload_update_if::<act::Remove>(|rows, id| {",
             ],
             &[
+                "bind_todo_actions(",
                 "cx.use_local::<String>()",
                 "cx.on_action_notify_models::<act::Add>",
                 "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
@@ -1551,12 +1811,13 @@ mod authoring_surface_policy_tests {
             EMBEDDED_VIEWPORT_DEMO,
             &[
                 "let size_preset_state = cx.state().local_init(|| 1usize);",
-                "let preset = size_preset_state.layout(cx).value_or_default();",
-                "cx.actions().local_set::<act::PickSize640, usize>(&size_preset_state, 0);",
+                "let preset = size_preset_state.layout_value(cx);",
+                "cx.actions().local(&size_preset_state).set::<act::PickSize640>(0);",
             ],
             &[
                 "cx.use_local_with(|| 1usize)",
                 "cx.on_action_notify_local_set::<act::PickSize640, usize>",
+                "let preset = size_preset_state.layout(cx).value_or_default();",
             ],
         );
     }
@@ -1568,10 +1829,57 @@ mod authoring_surface_policy_tests {
             &[
                 "let count_state = cx.state().local_init(|| 0u32);",
                 "let enabled_state = cx.state().local_init(|| false);",
-                "let count = count_state.layout(cx).value_or_default();",
-                "let enabled = enabled_state.paint(cx).value_or_default();",
+                "let count = count_state.layout_value(cx);",
+                "let enabled = enabled_state.paint_value(cx);",
             ],
-            &["cx.use_local_with(|| 0u32)", "cx.use_local_with(|| false)"],
+            &[
+                "cx.use_local_with(|| 0u32)",
+                "cx.use_local_with(|| false)",
+                "count_state.layout(cx).value_or_default()",
+                "enabled_state.paint(cx).value_or_default()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            DROP_SHADOW_DEMO,
+            &[
+                "let enabled_state = cx.state().local_init(|| false);",
+                "let stress_state = cx.state().local_init(|| false);",
+                "let enabled = enabled_state.layout_value(cx);",
+                "let stress = stress_state.layout_value(cx);",
+                "shadcn::Switch::new(enabled_state.clone_model())",
+                "shadcn::Switch::new(stress_state.clone_model())",
+            ],
+            &[
+                "enabled: app.models_mut().insert(false)",
+                "stress: app.models_mut().insert(false)",
+                "self.st.enabled.layout(cx).value_or_default()",
+                "self.st.stress.layout(cx).value_or_default()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_FLOATING_WINDOWS_DEMO,
+            &[
+                "let open_a_state = cx.state().local_init(|| true);",
+                "let select_mode_state = cx.state().local_init(|| None::<Arc<str>>);",
+                "let a_overlap_clicked_state = cx.state().local_init(|| false);",
+                "\"Window A\",",
+                "open_a_state.model(),",
+                "let clicked = a_overlap_clicked_state.paint_value_in(cx);",
+                "\"Mode\",",
+                "select_mode_state.model(),",
+            ],
+            &[
+                "open_a: app.models_mut().insert(true)",
+                "select_mode: app.models_mut().insert(None::<Arc<str>>)",
+                "a_overlap_clicked: app.models_mut().insert(false)",
+                "let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);",
+                "&self.open_a",
+                "read_model(",
+                "&self.a_overlap_clicked",
+                "&self.select_mode",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
@@ -1579,61 +1887,263 @@ mod authoring_surface_policy_tests {
             &[
                 "let left_clicks = cx.state().local_init(|| 0u32);",
                 "let drag_offset = cx.state().local_init(Point::default);",
-                "let last_anchor_value = last_context_menu_anchor.layout(cx).value_or_default();",
+                "let left_clicks_value = left_clicks.layout_value(cx);",
+                "let drag_offset_value = drag_offset.layout_value(cx);",
+                "let last_anchor_value = last_context_menu_anchor.layout_value(cx);",
             ],
             &[
                 "cx.use_local_with(|| 0u32)",
                 "cx.use_local_with(Point::default)",
+                "left_clicks.layout(cx).value_or_default()",
+                "drag_offset.layout(cx).value_or_default()",
+                "last_context_menu_anchor.layout(cx).value_or_default()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_SHADCN_ADAPTER_DEMO,
+            &[
+                "let count_state = cx.state().local_init(|| 0u32);",
+                "let enabled_state = cx.state().local_init(|| false);",
+                "let value_state = cx.state().local_init(|| 32.0f32);",
+                "let mode_state = cx.state().local_init(|| None::<Arc<str>>);",
+                "let draft_state = cx.state().local_init(String::new);",
+                "let count = count_state.layout_value(cx);",
+                "let enabled = enabled_state.paint_value(cx);",
+                "let value = value_state.paint_value(cx);",
+                "let mode = mode_state.paint_value(cx);",
+                "let draft = draft_state.paint_value(cx);",
+                "let _ = ui.toggle_model(\"Enabled (toggle wrapper)\", enabled_state.model());",
+            ],
+            &[
+                "count: app.models_mut().insert(0)",
+                "enabled: app.models_mut().insert(false)",
+                "value: app.models_mut().insert(32.0)",
+                "mode: app.models_mut().insert(None::<Arc<str>>)",
+                "draft: app.models_mut().insert(String::new())",
+                "let count = self.count.layout(cx).value_or_default();",
+                "let enabled = self.enabled.paint(cx).value_or_default();",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
+                "selected: cx.state().local_init(|| QueryId::Tip),",
+                "dark: cx.state().local_init(|| false),",
+                "global_slow: cx.state().local_init(|| false),",
+                "tabs: cx.state().local_init(|| Some(Arc::<str>::from(\"async\"))),",
+                "search_input: cx.state().local_init(|| \"react\".to_string()),",
+                "stock_symbol: cx.state().local_init(|| \"FRET\".to_string()),",
+                "let selected = locals.selected.layout_value(cx);",
+                "let dark = locals.dark.layout_value(cx);",
+                "let global_slow = locals.global_slow.layout_value(cx);",
+                "let namespace_input = locals.namespace_input.layout_value(cx);",
+                ".locals_with((&locals.selected, &locals.namespace_input))",
+                "cx.actions().local(&locals.dark)",
+                ".toggle_bool::<act::ToggleTheme>();",
+                "shadcn::Switch::new(&locals.global_slow)",
+                "shadcn::Tabs::new(&locals.tabs)",
+                "shadcn::Switch::new(&config.keep_prev)",
+                "shadcn::Switch::new(&config.fail_mode)",
+                "shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)",
+                "shadcn::Input::new(&locals.namespace_input)",
+                "shadcn::Input::new(&locals.search_input)",
+                "shadcn::Input::new(&locals.stock_symbol)",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED)",
-                "cx.actions().models::<act::SelectTip>({",
                 "cx.actions().transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);",
             ],
             &[
+                "selected: app.models_mut().insert(QueryId::Tip)",
+                "dark: app.models_mut().insert(false)",
+                "global_slow: app.models_mut().insert(false)",
+                "tabs: app.models_mut().insert(Some(Arc::<str>::from(\"async\")))",
+                "namespace_input: app.models_mut().insert(\"tip\".to_string())",
+                "search_input: app.models_mut().insert(\"react\".to_string())",
+                "stock_symbol: app.models_mut().insert(\"FRET\".to_string())",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED)",
                 "cx.on_action_notify_models::<act::SelectTip>",
+                "cx.actions().models::<act::SelectTip>({",
+                "cx.actions().models::<act::ToggleTheme>({",
                 "cx.on_action_notify_transient::<act::InvalidateSelected>",
+                "shadcn::Switch::new(locals.global_slow.clone_model())",
+                "shadcn::Tabs::new(locals.tabs.clone_model())",
+                "shadcn::Switch::new(config.keep_prev.clone_model())",
+                "shadcn::Switch::new(config.fail_mode.clone_model())",
+                "config.cancel_mode.open.clone_model()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            EDITOR_NOTES_DEMO,
+            &[
+                "let (committed_notes, notes_outcome) = cx.data().selector_model_paint(",
+                "(&asset.notes_model, &asset.notes_outcome_model),",
+            ],
+            &[
+                ".watch_model(&asset.notes_model)",
+                ".watch_model(&asset.notes_outcome_model)",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V1_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "blur_radius_px: cx.state().local_init(|| vec![14.0]),",
+                "blur_downsample: cx.state().local_init(|| vec![2.0]),",
+                "refraction_height_px: cx.state().local_init(|| vec![20.0]),",
+                "refraction_amount_px: cx.state().local_init(|| vec![12.0]),",
+                "depth_effect: cx.state().local_init(|| vec![0.35]),",
+                "chromatic_aberration: cx.state().local_init(|| vec![0.75]),",
+                "corner_radius_px: cx.state().local_init(|| vec![20.0]),",
+                "grain_strength: cx.state().local_init(|| vec![0.06]),",
+                "grain_scale: cx.state().local_init(|| vec![1.0]),",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.blur_radius_px)",
+                ".set::<act::Reset>(vec![14.0]);",
+                ".local(&st.grain_scale)",
+                ".set::<act::Reset>(vec![1.0]);",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "blur_radius_px: app.models_mut().insert(vec![14.0])",
+                "blur_downsample: app.models_mut().insert(vec![2.0])",
+                "refraction_height_px: app.models_mut().insert(vec![20.0])",
+                "refraction_amount_px: app.models_mut().insert(vec![12.0])",
+                "depth_effect: app.models_mut().insert(vec![0.35])",
+                "chromatic_aberration: app.models_mut().insert(vec![0.75])",
+                "corner_radius_px: app.models_mut().insert(vec![20.0])",
+                "grain_strength: app.models_mut().insert(vec![0.06])",
+                "grain_scale: app.models_mut().insert(vec![1.0])",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "use_non_filterable_input: cx.state().local_init(|| false),",
+                "sampling: cx.state().local_init(|| Some(Arc::<str>::from(\"linear\"))),",
+                "sampling_open: cx.state().local_init(|| false),",
+                "uv_span: cx.state().local_init(|| vec![0.25]),",
+                "input_strength: cx.state().local_init(|| vec![0.35]),",
+                "rim_strength: cx.state().local_init(|| vec![0.65]),",
+                "blur_radius_px: cx.state().local_init(|| vec![10.0]),",
+                "debug_input: cx.state().local_init(|| false),",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.use_non_filterable_input)",
+                ".set::<act::Reset>(false);",
+                ".local(&st.sampling)",
+                ".set::<act::Reset>(Some(Arc::<str>::from(\"linear\")));",
+                ".local(&st.blur_radius_px)",
+                ".set::<act::Reset>(vec![10.0]);",
+                "cx.actions().local(&st.debug_input).set::<act::Reset>(false);",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "use_non_filterable_input: app.models_mut().insert(false)",
+                "sampling: app.models_mut().insert(Some(Arc::from(\"linear\")))",
+                "sampling_open: app.models_mut().insert(false)",
+                "uv_span: app.models_mut().insert(vec![0.25])",
+                "input_strength: app.models_mut().insert(vec![0.35])",
+                "rim_strength: app.models_mut().insert(vec![0.65])",
+                "blur_radius_px: app.models_mut().insert(vec![10.0])",
+                "debug_input: app.models_mut().insert(false)",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "show_user0_probe: cx.state().local_init(|| false),",
+                "show_user1_probe: cx.state().local_init(|| false),",
+                "use_non_filterable_user0: cx.state().local_init(|| false),",
+                "use_non_filterable_user1: cx.state().local_init(|| false),",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.show_user0_probe)",
+                ".set::<act::Reset>(false);",
+                ".local(&st.show_user1_probe)",
+                ".local(&st.use_non_filterable_user0)",
+                ".local(&st.use_non_filterable_user1)",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "show_user0_probe: app.models_mut().insert(false)",
+                "show_user1_probe: app.models_mut().insert(false)",
+                "use_non_filterable_user0: app.models_mut().insert(false)",
+                "use_non_filterable_user1: app.models_mut().insert(false)",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             POSTPROCESS_THEME_DEMO,
-            &["cx.actions().models::<act::Reset>({"],
-            &["cx.on_action_notify_models::<act::Reset>"],
+            &[
+                "enabled: cx.state().local_init(|| true),",
+                "compare: cx.state().local_init(|| true),",
+                "theme: cx",
+                ".local_init(|| Option::<Arc<str>>::Some(Arc::from(\"cyberpunk\"))),",
+                "theme_open: cx.state().local_init(|| false),",
+                "chromatic_offset_px: cx.state().local_init(|| vec![4.0]),",
+                "scanline_strength: cx.state().local_init(|| vec![0.32]),",
+                "scanline_spacing_px: cx.state().local_init(|| vec![3.0]),",
+                "vignette_strength: cx.state().local_init(|| vec![0.6]),",
+                "grain_strength: cx.state().local_init(|| vec![0.12]),",
+                "grain_scale: cx.state().local_init(|| vec![1.5]),",
+                "retro_pixel_scale: cx.state().local_init(|| vec![10.0]),",
+                "retro_dither: cx.state().local_init(|| true),",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.theme)",
+                ".set::<act::Reset>(Some(Arc::<str>::from(\"cyberpunk\")));",
+                ".local(&st.chromatic_offset_px)",
+                ".set::<act::Reset>(vec![4.0]);",
+                "cx.actions().local(&st.retro_dither).set::<act::Reset>(true);",
+            ],
+            &[
+                "enabled: app.models_mut().insert(true)",
+                "compare: app.models_mut().insert(true)",
+                ".insert(Option::<Arc<str>>::Some(Arc::from(\"cyberpunk\")))",
+                "theme_open: app.models_mut().insert(false)",
+                "chromatic_offset_px: app.models_mut().insert(vec![4.0])",
+                "scanline_strength: app.models_mut().insert(vec![0.32])",
+                "scanline_spacing_px: app.models_mut().insert(vec![3.0])",
+                "vignette_strength: app.models_mut().insert(vec![0.6])",
+                "grain_strength: app.models_mut().insert(vec![0.12])",
+                "grain_scale: app.models_mut().insert(vec![1.5])",
+                "retro_pixel_scale: app.models_mut().insert(vec![10.0])",
+                "retro_dither: app.models_mut().insert(true)",
+                "cx.actions().models::<act::Reset>({",
+                "cx.on_action_notify_models::<act::Reset>",
+            ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LIQUID_GLASS_DEMO,
             &[
-                "cx.actions().models::<act::Reset>({",
-                "cx.actions().models::<act::ToggleInspector>({",
+                "show_fake: cx.state().local_init(|| true),",
+                "custom_v3_pair: cx.state().local_init(|| false),",
+                "warp_strength_px: cx.state().local_init(|| vec![10.0]),",
+                "cx.actions().local(&self.show_fake).set::<act::Reset>(true);",
+                ".local(&self.custom_v3_bevel_secondary)",
+                ".set::<act::Reset>(vec![1.0]);",
+                ".local(&self.show_inspector)",
+                ".toggle_bool::<act::ToggleInspector>();",
             ],
             &[
+                "show_fake: app.models_mut().insert(true)",
+                "custom_v3_pair: app.models_mut().insert(false)",
+                "warp_strength_px: app.models_mut().insert(vec![10.0])",
                 "cx.on_action_notify_models::<act::Reset>",
                 "cx.on_action_notify_models::<act::ToggleInspector>",
+                "cx.actions().models::<act::Reset>({",
+                "cx.actions().models::<act::ToggleInspector>({",
             ],
         );
 
@@ -1654,17 +2164,24 @@ mod authoring_surface_policy_tests {
             &[
                 "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
-                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({",
-                "let pending = self.st.pending_anchor.layout(cx).value_or_default();",
-                "let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();",
-                "let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();",
+                ".local(&expanded_code_blocks_state)",
+                ".payload_update_if::<act::ToggleCodeBlockExpand>(|set, id| {",
+                "let expanded_count = expanded_code_blocks_state.layout_read_ref(cx, |set| set.len());",
+                "let pending = pending_anchor.layout_value(cx);",
+                "let wrap_enabled = wrap_code_state.layout_value(cx);",
+                "let cap_enabled = cap_code_height_state.layout_value(cx);",
+                "components.on_link_activate = Some(Self::on_link_activate(pending_anchor_state.clone()));",
+                "shadcn::Switch::new(wrap_code_state.clone_model())",
+                "shadcn::Switch::new(cap_code_height_state.clone_model())",
             ],
             &[
                 "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.on_action_notify_transient::<act::RefreshRemoteImages>",
-                "cx.watch_model(&self.st.pending_anchor)",
-                "cx.watch_model(&self.st.wrap_code)",
-                "cx.watch_model(&self.st.cap_code_height)",
+                "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({",
+                "let expanded_count = cx.data().selector(",
+                "self.st.pending_anchor.layout(cx).value_or_default()",
+                "self.st.wrap_code.layout(cx).value_or_default()",
+                "self.st.cap_code_height.layout(cx).value_or_default()",
             ],
         );
     }
@@ -1672,31 +2189,36 @@ mod authoring_surface_policy_tests {
     #[test]
     fn selected_element_context_examples_prefer_handle_first_tracked_model_reads() {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
-            SIMPLE_TODO_DEMO,
+            TABLE_DEMO,
             &[
-                "let todos = todos_model.layout_in(cx).value_or_default();",
-                "let draft_value = draft_model.paint_in(cx).value_or_default();",
-                "if t.done.paint_in(cx).value_or_default() {",
-                "let done = item.done.paint_in(cx).value_or_default();",
+                "use fret::advanced::prelude::LocalState;",
+                "view_options_open: LocalState<bool>,",
+                "enable_grouping: LocalState<bool>,",
+                "grouped_column_mode: LocalState<Option<Arc<str>>>,",
+                "let enable_grouping = enable_grouping.layout_value_in(cx);",
+                "let grouped_column_mode = grouped_column_mode.layout_value_in(cx);",
+                "let view_options_open = view_options_open.clone_model();",
             ],
             &[
-                "let todos = cx.watch_model(&todos_model).layout().value_or_default();",
-                "let draft_value = cx.watch_model(&draft_model).paint().value_or_default();",
-                "if cx.watch_model(&t.done).paint().value_or_default() {",
-                "let done = cx.watch_model(&item.done).paint().value_or_default();",
+                "use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;",
+                "cx.watch_model(&enable_grouping_model)",
+                "cx.watch_model(&grouped_column_mode_model)",
+                "view_options_open: Model<bool>,",
+                "enable_grouping: Model<bool>,",
+                "grouped_column_mode: Model<Option<Arc<str>>>,",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             ASYNC_PLAYGROUND_DEMO,
             &[
-                "let selected = self.st.selected.layout_in(cx).value_or_default();",
-                "let dark = self.st.dark.layout_in(cx).value_or_default();",
-                "fn tracked_query_inputs(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> QueryKeyInputs {",
-                "let query_inputs = tracked_query_inputs(cx, st);",
-                "let tab = st.tabs.layout_in(cx).value_or_default();",
-                "let policy_settings: QueryPolicySettings = cx.data().selector(",
-                "config.fail_mode.layout_in(cx).value_or_default()",
+                "let selected = locals.selected.layout_value(cx);",
+                "let dark = locals.dark.layout_value(cx);",
+                "fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {",
+                "let query_inputs = tracked_query_inputs(cx, &locals);",
+                "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
+                "let policy_settings: QueryPolicySettings = cx.data().selector_layout(",
+                "config.fail_mode.layout_value_in(cx)",
             ],
             &[
                 "let selected = cx.watch_model(&self.st.selected).layout().value_or_default();",
@@ -1711,38 +2233,74 @@ mod authoring_surface_policy_tests {
                 "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
                 "let cache_s = config.cache_time_s.layout_in(cx).value_or_default();",
                 "let keep_prev = config.keep_prev.layout_in(cx).value_or_default();",
+                "cx.data().selector_layout(&locals.tabs, |tab| match tab.as_deref() {",
+                "let policy_settings: QueryPolicySettings = cx.data().selector(",
+                "cx.data().selector_layout(&config.fail_mode, |fail_mode| fail_mode)",
+                "config.fail_mode.layout_in(cx).value_or_default()",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             GENUI_DEMO,
             &[
-                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);",
-                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);",
+                "auto_apply_standard_actions: LocalState<bool>,",
+                "auto_fix_on_apply: LocalState<bool>,",
+                "editor_text: LocalState<String>,",
+                "stream_text: LocalState<String>,",
+                "stream_patch_only: LocalState<bool>,",
+                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_value_in(cx);",
+                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_value_in(cx);",
+                "let auto_apply_model = st.auto_apply_standard_actions.clone_model();",
+                "let auto_fix_model = st.auto_fix_on_apply.clone_model();",
                 "st.genui_state",
                 ".layout_in(cx)",
                 ".read_ref(|v| {",
                 "st.action_queue",
                 "st.validation_state",
-                "let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);",
+                "let stream_patch_only = st.stream_patch_only.layout_value_in(cx);",
+                "let stream_patch_only_model = st.stream_patch_only.clone_model();",
+                "shadcn::Textarea::new(&editor_model)",
+                "shadcn::Textarea::new(&stream_model)",
             ],
             &[
+                "auto_apply_standard_actions: Model<bool>,",
+                "auto_fix_on_apply: Model<bool>,",
+                "editor_text: Model<String>,",
+                "stream_text: Model<String>,",
+                "stream_patch_only: Model<bool>,",
                 "cx.watch_model(&st.auto_apply_standard_actions)",
                 "cx.watch_model(&st.auto_fix_on_apply)",
                 "cx.watch_model(&st.genui_state)",
                 "cx.watch_model(&st.action_queue)",
                 "cx.watch_model(&st.validation_state)",
                 "cx.watch_model(&st.stream_patch_only)",
+                "let auto_apply_model = st.auto_apply_standard_actions.clone();",
+                "let auto_fix_model = st.auto_fix_on_apply.clone();",
+                "let stream_patch_only_model = st.stream_patch_only.clone();",
+                "shadcn::Textarea::new(editor_model.clone())",
+                "shadcn::Textarea::new(stream_model.clone())",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector(",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
+                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector_layout(",
+                "&st.enabled,",
+                "&st.use_non_filterable_input,",
+                "&st.sampling,",
+                "&st.debug_input,",
+                "let enabled_model = st.enabled.clone_model();",
+                "let sampling_model = st.sampling.clone_model();",
+                "let sampling_open_model = st.sampling_open.clone_model();",
+                "let uv_span_state = st.uv_span.clone();",
+                "let input_strength_state = st.input_strength.clone();",
+                "let rim_strength_state = st.rim_strength.clone();",
+                "let blur_radius_state = st.blur_radius_px.clone();",
             ],
             &[
+                "let view_settings: CustomEffectV2ViewSettings = cx.data().selector(",
                 "cx.watch_model(model)",
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let use_non_filterable_input = cx.watch_model(&st.use_non_filterable_input)",
@@ -1751,6 +2309,13 @@ mod authoring_surface_policy_tests {
                 "let use_non_filterable_input = st.use_non_filterable_input.layout_in(cx).value_or(false);",
                 "let sampling_value = st",
                 "let debug_input = st.debug_input.layout_in(cx).value_or(false);",
+                "let enabled_model = st.enabled.clone();",
+                "let sampling_model = st.sampling.clone();",
+                "let sampling_open_model = st.sampling_open.clone();",
+                "let uv_span_model = st.uv_span.clone_model();",
+                "let input_strength_model = st.input_strength.clone_model();",
+                "let rim_strength_model = st.rim_strength.clone_model();",
+                "let blur_radius_model = st.blur_radius_px.clone_model();",
             ],
         );
 
@@ -1759,14 +2324,24 @@ mod authoring_surface_policy_tests {
             &[
                 "fn view_settings(",
                 "-> CustomEffectV2WebViewSettings {",
-                "cx.data().selector(",
-                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
+                "cx.data().selector_model_paint(",
+                "&controls.enabled,",
+                "&controls.tile_corner_radius_px,",
+                "reset_controls.reset_in(host.models_mut());",
+                "state.controls.reset_in(app.models_mut());",
                 "let view_settings = Self::view_settings(cx, &controls);",
             ],
             &[
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "cx.app.models().revision(&enabled_deps).unwrap_or(0)",
+                "cx.app.models().get_cloned(&enabled).unwrap_or(true)",
                 "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "CustomEffectV2WebDriver::reset_controls(app, &state.controls);",
+                "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
             ],
@@ -1777,14 +2352,24 @@ mod authoring_surface_policy_tests {
             &[
                 "fn view_settings(",
                 "-> CustomEffectV2GlassChromeWebViewSettings {",
-                "cx.data().selector(",
-                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
+                "cx.data().selector_model_paint(",
+                "&controls.enabled,",
+                "&controls.debug_input,",
+                "reset_controls.reset_in(host.models_mut());",
+                "state.controls.reset_in(app.models_mut());",
                 "let view_settings = Self::view_settings(cx, &controls);",
             ],
             &[
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "cx.app.models().revision(&enabled_deps).unwrap_or(0)",
+                "cx.app.models().get_cloned(&enabled).unwrap_or(true)",
                 "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "CustomEffectV2GlassChromeWebDriver::reset_controls(app, &state.controls);",
+                "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
             ],
@@ -1795,14 +2380,24 @@ mod authoring_surface_policy_tests {
             &[
                 "fn view_settings(",
                 "-> CustomEffectV2IdentityWebViewSettings {",
-                "cx.data().selector(",
-                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
+                "cx.data().selector_model_paint(",
+                "&controls.enabled,",
+                "&controls.debug_input,",
+                "reset_controls.reset_in(host.models_mut());",
+                "state.controls.reset_in(app.models_mut());",
                 "let view_settings = Self::view_settings(cx, &controls);",
             ],
             &[
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "cx.app.models().revision(&enabled_deps).unwrap_or(0)",
+                "cx.app.models().get_cloned(&enabled).unwrap_or(true)",
                 "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "CustomEffectV2IdentityWebDriver::reset_controls(app, &state.controls);",
+                "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
             ],
@@ -1813,26 +2408,92 @@ mod authoring_surface_policy_tests {
             &[
                 "fn view_settings(",
                 "-> CustomEffectV2LutWebViewSettings {",
-                "cx.data().selector(",
-                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "fn reset_in(&self, models: &mut fret_runtime::ModelStore) {",
+                "cx.data().selector_model_paint(",
+                "&controls.enabled,",
+                "&controls.tile_corner_radius_px,",
+                "reset_controls.reset_in(host.models_mut());",
+                "state.controls.reset_in(app.models_mut());",
                 "let view_settings = Self::view_settings(cx, &controls);",
             ],
             &[
+                "cx.data().selector(",
+                "cx.observe_model(&enabled_deps, Invalidation::Paint);",
+                "cx.app.models().revision(&enabled_deps).unwrap_or(0)",
+                "cx.app.models().get_cloned(&enabled).unwrap_or(true)",
                 "cx.watch_model(model)",
                 "model.paint_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
                 "model.paint_in(cx).read_ref(|v| v.as_ref().map(|s| s.to_string()))",
+                "CustomEffectV2LutWebDriver::reset_controls(app, &state.controls);",
+                "let _ = models.update(&reset_controls.enabled, |v| *v = true);",
                 "let enabled = controls.enabled.paint_in(cx).value_or(true);",
                 "let debug_input = controls.debug_input.paint_in(cx).value_or(false);",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_EDITOR_PROOF_DEMO,
+            &[
+                "struct EditorTextAssistReadout {",
+                "struct EditorTextFieldReadout {",
+                "struct AuthoringParitySharedStateReadout {",
+                "fn editor_text_assist_readout(",
+                "fn editor_text_field_readout(",
+                "fn editor_string_model_readout(",
+                "cx.data().selector_model_paint(",
+                "(query_model, dismissed_query_model, active_item_id_model),",
+                "(committed_model, outcome_model),",
+                "editor_string_model_readout(",
+                "let name_assist_items = editor_demo_name_assist_items(cx);",
+                "let name_assist_readout = editor_text_assist_readout(",
+                "let inline_rename_readout = editor_text_field_readout(",
+                "let password_readout = editor_text_field_readout(",
+                "let notes_readout = editor_text_field_readout(",
+                ".selector_model_paint(&editor_gradient_stops_model,",
+                ".selector_model_paint(&m.target, |target| target)",
+                "let shared = cx.data().selector_model_paint(",
+                "(&name_model, &drag_value_model, &slider_model, &enabled_model, &shading_model,)",
+            ],
+            &[
+                "let query = cx.watch_model(&editor_name_assist_model)",
+                "let dismissed_query = cx.watch_model(&editor_name_assist_dismissed_query_model)",
+                "let active_item_id = cx.watch_model(&editor_name_assist_active_item_model)",
+                "cx.watch_model(&editor_buffered_name_model)",
+                "cx.watch_model(&editor_name_assist_accepted_model)",
+                "cx.watch_model(&editor_inline_rename_model)",
+                "cx.watch_model(&editor_inline_rename_outcome_model)",
+                "cx.watch_model(&editor_password_model)",
+                "cx.watch_model(&editor_password_outcome_model)",
+                "cx.watch_model(&editor_notes_model)",
+                "cx.watch_model(&editor_notes_outcome_model)",
+                "watch_model(&editor_gradient_stops_model)",
+                "watch_model(&m.target)",
+                ".get_model_cloned(&editor_drag_value_outcome_model,",
+                ".get_model_cloned(&editor_position_outcome_model,",
+                ".get_model_cloned(&editor_transform_outcome_model,",
+                ".get_model_cloned(&name_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&slider_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)",
+                ".get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
-            &["let view_settings: CustomEffectV3ViewSettings = cx.data().selector("],
+            &[
+                "let view_settings: CustomEffectV3ViewSettings = cx.data().selector_layout(",
+                "&st.enabled,",
+                "&st.show_user0_probe,",
+                "&st.use_non_filterable_user1,",
+                "let enabled_model = st.enabled.clone_model();",
+                "let show_user0_probe_model = st.show_user0_probe.clone_model();",
+            ],
             &[
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
                 "let show_user0_probe = cx.watch_model(&st.show_user0_probe)",
                 "let use_non_filterable_user1 = cx.watch_model(&st.use_non_filterable_user1)",
+                "let view_settings: CustomEffectV3ViewSettings = cx.data().selector(",
                 "let enabled = st.enabled.layout_in(cx).value_or(true);",
                 "let show_user0_probe = st.show_user0_probe.layout_in(cx).value_or(false);",
                 "let show_user1_probe = st.show_user1_probe.layout_in(cx).value_or(false);",
@@ -1844,19 +2505,34 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V1_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
+                "let enabled = st.enabled.layout_value_in(cx);",
+                "let enabled_model = st.enabled.clone_model();",
+                "let blur_radius_state = st.blur_radius_px.clone();",
             ],
             &[
                 "cx.watch_model(model)",
                 "let enabled = cx.watch_model(&st.enabled).layout().value_or(true);",
+                "let enabled_model = st.enabled.clone();",
+                "let blur_radius_model = st.blur_radius_px.clone_model();",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             POSTPROCESS_THEME_DEMO,
-            &["let view_settings: ThemePostprocessViewSettings = cx.data().selector("],
             &[
+                "let view_settings: ThemePostprocessViewSettings = cx.data().selector_layout(",
+                "&st.enabled,",
+                "&st.compare,",
+                "&st.theme,",
+                "&st.retro_dither",
+                "let enabled_model = st.enabled.clone_model();",
+                "let theme_model = st.theme.clone_model();",
+                "let theme_open_model = st.theme_open.clone_model();",
+                "let chromatic_state = st.chromatic_offset_px.clone();",
+            ],
+            &[
+                "let view_settings: ThemePostprocessViewSettings = cx.data().selector(",
                 "let enabled = cx.watch_model(&self.st.enabled).layout().value_or(true);",
                 "let compare = cx.watch_model(&self.st.compare).layout().value_or(true);",
                 "let theme = cx.watch_model(&self.st.theme).layout().value_or(Option::<Arc<str>>::None);",
@@ -1865,22 +2541,31 @@ mod authoring_surface_policy_tests {
                 "let compare = self.st.compare.layout_in(cx).value_or(true);",
                 "let theme = self.st.theme.layout_in(cx).value_or(Option::<Arc<str>>::None);",
                 "let retro_dither = self.st.retro_dither.layout_in(cx).value_or(true);",
+                "let enabled_model = st.enabled.clone();",
+                "let theme_model = st.theme.clone();",
+                "let theme_open_model = st.theme_open.clone();",
+                "let chromatic_model = st.chromatic_offset_px.clone_model();",
             ],
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LIQUID_GLASS_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector(",
-                "let mode_settings: LiquidGlassModeSettings = cx.data().selector(",
-                "cx.observe_model(&show_fake_model, Invalidation::Layout);",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
+                "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector_layout(",
+                "&st.show_fake,",
+                "&st.custom_v3_pair,",
+                "let mode_settings: LiquidGlassModeSettings = cx.data().selector_layout(",
+                "&st.custom_v3_source_group,",
+                "let show_fake_switch_model = st.show_fake.clone_model();",
+                "let lens_radius_state = st.lens_radius_px.clone();",
             ],
             &[
                 "cx.watch_model(model)",
-                "let show_fake = cx.watch_model(&st.show_fake).layout().value_or(true);",
-                "let custom_v3_source_group = cx",
-                "let use_backdrop = cx.watch_model(&st.use_backdrop).layout().value_or(true);",
+                "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector(",
+                "let mode_settings: LiquidGlassModeSettings = cx.data().selector(",
+                "cx.observe_model(&show_fake_model, Invalidation::Layout);",
+                "let lens_radius_model = st.lens_radius_px.clone_model();",
                 "let show_fake = st.show_fake.layout_in(cx).value_or(true);",
                 "let show_warp = st.show_warp.layout_in(cx).value_or(true);",
                 "let show_warp_v2 = st.show_warp_v2.layout_in(cx).value_or(false);",
@@ -1897,12 +2582,20 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LAUNCHER_UTILITY_WINDOW_DEMO,
-            &["let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector("],
+            &[
+                "always_on_top: LocalState<bool>,",
+                "status: LocalState<Arc<str>>,",
+                "let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector_layout(",
+                "(&st.always_on_top, &st.status),",
+            ],
             &[
                 "let always_on_top = cx.watch_model(&st.always_on_top).layout().value_or(false);",
                 "cx.watch_model(&st.status)",
                 "let always_on_top = st.always_on_top.layout_in(cx).value_or(false);",
                 "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+                "always_on_top: fret_runtime::Model<bool>,",
+                "status: fret_runtime::Model<Arc<str>>,",
+                "let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector(",
             ],
         );
 
@@ -1914,8 +2607,31 @@ mod authoring_surface_policy_tests {
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
-            &["let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));"],
-            &["cx.watch_model(&st.status)"],
+            &[
+                "status: LocalState<Arc<str>>,",
+                "let status = st.status.layout_value_in(cx);",
+            ],
+            &[
+                "cx.watch_model(&st.status)",
+                "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+                "let status = cx.data().selector_layout(&st.status, |status| status);",
+                "status: fret_runtime::Model<Arc<str>>,",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            WORKSPACE_SHELL_DEMO,
+            &[
+                "let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =",
+                "cx.data().selector_model_layout(",
+                "(&dirty_close_prompt_open, &dirty_close_prompt),",
+                ".selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| {",
+            ],
+            &[
+                ".get_model_cloned(&dirty_close_prompt_open, Invalidation::Layout)",
+                ".get_model_cloned(&dirty_close_prompt, Invalidation::Layout)",
+                ".get_model_cloned(&tabstrip_two_row_pinned, Invalidation::Layout)",
+            ],
         );
     }
 

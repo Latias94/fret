@@ -137,7 +137,7 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
-**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions, prefer `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState tracked reads, and keep the first-contact handler surface to `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For ordinary initialized locals inside `locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed lists, bind row payloads with `.action_payload(...)` and prefer `payload_local_update_if::<A>(...)` as the default row-write path. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared `Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed payload actions without reopening the deleted payload-carrier namespace. Treat lower-level payload helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions()....)` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, prefer `cx.actions().action(act::Save)`, `cx.actions().action_payload(act::Remove, payload)`, and `cx.actions().listen(...)`.
+**Default authoring mental model:** when you take the `fret` golden path, start with `View` + `AppUi` + typed actions, prefer `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState tracked reads, and use `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when app code only needs a borrowed projection without cloning the full slot. Keep the first-contact handler surface to `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()`, `cx.actions().transient::<A>(...)`, plus widget `.action(...)` / `.action_payload(...)` whenever the control already exposes a stable action slot. For ordinary initialized locals inside `locals_with((...)).on::<A>(...)`, prefer `tx.value(&local)` for reads and keep `tx.value_or(...)` / `tx.value_or_else(...)` for explicit fallback cases only. For view-owned keyed lists, bind row payloads with `.action_payload(...)` and prefer `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path. If a widget already exposes its own `.on_activate(...)` hook, stay on that component-owned surface instead of importing the activation bridge just to attach a no-op or side effect override. Only add `use fret::app::AppActivateExt as _;` for activation-only surfaces that do not yet offer a narrower widget-owned app-facing helper, and keep the same action-first vocabulary there via `widget.action(act::Save)`, `widget.action_payload(act::Remove, payload)`, and `widget.listen(|host, acx| { ... })`. Drop down to `cx.actions().models::<A>(...)` for shared `Model<T>` graphs and `cx.actions().payload_models::<A>(...)` when the same graph needs typed payload actions without reopening the deleted payload-carrier namespace. Treat lower-level payload helpers, raw `AppUi::on_action_notify*`, and low-level `.on_activate(cx.actions().listen(...))` glue as cookbook/reference-only host-side escape hatches; if you intentionally reopen that seam, keep it on `cx.actions().listen(...)` or import `AppActivateExt` explicitly for activation-only typed dispatch.
 
 `fret::app::AppActivateSurface` / `AppActivateExt` are intentionally narrow: they cover
 activation-only widgets that expose the standard `OnActivate` slot but still lack a tighter
@@ -464,24 +464,27 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **Theme integration:**
 
 - Direct crate usage: prefer `use fret_ui_shadcn::{facade as shadcn, prelude::*};`, then call
-  `shadcn::themes::apply_shadcn_new_york(...)` for an explicit preset, or enable
-  `fret-ui-shadcn/app-integration` and call `shadcn::app::install(...)` for the golden-path
-  default. Treat that curated facade import as the only first-contact component-family discovery
-  lane: `shadcn::app::*` and `shadcn::themes::*` are setup lanes, not peer discovery lanes. For
-  environment / `UiServices`-boundary hooks, stay explicit with
+  `shadcn::themes::apply_shadcn_new_york(...)` for an explicit one-shot preset when the app wants
+  to own a fixed theme baseline directly, or enable `fret-ui-shadcn/app-integration` and call
+  `shadcn::app::install(...)` for the golden-path app wiring that also opts the app into
+  environment-aware host-theme syncing. Treat that curated facade import as the only first-contact
+  component-family discovery lane: `shadcn::app::*` and `shadcn::themes::*` are setup lanes, not
+  peer discovery lanes. For environment / `UiServices`-boundary hooks, stay explicit with
   `fret_ui_shadcn::advanced::{sync_theme_from_environment(...), install_with_ui_services(...)}`.
   `fret_ui_shadcn::advanced::*` is an implementation/debug lane, not a competing default import.
   For first-party prose/demo helpers, `shadcn::raw::typography::*` remains an explicit escape
   hatch. Only drop to `shadcn::raw::*` beyond these documented cases when you intentionally need
   the full uncurated module surface; the flat crate root is now treated as a hidden compatibility
   layer rather than a teaching lane.
-- Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)`,
-  `fret::shadcn::app::install(...)`, and only drop to `fret::shadcn::raw::*` when you need the
-  full uncurated `fret_ui_shadcn` surface. Treat `fret::shadcn::{Button, Card, ...}` as the only
-  first-contact component-family lane here too: `fret::shadcn::app::*` and
-  `fret::shadcn::themes::*` are setup lanes, not peer discovery lanes. That same raw escape hatch
-  also carries advanced service hooks at `fret::shadcn::raw::advanced::*`; first-party
-  prose/demo helpers may also use `fret::shadcn::raw::typography::*`.
+- Through `fret`: use `fret::shadcn::themes::apply_shadcn_new_york(...)` for explicit
+  app-owned/fixed presets, use `fret::shadcn::app::install(...)` when you want the curated app
+  integration plus environment-aware host-theme syncing, and only drop to `fret::shadcn::raw::*`
+  when you need the full uncurated `fret_ui_shadcn` surface. Treat
+  `fret::shadcn::{Button, Card, ...}` as the only first-contact component-family lane here too:
+  `fret::shadcn::app::*` and `fret::shadcn::themes::*` are setup lanes, not peer discovery lanes.
+  That same raw escape hatch also carries advanced service hooks at
+  `fret::shadcn::raw::advanced::*`; first-party prose/demo helpers may also use
+  `fret::shadcn::raw::typography::*`.
 
 **Tables vs grids (naming and intent):**
 

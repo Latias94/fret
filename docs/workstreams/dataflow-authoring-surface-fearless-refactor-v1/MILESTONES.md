@@ -1,7 +1,7 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — Milestones
 
 Status: Closed closeout lane (selector/query locked; action write follow-on split out)
-Last updated: 2026-03-17
+Last updated: 2026-03-20
 
 Related:
 
@@ -39,6 +39,15 @@ Read it as:
   surfaces and router compatibility is confirmed without widening this lane's scope.
 - The remaining default write-side productization work is now handed off to
   `docs/workstreams/action-write-surface-fearless-refactor-v1/`.
+
+## Current execution stance (2026-03-20)
+
+- The remaining proof/example breadth cleanup identified during closeout is now landed on the
+  audited first-party editor-grade surfaces (`workspace_shell_demo`, `editor_notes_demo`,
+  `imui_editor_proof_demo`).
+- Milestone 4 no longer carries outstanding proof-surface tracked-read migration debt.
+- Remaining discussion after this point belongs to adjacent authoring-density and write-side
+  follow-on lanes rather than this closed selector/query dataflow lane.
 
 ## Milestone 0 — Freeze the lane
 
@@ -152,8 +161,13 @@ Status:
 
 - M4 audit landed on 2026-03-17 via
   `ECOSYSTEM_ADAPTATION_AND_ROUTER_AUDIT_2026-03-17.md`.
-- Remaining closeout is about docs/source-gate alignment and unresolved proof surfaces from
-  earlier milestones, not about inventing more ecosystem/router-specific helper APIs.
+- Remaining closeout is about docs/source-gate alignment and historical evidence hygiene, not about
+  inventing more ecosystem/router-specific helper APIs.
+- The last proof/example breadth cleanup items landed on 2026-03-20 in:
+  - `apps/fret-examples/src/workspace_shell_demo.rs`
+  - `apps/fret-examples/src/editor_notes_demo.rs`
+  - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+  - `apps/fret-examples/src/lib.rs`
 
 Deliverables:
 
@@ -171,4 +185,5 @@ Exit criteria:
 Current remaining closeout gap:
 
 - first-contact docs/templates/gates are aligned for the landed batches,
-- and this lane no longer owns the remaining default write-side follow-on.
+- this lane no longer owns the remaining default write-side follow-on,
+- and there is no remaining proof-surface tracked-read adoption gap inside this lane.

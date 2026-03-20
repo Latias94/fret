@@ -145,13 +145,9 @@ fn label_for_control<H: UiHost>(
             let control_registry_on_down = control_registry_inner.clone();
             let for_control_on_down = for_control_inner.clone();
             let control_snapshot_on_down = control_snapshot_inner.clone();
-            cx.pointer_region_add_on_pointer_down(Arc::new(move |host, acx, down| {
-                // If the pointer-down hit-test chain includes a pressable (e.g. an embedded
-                // button), let that descendant own the interaction rather than capturing.
-                if down.hit_pressable_target.is_some() {
-                    return false;
-                }
-
+            cx.pointer_region_add_on_pointer_down(Arc::new(move |host, acx, _down| {
+                // Plain `Label` only owns a text child, so pressables elsewhere in the
+                // hit-test chain are ambient shells rather than embedded interactive content.
                 let target = host
                     .models_mut()
                     .read(&control_registry_on_down, |reg| {
@@ -192,9 +188,6 @@ fn label_for_control<H: UiHost>(
                 if !up.is_click {
                     return true;
                 }
-                if up.down_hit_pressable_target.is_some() {
-                    return false;
-                }
 
                 let control = host
                     .models_mut()
@@ -227,7 +220,7 @@ fn label_for_control<H: UiHost>(
             if enabled {
                 vec![child]
             } else {
-                vec![cx.opacity(0.7, move |_cx| vec![child])]
+                vec![cx.opacity(0.5, move |_cx| vec![child])]
             }
         })]
     })
@@ -303,10 +296,89 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_core::{
+        AppWindowId, Axis, Edges, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathStyle, Point, Px, Rect, SemanticsRole, Size, SvgId, TextBlobId, TextConstraints,
+        TextInput, TextMetrics,
+    };
+    use fret_ui::GlobalElementId;
+    use fret_ui::UiTree;
+    use fret_ui::element::{
+        ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
+        PressableProps, SizeStyle,
+    };
     use fret_ui::elements;
     use fret_ui::{Theme, ThemeConfig};
+    use std::sync::Arc;
+
+    struct FakeServices;
+
+    impl fret_core::TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn contains_opacity(node: &AnyElement, opacity: f32) -> bool {
+        let matches = match &node.kind {
+            ElementKind::Opacity(props) => (props.opacity - opacity).abs() <= 1e-6,
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
+        node.children
+            .iter()
+            .any(|child| contains_opacity(child, opacity))
+    }
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -437,5 +509,327 @@ mod tests {
             .expect("expected label to register itself in the control registry");
 
         assert_eq!(entry.element, el.id);
+    }
+
+    #[test]
+    fn label_for_disabled_control_uses_half_opacity() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+        let control_id = ControlId::from("disabled-email");
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let reg_model = control_registry_model(cx);
+            let _ = cx.app.models_mut().update(&reg_model, |reg| {
+                reg.register_control(
+                    cx.window,
+                    cx.frame_id,
+                    control_id.clone(),
+                    crate::primitives::control_registry::ControlEntry {
+                        element: GlobalElementId(42),
+                        enabled: false,
+                        action: ControlAction::FocusOnly,
+                    },
+                );
+            });
+
+            Label::new("Email")
+                .for_control(control_id.clone())
+                .into_element(cx)
+        });
+
+        let ElementKind::Semantics(props) = &el.kind else {
+            panic!("expected disabled associated label to build a Semantics root");
+        };
+        assert!(
+            props.disabled,
+            "expected disabled associated label semantics to be disabled"
+        );
+        assert!(
+            contains_opacity(&el, 0.5),
+            "expected disabled associated label to apply opacity 0.5"
+        );
+    }
+
+    #[test]
+    fn label_for_control_click_invokes_registered_control_action() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+        let mut services = FakeServices;
+        let checked = app.models_mut().insert(false);
+        let checked_for_render = checked.clone();
+        let control_id = ControlId::from("label.toggle.control");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "label-for-control-click-invokes-control-action",
+            |cx| {
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+                let registry_model = control_registry_model(cx);
+
+                vec![cx.flex(
+                    FlexProps {
+                        layout: row_layout,
+                        direction: Axis::Horizontal,
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let registry_model = registry_model.clone();
+                        let control_id_for_control = control_id.clone();
+                        let checked_for_control = checked_for_render.clone();
+                        let control = cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Checkbox,
+                                label: Some(Arc::from("Test checkbox")),
+                                checked: Some(false),
+                                test_id: Some(Arc::from("test.control")),
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let id = cx.root_id();
+                                let entry = crate::primitives::control_registry::ControlEntry {
+                                    element: id,
+                                    enabled: true,
+                                    action: ControlAction::ToggleBool(checked_for_control.clone()),
+                                };
+                                let _ = cx.app.models_mut().update(&registry_model, |reg| {
+                                    reg.register_control(
+                                        cx.window,
+                                        cx.frame_id,
+                                        control_id_for_control.clone(),
+                                        entry,
+                                    );
+                                });
+
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Px(Px(16.0)),
+                                                height: Length::Px(Px(16.0)),
+                                                min_width: None,
+                                                min_height: None,
+                                                max_width: None,
+                                                max_height: None,
+                                            },
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )]
+                            },
+                        );
+
+                        vec![
+                            control,
+                            Label::new("Toggle via label")
+                                .for_control(control_id.clone())
+                                .test_id("test.label")
+                                .into_element(cx),
+                        ]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let label = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("test.label"))
+            .expect("label semantics node");
+
+        let position = Point::new(
+            Px(label.bounds.origin.x.0 + label.bounds.size.width.0 * 0.5),
+            Px(label.bounds.origin.y.0 + label.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&checked), Some(true));
+    }
+
+    #[test]
+    fn label_for_control_click_invokes_registered_control_action_inside_ancestor_pressable() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+        let mut services = FakeServices;
+        let checked = app.models_mut().insert(false);
+        let checked_for_render = checked.clone();
+        let control_id = ControlId::from("label.toggle.control.inside.ancestor.pressable");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "label-for-control-click-inside-ancestor-pressable",
+            |cx| {
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+                let registry_model = control_registry_model(cx);
+
+                vec![cx.pressable(PressableProps::default(), move |cx, _state| {
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: row_layout,
+                            direction: Axis::Horizontal,
+                            gap: Px(8.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            let registry_model = registry_model.clone();
+                            let control_id_for_control = control_id.clone();
+                            let checked_for_control = checked_for_render.clone();
+                            let control = cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::Checkbox,
+                                    label: Some(Arc::from("Test checkbox")),
+                                    checked: Some(false),
+                                    test_id: Some(Arc::from("test.control")),
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let id = cx.root_id();
+                                    let entry = crate::primitives::control_registry::ControlEntry {
+                                        element: id,
+                                        enabled: true,
+                                        action: ControlAction::ToggleBool(
+                                            checked_for_control.clone(),
+                                        ),
+                                    };
+                                    let _ = cx.app.models_mut().update(&registry_model, |reg| {
+                                        reg.register_control(
+                                            cx.window,
+                                            cx.frame_id,
+                                            control_id_for_control.clone(),
+                                            entry,
+                                        );
+                                    });
+
+                                    vec![cx.container(
+                                        ContainerProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Px(Px(16.0)),
+                                                    height: Length::Px(Px(16.0)),
+                                                    min_width: None,
+                                                    min_height: None,
+                                                    max_width: None,
+                                                    max_height: None,
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |_cx| Vec::new(),
+                                    )]
+                                },
+                            );
+
+                            vec![
+                                control,
+                                Label::new("Toggle via label")
+                                    .for_control(control_id.clone())
+                                    .test_id("test.label")
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let label = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("test.label"))
+            .expect("label semantics node");
+
+        let position = Point::new(
+            Px(label.bounds.origin.x.0 + label.bounds.size.width.0 * 0.5),
+            Px(label.bounds.origin.y.0 + label.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&checked), Some(true));
     }
 }

@@ -27,6 +27,8 @@ use fret_ui_kit::{
     WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
 
+use crate::bool_model::IntoBoolModel;
+use crate::optional_bool_model::IntoOptionalBoolModel;
 use crate::overlay_motion;
 
 const SWITCH_THUMB_TRANSITION_EASE: fret_ui_kit::headless::easing::CubicBezier =
@@ -205,9 +207,9 @@ enum SwitchModel {
 }
 
 impl Switch {
-    pub fn new(model: Model<bool>) -> Self {
+    pub fn new(model: impl IntoBoolModel) -> Self {
         Self {
-            model: SwitchModel::Determinate(model),
+            model: SwitchModel::Determinate(model.into_bool_model()),
             size: SwitchSize::Default,
             disabled: false,
             aria_invalid: false,
@@ -249,9 +251,9 @@ impl Switch {
     ///
     /// When the value is `None`, the switch renders as unchecked (matching shadcn/ui's common
     /// `value || false` usage). Clicking will set the model to `Some(true/false)` thereafter.
-    pub fn new_opt(model: Model<Option<bool>>) -> Self {
+    pub fn new_opt(model: impl IntoOptionalBoolModel) -> Self {
         Self {
-            model: SwitchModel::Optional(model),
+            model: SwitchModel::Optional(model.into_optional_bool_model()),
             size: SwitchSize::Default,
             disabled: false,
             aria_invalid: false,
@@ -758,11 +760,13 @@ impl Switch {
     }
 }
 
-pub fn switch<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H> {
+pub fn switch<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M> {
     Switch::new(model)
 }
 
-pub fn switch_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H> {
+pub fn switch_opt<H: UiHost, M: IntoOptionalBoolModel>(
+    model: M,
+) -> impl IntoUiElement<H> + use<H, M> {
     Switch::new_opt(model)
 }
 

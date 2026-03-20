@@ -67,9 +67,16 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Top-level docs-style links can be authored without a surrogate button: contentless
   `NavigationMenuItem` now accepts `href` / `target` / `rel` and `on_activate`, covering the
   upstream Link Component outcome while keeping trigger chrome recipe-owned.
+- Pass: Top-level custom trigger composition already lives on
+  `NavigationMenuItem::{trigger, trigger_child, trigger_children}`, so first-party docs/examples
+  do not need a separate DOM-flavored `asChild`/generic-children API to show custom trigger
+  content.
 - Pass: `NavigationMenuLink` now also accepts `href` / `target` / `rel` and `on_activate` for
   submenu links, attaching link-value semantics and fallback `OpenUrl` behavior when no explicit
   action handler is provided.
+- Pass: `NavigationMenuLink::{new, child}` now accept the same narrow
+  `IntoOptionalTextValueModel` bridge as the compact root lane, so first-party parts usage does
+  not need raw `Model<Option<Arc<str>>>` handles.
 - Pass: `NavigationMenuLink` already supports arbitrary children, so rich rows/cards remain a
   component-layer composition concern rather than a runtime contract change.
 - Pass: Base UI timing props are mirrored by shadcn-friendly aliases:

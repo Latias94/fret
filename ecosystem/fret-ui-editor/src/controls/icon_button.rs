@@ -16,6 +16,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::ColorRef;
 
 use crate::primitives::EditorDensity;
+use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::icons::editor_icon_with;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
@@ -127,7 +128,7 @@ impl IconButton {
                     (
                         editor_icon_button_bg(theme, enabled, hovered, pressed),
                         editor_icon_button_border(theme, enabled, hovered, pressed),
-                        theme.color_token("muted-foreground"),
+                        editor_muted_foreground(theme),
                     )
                 };
                 let border_width = if border.is_some() { Px(1.0) } else { Px(0.0) };

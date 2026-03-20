@@ -7,7 +7,14 @@
 use fret_core::Color;
 use fret_ui::Theme;
 
-use super::{EditorTokenKeys, chrome::ResolvedEditorFrameChrome};
+use super::{
+    EditorTokenKeys,
+    chrome::ResolvedEditorFrameChrome,
+    colors::{
+        editor_accent, editor_border, editor_invalid_border, editor_invalid_foreground,
+        editor_muted_foreground, editor_subtle_bg,
+    },
+};
 
 /// Shared editor-grade widget visuals policy.
 ///
@@ -24,10 +31,7 @@ impl<'a> EditorWidgetVisuals<'a> {
     }
 
     pub(crate) fn muted_foreground(&self) -> Color {
-        self.theme
-            .color_by_key("muted-foreground")
-            .or_else(|| self.theme.color_by_key("muted_foreground"))
-            .unwrap_or_else(|| self.theme.color_token("foreground"))
+        editor_muted_foreground(self.theme)
     }
 
     pub(crate) fn hover_overlay_bg_custom(
@@ -38,7 +42,7 @@ impl<'a> EditorWidgetVisuals<'a> {
         hover_mix: f32,
         press_mix: f32,
     ) -> Color {
-        let accent = self.theme.color_token("accent");
+        let accent = editor_accent(self.theme);
         let mut out = base;
         if hovered {
             out = mix(out, accent, hover_mix);
@@ -57,7 +61,7 @@ impl<'a> EditorWidgetVisuals<'a> {
         hover_mix: f32,
         press_mix: f32,
     ) -> Color {
-        let accent = self.theme.color_token("accent");
+        let accent = editor_accent(self.theme);
         let mut out = base;
         if hovered {
             out = mix(out, accent, hover_mix);
@@ -89,7 +93,7 @@ impl<'a> EditorWidgetVisuals<'a> {
             return None;
         }
 
-        Some(self.hover_overlay_bg(self.theme.color_token("background"), hovered, pressed))
+        Some(self.hover_overlay_bg(editor_subtle_bg(self.theme), hovered, pressed))
     }
 
     pub(crate) fn icon_button_border(
@@ -105,11 +109,7 @@ impl<'a> EditorWidgetVisuals<'a> {
             return None;
         }
 
-        let base = self
-            .theme
-            .color_by_key("border")
-            .or_else(|| self.theme.color_by_key("component.input.border"))
-            .unwrap_or_else(|| self.theme.color_token("foreground"));
+        let base = editor_border(self.theme);
 
         Some(self.hover_overlay_border(base, hovered, pressed))
     }
@@ -126,7 +126,7 @@ impl<'a> EditorWidgetVisuals<'a> {
         // reduce contrast too much on dark themes.
         let disabled_alpha = if state.enabled { 1.0 } else { 0.55 };
 
-        let accent = self.theme.color_token("accent");
+        let accent = editor_accent(self.theme);
         let mut bg = alpha_mul(chrome.bg, disabled_alpha);
         let mut border = alpha_mul(chrome.border, disabled_alpha);
         let fg = alpha_mul(chrome.fg, disabled_alpha);
@@ -199,7 +199,7 @@ impl<'a> EditorWidgetVisuals<'a> {
     ) -> EditorFrameVisuals {
         let disabled_alpha = if state.enabled { 1.0 } else { 0.55 };
 
-        let accent = self.theme.color_token("accent");
+        let accent = editor_accent(self.theme);
         let mut bg = alpha_mul(if selected { selected_bg } else { base_bg }, disabled_alpha);
         let mut border = alpha_mul(
             if selected {
@@ -281,22 +281,11 @@ fn mix(a: Color, b: Color, t: f32) -> Color {
 
 impl<'a> EditorWidgetVisuals<'a> {
     fn control_invalid_fg(&self) -> Color {
-        self.theme
-            .color_by_key(EditorTokenKeys::CONTROL_INVALID_FG)
-            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-            .unwrap_or_else(|| self.theme.color_token("destructive"))
+        editor_invalid_foreground(self.theme)
     }
 
     fn control_invalid_border(&self) -> Color {
-        self.theme
-            .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
-            .or_else(|| {
-                self.theme
-                    .color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER)
-            })
-            .or_else(|| self.theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
-            .or_else(|| self.theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-            .unwrap_or_else(|| self.theme.color_token("destructive"))
+        editor_invalid_border(self.theme)
     }
 
     fn control_invalid_bg(&self, base: Color, border: Color) -> Color {
@@ -337,7 +326,7 @@ pub(crate) fn editor_icon_button_border(
 mod tests {
     use fret_app::App;
     use fret_core::{Color, Edges, Px};
-    use fret_ui::Theme;
+    use fret_ui::{Theme, ThemeConfig};
 
     use super::*;
 
@@ -473,6 +462,38 @@ mod tests {
         assert_eq!(
             widget_visuals.control_invalid_fg(),
             theme.color_token("destructive")
+        );
+    }
+
+    #[test]
+    fn icon_button_bg_prefers_editor_subtle_bg_over_host_background() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors
+                .insert("background".to_string(), "#ffffff".to_string());
+            cfg.colors.insert(
+                EditorTokenKeys::TEXT_FIELD_BG.to_string(),
+                "#141b24".to_string(),
+            );
+            cfg.colors.insert(
+                EditorTokenKeys::CHROME_ACCENT.to_string(),
+                "#355a86".to_string(),
+            );
+            theme.apply_config_patch(&cfg);
+        });
+
+        let theme = Theme::global(&app);
+        let hovered = editor_icon_button_bg(theme, true, true, false)
+            .expect("hovered icon button should render a background");
+
+        assert_eq!(
+            hovered,
+            hover_overlay_bg(theme, editor_subtle_bg(theme), true, false)
+        );
+        assert_ne!(
+            hovered,
+            hover_overlay_bg(theme, theme.color_token("background"), true, false)
         );
     }
 }

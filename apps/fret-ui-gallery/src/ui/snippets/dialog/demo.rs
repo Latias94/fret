@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
@@ -59,25 +60,37 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .into_element(cx)
         },
         move |cx| {
-            shadcn::DialogContent::new(ui::children![
-                cx;
-                shadcn::DialogHeader::new(ui::children![
-                    cx;
-                    shadcn::DialogTitle::new("Edit profile"),
-                    shadcn::DialogDescription::new(
-                        "Make changes to your profile here. Click save when you're done.",
-                    )
-                ]),
-                profile_fields(cx, name_model.clone(), username_model.clone()),
-                shadcn::DialogFooter::new(ui::children![
-                    cx;
-                    shadcn::Button::new("Cancel")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(open.clone()),
-                    shadcn::Button::new("Save changes")
-                        .toggle_model(save_open.clone()),
-                ]),
-            ])
+            let fields =
+                profile_fields(cx, name_model.clone(), username_model.clone()).into_element(cx);
+            shadcn::DialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::DialogHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::DialogTitle::new("Edit profile"));
+                        out.push_ui(
+                            cx,
+                            shadcn::DialogDescription::new(
+                                "Make changes to your profile here. Click save when you're done.",
+                            ),
+                        );
+                    }),
+                );
+                out.push(fields);
+                out.push_ui(
+                    cx,
+                    shadcn::DialogFooter::build(|cx, out| {
+                        let cancel = shadcn::DialogClose::from_scope().build(
+                            cx,
+                            shadcn::Button::new("Cancel").variant(shadcn::ButtonVariant::Outline),
+                        );
+                        out.push(cancel);
+                        out.push_ui(
+                            cx,
+                            shadcn::Button::new("Save changes").toggle_model(save_open.clone()),
+                        );
+                    }),
+                );
+            })
             .into_element(cx)
             .test_id("ui-gallery-dialog-demo-content")
         },

@@ -15,8 +15,6 @@ where
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let value = cx.local_model(|| 66.0);
-
     cx.keyed("ui_gallery.progress.rtl", |cx| {
         shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl)
             .into_element(cx, |cx| {
@@ -34,7 +32,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                 let field = shadcn::Field::new(vec![
                     label_row,
-                    shadcn::Progress::new(value.clone())
+                    shadcn::Progress::from_value(66.0)
+                        .a11y_label("تقدم الرفع")
                         .mirror_in_rtl(true)
                         .into_element(cx),
                 ])

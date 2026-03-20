@@ -77,7 +77,7 @@ impl View for HelloCounterView {
         let count_state = cx.state().local_init(|| 0i64);
         let step_state = cx.state().local_init(|| "1".to_string());
 
-        let count = count_state.layout(cx).value_or(0);
+        let count = count_state.layout_value(cx);
         let (effective_step, step_valid) = cx
             .data()
             .selector_layout(&step_state, |step_text| parse_step(step_text.as_str()));
@@ -85,7 +85,7 @@ impl View for HelloCounterView {
         cx.actions()
             .locals_with((&count_state, &step_state))
             .on::<act::Inc>(|tx, (count_state, step_state)| {
-                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let step_text = tx.value(&step_state);
                 let (step, _) = parse_step(&step_text);
                 tx.update(&count_state, |value| *value = value.saturating_add(step))
             });
@@ -93,18 +93,21 @@ impl View for HelloCounterView {
         cx.actions()
             .locals_with((&count_state, &step_state))
             .on::<act::Dec>(|tx, (count_state, step_state)| {
-                let step_text = tx.value_or_else(&step_state, || "1".to_string());
+                let step_text = tx.value(&step_state);
                 let (step, _) = parse_step(&step_text);
                 tx.update(&count_state, |value| *value = value.saturating_sub(step))
             });
 
-        cx.actions().local_set::<act::Reset, i64>(&count_state, 0);
+        cx.actions().local(&count_state).set::<act::Reset>(0);
         cx.actions()
-            .local_set::<act::SetStep1, String>(&step_state, "1".to_string());
+            .local(&step_state)
+            .set::<act::SetStep1>("1".to_string());
         cx.actions()
-            .local_set::<act::SetStep5, String>(&step_state, "5".to_string());
+            .local(&step_state)
+            .set::<act::SetStep5>("5".to_string());
         cx.actions()
-            .local_set::<act::SetStep10, String>(&step_state, "10".to_string());
+            .local(&step_state)
+            .set::<act::SetStep10>("10".to_string());
 
         let count_color = if count > 0 {
             theme.color_token("primary")

@@ -75,6 +75,12 @@ pub struct EventCx<'a, H: UiHost> {
     /// (e.g. `PointerRegion`, `Pressable`) so policy-level hooks can distinguish nested pressable
     /// targets (e.g. "row click" vs "button inside row").
     pub pointer_hit_pressable_target: Option<crate::GlobalElementId>,
+    /// `true` when `pointer_hit_pressable_target` is a strict descendant of the current event
+    /// target in the hit-test chain.
+    ///
+    /// This excludes ambient ancestor pressables and the current target itself, so policy hooks
+    /// can suppress forwarding only for truly nested interactive descendants.
+    pub pointer_hit_pressable_target_in_descendant_subtree: bool,
     pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
@@ -357,6 +363,8 @@ pub struct CommandCx<'a, H: UiHost> {
     pub focus: Option<NodeId>,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub requested_focus: Option<NodeId>,
+    pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
     pub stop_propagation: bool,
 }
 
@@ -390,6 +398,23 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
             return;
         };
         self.app.request_redraw(window);
+    }
+
+    /// Mark the current view as dirty and schedule a redraw.
+    ///
+    /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
+    /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
+    pub fn notify(&mut self) {
+        self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 }
 

@@ -98,6 +98,27 @@ Closeout note on 2026-03-16:
 - ecosystem integration-trait budgeting remains a real follow-on, but it should read from the
   final lane story after this closeout rather than compete with the closeout itself.
 
+Generic-shrink closure note on 2026-03-18:
+
+- the last evidence-backed zero-proof shrink batch on the `fret` facade is now landed:
+  `fret::actions::{TypedActionMeta, ActionRegistryExt}` are deleted and `ActionHandlerTable` is
+  internal-only,
+- this means the old generic "keep mining `fret` facade nouns for dead sugar" posture is now
+  closed,
+- from this point forward, this workstream should not reopen broad rename/delete work unless a new
+  misleading public-looking surface actually appears,
+- the active productization pressure has fully shifted to narrower follow-ons:
+  - default app-lane density:
+    `docs/workstreams/app-composition-density-follow-on-v1/`
+  - write-side/default handler ceremony:
+    `docs/workstreams/action-write-surface-fearless-refactor-v1/`
+  - selector/query density:
+    `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/`
+  - conversion / child landing:
+    `docs/workstreams/into-element-surface-fearless-refactor-v1/`
+- this file now serves as a milestone record plus maintenance gate, not as an open inventory of
+  future generic shrink ideas.
+
 Verification bundle on 2026-03-16:
 
 - `cargo nextest run -p fret --lib authoring_surface_policy_tests:: --no-fail-fast`

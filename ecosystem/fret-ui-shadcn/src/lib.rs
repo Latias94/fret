@@ -55,17 +55,20 @@ mod alert_dialog;
 mod aspect_ratio;
 mod avatar;
 mod badge;
+mod bool_model;
 mod breadcrumb;
 mod button;
 mod button_group;
 mod calendar;
 mod calendar_hijri;
+mod calendar_month_model;
 mod calendar_multiple;
 mod calendar_range;
 mod card;
 mod carousel;
 mod chart;
 mod checkbox;
+mod checked_state_model;
 mod collapsible;
 mod collapsible_primitives;
 mod combobox;
@@ -81,6 +84,8 @@ mod data_table_recipes;
 mod date_picker;
 mod date_picker_with_presets;
 mod date_range_picker;
+mod date_range_selection_model;
+mod date_vec_model;
 mod dialog;
 mod direction;
 mod drawer;
@@ -89,6 +94,8 @@ mod empty;
 mod experimental;
 mod extras;
 mod field;
+mod float_value_model;
+mod float_vec_model;
 mod form;
 mod hover_card;
 mod input;
@@ -103,6 +110,10 @@ mod menu_authoring;
 mod menubar;
 mod native_select;
 mod navigation_menu;
+mod optional_bool_model;
+mod optional_date_model;
+mod optional_float_value_model;
+mod optional_text_value_model;
 mod overlay_motion;
 mod pagination;
 mod popover;
@@ -122,6 +133,7 @@ mod shortcut_hint;
 mod sidebar;
 mod skeleton;
 mod slider;
+mod solar_hijri_month_model;
 mod sonner;
 mod spinner;
 #[cfg(any(feature = "state-selector", feature = "state-query"))]
@@ -131,12 +143,14 @@ mod table;
 mod tabs;
 mod text_edit_context_menu;
 mod text_value_model;
+mod text_vec_model;
 mod textarea;
 mod toast;
 mod toggle;
 mod toggle_group;
 mod tooltip;
 mod typography;
+mod u8_value_model;
 
 #[cfg(feature = "app-integration")]
 pub mod advanced;
@@ -182,8 +196,10 @@ pub mod raw {
     raw_module!(avatar);
     raw_module!(badge);
     raw_module!(breadcrumb);
+    raw_module!(bool_model);
     raw_module!(button);
     raw_module!(button_group);
+    raw_module!(calendar_month_model);
     raw_module!(calendar);
     raw_module!(calendar_hijri);
     raw_module!(calendar_multiple);
@@ -191,6 +207,7 @@ pub mod raw {
     raw_module!(card);
     raw_module!(carousel);
     raw_module!(chart);
+    raw_module!(checked_state_model);
     raw_module!(checkbox);
     raw_module!(collapsible);
     raw_module!(collapsible_primitives);
@@ -200,6 +217,8 @@ pub mod raw {
     raw_module!(context_menu);
     raw_module!(data_grid_canvas);
     raw_module!(data_table);
+    raw_module!(date_range_selection_model);
+    raw_module!(date_vec_model);
     raw_module!(date_picker);
     raw_module!(date_picker_with_presets);
     raw_module!(date_range_picker);
@@ -211,6 +230,8 @@ pub mod raw {
     raw_module!(experimental);
     raw_module!(extras);
     raw_module!(field);
+    raw_module!(float_value_model);
+    raw_module!(float_vec_model);
     raw_module!(form);
     raw_module!(hover_card);
     raw_module!(input);
@@ -223,6 +244,10 @@ pub mod raw {
     raw_module!(menubar);
     raw_module!(native_select);
     raw_module!(navigation_menu);
+    raw_module!(optional_date_model);
+    raw_module!(optional_bool_model);
+    raw_module!(optional_float_value_model);
+    raw_module!(optional_text_value_model);
     raw_module!(pagination);
     raw_module!(popover);
     raw_module!(progress);
@@ -237,6 +262,7 @@ pub mod raw {
     raw_module!(sidebar);
     raw_module!(skeleton);
     raw_module!(slider);
+    raw_module!(solar_hijri_month_model);
     raw_module!(sonner);
     raw_module!(spinner);
     #[cfg(any(feature = "state-selector", feature = "state-query"))]
@@ -251,6 +277,7 @@ pub mod raw {
     raw_module!(toggle_group);
     raw_module!(tooltip);
     raw_module!(typography);
+    raw_module!(u8_value_model);
     pub use ::fret_ui_kit::declarative::icon;
     pub use ::fret_ui_kit::declarative::style as decl_style;
     pub use ::fret_ui_kit::ui;
@@ -286,6 +313,7 @@ pub mod facade {
     pub use crate::badge::{
         Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants,
     };
+    pub use crate::bool_model::IntoBoolModel;
     pub use crate::breadcrumb::primitives::{
         Breadcrumb as BreadcrumbRoot, BreadcrumbEllipsis, BreadcrumbItem as BreadcrumbItemPart,
         BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
@@ -301,6 +329,7 @@ pub mod facade {
     };
     pub use crate::calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
     pub use crate::calendar_hijri::CalendarHijri;
+    pub use crate::calendar_month_model::IntoCalendarMonthModel;
     pub use crate::calendar_multiple::CalendarMultiple;
     pub use crate::calendar_range::CalendarRange;
     pub use crate::card::{
@@ -325,6 +354,7 @@ pub mod facade {
         ChartTooltipLabelContext, chart_container, chart_context, use_chart,
     };
     pub use crate::checkbox::{Checkbox, checkbox};
+    pub use crate::checked_state_model::IntoCheckedStateModel;
     pub use crate::collapsible::primitives::{
         Collapsible as CollapsibleRoot, CollapsibleContent as CollapsibleContentPart,
         CollapsibleTrigger as CollapsibleTriggerPart,
@@ -364,17 +394,19 @@ pub mod facade {
     pub use crate::date_picker::DatePicker;
     pub use crate::date_picker_with_presets::DatePickerWithPresets;
     pub use crate::date_range_picker::DateRangePicker;
+    pub use crate::date_range_selection_model::IntoDateRangeSelectionModel;
+    pub use crate::date_vec_model::IntoDateVecModel;
     pub use crate::dialog::{
         Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
-        DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
+        DialogOverlay, DialogPart, DialogPortal, DialogTitle, DialogTrigger,
     };
     pub use crate::direction::{
         DirectionProvider, LayoutDirection, use_direction, with_direction_provider,
     };
     pub use crate::drawer::{
         Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerDirection, DrawerFooter,
-        DrawerHeader, DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle,
-        DrawerTrigger,
+        DrawerHeader, DrawerModalMode, DrawerOverlay, DrawerPart, DrawerPortal, DrawerSide,
+        DrawerSnapPoint, DrawerTitle, DrawerTrigger,
     };
     pub use crate::dropdown_menu::{
         DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
@@ -393,6 +425,8 @@ pub mod facade {
         FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle, field_group,
         field_set,
     };
+    pub use crate::float_value_model::IntoFloatValueModel;
+    pub use crate::float_vec_model::IntoFloatVecModel;
     pub use crate::form::{
         Form, FormControl, FormDescription, FormErrorVisibility, FormField, FormItem, FormLabel,
         FormMessage, form,
@@ -435,6 +469,10 @@ pub mod facade {
         NavigationMenuViewport, navigation_menu, navigation_menu_list,
         navigation_menu_trigger_style, navigation_menu_uncontrolled,
     };
+    pub use crate::optional_bool_model::IntoOptionalBoolModel;
+    pub use crate::optional_date_model::IntoOptionalDateModel;
+    pub use crate::optional_float_value_model::IntoOptionalFloatValueModel;
+    pub use crate::optional_text_value_model::IntoOptionalTextValueModel;
     pub use crate::pagination::{
         Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
         PaginationLinkSize, PaginationNext, PaginationPrevious, pagination, pagination_content,
@@ -463,8 +501,8 @@ pub mod facade {
     };
     pub use crate::separator::{Separator, SeparatorOrientation, separator};
     pub use crate::sheet::{
-        Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay,
-        SheetPortal, SheetSide, SheetTitle, SheetTrigger,
+        Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader,
+        SheetModalMode, SheetOverlay, SheetPortal, SheetSide, SheetTitle, SheetTrigger,
     };
     pub use crate::shortcut_hint::ShortcutHint;
     pub use crate::sidebar::{
@@ -477,6 +515,7 @@ pub mod facade {
     };
     pub use crate::skeleton::Skeleton;
     pub use crate::slider::{Slider, slider};
+    pub use crate::solar_hijri_month_model::IntoSolarHijriMonthModel;
     pub use crate::sonner::{
         Sonner, ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastMessageOptions,
         ToastOffset, ToastPosition, ToastPromise, ToastPromiseAsyncOptions, ToastPromiseHandle,
@@ -499,6 +538,7 @@ pub mod facade {
         text_selection_context_menu_controllable, text_selection_context_menu_entries,
     };
     pub use crate::text_value_model::IntoTextValueModel;
+    pub use crate::text_vec_model::IntoTextVecModel;
     pub use crate::textarea::{Textarea, textarea};
     pub use crate::toggle::{
         Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggle_uncontrolled,
@@ -512,7 +552,9 @@ pub mod facade {
         Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipProvider, TooltipSide,
         TooltipTrigger,
     };
+    pub use crate::u8_value_model::IntoU8ValueModel;
     pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
+    pub use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
     pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 
     /// Default high-performance data grid surface (canvas-rendered).

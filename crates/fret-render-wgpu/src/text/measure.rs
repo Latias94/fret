@@ -95,11 +95,11 @@ impl TextSystem {
                             hit.clusters.clone(),
                         )
                     } else {
-                        let line = self
+                        let mut line = self
                             .parley_shaper
                             .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
                         let clusters: Arc<[fret_render_text::ShapedCluster]> =
-                            Arc::from(line.clusters);
+                            Arc::from(line.take_clusters());
 
                         let existed = self
                             .measure_shaping_cache
@@ -108,9 +108,9 @@ impl TextSystem {
                                 TextMeasureShapingEntry {
                                     text: Arc::<str>::from(text),
                                     spans: None,
-                                    width_px: line.width,
-                                    baseline_px: line.baseline,
-                                    line_height_px: line.line_height,
+                                    width_px: line.width(),
+                                    baseline_px: line.baseline(),
+                                    line_height_px: line.line_height(),
                                     clusters: clusters.clone(),
                                 },
                             )
@@ -126,7 +126,7 @@ impl TextSystem {
                             }
                         }
 
-                        (line.width, line.baseline, line.line_height, clusters)
+                        (line.width(), line.baseline(), line.line_height(), clusters)
                     };
 
                     if width_px <= max_width_px + 0.5 {
@@ -143,16 +143,16 @@ impl TextSystem {
                             TextInputRef::plain(text, style),
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 } else {
-                    let line = self
+                    let mut line = self
                         .parley_shaper
                         .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
-                    let width_px = line.width;
-                    let baseline_px = line.baseline;
-                    let line_height_px = line.line_height;
-                    let _clusters = line.clusters;
+                    let width_px = line.width();
+                    let baseline_px = line.baseline();
+                    let line_height_px = line.line_height();
+                    let _clusters = line.take_clusters();
 
                     if width_px <= max_width_px + 0.5 {
                         metrics_for_uniform_lines(
@@ -168,7 +168,7 @@ impl TextSystem {
                             TextInputRef::plain(text, style),
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 }
             } else {
@@ -177,7 +177,7 @@ impl TextSystem {
                     TextInputRef::plain(text, style),
                     normalized_constraints,
                 );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
+                metrics_from_wrapped_lines(wrapped.lines(), scale)
             };
 
             let bucket = self.measure_cache.entry(key).or_default();
@@ -313,7 +313,7 @@ impl TextSystem {
                             hit.clusters.clone(),
                         )
                     } else {
-                        let line = self.parley_shaper.shape_single_line_metrics(
+                        let mut line = self.parley_shaper.shape_single_line_metrics(
                             TextInputRef::Attributed {
                                 text: rich.text.as_ref(),
                                 base: base_style,
@@ -322,7 +322,7 @@ impl TextSystem {
                             scale,
                         );
                         let clusters: Arc<[fret_render_text::ShapedCluster]> =
-                            Arc::from(line.clusters);
+                            Arc::from(line.take_clusters());
 
                         let existed = self
                             .measure_shaping_cache
@@ -331,9 +331,9 @@ impl TextSystem {
                                 TextMeasureShapingEntry {
                                     text: rich.text.clone(),
                                     spans: Some(rich.spans.clone()),
-                                    width_px: line.width,
-                                    baseline_px: line.baseline,
-                                    line_height_px: line.line_height,
+                                    width_px: line.width(),
+                                    baseline_px: line.baseline(),
+                                    line_height_px: line.line_height(),
                                     clusters: clusters.clone(),
                                 },
                             )
@@ -349,7 +349,7 @@ impl TextSystem {
                             }
                         }
 
-                        (line.width, line.baseline, line.line_height, clusters)
+                        (line.width(), line.baseline(), line.line_height(), clusters)
                     };
 
                     if width_px <= max_width_px + 0.5 {
@@ -370,10 +370,10 @@ impl TextSystem {
                             },
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 } else {
-                    let line = self.parley_shaper.shape_single_line_metrics(
+                    let mut line = self.parley_shaper.shape_single_line_metrics(
                         TextInputRef::Attributed {
                             text: rich.text.as_ref(),
                             base: base_style,
@@ -381,10 +381,10 @@ impl TextSystem {
                         },
                         scale,
                     );
-                    let width_px = line.width;
-                    let baseline_px = line.baseline;
-                    let line_height_px = line.line_height;
-                    let _clusters = line.clusters;
+                    let width_px = line.width();
+                    let baseline_px = line.baseline();
+                    let line_height_px = line.line_height();
+                    let _clusters = line.take_clusters();
 
                     if width_px <= max_width_px + 0.5 {
                         metrics_for_uniform_lines(
@@ -404,7 +404,7 @@ impl TextSystem {
                             },
                             normalized_constraints,
                         );
-                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                        metrics_from_wrapped_lines(wrapped.lines(), scale)
                     }
                 }
             } else {
@@ -418,7 +418,7 @@ impl TextSystem {
                     },
                     normalized_constraints,
                 );
-                metrics_from_wrapped_lines(&wrapped.lines, scale)
+                metrics_from_wrapped_lines(wrapped.lines(), scale)
             };
 
             let bucket = self.measure_cache.entry(key).or_default();

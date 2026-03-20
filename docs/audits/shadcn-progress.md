@@ -26,10 +26,12 @@ This audit compares Fret's shadcn-aligned `Progress` against the upstream shadcn
 
 ### Authoring surface
 
-- Pass: `Progress::new(model)` covers the common shadcn authoring path.
+- Pass: `Progress::from_value(...)` covers the common shadcn prop-driven `value` path without forcing a `Model<f32>` at the call site.
+- Pass: `Progress::new(model)` remains the model-backed lane for timer-driven or shared-state demos.
 - Pass: `Progress::new_opt(model)` matches the upstream `value || 0` outcome by rendering `None` as 0%.
 - Pass: `Progress::new_values_first(model)` provides a useful bridge for slider-style `Vec<f32>` models.
-- Note: `Progress` is a leaf display control, so Fret intentionally does not add a generic `compose()` builder here.
+- Pass: UI Gallery `Usage` now teaches the snapshot/value lane first, while `Controlled` keeps the model-backed lane explicit.
+- Note: `Progress` stays a leaf display control on the default shadcn lane, so Fret intentionally does not add a generic children/`compose()` API here. Base UI's label/value parts remain a reference, not the default shadcn surface.
 
 ### Visual defaults (shadcn parity)
 
@@ -37,6 +39,11 @@ This audit compares Fret's shadcn-aligned `Progress` against the upstream shadcn
 - Pass: Default height matches `h-2`.
 - Pass: Indicator fills the full width and uses a translate transform driven by the current value, matching the upstream `translateX(-${100 - value}%)` outcome.
 
+### Semantics defaults
+
+- Pass: `role=ProgressBar`, horizontal orientation, numeric min/max/value, and default percentage value text are stamped on determinate progress.
+- Pass: Indeterminate (`None`) progress omits numeric/value semantics while still rendering the shadcn `value || 0` visual outcome.
+
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib progress`
+- `cargo nextest run -p fret-ui-shadcn progress`

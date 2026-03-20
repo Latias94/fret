@@ -15,6 +15,9 @@
 //! - `fret::advanced::ui_app(...)` and `fret::advanced::ui_app_with_hooks(...)` are the
 //!   recommended explicit manual-assembly entry points when you want the golden-path UI app
 //!   builder without depending on `fret-bootstrap` directly.
+//! - `fret::advanced::view::render_root_with_app_ui(...)` is the recommended bridge when a manual
+//!   `UiTree` / `FnDriver` surface still wants grouped `AppUi` + `LocalState` authoring without
+//!   switching the whole window to `View`.
 //! - `fret::advanced::run_native_with_fn_driver(...)`,
 //!   `fret::advanced::run_native_with_fn_driver_with_hooks(...)`, and
 //!   `fret::advanced::run_native_with_configured_fn_driver(...)` are the recommended advanced
@@ -702,7 +705,10 @@ pub mod docking {
 pub mod advanced {
     /// Low-level view-runtime helpers kept off the default crate root.
     pub mod view {
-        pub use crate::view::{ViewWindowState, view_init_window, view_view};
+        pub use crate::view::{
+            AppUiRenderRootState, UiCxDataExt, ViewWindowState, render_root_with_app_ui,
+            view_init_window, view_view,
+        };
 
         #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::view::view_record_engine_frame;
@@ -1513,10 +1519,9 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
     if !changed.contains(&std::any::TypeId::of::<fret_core::WindowMetricsService>()) {
         return;
     }
-    let config = app
-        .global::<fret_ui_shadcn::app::InstallConfig>()
-        .copied()
-        .unwrap_or_default();
+    let Some(config) = app.global::<fret_ui_shadcn::app::InstallConfig>().copied() else {
+        return;
+    };
     #[cfg(feature = "editor")]
     {
         let _ = fret_ui_editor::theme::sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change(
@@ -2149,6 +2154,7 @@ mod builder_surface_tests {
 mod tests {
     use std::any::TypeId;
 
+    use crate::shadcn::themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
     use crate::{advanced::KernelApp, shadcn};
     use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
     use fret_ui::{Theme, UiTree};
@@ -2202,15 +2208,50 @@ mod tests {
         assert_eq!(Theme::global(&app).revision(), rev_after);
     }
 
+    #[test]
+    fn shadcn_auto_theme_middleware_requires_app_install_config() {
+        let mut app = KernelApp::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
+        #[cfg(feature = "editor")]
+        fret_ui_editor::theme::install_editor_theme_preset_v1(
+            &mut app,
+            fret_ui_editor::theme::EditorThemePresetV1::Default,
+        );
+
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(ColorScheme::Light));
+        });
+
+        let mut ui = UiTree::<KernelApp>::default();
+        let mut state = ();
+        let before_bg = Theme::global(&app).colors.surface_background;
+        let before_rev = Theme::global(&app).revision();
+        #[cfg(feature = "editor")]
+        let editor_field_bg = Theme::global(&app).color_by_key("component.text_field.bg");
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_eq!(Theme::global(&app).revision(), before_rev);
+        assert_eq!(Theme::global(&app).colors.surface_background, before_bg);
+        #[cfg(feature = "editor")]
+        assert_eq!(
+            Theme::global(&app).color_by_key("component.text_field.bg"),
+            editor_field_bg
+        );
+    }
+
     #[cfg(feature = "editor")]
     #[test]
     fn shadcn_auto_theme_middleware_reapplies_installed_editor_preset_once() {
         let mut app = KernelApp::new();
-        shadcn::app::install_with_theme(
-            &mut app,
-            shadcn::themes::ShadcnBaseColor::Slate,
-            shadcn::themes::ShadcnColorScheme::Dark,
-        );
+        shadcn::app::install_with_theme(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
         fret_ui_editor::theme::install_editor_theme_preset_v1(
             &mut app,
             fret_ui_editor::theme::EditorThemePresetV1::Default,
@@ -2482,6 +2523,10 @@ mod authoring_surface_policy_tests {
             "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
         assert!(CRATE_README.contains("`state`: enable selector/query helpers on `AppUi`"));
+        assert!(CRATE_README.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
+        assert!(CRATE_README.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(CRATE_README.contains("`fret::style::{...}`"));
         assert!(CRATE_README.contains("`fret::icons::{icon, IconId}`"));
         assert!(CRATE_README.contains("`fret::semantics::SemanticsRole`"));
@@ -2810,6 +2855,10 @@ mod authoring_surface_policy_tests {
         ));
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
+        assert!(FIRST_HOUR.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
+        assert!(FIRST_HOUR.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
         assert!(!FIRST_HOUR.contains("`.dispatch::<A>()`"));
         assert!(!FIRST_HOUR.contains("`.dispatch_payload::<A>(...)`"));
@@ -2828,6 +2877,8 @@ mod authoring_surface_policy_tests {
         );
         assert!(!FIRST_HOUR.contains("cx.watch_model(&models.clicks)"));
         assert!(!FIRST_HOUR.contains("`fret_ui_shadcn::prelude::*`"));
+        assert!(!FIRST_HOUR.contains("let clicks = clicks_state.paint(cx).value_or_default();"));
+        assert!(!FIRST_HOUR.contains("let label = label_state.layout(cx).value_or_default();"));
     }
 
     #[test]
@@ -2911,9 +2962,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`widget.action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`widget.listen(|host, acx| { ... })`"));
         assert!(CRATE_USAGE_GUIDE.contains("`use fret::app::AppActivateExt as _;`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.actions().listen(...)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().action(act::Save)`"));
+        assert!(!CRATE_USAGE_GUIDE.contains("`cx.actions().action_payload(act::Remove, payload)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`tx.value(&local)`"));
         assert!(!CRATE_USAGE_GUIDE.contains("`widget.dispatch::<A>()`"));
@@ -2927,6 +2978,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`handle.read_layout(cx)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query_namespace(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
     }
@@ -3002,16 +3056,16 @@ mod authoring_surface_policy_tests {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`handle.read_layout(cx)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().invalidate_query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.listen(|host, acx| { ... })`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`use fret::app::AppActivateExt as _;`"));
-        assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
-        assert!(
-            AUTHORING_GOLDEN_PATH_V2
-                .contains("`cx.actions().action_payload(act::RemoveTodo, todo.id)`")
-        );
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action(act::Save)`"));
+        assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.actions().action_payload("));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch::<A>()`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`.dispatch_payload::<A>(payload)`"));
         assert!(!AUTHORING_GOLDEN_PATH_V2.contains("`cx.use_selector(...)`"));
@@ -3219,7 +3273,7 @@ mod authoring_surface_policy_tests {
         );
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::app::install(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`shadcn::themes::apply_shadcn_new_york(...)`"));
-        assert!(CRATE_USAGE_GUIDE.contains("only first-contact component-family discovery"));
+        assert!(CRATE_USAGE_GUIDE.contains("component-family discovery lane"));
         assert!(
             CRATE_USAGE_GUIDE.contains("`shadcn::app::*` and `shadcn::themes::*` are setup lanes")
         );
@@ -3503,6 +3557,13 @@ mod authoring_surface_policy_tests {
         assert!(ACTIONS_RS.contains(
             "pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};"
         ));
+        assert!(!ACTIONS_RS.contains("pub type OnAction"));
+        assert!(!ACTIONS_RS.contains("pub type OnPayloadAction"));
+        assert!(!ACTIONS_RS.contains("pub type OnActionAvailability"));
+        assert!(!ACTIONS_RS.contains("pub trait TypedActionMeta"));
+        assert!(!ACTIONS_RS.contains("pub trait ActionRegistryExt"));
+        assert!(!ACTIONS_RS.contains("pub struct ActionHandlerTable"));
+        assert!(ACTIONS_RS.contains("pub(crate) struct ActionHandlerTable"));
         assert!(!app_prelude_exports_symbol("ActionMeta"));
         assert!(!app_prelude_exports_symbol("ActionRegistry"));
         assert!(!app_prelude.contains("ActionMeta"));
@@ -3712,8 +3773,12 @@ mod authoring_surface_policy_tests {
         assert!(LIB_RS.contains("pub use crate::view::View;"));
         assert!(!root_header.contains("pub mod view;"));
         assert!(advanced_surface.contains("pub mod view {"));
+        assert!(advanced_surface.contains("AppUiRenderRootState"));
+        assert!(advanced_surface.contains("UiCxDataExt"));
+        assert!(advanced_surface.contains("render_root_with_app_ui"));
         assert!(advanced_surface.contains("ViewWindowState, view_init_window,"));
-        assert!(advanced_surface.contains("view_record_engine_frame, view_view,"));
+        assert!(advanced_surface.contains("view_view"));
+        assert!(advanced_surface.contains("view_record_engine_frame"));
     }
 
     #[test]

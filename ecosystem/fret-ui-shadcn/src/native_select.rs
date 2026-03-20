@@ -28,7 +28,9 @@ use fret_ui_kit::{
     Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
+use crate::bool_model::IntoBoolModel;
 use crate::command::{CommandEntry, CommandGroup, CommandItem, CommandList, CommandSeparator};
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::overlay_motion;
 use crate::popover::{Popover, PopoverContent};
 use crate::test_id::test_id_slug;
@@ -133,10 +135,10 @@ impl std::fmt::Debug for NativeSelect {
 }
 
 impl NativeSelect {
-    pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {
         Self {
-            model,
-            open,
+            model: model.into_optional_text_value_model(),
+            open: open.into_bool_model(),
             placeholder: Arc::from("Select..."),
             options: Vec::new(),
             optgroups: Vec::new(),
@@ -267,7 +269,10 @@ impl NativeSelect {
 }
 
 /// Builder-preserving helper for the common native-select authoring path.
-pub fn native_select(model: Model<Option<Arc<str>>>, open: Model<bool>) -> NativeSelect {
+pub fn native_select(
+    model: impl IntoOptionalTextValueModel,
+    open: impl IntoBoolModel,
+) -> NativeSelect {
     NativeSelect::new(model, open)
 }
 

@@ -22,17 +22,20 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
-use crate::primitives::EditorTokenKeys;
 use crate::primitives::chrome::{joined_text_input_style, resolve_editor_text_field_style};
+use crate::primitives::colors::{
+    editor_invalid_border, editor_invalid_foreground, editor_muted_foreground,
+};
 use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id, editor_icon_segment,
     editor_joined_input_frame_segments_with_overrides, editor_text_segment,
 };
+use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
     clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
     numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
 };
-use crate::primitives::style::EditorStyle;
+use crate::primitives::{NumericPresentation, style::EditorStyle};
 
 pub use crate::primitives::NumericInputSelectionBehavior;
 
@@ -139,6 +142,14 @@ where
         }
     }
 
+    /// Construct a numeric input from a shared editor authoring bundle.
+    pub fn from_presentation(model: Model<T>, presentation: NumericPresentation<T>) -> Self {
+        let mut input = Self::new(model, presentation.format(), presentation.parse());
+        input.options.prefix = presentation.chrome_prefix().cloned();
+        input.options.suffix = presentation.chrome_suffix().cloned();
+        input
+    }
+
     pub fn validate(mut self, validate: Option<NumericValidateFn<T>>) -> Self {
         self.validate = validate;
         self
@@ -223,8 +234,11 @@ where
         let error_display = options.error_display;
         let selection_behavior = options.selection_behavior;
         let focus_target = self.focus_target.clone();
-        let prefix = options.prefix.clone();
-        let suffix = options.suffix.clone();
+        let (prefix, suffix) = suppress_duplicate_chrome_affixes(
+            current_text.as_ref(),
+            options.prefix.clone(),
+            options.suffix.clone(),
+        );
         let input_test_id = derived_test_id(options.test_id.as_ref(), "input");
         let prefix_test_id = derived_test_id(options.test_id.as_ref(), "prefix");
         let suffix_test_id = derived_test_id(options.test_id.as_ref(), "suffix");
@@ -261,10 +275,7 @@ where
             },
             move |cx| {
                 let theme = Theme::global(&*cx.app);
-                let affix_color = theme
-                    .color_by_key("muted-foreground")
-                    .or_else(|| theme.color_by_key("muted_foreground"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let affix_color = editor_muted_foreground(theme);
                 let mut segments = Vec::new();
 
                 if let Some(prefix) = prefix.clone() {
@@ -438,10 +449,7 @@ where
                 let mut segments = Vec::new();
                 let affix_color = {
                     let theme = Theme::global(&*cx.app);
-                    theme
-                        .color_by_key("muted-foreground")
-                        .or_else(|| theme.color_by_key("muted_foreground"))
-                        .unwrap_or_else(|| theme.color_token("foreground"))
+                    editor_muted_foreground(theme)
                 };
 
                 if let Some(suffix) = suffix.clone() {
@@ -477,12 +485,7 @@ where
 
                 let error_border = {
                     let theme = Theme::global(&*cx.app);
-                    theme
-                        .color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER)
-                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_BORDER))
-                        .or_else(|| theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_FG))
-                        .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                        .unwrap_or_else(|| theme.color_token("destructive"))
+                    editor_invalid_border(theme)
                 };
 
                 let mut icon = editor_icon_segment(
@@ -506,10 +509,7 @@ where
 
         let error_color = {
             let theme = Theme::global(&*cx.app);
-            theme
-                .color_by_key(EditorTokenKeys::CONTROL_INVALID_FG)
-                .or_else(|| theme.color_by_key(EditorTokenKeys::NUMERIC_ERROR_FG))
-                .unwrap_or_else(|| theme.color_token("destructive"))
+            editor_invalid_foreground(theme)
         };
         let show_inline_error = matches!(
             error_display,
@@ -575,9 +575,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::editor_numeric_input_text_style;
+    use crate::controls::NumericInput;
     use crate::primitives::EditorDensity;
+    use crate::primitives::NumericPresentation;
+    use fret_app::App;
     use fret_core::Px;
     use fret_core::TextStyle;
+    use std::sync::Arc;
 
     #[test]
     fn numeric_input_text_style_uses_density_row_height_for_edit_line_box() {
@@ -594,6 +598,22 @@ mod tests {
         );
 
         assert_eq!(style.line_height, Some(Px(24.0)));
+    }
+
+    #[test]
+    fn numeric_input_from_presentation_adopts_format_parse_and_chrome_affixes() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(1.25f64);
+        let presentation = NumericPresentation::<f64>::fixed_decimals(2)
+            .with_chrome_prefix("$")
+            .with_chrome_suffix("ms");
+
+        let input = NumericInput::from_presentation(model, presentation);
+
+        assert_eq!((input.format)(1.25).as_ref(), "1.25");
+        assert_eq!((input.parse)("1.25"), Some(1.25));
+        assert_eq!(input.options.prefix, Some(Arc::from("$")));
+        assert_eq!(input.options.suffix, Some(Arc::from("ms")));
     }
 }
 

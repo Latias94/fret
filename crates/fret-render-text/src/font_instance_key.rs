@@ -6,7 +6,7 @@ pub struct FontFaceKey {
     pub face_index: u32,
     pub variation_key: u64,
     pub synthesis_embolden: bool,
-    /// Faux italic/oblique skew in degrees (fontique synthesis), applied at rasterization time.
+    /// Faux italic/oblique skew in degrees, applied at rasterization time.
     pub synthesis_skew_degrees: i8,
 }
 

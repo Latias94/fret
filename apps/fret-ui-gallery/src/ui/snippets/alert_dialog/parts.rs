@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("parts.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -20,38 +21,36 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .overlay(shadcn::AlertDialogOverlay::new())
         .content_with(move |cx| {
             shadcn::AlertDialogContent::build(|cx, out| {
-                out.push(
+                out.push_ui(
+                    cx,
                     shadcn::AlertDialogHeader::build(|cx, out| {
-                        out.push(
-                            shadcn::AlertDialogTitle::new("Part-based AlertDialog").into_element(cx),
-                        );
-                        out.push(
+                        out.push_ui(cx, shadcn::AlertDialogTitle::new("Part-based AlertDialog"));
+                        out.push_ui(
+                            cx,
                             shadcn::AlertDialogDescription::new(
                                 "Thin adapters for shadcn-style authoring (Trigger/Portal/Overlay).",
-                            )
-                            .into_element(cx),
+                            ),
                         );
-                    })
-                    .into_element(cx),
+                    }),
                 );
-                out.push(
+                out.push_ui(
+                    cx,
                     shadcn::AlertDialogFooter::build(|cx, out| {
-                        out.push(
+                        out.push_ui(
+                            cx,
                             shadcn::AlertDialogCancel::from_scope("Cancel")
-                                .test_id("ui-gallery-alert-dialog-parts-cancel")
-                                .into_element(cx),
+                                .test_id("ui-gallery-alert-dialog-parts-cancel"),
                         );
-                        out.push(
+                        out.push_ui(
+                            cx,
                             shadcn::AlertDialogAction::from_scope("Continue")
-                                .test_id("ui-gallery-alert-dialog-parts-action")
-                                .into_element(cx),
+                                .test_id("ui-gallery-alert-dialog-parts-action"),
                         );
-                    })
-                    .into_element(cx),
+                    }),
                 );
             })
-            .into_element(cx)
             .test_id("ui-gallery-alert-dialog-parts-content")
+            .into_element(cx)
         })
         .into_element(cx)
 }

@@ -2,6 +2,7 @@ pub mod align_item_with_trigger;
 pub mod demo;
 pub mod diag_surface;
 pub mod disabled;
+pub mod field_association;
 pub mod groups;
 pub mod invalid;
 pub mod label;

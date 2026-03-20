@@ -111,6 +111,7 @@ fret-ui-editor = { version = "0.1.0", path = "../fret-ui-editor", optional = tru
 fret-ui-material3 = { version = "0.1.0", path = "../fret-ui-material3", optional = true }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
+time.workspace = true
 
 # Used by the public signatures and error types.
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }

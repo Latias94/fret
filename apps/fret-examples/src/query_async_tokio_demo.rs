@@ -3,11 +3,12 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_query::{
+use fret::app::prelude::*;
+use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryError, QueryKey, QueryPolicy,
-    QueryRetryPolicy, QueryStatus,
+    QueryRetryPolicy,
 };
+use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
 
 mod act {
     fret::actions!([
@@ -53,7 +54,7 @@ impl FutureSpawner for TokioHandleSpawner {
     }
 }
 
-fn install_tokio_spawner(app: &mut KernelApp) {
+fn install_tokio_spawner(app: &mut App) {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_time()
         .build()
@@ -68,7 +69,7 @@ fn install_tokio_spawner(app: &mut KernelApp) {
 struct QueryAsyncTokioDemoView;
 
 impl View for QueryAsyncTokioDemoView {
-    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+    fn init(_app: &mut App, _window: WindowId) -> Self {
         Self
     }
 
@@ -85,13 +86,14 @@ impl View for QueryAsyncTokioDemoView {
         }
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);
+            .local(&fail_mode_state)
+            .toggle_bool::<act::ToggleFailMode>();
         cx.actions()
             .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.actions()
             .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = fail_mode_state.layout(cx).value_or_default();
+        let fail_mode = fail_mode_state.layout_value(cx);
 
         let query_handle = cx.data().query_async(
             demo_key(),
@@ -117,25 +119,24 @@ impl View for QueryAsyncTokioDemoView {
 
         let query_state = query_handle.read_layout(cx);
 
-        let status_label = match query_state.status {
-            QueryStatus::Idle => "Idle",
-            QueryStatus::Loading => "Loading",
-            QueryStatus::Success => "Success",
-            QueryStatus::Error => "Error",
+        let status_label = query_state.status.as_str();
+        let status_variant = if query_state.is_success() {
+            shadcn::BadgeVariant::Default
+        } else if query_state.is_error() {
+            shadcn::BadgeVariant::Destructive
+        } else {
+            shadcn::BadgeVariant::Secondary
         };
-        let status_variant = match query_state.status {
-            QueryStatus::Success => shadcn::BadgeVariant::Default,
-            QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-            QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
-        };
-        let info_line = match query_state.status {
-            QueryStatus::Loading if query_state.data.is_some() => {
-                "Refreshing (kept previous data)…"
-            }
-            QueryStatus::Loading => "Loading…",
-            QueryStatus::Success => "Ready.",
-            QueryStatus::Error => "Fetch failed.",
-            QueryStatus::Idle => "Idle.",
+        let info_line = if query_state.is_refreshing() {
+            "Refreshing (kept previous data)…"
+        } else if query_state.is_loading() {
+            "Loading…"
+        } else if query_state.is_success() {
+            "Ready."
+        } else if query_state.is_error() {
+            "Fetch failed."
+        } else {
+            "Idle."
         };
 
         let data_line: Arc<str> = query_state
@@ -148,7 +149,7 @@ impl View for QueryAsyncTokioDemoView {
             .as_ref()
             .map(|err| format!("Error: {:?}", err.kind()))
             .unwrap_or_else(|| "Error: <none>".to_string());
-        let error_color = if query_state.error.is_some() {
+        let error_color = if query_state.has_error() {
             theme.color_token("destructive")
         } else {
             theme.color_token("muted-foreground")
@@ -214,26 +215,21 @@ impl View for QueryAsyncTokioDemoView {
         .w_full()
         .max_w(Px(520.0));
 
-        query_page(cx.elements(), theme, card)
+        ui::single(cx, query_page(theme, card))
     }
 }
 
-fn query_page<C>(cx: &mut UiCx<'_>, theme: ThemeSnapshot, card: C) -> Ui
-where
-    C: IntoUiElement<KernelApp>,
-{
-    ui::v_flex(|cx| ui::single(cx, card))
+fn query_page(theme: ThemeSnapshot, content: impl UiChild) -> impl UiChild {
+    ui::v_flex(|cx| ui::single(cx, content))
         .bg(ColorRef::Color(theme.color_token("background")))
         .p(Space::N6)
         .w_full()
         .h_full()
         .justify_center()
         .items_center()
-        .into_element(cx)
-        .into()
 }
 
-fn install_dark_theme(app: &mut KernelApp) {
+fn install_dark_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
         app,
         shadcn::themes::ShadcnBaseColor::Zinc,

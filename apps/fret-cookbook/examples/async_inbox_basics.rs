@@ -203,13 +203,12 @@ impl View for AsyncInboxBasicsView {
         let status = self
             .st
             .status
-            .watch(cx)
-            .layout()
+            .layout(cx)
             .read_ref(|v| Arc::clone(v))
             .ok()
             .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-        let running = self.st.running.watch(cx).layout().value_or(false);
-        let progress = self.st.progress.watch(cx).layout().value_or(0.0);
+        let running = self.st.running.layout(cx).value_or(false);
+        let progress = self.st.progress.layout(cx).value_or(0.0);
         let inbox_stats = self.st.inbox.stats();
 
         let start_button = shadcn::Button::new("Start background job")

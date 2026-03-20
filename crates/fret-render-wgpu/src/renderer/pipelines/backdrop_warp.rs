@@ -221,20 +221,23 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret backdrop-warp pipeline layout"),
-            bind_group_layouts: &[&bind_group_layout],
+            bind_group_layouts: &[Some(&bind_group_layout)],
             immediate_size: 0,
         });
         let masked_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret backdrop-warp masked pipeline layout"),
-                bind_group_layouts: &[&self.globals.uniform_bind_group_layout, &bind_group_layout],
+                bind_group_layouts: &[
+                    Some(&self.globals.uniform_bind_group_layout),
+                    Some(&bind_group_layout),
+                ],
                 immediate_size: 0,
             });
         let mask_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret backdrop-warp mask pipeline layout"),
             bind_group_layouts: &[
-                &self.globals.uniform_bind_group_layout,
-                &mask_bind_group_layout,
+                Some(&self.globals.uniform_bind_group_layout),
+                Some(&mask_bind_group_layout),
             ],
             immediate_size: 0,
         });
@@ -242,15 +245,15 @@ impl Renderer {
         let image_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret backdrop-warp image pipeline layout"),
-                bind_group_layouts: &[&image_bind_group_layout],
+                bind_group_layouts: &[Some(&image_bind_group_layout)],
                 immediate_size: 0,
             });
         let image_masked_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret backdrop-warp image masked pipeline layout"),
                 bind_group_layouts: &[
-                    &self.globals.uniform_bind_group_layout,
-                    &image_bind_group_layout,
+                    Some(&self.globals.uniform_bind_group_layout),
+                    Some(&image_bind_group_layout),
                 ],
                 immediate_size: 0,
             });
@@ -258,8 +261,8 @@ impl Renderer {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret backdrop-warp image mask pipeline layout"),
                 bind_group_layouts: &[
-                    &self.globals.uniform_bind_group_layout,
-                    &image_mask_bind_group_layout,
+                    Some(&self.globals.uniform_bind_group_layout),
+                    Some(&image_mask_bind_group_layout),
                 ],
                 immediate_size: 0,
             });

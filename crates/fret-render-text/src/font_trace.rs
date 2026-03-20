@@ -12,9 +12,35 @@ pub struct FontTraceState {
 
 #[derive(Debug, Clone)]
 pub struct FontTraceFamilyResolved {
-    pub family: String,
-    pub glyphs: u32,
-    pub missing_glyphs: u32,
+    family: String,
+    glyphs: u32,
+    missing_glyphs: u32,
+}
+
+impl FontTraceFamilyResolved {
+    pub fn new(family: String, glyphs: u32, missing_glyphs: u32) -> Self {
+        Self {
+            family,
+            glyphs,
+            missing_glyphs,
+        }
+    }
+
+    pub fn family(&self) -> &str {
+        &self.family
+    }
+
+    pub fn glyphs(&self) -> u32 {
+        self.glyphs
+    }
+
+    pub fn missing_glyphs(&self) -> u32 {
+        self.missing_glyphs
+    }
+
+    pub fn into_parts(self) -> (String, u32, u32) {
+        (self.family, self.glyphs, self.missing_glyphs)
+    }
 }
 
 impl FontTraceState {
@@ -74,14 +100,15 @@ impl FontTraceState {
         for family in families {
             let class = classify_trace_family(
                 &style.font,
-                &family.family,
+                family.family(),
                 &requested_generic_lower,
                 &common_fallback_lower,
             );
+            let (family, glyphs, missing_glyphs) = family.into_parts();
             usages.push(fret_core::RendererTextFontTraceFamilyUsage {
-                family: family.family,
-                glyphs: family.glyphs,
-                missing_glyphs: family.missing_glyphs,
+                family,
+                glyphs,
+                missing_glyphs,
                 class,
             });
         }

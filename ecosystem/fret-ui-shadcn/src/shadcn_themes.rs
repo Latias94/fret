@@ -1826,6 +1826,31 @@ mod tests {
     }
 
     #[test]
+    fn new_york_v4_keeps_workspace_tab_item_tokens_fallback_first_for_v1() {
+        for &base in ShadcnBaseColor::ALL {
+            for scheme in [ShadcnColorScheme::Light, ShadcnColorScheme::Dark] {
+                let cfg = shadcn_new_york_config(base, scheme);
+                assert!(
+                    !cfg.colors.contains_key("workspace.tab.active_bg"),
+                    "workspace.tab.active_bg should remain adapter-unseeded for {base:?}/{scheme:?}"
+                );
+                assert!(
+                    !cfg.colors.contains_key("workspace.tab.hover_bg"),
+                    "workspace.tab.hover_bg should remain adapter-unseeded for {base:?}/{scheme:?}"
+                );
+                assert!(
+                    !cfg.colors.contains_key("workspace.tab.dirty_fg"),
+                    "workspace.tab.dirty_fg should remain adapter-unseeded for {base:?}/{scheme:?}"
+                );
+                assert!(
+                    !cfg.colors.contains_key("workspace.tab.drop_indicator"),
+                    "workspace.tab.drop_indicator should remain adapter-unseeded for {base:?}/{scheme:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn new_york_v4_seeds_canonical_motion_tokens() {
         let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 

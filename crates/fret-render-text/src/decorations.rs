@@ -151,12 +151,12 @@ pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
         let thickness = Px((thickness_px / scale).max(0.0));
 
         for span in spans {
-            if span.underline.is_none() && span.strikethrough.is_none() {
+            if span.underline().is_none() && span.strikethrough().is_none() {
                 continue;
             }
 
-            let start = span.start.max(line.start());
-            let end = span.end.min(line.end());
+            let start = span.start().max(line.start());
+            let end = span.end().min(line.end());
             if start >= end {
                 continue;
             }
@@ -167,21 +167,21 @@ pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
             let right = Px(x0.0.max(x1.0));
             let width = Px((right.0 - left.0).max(thickness.0));
 
-            if let Some(underline) = span.underline.as_ref() {
+            if let Some(underline) = span.underline() {
                 out.push(TextDecoration {
                     kind: TextDecorationKind::Underline,
                     rect: Rect::new(Point::new(left, underline_y), Size::new(width, thickness)),
-                    paint_span: Some(span.slot),
-                    color: underline.color,
+                    paint_span: Some(span.slot()),
+                    color: underline.color(),
                 });
             }
 
-            if let Some(strikethrough) = span.strikethrough.as_ref() {
+            if let Some(strikethrough) = span.strikethrough() {
                 out.push(TextDecoration {
                     kind: TextDecorationKind::Strikethrough,
                     rect: Rect::new(Point::new(left, strike_y), Size::new(width, thickness)),
-                    paint_span: Some(span.slot),
-                    color: strikethrough.color,
+                    paint_span: Some(span.slot()),
+                    color: strikethrough.color(),
                 });
             }
         }
@@ -284,7 +284,11 @@ mod tests {
             scale,
             snap_vertical,
         );
-        let lines: Vec<_> = prepared.lines.iter().map(|l| l.layout.clone()).collect();
+        let lines: Vec<_> = prepared
+            .lines()
+            .iter()
+            .map(|line| line.layout().clone())
+            .collect();
 
         let ppem = style.size.0 * scale;
         let metrics_px = decoration_metrics_px_for_font_bytes(
@@ -347,7 +351,7 @@ mod tests {
                 "expected decoration to stay within the text box (top)"
             );
             assert!(
-                d.rect.origin.y.0 + d.rect.size.height.0 <= prepared.metrics.size.height.0 + 1e-3,
+                d.rect.origin.y.0 + d.rect.size.height.0 <= prepared.metrics().size.height.0 + 1e-3,
                 "expected decoration to stay within the text box (bottom)"
             );
         }

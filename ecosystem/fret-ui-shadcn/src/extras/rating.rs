@@ -17,6 +17,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
 use crate::test_id::attach_test_id;
+use crate::u8_value_model::IntoU8ValueModel;
 
 fn star_test_id(index_1_based: u8) -> Arc<str> {
     Arc::<str>::from(format!("shadcn-extras.rating.star-{index_1_based}"))
@@ -59,9 +60,9 @@ impl std::fmt::Debug for Rating {
 }
 
 impl Rating {
-    pub fn new(model: Model<u8>) -> Self {
+    pub fn new(model: impl IntoU8ValueModel) -> Self {
         Self {
-            model: Some(model),
+            model: Some(model.into_u8_value_model()),
             default_value: 0,
             count: 5,
             read_only: false,

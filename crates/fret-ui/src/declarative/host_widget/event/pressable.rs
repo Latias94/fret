@@ -16,6 +16,7 @@ struct PressablePressTracking {
     down_position: Option<Point>,
     down_hit_is_text_input: bool,
     down_hit_pressable_target: Option<crate::GlobalElementId>,
+    down_hit_pressable_target_in_descendant_subtree: bool,
 }
 
 pub(super) fn handle_pressable<H: UiHost>(
@@ -343,6 +344,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                         hit_is_text_input: cx.pointer_hit_is_text_input,
                         hit_is_pressable: cx.pointer_hit_is_pressable,
                         hit_pressable_target: cx.pointer_hit_pressable_target,
+                        hit_pressable_target_in_descendant_subtree: cx
+                            .pointer_hit_pressable_target_in_descendant_subtree,
                     };
 
                     let mut host = PressablePointerHookHost {
@@ -405,6 +408,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                         st.down_position = Some(*position);
                         st.down_hit_is_text_input = cx.pointer_hit_is_text_input;
                         st.down_hit_pressable_target = cx.pointer_hit_pressable_target;
+                        st.down_hit_pressable_target_in_descendant_subtree =
+                            cx.pointer_hit_pressable_target_in_descendant_subtree;
                     },
                 );
                 cx.invalidate_self(Invalidation::Paint);
@@ -453,6 +458,14 @@ pub(super) fn handle_pressable<H: UiHost>(
                             PressablePressTracking::default,
                             |st| st.down_hit_pressable_target,
                         ),
+                        down_hit_pressable_target_in_descendant_subtree:
+                            crate::elements::with_element_state(
+                                &mut *cx.app,
+                                window,
+                                this.element,
+                                PressablePressTracking::default,
+                                |st| st.down_hit_pressable_target_in_descendant_subtree,
+                            ),
                     };
 
                     let mut host = PressablePointerHookHost {

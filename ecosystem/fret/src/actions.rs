@@ -14,12 +14,12 @@ pub use fret_ui_kit::command::ElementCommandGatingExt;
 
 use std::any::Any;
 
-pub type OnAction = std::sync::Arc<
+type OnAction = std::sync::Arc<
     dyn Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
         + 'static,
 >;
 
-pub type OnPayloadAction = std::sync::Arc<
+type OnPayloadAction = std::sync::Arc<
     dyn Fn(
             &mut dyn fret_ui::action::UiFocusActionHost,
             fret_ui::action::ActionCx,
@@ -28,20 +28,13 @@ pub type OnPayloadAction = std::sync::Arc<
         + 'static,
 >;
 
-pub type OnActionAvailability = std::sync::Arc<
+type OnActionAvailability = std::sync::Arc<
     dyn Fn(
             &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
             fret_ui::action::CommandAvailabilityActionCx,
         ) -> fret_ui::CommandAvailability
         + 'static,
 >;
-
-/// Typed action marker type that also provides metadata for command palette / menus (v1).
-///
-/// v1 strategy (ADR 0307): this metadata is the existing command metadata surface.
-pub trait TypedActionMeta: TypedAction {
-    fn meta() -> ActionMeta;
-}
 
 /// Typed payload action marker type (v2 prototype).
 ///
@@ -52,33 +45,23 @@ pub trait TypedPayloadAction: TypedAction {
     type Payload: Any + Send + Sync + 'static;
 }
 
-pub trait ActionRegistryExt {
-    fn register_typed_action<A: TypedActionMeta>(&mut self);
-}
-
-impl ActionRegistryExt for fret_runtime::CommandRegistry {
-    fn register_typed_action<A: TypedActionMeta>(&mut self) {
-        self.register(A::action_id(), A::meta());
-    }
-}
-
 /// Minimal handler table that dispatches stable [`ActionId`]s through the existing command hooks.
 ///
 /// v1 note: `ActionId` is `CommandId`-compatible, so this is implemented as a thin adapter over
 /// `OnCommand` / `OnCommandAvailability`.
 #[derive(Default)]
-pub struct ActionHandlerTable {
+pub(crate) struct ActionHandlerTable {
     on_action: std::collections::HashMap<ActionId, OnAction>,
     on_payload_action: std::collections::HashMap<ActionId, OnPayloadAction>,
     on_action_availability: std::collections::HashMap<ActionId, OnActionAvailability>,
 }
 
 impl ActionHandlerTable {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    pub fn on<A: TypedAction>(
+    pub(crate) fn on<A: TypedAction>(
         mut self,
         f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
         + 'static,
@@ -88,7 +71,7 @@ impl ActionHandlerTable {
         self
     }
 
-    pub fn on_payload<A: TypedPayloadAction>(
+    pub(crate) fn on_payload<A: TypedPayloadAction>(
         mut self,
         f: impl Fn(
             &mut dyn fret_ui::action::UiFocusActionHost,
@@ -110,7 +93,7 @@ impl ActionHandlerTable {
         self
     }
 
-    pub fn availability<A: TypedAction>(
+    pub(crate) fn availability<A: TypedAction>(
         mut self,
         f: impl Fn(
             &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
@@ -123,7 +106,7 @@ impl ActionHandlerTable {
         self
     }
 
-    pub fn build(
+    pub(crate) fn build(
         self,
     ) -> (
         fret_ui::action::OnCommand,

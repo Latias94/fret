@@ -1,14 +1,22 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
+use crate::ui::snippets::avatar::demo_image;
 use fret::{UiChild, UiCx};
 use fret_core::{Corners, Px};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let avatar =
-        shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)]).into_element(cx);
+    let avatar_image = demo_image(cx);
+    let avatar = shadcn::Avatar::new([
+        shadcn::AvatarImage::maybe(avatar_image).into_element(cx),
+        shadcn::AvatarFallback::new("LR")
+            .when_image_missing(avatar_image)
+            .delay_ms(120)
+            .into_element(cx),
+    ])
+    .into_element(cx);
     let trigger = shadcn::DropdownMenuTrigger::build(
         shadcn::Button::new("")
             .variant(shadcn::ButtonVariant::Ghost)
@@ -26,8 +34,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .content(
                 shadcn::DropdownMenuContent::new()
                     .align(shadcn::DropdownMenuAlign::End)
-                    .side_offset(Px(4.0))
-                    .min_width(Px(224.0)),
+                    .side_offset(Px(4.0)),
             )
             .entries([
                 shadcn::DropdownMenuGroup::new([

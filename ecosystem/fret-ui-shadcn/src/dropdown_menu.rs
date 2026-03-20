@@ -81,6 +81,34 @@ pub enum DropdownMenuSide {
     #[default]
     Bottom,
     Left,
+    InlineStart,
+    InlineEnd,
+}
+
+pub(crate) fn dropdown_menu_overlay_side(
+    direction: crate::direction::LayoutDirection,
+    side: DropdownMenuSide,
+) -> Side {
+    match side {
+        DropdownMenuSide::Top => Side::Top,
+        DropdownMenuSide::Right => Side::Right,
+        DropdownMenuSide::Bottom => Side::Bottom,
+        DropdownMenuSide::Left => Side::Left,
+        DropdownMenuSide::InlineStart => {
+            if direction == crate::direction::LayoutDirection::Rtl {
+                Side::Right
+            } else {
+                Side::Left
+            }
+        }
+        DropdownMenuSide::InlineEnd => {
+            if direction == crate::direction::LayoutDirection::Rtl {
+                Side::Left
+            } else {
+                Side::Right
+            }
+        }
+    }
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -3658,12 +3686,7 @@ impl DropdownMenu {
                         DropdownMenuAlign::Center => Align::Center,
                         DropdownMenuAlign::End => Align::End,
                     };
-                    let side = match side {
-                        DropdownMenuSide::Top => Side::Top,
-                        DropdownMenuSide::Right => Side::Right,
-                        DropdownMenuSide::Bottom => Side::Bottom,
-                        DropdownMenuSide::Left => Side::Left,
-                    };
+                    let side = dropdown_menu_overlay_side(direction, side);
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
@@ -5346,6 +5369,26 @@ mod tests {
         el.children
             .iter()
             .find_map(find_first_inherited_foreground_node)
+    }
+
+    #[test]
+    fn dropdown_menu_logical_sides_follow_layout_direction() {
+        assert_eq!(
+            dropdown_menu_overlay_side(LayoutDirection::Ltr, DropdownMenuSide::InlineStart),
+            Side::Left
+        );
+        assert_eq!(
+            dropdown_menu_overlay_side(LayoutDirection::Ltr, DropdownMenuSide::InlineEnd),
+            Side::Right
+        );
+        assert_eq!(
+            dropdown_menu_overlay_side(LayoutDirection::Rtl, DropdownMenuSide::InlineStart),
+            Side::Right
+        );
+        assert_eq!(
+            dropdown_menu_overlay_side(LayoutDirection::Rtl, DropdownMenuSide::InlineEnd),
+            Side::Left
+        );
     }
 
     #[test]

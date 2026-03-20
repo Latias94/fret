@@ -236,6 +236,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 window: AppWindowId,
                 element: crate::GlobalElementId,
                 requested_focus: &'a mut Option<NodeId>,
+                notify_requested: &'a mut bool,
+                notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
             }
 
             impl<H: UiHost> crate::action::UiActionHost for CommandHookHost<'_, H> {
@@ -305,6 +307,19 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         |svc, app| svc.consume(window, app.tick_id(), action),
                     )
                 }
+
+                #[track_caller]
+                fn notify(&mut self, _cx: crate::action::ActionCx) {
+                    *self.notify_requested = true;
+                    if self.notify_requested_location.is_none() {
+                        let caller = std::panic::Location::caller();
+                        *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                            file: caller.file(),
+                            line: caller.line(),
+                            column: caller.column(),
+                        });
+                    }
+                }
             }
 
             impl<H: UiHost> crate::action::UiFocusActionHost for CommandHookHost<'_, H> {
@@ -325,6 +340,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 window,
                 element: self.element,
                 requested_focus: &mut cx.requested_focus,
+                notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             let action_cx = crate::action::ActionCx {
                 window,

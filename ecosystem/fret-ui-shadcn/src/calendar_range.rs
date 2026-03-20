@@ -27,6 +27,8 @@ use crate::calendar::{
     calendar_month_caption, calendar_multi_month_nav_overlay, calendar_single_month_header,
     calendar_weekday_row,
 };
+use crate::calendar_month_model::IntoCalendarMonthModel;
+use crate::date_range_selection_model::IntoDateRangeSelectionModel;
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
@@ -93,10 +95,13 @@ impl std::fmt::Debug for CalendarRange {
 }
 
 impl CalendarRange {
-    pub fn new(month: Model<CalendarMonth>, selected: Model<DateRangeSelection>) -> Self {
+    pub fn new(
+        month: impl IntoCalendarMonthModel,
+        selected: impl IntoDateRangeSelectionModel,
+    ) -> Self {
         Self {
-            month,
-            selected,
+            month: month.into_calendar_month_model(),
+            selected: selected.into_date_range_selection_model(),
             number_of_months: 1,
             locale: CalendarLocale::default(),
             caption_layout: CalendarCaptionLayout::default(),

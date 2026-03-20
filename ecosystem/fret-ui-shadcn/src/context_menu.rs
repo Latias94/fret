@@ -22,7 +22,7 @@ use fret_ui::element::{
     SpacerProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, Side};
+use fret_ui::overlay_placement::Align;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -41,7 +41,7 @@ use fret_ui_kit::{
     Radius, Space, ui,
 };
 
-use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
+use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide, dropdown_menu_overlay_side};
 use crate::menu_authoring;
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
@@ -441,11 +441,6 @@ struct ContextMenuCancelOpenState {
 }
 
 type ContextMenuCancelOpenShared = Arc<Mutex<ContextMenuCancelOpenState>>;
-
-#[derive(Default)]
-struct ContextMenuTriggerTimerInstalledState {
-    installed: bool,
-}
 
 fn context_menu_cancel_open_shared() -> ContextMenuCancelOpenShared {
     Arc::new(Mutex::new(ContextMenuCancelOpenState::default()))
@@ -1315,14 +1310,11 @@ fn take_submenu_entries_by_value(
     None
 }
 
-fn menu_structural_group<H: UiHost, I>(
+fn menu_structural_group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     role: fret_core::SemanticsRole,
-    children: I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = AnyElement>,
-{
+    children: Vec<AnyElement>,
+) -> AnyElement {
     cx.semantic_flex(
         fret_ui::element::SemanticFlexProps {
             role,
@@ -1387,7 +1379,7 @@ impl ContextMenuRenderEnv {
                     out.push(menu_structural_group(
                         cx,
                         fret_core::SemanticsRole::Group,
-                        children,
+                        children.into_vec(),
                     ));
                 }
                 ContextMenuEntry::RadioGroup(group) => {
@@ -1959,7 +1951,7 @@ impl ContextMenuContentRenderEnv {
                     out.push(menu_structural_group(
                         cx,
                         fret_core::SemanticsRole::Group,
-                        children,
+                        children.into_vec(),
                     ));
                 }
                 ContextMenuEntry::RadioGroup(group) => {
@@ -2287,6 +2279,10 @@ impl ContextMenuContentRenderEnv {
         let checked = item.checked.clone();
         let on_checked_change = item.on_checked_change.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
+        let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -2315,9 +2311,10 @@ impl ContextMenuContentRenderEnv {
         let accent_fg = self.accent_fg;
 
         cx.keyed(value.clone(), move |cx| {
-            let checked_now = checked.snapshot(cx);
-            cx.pressable(
-                PressableProps {
+            cx.pressable_with_id_props(move |cx, st, _item_id| {
+                let checked_now = checked.snapshot(cx);
+
+                let props = PressableProps {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
@@ -2327,74 +2324,75 @@ impl ContextMenuContentRenderEnv {
                     enabled: !disabled,
                     focusable: !disabled,
                     focus_ring: Some(ring),
-                    a11y: menu::item::menu_item_checkbox_a11y(a11y_label.clone(), checked_now)
-                        .with_collection_position(collection_index, item_count),
+                    a11y: {
+                        let mut a11y =
+                            menu::item::menu_item_checkbox_a11y(a11y_label.clone(), checked_now);
+                        a11y.test_id = test_id.clone();
+                        a11y.with_collection_position(collection_index, item_count)
+                    },
                     ..Default::default()
-                },
-                move |cx, st| {
-                    cx.pressable_add_on_pointer_up(
-                        context_menu_cancel_open_item_pointer_up_handler(
-                            cancel_open.clone(),
-                            open.clone(),
-                        ),
-                    );
+                };
 
-                    let checked_now = checked.snapshot(cx);
+                cx.pressable_add_on_pointer_up(context_menu_cancel_open_item_pointer_up_handler(
+                    cancel_open.clone(),
+                    open.clone(),
+                ));
 
-                    if !disabled {
-                        let checked_for_activate = checked.clone();
-                        let on_checked_change_for_activate = on_checked_change.clone();
-                        cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
-                            let next = checked_for_activate.toggle(host);
-                            if let Some(handler) = on_checked_change_for_activate.as_ref() {
-                                handler(host, action_cx, next);
-                            }
-                        }));
-                    }
-                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
-                    if !disabled && close_on_select {
-                        cx.pressable_set_bool(&open, false);
-                    }
+                if !disabled {
+                    let checked_for_activate = checked.clone();
+                    let on_checked_change_for_activate = on_checked_change.clone();
+                    cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
+                        let next = checked_for_activate.toggle(host);
+                        if let Some(handler) = on_checked_change_for_activate.as_ref() {
+                            handler(host, action_cx, next);
+                        }
+                    }));
+                }
+                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                if !disabled && close_on_select {
+                    cx.pressable_set_bool(&open, false);
+                }
 
-                    let trailing = trailing.or_else(|| {
-                        command.as_ref().and_then(|cmd| {
-                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
-                        })
-                    });
+                let trailing = trailing.or_else(|| {
+                    command.as_ref().and_then(|cmd| {
+                        command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                            .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                    })
+                });
 
-                    let mut row_bg = fret_core::Color::TRANSPARENT;
-                    let mut row_fg = fg;
-                    if st.hovered || st.pressed || st.focused {
-                        row_bg = accent;
-                        row_fg = accent_fg;
-                    }
+                let mut row_bg = fret_core::Color::TRANSPARENT;
+                let mut row_fg = fg;
+                if st.hovered || st.pressed || st.focused {
+                    row_bg = accent;
+                    row_fg = accent_fg;
+                }
 
-                    menu_row_children(
-                        cx,
-                        label.clone(),
-                        leading,
-                        None,
-                        reserve_leading_slot,
-                        trailing,
-                        false,
-                        Some(checked_now),
-                        disabled,
-                        row_bg,
-                        row_fg,
-                        row_fg,
-                        text_style.clone(),
-                        font_size,
-                        font_line_height,
-                        pad_x,
-                        pad_x,
-                        pad_y,
-                        radius_sm,
-                        text_disabled,
-                        None,
-                    )
-                },
-            )
+                let children = menu_row_children(
+                    cx,
+                    label.clone(),
+                    leading,
+                    None,
+                    reserve_leading_slot,
+                    trailing,
+                    false,
+                    Some(checked_now),
+                    disabled,
+                    row_bg,
+                    row_fg,
+                    row_fg,
+                    text_style.clone(),
+                    font_size,
+                    font_line_height,
+                    pad_x,
+                    pad_x,
+                    pad_y,
+                    radius_sm,
+                    text_disabled,
+                    chrome_test_id.clone(),
+                );
+
+                (props, children)
+            })
         })
     }
 
@@ -2412,6 +2410,10 @@ impl ContextMenuContentRenderEnv {
         let group_value = item.group_value.clone();
         let on_value_change = item.on_value_change.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
+        let test_id = item.test_id.clone();
+        let chrome_test_id = test_id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
         let close_on_select = item.close_on_select;
         let command = item.command;
         let disabled = item.disabled
@@ -2442,8 +2444,9 @@ impl ContextMenuContentRenderEnv {
         cx.keyed(value.clone(), move |cx| {
             let selected = group_value.snapshot(cx);
             let is_selected = menu::radio_group::is_selected(selected.as_ref(), &value);
-            cx.pressable(
-                PressableProps {
+
+            cx.pressable_with_id_props(move |cx, st, _item_id| {
+                let props = PressableProps {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
@@ -2453,80 +2456,82 @@ impl ContextMenuContentRenderEnv {
                     enabled: !disabled,
                     focusable: !disabled,
                     focus_ring: Some(ring),
-                    a11y: menu::item::menu_item_radio_a11y(a11y_label.clone(), is_selected)
-                        .with_collection_position(collection_index, item_count),
+                    a11y: {
+                        let mut a11y =
+                            menu::item::menu_item_radio_a11y(a11y_label.clone(), is_selected);
+                        a11y.test_id = test_id.clone();
+                        a11y.with_collection_position(collection_index, item_count)
+                    },
                     ..Default::default()
-                },
-                move |cx, st| {
-                    cx.pressable_add_on_pointer_up(
-                        context_menu_cancel_open_item_pointer_up_handler(
-                            cancel_open.clone(),
-                            open.clone(),
-                        ),
-                    );
+                };
 
-                    let selected = group_value.snapshot(cx);
-                    let is_selected = menu::radio_group::is_selected(selected.as_ref(), &value);
+                cx.pressable_add_on_pointer_up(context_menu_cancel_open_item_pointer_up_handler(
+                    cancel_open.clone(),
+                    open.clone(),
+                ));
 
-                    if !disabled {
-                        let group_value_for_activate = group_value.clone();
-                        let value_for_activate = value.clone();
-                        let on_value_change_for_activate = on_value_change.clone();
-                        cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
-                            let Some(next) =
-                                group_value_for_activate.select(host, &value_for_activate)
-                            else {
-                                return;
-                            };
-                            if let Some(handler) = on_value_change_for_activate.as_ref() {
-                                handler(host, action_cx, next);
-                            }
-                        }));
-                    }
-                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
-                    if !disabled && close_on_select {
-                        cx.pressable_set_bool(&open, false);
-                    }
+                let selected = group_value.snapshot(cx);
+                let is_selected = menu::radio_group::is_selected(selected.as_ref(), &value);
 
-                    let trailing = trailing.or_else(|| {
-                        command.as_ref().and_then(|cmd| {
-                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
-                        })
-                    });
+                if !disabled {
+                    let group_value_for_activate = group_value.clone();
+                    let value_for_activate = value.clone();
+                    let on_value_change_for_activate = on_value_change.clone();
+                    cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
+                        let Some(next) = group_value_for_activate.select(host, &value_for_activate)
+                        else {
+                            return;
+                        };
+                        if let Some(handler) = on_value_change_for_activate.as_ref() {
+                            handler(host, action_cx, next);
+                        }
+                    }));
+                }
+                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                if !disabled && close_on_select {
+                    cx.pressable_set_bool(&open, false);
+                }
 
-                    let mut row_bg = fret_core::Color::TRANSPARENT;
-                    let mut row_fg = fg;
-                    if st.hovered || st.pressed || st.focused {
-                        row_bg = accent;
-                        row_fg = accent_fg;
-                    }
+                let trailing = trailing.or_else(|| {
+                    command.as_ref().and_then(|cmd| {
+                        command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                            .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                    })
+                });
 
-                    menu_row_children(
-                        cx,
-                        label.clone(),
-                        leading,
-                        None,
-                        reserve_leading_slot,
-                        trailing,
-                        false,
-                        Some(is_selected),
-                        disabled,
-                        row_bg,
-                        row_fg,
-                        row_fg,
-                        text_style.clone(),
-                        font_size,
-                        font_line_height,
-                        pad_x,
-                        pad_x,
-                        pad_y,
-                        radius_sm,
-                        text_disabled,
-                        None,
-                    )
-                },
-            )
+                let mut row_bg = fret_core::Color::TRANSPARENT;
+                let mut row_fg = fg;
+                if st.hovered || st.pressed || st.focused {
+                    row_bg = accent;
+                    row_fg = accent_fg;
+                }
+
+                let children = menu_row_children(
+                    cx,
+                    label.clone(),
+                    leading,
+                    None,
+                    reserve_leading_slot,
+                    trailing,
+                    false,
+                    Some(is_selected),
+                    disabled,
+                    row_bg,
+                    row_fg,
+                    row_fg,
+                    text_style.clone(),
+                    font_size,
+                    font_line_height,
+                    pad_x,
+                    pad_x,
+                    pad_y,
+                    radius_sm,
+                    text_disabled,
+                    chrome_test_id.clone(),
+                );
+
+                (props, children)
+            })
         })
     }
 }
@@ -2558,6 +2563,9 @@ fn menu_row_children<H: UiHost>(
     let label_test_id = chrome_test_id
         .as_ref()
         .map(|id| Arc::<str>::from(format!("{id}-label")));
+    let indicator_test_id = chrome_test_id
+        .as_ref()
+        .map(|id| Arc::<str>::from(format!("{id}-indicator")));
     let trailing_test_id = chrome_test_id
         .as_ref()
         .map(|id| Arc::<str>::from(format!("{id}-trailing")));
@@ -2604,7 +2612,7 @@ fn menu_row_children<H: UiHost>(
 
             if let Some(is_on) = indicator_on {
                 let indicator_fg = text_fg;
-                row.push(cx.flex(
+                let mut indicator = cx.flex(
                     FlexProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
@@ -2632,7 +2640,11 @@ fn menu_row_children<H: UiHost>(
                             Some(ColorRef::Color(indicator_fg)),
                         )]
                     },
-                ));
+                );
+                if let Some(test_id) = indicator_test_id.clone() {
+                    indicator = indicator.test_id(test_id);
+                }
+                row.push(indicator);
             }
 
             if let Some(l) = leading.take() {
@@ -3429,7 +3441,10 @@ impl ContextMenu {
                 menu::context_menu_anchor_store_model(cx.app);
 
             let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
-            let touch_long_press = menu::context_menu_touch_long_press();
+            // Keep pending touch long-press state tied to the menu instance rather than the
+            // current render root so timer dispatch survives owner churn.
+            let touch_long_press: menu::ContextMenuTouchLongPress =
+                menu::context_menu_touch_long_press_for_open_model(cx.app, &open);
             let pointer_policy = Arc::new({
                 let anchor_store_model = anchor_store_model.clone();
                 let touch_long_press = touch_long_press.clone();
@@ -3440,7 +3455,7 @@ impl ContextMenu {
                     if disabled {
                         return false;
                     }
-                    let _ = menu::context_menu_touch_long_press_on_pointer_down(
+                    let touch_long_press_handled = menu::context_menu_touch_long_press_on_pointer_down(
                         &touch_long_press,
                         host,
                         cx,
@@ -3467,7 +3482,7 @@ impl ContextMenu {
                             host.capture_pointer();
                         }
                     }
-                    handled
+                    touch_long_press_handled || handled
                 }
             });
 
@@ -3511,7 +3526,9 @@ impl ContextMenu {
                             up.position,
                             up.button,
                         );
-                        if up.button == fret_core::MouseButton::Right {
+                        if up.button == fret_core::MouseButton::Right
+                            || up.pointer_type == fret_core::PointerType::Touch
+                        {
                             host.release_pointer_capture();
                         }
                         touch_on_up(host, acx, up)
@@ -3527,44 +3544,26 @@ impl ContextMenu {
                         touch_on_cancel(host, acx, cancel)
                     }));
                     let region_id = cx.root_id();
-                    let installed = cx.state_for(
+                    let cancel_open_for_timer = cancel_open_for_region.clone();
+                    cx.timer_on_timer_for(
                         region_id,
-                        ContextMenuTriggerTimerInstalledState::default,
-                        |st| st.installed,
-                    );
-                    if !installed {
-                        let cancel_open_for_timer = cancel_open_for_region.clone();
-                        cx.timer_add_on_timer_for(
-                            region_id,
-                            Arc::new(move |host, action_cx, token| {
-                                context_menu_cancel_open_on_timer(
-                                    &cancel_open_for_timer,
-                                    host,
-                                    token,
-                                );
-                                let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
-                                    &touch_long_press_for_timer,
-                                    token,
-                                ) else {
-                                    return false;
-                                };
+                        Arc::new(move |host, action_cx, token| {
+                            context_menu_cancel_open_on_timer(&cancel_open_for_timer, host, token);
+                            let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
+                                &touch_long_press_for_timer,
+                                token,
+                            ) else {
+                                return false;
+                            };
 
-                                let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
-                                    map.insert(open_model_id, anchor);
-                                });
-                                let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
-                                host.request_redraw(action_cx.window);
-                                true
-                            }),
-                        );
-                        cx.state_for(
-                            region_id,
-                            ContextMenuTriggerTimerInstalledState::default,
-                            |st| {
-                                st.installed = true;
-                            },
-                        );
-                    }
+                            let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
+                                map.insert(open_model_id, anchor);
+                            });
+                            let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
+                            host.request_redraw(action_cx.window);
+                            true
+                        }),
+                    );
                     vec![trigger_element]
                 })
             });
@@ -3777,12 +3776,7 @@ impl ContextMenu {
                         DropdownMenuAlign::Center => Align::Center,
                         DropdownMenuAlign::End => Align::End,
                     };
-                    let side = match side {
-                        DropdownMenuSide::Top => Side::Top,
-                        DropdownMenuSide::Right => Side::Right,
-                        DropdownMenuSide::Bottom => Side::Bottom,
-                        DropdownMenuSide::Left => Side::Left,
-                    };
+                    let side = dropdown_menu_overlay_side(direction, side);
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
@@ -4067,7 +4061,7 @@ impl ContextMenu {
                                                         out.push(menu_structural_group(
                                                             cx,
                                                             fret_core::SemanticsRole::Group,
-                                                            children,
+                                                            children.into_vec(),
                                                         ));
                                                     }
                                                     ContextMenuEntry::RadioGroup(group) => {
@@ -5566,6 +5560,149 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger_with_rekey(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        use_alt_trigger_key: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-touch-long-press-rekey",
+            move |cx| {
+                let use_alt_trigger_key = cx
+                    .watch_model(&use_alt_trigger_key)
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+
+                vec![ContextMenu::from_open(open).into_element(
+                    cx,
+                    move |cx| {
+                        let key = if use_alt_trigger_key {
+                            "trigger-b"
+                        } else {
+                            "trigger-a"
+                        };
+                        cx.keyed(key, |cx| {
+                            cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st| {
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            )
+                        })
+                    },
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_focusable_trigger_with_owner_rekey(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        use_alt_owner_key: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-touch-long-press-owner-rekey",
+            move |cx| {
+                let use_alt_owner_key = cx
+                    .watch_model(&use_alt_owner_key)
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+
+                let owner_key = if use_alt_owner_key {
+                    "owner-b"
+                } else {
+                    "owner-a"
+                };
+
+                vec![cx.keyed(owner_key, |cx| {
+                    ContextMenu::from_open(open).into_element(
+                        cx,
+                        |cx| {
+                            cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st| {
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            )
+                        },
+                        |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                    )
+                })]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_focusable_trigger_with_debug_cancel_open(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -5644,12 +5781,13 @@ mod tests {
                     move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                           acx: fret_ui::action::ActionCx,
                           down: fret_ui::action::PointerDownCx| {
-                        let _ = menu::context_menu_touch_long_press_on_pointer_down(
-                            &touch_long_press,
-                            host,
-                            acx,
-                            down,
-                        );
+                        let touch_long_press_handled =
+                            menu::context_menu_touch_long_press_on_pointer_down(
+                                &touch_long_press,
+                                host,
+                                acx,
+                                down,
+                            );
                         let handled = base_pointer_policy(host, acx, down);
                         if handled {
                             menu::context_menu_touch_long_press_clear(&touch_long_press, host);
@@ -5667,7 +5805,7 @@ mod tests {
                                 host.capture_pointer();
                             }
                         }
-                        handled
+                        touch_long_press_handled || handled
                     }
                 });
 
@@ -5707,38 +5845,26 @@ mod tests {
                                     up.position,
                                     up.button,
                                 );
-                                if up.button == fret_core::MouseButton::Right {
+                                if up.button == fret_core::MouseButton::Right
+                                    || up.pointer_type == fret_core::PointerType::Touch
+                                {
                                     host.release_pointer_capture();
                                 }
                                 false
                             }));
                             let region_id = cx.root_id();
-                            let installed = cx.state_for(
+                            let cancel_open_for_timer = cancel_open_for_region.clone();
+                            cx.timer_on_timer_for(
                                 region_id,
-                                ContextMenuTriggerTimerInstalledState::default,
-                                |st| st.installed,
+                                Arc::new(move |host, _acx, token| {
+                                    context_menu_cancel_open_on_timer(
+                                        &cancel_open_for_timer,
+                                        host,
+                                        token,
+                                    );
+                                    false
+                                }),
                             );
-                            if !installed {
-                                let cancel_open_for_timer = cancel_open_for_region.clone();
-                                cx.timer_add_on_timer_for(
-                                    region_id,
-                                    Arc::new(move |host, _acx, token| {
-                                        context_menu_cancel_open_on_timer(
-                                            &cancel_open_for_timer,
-                                            host,
-                                            token,
-                                        );
-                                        false
-                                    }),
-                                );
-                                cx.state_for(
-                                    region_id,
-                                    ContextMenuTriggerTimerInstalledState::default,
-                                    |st| {
-                                        st.installed = true;
-                                    },
-                                );
-                            }
                             vec![trigger]
                         })
                     },
@@ -5955,6 +6081,17 @@ mod tests {
             panic!("expected touch long-press timer; effects={effects:?}");
         };
 
+        // The gallery/native diag path rebuilds the trigger subtree while the pointer is still
+        // held down. Keep the pending long-press state alive across that rerender.
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -5971,6 +6108,214 @@ mod tests {
             window,
             bounds,
             open.clone(),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_survives_trigger_subtree_rekey() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(false);
+        let use_alt_trigger_key = app.models_mut().insert(false);
+
+        let root = render_frame_focusable_trigger_with_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_trigger_key.clone(),
+        );
+
+        let trigger_a = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger before rekey");
+        let trigger_bounds = ui.debug_node_bounds(trigger_a).expect("trigger bounds");
+        let touch_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(7),
+                position: touch_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let long_press_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. }
+                if *after == menu::CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY =>
+            {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(long_press_token) = long_press_token else {
+            panic!("expected touch long-press timer; effects={effects:?}");
+        };
+
+        let _ = app
+            .models_mut()
+            .update(&use_alt_trigger_key, |value| *value = true);
+        let root = render_frame_focusable_trigger_with_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_trigger_key.clone(),
+        );
+
+        let trigger_b = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger after rekey");
+        assert_ne!(
+            trigger_a, trigger_b,
+            "expected trigger subtree rekey to replace the trigger node"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer {
+                token: long_press_token,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_trigger_key,
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_survives_owner_rekey() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(false);
+        let use_alt_owner_key = app.models_mut().insert(false);
+
+        let root = render_frame_focusable_trigger_with_owner_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_owner_key.clone(),
+        );
+
+        let trigger_before = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger before owner rekey");
+        let trigger_bounds = ui
+            .debug_node_bounds(trigger_before)
+            .expect("trigger bounds before owner rekey");
+        let touch_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(11),
+                position: touch_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let long_press_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. }
+                if *after == menu::CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY =>
+            {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(long_press_token) = long_press_token else {
+            panic!("expected touch long-press timer; effects={effects:?}");
+        };
+
+        let _ = app
+            .models_mut()
+            .update(&use_alt_owner_key, |value| *value = true);
+        let root = render_frame_focusable_trigger_with_owner_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_owner_key.clone(),
+        );
+
+        let trigger_after = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger after owner rekey");
+        assert_ne!(
+            trigger_before, trigger_after,
+            "expected owner rekey to replace the trigger subtree"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer {
+                token: long_press_token,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_owner_rekey(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            use_alt_owner_key,
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
@@ -6501,6 +6846,77 @@ mod tests {
         root
     }
 
+    fn render_frame_pressable_ancestor_with_non_pressable_trigger_and_entries(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        workspace_activated: Model<bool>,
+        entries: Vec<ContextMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-touch-ancestor-pressable",
+            move |cx| {
+                vec![cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::TextField),
+                            label: Some(Arc::from("Workspace")),
+                            test_id: Some(Arc::from("workspace")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&workspace_activated, true);
+                        vec![ContextMenu::from_open(open).into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            move |_cx| entries,
+                        )]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     #[test]
     fn context_menu_item_action_payload_records_pending_payload() {
         let window = AppWindowId::default();
@@ -6633,6 +7049,235 @@ mod tests {
             .ok()
             .expect("payload type must match");
         assert_eq!(*payload, 41);
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_trigger_does_not_delegate_capture_to_pressable_ancestor() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let workspace_activated = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _ = render_frame_pressable_ancestor_with_non_pressable_trigger_and_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            workspace_activated,
+            vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let workspace = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("workspace"))
+            .map(|node| node.id)
+            .expect("workspace semantics node");
+
+        let trigger_pos = Point::new(Px(60.0), Px(20.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        assert_ne!(
+            ui.captured_for(fret_core::PointerId(0)),
+            Some(workspace),
+            "touch long-press arming should not let an ancestor pressable steal pointer capture"
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_item_tap_dispatches_command_inside_pressable_ancestor() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let workspace_activated = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+        let cmd = CommandId::new("context_menu.tests.touch_item_inside_pressable_ancestor.v1");
+
+        let build_entries = || {
+            vec![ContextMenuEntry::Item(
+                ContextMenuItem::new("Touch Item").action(cmd.clone()),
+            )]
+        };
+
+        let _ = render_frame_pressable_ancestor_with_non_pressable_trigger_and_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            workspace_activated.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let workspace = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("workspace"))
+            .map(|node| node.id)
+            .expect("workspace semantics node");
+
+        let trigger_pos = Point::new(Px(60.0), Px(20.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let long_press_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. }
+                if *after == menu::CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY =>
+            {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(long_press_token) = long_press_token else {
+            panic!("expected touch long-press timer; effects={effects:?}");
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer {
+                token: long_press_token,
+            },
+        );
+        let _ = render_frame_pressable_ancestor_with_non_pressable_trigger_and_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            workspace_activated.clone(),
+            build_entries(),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: false,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        let _ = render_frame_pressable_ancestor_with_non_pressable_trigger_and_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            workspace_activated.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let item = snap
+            .nodes
+            .iter()
+            .find(|node| {
+                node.role == SemanticsRole::MenuItem && node.label.as_deref() == Some("Touch Item")
+            })
+            .expect("touch item");
+        let item_pos = Point::new(
+            Px(item.bounds.origin.x.0 + item.bounds.size.width.0 / 2.0),
+            Px(item.bounds.origin.y.0 + item.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: item_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        assert_ne!(
+            ui.captured_for(fret_core::PointerId(1)),
+            Some(workspace),
+            "touching a menu item should not hand pointer capture to the pressable ancestor"
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: item_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(
+                |effect| matches!(effect, Effect::Command { command, .. } if command.as_str() == cmd.as_str())
+            ),
+            "expected touch tap to dispatch {cmd:?}; open={:?} workspace_activated={:?} captured={:?} effects={effects:?}",
+            app.models().get_copied(&open),
+            app.models().get_copied(&workspace_activated),
+            ui.captured_for(fret_core::PointerId(1)),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&workspace_activated),
+            Some(false),
+            "menu item tap should not activate the pressable ancestor"
+        );
     }
 
     #[test]

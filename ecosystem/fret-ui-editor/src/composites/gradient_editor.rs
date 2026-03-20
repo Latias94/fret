@@ -217,7 +217,6 @@ impl GradientEditor {
             .then_some(angle_degrees.clone())
             .flatten()
             .map(|m| {
-                let (angle_format, angle_parse, _) = NumericPresentation::<f64>::degrees(0).parts();
                 PropertyRow::new()
                     .options(PropertyRowOptions {
                         reset_slot_width: Some(Px(0.0)),
@@ -228,7 +227,7 @@ impl GradientEditor {
                         cx,
                         |cx| cx.text("Angle"),
                         |cx| {
-                            DragValue::new(m, angle_format, angle_parse)
+                            DragValue::from_presentation(m, NumericPresentation::<f64>::degrees(0))
                                 .options(DragValueOptions {
                                     test_id: angle_test_id.clone(),
                                     ..Default::default()
@@ -327,9 +326,6 @@ fn stop_row<H: UiHost>(
     stop: GradientStopBinding,
     row_options: PropertyRowOptions,
 ) -> AnyElement {
-    let (stop_position_format, stop_position_parse, _) =
-        NumericPresentation::<f64>::percent_0_1(0).parts();
-
     let remove = stop.remove.clone();
     let stop_id = stop.id;
     let row_test_id = stops_test_id
@@ -366,10 +362,9 @@ fn stop_row<H: UiHost>(
                     wrap: false,
                 },
                 move |cx| {
-                    let pos = DragValue::new(
+                    let pos = DragValue::from_presentation(
                         stop.position.clone(),
-                        stop_position_format.clone(),
-                        stop_position_parse.clone(),
+                        NumericPresentation::<f64>::percent_0_1(0),
                     )
                     .options(DragValueOptions {
                         test_id: position_test_id.clone(),

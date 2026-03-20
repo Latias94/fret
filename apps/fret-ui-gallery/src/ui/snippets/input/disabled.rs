@@ -12,7 +12,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Field::new([
         shadcn::FieldLabel::new("Email").into_element(cx),
         shadcn::Input::new(value)
-            .a11y_label("Disabled email")
+            .a11y_label("Email")
+            .placeholder("Email")
             .disabled(true)
             .into_element(cx),
         shadcn::FieldDescription::new("This field is currently disabled.").into_element(cx),

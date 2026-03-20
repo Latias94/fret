@@ -1052,3 +1052,207 @@ fn modal_reasserts_focus_when_focus_leaves_modal_layer_while_open() {
 
     assert_eq!(ui.focus(), Some(modal_focus_node));
 }
+
+#[test]
+fn popover_requested_after_modal_stays_above_parent_modal_layer() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let parent_open = app.models_mut().insert(true);
+    let child_open = app.models_mut().insert(true);
+    let parent_clicked = app.models_mut().insert(false);
+    let child_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        child_open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        child_open.clone(),
+    );
+
+    let parent_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "parent-modal-child", |cx| {
+            vec![cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |cx, _st| {
+                    cx.pressable_toggle_bool(&parent_clicked);
+                    Vec::new()
+                },
+            )]
+        });
+
+    let child_id = GlobalElementId(0xcafe);
+    let child_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "child-popover", |cx| {
+            vec![cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            left: Some(Px(120.0)).into(),
+                            top: Some(Px(48.0)).into(),
+                            ..Default::default()
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(Px(96.0)),
+                            height: Length::Px(Px(44.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |cx, _st| {
+                    cx.pressable_toggle_bool(&child_clicked);
+                    Vec::new()
+                },
+            )]
+        });
+
+    let parent_id = GlobalElementId(0xbeef);
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: parent_id,
+            root_name: modal_root_name(parent_id),
+            trigger: None,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: parent_open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            children: parent_children,
+        },
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: child_id,
+            root_name: popover_root_name(child_id),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: child_open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: child_children,
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let (parent_layer, child_layer) =
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+            let parent_layer = overlays
+                .modals
+                .get(&(window, parent_id))
+                .map(|entry| entry.layer)
+                .expect("parent modal layer");
+            let child_layer = overlays
+                .popovers
+                .get(&(window, child_id))
+                .map(|entry| entry.layer)
+                .expect("child popover layer");
+            (parent_layer, child_layer)
+        });
+
+    let layers = ui.debug_layers_in_paint_order();
+    let parent_index = layers
+        .iter()
+        .position(|layer| layer.id == parent_layer)
+        .expect("parent layer index");
+    let child_index = layers
+        .iter()
+        .position(|layer| layer.id == child_layer)
+        .expect("child layer index");
+    assert!(
+        child_index > parent_index,
+        "expected child popover layer above parent modal; parent_index={parent_index} child_index={child_index} layers={layers:?}"
+    );
+
+    let point = Point::new(Px(124.0), Px(52.0));
+    let hit = ui.debug_hit_test(point);
+    let hit_node = hit.hit.expect("hit node");
+    let hit_layer = ui.node_layer(hit_node);
+    assert!(
+        hit_layer == Some(child_layer),
+        "expected point inside child popover to route to child layer; point={point:?} hit={hit:?} hit_layer={hit_layer:?} child_layer={child_layer:?}"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: point,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: point,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&child_clicked), Some(true));
+    assert_eq!(app.models().get_copied(&parent_clicked), Some(false));
+}

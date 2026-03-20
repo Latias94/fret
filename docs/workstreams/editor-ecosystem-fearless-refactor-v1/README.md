@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-15**
+Last updated: **2026-03-18**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -50,6 +50,10 @@ Current checkpoint:
 - shared inspector layout metrics now drive `PropertyRow`, `PropertyGrid`,
   `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`,
 - the row grammar is now explicit (`label lane -> value lane -> reset slot -> status/actions slot`),
+- the promoted `imui_editor_proof_demo` rows now also stay on that same lane grammar all the way
+  through resettable proof cases: drag-value, material sliders, and advanced position rows now
+  feed `row_cx.row_options` back into `PropertyRow`, so the proof surface no longer bypasses the
+  shared reset/status slot caps when those rows add local reset affordances,
 - optional trailing lanes now collapse when a row has no reset/status affordance, while the shared
   wide-inspector value cap was raised so review surfaces stop stranding common editor fields at
   half-panel width,
@@ -99,15 +103,30 @@ Current checkpoint:
   color-edit popovers (`ColorEdit`). Those surfaces now share one editor popup-surface resolver,
   and editor-owned `editor.popup.*` tokens keep them on the dark review baseline instead of
   inheriting a host theme's bright `popover` card,
+- that semantic cleanup is now centralized one layer lower as well: `InspectorPanel`,
+  `PropertyGroup`, shared popup shells, and `TransformEdit` section badges resolve their
+  panel/header/popup/subtle tones through shared editor color helpers instead of keeping
+  per-composite fallback ladders,
 - popup-shell geometry is now editor-owned too: `editor.popup.radius` plus
   `editor.popup.shadow_*` let the dense preset keep a tighter popup silhouette/elevation without
   reintroducing widget-local popup tuning in each control,
+- popup list row chrome now also has a narrower shared editor seam:
+  `TextAssistField` and `EnumSelect` both reuse the internal `popup_list` primitive for row gap,
+  row radius, row text style, active/disabled palette, content-height budgeting, and popup
+  placement margins, which removes one more pocket of per-control popup heuristics without
+  promoting a wider fake "universal popup" API too early,
+- the focused popup gates were rerun again on **2026-03-18** against that shared row seam, and
+  the promoted `Name assist` / `EnumSelect` popup captures still keep row highlight, text density,
+  and popup placement stable without reopening the clear-button / selected-row drift that used to
+  live in per-control popup heuristics,
 - editor numeric text-entry now also has a shared baseline policy for "replace current value on
   initial typed edit", so affixed `NumericInput` / `DragValue` / `Slider` flows behave more like
   editor fields than generic app forms, `DragValue` / `Slider` double-click typing now routes
   focus through a shared delayed handoff so the nested text input becomes reliably focusable
-  before the first edit, and `AxisDragValue` no longer lags behind on validation affordances while
-  typing,
+  before the first edit, `AxisDragValue` no longer lags behind on validation affordances while
+  typing and now keeps the same row-height line box in typed-edit mode as it does while scrubbing,
+  and formatter-owned unit text now suppresses duplicate joined chrome affixes so percent and
+  currency-like editor readouts stay single-sourced,
 - editor text-like controls now also have an explicit lightweight policy split: general
   `TextField`s preserve caret/selection by default but can opt into select-all-on-focus, while
   `MiniSearchBox` defaults to select-all-on-focus plus Escape-to-clear and exposes a dedicated
@@ -118,7 +137,9 @@ Current checkpoint:
   plain Enter still inserts a newline, and the promoted proof now also locks the first two
   non-default editor opt-ins on top of that baseline: inline-rename style fields can choose
   cancel-on-blur, while multiline notes can keep a preserved draft across blur until an explicit
-  commit/cancel. Proof/diag now covers those draft-vs-committed paths directly,
+  commit/cancel. The promoted multiline baseline now also defaults to stable line boxes
+  (`FixedFromStyle` + forced strut + bounds-aligned placement) so textarea/note rows stop changing
+  height while the user edits. Proof/diag now covers those draft-vs-committed paths directly,
 - the same `TextField` surface now also has the first editor-grade extensibility hooks layered on
   top of that buffered baseline: password-mode rendering for single-line fields, explicit outcome
   callbacks for commit/cancel, assistive semantics placeholders for future completion/history
@@ -142,13 +163,23 @@ Current checkpoint:
   numeric labels: `NumericTextAffixes`, `affixed_number_format`, `affixed_number_parse`,
   `degrees_format`, and `degrees_parse` now live in `fret-ui-editor::primitives`, and
   `GradientEditor` angle editing no longer keeps a private `°` formatter/parser pair,
-- the same numeric authoring surface now also has a first lightweight bundling layer above raw
-  `format` / `parse` closures: `NumericPresentation<T>` groups text formatting/parsing with
-  control-chrome affixes, the promoted proof/demo surface now reuses that bundle for
-  fixed-decimal numeric examples, currency-like `DragValue`, and percent `Slider` authoring
-  instead of wiring those pieces through ad-hoc formatter/parser pairs, and `GradientEditor` now
-  also consumes the same bundle for angle/stop-position authoring instead of keeping another pair
-  of raw formatter/parser closures,
+- the same numeric authoring surface now also exposes a preferred first-party constructor lane
+  above raw `format` / `parse` closures: `NumericPresentation<T>` groups text formatting/parsing
+  with control-chrome affixes, and `NumericInput`, `DragValue`, `AxisDragValue`, `Slider`, plus
+  `VecEdit` variants now expose `from_presentation(...)` constructors so first-party editor
+  surfaces stop open-coding `(format, parse, prefix, suffix)` bundles. `TransformEdit` now also
+  has a section-scoped direct lane via `TransformEditPresentations`, so higher-level composites do
+  not need to fan back out into ad-hoc shared closures once position/rotation/scale want to carry
+  their own numeric stories. The promoted proof/demo surface now routes its fixed-decimal,
+  currency-like, percent, advanced-position, exposure, and transform examples through that lane.
+  The advanced transform proof now also demonstrates the intended heterogeneous section story
+  directly: position uses editor chrome suffixes, rotation owns `°` inside the formatter/parser,
+  and scale uses normalized percent formatting instead of another shared fixed-decimal readout.
+  That visible authoring story now also has a focused screenshot proof at
+  `tools/diag-scripts/ui-editor/imui/imui-editor-proof-advanced-transform-presentations-screenshots.json`,
+  so review can pin the `m / ° / 100%` split without reopening the full proof surface manually.
+  `GradientEditor` now also consumes the same bundle for angle and stop-position authoring instead
+  of keeping another pair of raw formatter/parser closures,
 - the same numeric edit-session seam now also propagates through composite editor controls:
   `VecEdit` exposes `(axis, outcome)`, `TransformEdit` exposes `(section, axis, outcome)`, the
   promoted proof surface now carries stable
@@ -173,9 +204,25 @@ Current checkpoint:
   surfaces, and `workspace_shell_demo` can opt into that flow via
   `FRET_WORKSPACE_SHELL_EDITOR_PRESET` without changing its default neutral shell setup,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
+- the latest default proof rerun on **2026-03-18** also confirms those resettable proof rows still
+  fit the shared lane grammar after routing them through shared row options instead of proof-local
+  `PropertyRow` defaults,
+- the same proof-local density pass now also keeps committed/outcome text shorter on non-empty
+  proof readouts (`Commit` / `Cancel`, `N lines`, `N chars`) so screenshot review stays focused on
+  the controls rather than long diagnostic phrasing once those rows are populated,
+- the matching dense proof rerun on **2026-03-18** also passed after that wording compaction, so
+  the tighter `imgui_like_dense` right lane still reads cleanly once those proof rows become
+  non-empty,
+- a fresh same-day rerun against the current worktree kept those proof screenshots stable too, so
+  popup-list unification plus the proof-row lane/readout cleanup now share one evidence story
+  rather than relying on older captures from before the latest seam extraction,
 - the full authoring proof surface now also has a focused affordance screenshot gate for populated
   text-field clear buttons and percent slider readouts so icon alignment and affix composition stay
   reviewable under proof-demo refactors,
+- multiline notes now also follow the same review discipline on the app-local `editor_notes_demo`
+  surface: the preserve-draft gate's initial screenshot pins the trailing clear affordance to the
+  textarea's top content edge instead of letting it float at the vertical midpoint of the notes
+  block,
 - that full authoring surface now also keeps its explanatory/meta text compressed into a shorter
   preface plus two-line shared-state readout, so screenshot review stays focused on the paired
   authoring columns instead of the proof chrome around them,
@@ -188,8 +235,16 @@ Current checkpoint:
   surface as well,
 - inline-rename cancel-on-blur now also has its first non-proof in-tree consumer:
   `fret-node`'s retained rename overlay host cancels on focus loss, closes the overlay, and
-  restores focus to the canvas without queueing a rename transaction, while multiline
-  preserve-draft still remains proof-only until another real consumer appears,
+  restores focus to the canvas without queueing a rename transaction, and multiline
+  preserve-draft now also has a first app-local non-proof in-tree consumer via
+  `editor_notes_demo`'s inspector notes surface. That demo keeps the policy app-local and
+  declarative on purpose instead of promoting a shared notes helper too early, and a focused
+  diagnostics script now exists at
+  `tools/diag-scripts/ui-editor/editor-notes-demo/editor-notes-demo-preserve-draft.json`. The
+  launched packed rerun also passes on 2026-03-15 against the direct
+  `target/debug/editor_notes_demo.exe` path. That app-local notes surface now also deliberately
+  opts out of `FretApp`'s shadcn app-integration lane and pins a raw dark shadcn host preset, so
+  screenshot review keeps a fixed editor baseline instead of following OS light/dark changes,
 - repeated gradient-stop rows now also have a focused identity gate, so add/remove churn proves
   edited values stay attached to stable stop ids instead of drifting with row order,
 - the text-assist boundary is now split the way this workstream wanted it to be:
@@ -238,13 +293,12 @@ Current checkpoint:
   `tools/diag-scripts/ui-editor/imui/imui-editor-proof-enum-select-selected-row-reveal.json`, and
   `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-screenshots.json`
   now keep popup geometry and chrome reviewable without reopening the full proof surface manually,
-- and the remaining foundation cleanup is now mostly about promoting the next layer above that
-  baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
-  move further into shared kit policy, alongside richer password/history integrations, targeted
-  `BlurBehavior::Cancel` / `PreserveDraft` adoption on real editor surfaces, and final cleanup for
-  the remaining non-empty proof-local status/readout density plus dense-preset lane calibration now
-  that the worst wide-inspector slack, trailing idle-lane waste, and idle proof-row height have
-  all been pulled back.
+- and the remaining foundation cleanup is now mostly about keeping this baseline boring and
+  reviewable: only popup/scroll/selection behaviors with real multi-consumer evidence should move
+  further into shared kit policy, richer password/history integrations still need a second
+  consumer story, the app-local `PreserveDraft` notes surface still needs an ownership decision,
+  and the next practical step is to split the current foundation closure into reviewable grouped
+  commits before any new promoted editor component work resumes.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.
@@ -257,6 +311,8 @@ priority than baseline correction.
   [docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_COMPONENT_SYSTEM.md](./EDITOR_COMPONENT_SYSTEM.md)
 - Editor interaction, identity, and diagnostics contract:
   [docs/workstreams/editor-ecosystem-fearless-refactor-v1/EDITOR_INTERACTION_CONTRACT.md](./EDITOR_INTERACTION_CONTRACT.md)
+- Workspace shell starter-set baseline:
+  [docs/workstreams/editor-ecosystem-fearless-refactor-v1/WORKSPACE_SHELL_STARTER_SET.md](./WORKSPACE_SHELL_STARTER_SET.md)
 - Forward-looking milestones:
   [docs/workstreams/editor-ecosystem-fearless-refactor-v1/MILESTONES.md](./MILESTONES.md)
 - Active TODO tracker:

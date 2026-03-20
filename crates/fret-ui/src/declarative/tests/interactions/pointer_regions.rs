@@ -305,6 +305,7 @@ fn pointer_down_payload_marks_hit_is_pressable_for_pressable_descendants() {
 
     let seen = app.models_mut().insert(false);
     let seen_target = app.models_mut().insert(None::<crate::GlobalElementId>);
+    let seen_descendant = app.models_mut().insert(None::<bool>);
     let pressable_id = app.models_mut().insert(None::<crate::GlobalElementId>);
     let root = render_root(
         &mut ui,
@@ -316,6 +317,7 @@ fn pointer_down_payload_marks_hit_is_pressable_for_pressable_descendants() {
         |cx| {
             let seen = seen.clone();
             let seen_target = seen_target.clone();
+            let seen_descendant = seen_descendant.clone();
             let on_down = Arc::new(
                 move |host: &mut dyn crate::action::UiPointerActionHost,
                       cx: crate::action::ActionCx,
@@ -325,6 +327,9 @@ fn pointer_down_payload_marks_hit_is_pressable_for_pressable_descendants() {
                         .update(&seen, |v: &mut bool| *v = down.hit_is_pressable);
                     let _ = host.models_mut().update(&seen_target, |v| {
                         *v = down.hit_pressable_target;
+                    });
+                    let _ = host.models_mut().update(&seen_descendant, |v| {
+                        *v = Some(down.hit_pressable_target_in_descendant_subtree);
                     });
                     host.request_redraw(cx.window);
                     false
@@ -382,6 +387,11 @@ fn pointer_down_payload_marks_hit_is_pressable_for_pressable_descendants() {
         Some(Some(pressable_el)),
         "expected pointer down payload to report the deepest pressable hit target"
     );
+    assert_eq!(
+        app.models().get_cloned(&seen_descendant),
+        Some(Some(true)),
+        "expected pointer down payload to mark descendant pressable hits"
+    );
 }
 
 #[test]
@@ -398,6 +408,7 @@ fn pointer_up_payload_exposes_pressable_hit_target_from_pointer_down() {
     let mut services = FakeTextService::default();
 
     let seen_target = app.models_mut().insert(None::<crate::GlobalElementId>);
+    let seen_descendant = app.models_mut().insert(None::<bool>);
     let pressable_id = app.models_mut().insert(None::<crate::GlobalElementId>);
     let root = render_root(
         &mut ui,
@@ -408,6 +419,7 @@ fn pointer_up_payload_exposes_pressable_hit_target_from_pointer_down() {
         "pointer-up-down-hit-pressable-target",
         |cx| {
             let seen_target = seen_target.clone();
+            let seen_descendant = seen_descendant.clone();
             let on_down = Arc::new(
                 move |_host: &mut dyn crate::action::UiPointerActionHost,
                       _cx: crate::action::ActionCx,
@@ -419,6 +431,9 @@ fn pointer_up_payload_exposes_pressable_hit_target_from_pointer_down() {
                       up: crate::action::PointerUpCx| {
                     let _ = host.models_mut().update(&seen_target, |v| {
                         *v = up.down_hit_pressable_target;
+                    });
+                    let _ = host.models_mut().update(&seen_descendant, |v| {
+                        *v = Some(up.down_hit_pressable_target_in_descendant_subtree);
                     });
                     host.request_redraw(cx.window);
                     false
@@ -489,6 +504,258 @@ fn pointer_up_payload_exposes_pressable_hit_target_from_pointer_down() {
         app.models().get_cloned(&seen_target),
         Some(Some(pressable_el)),
         "expected pointer up payload to carry the deepest pressable hit target from pointer down"
+    );
+    assert_eq!(
+        app.models().get_cloned(&seen_descendant),
+        Some(Some(true)),
+        "expected pointer up payload to preserve descendant pressable hit classification"
+    );
+}
+
+#[test]
+fn pointer_payload_distinguishes_descendant_from_ancestor_pressable_targets() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(140.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let seen_down_target = app.models_mut().insert(None::<crate::GlobalElementId>);
+    let seen_down_descendant = app.models_mut().insert(None::<bool>);
+    let seen_up_target = app.models_mut().insert(None::<crate::GlobalElementId>);
+    let seen_up_descendant = app.models_mut().insert(None::<bool>);
+    let outer_pressable_id = app.models_mut().insert(None::<crate::GlobalElementId>);
+    let inner_pressable_id = app.models_mut().insert(None::<crate::GlobalElementId>);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-pressable-hit-relation",
+        |cx| {
+            let seen_down_target = seen_down_target.clone();
+            let seen_down_descendant = seen_down_descendant.clone();
+            let seen_up_target = seen_up_target.clone();
+            let seen_up_descendant = seen_up_descendant.clone();
+            let outer_pressable_id = outer_pressable_id.clone();
+            let inner_pressable_id = inner_pressable_id.clone();
+
+            let on_down = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      down: crate::action::PointerDownCx| {
+                    host.capture_pointer();
+                    let _ = host.models_mut().update(&seen_down_target, |v| {
+                        *v = down.hit_pressable_target;
+                    });
+                    let _ = host.models_mut().update(&seen_down_descendant, |v| {
+                        *v = Some(down.hit_pressable_target_in_descendant_subtree);
+                    });
+                    host.request_redraw(cx.window);
+                    false
+                },
+            );
+            let on_up = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      up: crate::action::PointerUpCx| {
+                    host.release_pointer_capture();
+                    let _ = host.models_mut().update(&seen_up_target, |v| {
+                        *v = up.down_hit_pressable_target;
+                    });
+                    let _ = host.models_mut().update(&seen_up_descendant, |v| {
+                        *v = Some(up.down_hit_pressable_target_in_descendant_subtree);
+                    });
+                    host.request_redraw(cx.window);
+                    false
+                },
+            );
+
+            let mut outer_props = crate::element::PressableProps::default();
+            outer_props.layout.size.width = Length::Fill;
+            outer_props.layout.size.height = Length::Fill;
+
+            let mut region_props = crate::element::PointerRegionProps::default();
+            region_props.layout.size.width = Length::Fill;
+            region_props.layout.size.height = Length::Fill;
+
+            vec![
+                cx.pressable_with_id(outer_props, move |cx, _state, outer_id| {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&outer_pressable_id, |v| *v = Some(outer_id));
+                    vec![cx.pointer_region(region_props, move |cx| {
+                        cx.pointer_region_on_pointer_down(on_down.clone());
+                        cx.pointer_region_on_pointer_up(on_up.clone());
+                        vec![cx.pressable_with_id(
+                            crate::element::PressableProps::default(),
+                            move |cx, _state, inner_id| {
+                                let _ = cx
+                                    .app
+                                    .models_mut()
+                                    .update(&inner_pressable_id, |v| *v = Some(inner_id));
+                                vec![cx.text("inner")]
+                            },
+                        )]
+                    })]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let outer_pressable = ui.children(root)[0];
+    let pointer_region = ui.children(outer_pressable)[0];
+    let inner_pressable = ui.children(pointer_region)[0];
+
+    let outer_pressable_el = app
+        .models()
+        .get_copied(&outer_pressable_id)
+        .flatten()
+        .expect("outer pressable element id");
+    let inner_pressable_el = app
+        .models()
+        .get_copied(&inner_pressable_id)
+        .flatten()
+        .expect("inner pressable element id");
+
+    let center_of = |bounds: fret_core::Rect| {
+        Point::new(
+            Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+            Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+        )
+    };
+
+    let pointer_region_bounds = ui
+        .debug_node_bounds(pointer_region)
+        .expect("pointer region bounds");
+    let inner_pressable_bounds = ui
+        .debug_node_bounds(inner_pressable)
+        .expect("inner pressable bounds");
+
+    let nested_position = center_of(inner_pressable_bounds);
+    let y_mid = Px(pointer_region_bounds.origin.y.0 + pointer_region_bounds.size.height.0 * 0.5);
+    let x0 = pointer_region_bounds.origin.x.0;
+    let w = pointer_region_bounds.size.width.0;
+    let ancestor_position = [
+        Point::new(Px(x0 + 4.0), y_mid),
+        Point::new(Px(x0 + w * 0.5), y_mid),
+        Point::new(Px(x0 + w - 4.0), y_mid),
+    ]
+    .into_iter()
+    .find(|p| pointer_region_bounds.contains(*p) && !inner_pressable_bounds.contains(*p))
+    .expect("expected a point inside the pointer region but outside the nested pressable");
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: nested_position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: nested_position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&seen_down_target),
+        Some(Some(inner_pressable_el))
+    );
+    assert_eq!(
+        app.models().get_cloned(&seen_down_descendant),
+        Some(Some(true))
+    );
+    assert_eq!(
+        app.models().get_cloned(&seen_up_target),
+        Some(Some(inner_pressable_el))
+    );
+    assert_eq!(
+        app.models().get_cloned(&seen_up_descendant),
+        Some(Some(true))
+    );
+
+    let _ = app
+        .models_mut()
+        .update(&seen_down_target, |v| *v = None::<crate::GlobalElementId>);
+    let _ = app
+        .models_mut()
+        .update(&seen_down_descendant, |v| *v = None::<bool>);
+    let _ = app
+        .models_mut()
+        .update(&seen_up_target, |v| *v = None::<crate::GlobalElementId>);
+    let _ = app
+        .models_mut()
+        .update(&seen_up_descendant, |v| *v = None::<bool>);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: ancestor_position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: ancestor_position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&seen_down_target),
+        Some(Some(outer_pressable_el)),
+        "expected pointer down to preserve the ambient ancestor pressable target"
+    );
+    assert_eq!(
+        app.models().get_cloned(&seen_down_descendant),
+        Some(Some(false)),
+        "expected pointer down to exclude ancestor pressables from descendant classification"
+    );
+    assert_eq!(
+        app.models().get_cloned(&seen_up_target),
+        Some(Some(outer_pressable_el)),
+        "expected pointer up to preserve the ambient ancestor pressable target"
+    );
+    assert_eq!(
+        app.models().get_cloned(&seen_up_descendant),
+        Some(Some(false)),
+        "expected pointer up to exclude ancestor pressables from descendant classification"
     );
 }
 

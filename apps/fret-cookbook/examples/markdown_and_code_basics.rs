@@ -64,7 +64,7 @@ impl View for MarkdownAndCodeBasicsView {
         let wrap_state = cx.state().local_init(|| Some(Arc::from(WRAP_SCROLL_X)));
         let cap_height_state = cx.state().local_init(|| true);
 
-        let source = source_state.layout(cx).value_or_default();
+        let source = source_state.layout_value(cx);
         let preview_settings: PreviewSettings =
             cx.data()
                 .selector_layout((&wrap_state, &cap_height_state), |(wrap, cap_height)| {
@@ -92,7 +92,7 @@ impl View for MarkdownAndCodeBasicsView {
         // Keep the "Copy" affordance visible in scripts/screenshots without requiring hover.
         components.code_block_ui.copy_button_on_hover = false;
 
-        let wrap_toggle = shadcn::ToggleGroup::single(wrap_state.clone_model())
+        let wrap_toggle = shadcn::ToggleGroup::single(&wrap_state)
             .items([
                 shadcn::ToggleGroupItem::new(WRAP_SCROLL_X, [cx.text("Scroll X")])
                     .a11y_label("Scroll horizontally")
@@ -104,8 +104,7 @@ impl View for MarkdownAndCodeBasicsView {
             .refine_layout(LayoutRefinement::default().flex_none())
             .test_id(TEST_ID_WRAP);
 
-        let cap_switch =
-            shadcn::Switch::new(cap_height_state.clone_model()).test_id(TEST_ID_CAP_HEIGHT);
+        let cap_switch = shadcn::Switch::new(&cap_height_state).test_id(TEST_ID_CAP_HEIGHT);
 
         let reset = shadcn::Button::new("Reset sample")
             .variant(shadcn::ButtonVariant::Secondary)
@@ -196,7 +195,8 @@ impl View for MarkdownAndCodeBasicsView {
         .max_w(Px(980.0));
 
         cx.actions()
-            .local_set::<act::Reset, String>(&source_state, SAMPLE_MARKDOWN.to_string());
+            .local(&source_state)
+            .set::<act::Reset>(SAMPLE_MARKDOWN.to_string());
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }

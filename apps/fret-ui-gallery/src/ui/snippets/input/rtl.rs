@@ -14,10 +14,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::FieldLabel::new("مفتاح API").into_element(cx),
             shadcn::Input::new(value)
                 .a11y_label("مفتاح API")
+                .password()
                 .placeholder("sk-...")
                 .into_element(cx),
-            shadcn::FieldDescription::new("استخدم هذا المفتاح للوصول إلى واجهة برمجة التطبيقات.")
-                .into_element(cx),
+            shadcn::FieldDescription::new("مفتاح API الخاص بك مشفر ومخزن بأمان.").into_element(cx),
         ])
         .refine_layout(max_w_xs)
         .into_element(cx)

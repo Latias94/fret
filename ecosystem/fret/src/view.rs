@@ -58,6 +58,16 @@ impl<T> Clone for LocalState<T> {
 }
 
 impl<T> LocalState<T> {
+    /// Wrap an existing raw `Model<T>` handle as explicit `LocalState<T>` bridge state.
+    ///
+    /// This is primarily for advanced/manual surfaces that allocate tracked slots outside the
+    /// default `AppUi` render loop (for example: manual `UiTree` drivers or hybrid runtime-owned
+    /// window state) but still want to read/write that slot through the `LocalState<T>` helpers on
+    /// the app-facing authoring lane.
+    pub fn from_model(model: Model<T>) -> Self {
+        Self { model }
+    }
+
     /// Expose the underlying `Model<T>` as an explicit bridge.
     ///
     /// This exists for advanced/component/hybrid surfaces that intentionally still speak
@@ -139,8 +149,8 @@ impl<T> LocalState<T> {
     /// This is a store-only write helper: it does **not** request redraw or mark the current
     /// view-cache root dirty by itself. Use it inside `cx.actions().models::<A>(...)` when the
     /// write participates in a broader model-store transaction, or prefer the grouped
-    /// `cx.actions().local_*` / `payload_local_update_if::<A>(...)` helpers when the local write
-    /// itself should drive rerender.
+    /// `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` /
+    /// `.payload_update_if::<A>(...)` helpers when the local write itself should drive rerender.
     pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
     where
         T: Any,
@@ -238,6 +248,26 @@ impl<T> LocalState<T> {
             .expect("LocalState-first app code should always read initialized locals")
     }
 
+    /// Read a derived value from this local through a layout invalidation tracked borrow on the
+    /// default app surface.
+    ///
+    /// Use this when app code only needs a projection (for example: `len()`, membership checks, or
+    /// lightweight formatting) and should not clone the entire `T` just to compute that result.
+    /// Keep raw `layout(cx).read_ref(...)` when you intentionally want the explicit tracked-read
+    /// builder.
+    pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.layout(cx)
+            .read_ref(f)
+            .expect("LocalState-first app code should always read initialized locals")
+    }
+
     /// Read the current local value through a paint invalidation tracked read on the default app
     /// surface.
     ///
@@ -249,6 +279,25 @@ impl<T> LocalState<T> {
     {
         self.paint(cx)
             .value()
+            .expect("LocalState-first app code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a paint invalidation tracked borrow on the
+    /// default app surface.
+    ///
+    /// Use this when paint-time app code only needs a projection and should not clone the whole
+    /// slot. Keep raw `paint(cx).read_ref(...)` when you intentionally want the explicit
+    /// tracked-read builder.
+    pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.paint(cx)
+            .read_ref(f)
             .expect("LocalState-first app code should always read initialized locals")
     }
 
@@ -288,6 +337,32 @@ impl<T> LocalState<T> {
         self.watch_in(cx).paint()
     }
 
+    /// Read the current local value through a paint invalidation tracked read on helper-heavy
+    /// `ElementContext` bridge surfaces.
+    pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>(&'m self, cx: &'cx mut ElementContext<'a, H>) -> T
+    where
+        T: Any + Clone,
+    {
+        self.paint_in(cx)
+            .value()
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a paint invalidation tracked borrow on
+    /// helper-heavy `ElementContext` bridge surfaces.
+    pub fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.paint_in(cx)
+            .read_ref(f)
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
     /// Convenience bridge over [`LocalState::watch_in`] for layout invalidation reads.
     pub fn layout_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
@@ -297,6 +372,35 @@ impl<T> LocalState<T> {
         T: Any,
     {
         self.watch_in(cx).layout()
+    }
+
+    /// Read the current local value through a layout invalidation tracked read on helper-heavy
+    /// `ElementContext` bridge surfaces.
+    pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> T
+    where
+        T: Any + Clone,
+    {
+        self.layout_in(cx)
+            .value()
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a layout invalidation tracked borrow on
+    /// helper-heavy `ElementContext` bridge surfaces.
+    pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.layout_in(cx)
+            .read_ref(f)
+            .expect("LocalState bridge code should always read initialized locals")
     }
 
     /// Convenience bridge over [`LocalState::watch_in`] for hit-test invalidation reads.
@@ -603,6 +707,52 @@ impl<T: Any> TrackedStateExt<T> for Model<T> {
 }
 
 #[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoBoolModel for LocalState<bool> {
+    fn into_bool_model(self) -> Model<bool> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoBoolModel for &LocalState<bool> {
+    fn into_bool_model(self) -> Model<bool> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalBoolModel for LocalState<Option<bool>> {
+    fn into_optional_bool_model(self) -> Model<Option<bool>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalBoolModel for &LocalState<Option<bool>> {
+    fn into_optional_bool_model(self) -> Model<Option<bool>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCheckedStateModel
+    for LocalState<fret_ui_kit::primitives::checkbox::CheckedState>
+{
+    fn into_checked_state_model(self) -> Model<fret_ui_kit::primitives::checkbox::CheckedState> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCheckedStateModel
+    for &LocalState<fret_ui_kit::primitives::checkbox::CheckedState>
+{
+    fn into_checked_state_model(self) -> Model<fret_ui_kit::primitives::checkbox::CheckedState> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoTextValueModel for LocalState<String> {
     fn into_text_value_model(self) -> Model<String> {
         self.clone_model()
@@ -612,6 +762,176 @@ impl fret_ui_shadcn::facade::IntoTextValueModel for LocalState<String> {
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoTextValueModel for &LocalState<String> {
     fn into_text_value_model(self) -> Model<String> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalTextValueModel for LocalState<Option<Arc<str>>> {
+    fn into_optional_text_value_model(self) -> Model<Option<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalTextValueModel for &LocalState<Option<Arc<str>>> {
+    fn into_optional_text_value_model(self) -> Model<Option<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoTextVecModel for LocalState<Vec<Arc<str>>> {
+    fn into_text_vec_model(self) -> Model<Vec<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoTextVecModel for &LocalState<Vec<Arc<str>>> {
+    fn into_text_vec_model(self) -> Model<Vec<Arc<str>>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatValueModel for LocalState<f32> {
+    fn into_float_value_model(self) -> Model<f32> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatValueModel for &LocalState<f32> {
+    fn into_float_value_model(self) -> Model<f32> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalFloatValueModel for LocalState<Option<f32>> {
+    fn into_optional_float_value_model(self) -> Model<Option<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalFloatValueModel for &LocalState<Option<f32>> {
+    fn into_optional_float_value_model(self) -> Model<Option<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatVecModel for LocalState<Vec<f32>> {
+    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoFloatVecModel for &LocalState<Vec<f32>> {
+    fn into_float_vec_model(self) -> Model<Vec<f32>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCalendarMonthModel
+    for LocalState<fret_ui_kit::headless::calendar::CalendarMonth>
+{
+    fn into_calendar_month_model(self) -> Model<fret_ui_kit::headless::calendar::CalendarMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoCalendarMonthModel
+    for &LocalState<fret_ui_kit::headless::calendar::CalendarMonth>
+{
+    fn into_calendar_month_model(self) -> Model<fret_ui_kit::headless::calendar::CalendarMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalDateModel for LocalState<Option<time::Date>> {
+    fn into_optional_date_model(self) -> Model<Option<time::Date>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoOptionalDateModel for &LocalState<Option<time::Date>> {
+    fn into_optional_date_model(self) -> Model<Option<time::Date>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoSolarHijriMonthModel
+    for LocalState<fret_ui_shadcn::facade::SolarHijriMonth>
+{
+    fn into_solar_hijri_month_model(self) -> Model<fret_ui_shadcn::facade::SolarHijriMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoSolarHijriMonthModel
+    for &LocalState<fret_ui_shadcn::facade::SolarHijriMonth>
+{
+    fn into_solar_hijri_month_model(self) -> Model<fret_ui_shadcn::facade::SolarHijriMonth> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoU8ValueModel for LocalState<u8> {
+    fn into_u8_value_model(self) -> Model<u8> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoU8ValueModel for &LocalState<u8> {
+    fn into_u8_value_model(self) -> Model<u8> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateRangeSelectionModel
+    for LocalState<fret_ui_kit::headless::calendar::DateRangeSelection>
+{
+    fn into_date_range_selection_model(
+        self,
+    ) -> Model<fret_ui_kit::headless::calendar::DateRangeSelection> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateRangeSelectionModel
+    for &LocalState<fret_ui_kit::headless::calendar::DateRangeSelection>
+{
+    fn into_date_range_selection_model(
+        self,
+    ) -> Model<fret_ui_kit::headless::calendar::DateRangeSelection> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateVecModel for LocalState<Vec<time::Date>> {
+    fn into_date_vec_model(self) -> Model<Vec<time::Date>> {
+        self.clone_model()
+    }
+}
+
+#[cfg(feature = "shadcn")]
+impl fret_ui_shadcn::facade::IntoDateVecModel for &LocalState<Vec<time::Date>> {
+    fn into_date_vec_model(self) -> Model<Vec<time::Date>> {
         self.clone_model()
     }
 }
@@ -655,35 +975,17 @@ impl<T: 'static> QueryHandleReadLayoutExt<T> for fret_query::QueryHandle<T> {
 /// dependency signatures without bouncing through `clone_model()` or `local.model()`.
 #[cfg(feature = "state-selector")]
 pub(crate) trait LocalSelectorDepsBuilderExt {
-    fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self;
-
     fn local_rev_invalidation<T: Any>(
         &mut self,
         local: &LocalState<T>,
         invalidation: Invalidation,
     ) -> &mut Self;
-
-    fn local_paint_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::Paint)
-    }
-
-    fn local_layout_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::Layout)
-    }
-
-    fn local_hit_test_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::HitTest)
-    }
 }
 
 #[cfg(feature = "state-selector")]
 impl<'cx, 'a, H: UiHost> LocalSelectorDepsBuilderExt
     for fret_selector::ui::DepsBuilder<'cx, 'a, H>
 {
-    fn local_rev<T: Any>(&mut self, local: &LocalState<T>) -> &mut Self {
-        self.local_rev_invalidation(local, Invalidation::Paint)
-    }
-
     fn local_rev_invalidation<T: Any>(
         &mut self,
         local: &LocalState<T>,
@@ -705,6 +1007,22 @@ fn local_selector_value_in<T: Any + Clone, H: UiHost>(
         Invalidation::HitTest | Invalidation::HitTestOnly => local.hit_test_in(cx).value(),
     };
     value.expect("LocalState-first selector inputs should always resolve a tracked value")
+}
+
+#[cfg(feature = "state-selector")]
+fn model_selector_value_in<T: Any + Clone, H: UiHost>(
+    model: &Model<T>,
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+) -> T {
+    let value = match invalidation {
+        Invalidation::Paint => cx.get_model_cloned(model, Invalidation::Paint),
+        Invalidation::Layout => cx.get_model_cloned(model, Invalidation::Layout),
+        Invalidation::HitTest | Invalidation::HitTestOnly => {
+            cx.get_model_cloned(model, Invalidation::HitTest)
+        }
+    };
+    value.expect("Model selector inputs should always resolve a tracked value")
 }
 
 /// App-facing LocalState selector inputs for the grouped `cx.data()` lane.
@@ -784,6 +1102,90 @@ impl_local_selector_inputs_tuple!(
     (A:0, B:1, C:2, D:3, E:4, F:5),
 );
 
+/// Explicit shared-`Model<T>` selector inputs for grouped derived reads on the app-facing lane.
+///
+/// This keeps the advanced/manual path out of raw `selector(deps, compute)` boilerplate when the
+/// state already lives in an explicit `Model<T>` bag instead of `LocalState<T>`.
+#[cfg(feature = "state-selector")]
+#[doc(hidden)]
+pub trait ModelSelectorInputs<'a, H: UiHost>: Copy {
+    type Values;
+
+    fn deps_in(
+        self,
+        cx: &mut ElementContext<'a, H>,
+        invalidation: Invalidation,
+    ) -> fret_selector::DepsSignature;
+
+    fn values_in(self, cx: &mut ElementContext<'a, H>, invalidation: Invalidation) -> Self::Values;
+}
+
+#[cfg(feature = "state-selector")]
+impl<'a, H: UiHost, T: Any + Clone> ModelSelectorInputs<'a, H> for &Model<T> {
+    type Values = T;
+
+    fn deps_in(
+        self,
+        cx: &mut ElementContext<'a, H>,
+        invalidation: Invalidation,
+    ) -> fret_selector::DepsSignature {
+        let mut deps = fret_selector::ui::DepsBuilder::new(cx);
+        deps.model_rev_invalidation(self, invalidation);
+        deps.finish()
+    }
+
+    fn values_in(self, cx: &mut ElementContext<'a, H>, invalidation: Invalidation) -> Self::Values {
+        model_selector_value_in(self, cx, invalidation)
+    }
+}
+
+#[cfg(feature = "state-selector")]
+macro_rules! impl_model_selector_inputs_tuple {
+    ($(($($name:ident:$idx:tt),+)),+ $(,)?) => {
+        $(
+            impl<'a, H: UiHost, $($name: Any + Clone),+> ModelSelectorInputs<'a, H>
+                for ($(&Model<$name>,)+)
+            {
+                type Values = ($($name,)+);
+
+                fn deps_in(
+                    self,
+                    cx: &mut ElementContext<'a, H>,
+                    invalidation: Invalidation,
+                ) -> fret_selector::DepsSignature {
+                    let mut deps = fret_selector::ui::DepsBuilder::new(cx);
+                    $(deps.model_rev_invalidation(self.$idx, invalidation);)+
+                    deps.finish()
+                }
+
+                fn values_in(
+                    self,
+                    cx: &mut ElementContext<'a, H>,
+                    invalidation: Invalidation,
+                ) -> Self::Values {
+                    ($(model_selector_value_in(self.$idx, cx, invalidation),)+)
+                }
+            }
+        )+
+    };
+}
+
+#[cfg(feature = "state-selector")]
+impl_model_selector_inputs_tuple!(
+    (A:0, B:1),
+    (A:0, B:1, C:2),
+    (A:0, B:1, C:2, D:3),
+    (A:0, B:1, C:2, D:3, E:4),
+    (A:0, B:1, C:2, D:3, E:4, F:5),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9, K:10),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9, K:10, L:11),
+    (A:0, B:1, C:2, D:3, E:4, F:5, G:6, Hh:7, I:8, J:9, K:10, L:11, M:12),
+);
+
 /// Per-frame view construction context passed to [`View::render`].
 ///
 /// This is a thin wrapper over [`ElementContext`] that:
@@ -802,15 +1204,11 @@ pub struct AppUi<'cx, 'a, H: UiHost> {
 /// `fret::advanced::prelude::*`.
 ///
 /// Import it explicitly when advanced code still wants stable callsite-keyed `Model<T>`
-/// allocation rather than the grouped `cx.state().local*` surface.
+/// allocation rather than the grouped `cx.state().local*` surface. For loop/dynamic callsites,
+/// wrap `use_state::<T>()` in `cx.keyed(...)` instead of relying on a separate keyed alias.
 pub trait AppUiRawStateExt {
     #[track_caller]
     fn use_state<T>(&mut self) -> Model<T>
-    where
-        T: Any + Default;
-
-    #[track_caller]
-    fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
     where
         T: Any + Default;
 }
@@ -822,14 +1220,6 @@ impl<'cx, 'a, H: UiHost> AppUiRawStateExt for AppUi<'cx, 'a, H> {
         T: Any + Default,
     {
         self.use_state_with(T::default)
-    }
-
-    #[track_caller]
-    fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
-    where
-        T: Any + Default,
-    {
-        self.keyed(key, |cx| AppUiRawStateExt::use_state::<T>(cx))
     }
 }
 
@@ -947,11 +1337,23 @@ pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
+#[doc(hidden)]
+pub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T> {
+    cx: &'view mut AppUi<'cx, 'a, H>,
+    local: LocalState<T>,
+}
+
 /// Grouped action/effect registration helpers for extracted `UiCx` child builders on the default
 /// app surface.
 #[doc(hidden)]
 pub struct UiCxActions<'cx, 'a> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
+}
+
+#[doc(hidden)]
+pub struct UiCxActionLocal<'cx, 'a, T> {
+    cx: &'cx mut ElementContext<'a, crate::app::App>,
+    local: LocalState<T>,
 }
 
 #[doc(hidden)]
@@ -984,6 +1386,58 @@ where
     }
 }
 
+impl<'view, 'cx, 'a, H: UiHost, T> AppUiActionLocal<'view, 'cx, 'a, H, T>
+where
+    T: Any,
+{
+    pub fn update<A>(self, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| update(value))
+            });
+    }
+
+    pub fn set<A>(self, value: T)
+    where
+        A: crate::TypedAction,
+        T: Clone,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.set_action(host, action_cx, value.clone())
+            });
+    }
+
+    pub fn payload_update_if<A>(self, update: impl Fn(&mut T, A::Payload) -> bool + 'static)
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_payload_action_handler::<A>(move |host, action_cx, payload| {
+                local.update_action_if(host, action_cx, |value| update(value, payload))
+            });
+    }
+}
+
+impl<'view, 'cx, 'a, H: UiHost> AppUiActionLocal<'view, 'cx, 'a, H, bool> {
+    pub fn toggle_bool<A>(self)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| *value = !*value)
+            });
+    }
+}
+
 impl<'cx, 'a, C> UiCxLocalsWith<'cx, 'a, C>
 where
     C: Clone + 'static,
@@ -998,6 +1452,54 @@ where
                 models: host.models_mut(),
             };
             f(&mut tx, captures.clone())
+        });
+    }
+}
+
+impl<'cx, 'a, T> UiCxActionLocal<'cx, 'a, T>
+where
+    T: Any,
+{
+    pub fn update<A>(self, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| update(value))
+        });
+    }
+
+    pub fn set<A>(self, value: T)
+    where
+        A: crate::TypedAction,
+        T: Clone,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.set_action(host, action_cx, value.clone())
+        });
+    }
+
+    pub fn payload_update_if<A>(self, update: impl Fn(&mut T, A::Payload) -> bool + 'static)
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        let local = self.local;
+        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+            local.update_action_if(host, action_cx, |value| update(value, payload))
+        });
+    }
+}
+
+impl<'cx, 'a> UiCxActionLocal<'cx, 'a, bool> {
+    pub fn toggle_bool<A>(self)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| *value = !*value)
         });
     }
 }
@@ -1079,6 +1581,7 @@ struct UiCxActionHooksFrameSlot {
 
 struct UiCxActionHooksOwner;
 struct ViewRuntimeActionHooksOwner;
+struct AppUiRenderRootActionHooksOwner;
 
 fn prepare_uicx_action_hooks(cx: &mut ElementContext<'_, crate::app::App>) {
     let frame_id = cx.frame_id;
@@ -1184,63 +1687,21 @@ fn uicx_on_action_availability<A>(
 }
 
 impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
-    /// Build a widget-local activation handler using the same action-first vocabulary as widgets
-    /// that already expose `.action(...)`.
-    pub fn action<A>(self, _action: A) -> OnActivate
-    where
-        A: crate::TypedAction,
-    {
-        dispatch_action_listener::<A>()
-    }
-
-    /// Build a widget-local activation handler that dispatches a typed payload action while
-    /// keeping the action marker on the call site.
-    pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate
-    where
-        A: crate::actions::TypedPayloadAction,
-        A::Payload: Clone,
-    {
-        dispatch_payload_action_listener::<A>(payload)
-    }
-
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
     pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
     }
 
-    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    /// Bind a typed action handler against one `LocalState<T>` slot without repeating that handle
+    /// on every helper family.
+    pub fn local<T>(self, local: &LocalState<T>) -> AppUiActionLocal<'view, 'cx, 'a, H, T>
     where
-        A: crate::TypedAction,
         T: Any,
     {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.update_action(host, action_cx, |value| update(value))
-            });
-    }
-
-    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.set_action(host, action_cx, value.clone())
-            });
-    }
-
-    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
-    where
-        A: crate::TypedAction,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.update_action(host, action_cx, |value| *value = !*value)
-            });
+        AppUiActionLocal {
+            cx: self.cx,
+            local: LocalState::clone(local),
+        }
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
@@ -1254,9 +1715,9 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
     /// raw payload-carrier namespace.
     ///
-    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
-    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
-    /// lives in `ModelStore`.
+    /// Prefer `cx.actions().local(&local).payload_update_if::<A>(...)` when the write stays on
+    /// `LocalState<T>`. Use this when the payload targets shared `Model<T>` graphs or
+    /// view-external state that already lives in `ModelStore`.
     pub fn payload_models<A>(
         self,
         f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
@@ -1272,6 +1733,10 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     /// Clone the provided `LocalState<T>` handles into a hidden builder so the call site can pass
     /// `(&draft_state, &next_id_state, ...)` directly, then register the typed action via
     /// `.on::<A>(...)` without repeating a `LocalState::clone(...)` prelude at every call site.
+    ///
+    /// Borrowed captures are often the right default in real render bodies because the same local
+    /// handles are still used later for reads, widget binding, or other action registration. Use
+    /// owned `LocalState<T>` values only when the handles are not needed again in the same scope.
     ///
     /// This keeps action identity and the `LocalStateTxn` boundary explicit while trimming the
     /// common multi-slot capture ceremony on the default app lane.
@@ -1295,21 +1760,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         });
     }
 
-    pub fn payload_local_update_if<A, T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_payload_action_handler::<A>(move |host, action_cx, payload| {
-                local.update_action_if(host, action_cx, |value| update(value, payload))
-            });
-    }
-
     pub fn availability<A>(
         self,
         f: impl Fn(
@@ -1325,60 +1775,21 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
 }
 
 impl<'cx, 'a> UiCxActions<'cx, 'a> {
-    /// Build a widget-local activation handler using the same action-first vocabulary as widgets
-    /// that already expose `.action(...)`.
-    pub fn action<A>(self, _action: A) -> OnActivate
-    where
-        A: crate::TypedAction,
-    {
-        dispatch_action_listener::<A>()
-    }
-
-    /// Build a widget-local activation handler that dispatches a typed payload action while
-    /// keeping the action marker on the call site.
-    pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate
-    where
-        A: crate::actions::TypedPayloadAction,
-        A::Payload: Clone,
-    {
-        dispatch_payload_action_listener::<A>(payload)
-    }
-
     /// Build a widget-local activation listener without reopening the raw `Arc<dyn Fn...>` seam.
     pub fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> OnActivate {
         action_listener(f)
     }
 
-    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    /// Bind a typed action handler against one `LocalState<T>` slot without repeating that handle
+    /// on every helper family.
+    pub fn local<T>(self, local: &LocalState<T>) -> UiCxActionLocal<'cx, 'a, T>
     where
-        A: crate::TypedAction,
         T: Any,
     {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.update_action(host, action_cx, |value| update(value))
-        });
-    }
-
-    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.set_action(host, action_cx, value.clone())
-        });
-    }
-
-    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
-    where
-        A: crate::TypedAction,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.update_action(host, action_cx, |value| *value = !*value)
-        });
+        UiCxActionLocal {
+            cx: self.cx,
+            local: LocalState::clone(local),
+        }
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
@@ -1391,9 +1802,9 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
     /// raw payload-carrier namespace.
     ///
-    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
-    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
-    /// lives in `ModelStore`.
+    /// Prefer `cx.actions().local(&local).payload_update_if::<A>(...)` when the write stays on
+    /// `LocalState<T>`. Use this when the payload targets shared `Model<T>` graphs or
+    /// view-external state that already lives in `ModelStore`.
     pub fn payload_models<A>(
         self,
         f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
@@ -1430,20 +1841,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         uicx_on_action_notify::<A>(self.cx, move |host, action_cx| {
             host.record_transient_event(action_cx, transient_key);
             true
-        });
-    }
-
-    pub fn payload_local_update_if<A, T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
-            local.update_action_if(host, action_cx, |value| update(value, payload))
         });
     }
 
@@ -1491,25 +1888,45 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         )
     }
 
-    /// Keyed LocalState-first selector path for repeated callsites (lists/loops) on the default
-    /// app-facing lane.
+    /// Grouped selector path for explicit shared `Model<T>` bags that affect layout.
+    ///
+    /// Use this when the deps intentionally stay as shared `Model<T>` handles on manual/advanced
+    /// surfaces. Prefer `selector_layout(...)` when the inputs are view-owned `LocalState<T>`.
     #[track_caller]
     #[cfg(feature = "state-selector")]
-    pub fn selector_layout_keyed<K: Hash, Inputs, TValue>(
+    pub fn selector_model_layout<Inputs, TValue>(
         self,
-        key: K,
         inputs: Inputs,
         compute: impl FnOnce(Inputs::Values) -> TValue,
     ) -> TValue
     where
-        Inputs: LocalSelectorLayoutInputs<'a, H>,
+        Inputs: ModelSelectorInputs<'a, H>,
         TValue: Any + Clone,
     {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
+        fret_selector::ui::SelectorElementContextExt::use_selector(
             self.cx.cx,
-            key,
             move |cx| inputs.deps_in(cx, Invalidation::Layout),
             move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
+    /// Grouped selector path for explicit shared `Model<T>` bags that affect paint-time derived
+    /// values.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_model_paint<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: ModelSelectorInputs<'a, H>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Paint),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Paint)),
         )
     }
 
@@ -1525,23 +1942,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiData<'view, 'cx, 'a, H> {
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector(self.cx.cx, deps, compute)
-    }
-
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn selector_keyed<K: Hash, Deps, TValue>(
-        self,
-        key: K,
-        deps: impl FnOnce(&mut ElementContext<'a, H>) -> Deps,
-        compute: impl FnOnce(&mut ElementContext<'a, H>) -> TValue,
-    ) -> TValue
-    where
-        Deps: Any + PartialEq,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx.cx, key, deps, compute,
-        )
     }
 
     #[cfg(feature = "state-query")]
@@ -1634,24 +2034,43 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         )
     }
 
-    /// Keyed LocalState-first selector path for repeated extracted `UiCx` helper callsites.
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `UiCx` helpers when
+    /// the derived value affects layout.
     #[track_caller]
     #[cfg(feature = "state-selector")]
-    pub fn selector_layout_keyed<K: Hash, Inputs, TValue>(
+    pub fn selector_model_layout<Inputs, TValue>(
         self,
-        key: K,
         inputs: Inputs,
         compute: impl FnOnce(Inputs::Values) -> TValue,
     ) -> TValue
     where
-        Inputs: LocalSelectorLayoutInputs<'a, crate::app::App>,
+        Inputs: ModelSelectorInputs<'a, crate::app::App>,
         TValue: Any + Clone,
     {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
+        fret_selector::ui::SelectorElementContextExt::use_selector(
             self.cx,
-            key,
             move |cx| inputs.deps_in(cx, Invalidation::Layout),
             move |cx| compute(inputs.values_in(cx, Invalidation::Layout)),
+        )
+    }
+
+    /// Grouped selector path for explicit shared `Model<T>` bags on extracted `UiCx` helpers when
+    /// the derived value affects paint.
+    #[track_caller]
+    #[cfg(feature = "state-selector")]
+    pub fn selector_model_paint<Inputs, TValue>(
+        self,
+        inputs: Inputs,
+        compute: impl FnOnce(Inputs::Values) -> TValue,
+    ) -> TValue
+    where
+        Inputs: ModelSelectorInputs<'a, crate::app::App>,
+        TValue: Any + Clone,
+    {
+        fret_selector::ui::SelectorElementContextExt::use_selector(
+            self.cx,
+            move |cx| inputs.deps_in(cx, Invalidation::Paint),
+            move |cx| compute(inputs.values_in(cx, Invalidation::Paint)),
         )
     }
 
@@ -1667,23 +2086,6 @@ impl<'cx, 'a> UiCxData<'cx, 'a> {
         TValue: Any + Clone,
     {
         fret_selector::ui::SelectorElementContextExt::use_selector(self.cx, deps, compute)
-    }
-
-    #[track_caller]
-    #[cfg(feature = "state-selector")]
-    pub fn selector_keyed<K: Hash, Deps, TValue>(
-        self,
-        key: K,
-        deps: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> Deps,
-        compute: impl FnOnce(&mut ElementContext<'a, crate::app::App>) -> TValue,
-    ) -> TValue
-    where
-        Deps: Any + PartialEq,
-        TValue: Any + Clone,
-    {
-        fret_selector::ui::SelectorElementContextExt::use_selector_keyed(
-            self.cx, key, deps, compute,
-        )
     }
 
     #[cfg(feature = "state-query")]
@@ -1943,7 +2345,7 @@ impl<'cx, 'a, H: UiHost> AppUi<'cx, 'a, H> {
                     slot.calls_in_frame = slot.calls_in_frame.saturating_add(1);
                     if slot.calls_in_frame == 2 {
                         eprintln!(
-                            "use_state called multiple times per frame at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` or use `use_state_keyed(...)` to avoid state collisions",
+                            "use_state called multiple times per frame at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` to avoid state collisions",
                             callsite.file(),
                             callsite.line(),
                             callsite.column()
@@ -2011,6 +2413,83 @@ impl<'cx, 'a, H: UiHost> std::ops::DerefMut for AppUi<'cx, 'a, H> {
 pub struct ViewWindowState<V: View> {
     pub view: V,
     pub(crate) cached_handlers: Option<(OnCommand, OnCommandAvailability)>,
+    pub(crate) cached_action_root: Option<fret_ui::GlobalElementId>,
+}
+
+/// Keepalive state for manual `render_root(...)` surfaces that opt into `AppUi`.
+///
+/// This mirrors the cached action-handler lifecycle used by the `View` runtime so manual `UiTree`
+/// / `FnDriver` hosts can reuse the same grouped `AppUi` authoring surface without reintroducing
+/// low-level action-hook bookkeeping at each call site.
+#[derive(Default)]
+pub struct AppUiRenderRootState {
+    cached_handlers: Option<(OnCommand, OnCommandAvailability)>,
+    cached_action_root: Option<fret_ui::GlobalElementId>,
+}
+
+fn clear_app_ui_action_handlers_for_owner<Owner: 'static, H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    action_root: fret_ui::GlobalElementId,
+) {
+    cx.action_clear_on_command_for_owner::<Owner>(action_root);
+    cx.action_clear_on_command_availability_for_owner::<Owner>(action_root);
+}
+
+fn install_app_ui_action_handlers_for_owner<Owner: 'static, H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    action_root: fret_ui::GlobalElementId,
+    handlers: &Option<(OnCommand, OnCommandAvailability)>,
+) {
+    if let Some((on_command, on_command_availability)) = handlers.clone() {
+        cx.action_on_command_for_owner::<Owner>(action_root, on_command);
+        cx.action_on_command_availability_for_owner::<Owner>(action_root, on_command_availability);
+    }
+}
+
+fn render_app_ui_with_cached_handlers<'a, Owner: 'static, H: UiHost + 'static>(
+    cx: &mut ElementContext<'a, H>,
+    action_root_name: &str,
+    cached_handlers: &mut Option<(OnCommand, OnCommandAvailability)>,
+    cached_action_root: &mut Option<fret_ui::GlobalElementId>,
+    render: impl for<'cx, 'el> FnOnce(&mut AppUi<'cx, 'el, H>) -> crate::Ui,
+) -> crate::Ui {
+    let mut render = Some(render);
+    cx.named(action_root_name, |cx| {
+        if let Some(action_root) = *cached_action_root {
+            clear_app_ui_action_handlers_for_owner::<Owner, _>(cx, action_root);
+
+            // Ensure handlers remain installed even when the view-cache root is reused (render
+            // skipped).
+            install_app_ui_action_handlers_for_owner::<Owner, _>(cx, action_root, cached_handlers);
+        }
+
+        cx.view_cache(
+            fret_ui::element::ViewCacheProps {
+                contained_layout: true,
+                cache_key: 0,
+                ..fret_ui::element::ViewCacheProps::default()
+            },
+            |cx| {
+                let action_root = cx.root_id();
+                clear_app_ui_action_handlers_for_owner::<Owner, _>(cx, action_root);
+
+                let mut app_ui = AppUi::new(cx, action_root);
+                let render = render.take().expect("AppUi render closure should run once");
+                let out = render(&mut app_ui);
+                *cached_handlers = app_ui.take_action_handlers();
+                *cached_action_root = Some(action_root);
+
+                install_app_ui_action_handlers_for_owner::<Owner, _>(
+                    cx,
+                    action_root,
+                    cached_handlers,
+                );
+
+                out
+            },
+        )
+        .into()
+    })
 }
 
 #[doc(hidden)]
@@ -2021,6 +2500,7 @@ pub fn view_init_window<V: View>(
     ViewWindowState {
         view: V::init(app, window),
         cached_handlers: None,
+        cached_action_root: None,
     }
 }
 
@@ -2029,55 +2509,46 @@ pub fn view_view<'a, V: View>(
     cx: &mut ElementContext<'a, fret_app::App>,
     st: &mut ViewWindowState<V>,
 ) -> crate::Ui {
-    cx.named("__fret.view.action_root", |cx| {
-        let action_root = cx.root_id();
+    let ViewWindowState {
+        view,
+        cached_handlers,
+        cached_action_root,
+    } = st;
+    render_app_ui_with_cached_handlers::<ViewRuntimeActionHooksOwner, _>(
+        cx,
+        "__fret.view.action_root",
+        cached_handlers,
+        cached_action_root,
+        |app_ui| view.render(app_ui),
+    )
+}
 
-        cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
-        cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-            action_root,
-        );
-
-        // Ensure handlers remain installed even when the view-cache root is reused (render
-        // skipped).
-        if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
-            cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root, on_command);
-            cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-                action_root,
-                on_command_availability,
-            );
-        }
-
-        cx.view_cache(
-            fret_ui::element::ViewCacheProps {
-                contained_layout: true,
-                cache_key: 0,
-                ..fret_ui::element::ViewCacheProps::default()
-            },
-            |cx| {
-                cx.action_clear_on_command_for_owner::<ViewRuntimeActionHooksOwner>(action_root);
-                cx.action_clear_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-                    action_root,
-                );
-
-                let mut app_ui = AppUi::new(cx, action_root);
-                let out = st.view.render(&mut app_ui);
-                st.cached_handlers = app_ui.take_action_handlers();
-
-                if let Some((on_command, on_command_availability)) = st.cached_handlers.clone() {
-                    cx.action_on_command_for_owner::<ViewRuntimeActionHooksOwner>(
-                        action_root,
-                        on_command,
-                    );
-                    cx.action_on_command_availability_for_owner::<ViewRuntimeActionHooksOwner>(
-                        action_root,
-                        on_command_availability,
-                    );
-                }
-
-                out
-            },
+/// Render a manual declarative root through the grouped `AppUi` authoring surface.
+///
+/// This is the explicit advanced/manual-assembly bridge for `UiTree` / `FnDriver` code that still
+/// owns its own window state but wants the same `AppUi` + `LocalState` authoring lane that the
+/// higher-level `View` runtime uses.
+pub fn render_root_with_app_ui<'a, H: UiHost + 'static>(
+    cx: fret_ui::declarative::RenderRootContext<'a, H>,
+    root_name: &str,
+    state: &mut AppUiRenderRootState,
+    render: impl for<'cx, 'el> FnOnce(&mut AppUi<'cx, 'el, H>) -> crate::Ui,
+) -> fret_core::NodeId {
+    let fret_ui::declarative::RenderRootContext {
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+    } = cx;
+    fret_ui::declarative::render_root(ui, app, services, window, bounds, root_name, |cx| {
+        render_app_ui_with_cached_handlers::<AppUiRenderRootActionHooksOwner, _>(
+            cx,
+            "__fret.advanced.view.render_root_with_app_ui.action_root",
+            &mut state.cached_handlers,
+            &mut state.cached_action_root,
+            render,
         )
-        .into()
     })
 }
 
@@ -2103,14 +2574,84 @@ pub fn view_record_engine_frame<V: View>(
 #[cfg(test)]
 mod tests {
     use super::{
-        AppActivateExt, AppActivateSurface, LocalActionCapture, LocalState, LocalStateTxn,
-        OnActivate, action_listener, dispatch_action_listener, dispatch_payload_action_listener,
+        AppActivateExt, AppActivateSurface, AppUiRenderRootState, LocalActionCapture, LocalState,
+        LocalStateTxn, OnActivate, View, ViewWindowState, action_listener,
+        dispatch_action_listener, dispatch_payload_action_listener, render_root_with_app_ui,
+        view_init_window, view_view,
     };
     use std::any::Any;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
     const VIEW_RS_SOURCE: &str = include_str!("view.rs");
-    use fret_core::AppWindowId;
+    use fret_core::{
+        AppWindowId, FrameId, NodeId, Point, Px, Rect, Size, TextConstraints, TextMetrics,
+    };
     use fret_runtime::{ActionId, CommandId, Effect, ModelStore, TimerToken};
     use fret_ui::action::{ActionCx, ActivateReason, UiActionHost, UiFocusActionHost};
+    use fret_ui::declarative::render_root;
+    use fret_ui::{UiTree, element::Length};
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
 
     struct DispatchAction;
     impl fret_runtime::TypedAction for DispatchAction {
@@ -2127,6 +2668,13 @@ mod tests {
     }
     impl crate::actions::TypedPayloadAction for DispatchPayloadAction {
         type Payload = u64;
+    }
+
+    struct RuntimeIncrementAction;
+    impl fret_runtime::TypedAction for RuntimeIncrementAction {
+        fn action_id() -> ActionId {
+            ActionId::from("test.locals_with.runtime.increment.v1")
+        }
     }
 
     #[derive(Default)]
@@ -2206,6 +2754,178 @@ mod tests {
         fn request_focus(&mut self, _target: fret_ui::GlobalElementId) {}
     }
 
+    struct RuntimeLocalsWithView {
+        count: Option<LocalState<u32>>,
+        touched: Option<LocalState<bool>>,
+        renders: Arc<AtomicUsize>,
+        last_seen_count: Arc<AtomicUsize>,
+    }
+
+    impl View for RuntimeLocalsWithView {
+        fn init(_app: &mut crate::app::App, _window: crate::WindowId) -> Self {
+            Self {
+                count: None,
+                touched: None,
+                renders: Arc::new(AtomicUsize::new(0)),
+                last_seen_count: Arc::new(AtomicUsize::new(0)),
+            }
+        }
+
+        fn render(&mut self, cx: &mut crate::AppUi<'_, '_>) -> crate::Ui {
+            self.renders.fetch_add(1, Ordering::SeqCst);
+
+            if self.count.is_none() {
+                self.count = Some(cx.state().local_init(|| 0u32));
+            }
+            if self.touched.is_none() {
+                self.touched = Some(cx.state().local_init(|| false));
+            }
+
+            let count = self
+                .count
+                .as_ref()
+                .expect("count local should exist")
+                .clone();
+            let touched = self
+                .touched
+                .as_ref()
+                .expect("touched local should exist")
+                .clone();
+
+            cx.actions()
+                .locals_with((&count, &touched))
+                .on::<RuntimeIncrementAction>(|tx, (count, touched)| {
+                    let incremented = tx.update_if(&count, |value| {
+                        *value += 1;
+                        true
+                    });
+                    let flagged = tx.set(&touched, true);
+                    incremented || flagged
+                });
+
+            self.last_seen_count
+                .store(count.layout_value(cx) as usize, Ordering::SeqCst);
+
+            let mut props = fret_ui::element::ContainerProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            cx.container(props, |_cx| Vec::new()).into()
+        }
+    }
+
+    fn render_runtime_view(
+        ui: &mut UiTree<crate::app::App>,
+        app: &mut crate::app::App,
+        services: &mut FakeUiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        st: &mut ViewWindowState<RuntimeLocalsWithView>,
+    ) -> NodeId {
+        let root = render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "locals-with-runtime",
+            |cx| view_view(cx, st),
+        );
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    struct ManualRuntimeLocalsWithRoot {
+        app_ui_root: AppUiRenderRootState,
+        count: Option<LocalState<u32>>,
+        touched: Option<LocalState<bool>>,
+        renders: Arc<AtomicUsize>,
+        last_seen_count: Arc<AtomicUsize>,
+    }
+
+    impl Default for ManualRuntimeLocalsWithRoot {
+        fn default() -> Self {
+            Self {
+                app_ui_root: AppUiRenderRootState::default(),
+                count: None,
+                touched: None,
+                renders: Arc::new(AtomicUsize::new(0)),
+                last_seen_count: Arc::new(AtomicUsize::new(0)),
+            }
+        }
+    }
+
+    fn render_manual_runtime_view(
+        ui: &mut UiTree<crate::app::App>,
+        app: &mut crate::app::App,
+        services: &mut FakeUiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        st: &mut ManualRuntimeLocalsWithRoot,
+    ) -> NodeId {
+        let ManualRuntimeLocalsWithRoot {
+            app_ui_root,
+            count,
+            touched,
+            renders,
+            last_seen_count,
+        } = st;
+        let root = render_root_with_app_ui(
+            fret_ui::declarative::RenderRootContext::new(ui, app, services, window, bounds),
+            "manual-locals-with-runtime",
+            app_ui_root,
+            |cx| {
+                renders.fetch_add(1, Ordering::SeqCst);
+
+                if count.is_none() {
+                    *count = Some(cx.state().local_init(|| 0u32));
+                }
+                if touched.is_none() {
+                    *touched = Some(cx.state().local_init(|| false));
+                }
+
+                let count = count.as_ref().expect("count local should exist").clone();
+                let touched = touched
+                    .as_ref()
+                    .expect("touched local should exist")
+                    .clone();
+
+                cx.actions()
+                    .locals_with((&count, &touched))
+                    .on::<RuntimeIncrementAction>(|tx, (count, touched)| {
+                        let incremented = tx.update_if(&count, |value| {
+                            *value += 1;
+                            true
+                        });
+                        let flagged = tx.set(&touched, true);
+                        incremented || flagged
+                    });
+
+                last_seen_count.store(count.layout_value(cx) as usize, Ordering::SeqCst);
+
+                let mut props = fret_ui::element::ContainerProps::default();
+                props.layout.size.width = Length::Fill;
+                props.layout.size.height = Length::Fill;
+
+                cx.container(props, |_cx| Vec::new()).into()
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn first_leaf(ui: &UiTree<crate::app::App>, mut node: NodeId) -> NodeId {
+        loop {
+            let children = ui.children(node);
+            if children.is_empty() {
+                return node;
+            }
+            node = children[0];
+        }
+    }
+
     #[test]
     fn local_state_value_in_helpers_clone_store_values() {
         let mut host = FakeHost::default();
@@ -2225,6 +2945,97 @@ mod tests {
             .value_in_or_default(&host.models),
             String::new()
         );
+    }
+
+    #[test]
+    fn local_state_from_model_wraps_existing_raw_handle() {
+        let mut host = FakeHost::default();
+        let model = host.models.insert(String::from("hello"));
+        let local = LocalState::from_model(model.clone());
+
+        assert_eq!(local.model(), &model);
+        assert_eq!(local.value_in(&host.models), Some(String::from("hello")));
+    }
+
+    #[test]
+    fn local_state_borrowed_read_helpers_project_without_clone_noise() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        let mut services = FakeUiServices;
+        let local = LocalState::from_model(app.models_mut().insert(vec![1u32, 2, 3]));
+
+        let root = render_root_with_app_ui(
+            fret_ui::declarative::RenderRootContext::new(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+            ),
+            "local-state-borrowed-read",
+            &mut AppUiRenderRootState::default(),
+            |cx| {
+                let layout_len = local.layout_read_ref(cx, |values| values.len());
+                let paint_len = local.paint_read_ref(cx, |values| values.len());
+                assert_eq!(layout_len, 3);
+                assert_eq!(paint_len, 3);
+                cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                    Vec::new()
+                })
+                .into()
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    }
+
+    #[test]
+    fn local_state_bridge_read_helpers_project_without_clone_noise() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        let mut services = FakeUiServices;
+        let local = LocalState::from_model(app.models_mut().insert(vec![1u32, 2, 3]));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "local-state-bridge-read",
+            |cx| {
+                let layout_values = local.layout_value_in(cx);
+                let layout_len = local.layout_read_ref_in(cx, |values| values.len());
+                let paint_values = local.paint_value_in(cx);
+                let paint_len = local.paint_read_ref_in(cx, |values| values.len());
+                assert_eq!(layout_values, vec![1u32, 2, 3]);
+                assert_eq!(layout_len, 3);
+                assert_eq!(paint_values, vec![1u32, 2, 3]);
+                assert_eq!(paint_len, 3);
+                vec![
+                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                        Vec::new()
+                    })
+                    .into(),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
     }
 
     #[test]
@@ -2399,6 +3210,139 @@ mod tests {
     }
 
     #[test]
+    fn locals_with_runtime_dispatch_updates_locals_and_rerenders_cached_view() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+
+        let mut services = FakeUiServices;
+        let mut st = view_init_window::<RuntimeLocalsWithView>(&mut app, window);
+
+        app.set_frame_id(FrameId(1));
+        let root = render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        ui.set_focus(Some(first_leaf(&ui, root)));
+        assert!(
+            st.cached_handlers.is_some(),
+            "view render should install cached action handlers before command dispatch"
+        );
+        assert!(
+            st.cached_action_root.is_some(),
+            "view render should cache the concrete action root used for runtime dispatch"
+        );
+        assert_eq!(st.view.renders.load(Ordering::SeqCst), 1);
+        assert_eq!(st.view.last_seen_count.load(Ordering::SeqCst), 0);
+
+        app.set_frame_id(FrameId(2));
+        render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.view.renders.load(Ordering::SeqCst),
+            1,
+            "expected the view-cache root to reuse the previous frame before any notify-driven invalidation"
+        );
+
+        let command = <RuntimeIncrementAction as fret_runtime::TypedAction>::action_id();
+        assert!(ui.dispatch_command(&mut app, &mut services, &command));
+        assert_eq!(
+            st.view
+                .count
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(1)
+        );
+        assert_eq!(
+            st.view
+                .touched
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(true)
+        );
+        assert!(
+            app.flush_effects()
+                .iter()
+                .any(|effect| matches!(effect, Effect::Redraw(redraw) if *redraw == window)),
+            "locals_with action dispatch should request a redraw through the runtime host"
+        );
+
+        app.set_frame_id(FrameId(3));
+        render_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.view.renders.load(Ordering::SeqCst),
+            2,
+            "notify should force the cached view root to rerender on the next frame"
+        );
+        assert_eq!(st.view.last_seen_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn manual_render_root_with_app_ui_keeps_handlers_and_local_state_alive() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+
+        let mut services = FakeUiServices;
+        let mut st = ManualRuntimeLocalsWithRoot::default();
+
+        app.set_frame_id(FrameId(1));
+        let root =
+            render_manual_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        ui.set_focus(Some(first_leaf(&ui, root)));
+        assert!(
+            st.app_ui_root.cached_handlers.is_some(),
+            "manual AppUi root should install cached action handlers before command dispatch"
+        );
+        assert!(
+            st.app_ui_root.cached_action_root.is_some(),
+            "manual AppUi root should cache the concrete action root used for runtime dispatch"
+        );
+        assert_eq!(st.renders.load(Ordering::SeqCst), 1);
+        assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 0);
+
+        app.set_frame_id(FrameId(2));
+        render_manual_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.renders.load(Ordering::SeqCst),
+            1,
+            "expected the manual AppUi root to reuse the previous frame before any notify-driven invalidation"
+        );
+
+        let command = <RuntimeIncrementAction as fret_runtime::TypedAction>::action_id();
+        assert!(ui.dispatch_command(&mut app, &mut services, &command));
+        assert_eq!(
+            st.count
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(1)
+        );
+        assert_eq!(
+            st.touched
+                .as_ref()
+                .and_then(|local| local.value_in(app.models())),
+            Some(true)
+        );
+        assert!(
+            app.flush_effects()
+                .iter()
+                .any(|effect| matches!(effect, Effect::Redraw(redraw) if *redraw == window)),
+            "manual AppUi root dispatch should request a redraw through the runtime host"
+        );
+
+        app.set_frame_id(FrameId(3));
+        render_manual_runtime_view(&mut ui, &mut app, &mut services, window, bounds, &mut st);
+        assert_eq!(
+            st.renders.load(Ordering::SeqCst),
+            2,
+            "notify should force the cached manual AppUi root to rerender on the next frame"
+        );
+        assert_eq!(st.last_seen_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
     fn dispatch_listener_queues_a_command_effect() {
         let mut host = FakeHost::default();
         let action_cx = ActionCx {
@@ -2545,6 +3489,7 @@ mod tests {
             .expect("view.rs test module marker should exist");
         assert!(!api_source.contains("pub fn use_state<"));
         assert!(!api_source.contains("pub fn use_state_keyed<"));
+        assert!(!api_source.contains("fn use_state_keyed<"));
         assert!(!api_source.contains("pub fn use_local<"));
         assert!(!api_source.contains("pub fn use_local_keyed<"));
         assert!(!api_source.contains("pub fn use_local_with<"));
@@ -2582,6 +3527,12 @@ mod tests {
         assert!(api_source.contains(
             "pub fn paint_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T"
         ));
+        assert!(api_source.contains("pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("pub fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));
@@ -2596,6 +3547,7 @@ mod tests {
         assert!(!api_source.contains("pub trait LocalSelectorDepsBuilderExt"));
         assert!(api_source.contains("pub(crate) trait LocalSelectorDepsBuilderExt"));
         assert!(api_source.contains("pub trait LocalSelectorLayoutInputs"));
+        assert!(api_source.contains("pub trait ModelSelectorInputs"));
         assert!(api_source.contains("pub trait QueryHandleReadLayoutExt<T: 'static>"));
         assert!(api_source.contains("pub trait AppUiRawStateExt"));
         assert!(api_source.contains("pub trait AppUiRawActionNotifyExt"));
@@ -2607,9 +3559,19 @@ mod tests {
         assert!(!api_source.contains("pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self"));
         assert!(api_source.contains("pub(crate) fn new("));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains(
+            "pub fn local<T>(self, local: &LocalState<T>) -> AppUiActionLocal<'view, 'cx, 'a, H, T>"
+        ));
+        assert!(!api_source.contains("pub fn local_update<A, T>("));
+        assert!(!api_source.contains("pub fn local_set<A, T>("));
+        assert!(!api_source.contains("pub fn toggle_local_bool<A>("));
+        assert!(!api_source.contains("pub fn payload_local_update_if<A, T>("));
         assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
-        assert!(api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
+        assert!(api_source.contains("pub fn selector_model_layout<Inputs, TValue>("));
+        assert!(api_source.contains("pub fn selector_model_paint<Inputs, TValue>("));
+        assert!(!api_source.contains("pub fn selector_layout_keyed<K: Hash, Inputs, TValue>("));
+        assert!(!api_source.contains("pub fn selector_keyed<K: Hash, Deps, TValue>("));
         assert!(api_source.contains("pub fn invalidate_query<T: Any + Send + Sync + 'static>("));
         assert!(
             api_source.contains("pub fn invalidate_query_namespace(self, namespace: &'static str)")
@@ -2627,8 +3589,8 @@ mod tests {
         assert!(api_source.contains(
             "fn listen(self, f: impl Fn(&mut dyn UiActionHost, ActionCx) + 'static) -> Self"
         ));
-        assert!(api_source.contains("pub fn action<A>(self, _action: A) -> OnActivate"));
-        assert!(api_source.contains(
+        assert!(!api_source.contains("pub fn action<A>(self, _action: A) -> OnActivate"));
+        assert!(!api_source.contains(
             "pub fn action_payload<A>(self, _action: A, payload: A::Payload) -> OnActivate"
         ));
         assert!(!api_source.contains("fn dispatch<A>(self) -> Self"));
@@ -2642,6 +3604,16 @@ mod tests {
         assert!(api_source.contains(
             "pub fn payload_models<A>(\n        self,\n        f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,"
         ));
+        assert!(
+            api_source.contains(
+                "#[doc(hidden)]\npub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T>"
+            )
+        );
+        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxActionLocal<'cx, 'a, T>"));
+        assert!(api_source.contains("pub fn update<A>(self, update: impl Fn(&mut T) + 'static)"));
+        assert!(api_source.contains("pub fn set<A>(self, value: T)"));
+        assert!(api_source.contains("pub fn toggle_bool<A>(self)"));
+        assert!(api_source.contains("pub fn payload_update_if<A>("));
         assert!(api_source.contains("pub fn locals_with<C>("));
         assert!(api_source.contains(
             "pub fn on<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> bool + 'static)"
@@ -2774,12 +3746,30 @@ mod tests {
             "Read the current local value through a layout invalidation tracked read on the default app"
         ));
         assert!(api_source.contains(
+            "Read a derived value from this local through a layout invalidation tracked borrow on the"
+        ));
+        assert!(api_source.contains(
             "Read the current local value through a paint invalidation tracked read on the default app"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a paint invalidation tracked borrow on the"
         ));
         assert!(
             api_source
                 .contains("Observe/read this local from helper-heavy `ElementContext` surfaces.")
         );
+        assert!(api_source.contains(
+            "Read the current local value through a paint invalidation tracked read on helper-heavy"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a paint invalidation tracked borrow on"
+        ));
+        assert!(api_source.contains(
+            "Read the current local value through a layout invalidation tracked read on helper-heavy"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a layout invalidation tracked borrow on"
+        ));
         assert!(api_source.contains(
             "This trait is intentionally omitted from `fret::app::prelude::*` and reexported from"
         ));

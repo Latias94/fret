@@ -30,5 +30,6 @@ Key upstream concepts:
 ## Current parity notes
 
 - Pass: Progress normalization clamps into a `[0, 1]` fraction.
-- Partial: Fret does not yet model a dedicated `ProgressBar` semantics role; a11y parity is pending.
-
+- Pass: Fret stamps `role=ProgressBar`, numeric range/value, and a default percentage `aria-valuetext`-like value for determinate progress.
+- Pass: Optional/indeterminate progress omits numeric/value semantics while keeping the visual indicator at the Radix/shadcn 0% baseline.
+- Note: The default shadcn/Radix lane remains leaf-first; Base UI-style label/value child slots are treated as a separate headless surface, not the default recipe contract.

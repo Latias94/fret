@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
 use crate::direction::LayoutDirection;
+use crate::float_value_model::IntoFloatValueModel;
+use crate::float_vec_model::IntoFloatVecModel;
+use crate::optional_float_value_model::IntoOptionalFloatValueModel;
 use fret_core::{Edges, Px, SemanticsOrientation, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -28,6 +31,7 @@ enum ProgressModel {
     Determinate(Model<f32>),
     Optional(Model<Option<f32>>),
     ValuesFirst(Model<Vec<f32>>),
+    Value(Option<f32>),
 }
 
 #[derive(Clone)]
@@ -42,9 +46,31 @@ pub struct Progress {
 }
 
 impl Progress {
-    pub fn new(model: Model<f32>) -> Self {
+    pub fn new(model: impl IntoFloatValueModel) -> Self {
         Self {
-            model: ProgressModel::Determinate(model),
+            model: ProgressModel::Determinate(model.into_float_value_model()),
+            min: 0.0,
+            max: 100.0,
+            mirror_in_rtl: false,
+            a11y_label: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates a progress indicator from a plain snapshot value, mirroring the upstream `value`
+    /// prop without forcing a `Model<f32>` at the call site.
+    pub fn from_value(value: f32) -> Self {
+        Self::from_optional_value(Some(value))
+    }
+
+    /// Creates a progress indicator from an optional snapshot value.
+    ///
+    /// This mirrors upstream `value?: number | null`, where `None` keeps the bar visually at 0%
+    /// while omitting numeric semantics for indeterminate progress.
+    pub fn from_optional_value(value: Option<f32>) -> Self {
+        Self {
+            model: ProgressModel::Value(value),
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
@@ -58,9 +84,9 @@ impl Progress {
     ///
     /// When the value is `None`, the indicator renders as 0% (matching shadcn/ui's
     /// `value || 0` behavior).
-    pub fn new_opt(model: Model<Option<f32>>) -> Self {
+    pub fn new_opt(model: impl IntoOptionalFloatValueModel) -> Self {
         Self {
-            model: ProgressModel::Optional(model),
+            model: ProgressModel::Optional(model.into_optional_float_value_model()),
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
@@ -73,9 +99,9 @@ impl Progress {
     /// Creates a progress indicator driven by the first entry in a values model.
     ///
     /// This is primarily useful for parity with slider-style value models (`Vec<f32>`).
-    pub fn new_values_first(model: Model<Vec<f32>>) -> Self {
+    pub fn new_values_first(model: impl IntoFloatVecModel) -> Self {
         Self {
-            model: ProgressModel::ValuesFirst(model),
+            model: ProgressModel::ValuesFirst(model.into_float_vec_model()),
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
@@ -127,139 +153,164 @@ impl Progress {
                 .read_ref(|values| values.first().copied())
                 .ok()
                 .flatten(),
+            ProgressModel::Value(value) => *value,
         }
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let motion_key = match &self.model {
-            ProgressModel::Determinate(model) => model.id(),
-            ProgressModel::Optional(model) => model.id(),
-            ProgressModel::ValuesFirst(model) => model.id(),
+            ProgressModel::Determinate(model) => Some(("determinate", model.id())),
+            ProgressModel::Optional(model) => Some(("optional", model.id())),
+            ProgressModel::ValuesFirst(model) => Some(("values_first", model.id())),
+            ProgressModel::Value(_) => None,
         };
 
-        cx.keyed(("shadcn-progress", motion_key), |cx| {
-            cx.scope(|cx| {
-                let mirror_in_rtl = self.mirror_in_rtl;
-                let a11y_label = self.a11y_label.clone();
-                let theme = Theme::global(&*cx.app).snapshot();
-                let height = theme
-                    .metric_by_key("component.progress.height")
-                    .unwrap_or(Px(8.0));
-                let radius = theme
-                    .metric_by_key("component.progress.radius")
-                    .unwrap_or_else(|| MetricRef::radius(Radius::Full).resolve(&theme));
-                let radius = Px(radius.0.min(height.0 * 0.5));
+        match motion_key {
+            Some(motion_key) => cx.keyed(("shadcn-progress", motion_key), |cx| {
+                self.into_element_scoped(cx)
+            }),
+            None => self.into_element_scoped(cx),
+        }
+    }
 
-                // shadcn v4 Progress uses `bg-primary/20` for the track.
-                let mut track_bg = theme.color_token("primary");
-                track_bg.a *= 0.2;
-                let fill = theme.color_token("primary");
+    fn into_element_scoped<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.scope(|cx| {
+            let mirror_in_rtl = self.mirror_in_rtl;
+            let a11y_label = self.a11y_label.clone();
+            let theme = Theme::global(&*cx.app).snapshot();
+            let height = theme
+                .metric_by_key("component.progress.height")
+                .unwrap_or(Px(8.0));
+            let radius = theme
+                .metric_by_key("component.progress.radius")
+                .unwrap_or_else(|| MetricRef::radius(Radius::Full).resolve(&theme));
+            let radius = Px(radius.0.min(height.0 * 0.5));
 
-                let v = self.value(cx);
-                let t = v
-                    .map(|v| radix_progress::normalize_progress(v, self.min, self.max))
-                    .unwrap_or(0.0);
+            // shadcn v4 Progress uses `bg-primary/20` for the track.
+            let mut track_bg = theme.color_token("primary");
+            track_bg.a *= 0.2;
+            let fill = theme.color_token("primary");
 
-                let base_layout = LayoutRefinement::default()
-                    .w_full()
-                    .h_px(height)
-                    .overflow_hidden()
-                    .merge(self.layout);
+            let v = self.value(cx);
+            let t = v
+                .map(|v| radix_progress::normalize_progress(v, self.min, self.max))
+                .unwrap_or(0.0);
+            let value_text =
+                v.and_then(|value| default_progress_value_label(value, self.min, self.max));
 
-                let mut track_props = decl_style::container_props(
-                    &theme,
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(track_bg))
-                        .rounded(Radius::Full)
-                        .merge(self.chrome),
-                    base_layout,
-                );
+            let base_layout = LayoutRefinement::default()
+                .w_full()
+                .h_px(height)
+                .overflow_hidden()
+                .merge(self.layout);
 
-                // `container_props` uses a resolved radius; override with `component.progress.radius` if present.
-                track_props.corner_radii = fret_core::Corners::all(radius);
+            let mut track_props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(track_bg))
+                    .rounded(Radius::Full)
+                    .merge(self.chrome),
+                base_layout,
+            );
 
-                let mut out = cx.container(track_props, move |cx| {
-                    // Match the upstream DOM structure:
-                    // - the indicator is full-width (`w-full`)
-                    // - it is shifted with a translate so the left edge is clipped by the track's
-                    //   `overflow-hidden`, keeping the right edge rounded.
-                    let motion_owner = cx.root_id();
-                    let dir = crate::direction::use_direction(cx, None);
-                    let translate_x_fraction_target =
-                        if mirror_in_rtl && dir == LayoutDirection::Rtl {
-                            1.0 - t
-                        } else {
-                            t - 1.0
-                        };
+            // `container_props` uses a resolved radius; override with `component.progress.radius` if present.
+            track_props.corner_radii = fret_core::Corners::all(radius);
 
-                    // Upstream shadcn/ui uses `transition-all` on the indicator, so value changes
-                    // animate the translate transform (Tailwind default easing/duration).
-                    let duration = overlay_motion::shadcn_motion_duration_150(cx);
-                    let translate_x_fraction = decl_motion::drive_tween_f32_for_element(
-                        cx,
-                        motion_owner,
-                        "indicator-translate-x",
-                        translate_x_fraction_target,
-                        duration,
-                        shadcn_progress_transition_ease,
-                    )
-                    .value;
+            let mut out = cx.container(track_props, move |cx| {
+                // Match the upstream DOM structure:
+                // - the indicator is full-width (`w-full`)
+                // - it is shifted with a translate so the left edge is clipped by the track's
+                //   `overflow-hidden`, keeping the right edge rounded.
+                let motion_owner = cx.root_id();
+                let dir = crate::direction::use_direction(cx, None);
+                let translate_x_fraction_target = if mirror_in_rtl && dir == LayoutDirection::Rtl {
+                    1.0 - t
+                } else {
+                    t - 1.0
+                };
 
-                    let mut transform_layout = LayoutStyle::default();
-                    transform_layout.size.width = Length::Fill;
-                    transform_layout.size.height = Length::Fill;
+                // Upstream shadcn/ui uses `transition-all` on the indicator, so value changes
+                // animate the translate transform (Tailwind default easing/duration).
+                let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                let translate_x_fraction = decl_motion::drive_tween_f32_for_element(
+                    cx,
+                    motion_owner,
+                    "indicator-translate-x",
+                    translate_x_fraction_target,
+                    duration,
+                    shadcn_progress_transition_ease,
+                )
+                .value;
 
-                    vec![cx.fractional_render_transform_props(
-                        FractionalRenderTransformProps {
-                            layout: transform_layout,
-                            translate_x_fraction,
-                            translate_y_fraction: 0.0,
-                        },
-                        move |cx| {
-                            let mut fill_layout = LayoutStyle::default();
-                            fill_layout.size.width = Length::Fill;
-                            fill_layout.size.height = Length::Fill;
+                let mut transform_layout = LayoutStyle::default();
+                transform_layout.size.width = Length::Fill;
+                transform_layout.size.height = Length::Fill;
 
-                            vec![cx.container(
-                                fret_ui::element::ContainerProps {
-                                    layout: fill_layout,
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    background: Some(fill),
-                                    shadow: None,
-                                    border: Edges::all(Px(0.0)),
-                                    border_color: None,
-                                    corner_radii: fret_core::Corners::all(radius),
-                                    ..Default::default()
-                                },
-                                |_cx| Vec::new(),
-                            )]
-                        },
-                    )]
-                });
+                vec![cx.fractional_render_transform_props(
+                    FractionalRenderTransformProps {
+                        layout: transform_layout,
+                        translate_x_fraction,
+                        translate_y_fraction: 0.0,
+                    },
+                    move |cx| {
+                        let mut fill_layout = LayoutStyle::default();
+                        fill_layout.size.width = Length::Fill;
+                        fill_layout.size.height = Length::Fill;
 
-                let mut semantics = SemanticsDecoration::default()
-                    .role(SemanticsRole::ProgressBar)
-                    .orientation(SemanticsOrientation::Horizontal);
-                if let Some(label) = a11y_label {
-                    semantics = semantics.label(label);
-                }
-                if self.min.is_finite() && self.max.is_finite() {
-                    semantics = semantics.numeric_range(self.min as f64, self.max as f64);
-                }
-                if let Some(value) = v
-                    && value.is_finite()
-                {
-                    semantics = semantics.numeric_value(value as f64);
-                }
-                out = out.attach_semantics(semantics);
-                out
-            })
+                        vec![cx.container(
+                            fret_ui::element::ContainerProps {
+                                layout: fill_layout,
+                                padding: Edges::all(Px(0.0)).into(),
+                                background: Some(fill),
+                                shadow: None,
+                                border: Edges::all(Px(0.0)),
+                                border_color: None,
+                                corner_radii: fret_core::Corners::all(radius),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    },
+                )]
+            });
+
+            let mut semantics = SemanticsDecoration::default()
+                .role(SemanticsRole::ProgressBar)
+                .orientation(SemanticsOrientation::Horizontal);
+            if let Some(label) = a11y_label {
+                semantics = semantics.label(label);
+            }
+            if self.min.is_finite() && self.max.is_finite() {
+                semantics = semantics.numeric_range(self.min as f64, self.max as f64);
+            }
+            if let Some(value_text) = value_text {
+                semantics = semantics.value(value_text);
+            }
+            if let Some(value) = v
+                && value.is_finite()
+            {
+                semantics = semantics.numeric_value(value as f64);
+            }
+            out = out.attach_semantics(semantics);
+            out
         })
     }
 }
 
-pub fn progress<H: UiHost>(model: Model<f32>) -> impl IntoUiElement<H> + use<H> {
+fn default_progress_value_label(value: f32, min: f32, max: f32) -> Option<Arc<str>> {
+    if !value.is_finite() || !min.is_finite() || !max.is_finite() {
+        return None;
+    }
+    let span = max - min;
+    if !span.is_finite() || span.abs() <= f32::EPSILON {
+        return None;
+    }
+    let percent = (radix_progress::normalize_progress(value, min, max) * 100.0).round() as i32;
+    Some(Arc::from(format!("{percent}%")))
+}
+
+pub fn progress<H: UiHost, M: IntoFloatValueModel>(model: M) -> impl IntoUiElement<H> + use<H, M> {
     Progress::new(model)
 }
 
@@ -320,6 +371,25 @@ mod tests {
                 semantics.numeric_value, None,
                 "expected None value to omit numeric_value"
             );
+            assert_eq!(semantics.value.as_deref(), None);
+        });
+    }
+
+    #[test]
+    fn progress_from_value_stamps_numeric_value_and_default_value_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Progress::from_value(42.0).into_element(cx);
+
+            let semantics = el
+                .semantics_decoration
+                .as_ref()
+                .expect("semantics decoration");
+            assert_eq!(semantics.role, Some(SemanticsRole::ProgressBar));
+            assert_eq!(semantics.numeric_value, Some(42.0));
+            assert_eq!(semantics.value.as_deref(), Some("42%"));
         });
     }
 

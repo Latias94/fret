@@ -13,7 +13,10 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
 
-use crate::primitives::EditorTokenKeys;
+use crate::primitives::colors::{
+    editor_panel_background, editor_property_group_border, editor_property_header_background,
+    editor_property_header_border, editor_property_header_foreground,
+};
 use crate::primitives::icons::editor_icon;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::visuals::hover_overlay_bg;
@@ -108,32 +111,12 @@ impl PropertyGroup {
                     .options
                     .header_height
                     .unwrap_or(metrics.group_header_height);
-                let header_bg = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG)
-                    .or_else(|| theme.color_by_key("muted"))
-                    .or_else(|| theme.color_by_key("component.card.bg"))
-                    .unwrap_or_else(|| theme.color_token("background"));
-                let header_border = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER)
-                    .or_else(|| theme.color_by_key("border"))
-                    .or_else(|| theme.color_by_key("component.card.border"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
-                let panel_bg = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG)
-                    .or_else(|| theme.color_by_key("card"))
-                    .or_else(|| theme.color_by_key("component.card.bg"))
-                    .unwrap_or_else(|| theme.color_token("background"));
-                let group_border = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_GROUP_BORDER)
-                    .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER))
-                    .or_else(|| theme.color_by_key("border"))
-                    .or_else(|| theme.color_by_key("component.card.border"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let header_bg = editor_property_header_background(theme);
+                let header_border = editor_property_header_border(theme);
+                let panel_bg = editor_panel_background(theme);
+                let group_border = editor_property_group_border(theme);
                 let radius = theme.metric_token("metric.radius.sm");
-                let header_fg = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_HEADER_FG)
-                    .or_else(|| theme.color_by_key("foreground"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let header_fg = editor_property_header_foreground(theme);
                 (
                     metrics,
                     header_height,

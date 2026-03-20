@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("custom_close_button.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -12,7 +13,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     });
 
     let open_for_trigger = open.clone();
-    let open_for_footer = open.clone();
     let link_model = share_link.clone();
 
     shadcn::Dialog::new(open.clone()).into_element(
@@ -25,25 +25,36 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx)
         },
         move |cx| {
-            shadcn::DialogContent::new([
-                shadcn::DialogHeader::new([
-                    shadcn::DialogTitle::new("Share link").into_element(cx),
-                    shadcn::DialogDescription::new(
-                        "Replace the close affordance with a custom footer action.",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::Input::new(link_model.clone())
-                    .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx),
-                shadcn::DialogFooter::new([shadcn::Button::new("Close")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .test_id("ui-gallery-dialog-custom-close-footer")
-                    .toggle_model(open_for_footer.clone())
-                    .into_element(cx)])
-                .into_element(cx),
-            ])
+            let input = shadcn::Input::new(link_model.clone())
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx);
+            shadcn::DialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::DialogHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::DialogTitle::new("Share link"));
+                        out.push_ui(
+                            cx,
+                            shadcn::DialogDescription::new(
+                                "Replace the close affordance with a custom footer action.",
+                            ),
+                        );
+                    }),
+                );
+                out.push(input);
+                out.push_ui(
+                    cx,
+                    shadcn::DialogFooter::build(|cx, out| {
+                        let close = shadcn::DialogClose::from_scope().build(
+                            cx,
+                            shadcn::Button::new("Close")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .test_id("ui-gallery-dialog-custom-close-footer"),
+                        );
+                        out.push(close);
+                    }),
+                );
+            })
             .show_close_button(false)
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
             .into_element(cx)

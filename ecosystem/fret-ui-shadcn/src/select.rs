@@ -1,3 +1,5 @@
+use crate::bool_model::IntoBoolModel;
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
 use crate::test_id::{attach_test_id, attach_test_id_suffix, test_id_slug};
@@ -31,6 +33,7 @@ use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
+use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
@@ -1323,10 +1326,10 @@ pub struct Select {
 }
 
 impl Select {
-    pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {
         Self {
-            model,
-            open,
+            model: model.into_optional_text_value_model(),
+            open: open.into_bool_model(),
             on_value_change: None,
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
@@ -1824,7 +1827,7 @@ fn select_impl<H: UiHost>(
         .merge(chrome);
 
     cx.scope(|cx| {
-        let control_id = control_id.clone();
+        let control_id = field_state_prim::use_field_control_id_in_scope(cx, control_id.clone());
         let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
         let labelled_by_element = if a11y_label.is_some() {
             None

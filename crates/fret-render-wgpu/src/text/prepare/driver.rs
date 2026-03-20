@@ -100,12 +100,11 @@ impl TextSystem {
             scale,
             snap_vertical,
         );
-        let metrics = prepared.metrics;
-        let missing_glyphs = prepared.missing_glyphs;
-        let first_line_caret_stops = prepared.first_line_caret_stops;
+        let (_, metrics, prepared_lines, first_line_caret_stops, missing_glyphs) =
+            prepared.into_parts();
 
-        lines.reserve(prepared.lines.len().max(1));
-        for prepared_line in prepared.lines {
+        lines.reserve(prepared_lines.len().max(1));
+        for prepared_line in prepared_lines {
             self.materialize_prepared_line(
                 prepared_line,
                 resolved_spans,
@@ -133,7 +132,7 @@ fn prepare_paint_palette(
 ) -> Option<Arc<[Option<fret_core::Color>]>> {
     resolved_spans.map(|spans| {
         let mut palette: Vec<Option<fret_core::Color>> = Vec::with_capacity(spans.len());
-        palette.extend(spans.iter().map(|span| span.fg));
+        palette.extend(spans.iter().map(ResolvedSpan::fg));
         Arc::<[Option<fret_core::Color>]>::from(palette)
     })
 }

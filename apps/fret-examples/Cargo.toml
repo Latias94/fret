@@ -88,8 +88,11 @@ windows = { workspace = true, features = [
     "Win32_System_Threading",
 ] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-metal.workspace = true
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret = { path = "../../ecosystem/fret", default-features = false, features = ["app"] }
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["app", "state"] }
 fret-launch = { path = "../../crates/fret-launch" }
 web-sys = { version = "0.3", features = [
     "CanvasRenderingContext2d",

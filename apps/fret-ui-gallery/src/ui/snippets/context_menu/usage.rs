@@ -8,7 +8,9 @@ use fret_ui_shadcn::facade as shadcn;
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::ContextMenu::uncontrolled(cx)
         .compose()
-        .trigger(shadcn::Button::new("Right click here").variant(shadcn::ButtonVariant::Outline))
+        .trigger(shadcn::ContextMenuTrigger::build(
+            shadcn::Button::new("Right click here").variant(shadcn::ButtonVariant::Outline),
+        ))
         .content(shadcn::ContextMenuContent::new())
         .entries([
             shadcn::ContextMenuEntry::Item(

@@ -30,16 +30,20 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 - Pass: this is an extension/guide surface, not a single upstream `registry:ui` leaf; parity should be measured against documented outcomes and reusable recipe seams rather than literal one-to-one prop parity.
 - Pass: `DataTable` wraps the TanStack-aligned headless engine while `TableState` lives in `fret_ui_headless`; toolbar, pagination, and view-options helpers stay as separate reusable recipes instead of collapsing into one mega root surface.
 - Pass: no extra generic `children` / `compose()` widening is needed at the root because the guide surface is already decomposed into `DataTable` plus companion recipes and headless column/state configuration.
+- Pass: `DataTableToolbar::trailing(...)` already covers the concrete right-side extensibility shown by first-party demos; this audit does not find enough pressure to widen it into an unconstrained generic children surface.
 
 ### Ownership & behavior
 
 - Pass: row heights, table chrome, selection affordances, pagination controls, and column-action menus remain recipe-owned on the `DataTable` / companion recipe layer.
 - Pass: app-specific columns, data shape, filtering rules, and page-level width/height negotiation remain caller-owned.
 - Pass: existing web-vs-Fret layout gates already cover key `data-table-demo` geometry outcomes; this pass does not identify a mechanism-layer gap.
+- Pass: the non-retained `table_virtualized(...)` mismatch that broke nested row-action hit-testing was a `fret-ui-kit` content-shell sizing bug (`table_virtualized_impl(...)` needed a full-height flex shell so the virtual list receives a real viewport), not a `crates/fret-ui` mechanism defect.
+- Pass: the retained/shadcn-default row-action mismatch was also recipe-layer ownership: when `pointer_row_selection=false`, the retained row wrapper must stop being the pressable hit target and fall back to semantics + hover chrome so nested row-action buttons stay hittable.
+- Pass: one earlier `ui-gallery` failure was diagnostics drift rather than component drift; after the docs page reflow, the scripted target moved below the viewport and the gate needed `scroll_into_view` + `bounds_within_window` before clicking.
 
 ### Gallery / docs parity
 
-- Pass: the gallery now presents the guide as `Basic Table`, `Guide Demo`, `RTL`, `Guide Outline`, and `API Reference`, making the compression of the upstream multi-chapter guide explicit.
+- Pass: the gallery now keeps `Default Recipe (Fret)` as an explicit repo golden path, then presents the guide-aligned follow-ups as `Basic Table`, `Guide Demo`, `RTL`, `Guide Outline`, and `API Reference`, making both the repo-specific baseline and the compressed upstream guide mapping explicit.
 - Pass: the selection column examples now stay on typed `.action(...)` / `.action_payload(...)` plus grouped `cx.actions().models::<A>(...)` / `payload_models::<A>(...)` instead of teaching root command routing for select-all and row toggles.
 - Pass: the row-action dropdown menus in `Basic Table`, `Guide Demo`, and `RTL` now also stay on typed `.action(...)` / `.action_payload(...)` instead of falling back to per-row `CommandId::new(...)` strings for menu items.
 - Pass: `Guide Outline` remains a compact Fret follow-up that points to reusable pieces instead of copying every upstream chapter verbatim.
@@ -51,3 +55,7 @@ shadcn/ui v4 Radix guide, the guide demos, and the existing table layout gates.
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib data_table`
 - `cargo test -p fret-ui-gallery --test data_table_action_first_surface`
 - Existing geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`
+- `cargo nextest run -p fret-ui-kit table_virtualized_nested_pressable_remains_hittable_when_pointer_row_selection_disabled`
+- `cargo nextest run -p fret-ui-kit table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled`
+- `cargo nextest run -p fret-ui-kit table_virtualized_retained_`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-row-actions-menu-stability.json --dir target/fret-diag/data-table-guide-row-actions-recheck --timeout-ms 240000 --pack --ai-packet --launch -- cargo run -p fret-ui-gallery`

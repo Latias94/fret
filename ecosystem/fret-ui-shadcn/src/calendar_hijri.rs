@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use crate::optional_date_model::IntoOptionalDateModel;
+use crate::solar_hijri_month_model::IntoSolarHijriMonthModel;
 use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -326,10 +328,10 @@ pub struct CalendarHijri {
 }
 
 impl CalendarHijri {
-    pub fn new(month: Model<SolarHijriMonth>, selected: Model<Option<Date>>) -> Self {
+    pub fn new(month: impl IntoSolarHijriMonthModel, selected: impl IntoOptionalDateModel) -> Self {
         Self {
-            month,
-            selected,
+            month: month.into_solar_hijri_month_model(),
+            selected: selected.into_optional_date_model(),
             disable_navigation: false,
             week_start: Weekday::Saturday,
             show_outside_days: true,

@@ -2,9 +2,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::app::prelude::*;
+use fret::query::{QueryError, QueryKey, QueryPolicy};
 use fret::style::Space;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
-use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -13,6 +12,9 @@ mod act {
         ToggleErrorMode = "cookbook.query_basics.toggle_error_mode.v1"
     ]);
 }
+
+const TRANSIENT_INVALIDATE_KEY: u64 = 0xC00B_1001;
+const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xC00B_1002;
 
 const TEST_ID_ROOT: &str = "cookbook.query_basics.root";
 const TEST_ID_STATUS_BADGE: &str = "cookbook.query_basics.status.badge";
@@ -42,35 +44,23 @@ impl View for QueryBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let fail_mode = cx.state().local::<bool>();
-        let invalidate_requested = cx.state().local::<bool>();
-        let invalidate_namespace_requested = cx.state().local::<bool>();
+        let fail_mode = cx.state().local_init(|| false);
 
-        cx.actions()
-            .toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
-        cx.actions()
-            .local_set::<act::Invalidate, bool>(&invalidate_requested, true);
-        cx.actions()
-            .local_set::<act::InvalidateNamespace, bool>(&invalidate_namespace_requested, true);
-        cx.actions()
-            .availability::<act::ToggleErrorMode>(|_host, _acx| CommandAvailability::Available);
-        cx.actions()
-            .availability::<act::Invalidate>(|_host, _acx| CommandAvailability::Available);
-        cx.actions()
-            .availability::<act::InvalidateNamespace>(|_host, _acx| CommandAvailability::Available);
-
-        let fail_mode_enabled = fail_mode.layout(cx).value_or(false);
-        let do_invalidate = invalidate_requested.layout(cx).value_or(false);
-        let do_invalidate_namespace = invalidate_namespace_requested.layout(cx).value_or(false);
-
-        if do_invalidate {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY) {
             cx.data().invalidate_query(demo_key());
-            let _ = invalidate_requested.set_in(cx.app.models_mut(), false);
         }
-        if do_invalidate_namespace {
+        if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
             cx.data().invalidate_query_namespace(QUERY_NS);
-            let _ = invalidate_namespace_requested.set_in(cx.app.models_mut(), false);
         }
+
+        cx.actions()
+            .local(&fail_mode)
+            .toggle_bool::<act::ToggleErrorMode>();
+        cx.actions()
+            .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
+        cx.actions()
+            .transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
+        let fail_mode_enabled = fail_mode.layout_value(cx);
 
         let key = demo_key();
         let policy = QueryPolicy {
@@ -91,13 +81,6 @@ impl View for QueryBasicsView {
 
         let state = handle.read_layout(cx);
 
-        let status_label = match state.status {
-            QueryStatus::Idle => "Idle",
-            QueryStatus::Loading => "Loading",
-            QueryStatus::Success => "Success",
-            QueryStatus::Error => "Error",
-        };
-
         let mode_badge = shadcn::Badge::new(if fail_mode_enabled {
             "Mode: Error"
         } else {
@@ -106,11 +89,13 @@ impl View for QueryBasicsView {
         .variant(shadcn::BadgeVariant::Secondary)
         .test_id(TEST_ID_MODE_BADGE);
 
-        let status_badge = shadcn::Badge::new(status_label)
-            .variant(match state.status {
-                QueryStatus::Success => shadcn::BadgeVariant::Default,
-                QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-                QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
+        let status_badge = shadcn::Badge::new(state.status.as_str())
+            .variant(if state.is_success() {
+                shadcn::BadgeVariant::Default
+            } else if state.is_error() {
+                shadcn::BadgeVariant::Destructive
+            } else {
+                shadcn::BadgeVariant::Secondary
             })
             .test_id(TEST_ID_STATUS_BADGE);
 

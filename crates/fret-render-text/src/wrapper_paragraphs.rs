@@ -63,12 +63,7 @@ pub(crate) fn wrap_with_newlines(
         &mut lines,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 pub(crate) fn wrap_with_newlines_measure_only(
@@ -120,12 +115,7 @@ pub(crate) fn wrap_with_newlines_measure_only(
         &mut lines,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -270,7 +260,7 @@ fn push_paragraph_measure_only(
                 ),
                 None => shaper.shape_single_line_metrics(TextInputRef::plain(slice, base), scale),
             };
-            shaped.width = max_w;
+            shaped.set_width(max_w);
             out_ranges.push(paragraph_range);
             out_lines.push(shaped);
         }
@@ -356,18 +346,18 @@ pub(crate) fn wrap_none_ellipsis(
     };
 
     let full = shaper.shape_single_line(input, scale);
-    if full.width <= max_width_px + 0.5 {
+    if full.width() <= max_width_px + 0.5 {
         return WrappedSingleLineInternal {
             kept_end: text_len,
             line: full,
         };
     }
 
-    let ellipsis = shaper.shape_single_line(TextInputRef::plain(ELLIPSIS, base), scale);
-    let ellipsis_w = ellipsis.width.max(0.0);
+    let mut ellipsis = shaper.shape_single_line(TextInputRef::plain(ELLIPSIS, base), scale);
+    let ellipsis_w = ellipsis.width().max(0.0);
     let available = (max_width_px - ellipsis_w).max(0.0);
 
-    let mut cut_end = cut_end_for_available(text, &full.clusters, available);
+    let mut cut_end = cut_end_for_available(text, full.clusters(), available);
     if cut_end < text_len && cut_end > 0 {
         cut_end = trim_trailing_whitespace(text, cut_end);
         cut_end = clamp_to_char_boundary(text, cut_end);
@@ -378,8 +368,8 @@ pub(crate) fn wrap_none_ellipsis(
     // contextual shaping scripts).
     let mut kept = shape_prefix(shaper, text, base, spans, cut_end, scale);
 
-    if kept.width > available + 0.5 {
-        let cut2 = cut_end_for_available(&text[..cut_end], &kept.clusters, available);
+    if kept.width() > available + 0.5 {
+        let cut2 = cut_end_for_available(&text[..cut_end], kept.clusters(), available);
         if cut2 < cut_end {
             cut_end = clamp_to_char_boundary(text, trim_trailing_whitespace(text, cut2));
             cut_end = clamp_to_grapheme_boundary_down(text, cut_end);
@@ -389,35 +379,35 @@ pub(crate) fn wrap_none_ellipsis(
 
     let ellipsis_start_x = (max_width_px - ellipsis_w).max(0.0);
 
-    let mut glyphs: Vec<ParleyGlyph> = kept.glyphs;
-    glyphs.extend(ellipsis.glyphs.into_iter().map(|mut g| {
+    let mut clusters: Vec<ShapedCluster> = kept.take_clusters();
+    let mut glyphs: Vec<ParleyGlyph> = kept.take_glyphs();
+    glyphs.extend(ellipsis.take_glyphs().into_iter().map(|mut g| {
         g.x += ellipsis_start_x;
         g.text_range = empty_range_at(cut_end);
         g.is_rtl = false;
         g
     }));
 
-    let mut clusters: Vec<ShapedCluster> = kept.clusters;
-    clusters.push(ShapedCluster {
-        text_range: empty_range_at(cut_end),
-        x0: ellipsis_start_x,
-        x1: ellipsis_start_x + ellipsis_w,
-        is_rtl: false,
-    });
+    clusters.push(ShapedCluster::new(
+        empty_range_at(cut_end),
+        ellipsis_start_x,
+        ellipsis_start_x + ellipsis_w,
+        false,
+    ));
 
     WrappedSingleLineInternal {
         kept_end: cut_end,
-        line: ShapedLineLayout {
-            width: max_width_px,
-            ascent: kept.ascent.max(ellipsis.ascent),
-            descent: kept.descent.max(ellipsis.descent),
-            ink_ascent: kept.ink_ascent.max(ellipsis.ink_ascent),
-            ink_descent: kept.ink_descent.max(ellipsis.ink_descent),
-            baseline: kept.baseline.max(ellipsis.baseline),
-            line_height: kept.line_height.max(ellipsis.line_height),
+        line: ShapedLineLayout::new(
+            max_width_px,
+            kept.ascent().max(ellipsis.ascent()),
+            kept.descent().max(ellipsis.descent()),
+            kept.ink_ascent().max(ellipsis.ink_ascent()),
+            kept.ink_descent().max(ellipsis.ink_descent()),
+            kept.baseline().max(ellipsis.baseline()),
+            kept.line_height().max(ellipsis.line_height()),
             glyphs,
             clusters,
-        },
+        ),
     }
 }
 

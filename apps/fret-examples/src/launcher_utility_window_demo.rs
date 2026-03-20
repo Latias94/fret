@@ -10,7 +10,6 @@ use fret_runtime::{
     WindowStyleRequest, WindowZLevel,
 };
 use fret_ui::ElementContext;
-use fret_ui::Invalidation;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SemanticsDecoration, SizeStyle};
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
@@ -66,9 +65,9 @@ pub fn run() -> anyhow::Result<()> {
 
 struct LauncherUtilityWindowState {
     window: AppWindowId,
-    always_on_top: fret_runtime::Model<bool>,
+    always_on_top: LocalState<bool>,
     blink_timer: Option<TimerToken>,
-    status: fret_runtime::Model<Arc<str>>,
+    status: LocalState<Arc<str>>,
 }
 
 #[derive(Clone)]
@@ -80,9 +79,9 @@ struct LauncherUtilityWindowViewSettings {
 fn init_window(app: &mut KernelApp, window: AppWindowId) -> LauncherUtilityWindowState {
     LauncherUtilityWindowState {
         window,
-        always_on_top: app.models_mut().insert(false),
+        always_on_top: LocalState::from_model(app.models_mut().insert(false)),
         blink_timer: None,
-        status: app.models_mut().insert(Arc::from("Idle")),
+        status: LocalState::from_model(app.models_mut().insert(Arc::from("Idle"))),
     }
 }
 
@@ -108,9 +107,7 @@ fn on_command(
 
             let token = app.next_timer_token();
             st.blink_timer = Some(token);
-            let _ = app
-                .models_mut()
-                .update(&st.status, |v| *v = Arc::from("Blink: hide"));
+            let _ = st.status.set_in(app.models_mut(), Arc::from("Blink: hide"));
 
             app.push_effect(Effect::Window(WindowRequest::SetVisible {
                 window,
@@ -124,14 +121,8 @@ fn on_command(
             });
         }
         CMD_TOGGLE_ALWAYS_ON_TOP => {
-            let next = app
-                .models_mut()
-                .update(&st.always_on_top, |v| {
-                    *v = !*v;
-                    *v
-                })
-                .ok()
-                .unwrap_or(false);
+            let next = !st.always_on_top.value_in_or(app.models(), false);
+            let _ = st.always_on_top.set_in(app.models_mut(), next);
 
             let z_level = if next {
                 WindowZLevel::AlwaysOnTop
@@ -145,13 +136,14 @@ fn on_command(
                     ..Default::default()
                 },
             }));
-            let _ = app.models_mut().update(&st.status, |v| {
-                *v = Arc::from(if next {
+            let _ = st.status.set_in(
+                app.models_mut(),
+                Arc::from(if next {
                     "AlwaysOnTop: on"
                 } else {
                     "AlwaysOnTop: off"
-                })
-            });
+                }),
+            );
         }
         CMD_QUIT => {
             app.push_effect(Effect::QuitApp);
@@ -180,9 +172,7 @@ fn on_event(
         window,
         visible: true,
     }));
-    let _ = app
-        .models_mut()
-        .update(&st.status, |v| *v = Arc::from("Blink: show"));
+    let _ = st.status.set_in(app.models_mut(), Arc::from("Blink: show"));
     app.request_redraw(window);
 }
 
@@ -195,26 +185,11 @@ fn view(
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
-    let always_on_top = st.always_on_top.clone();
-    let status = st.status.clone();
-    let always_on_top_deps = always_on_top.clone();
-    let status_deps = status.clone();
-    let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector(
-        move |cx| {
-            cx.observe_model(&always_on_top_deps, Invalidation::Layout);
-            cx.observe_model(&status_deps, Invalidation::Layout);
-            (
-                cx.app.models().revision(&always_on_top_deps).unwrap_or(0),
-                cx.app.models().revision(&status_deps).unwrap_or(0),
-            )
-        },
-        move |cx| LauncherUtilityWindowViewSettings {
-            always_on_top: cx.app.models().get_cloned(&always_on_top).unwrap_or(false),
-            status: cx
-                .app
-                .models()
-                .get_cloned(&status)
-                .unwrap_or_else(|| Arc::from("Idle")),
+    let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector_layout(
+        (&st.always_on_top, &st.status),
+        |(always_on_top, status)| LauncherUtilityWindowViewSettings {
+            always_on_top,
+            status,
         },
     );
 

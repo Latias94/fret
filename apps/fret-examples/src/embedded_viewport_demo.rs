@@ -54,7 +54,7 @@ impl View for EmbeddedViewportDemoView {
             .value_or_else(|| Arc::from("<no input yet>"));
 
         let size_preset_state = cx.state().local_init(|| 1usize);
-        let preset = size_preset_state.layout(cx).value_or_default();
+        let preset = size_preset_state.layout_value(cx);
         let (target_px_size, preset_label): ((u32, u32), &'static str) = match preset {
             0 => ((640, 360), "640×360"),
             2 => ((1280, 720), "1280×720"),
@@ -144,11 +144,14 @@ impl View for EmbeddedViewportDemoView {
         .into_element(cx);
 
         cx.actions()
-            .local_set::<act::PickSize640, usize>(&size_preset_state, 0);
+            .local(&size_preset_state)
+            .set::<act::PickSize640>(0);
         cx.actions()
-            .local_set::<act::PickSize960, usize>(&size_preset_state, 1);
+            .local(&size_preset_state)
+            .set::<act::PickSize960>(1);
         cx.actions()
-            .local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
+            .local(&size_preset_state)
+            .set::<act::PickSize1280>(2);
 
         embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())
     }

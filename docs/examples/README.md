@@ -20,8 +20,10 @@ Productization note:
 These are intentionally stable and should be your default onboarding path:
 
 They all teach the same small authoring model first: `LocalState` for view-owned state,
-`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for coordinated LocalState writes, keyed-row payload binding via
-`.action_payload(...)`, `payload_local_update_if::<A>(...)` as the default row-write path,
+`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for coordinated LocalState writes,
+`cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for
+single-local writes, keyed-row payload binding via `.action_payload(...)`, and
+`cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path,
 `cx.actions().transient(...)` for App-bound effects, and widget-local `.action(...)` /
 `.action_payload(...)` / `.listen(...)` only when a control truly needs the activation bridge.
 Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
@@ -31,7 +33,8 @@ Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` grap
 2. `simple-todo` (template) — view runtime + typed actions + keyed lists (no selectors/queries;
    the current default path is `LocalState<Vec<_>>` + payload row actions for view-owned lists).
    - Generate: `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
-3. `todo` (template) — “best practice baseline” (selectors + queries).
+3. `todo` (template) — richer third rung once you need selectors + queries; not the default starter
+   scaffold.
    - Generate: `cargo run -p fretboard -- new todo --name my-todo`
    - Read: [docs/examples/todo-app-golden-path.md](./todo-app-golden-path.md)
    - Note: this template opts into `fret` feature `state` (selector/query helpers).

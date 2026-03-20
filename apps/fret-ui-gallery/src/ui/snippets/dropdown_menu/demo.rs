@@ -24,8 +24,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .min_width(Px(224.0)),
                 )
                 .entries([
+                    shadcn::DropdownMenuLabel::new("My Account").into(),
                     shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuLabel::new("My Account").into(),
                         shadcn::DropdownMenuItem::new("Profile")
                             .shortcut("⇧⌘P")
                             .test_id("ui-gallery-dropdown-menu-demo-profile")
@@ -37,6 +37,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .into(),
                         shadcn::DropdownMenuItem::new("Settings")
                             .shortcut("⌘S")
+                            .into(),
+                        shadcn::DropdownMenuItem::new("Keyboard shortcuts")
+                            .shortcut("⌘K")
                             .into(),
                     ])
                     .into(),
@@ -59,17 +62,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     ])
                     .into(),
                     shadcn::DropdownMenuSeparator::new().into(),
-                    shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuItem::new("GitHub").into(),
-                        shadcn::DropdownMenuItem::new("Support").into(),
-                        shadcn::DropdownMenuItem::new("API").disabled(true).into(),
-                    ])
-                    .into(),
+                    shadcn::DropdownMenuItem::new("GitHub").into(),
+                    shadcn::DropdownMenuItem::new("Support").into(),
+                    shadcn::DropdownMenuItem::new("API").disabled(true).into(),
                     shadcn::DropdownMenuSeparator::new().into(),
-                    shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Log out")
+                    shadcn::DropdownMenuItem::new("Log out")
                         .shortcut("⇧⌘Q")
-                        .into()])
-                    .into(),
+                        .into(),
                 ])
         })
         .into_element(cx)

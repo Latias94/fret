@@ -58,6 +58,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let refresh_text = cx.text("Refresh");
             let refresh_button = shadcn::Button::new("Refresh")
                 .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
                 .children([refresh_icon, refresh_text])
                 .into_element(cx);
 

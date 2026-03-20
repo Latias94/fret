@@ -1,5 +1,23 @@
 use thiserror::Error;
 
+#[derive(Debug, Error, Clone, Copy, PartialEq, Eq)]
+pub enum SurfaceAcquireError {
+    #[error("wgpu surface acquire timed out")]
+    Timeout,
+
+    #[error("wgpu surface is outdated")]
+    Outdated,
+
+    #[error("wgpu surface was lost")]
+    Lost,
+
+    #[error("wgpu surface ran out of memory")]
+    OutOfMemory,
+
+    #[error("wgpu surface acquire failed with an unspecified error")]
+    Other,
+}
+
 #[derive(Debug, Error)]
 pub enum RenderError {
     #[error("invalid FRET_WGPU_BACKEND override: {raw}")]
@@ -51,6 +69,6 @@ pub enum RenderError {
     #[error("wgpu surface get_current_texture failed")]
     SurfaceAcquireFailed {
         #[source]
-        source: wgpu::SurfaceError,
+        source: SurfaceAcquireError,
     },
 }

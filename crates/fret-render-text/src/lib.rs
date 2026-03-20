@@ -20,21 +20,38 @@ mod wrapper_paragraphs;
 mod wrapper_ranges;
 mod wrapper_slices;
 
-pub use cache_keys::*;
-pub use cache_tuning::*;
-pub use decorations::*;
-pub use fallback_policy::*;
-pub use font_instance_key::*;
-pub use font_names::*;
-pub use font_stack::*;
-pub use font_trace::*;
-pub use geometry::*;
-pub use line_layout::*;
-pub use measure::*;
-pub use parley_shaper::*;
-pub use prepare_layout::*;
-pub use spans::*;
-pub use wrapper::*;
+pub use cache_keys::{
+    TextBlobKey, TextMeasureKey, TextShapeKey, spans_paint_fingerprint, spans_shaping_fingerprint,
+};
+pub use cache_tuning::{
+    measure_shaping_cache_entries, measure_shaping_cache_min_text_len_bytes,
+    released_blob_cache_entries,
+};
+pub use decorations::{
+    TextDecoration, TextDecorationKind, TextDecorationMetricsPx,
+    decoration_metrics_px_for_font_bytes, decorations_for_lines,
+};
+pub use fallback_policy::{CommonFallbackMode, TextFallbackPolicyV1, common_fallback_stack_suffix};
+pub use font_instance_key::{FontFaceKey, variation_key_from_normalized_coords};
+pub use font_names::best_family_name_from_font_bytes;
+pub use font_stack::{GenericFamilyInjectionState, apply_font_families_inner};
+pub use font_trace::{FontTraceFamilyResolved, FontTraceState};
+pub use geometry::{
+    TextLineCluster, TextLineDecorationGeometry, TextLineGeometry, caret_rect_from_lines,
+    caret_stops_for_slice, caret_x_from_stops, hit_test_point_from_lines, hit_test_x_from_stops,
+    selection_rects_from_lines, selection_rects_from_lines_clipped,
+};
+pub use line_layout::TextLineLayout;
+pub use measure::TextMeasureCaches;
+pub use parley_shaper::{
+    FontSynthesis, GlyphFontData, ParleyGlyph, ParleyShaper, ParleyShaperFontDbDiagnosticsSnapshot,
+    ShapedCluster, ShapedLineLayout, run_system_font_rescan,
+};
+pub use prepare_layout::{PreparedLayout, PreparedLine, prepare_layout_from_wrapped};
+pub use spans::{
+    ResolvedSpan, paint_span_for_text_range, resolve_spans_for_text, sanitize_spans_for_text,
+};
+pub use wrapper::{WrappedLayout, wrap_with_constraints, wrap_with_constraints_measure_only};
 
 #[inline]
 pub fn effective_text_scale_factor(scale_factor: f32) -> f32 {
@@ -47,19 +64,106 @@ pub fn effective_text_scale_factor(scale_factor: f32) -> f32 {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FontCatalogEntryMetadata {
-    pub family: String,
-    pub has_variable_axes: bool,
-    pub known_variable_axes: Vec<String>,
-    pub variable_axes: Vec<FontVariableAxisMetadata>,
-    pub is_monospace_candidate: bool,
+    family: String,
+    has_variable_axes: bool,
+    known_variable_axes: Vec<String>,
+    variable_axes: Vec<FontVariableAxisMetadata>,
+    is_monospace_candidate: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct FontVariableAxisMetadata {
-    pub tag: String,
-    pub min_bits: u32,
-    pub max_bits: u32,
-    pub default_bits: u32,
+    tag: String,
+    min_bits: u32,
+    max_bits: u32,
+    default_bits: u32,
+}
+
+impl FontCatalogEntryMetadata {
+    pub fn new(
+        family: String,
+        has_variable_axes: bool,
+        known_variable_axes: Vec<String>,
+        variable_axes: Vec<FontVariableAxisMetadata>,
+        is_monospace_candidate: bool,
+    ) -> Self {
+        Self {
+            family,
+            has_variable_axes,
+            known_variable_axes,
+            variable_axes,
+            is_monospace_candidate,
+        }
+    }
+
+    pub fn family(&self) -> &str {
+        &self.family
+    }
+
+    pub fn has_variable_axes(&self) -> bool {
+        self.has_variable_axes
+    }
+
+    pub fn known_variable_axes(&self) -> &[String] {
+        &self.known_variable_axes
+    }
+
+    pub fn variable_axes(&self) -> &[FontVariableAxisMetadata] {
+        &self.variable_axes
+    }
+
+    pub fn is_monospace_candidate(&self) -> bool {
+        self.is_monospace_candidate
+    }
+
+    pub fn into_parts(
+        self,
+    ) -> (
+        String,
+        bool,
+        Vec<String>,
+        Vec<FontVariableAxisMetadata>,
+        bool,
+    ) {
+        (
+            self.family,
+            self.has_variable_axes,
+            self.known_variable_axes,
+            self.variable_axes,
+            self.is_monospace_candidate,
+        )
+    }
+}
+
+impl FontVariableAxisMetadata {
+    pub fn new(tag: String, min_bits: u32, max_bits: u32, default_bits: u32) -> Self {
+        Self {
+            tag,
+            min_bits,
+            max_bits,
+            default_bits,
+        }
+    }
+
+    pub fn tag(&self) -> &str {
+        &self.tag
+    }
+
+    pub fn min_bits(&self) -> u32 {
+        self.min_bits
+    }
+
+    pub fn max_bits(&self) -> u32 {
+        self.max_bits
+    }
+
+    pub fn default_bits(&self) -> u32 {
+        self.default_bits
+    }
+
+    pub fn into_parts(self) -> (String, u32, u32, u32) {
+        (self.tag, self.min_bits, self.max_bits, self.default_bits)
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -16,6 +16,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
+use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size};
@@ -158,6 +159,9 @@ impl Input {
 
     /// Associates this input with a logical form control id so related elements (e.g. labels,
     /// helper text) can forward activation and attach `labelled-by` / `described-by` semantics.
+    ///
+    /// When omitted inside `Field::build(...)`, the input inherits the field-local association
+    /// provided by `Field`.
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
         self.control_id = Some(id.into());
         self
@@ -492,7 +496,7 @@ fn input_element<H: UiHost>(
     let model_for_hook = props.model.clone();
     let on_submit_hook = on_submit.clone();
     let submit_command_for_hook = submit_command.clone();
-    let control_id = control_id.clone();
+    let control_id = field_state_prim::use_field_control_id_in_scope(cx, control_id.clone());
     let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
     let input = cx.text_input_with_id_props(|cx, id| {
         if let (Some(control_id), Some(control_registry)) =

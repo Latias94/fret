@@ -37,6 +37,18 @@ Goal:
 - `apps/fret-examples/src/imui_shadcn_adapter_demo.rs`
 - `apps/fret-examples/src/async_playground_demo.rs`
 
+Classification note:
+
+- `hello.rs`, `hello_counter.rs`, `query_basics.rs`, `commands_keymap_basics.rs`, `form_basics.rs`,
+  `toggle_basics.rs`, `payload_actions_basics.rs`, `hello_counter_demo.rs`, `query_demo.rs`,
+  `query_async_tokio_demo.rs`, and `drop_shadow_demo.rs` are the app-facing compare set in this
+  audit.
+- `embedded_viewport_demo`, `imui_hello_demo`, `imui_response_signals_demo`,
+  `imui_shadcn_adapter_demo`, and `async_playground_demo` are included as helper-heavy or
+  advanced/default-adjacent comparison samples.
+- Those advanced/default-adjacent samples are useful for spotting remaining `UiCx` /
+  `ElementContext` read noise, but they are not default-path proof surfaces on their own.
+
 ## Current shipped shorter read surface
 
 The repo already ships the shorter tracked-read story for `AppUi`:

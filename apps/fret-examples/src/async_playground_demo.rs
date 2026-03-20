@@ -5,11 +5,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use fret::{FretApp, actions::CommandId, advanced::prelude::*, component::prelude::*, shadcn};
-use fret_query::{
+use fret::query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
     QueryPolicy, QuerySnapshotEntry, QueryState, QueryStatus, with_query_client,
 };
+use fret::{FretApp, actions::CommandId, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_ui::element::{PressableA11y, PressableProps};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
@@ -117,36 +117,36 @@ fn install_light_theme(app: &mut KernelApp) {
 }
 
 #[derive(Clone)]
-struct SelectModel {
-    value: Model<Option<Arc<str>>>,
-    open: Model<bool>,
+struct SelectLocals {
+    value: LocalState<Option<Arc<str>>>,
+    open: LocalState<bool>,
 }
 
-impl SelectModel {
+impl SelectLocals {
     fn new(app: &mut KernelApp, initial: Option<&'static str>) -> Self {
         Self {
-            value: app.models_mut().insert(initial.map(Arc::from)),
-            open: app.models_mut().insert(false),
+            value: LocalState::from_model(app.models_mut().insert(initial.map(Arc::from))),
+            open: LocalState::from_model(app.models_mut().insert(false)),
         }
     }
 }
 
-struct QueryConfigModels {
-    stale_time_s: Model<String>,
-    cache_time_s: Model<String>,
-    keep_prev: Model<bool>,
-    cancel_mode: SelectModel,
-    fail_mode: Model<bool>,
+struct QueryConfigLocals {
+    stale_time_s: LocalState<String>,
+    cache_time_s: LocalState<String>,
+    keep_prev: LocalState<bool>,
+    cancel_mode: SelectLocals,
+    fail_mode: LocalState<bool>,
 }
 
-impl QueryConfigModels {
+impl QueryConfigLocals {
     fn new(app: &mut KernelApp) -> Self {
         Self {
-            stale_time_s: app.models_mut().insert("2".to_string()),
-            cache_time_s: app.models_mut().insert("30".to_string()),
-            keep_prev: app.models_mut().insert(true),
-            cancel_mode: SelectModel::new(app, Some("cancel")),
-            fail_mode: app.models_mut().insert(false),
+            stale_time_s: LocalState::from_model(app.models_mut().insert("2".to_string())),
+            cache_time_s: LocalState::from_model(app.models_mut().insert("30".to_string())),
+            keep_prev: LocalState::from_model(app.models_mut().insert(true)),
+            cancel_mode: SelectLocals::new(app, Some("cancel")),
+            fail_mode: LocalState::from_model(app.models_mut().insert(false)),
         }
     }
 }
@@ -169,7 +169,6 @@ struct QueryKeyInputs {
 struct QueryDiag {
     status: QueryStatus,
     stale: Option<bool>,
-    inflight: Option<u64>,
 }
 
 impl QueryDiag {
@@ -177,7 +176,6 @@ impl QueryDiag {
         Self {
             status: st.status,
             stale: None,
-            inflight: st.inflight,
         }
     }
 }
@@ -189,21 +187,38 @@ enum FetchMode {
 }
 
 struct AsyncPlaygroundState {
-    selected: Model<QueryId>,
-    dark: Model<bool>,
-
-    global_slow: Model<bool>,
-    tabs: Model<Option<Arc<str>>>,
-
-    namespace_input: Model<String>,
-    search_input: Model<String>,
-    stock_symbol: Model<String>,
-
-    configs: HashMap<QueryId, QueryConfigModels>,
+    configs: HashMap<QueryId, QueryConfigLocals>,
     last_diag: HashMap<QueryId, QueryDiag>,
 
     catalog_scroll: fret_ui::scroll::ScrollHandle,
     inspector_scroll: fret_ui::scroll::ScrollHandle,
+}
+
+#[derive(Clone)]
+struct AsyncPlaygroundLocals {
+    selected: LocalState<QueryId>,
+    dark: LocalState<bool>,
+    global_slow: LocalState<bool>,
+    tabs: LocalState<Option<Arc<str>>>,
+    namespace_input: LocalState<String>,
+    search_input: LocalState<String>,
+    stock_symbol: LocalState<String>,
+}
+
+impl AsyncPlaygroundLocals {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            selected: cx.state().local_init(|| QueryId::Tip),
+            dark: cx.state().local_init(|| false),
+            global_slow: cx.state().local_init(|| false),
+            tabs: cx.state().local_init(|| Some(Arc::<str>::from("async"))),
+            namespace_input: cx
+                .state()
+                .local_init(|| default_namespace_for_id(QueryId::Tip).to_string()),
+            search_input: cx.state().local_init(|| "react".to_string()),
+            stock_symbol: cx.state().local_init(|| "FRET".to_string()),
+        }
+    }
 }
 
 struct AsyncPlaygroundView {
@@ -234,19 +249,12 @@ impl View for AsyncPlaygroundView {
     fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
         let mut configs = HashMap::new();
         for id in QueryId::ALL {
-            configs.insert(id, QueryConfigModels::new(app));
+            configs.insert(id, QueryConfigLocals::new(app));
         }
 
         Self {
             applied_dark: false,
             st: AsyncPlaygroundState {
-                selected: app.models_mut().insert(QueryId::Tip),
-                dark: app.models_mut().insert(false),
-                global_slow: app.models_mut().insert(false),
-                tabs: app.models_mut().insert(Some(Arc::<str>::from("async"))),
-                namespace_input: app.models_mut().insert("tip".to_string()),
-                search_input: app.models_mut().insert("react".to_string()),
-                stock_symbol: app.models_mut().insert("FRET".to_string()),
                 configs,
                 last_diag: HashMap::new(),
                 catalog_scroll: fret_ui::scroll::ScrollHandle::default(),
@@ -256,110 +264,84 @@ impl View for AsyncPlaygroundView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let dark_for_theme = cx
-            .app
-            .models()
-            .get_copied(&self.st.dark)
-            .unwrap_or_default();
-        if self.applied_dark != dark_for_theme {
-            self.applied_dark = dark_for_theme;
-            apply_theme(cx.app, dark_for_theme);
+        let locals = AsyncPlaygroundLocals::new(cx);
+        let query_inputs = tracked_query_inputs(cx, &locals);
+        let selected = locals.selected.layout_value(cx);
+        let dark = locals.dark.layout_value(cx);
+        let global_slow = locals.global_slow.layout_value(cx);
+        let namespace_input = locals.namespace_input.layout_value(cx);
+
+        if self.applied_dark != dark {
+            self.applied_dark = dark;
+            apply_theme(cx.app, dark);
         }
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_SELECTED) {
-            let selected = cx
-                .app
-                .models()
-                .get_copied(&self.st.selected)
-                .unwrap_or_default();
-            let key = query_key_for_selected(cx.app, &self.st, selected);
+            let key = query_key_for_selected(selected, &query_inputs);
             let _ = with_query_client(cx.app, |client, app| client.invalidate(app, key));
         }
 
         if cx.effects().take_transient(TRANSIENT_CANCEL_SELECTED) {
-            let selected = cx
-                .app
-                .models()
-                .get_copied(&self.st.selected)
-                .unwrap_or_default();
-            let key = query_key_for_selected(cx.app, &self.st, selected);
+            let key = query_key_for_selected(selected, &query_inputs);
             let _ = with_query_client(cx.app, |client, app| client.cancel_inflight(app, key));
         }
 
         if cx.effects().take_transient(TRANSIENT_INVALIDATE_NAMESPACE) {
-            let ns = cx
-                .app
-                .models()
-                .get_cloned(&self.st.namespace_input)
-                .unwrap_or_default();
-            let ns = ns.trim();
+            let ns = namespace_input.trim();
             if let Some(ns) = map_namespace(ns) {
                 let _ = with_query_client(cx.app, |client, _app| client.invalidate_namespace(ns));
             }
         }
 
         let theme = Theme::global(&*cx.app).snapshot();
-        let selected = self.st.selected.layout_in(cx).value_or_default();
-        let dark = self.st.dark.layout_in(cx).value_or_default();
-        let global_slow = self.st.global_slow.layout_in(cx).value_or_default();
 
-        let header =
-            header_bar(cx, &mut self.st, theme.clone(), global_slow, dark).into_element(cx);
-        let body = body(cx, &mut self.st, theme, global_slow, selected).into_element(cx);
+        let header = header_bar(cx, &locals, theme.clone(), global_slow, dark).into_element(cx);
+        let body = body(cx, &mut self.st, &locals, theme, global_slow, selected).into_element(cx);
 
-        cx.actions().models::<act::SelectTip>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |models| {
-                let _ = models.update(&selected, |v| *v = QueryId::Tip);
-                let _ = models.update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Tip));
-                });
-                true
-            }
-        });
-        cx.actions().models::<act::SelectSearch>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |models| {
-                let _ = models.update(&selected, |v| *v = QueryId::Search);
-                let _ = models.update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Search));
-                });
-                true
-            }
-        });
-        cx.actions().models::<act::SelectStock>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |models| {
-                let _ = models.update(&selected, |v| *v = QueryId::Stock);
-                let _ = models.update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Stock));
-                });
-                true
-            }
-        });
-        cx.actions().models::<act::SelectStatus>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |models| {
-                let _ = models.update(&selected, |v| *v = QueryId::Status);
-                let _ = models.update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Status));
-                });
-                true
-            }
-        });
+        cx.actions()
+            .locals_with((&locals.selected, &locals.namespace_input))
+            .on::<act::SelectTip>(|tx, (selected_state, namespace_input_state)| {
+                let handled_selected = tx.set(&selected_state, QueryId::Tip);
+                let handled_namespace = tx.set(
+                    &namespace_input_state,
+                    default_namespace_for_id(QueryId::Tip).to_string(),
+                );
+                handled_selected || handled_namespace
+            });
+        cx.actions()
+            .locals_with((&locals.selected, &locals.namespace_input))
+            .on::<act::SelectSearch>(|tx, (selected_state, namespace_input_state)| {
+                let handled_selected = tx.set(&selected_state, QueryId::Search);
+                let handled_namespace = tx.set(
+                    &namespace_input_state,
+                    default_namespace_for_id(QueryId::Search).to_string(),
+                );
+                handled_selected || handled_namespace
+            });
+        cx.actions()
+            .locals_with((&locals.selected, &locals.namespace_input))
+            .on::<act::SelectStock>(|tx, (selected_state, namespace_input_state)| {
+                let handled_selected = tx.set(&selected_state, QueryId::Stock);
+                let handled_namespace = tx.set(
+                    &namespace_input_state,
+                    default_namespace_for_id(QueryId::Stock).to_string(),
+                );
+                handled_selected || handled_namespace
+            });
+        cx.actions()
+            .locals_with((&locals.selected, &locals.namespace_input))
+            .on::<act::SelectStatus>(|tx, (selected_state, namespace_input_state)| {
+                let handled_selected = tx.set(&selected_state, QueryId::Status);
+                let handled_namespace = tx.set(
+                    &namespace_input_state,
+                    default_namespace_for_id(QueryId::Status).to_string(),
+                );
+                handled_selected || handled_namespace
+            });
 
-        cx.actions().models::<act::ToggleTheme>({
-            let dark = self.st.dark.clone();
-            move |models| models.update(&dark, |v| *v = !*v).is_ok()
-        });
+        cx.actions()
+            .local(&locals.dark)
+            .toggle_bool::<act::ToggleTheme>();
 
         cx.actions()
             .transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
@@ -378,7 +360,7 @@ impl View for AsyncPlaygroundView {
 
 fn header_bar(
     cx: &mut UiCx<'_>,
-    st: &mut AsyncPlaygroundState,
+    locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     dark: bool,
@@ -393,7 +375,7 @@ fn header_bar(
         .text_sm()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let slow_switch = shadcn::Switch::new(st.global_slow.clone())
+    let slow_switch = shadcn::Switch::new(&locals.global_slow)
         .a11y_label("Simulate slow network")
         .into_element(cx);
     let slow_row = ui::h_flex(|_cx| [slow_label, slow_switch])
@@ -429,13 +411,14 @@ fn header_bar(
 fn body(
     cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
+    locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let left = catalog_panel(cx, st, theme.clone(), selected).into_element(cx);
-    let mid = main_panel(cx, st, theme.clone(), global_slow, selected).into_element(cx);
-    let right = inspector_panel(cx, st, theme, selected).into_element(cx);
+    let mid = main_panel(cx, st, locals, theme.clone(), global_slow, selected).into_element(cx);
+    let right = inspector_panel(cx, st, locals, theme, selected).into_element(cx);
 
     let sep_1 = shadcn::Separator::new()
         .orientation(SeparatorOrientation::Vertical)
@@ -575,11 +558,12 @@ fn select_command_for_id(id: QueryId) -> CommandId {
 fn main_panel(
     cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
+    locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let mode = active_mode(cx, st);
+    let mode = active_mode(cx, locals);
 
     let title = ui::text(selected.label())
         .font_semibold()
@@ -629,6 +613,7 @@ fn main_panel(
         query_panel_for_mode(
             cx,
             st,
+            locals,
             theme.clone(),
             global_slow,
             selected,
@@ -644,6 +629,7 @@ fn main_panel(
         query_panel_for_mode(
             cx,
             st,
+            locals,
             theme.clone(),
             global_slow,
             selected,
@@ -656,7 +642,7 @@ fn main_panel(
             .into_element(cx)
     };
 
-    let tabs = shadcn::Tabs::new(st.tabs.clone())
+    let tabs = shadcn::Tabs::new(&locals.tabs)
         .content_fill_remaining(true)
         .items([
             shadcn::TabsItem::new("sync", "Sync", [sync_panel]),
@@ -689,11 +675,12 @@ fn main_panel(
 fn inspector_panel(
     cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
+    locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     selected: QueryId,
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let policy = query_policy(cx, st, selected);
-    let key = query_key_for_id(cx, st, selected);
+    let key = query_key_for_id(cx, locals, selected);
     let snap = snapshot_entry_for_key(cx, key);
 
     let status = snap.as_ref().map(|s| s.status).unwrap_or(QueryStatus::Idle);
@@ -735,7 +722,7 @@ fn inspector_panel(
     let policy_editor = policy_editor(cx, st, theme.clone(), selected).into_element(cx);
 
     let ns_row = ui::h_flex(|cx| {
-        let input = shadcn::Input::new(st.namespace_input.clone())
+        let input = shadcn::Input::new(&locals.namespace_input)
             .placeholder("tip/search/stock/status")
             .refine_layout(LayoutRefinement::default().flex_grow(1.0))
             .into_element(cx);
@@ -787,10 +774,10 @@ fn policy_editor(
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let config = st.configs.get(&id).expect("missing config");
 
-    let stale = shadcn::Input::new(config.stale_time_s.clone())
+    let stale = shadcn::Input::new(&config.stale_time_s)
         .placeholder("stale_time (s)")
         .into_element(cx);
-    let cache = shadcn::Input::new(config.cache_time_s.clone())
+    let cache = shadcn::Input::new(&config.cache_time_s)
         .placeholder("cache_time (s)")
         .into_element(cx);
 
@@ -798,7 +785,7 @@ fn policy_editor(
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let keep_prev = shadcn::Switch::new(config.keep_prev.clone())
+    let keep_prev = shadcn::Switch::new(&config.keep_prev)
         .a11y_label("Keep previous data while loading")
         .into_element(cx);
 
@@ -806,21 +793,18 @@ fn policy_editor(
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
-    let fail = shadcn::Switch::new(config.fail_mode.clone())
+    let fail = shadcn::Switch::new(&config.fail_mode)
         .a11y_label("Force failures")
         .into_element(cx);
 
-    let cancel_mode = shadcn::Select::new(
-        config.cancel_mode.value.clone(),
-        config.cancel_mode.open.clone(),
-    )
-    .a11y_label("Cancel mode")
-    .value(shadcn::SelectValue::new().placeholder("Cancel mode"))
-    .items([
-        shadcn::SelectItem::new("cancel", "Cancel inflight"),
-        shadcn::SelectItem::new("keep", "Keep inflight"),
-    ])
-    .into_element(cx);
+    let cancel_mode = shadcn::Select::new(&config.cancel_mode.value, &config.cancel_mode.open)
+        .a11y_label("Cancel mode")
+        .value(shadcn::SelectValue::new().placeholder("Cancel mode"))
+        .items([
+            shadcn::SelectItem::new("cancel", "Cancel inflight"),
+            shadcn::SelectItem::new("keep", "Keep inflight"),
+        ])
+        .into_element(cx);
 
     ui::v_flex(|cx| {
         [
@@ -846,6 +830,7 @@ fn policy_editor(
 fn query_panel_for_mode(
     cx: &mut UiCx<'_>,
     st: &mut AsyncPlaygroundState,
+    locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
@@ -854,7 +839,7 @@ fn query_panel_for_mode(
     let id = selected;
     let policy = query_policy(cx, st, id);
     let fail_mode = query_fail_mode(cx, st, id);
-    let query_inputs = tracked_query_inputs(cx, st);
+    let query_inputs = tracked_query_inputs(cx, locals);
     let key = query_key_for_params(id, query_inputs.search.clone(), query_inputs.symbol.clone());
 
     let base_delay = match id {
@@ -892,7 +877,7 @@ fn query_panel_for_mode(
     let snap = snapshot_entry_for_key(cx, key);
     observe_query_diag(st, id, &state, snap.as_ref());
 
-    let inputs = query_inputs_row(cx, st, theme.clone(), id).into_element(cx);
+    let inputs = query_inputs_row(cx, locals, theme.clone(), id).into_element(cx);
     let view =
         query_result_view(cx, theme, id, key, &state, snap.as_ref(), &policy).into_element(cx);
     ui::v_flex(|_cx| [inputs, view])
@@ -904,7 +889,7 @@ fn query_panel_for_mode(
 
 fn query_inputs_row(
     cx: &mut UiCx<'_>,
-    st: &mut AsyncPlaygroundState,
+    locals: &AsyncPlaygroundLocals,
     theme: ThemeSnapshot,
     id: QueryId,
 ) -> impl IntoUiElement<KernelApp> + use<> {
@@ -923,7 +908,7 @@ fn query_inputs_row(
     match id {
         QueryId::Search => {
             children.push(
-                shadcn::Input::new(st.search_input.clone())
+                shadcn::Input::new(&locals.search_input)
                     .placeholder("Search query…")
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
@@ -931,7 +916,7 @@ fn query_inputs_row(
         }
         QueryId::Stock => {
             children.push(
-                shadcn::Input::new(st.stock_symbol.clone())
+                shadcn::Input::new(&locals.stock_symbol)
                     .placeholder("Symbol…")
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
@@ -985,7 +970,7 @@ fn query_result_view(
             .text_sm()
             .into_element(cx),
         QueryStatus::Loading => {
-            let kept = policy.keep_previous_data_while_loading && state.data.is_some();
+            let kept = policy.keep_previous_data_while_loading && state.is_refreshing();
             ui::text(if kept {
                 "Loading… (keepPreviousDataWhileLoading=true)"
             } else {
@@ -1040,66 +1025,34 @@ fn query_result_view(
     .into_element(cx)
 }
 
-fn active_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> FetchMode {
-    let tab = st.tabs.layout_in(cx).value_or_default();
-    match tab.as_deref() {
-        Some("sync") => FetchMode::Sync,
-        _ => FetchMode::Async,
-    }
+fn active_mode(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> FetchMode {
+    locals
+        .tabs
+        .layout_read_ref_in(cx, |tab| match tab.as_deref() {
+            Some("sync") => FetchMode::Sync,
+            _ => FetchMode::Async,
+        })
 }
 
 fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> QueryPolicy {
     let config = st.configs.get(&id).expect("missing config");
-    let stale_time_s = config.stale_time_s.clone();
-    let cache_time_s = config.cache_time_s.clone();
-    let keep_prev = config.keep_prev.clone();
-    let cancel_mode_value = config.cancel_mode.value.clone();
-    let stale_time_s_deps = stale_time_s.clone();
-    let cache_time_s_deps = cache_time_s.clone();
-    let keep_prev_deps = keep_prev.clone();
-    let cancel_mode_value_deps = cancel_mode_value.clone();
-    let policy_settings: QueryPolicySettings = cx.data().selector(
-        move |cx| {
-            cx.observe_model(&stale_time_s_deps, Invalidation::Layout);
-            cx.observe_model(&cache_time_s_deps, Invalidation::Layout);
-            cx.observe_model(&keep_prev_deps, Invalidation::Layout);
-            cx.observe_model(&cancel_mode_value_deps, Invalidation::Layout);
-            (
-                cx.app.models().revision(&stale_time_s_deps).unwrap_or(0),
-                cx.app.models().revision(&cache_time_s_deps).unwrap_or(0),
-                cx.app.models().revision(&keep_prev_deps).unwrap_or(0),
-                cx.app
-                    .models()
-                    .revision(&cancel_mode_value_deps)
-                    .unwrap_or(0),
-            )
-        },
-        move |cx| QueryPolicySettings {
-            stale_time_s: cx
-                .app
-                .models()
-                .get_cloned(&stale_time_s)
-                .unwrap_or_default(),
-            cache_time_s: cx
-                .app
-                .models()
-                .get_cloned(&cache_time_s)
-                .unwrap_or_default(),
-            keep_previous_data_while_loading: cx
-                .app
-                .models()
-                .get_cloned(&keep_prev)
-                .unwrap_or_default(),
-            cancel_mode: match cx
-                .app
-                .models()
-                .get_cloned(&cancel_mode_value)
-                .unwrap_or_default()
-                .as_deref()
-            {
-                Some("keep") => QueryCancelMode::KeepInFlight,
-                _ => QueryCancelMode::CancelInFlight,
-            },
+    let policy_settings: QueryPolicySettings = cx.data().selector_layout(
+        (
+            &config.stale_time_s,
+            &config.cache_time_s,
+            &config.keep_prev,
+            &config.cancel_mode.value,
+        ),
+        |(stale_time_s, cache_time_s, keep_previous_data_while_loading, cancel_mode_value)| {
+            QueryPolicySettings {
+                stale_time_s,
+                cache_time_s,
+                keep_previous_data_while_loading,
+                cancel_mode: match cancel_mode_value.as_deref() {
+                    Some("keep") => QueryCancelMode::KeepInFlight,
+                    _ => QueryCancelMode::CancelInFlight,
+                },
+            }
         },
     );
 
@@ -1114,64 +1067,34 @@ fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> Qu
 
 fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
-    config.fail_mode.layout_in(cx).value_or_default()
+    config.fail_mode.layout_value_in(cx)
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {
     s.trim().parse::<u64>().unwrap_or(fallback)
 }
 
-fn query_key_for_selected(
-    app: &KernelApp,
-    st: &AsyncPlaygroundState,
-    selected: QueryId,
-) -> QueryKey<Arc<str>> {
-    let search = app
-        .models()
-        .get_cloned(&st.search_input)
-        .unwrap_or_default();
-    let symbol = app
-        .models()
-        .get_cloned(&st.stock_symbol)
-        .unwrap_or_default();
-    query_key_for_params(selected, search, symbol)
+fn query_key_for_selected(selected: QueryId, query_inputs: &QueryKeyInputs) -> QueryKey<Arc<str>> {
+    query_key_for_params(
+        selected,
+        query_inputs.search.clone(),
+        query_inputs.symbol.clone(),
+    )
 }
 
-fn tracked_query_inputs(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState) -> QueryKeyInputs {
-    let search_input = st.search_input.clone();
-    let stock_symbol = st.stock_symbol.clone();
-    let search_input_deps = search_input.clone();
-    let stock_symbol_deps = stock_symbol.clone();
-    cx.data().selector(
-        move |cx| {
-            cx.observe_model(&search_input_deps, Invalidation::Layout);
-            cx.observe_model(&stock_symbol_deps, Invalidation::Layout);
-            (
-                cx.app.models().revision(&search_input_deps).unwrap_or(0),
-                cx.app.models().revision(&stock_symbol_deps).unwrap_or(0),
-            )
-        },
-        move |cx| QueryKeyInputs {
-            search: cx
-                .app
-                .models()
-                .get_cloned(&search_input)
-                .unwrap_or_default(),
-            symbol: cx
-                .app
-                .models()
-                .get_cloned(&stock_symbol)
-                .unwrap_or_default(),
-        },
+fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {
+    cx.data().selector_layout(
+        (&locals.search_input, &locals.stock_symbol),
+        |(search, symbol)| QueryKeyInputs { search, symbol },
     )
 }
 
 fn query_key_for_id(
     cx: &mut UiCx<'_>,
-    st: &AsyncPlaygroundState,
+    locals: &AsyncPlaygroundLocals,
     id: QueryId,
 ) -> QueryKey<Arc<str>> {
-    let query_inputs = tracked_query_inputs(cx, st);
+    let query_inputs = tracked_query_inputs(cx, locals);
     query_key_for_params(id, query_inputs.search, query_inputs.symbol)
 }
 
@@ -1215,15 +1138,17 @@ fn status_badge(
             .into_element(cx);
     };
 
-    let mut label = format!("{:?}", diag.status);
+    let mut label = diag.status.as_str().to_string();
     if diag.stale == Some(true) {
         label.push_str(" (stale)");
     }
 
-    let variant = match diag.status {
-        QueryStatus::Success => shadcn::BadgeVariant::Default,
-        QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-        QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
+    let variant = if diag.status.is_success() {
+        shadcn::BadgeVariant::Default
+    } else if diag.status.is_error() {
+        shadcn::BadgeVariant::Destructive
+    } else {
+        shadcn::BadgeVariant::Secondary
     };
 
     shadcn::Badge::new(label).variant(variant).into_element(cx)

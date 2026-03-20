@@ -23,6 +23,7 @@ use fret_ui_kit::{
     WidgetStates,
 };
 
+use crate::float_vec_model::IntoFloatVecModel;
 use crate::overlay_motion;
 use crate::test_id::attach_test_id_suffix;
 
@@ -170,9 +171,9 @@ pub struct Slider {
 }
 
 impl Slider {
-    pub fn new(model: Model<Vec<f32>>) -> Self {
+    pub fn new(model: impl IntoFloatVecModel) -> Self {
         Self {
-            model,
+            model: model.into_float_vec_model(),
             orientation: radix_slider::SliderOrientation::Horizontal,
             dir: None,
             inverted: false,
@@ -326,7 +327,7 @@ impl Slider {
 }
 
 /// Builder-preserving helper for the common slider authoring path.
-pub fn slider(model: Model<Vec<f32>>) -> Slider {
+pub fn slider(model: impl IntoFloatVecModel) -> Slider {
     Slider::new(model)
 }
 

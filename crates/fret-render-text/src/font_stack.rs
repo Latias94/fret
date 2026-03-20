@@ -13,7 +13,7 @@ impl GenericFamilyInjectionState {
         self.injected_by_generic.clear();
     }
 
-    pub fn apply_generic_stack(
+    pub(crate) fn apply_generic_stack(
         &mut self,
         shaper: &mut ParleyShaper,
         generic: ParleyGenericFamily,
@@ -54,7 +54,7 @@ impl GenericFamilyInjectionState {
     }
 }
 
-pub fn pick_primary_family_id(
+pub(crate) fn pick_primary_family_id(
     shaper: &mut ParleyShaper,
     overrides: &[String],
     defaults: &'static [&'static str],
@@ -67,7 +67,7 @@ pub fn pick_primary_family_id(
     fallback_policy::first_available_family_id(shaper, defaults)
 }
 
-pub fn resolve_common_fallback_ids_and_suffix(
+pub(crate) fn resolve_common_fallback_ids_and_suffix(
     shaper: &mut ParleyShaper,
     candidates: &[String],
 ) -> (Vec<ParleyFamilyId>, String) {

@@ -1,5 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
+use fret::advanced::prelude::TrackedStateExt as _;
+use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
 use fret_app::{App, CommandId, CommandMeta, Effect, Model, WhenExpr, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
@@ -18,7 +20,7 @@ use fret_ui::element::{
     SemanticsProps, TextProps,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui::{ElementContext, Theme, UiTree};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
@@ -31,6 +33,7 @@ use std::sync::Arc;
 
 struct ComponentsGalleryWindowState {
     ui: UiTree<App>,
+    app_ui_root: AppUiRenderRootState,
     root: Option<fret_core::NodeId>,
     items: Model<Vec<TreeItem>>,
     tree_state: Model<TreeState>,
@@ -160,6 +163,7 @@ impl ComponentsGalleryDriver {
 
         ComponentsGalleryWindowState {
             ui,
+            app_ui_root: AppUiRenderRootState::default(),
             root: None,
             items,
             tree_state,
@@ -260,31 +264,30 @@ impl ComponentsGalleryDriver {
 
         Self::sync_gallery_shadcn_theme(app, state);
 
-        let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-            .render_root("components-gallery", |cx| {
+        let root = render_root_with_app_ui(
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds),
+            "components-gallery",
+            &mut state.app_ui_root,
+            |cx| {
                 if std::env::var_os("FRET_COMPONENTS_GALLERY_TABLE_TORTURE").is_some() {
                     let (data, columns) = cx.slot_state(
                         || {
-                            let n: u64 =
-                                std::env::var("FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N")
-                                    .ok()
-                                    .and_then(|v| v.parse().ok())
-                                    .unwrap_or(50_000);
+                            let n: u64 = std::env::var("FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N")
+                                .ok()
+                                .and_then(|v| v.parse().ok())
+                                .unwrap_or(50_000);
 
                             let data: Arc<[u64]> = Arc::from((0..n).collect::<Vec<u64>>());
 
                             let cols: Vec<ColumnDef<u64>> = vec![
                                 ColumnDef::new("id").sort_by(|a: &u64, b: &u64| a.cmp(b)),
-                                ColumnDef::new("status").sort_by(|a: &u64, b: &u64| {
-                                    (a % 3).cmp(&(b % 3))
-                                }),
+                                ColumnDef::new("status")
+                                    .sort_by(|a: &u64, b: &u64| (a % 3).cmp(&(b % 3))),
                                 ColumnDef::new("cpu").sort_by(|a: &u64, b: &u64| {
-                                    (((a * 7) % 100) as u32)
-                                        .cmp(&(((b * 7) % 100) as u32))
+                                    (((a * 7) % 100) as u32).cmp(&(((b * 7) % 100) as u32))
                                 }),
                                 ColumnDef::new("mem_mb").sort_by(|a: &u64, b: &u64| {
-                                    ((128 + (a % 4096)) as u32)
-                                        .cmp(&((128 + (b % 4096)) as u32))
+                                    ((128 + (a % 4096)) as u32).cmp(&((128 + (b % 4096)) as u32))
                                 }),
                             ];
                             let columns: Arc<[ColumnDef<u64>]> = Arc::from(cols);
@@ -293,7 +296,8 @@ impl ComponentsGalleryDriver {
                         },
                         |(data, columns)| (data.clone(), columns.clone()),
                     );
-                    let table_state = cx.local_model_keyed("table_torture.state", TableState::default);
+                    let table_state =
+                        cx.local_model_keyed("table_torture.state", TableState::default);
 
                     let theme = cx.theme_snapshot();
                     let padding = theme.metric_token("metric.padding.md");
@@ -397,18 +401,35 @@ impl ComponentsGalleryDriver {
                     props.padding = Edges::all(padding).into();
                     props.background = Some(theme.color_token("background"));
 
-                    return vec![cx.container(props, |_cx| vec![header, table])];
+                    return vec![cx.container(props, |_cx| vec![header, table])].into();
                 }
 
-                cx.observe_model(&tree_state, Invalidation::Layout);
                 let theme = cx.theme_snapshot();
                 let theme_name = Theme::global(&*cx.app).name.clone();
-                let selected = cx
-                    .app
-                    .models()
-                    .read(&tree_state, |s| s.selected)
+                let selected = tree_state
+                    .layout(cx)
+                    .read_ref(|s| s.selected)
                     .ok()
                     .flatten();
+                let selected_ui_font = ui_font_override.layout(cx).value_or_default();
+                let selected_emoji_font = emoji_font_override.layout(cx).value_or_default();
+                let checkbox_value = checkbox.layout(cx).copied_or(false);
+                let switch_value = switch.layout(cx).copied_or(false);
+                let radio_label = radio
+                    .layout(cx)
+                    .value_or_default()
+                    .as_deref()
+                    .unwrap_or("<none>")
+                    .to_owned();
+                let select_label = select
+                    .layout(cx)
+                    .value_or_default()
+                    .as_deref()
+                    .unwrap_or("<none>")
+                    .to_owned();
+                let last_action_value = last_action
+                    .layout(cx)
+                    .value_or_else(|| Arc::<str>::from("<none>"));
 
                 let title: Arc<str> = Arc::from("components_gallery");
                 let subtitle: Arc<str> = Arc::from(format!(
@@ -603,18 +624,6 @@ impl ComponentsGalleryDriver {
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            let selected_emoji_font = cx
-                                                .app
-                                                .models()
-                                                .read(&emoji_font_override, |v| v.clone())
-                                                .ok()
-                                                .flatten();
-                                            let selected_ui_font = cx
-                                                .app
-                                                .models()
-                                                .read(&ui_font_override, |v| v.clone())
-                                                .ok()
-                                                .flatten();
                                             let available_fonts: Arc<[Arc<str>]> = cx
                                                 .app
                                                 .global::<fret_app::FontCatalogCache>()
@@ -889,13 +898,6 @@ impl ComponentsGalleryDriver {
                                             wrap: true,
                                         },
                                     |cx| {
-                                        cx.observe_model(&checkbox, Invalidation::Layout);
-                                        cx.observe_model(&switch, Invalidation::Layout);
-                                        let checkbox_value =
-                                            cx.app.models().get_copied(&checkbox).unwrap_or(false);
-                                        let switch_value =
-                                            cx.app.models().get_copied(&switch).unwrap_or(false);
-
                                             vec![
                                                 shadcn::Checkbox::new(checkbox)
                                                     .a11y_label("Demo checkbox")
@@ -919,17 +921,8 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
-                                        cx.observe_model(&radio, Invalidation::Layout);
-                                        let value = cx
-                                            .app
-                                            .models()
-                                            .get_cloned(&radio)
-                                            .flatten()
-                                            .map(|v| v.to_string())
-                                            .unwrap_or_else(|| "<none>".to_string());
-
                                             vec![
-                                                cx.text(format!("radio: {value}")),
+                                                cx.text(format!("radio: {radio_label}")),
                                                 shadcn::RadioGroup::new(radio)
                                                     .a11y_label("Demo radio group")
                                                     .item(shadcn::RadioGroupItem::new("a", "Alpha"))
@@ -953,16 +946,6 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
-                                        cx.observe_model(&select, Invalidation::Layout);
-                                        let value = cx
-                                            .app
-                                            .models()
-                                            .get_cloned(&select)
-                                            .flatten()
-                                            .as_deref()
-                                            .unwrap_or("<none>")
-                                            .to_owned();
-
 	                                        vec![
 	                                            shadcn::Select::new(select, select_open)
 	                                                .a11y_label("Demo select")
@@ -976,7 +959,7 @@ impl ComponentsGalleryDriver {
 	                                                    shadcn::SelectItem::new("cherry", "Cherry"),
 	                                                ])
                                                 .into_element(cx),
-                                            cx.text(format!("select: {value}")),
+                                            cx.text(format!("select: {select_label}")),
                                         ]
                                     },
                                 ),
@@ -1005,9 +988,6 @@ impl ComponentsGalleryDriver {
                                         wrap: false,
                                     },
                                     |cx| {
-                                        cx.observe_model(&last_action, Invalidation::Layout);
-                                        let last_action = cx.app.models().get_cloned(&last_action);
-
                                         let overlays = cx.flex(
                                             FlexProps {
                                                 layout: LayoutStyle::default(),
@@ -1331,9 +1311,7 @@ impl ComponentsGalleryDriver {
                                             overlays,
                                             cx.text(format!(
                                                 "last action: {}",
-                                                last_action
-                                                    .as_deref()
-                                                    .unwrap_or("<none>")
+                                                last_action_value.as_ref()
                                             )),
                                             cx.text(
                                                 "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
@@ -1371,7 +1349,9 @@ impl ComponentsGalleryDriver {
                     .padding_px(padding)
                     .bg(ColorRef::Color(bg))
                     .into_element(cx)]
-            });
+                .into()
+            },
+        );
 
         state.ui.set_root(root);
         OverlayController::render(&mut state.ui, app, services, window, bounds);

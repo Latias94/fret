@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("no_close_button.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -19,14 +20,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx)
         },
         move |cx| {
-            shadcn::DialogContent::new([shadcn::DialogHeader::new([
-                shadcn::DialogTitle::new("No Close Button").into_element(cx),
-                shadcn::DialogDescription::new(
-                    "This dialog omits explicit close controls and relies on Escape or overlay dismissal.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx)])
+            shadcn::DialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::DialogHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::DialogTitle::new("No Close Button"));
+                        out.push_ui(
+                            cx,
+                            shadcn::DialogDescription::new(
+                                "This dialog omits explicit close controls and relies on Escape or overlay dismissal.",
+                            ),
+                        );
+                    }),
+                );
+            })
             .show_close_button(false)
             .into_element(cx)
             .test_id("ui-gallery-dialog-no-close-content")

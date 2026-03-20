@@ -1197,6 +1197,14 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        if command.as_str().starts_with("ui_gallery.context_menu.") {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from(command.as_str());
+            });
+            app.request_redraw(window);
+            return;
+        }
+
         if command.as_str() == fret_app::core_commands::EDIT_UNDO {
             let mut did_apply = false;
             app.with_global_mut(

@@ -38,8 +38,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::DropdownMenuContent::new()
                     .align(shadcn::DropdownMenuAlign::Start)
                     .side_offset(Px(4.0))
-                    // new-york-v4 dropdown-menu-checkboxes: `DropdownMenuContent className="w-56"`.
-                    .min_width(Px(224.0)),
+                    // base-nova dropdown-menu-checkboxes: `DropdownMenuContent className="w-40"`.
+                    .min_width(Px(160.0)),
             )
             .entries([shadcn::DropdownMenuGroup::new([
                 shadcn::DropdownMenuLabel::new("Appearance").into(),

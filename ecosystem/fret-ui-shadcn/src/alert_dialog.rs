@@ -2725,6 +2725,39 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_content_build_accepts_builder_first_sections() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDialogContent::build(|cx, out| {
+                out.push(
+                    AlertDialogHeader::build(|cx, out| {
+                        out.push(AlertDialogTitle::new("Title").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+                out.push(
+                    AlertDialogFooter::build(|cx, out| {
+                        out.push(crate::button::Button::new("Close").into_element(cx));
+                    })
+                    .into_element(cx),
+                );
+            })
+            .test_id("content")
+            .into_element(cx)
+        });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert!(contains_plain_text(&element, "Title"));
+        assert!(contains_plain_text(&element, "Close"));
+    }
+
+    #[test]
     fn alert_dialog_children_api_supports_from_scope_buttons() {
         let window = AppWindowId::default();
         let mut app = App::new();

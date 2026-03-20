@@ -36,7 +36,7 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-command-basic" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-command-basic-trigger.chrome" } },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
@@ -45,7 +45,7 @@
         "target": {
           "kind": "role_and_name",
           "role": "dialog",
-          "name": "Basic command dialog"
+          "name": "Command palette"
         }
       },
       "timeout_frames": 240
@@ -57,7 +57,7 @@
         "target": {
           "kind": "role_and_name",
           "role": "dialog",
-          "name": "Basic command dialog"
+          "name": "Command palette"
         }
       }
     },

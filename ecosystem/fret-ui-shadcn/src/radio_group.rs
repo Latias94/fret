@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::direction::LayoutDirection;
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -107,6 +108,7 @@ pub struct RadioGroupItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
     pub children: Option<Vec<AnyElement>>,
+    pub control_id: Option<ControlId>,
     pub disabled: bool,
     pub aria_invalid: bool,
     pub variant: RadioGroupItemVariant,
@@ -118,6 +120,7 @@ impl RadioGroupItem {
             value: value.into(),
             label: label.into(),
             children: None,
+            control_id: None,
             disabled: false,
             aria_invalid: false,
             variant: RadioGroupItemVariant::default(),
@@ -132,6 +135,13 @@ impl RadioGroupItem {
 
     pub fn child(mut self, child: AnyElement) -> Self {
         self.children = Some(vec![child]);
+        self
+    }
+
+    /// Binds this radio item to a logical form control id so `FieldLabel::for_control(...)`
+    /// can target a specific item instead of only the group's current tab stop.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -211,9 +221,9 @@ pub struct RadioGroup {
 }
 
 impl RadioGroup {
-    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn new(model: impl IntoOptionalTextValueModel) -> Self {
         Self {
-            model: Some(model),
+            model: Some(model.into_optional_text_value_model()),
             default_value: None,
             items: Vec::new(),
             disabled: false,
@@ -260,6 +270,8 @@ impl RadioGroup {
     ///
     /// When set, `Label::for_control(ControlId)` forwards focus to the active radio item, and the
     /// group uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
+    ///
+    /// Use [`RadioGroupItem::control_id`] when labels should target specific radio items.
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
         self.control_id = Some(id.into());
         self
@@ -328,10 +340,12 @@ impl RadioGroup {
             layout,
             style,
         } = self;
+        let has_item_control_ids = items.iter().any(|item| item.control_id.is_some());
 
         cx.scope(|cx| {
             let control_id = control_id.clone();
-            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+            let control_registry = (control_id.is_some() || has_item_control_ids)
+                .then(|| control_registry_model(cx));
             let labelled_by_element = if a11y_label.is_some() {
                 None
             } else if let (Some(control_id), Some(control_registry)) =
@@ -476,6 +490,7 @@ impl RadioGroup {
                         let tab_stop = active.is_some_and(|a| a == idx);
                         let aria_invalid = item.aria_invalid;
                         let item_variant = item.variant;
+                        let item_control_id = item.control_id;
                         let control_id_for_register = control_id_for_register.clone();
                         let control_registry_for_register = control_registry_for_register.clone();
                         let tab_stop_for_register = tab_stop;
@@ -512,10 +527,13 @@ impl RadioGroup {
                         let default_label_color = default_label_color.clone();
                         let default_indicator_color = default_indicator_color.clone();
                         let key = value.clone();
+                        let radio_value = value.clone();
+                        let value_for_control = value.clone();
+                        let model_for_control = model.clone();
                         out.push(cx.keyed(key, move |cx| {
                             let base_ring_style = ring_style;
                             let focus_ring_for_props = base_ring_style.clone();
-                            radio_group_prim::RadioGroupItem::new(value)
+                            radio_group_prim::RadioGroupItem::new(radio_value)
                                 .label(a11y_label.clone())
                                 .disabled(!item_enabled)
                                 .index(idx)
@@ -551,6 +569,22 @@ impl RadioGroup {
                                     move |cx, st, id, checked, props| {
                                         if let Some(test_id) = item_test_id.clone() {
                                             props.a11y.test_id = Some(test_id);
+                                        }
+                                        if let (Some(control_id), Some(control_registry)) = (
+                                            item_control_id.clone(),
+                                            control_registry_for_register.clone(),
+                                        ) {
+                                            let entry = ControlEntry {
+                                                element: id,
+                                                enabled: item_enabled,
+                                                action: ControlAction::SetOptionalArcStr(
+                                                    model_for_control.clone(),
+                                                    value_for_control.clone(),
+                                                ),
+                                            };
+                                            let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                                                reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                                            });
                                         }
                                         if tab_stop_for_register
                                             && let (Some(control_id), Some(control_registry)) = (
@@ -879,7 +913,10 @@ impl RadioGroup {
 }
 
 /// Builder-preserving controlled helper for the common radio-group authoring path.
-pub fn radio_group(model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>) -> RadioGroup {
+pub fn radio_group(
+    model: impl IntoOptionalTextValueModel,
+    items: Vec<RadioGroupItem>,
+) -> RadioGroup {
     let mut group = RadioGroup::new(model);
     for item in items {
         group = group.item(item);
@@ -919,6 +956,7 @@ mod tests {
     use fret_ui::element::{ElementKind, PressableProps};
     use fret_ui::{Theme, ThemeConfig, UiTree};
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+    use fret_ui_kit::primitives::control_registry::ControlId;
 
     struct FakeServices;
 
@@ -1972,6 +2010,125 @@ mod tests {
         assert_eq!(label.layout.flex.shrink, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Auto);
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn radio_group_item_control_id_allows_field_label_to_select_specific_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("yearly")));
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+        let monthly_id = ControlId::from("plan-monthly");
+        let yearly_id = ControlId::from("plan-yearly");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-item-control-id-label-forwarding",
+            |cx| {
+                vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                    vec![
+                        crate::field::FieldLabel::new("Monthly")
+                            .for_control(monthly_id.clone())
+                            .test_id("radio.item.monthly.label")
+                            .into_element(cx),
+                        crate::field::FieldLabel::new("Yearly")
+                            .for_control(yearly_id.clone())
+                            .test_id("radio.item.yearly.label")
+                            .into_element(cx),
+                        RadioGroup::new(model.clone())
+                            .a11y_label("Subscription Plan")
+                            .item(
+                                RadioGroupItem::new("monthly", "Monthly")
+                                    .control_id(monthly_id.clone()),
+                            )
+                            .item(
+                                RadioGroupItem::new("yearly", "Yearly")
+                                    .control_id(yearly_id.clone()),
+                            )
+                            .into_element(cx),
+                    ]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
+        let monthly_label_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("radio.item.monthly.label"))
+            .map(|n| n.id)
+            .expect("expected monthly label node");
+        let monthly_label_bounds = ui
+            .debug_node_bounds(monthly_label_node)
+            .expect("expected monthly label bounds");
+        let label_center = Point::new(
+            Px(monthly_label_bounds.origin.x.0 + monthly_label_bounds.size.width.0 * 0.5),
+            Px(monthly_label_bounds.origin.y.0 + monthly_label_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(7),
+                position: label_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(7),
+                position: label_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_cloned(&model).flatten().as_deref(),
+            Some("monthly")
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus after clicking item label");
+        let focused_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .expect("focused node");
+        assert_eq!(focused_node.role, SemanticsRole::RadioButton);
+        assert_eq!(focused_node.label.as_deref(), Some("Monthly"));
+        assert_eq!(ui.focus(), Some(focused_node.id));
+        let _ = root;
     }
 
     #[test]

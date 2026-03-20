@@ -6,6 +6,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
+#[cfg(target_os = "macos")]
+use objc2_metal::MTLDevice as _;
 
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
@@ -2049,7 +2051,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     context
                                         .device
                                         .as_hal::<wgpu::hal::api::Metal>()
-                                        .map(|dev| dev.raw_device().current_allocated_size() as u64)
+                                        .map(|dev| dev.raw_device().currentAllocatedSize() as u64)
                                 };
                                 #[cfg(not(target_os = "macos"))]
                                 let metal_current_allocated_size_bytes: Option<u64> = None;
@@ -2150,7 +2152,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     if let Err(err) = draw_result {
                         match err {
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::Lost,
+                                source: fret_render::SurfaceAcquireError::Lost,
                             } => {
                                 let size = state.window.surface_size();
                                 surface.resize(&context.device, size.width, size.height);
@@ -2169,7 +2171,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::Outdated,
+                                source: fret_render::SurfaceAcquireError::Outdated,
                             } => {
                                 let size = state.window.surface_size();
                                 surface.resize(&context.device, size.width, size.height);
@@ -2188,7 +2190,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::Timeout,
+                                source: fret_render::SurfaceAcquireError::Timeout,
                             } => {
                                 // Transient on some platforms (especially during startup / resize).
                                 // Schedule a one-shot redraw so the window doesn't stay blank until
@@ -2202,7 +2204,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::OutOfMemory,
+                                source: fret_render::SurfaceAcquireError::OutOfMemory,
                             } => {
                                 self.dispatcher.shutdown();
                                 event_loop.exit();

@@ -1,16 +1,18 @@
 use anyhow::Context as _;
-use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
+use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_kit::ui;
@@ -21,14 +23,15 @@ use time::{OffsetDateTime, Weekday};
 
 pub struct DemoWindowState {
     ui: UiTree<App>,
-    open: Model<bool>,
-    month: Model<CalendarMonth>,
-    selected: Model<Option<time::Date>>,
-    week_start_monday: Model<bool>,
-    show_outside_days: Model<bool>,
-    disable_outside_days: Model<bool>,
-    disable_weekends: Model<bool>,
-    disabled: Model<bool>,
+    app_ui_root: AppUiRenderRootState,
+    open: LocalState<bool>,
+    month: LocalState<CalendarMonth>,
+    selected: LocalState<Option<time::Date>>,
+    week_start_monday: LocalState<bool>,
+    show_outside_days: LocalState<bool>,
+    disable_outside_days: LocalState<bool>,
+    disable_weekends: LocalState<bool>,
+    disabled: LocalState<bool>,
 }
 
 #[derive(Default)]
@@ -37,21 +40,23 @@ pub struct DatePickerDemoDriver;
 impl DatePickerDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
         let today = OffsetDateTime::now_utc().date();
-        let open = app.models_mut().insert(false);
-        let selected = app.models_mut().insert(None::<time::Date>);
-        let month = app.models_mut().insert(CalendarMonth::from_date(today));
+        let open = LocalState::from_model(app.models_mut().insert(false));
+        let selected = LocalState::from_model(app.models_mut().insert(None::<time::Date>));
+        let month =
+            LocalState::from_model(app.models_mut().insert(CalendarMonth::from_date(today)));
 
-        let week_start_monday = app.models_mut().insert(true);
-        let show_outside_days = app.models_mut().insert(true);
-        let disable_outside_days = app.models_mut().insert(true);
-        let disable_weekends = app.models_mut().insert(false);
-        let disabled = app.models_mut().insert(false);
+        let week_start_monday = LocalState::from_model(app.models_mut().insert(true));
+        let show_outside_days = LocalState::from_model(app.models_mut().insert(true));
+        let disable_outside_days = LocalState::from_model(app.models_mut().insert(true));
+        let disable_weekends = LocalState::from_model(app.models_mut().insert(false));
+        let disabled = LocalState::from_model(app.models_mut().insert(false));
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
         DemoWindowState {
             ui,
+            app_ui_root: AppUiRenderRootState::default(),
             open,
             month,
             selected,
@@ -129,16 +134,14 @@ fn handle_command(
         }
         "date_picker_demo.reset_today" => {
             let today = OffsetDateTime::now_utc().date();
-            let _ = app
-                .models_mut()
-                .update(&state.selected, |v| *v = Some(today));
-            let _ = app
-                .models_mut()
-                .update(&state.month, |m| *m = CalendarMonth::from_date(today));
+            let _ = state.selected.set_in(app.models_mut(), Some(today));
+            let _ = state
+                .month
+                .set_in(app.models_mut(), CalendarMonth::from_date(today));
             app.request_redraw(window);
         }
         "date_picker_demo.clear" => {
-            let _ = app.models_mut().update(&state.selected, |v| *v = None);
+            let _ = state.selected.set_in(app.models_mut(), None);
             app.request_redraw(window);
         }
         _ => {}
@@ -197,241 +200,209 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
     let disable_weekends = state.disable_weekends.clone();
     let disabled = state.disabled.clone();
 
-    let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("date-picker-demo", move |cx| {
-                    cx.observe_model(&open, Invalidation::Layout);
-                    cx.observe_model(&month, Invalidation::Layout);
-                    cx.observe_model(&selected, Invalidation::Layout);
-                    cx.observe_model(&week_start_monday, Invalidation::Layout);
-                    cx.observe_model(&show_outside_days, Invalidation::Layout);
-                    cx.observe_model(&disable_outside_days, Invalidation::Layout);
-                    cx.observe_model(&disable_weekends, Invalidation::Layout);
-                    cx.observe_model(&disabled, Invalidation::Layout);
+    let root = render_root_with_app_ui(
+        declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds),
+        "date-picker-demo",
+        &mut state.app_ui_root,
+        move |cx| {
+            let theme = cx.theme_snapshot();
+            let padding = theme.metric_token("metric.padding.md");
 
-                    let theme = cx.theme_snapshot();
-                    let padding = theme.metric_token("metric.padding.md");
+            let open_value = open.layout_value(cx);
+            let selected_value = selected.layout_value(cx);
+            let month_label: Arc<str> = month
+                .layout(cx)
+                .read_ref(|m| Arc::from(format!("{:?} {}", m.month, m.year)))
+                .unwrap_or_else(|_| Arc::from("<unknown>"));
 
-                    let open_value = cx.app.models().get_copied(&open).unwrap_or(false);
-                    let selected_value = cx
-                        .app
-                        .models()
-                        .read(&selected, |s| *s)
-                        .ok()
-                        .flatten();
+            let selected_label: Arc<str> = selected_value
+                .map(|d| Arc::from(d.to_string()))
+                .unwrap_or_else(|| Arc::from("<none>"));
 
-                    let month_label = cx
-                        .app
-                        .models()
-                        .read(&month, |m| format!("{:?} {}", m.month, m.year))
-                        .ok();
+            let week_start_monday_value = week_start_monday.layout_value(cx);
+            let show_outside_days_value = show_outside_days.layout_value(cx);
+            let disable_outside_days_value = disable_outside_days.layout_value(cx);
+            let disable_weekends_value = disable_weekends.layout_value(cx);
+            let disabled_value = disabled.layout_value(cx);
 
-                    let selected_label: Arc<str> = selected_value
-                        .map(|d| Arc::from(d.to_string()))
-                        .unwrap_or_else(|| Arc::from("<none>"));
-                    let month_label: Arc<str> = month_label
-                        .map(|s| Arc::from(s))
-                        .unwrap_or_else(|| Arc::from("<unknown>"));
+            let header = ui::h_row(|cx| {
+                [
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from("date_picker_demo.close"))
+                        .into_element(cx),
+                    shadcn::Button::new("Today")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from("date_picker_demo.reset_today"))
+                        .into_element(cx),
+                    shadcn::Button::new("Clear")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from("date_picker_demo.clear"))
+                        .into_element(cx),
+                    cx.text(Arc::from(format!(
+                        "DatePicker | open={} selected={} month={}",
+                        if open_value { "true" } else { "false" },
+                        selected_label.as_ref(),
+                        month_label.as_ref(),
+                    ))),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-                    let week_start_monday_value = cx
-                        .app
-                        .models()
-                        .get_copied(&week_start_monday)
-                        .unwrap_or(true);
-                    let show_outside_days_value = cx
-                        .app
-                        .models()
-                        .get_copied(&show_outside_days)
-                        .unwrap_or(true);
-                    let disable_outside_days_value = cx
-                        .app
-                        .models()
-                        .get_copied(&disable_outside_days)
-                        .unwrap_or(true);
-                    let disable_weekends_value = cx
-                        .app
-                        .models()
-                        .get_copied(&disable_weekends)
-                        .unwrap_or(false);
-                    let disabled_value = cx.app.models().get_copied(&disabled).unwrap_or(false);
+            let toggles = cx.flex(
+                FlexProps {
+                    layout: LayoutStyle::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                    padding: Edges::all(Px(0.0)).into(),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: true,
+                },
+                |cx| {
+                    vec![
+                        cx.text("week start monday"),
+                        shadcn::Switch::new(&week_start_monday)
+                            .a11y_label("Week starts on Monday")
+                            .into_element(cx),
+                        cx.text("show outside days"),
+                        shadcn::Switch::new(&show_outside_days)
+                            .a11y_label("Show outside days")
+                            .into_element(cx),
+                        cx.text("disable outside days"),
+                        shadcn::Switch::new(&disable_outside_days)
+                            .a11y_label("Disable outside days")
+                            .into_element(cx),
+                        cx.text("disable weekends"),
+                        shadcn::Switch::new(&disable_weekends)
+                            .a11y_label("Disable weekends")
+                            .into_element(cx),
+                        cx.text("disabled"),
+                        shadcn::Switch::new(&disabled)
+                            .a11y_label("Disable date picker")
+                            .into_element(cx),
+                    ]
+                },
+            );
 
-                    let header = ui::h_row(|cx| {
-                        [
-                            shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(CommandId::from("date_picker_demo.close"))
-                                .into_element(cx),
-                            shadcn::Button::new("Today")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(CommandId::from("date_picker_demo.reset_today"))
-                                .into_element(cx),
-                            shadcn::Button::new("Clear")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(CommandId::from("date_picker_demo.clear"))
-                                .into_element(cx),
-                            cx.text(Arc::from(format!(
-                                "DatePicker | open={} selected={} month={}",
-                                if open_value { "true" } else { "false" },
-                                selected_label.as_ref(),
-                                month_label.as_ref(),
-                            ))),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx);
+            let picker = {
+                let week_start = if week_start_monday_value {
+                    Weekday::Monday
+                } else {
+                    Weekday::Sunday
+                };
 
-                    let toggles = cx.flex(
+                let mut picker = shadcn::DatePicker::new(&open, &month, &selected)
+                    .week_start(week_start)
+                    .show_outside_days(show_outside_days_value)
+                    .disable_outside_days(disable_outside_days_value)
+                    .disabled(disabled_value);
+
+                if disable_weekends_value {
+                    picker = picker.disabled_by(|d| {
+                        matches!(d.weekday(), Weekday::Saturday | Weekday::Sunday)
+                    });
+                }
+
+                picker.into_element(cx)
+            };
+
+            let calendar = {
+                let week_start = if week_start_monday_value {
+                    Weekday::Monday
+                } else {
+                    Weekday::Sunday
+                };
+
+                let mut cal = shadcn::Calendar::new(&month, &selected)
+                    .week_start(week_start)
+                    .show_outside_days(show_outside_days_value)
+                    .disable_outside_days(disable_outside_days_value);
+
+                if disable_weekends_value {
+                    cal = cal.disabled_by(|d| {
+                        matches!(d.weekday(), Weekday::Saturday | Weekday::Sunday)
+                    });
+                }
+
+                cal.into_element(cx)
+            };
+
+            let instructions = cx.text(Arc::from(
+                "Try: Tab to focus the picker, Enter/Space to open, Arrow keys to navigate days, Enter to select, Esc to close.",
+            ));
+
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: root_layout,
+                    background: Some(theme.color_token("background")),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.flex(
                         FlexProps {
-                            layout: LayoutStyle::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: true,
-                        },
-                        |cx| {
-                            vec![
-                                cx.text("week start monday"),
-                                shadcn::Switch::new(week_start_monday.clone())
-                                    .a11y_label("Week starts on Monday")
-                                    .into_element(cx),
-                                cx.text("show outside days"),
-                                shadcn::Switch::new(show_outside_days.clone())
-                                    .a11y_label("Show outside days")
-                                    .into_element(cx),
-                                cx.text("disable outside days"),
-                                shadcn::Switch::new(disable_outside_days.clone())
-                                    .a11y_label("Disable outside days")
-                                    .into_element(cx),
-                                cx.text("disable weekends"),
-                                shadcn::Switch::new(disable_weekends.clone())
-                                    .a11y_label("Disable weekends")
-                                    .into_element(cx),
-                                cx.text("disabled"),
-                                shadcn::Switch::new(disabled.clone())
-                                    .a11y_label("Disable date picker")
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let picker = {
-                        let week_start = if week_start_monday_value {
-                            Weekday::Monday
-                        } else {
-                            Weekday::Sunday
-                        };
-
-                        let mut picker =
-                            shadcn::DatePicker::new(open.clone(), month.clone(), selected.clone())
-                                .week_start(week_start)
-                                .show_outside_days(show_outside_days_value)
-                                .disable_outside_days(disable_outside_days_value)
-                                .disabled(disabled_value);
-
-                        if disable_weekends_value {
-                            picker = picker.disabled_by(|d| {
-                                matches!(d.weekday(), Weekday::Saturday | Weekday::Sunday)
-                            });
-                        }
-
-                        picker.into_element(cx)
-                    };
-
-                    let calendar = {
-                        let week_start = if week_start_monday_value {
-                            Weekday::Monday
-                        } else {
-                            Weekday::Sunday
-                        };
-
-                        let mut cal = shadcn::Calendar::new(month.clone(), selected.clone())
-                            .week_start(week_start)
-                            .show_outside_days(show_outside_days_value)
-                            .disable_outside_days(disable_outside_days_value);
-
-                        if disable_weekends_value {
-                            cal = cal.disabled_by(|d| {
-                                matches!(d.weekday(), Weekday::Saturday | Weekday::Sunday)
-                            });
-                        }
-
-                        cal.into_element(cx)
-                    };
-
-                    let instructions = cx.text(Arc::from(
-                        "Try: Tab to focus the picker, Enter/Space to open, Arrow keys to navigate days, Enter to select, Esc to close.",
-                    ));
-
-                    let mut root_layout = LayoutStyle::default();
-                    root_layout.size.width = Length::Fill;
-                    root_layout.size.height = Length::Fill;
-
-                    vec![cx.container(
-                        ContainerProps {
                             layout: root_layout,
-                            background: Some(theme.color_token("background")),
-                            ..Default::default()
+                            direction: fret_core::Axis::Vertical,
+                            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                            padding: Edges::all(padding).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
                         },
                         move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: root_layout,
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
-                                    padding: Edges::all(padding).into(),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    vec![
-                                        header,
-                                        toggles,
-                                        instructions,
-                                        cx.container(
-                                            ContainerProps {
-                                                layout: LayoutStyle {
-                                                    overflow: Overflow::Clip,
-                                                    ..Default::default()
-                                                },
-                                                border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_token("border")),
-                                                corner_radii: Corners::all(
-                                                    theme.metric_token("metric.radius.md"),
-                                                ),
-                                                padding: Edges::all(Px(12.0)).into(),
-                                                ..Default::default()
-                                            },
-                                            move |_cx| vec![picker],
+                            vec![
+                                header,
+                                toggles,
+                                instructions,
+                                cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: Some(theme.color_token("border")),
+                                        corner_radii: Corners::all(
+                                            theme.metric_token("metric.radius.md"),
                                         ),
-                                        cx.container(
-                                            ContainerProps {
-                                                layout: LayoutStyle {
-                                                    overflow: Overflow::Clip,
-                                                    ..Default::default()
-                                                },
-                                                border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_token("border")),
-                                                corner_radii: Corners::all(
-                                                    theme.metric_token("metric.radius.md"),
-                                                ),
-                                                padding: Edges::all(Px(12.0)).into(),
-                                                ..Default::default()
-                                            },
-                                            move |_cx| vec![calendar],
+                                        padding: Edges::all(Px(12.0)).into(),
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![picker],
+                                ),
+                                cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: Some(theme.color_token("border")),
+                                        corner_radii: Corners::all(
+                                            theme.metric_token("metric.radius.md"),
                                         ),
-                                    ]
-                                },
-                            )]
+                                        padding: Edges::all(Px(12.0)).into(),
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![calendar],
+                                ),
+                            ]
                         },
                     )]
-                });
+                },
+            )]
+            .into()
+        },
+    );
 
     state.ui.set_root(root);
     OverlayController::render(&mut state.ui, app, services, window, bounds);

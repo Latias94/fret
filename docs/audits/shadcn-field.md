@@ -58,12 +58,15 @@ docs and example implementations in `repo-ref/ui`.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream base Field docs path first: `Usage`, `Anatomy`, `Form`, the example set through `Field Group`, `RTL`, `Responsive Layout`, `Validation and Errors`, `Accessibility`, and `API Reference`.
+- Pass: `Usage` and `Anatomy` are now real snippet-backed examples instead of page-local hand-written Rust strings, so the default docs lane is copyable and compiled.
 - Pass: the previous docs drift was mostly page/public-surface parity and source-of-truth staleness (`new-york-v4` references), not a recipe default-style bug.
 - Pass: ownership notes now stay explicit: `FieldDescription` remains recipe-owned full-width wrapping, while plain `FieldLabel` / `FieldTitle` remain intrinsic-width by default unless the enclosing `Field` orientation or call site expands them.
 
 ## Validation
 
 - Gallery compile: `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- Source-policy gate: `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` (`field_snippets_prefer_ui_cx_on_the_default_app_surface`, `field_page_usage_prefers_field_wrapper_family`)
+- Gallery docs smoke: `tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json`
 - Web layout gate:
   `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_field_input_geometry`, `web_vs_fret_layout_field_checkbox_geometry`,

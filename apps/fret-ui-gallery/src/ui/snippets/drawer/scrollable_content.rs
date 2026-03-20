@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("scrollable_content.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;
@@ -32,20 +33,17 @@ fn paragraph_block<H: UiHost>(
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
     let trigger_open = open.clone();
-    let close_open = open.clone();
 
     shadcn::Drawer::new(open)
         .direction(shadcn::DrawerDirection::Right)
-        .into_element(
-            cx,
-            move |cx| {
+        .children([
+            shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(
                 shadcn::Button::new("Scrollable Content")
                     .variant(shadcn::ButtonVariant::Outline)
                     .toggle_model(trigger_open.clone())
-                    .test_id("ui-gallery-drawer-scrollable-trigger")
-                    .into_element(cx)
-            },
-            move |cx| {
+                    .test_id("ui-gallery-drawer-scrollable-trigger"),
+            )),
+            shadcn::DrawerPart::content_with(move |cx| {
                 let scroller = shadcn::ScrollArea::new(ui::children![
                     cx;
                     paragraph_block(cx, "Scrollable", 14)
@@ -70,27 +68,37 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     cx.container(props, move |_cx| [scroller])
                 };
 
-                shadcn::DrawerContent::new(ui::children![
-                    cx;
-                    shadcn::DrawerHeader::new(ui::children![
-                        cx;
-                        shadcn::DrawerTitle::new("Scrollable Content"),
-                        shadcn::DrawerDescription::new(
-                            "Keep actions visible while the content scrolls.",
-                        )
-                    ]),
-                    padded,
-                    shadcn::DrawerFooter::new(ui::children![
-                        cx;
-                        shadcn::Button::new("Submit"),
-                        shadcn::Button::new("Cancel")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(close_open.clone()),
-                    ]),
-                ])
+                shadcn::DrawerContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        shadcn::DrawerHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::DrawerTitle::new("Scrollable Content"));
+                            out.push_ui(
+                                cx,
+                                shadcn::DrawerDescription::new(
+                                    "Keep actions visible while the content scrolls.",
+                                ),
+                            );
+                        }),
+                    );
+                    out.push(padded);
+                    out.push_ui(
+                        cx,
+                        shadcn::DrawerFooter::build(|cx, out| {
+                            out.push_ui(cx, shadcn::Button::new("Submit"));
+                            let cancel = shadcn::DrawerClose::from_scope().build(
+                                cx,
+                                shadcn::Button::new("Cancel")
+                                    .variant(shadcn::ButtonVariant::Outline),
+                            );
+                            out.push(cancel);
+                        }),
+                    );
+                })
                 .into_element(cx)
                 .test_id("ui-gallery-drawer-scrollable-content")
-            },
-        )
+            }),
+        ])
+        .into_element(cx)
 }
 // endregion: example

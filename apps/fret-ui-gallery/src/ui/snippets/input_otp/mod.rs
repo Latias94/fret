@@ -1,4 +1,5 @@
 pub mod alphanumeric;
+pub mod compact_builder;
 pub mod controlled;
 pub mod demo;
 pub mod disabled;

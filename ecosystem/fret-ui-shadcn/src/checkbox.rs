@@ -28,6 +28,9 @@ use fret_ui_kit::{
     WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt,
 };
 
+use crate::bool_model::IntoBoolModel;
+use crate::checked_state_model::IntoCheckedStateModel;
+use crate::optional_bool_model::IntoOptionalBoolModel;
 use crate::overlay_motion;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -127,9 +130,9 @@ enum CheckboxCheckedModel {
 }
 
 impl Checkbox {
-    pub fn new(model: Model<bool>) -> Self {
+    pub fn new(model: impl IntoBoolModel) -> Self {
         Self {
-            checked: CheckboxCheckedModel::Bool(model),
+            checked: CheckboxCheckedModel::Bool(model.into_bool_model()),
             aria_invalid: false,
             disabled: false,
             control_id: None,
@@ -143,9 +146,9 @@ impl Checkbox {
         }
     }
 
-    pub fn new_tristate(model: Model<CheckedState>) -> Self {
+    pub fn new_tristate(model: impl IntoCheckedStateModel) -> Self {
         Self {
-            checked: CheckboxCheckedModel::TriState(model),
+            checked: CheckboxCheckedModel::TriState(model.into_checked_state_model()),
             aria_invalid: false,
             disabled: false,
             control_id: None,
@@ -189,9 +192,9 @@ impl Checkbox {
     /// Creates a checkbox bound to an optional boolean model.
     ///
     /// This maps `None` to the indeterminate state, matching Radix's `"indeterminate"` outcome.
-    pub fn new_optional(model: Model<Option<bool>>) -> Self {
+    pub fn new_optional(model: impl IntoOptionalBoolModel) -> Self {
         Self {
-            checked: CheckboxCheckedModel::OptionalBool(model),
+            checked: CheckboxCheckedModel::OptionalBool(model.into_optional_bool_model()),
             aria_invalid: false,
             disabled: false,
             control_id: None,
@@ -630,11 +633,13 @@ impl Checkbox {
     }
 }
 
-pub fn checkbox<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H> {
+pub fn checkbox<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M> {
     Checkbox::new(model)
 }
 
-pub fn checkbox_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H> {
+pub fn checkbox_opt<H: UiHost, M: IntoOptionalBoolModel>(
+    model: M,
+) -> impl IntoUiElement<H> + use<H, M> {
     Checkbox::new_optional(model)
 }
 

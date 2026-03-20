@@ -430,44 +430,69 @@ impl<H: UiHost> UiTree<H> {
             let mut handled_by_node: Option<NodeId> = None;
 
             loop {
-                let (did_handle, invalidations, requested_focus, stop_bubbling, parent) = self
-                    .with_widget_mut(node_id, |widget, tree| {
-                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                        let window = tree.window;
-                        let focus = tree.focus;
-                        let mut cx = CommandCx {
-                            app,
-                            services: &mut *services,
-                            tree,
-                            node: node_id,
-                            window,
-                            input_ctx: input_ctx.clone(),
-                            focus,
-                            invalidations: Vec::new(),
-                            requested_focus: None,
-                            stop_propagation: false,
-                        };
-                        let did_handle = widget.command(&mut cx, command);
-                        (
-                            did_handle,
-                            cx.invalidations,
-                            cx.requested_focus,
-                            cx.stop_propagation,
-                            parent,
-                        )
-                    });
+                let (
+                    did_handle,
+                    invalidations,
+                    requested_focus,
+                    notify_requested,
+                    notify_requested_location,
+                    stop_bubbling,
+                    parent,
+                ) = self.with_widget_mut(node_id, |widget, tree| {
+                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let window = tree.window;
+                    let focus = tree.focus;
+                    let mut cx = CommandCx {
+                        app,
+                        services: &mut *services,
+                        tree,
+                        node: node_id,
+                        window,
+                        input_ctx: input_ctx.clone(),
+                        focus,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        notify_requested: false,
+                        notify_requested_location: None,
+                        stop_propagation: false,
+                    };
+                    let did_handle = widget.command(&mut cx, command);
+                    (
+                        did_handle,
+                        cx.invalidations,
+                        cx.requested_focus,
+                        cx.notify_requested,
+                        cx.notify_requested_location,
+                        cx.stop_propagation,
+                        parent,
+                    )
+                });
 
                 if did_handle {
                     handled = true;
                     handled_by_node = handled_by_node.or(Some(node_id));
                 }
 
-                if !invalidations.is_empty() || requested_focus.is_some() {
+                if !invalidations.is_empty() || requested_focus.is_some() || notify_requested {
                     needs_redraw = true;
                 }
 
                 for (id, inv) in invalidations {
                     self.mark_invalidation(id, inv);
+                }
+
+                if notify_requested {
+                    self.debug_record_notify_request(
+                        app.frame_id(),
+                        node_id,
+                        notify_requested_location,
+                    );
+                    self.mark_invalidation_with_source(
+                        node_id,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Notify,
+                    );
+                    needs_redraw = true;
                 }
 
                 if let Some(focus) = requested_focus {

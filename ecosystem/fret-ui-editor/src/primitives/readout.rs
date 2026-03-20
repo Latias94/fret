@@ -11,6 +11,7 @@ use fret_ui::Theme;
 use fret_ui::element::{LayoutStyle, TextProps};
 use fret_ui_kit::typography;
 
+use super::colors::editor_muted_foreground;
 use super::style::EditorStyle;
 
 /// Resolve the compact readout text size from a base control text size.
@@ -22,10 +23,7 @@ pub fn compact_readout_text_px(base_text_px: Px) -> Px {
 }
 
 fn compact_readout_fg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("muted-foreground")
-        .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_token("foreground"))
+    editor_muted_foreground(theme)
 }
 
 /// Shared compact non-edit readout text styling.

@@ -40,8 +40,11 @@ Unless a document says otherwise:
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
 - Action-first authoring + view runtime refactor (closed lane): `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - Closeout read: `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_ENDGAME_SUMMARY.md`
-- Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, and `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
+- Post-v1 authoring density reduction (closed closeout lane): `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO.md`, `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`, and the post-closeout Todo/scaffold interpretation addendum `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO_LADDER_AUDIT_2026-03-20.md`
 - Dataflow authoring surface (closed closeout lane for selector/query + ecosystem/router boundary conclusions): `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`
+- Into-element surface cleanup (closed closeout lane for conversion-vocabulary collapse and typed first-party teaching surfaces): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
+- Selector/query authoring density (closed closeout lane for the remaining default-path selector/query density question): `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TODO.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md`, and `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
+- View-locals authoring (closed closeout lane for grouped view-owned `LocalState<T>` organization): `docs/workstreams/view-locals-authoring-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TODO.md`, and `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
 - Action write surface (closed closeout lane for the default app-lane write budget): `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
 - App composition density follow-on (closeout / maintenance lane: M1 closed on a no-new-API verdict, M2 closed on grouped query invalidation, router excluded): `docs/workstreams/app-composition-density-follow-on-v1/DESIGN.md`, `docs/workstreams/app-composition-density-follow-on-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/app-composition-density-follow-on-v1/MILESTONES.md`, and `docs/workstreams/app-composition-density-follow-on-v1/TODO.md`
 - Local-state architecture follow-on (closed decision lane; reopen only with fresh cross-surface evidence): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
@@ -142,6 +145,15 @@ now taught as `LocalState` + view runtime + typed actions.
   - Workstream: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
   - Target state: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
   - Scope note: the selector/query posture and ecosystem/router boundary are closed there; write-side follow-on moved out
+- Selector/query authoring density (closed narrow closeout lane):
+  - Workstream: `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/DESIGN.md`
+  - Target state: `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+  - Scope note: this lane is now closed on query semantic projections plus a no-new-API selector verdict; read the closeout before reopening
+- View-locals authoring (closed closeout lane):
+  - Workstream: `docs/workstreams/view-locals-authoring-fearless-refactor-v1/DESIGN.md`
+  - Target state: `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+  - Closeout: `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
+  - Scope note: this lane now closes on the shipped `1-2 inline / 3+ bundle` rule; reopen only if fresh cross-surface evidence exceeds the closeout audit
 - Action write surface follow-on (closed closeout lane for the default app-lane write budget):
   - Workstream: `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`
   - Target state: `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -173,10 +185,11 @@ now taught as `LocalState` + view runtime + typed actions.
 - Canonical startup/import reminder:
   - app-facing imports live under `use fret::app::prelude::*;`
   - default native startup uses `FretApp::new(...).window(...).view::<MyView>()?.run()`
-- Keyed row payloads (default when rows are view-owned): `fret::payload_actions!` + `ui::for_each_keyed(...)` + `.action_payload(...)`, with `payload_local_update_if::<A>(...)` as the default row write path.
+- Keyed row payloads (default when rows are view-owned): `fret::payload_actions!` + `ui::for_each_keyed(...)` + `.action_payload(...)`, with `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row write path.
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
-  - `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
+  - Keep one or two trivial locals inline; once a view owns several related `LocalState<T>` slots, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`.
+  - `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` - default transaction form inside that bundle for typed UI actions coordinating view-owned `LocalState<T>` slots.
   - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - use this only when a control exposes activation glue rather than a narrower widget-owned app-facing helper. Import `use fret::app::AppActivateExt as _;` explicitly for that bridge; raw `on_activate*` helper families stay component/advanced-oriented.
@@ -228,9 +241,11 @@ now taught as `LocalState` + view runtime + typed actions.
   - Run: `cargo run -p fretboard -- dev native --bin components_gallery`
 - Starter todo public proof surface (default app lane, no selector/query): [apps/fret-examples/src/simple_todo_demo.rs](../apps/fret-examples/src/simple_todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin simple_todo_demo`
-- Todo app “golden path” (shadcn + bootstrap): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
+- Todo app “golden path” (richer third rung; shadcn + bootstrap + selector/query): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
   - Run: `cargo run -p fretboard -- dev native --bin todo_demo`
-- Starter todo template generator: `cargo run -p fretboard -- new todo --name my-todo`
+- Default starter template generator (second rung, no selector/query): `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
+  - Guide: [docs/first-hour.md](./first-hour.md)
+- Richer todo template generator (third rung, selectors + queries): `cargo run -p fretboard -- new todo --name my-todo`
   - Guide: [docs/examples/todo-app-golden-path.md](./examples/todo-app-golden-path.md)
 - Windows build speed note: prefer `fretboard dev native ...` (defaults to `--profile dev-fast` on Windows).
 - Docking + viewport + overlays conformance harness (ADR 0072): [apps/fret-examples/src/docking_arbitration_demo.rs](../apps/fret-examples/src/docking_arbitration_demo.rs)

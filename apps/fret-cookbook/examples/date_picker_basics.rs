@@ -1,5 +1,6 @@
 use fret::app::prelude::*;
 use fret::style::Space;
+use fret_ui_kit::headless::calendar::CalendarMonth;
 use time::{Date, Month};
 
 const TEST_ID_ROOT: &str = "cookbook.date_picker_basics.root";
@@ -14,10 +15,13 @@ impl View for DatePickerBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let initial_selected =
+            Date::from_calendar_date(2026, Month::January, 15).expect("valid date");
         let open_state = cx.state().local_init(|| false);
-        let selected_state = cx.state().local_init(|| {
-            Some(Date::from_calendar_date(2026, Month::January, 15).expect("valid date"))
-        });
+        let month_state = cx
+            .state()
+            .local_init(|| CalendarMonth::from_date(initial_selected));
+        let selected_state = cx.state().local_init(|| Some(initial_selected));
 
         let selected = cx
             .state()
@@ -36,16 +40,10 @@ impl View for DatePickerBasicsView {
             ]
         });
 
-        let picker = shadcn::DatePicker::new_controllable(
-            cx.elements(),
-            Some(selected_state.clone_model()),
-            None,
-            Some(open_state.clone_model()),
-            false,
-        )
-        .format_selected_iso()
-        .into_element(cx)
-        .test_id(TEST_ID_PICKER);
+        let picker = shadcn::DatePicker::new(&open_state, &month_state, &selected_state)
+            .format_selected_iso()
+            .into_element(cx)
+            .test_id(TEST_ID_PICKER);
 
         let selected_row = ui::h_flex(|cx| {
             ui::children![

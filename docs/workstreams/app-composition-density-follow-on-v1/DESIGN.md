@@ -1,7 +1,7 @@
 # App Composition Density Follow-on v1
 
-Status: closeout / maintenance lane
-Last updated: 2026-03-17
+Status: maintenance-only historical design record
+Last updated: 2026-03-18
 
 Related:
 
@@ -24,6 +24,14 @@ Closeout reading rule on 2026-03-17:
 - read this document as the historical design record for a narrow closeout lane, not as an open
   invitation to reopen broad authoring redesign
 
+Closeout note on 2026-03-18:
+
+- M3 is now also closed on docs/examples/templates/gates alignment,
+- canonical default-path docs and source-policy checks now all teach the same narrowed posture,
+- raw `with_query_client(...)` remains documented only for pure app/driver boundaries,
+- this document should now be read as a historical explanation of why the lane existed, not as a
+  description of currently open product-surface work.
+
 ## Why this workstream exists
 
 The broad pre-release authoring reset is already closed on its main questions:
@@ -34,10 +42,10 @@ The broad pre-release authoring reset is already closed on its main questions:
 - the default app-lane write budget is settled on the current `cx.actions()` families,
 - and router remains an explicit adjacent seam rather than a driver for default-path sugar.
 
-The remaining pain is narrower.
+The remaining pain was narrower.
 
-Today, the third-rung Todo path is structurally correct and teachable, but the default app lane
-still shows two kinds of accidental ceremony:
+At the time this lane was opened, the third-rung Todo path was structurally correct and teachable,
+but the default app lane still showed two kinds of accidental ceremony:
 
 1. page/root composition often over-spells layout transport with nested wrapper closures,
 2. query invalidation still drops back to raw `with_query_client(...)` + `request_redraw(...)`
@@ -50,7 +58,7 @@ This workstream exists to reduce that accidental ceremony without reopening:
 - the app/component/advanced taxonomy,
 - or router ergonomics.
 
-## Current diagnosis
+## Original diagnosis
 
 ### 1. App-shell composition is correct but still denser than it needs to be
 
@@ -70,21 +78,21 @@ Even after that cleanup, the default app lane still repeats wrapper-only composi
 Those seams are not wrong, but they still make ordinary app code feel more ceremonial than the
 already-settled runtime/dataflow model requires.
 
-### 2. Query invalidation still falls back to raw client plumbing on the app lane
+### 2. Query invalidation was still falling back to raw client plumbing on the app lane
 
 The app-facing read path is already grouped and productized:
 
 - `cx.data().query(...)`
 - `handle.read_layout(cx)`
 
-But the corresponding app-lane write-side query maintenance path is not grouped the same way.
-Current first-party examples still teach:
+But the corresponding app-lane write-side query maintenance path was not grouped the same way.
+The first audited app-facing examples still taught:
 
 - `with_query_client(cx.app, |client, app| client.invalidate(app, key))`
 - `with_query_client(cx.app, |client, _app| client.invalidate_namespace(namespace))`
 - `cx.app.request_redraw(cx.window)`
 
-That repeated shell appears in:
+That repeated shell appeared in:
 
 - `apps/fret-cookbook/examples/query_basics.rs`
 - `apps/fret-examples/src/query_demo.rs`
@@ -191,9 +199,9 @@ These remain useful boundary checks, but they should not drive default app-lane 
    app-facing authoring layer, not in `fret-query`.
 6. Do not use this lane to normalize router, advanced, or component surfaces toward the app lane.
 
-## What success means
+## What success meant
 
-This workstream is successful when:
+This workstream was considered successful when:
 
 - Todo-sized default app code is visibly shorter for the right reasons,
 - at least one non-Todo app-facing surface benefits from the same reduction,

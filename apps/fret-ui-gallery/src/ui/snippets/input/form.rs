@@ -61,7 +61,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .a11y_label("Email")
                     .placeholder("john@example.com")
                     .into_element(cx),
-                shadcn::FieldDescription::new("We'll never share your email.").into_element(cx),
+                shadcn::FieldDescription::new("We'll never share your email with anyone.")
+                    .into_element(cx),
             ]),
             row,
             shadcn::Field::new([

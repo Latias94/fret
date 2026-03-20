@@ -14,8 +14,10 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`empty(|cx| ui::children![cx; ...])` plus `empty_header`, `empty_media`, `empty_title`, `empty_description`, and `empty_content` keeps the upstream slot model intact while preserving typed builder affordances before the landing seam.",
+        "`shadcn::Empty::new([...])` plus `EmptyHeader::new([...])`, `EmptyMedia::new([...])`, and `EmptyContent::new([...])` is the direct compound-children lane that matches the upstream JSX composition model most closely.",
+        "`empty(|cx| ui::children![cx; ...])` and the `empty_*` helper family remain available as typed lazy-builder conveniences when eager child construction would be awkward.",
         "`empty_media(...).variant(...)` covers the documented `default` and `icon` media variants without widening the public surface.",
+        "The gallery `Demo` and `RTL` previews now follow the upstream `new-york-v4` teaching shape more closely: icon media, a centered two-button action row, and a semantic link CTA rendered through `ButtonRender::Link` instead of a generic `asChild` escape hatch.",
         "Gallery section order now mirrors the upstream Empty docs first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
         "Current recipe defaults intentionally remain aligned to the in-repo `new-york-v4` web geometry gates (`p-6 md:p-12`, `gap-6`, dashed card chrome) rather than re-translating the base source classes one-to-one in this pass.",
         "Caller-owned refinements stay explicit for preview height, background paint, inline content layout, embedded `InputGroup` width, and page/grid placement constraints.",
@@ -25,10 +27,12 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .no_shell()
         .description("Ownership notes, source-of-truth mapping, and public-surface guidance.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("A primary empty state with actions and a secondary link.")
+        .description(
+            "A docs-aligned empty state with a centered action row and a semantic link CTA.",
+        )
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for the `empty(...)` wrapper family and slot parts.")
+        .description("Copyable minimal usage for the direct compound-children API and slot parts.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let outline = DocSection::build(cx, "Outline", outline)
         .description("Outlined empty state for low-emphasis surfaces.")
@@ -46,7 +50,7 @@ pub(super) fn preview_empty(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Empty states can include search inputs and trailing affordances.")
         .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Empty layout should follow right-to-left direction context.")
+        .description("The same docs-aligned composition should remain readable in right-to-left direction context.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(

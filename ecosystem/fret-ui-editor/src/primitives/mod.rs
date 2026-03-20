@@ -6,6 +6,7 @@ pub(crate) mod icons;
 pub(crate) mod input_group;
 pub(crate) mod inspector_layout;
 pub mod numeric_text_entry;
+pub(crate) mod popup_list;
 pub(crate) mod popup_surface;
 pub mod readout;
 pub(crate) mod style;
@@ -14,6 +15,7 @@ pub mod tokens;
 pub(crate) mod visuals;
 
 pub(crate) mod chrome;
+pub(crate) mod colors;
 
 pub mod drag_value_core;
 pub mod numeric_format;

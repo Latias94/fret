@@ -6,6 +6,7 @@ use crate::ui::snippets::input_group as snippets;
 
 pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let align_inline_start = snippets::align_inline_start::render(cx);
     let align_inline_end = snippets::align_inline_end::render(cx);
     let align_block_start = snippets::align_block_start::render(cx);
@@ -23,7 +24,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let custom_input = snippets::custom_input::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let usage = doc_layout::muted_full_width(
+    let usage_notes = doc_layout::muted_full_width(
         cx,
         "Prefer the high-level `InputGroup::new(model)` shorthand for first-party app code; keep the part-based surface for direct shadcn docs parity when you explicitly want addon/control parts.",
     );
@@ -44,7 +45,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The current parity work here is page/public-surface alignment, not a mechanism bug.",
         "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane.",
         "The `Dropdown` example intentionally stays on `DropdownMenu::compose()`; swapping the trigger to `InputGroupButton` does not by itself require falling back to `build_parts(...)`.",
-        "`Custom Input` is expressed as composition via slots / parts (no dedicated \"custom control\" type).",
+        "`Custom Input` now uses the narrow `custom_input(...)` / `custom_textarea(...)` seam for caller-owned controls; a generic root `children(...)` API is still intentionally absent.",
         "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
     ]);
     let align = DocSection::build(cx, "Align", align)
@@ -54,6 +55,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         );
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
+        .test_id_prefix("ui-gallery-input-group-api-reference")
         .description("Public surface summary and ownership notes.");
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
@@ -64,21 +66,13 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("A compact input group and a textarea-style input group.")
         .test_id_prefix("ui-gallery-input-group-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = ui::v_stack(|cx| vec![usage.into_element(cx), usage_notes.into_element(cx)])
+        .gap(Space::N3)
+        .items_start();
     let usage = DocSection::build(cx, "Usage", usage)
         .description("Copyable minimal usage for the compact shorthand; part-based docs parity remains documented in Notes/API Reference.")
-        .code_rust(
-            r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
-
-let query = cx.local_model_keyed("query", String::new);
-
-shadcn::InputGroup::new(query)
-    .placeholder("Search...")
-    .trailing([icon::icon(
-        cx,
-        fret_icons::IconId::new_static("lucide.search"),
-    )])
-    .into_element(cx);"#,
-        );
+        .test_id_prefix("ui-gallery-input-group-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let align_inline_start = DocSection::build(cx, "Align / inline-start", align_inline_start)
         .description("Inline-start addon (leading slot).")
         .test_id_prefix("ui-gallery-input-group-align-inline-start")
@@ -124,7 +118,7 @@ shadcn::InputGroup::new(query)
         .test_id_prefix("ui-gallery-input-group-textarea")
         .code_rust_from_file_region(snippets::textarea::SOURCE, "example");
     let custom_input = DocSection::build(cx, "Custom Input", custom_input)
-        .description("Custom/extended input chrome via slots.")
+        .description("Caller-owned control embedded via `custom_textarea(...)` while the group still owns chrome/addons.")
         .test_id_prefix("ui-gallery-input-group-custom-input")
         .code_rust_from_file_region(snippets::custom_input::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

@@ -25,10 +25,16 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
+use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::icons::editor_icon_with;
 use crate::primitives::input_group::{
     editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
     editor_input_group_row,
+};
+use crate::primitives::popup_list::{
+    EditorPopupListRowState, editor_popup_list_row_gap, editor_popup_list_row_palette,
+    editor_popup_list_row_radius, editor_popup_list_row_text_style, editor_popup_side_offset,
+    editor_popup_window_margin,
 };
 use crate::primitives::popup_surface::{
     EditorPopupSurfaceChrome, resolve_editor_popup_surface_chrome,
@@ -505,9 +511,9 @@ fn request_overlay<H: UiHost>(
         popper::LayoutDirection::Ltr,
         Side::Bottom,
         Align::Start,
-        Px(4.0),
+        editor_popup_side_offset(),
     )
-    .with_collision_padding(Edges::all(Px(8.0)));
+    .with_collision_padding(Edges::all(editor_popup_window_margin()));
 
     let list = cx.anchored_props(
         fret_ui::element::AnchoredProps {
@@ -609,7 +615,7 @@ fn request_overlay<H: UiHost>(
                                                 ..Default::default()
                                             },
                                             direction: Axis::Vertical,
-                                            gap: SpacingLength::Px(Px(2.0)),
+                                            gap: editor_popup_list_row_gap().into(),
                                             padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Stretch,
@@ -617,7 +623,15 @@ fn request_overlay<H: UiHost>(
                                         },
                                         move |cx| {
                                             if filtered.is_empty() {
-                                                return vec![cx.text("No matches")];
+                                                let theme = Theme::global(&*cx.app);
+                                                let mut props =
+                                                    TextProps::new(Arc::from("No matches"));
+                                                props.style =
+                                                    Some(editor_popup_list_row_text_style(
+                                                        density.row_height,
+                                                    ));
+                                                props.color = Some(editor_muted_foreground(theme));
+                                                return vec![cx.text_props(props)];
                                             }
 
                                             let item_test_id_prefix = item_test_id_prefix.clone();
@@ -766,15 +780,6 @@ fn enum_select_row<H: UiHost>(
         ))
     });
 
-    let (bg_hover, fg_hover, fg) = {
-        let theme = Theme::global(&*cx.app);
-        (
-            theme.color_token("accent"),
-            theme.color_token("accent-foreground"),
-            theme.color_token("foreground"),
-        )
-    };
-
     let value_for_activate = item.value.clone();
     let model_for_activate = model.clone();
     let open_for_activate = open.clone();
@@ -815,12 +820,17 @@ fn enum_select_row<H: UiHost>(
             ));
 
             let hovered = st.hovered || st.hovered_raw;
-            let bg = if hovered || selected {
-                Some(bg_hover)
-            } else {
-                None
+            let row_palette = {
+                let theme = Theme::global(&*cx.app);
+                editor_popup_list_row_palette(
+                    theme,
+                    hovered,
+                    EditorPopupListRowState {
+                        active: selected,
+                        disabled: false,
+                    },
+                )
             };
-            let text_color = if hovered || selected { fg_hover } else { fg };
 
             vec![cx.container(
                 ContainerProps {
@@ -833,8 +843,8 @@ fn enum_select_row<H: UiHost>(
                         ..Default::default()
                     },
                     padding: Edges::symmetric(density.padding_x, Px(0.0)).into(),
-                    background: bg,
-                    corner_radii: Corners::all(Px(6.0)),
+                    background: row_palette.bg,
+                    corner_radii: Corners::all(editor_popup_list_row_radius()),
                     ..Default::default()
                 },
                 move |cx| {
@@ -848,12 +858,8 @@ fn enum_select_row<H: UiHost>(
                             ..Default::default()
                         },
                         text: item.label.clone(),
-                        style: Some(typography::as_control_text(TextStyle {
-                            size: Px(12.0),
-                            line_height: Some(density.row_height),
-                            ..Default::default()
-                        })),
-                        color: Some(text_color),
+                        style: Some(editor_popup_list_row_text_style(density.row_height)),
+                        color: Some(row_palette.fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
                         align: TextAlign::Start,

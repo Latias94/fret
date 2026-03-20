@@ -29,12 +29,14 @@ base examples, and the existing item layout gates.
 
 - Pass: `Item::new([...])` plus `ItemMedia`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemGroup`, and `ItemHeader` matches the upstream slot model directly.
 - Pass: `ItemRender::Link` is the right Fret equivalent of the upstream `render={<a ... />}` pattern and keeps link semantics on the pressable root.
+- Pass: `ItemTitle::new_children([...])` and `ItemDescription::new_children([...])` now keep slot-local rich text / composed-child authoring available without widening the root `Item` API beyond the documented link-render lane.
 - Pass: `ItemSize::Xs` is already supported in Fret and is now surfaced explicitly by the gallery size example.
 - Pass: no extra generic `asChild` / `compose()` API is needed here.
 
 ### Layout & default-style ownership
 
 - Pass: intrinsic item chrome, slot spacing, media sizing, and size presets remain recipe-owned because the upstream component source defines those defaults on the item itself.
+- Pass: media parts now self-start with a small top offset when an `ItemDescription` is present, matching the upstream `group-has(...):self-start translate-y-0.5` outcome at the recipe layer.
 - Pass: surrounding width caps, page columns, grid placement, and mixed-list layouts remain caller-owned composition.
 - Pass: existing item web layout gates continue to cover representative geometry for `item-demo`, `item-size`, `item-avatar`, and `item-link`.
 

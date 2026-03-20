@@ -196,6 +196,9 @@ Evidence anchors:
   example-local `impl WinitAppDriver` bodies are better understood as internal migration debt
   or complex harness glue (multi-window, hot reload, accessibility, engine-frame hooks), not
   as evidence that `FnDriver` lacks extension headroom.
+- Those web custom-effect examples should be read strictly as launch-surface / advanced manual
+  harness evidence. They do not imply that the same demos are part of the default app-lane
+  `LocalState`-first authoring story.
 - The same holds for the low-risk batch (`first_frame_smoke_demo`, `effects_demo`,
   `external_texture_imports_web_demo`): even smoke/profiling/external-texture demos can move to
   `FnDriver` without exposing additional launch hooks.

@@ -1,5 +1,7 @@
 # Into-Element Surface (Fearless Refactor v1) — TODO
 
+Status: maintenance-only closeout tracker
+
 This TODO list tracks the work described in `DESIGN.md`.
 
 Because this is a pre-release reset, "done" means we actually delete superseded public conversion
@@ -11,6 +13,7 @@ Companion docs:
 - `MILESTONES.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
 
 Closeout reading rule on 2026-03-16:
 
@@ -20,6 +23,24 @@ Closeout reading rule on 2026-03-16:
 - remaining work here is helper-tail cleanup, explicit raw-seam inventory, source-policy gates,
   and stale-doc closeout
 - historical execution notes below are archived evidence, not current sequencing instructions
+
+Closeout note on 2026-03-18:
+
+- there are now no unchecked execution items left on this lane,
+- a sampled 2026-03-18 re-audit confirmed the representative closure gates still pass:
+  - `reusable_component_helper_surface`
+  - `copyable_ui_gallery_snippet_lane_has_no_top_level_raw_render_roots`
+  - `direct_recipe_root_pages_mark_their_default_lane_without_inventing_compose`
+  - `navigation_menu_and_pagination_pages_keep_their_dual_lane_story`
+  - `gallery_doc_layout_retains_only_intentional_raw_boundaries`
+  - `internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams`
+- future edits in this folder should therefore be limited to drift control and audited seam
+  inventory updates, not new conversion-surface design.
+
+Closeout audit note on 2026-03-20:
+
+- the lane now has an explicit closeout audit rather than only distributed sampled notes;
+- treat the remaining checklist/history below as archived evidence, not as an open execution plan.
 
 Historical execution note on 2026-03-13:
 
@@ -192,7 +213,7 @@ Historical execution note on 2026-03-14:
   The focused gallery source gate now locks `Carousel` parts usage down to the explicit
   upstream-shaped lane plus the custom-control diagnostics snippets `events.rs` and `rtl.rs`.
 - the selected first-party shadcn family lanes now also have a crate-root/facade export guard:
-  `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs::authoring_critical_family_exports_stay_on_root_and_curated_facade`
+  `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs::authoring_critical_family_exports_live_on_curated_facade_only`
   now locks `Select`, `Combobox`, `ComboboxChips`, `Command`, `NavigationMenu`, and `Pagination`
   so newly added builder steps or upstream-shaped parts do not become root-only exports and drift
   away from the curated `shadcn::...` teaching surface.
@@ -1197,20 +1218,15 @@ Implementation note on 2026-03-13:
   `apps/fret-examples/src/drop_shadow_demo.rs` (`card<H>(...)`),
   `apps/fret-examples/src/markdown_demo.rs` (`render_image_placeholder<H>(...)`),
   `apps/fret-examples/src/liquid_glass_demo.rs` (`lens_panel<H>(...)`),
-  `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
-  (`lens`, `inspector`),
-  `apps/fret-examples/src/custom_effect_v2_web_demo.rs`
-  (`lens`, `inspector`),
-  `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs`
-  (`lens`, `inspector`),
-  and `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
-  (`label_row`, `lens`, `controls_panel`),
   `apps/fret-cookbook/examples/customv1_basics.rs`
   (`panel_shell(...)`, `preview_content(...)`),
   `apps/fret-cookbook/examples/drop_shadow_basics.rs` (`shadow_card(...)`),
   and `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
   (`render_image_preview(...)`)
   now return `impl IntoUiElement<...>`.
+- the manual/web `custom_effect_v2_*_web_demo` family now also follows the same typed helper-return
+  rule for reusable helpers (`lens`, `inspector`, `label_row`, `controls_panel`), but those files
+  remain advanced/manual harness evidence rather than default app-lane teaching surfaces.
 - `apps/fret-examples/src/hello_world_compare_demo.rs` now keeps its local `swatch(...)` closure
   off raw landed returns by default; it lands explicitly only where the surrounding child array
   wants raw elements.
@@ -1354,13 +1370,14 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
 - `apps/fret-cookbook/examples/chart_interactions_basics.rs::chart_canvas(...)` is now treated as
   an intentional raw retained seam rather than migration debt: it owns
   `RetainedSubtreeProps::new::<KernelApp>(...)` and `cached_subtree_with(...)` landing.
-- selected default-app WebGPU examples now also keep reusable helpers off raw landed returns by
-  default:
+- selected WebGPU manual/web harness examples now also keep reusable helpers off raw landed returns
+  by default:
   `custom_effect_v2_identity_web_demo`, `custom_effect_v2_web_demo`,
   `custom_effect_v2_lut_web_demo`, and `custom_effect_v2_glass_chrome_web_demo`
   now use `impl IntoUiElement<fret_app::App> + use<>` for non-raw helper composition, with
   explicit `.into_element(cx)` reserved for stage child arrays, overlay child collections, and
-  other concrete raw landing seams.
+  other concrete raw landing seams. This is advanced/manual harness closure, not default
+  app-lane proof.
 - selected UI Gallery AI doc pages now keep page-local helpers on the default app-facing child
   surface:
   `ai_persona_demo.rs`, `ai_commit_demo.rs`, `ai_context_demo.rs`,

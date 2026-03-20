@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::bool_model::IntoBoolModel;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -31,6 +32,7 @@ use crate::command::CommandPaletteA11ySelectedMode;
 use crate::command::{CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator};
 use crate::popover::{Popover, PopoverContent};
 use crate::test_id::test_id_slug;
+use crate::text_vec_model::IntoTextVecModel;
 
 /// Part-based authoring surface aligned with shadcn/ui v4 exports.
 #[derive(Debug)]
@@ -116,7 +118,9 @@ impl ComboboxChips {
         self
     }
 
-    pub fn new(values: Model<Vec<Arc<str>>>, open: Model<bool>) -> Self {
+    pub fn new(values: impl IntoTextVecModel, open: impl IntoBoolModel) -> Self {
+        let values = values.into_text_vec_model();
+        let open = open.into_bool_model();
         Self {
             values,
             open,

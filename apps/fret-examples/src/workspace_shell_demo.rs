@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use fret::advanced::view::UiCxDataExt as _;
 use fret::{shadcn, shadcn::themes::ShadcnColorScheme};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
@@ -250,14 +251,12 @@ impl WorkspaceShellDemoDriver {
 
                     let theme = cx.theme_snapshot();
                     let bg = Some(theme.color_token("background"));
-                    let prompt_open = cx
-                        .get_model_cloned(&dirty_close_prompt_open, Invalidation::Layout)
-                        .unwrap_or(false);
+                    let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =
+                        cx.data().selector_model_layout(
+                            (&dirty_close_prompt_open, &dirty_close_prompt),
+                            |(prompt_open, prompt)| (prompt_open, prompt),
+                        );
                     if prompt_open {
-                        let prompt = cx
-                            .get_model_cloned(&dirty_close_prompt, Invalidation::Layout)
-                            .unwrap_or(None);
-
                         let (reason, dirty_list, active_tab, close_count) = prompt
                             .as_ref()
                             .map(|p| {
@@ -512,6 +511,11 @@ impl WorkspaceShellDemoDriver {
                         )
                     });
 
+                    let two_row_pinned = cx
+                        .data()
+                        .selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| {
+                            two_row_pinned
+                        });
                     let theme_for_center = theme.clone();
                     let window_layout_for_center = window_layout.clone();
                     let center = cx.keyed("workspace_shell.center", move |cx| {
@@ -521,9 +525,6 @@ impl WorkspaceShellDemoDriver {
                                   is_active: bool,
                                   tab_drag| {
                                 let title = |id: &str| Arc::<str>::from(id);
-                                let two_row_pinned = cx
-                                    .get_model_cloned(&tabstrip_two_row_pinned, Invalidation::Layout)
-                                    .unwrap_or(false);
                                 let strip =
                                     WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, title)
                                         .separate_pinned_row(two_row_pinned)

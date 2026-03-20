@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
-use fret::advanced::view::ViewWindowState;
+use fret::advanced::view::{UiCxDataExt as _, ViewWindowState};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
@@ -25,12 +25,12 @@ use fret_ui_editor::composites::{
 use fret_ui_editor::controls::{
     Checkbox, ColorEdit, ColorEditOptions, DragValue, DragValueOutcome,
     EditorTextSelectionBehavior, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
-    FieldStatusBadge, NumericFormatFn, NumericInput, NumericInputOptions, NumericParseFn,
-    NumericPresentation, NumericValidateFn, NumericValueConstraints, Slider, SliderOptions,
-    TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField,
-    TextFieldBlurBehavior, TextFieldMode, TextFieldOptions, TextFieldOutcome, TransformEdit,
-    TransformEditAxisOutcome, TransformEditOptions, TransformEditSection, Vec3Edit, VecEditAxis,
-    VecEditAxisOutcome, VecEditOptions,
+    FieldStatusBadge, NumericInput, NumericInputOptions, NumericPresentation, NumericValidateFn,
+    NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
+    TextAssistFieldSurface, TextField, TextFieldBlurBehavior, TextFieldMode, TextFieldOptions,
+    TextFieldOutcome, TransformEdit, TransformEditAxisOutcome, TransformEditOptions,
+    TransformEditPresentations, TransformEditSection, Vec3Edit, VecEditAxis, VecEditAxisOutcome,
+    VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
@@ -93,8 +93,24 @@ fn editor_fixed_decimals_presentation() -> NumericPresentation<f64> {
     NumericPresentation::fixed_decimals(3)
 }
 
+fn editor_position_presentation() -> NumericPresentation<f64> {
+    editor_fixed_decimals_presentation().with_chrome_suffix("m")
+}
+
+fn editor_rotation_presentation() -> NumericPresentation<f64> {
+    NumericPresentation::degrees(0)
+}
+
 fn editor_percent_presentation() -> NumericPresentation<f64> {
     NumericPresentation::percent_0_1(0)
+}
+
+fn editor_transform_presentations() -> TransformEditPresentations {
+    TransformEditPresentations::new(
+        editor_position_presentation(),
+        editor_rotation_presentation(),
+        editor_percent_presentation(),
+    )
 }
 
 fn authoring_parity_value_presentation() -> NumericPresentation<f64> {
@@ -109,8 +125,8 @@ fn authoring_parity_blend_presentation() -> NumericPresentation<f64> {
 
 fn edit_session_outcome_label(outcome: EditSessionOutcome) -> &'static str {
     match outcome {
-        EditSessionOutcome::Committed => "Committed",
-        EditSessionOutcome::Canceled => "Canceled",
+        EditSessionOutcome::Committed => "Commit",
+        EditSessionOutcome::Canceled => "Cancel",
     }
 }
 
@@ -204,7 +220,13 @@ fn proof_compact_readout<H: UiHost>(
 fn committed_line_count_label(text: &str) -> String {
     let lines = text.lines().count();
     let noun = if lines == 1 { "line" } else { "lines" };
-    format!("{lines} {noun} committed")
+    format!("{lines} {noun}")
+}
+
+fn committed_char_count_label(text: &str) -> String {
+    let chars = text.chars().count();
+    let noun = if chars == 1 { "char" } else { "chars" };
+    format!("{chars} {noun}")
 }
 
 fn editor_text_assist_state_label(
@@ -225,6 +247,86 @@ fn editor_text_assist_state_label(
     }
 
     format!("Expanded ({visible_count} matches)")
+}
+
+#[derive(Clone)]
+struct EditorTextAssistReadout {
+    state_label: String,
+    active_label: String,
+}
+
+#[derive(Clone)]
+struct EditorTextFieldReadout {
+    committed: String,
+    outcome: String,
+}
+
+#[derive(Clone)]
+struct AuthoringParitySharedStateReadout {
+    name_line: String,
+    value_line: String,
+    blend_line: String,
+    enabled_line: String,
+    shading_line: String,
+}
+
+fn editor_text_assist_readout(
+    cx: &mut UiCx<'_>,
+    items: Arc<[TextAssistItem]>,
+    query_model: &Model<String>,
+    dismissed_query_model: &Model<String>,
+    active_item_id_model: &Model<Option<Arc<str>>>,
+) -> EditorTextAssistReadout {
+    cx.data().selector_model_paint(
+        (query_model, dismissed_query_model, active_item_id_model),
+        move |(query, dismissed_query, active_item_id)| {
+            let controller = controller_with_active_item_id(
+                items.as_ref(),
+                &query,
+                active_item_id.as_ref(),
+                TextAssistMatchMode::Prefix,
+                false,
+            );
+            let visible_count = if query.trim().is_empty() {
+                0
+            } else {
+                controller.visible().len()
+            };
+            let expanded =
+                input_owned_text_assist_expanded(&query, &dismissed_query, visible_count);
+
+            EditorTextAssistReadout {
+                state_label: editor_text_assist_state_label(
+                    &query,
+                    &dismissed_query,
+                    visible_count,
+                ),
+                active_label: if expanded {
+                    controller
+                        .active_match()
+                        .map(|entry| entry.label.as_ref().to_string())
+                        .unwrap_or_else(|| "None".to_string())
+                } else {
+                    "None".to_string()
+                },
+            }
+        },
+    )
+}
+
+fn editor_text_field_readout(
+    cx: &mut UiCx<'_>,
+    committed_model: &Model<String>,
+    outcome_model: &Model<String>,
+) -> EditorTextFieldReadout {
+    cx.data()
+        .selector_model_paint((committed_model, outcome_model), |(committed, outcome)| {
+            EditorTextFieldReadout { committed, outcome }
+        })
+}
+
+fn editor_string_model_readout(cx: &mut UiCx<'_>, model: &Model<String>) -> String {
+    cx.data().selector_model_paint(model, |value| value)
 }
 
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
@@ -614,9 +716,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                     ui.add_ui(editor_label);
                 }
                 ui.mount(|cx| {
-                    let (fmt, parse, _) = editor_fixed_decimals_presentation().parts();
-                    let fmt: NumericFormatFn<f64> = fmt;
-                    let parse: NumericParseFn<f64> = parse;
+                    let fixed_presentation = editor_fixed_decimals_presentation();
                     let validate: NumericValidateFn<f64> = Arc::new(|v| {
                         if (0.0..=1.0).contains(&v) {
                             None
@@ -819,23 +919,24 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let inline_rename_readout =
+                                                        editor_text_field_readout(
+                                                            cx,
+                                                            &editor_inline_rename_model,
+                                                            &editor_inline_rename_outcome_model,
+                                                        );
+                                                    let inline_rename_committed =
+                                                        inline_rename_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Rename committed"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_inline_rename_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             proof_compact_readout(
                                                                 cx,
-                                                                committed,
+                                                                inline_rename_committed.clone(),
                                                                 Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.inline-rename.committed",
                                                                 )),
@@ -844,13 +945,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let inline_rename_outcome = cx
-                                                        .watch_model(
-                                                            &editor_inline_rename_outcome_model,
-                                                        )
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let inline_rename_outcome =
+                                                        inline_rename_readout.outcome;
                                                     if !inline_rename_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -950,22 +1046,24 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let password_readout = editor_text_field_readout(
+                                                        cx,
+                                                        &editor_password_model,
+                                                        &editor_password_outcome_model,
+                                                    );
+                                                    let password_committed =
+                                                        password_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Secret length"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_password_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             let readout =
-                                                                format!("{} chars committed", committed.chars().count());
+                                                                committed_char_count_label(
+                                                                    &password_committed,
+                                                                );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 readout,
@@ -977,13 +1075,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let password_outcome = cx
-                                                        .watch_model(
-                                                            &editor_password_outcome_model,
-                                                        )
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let password_outcome =
+                                                        password_readout.outcome;
                                                     if !password_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -1013,13 +1106,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         ),
                                                         |cx| cx.text("Committed"),
                                                         |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_buffered_name_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                            let committed = editor_string_model_readout(
+                                                                cx,
+                                                                &editor_buffered_name_model,
+                                                            );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 committed,
@@ -1053,50 +1143,29 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let name_assist_items =
+                                                        editor_demo_name_assist_items(cx);
+                                                    let name_assist_readout =
+                                                        editor_text_assist_readout(
+                                                            cx,
+                                                            name_assist_items,
+                                                            &editor_name_assist_model,
+                                                            &editor_name_assist_dismissed_query_model,
+                                                            &editor_name_assist_active_item_model,
+                                                        );
+                                                    let name_assist_state =
+                                                        name_assist_readout.state_label.clone();
+                                                    let name_assist_active =
+                                                        name_assist_readout.active_label.clone();
+
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Assist state"),
-                                                        |cx| {
-                                                            let query = cx
-                                                                .watch_model(&editor_name_assist_model)
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let dismissed_query = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_dismissed_query_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let active_item_id = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_active_item_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or(None);
-                                                            let items = editor_demo_name_assist_items(cx);
-                                                            let controller = controller_with_active_item_id(
-                                                                items.as_ref(),
-                                                                &query,
-                                                                active_item_id.as_ref(),
-                                                                TextAssistMatchMode::Prefix,
-                                                                false,
-                                                            );
-                                                            let visible_count = if query.trim().is_empty() {
-                                                                0
-                                                            } else {
-                                                                controller.visible().len()
-                                                            };
-                                                            let state = editor_text_assist_state_label(
-                                                                &query,
-                                                                &dismissed_query,
-                                                                visible_count,
-                                                            );
+                                                        move |cx| {
+                                                            let state = name_assist_state.clone();
                                                             proof_compact_readout(
                                                                 cx,
                                                                 state,
@@ -1114,52 +1183,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Active assist"),
-                                                        |cx| {
-                                                            let query = cx
-                                                                .watch_model(&editor_name_assist_model)
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let dismissed_query = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_dismissed_query_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let active_item_id = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_active_item_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or(None);
-                                                            let items = editor_demo_name_assist_items(cx);
-                                                            let controller = controller_with_active_item_id(
-                                                                items.as_ref(),
-                                                                &query,
-                                                                active_item_id.as_ref(),
-                                                                TextAssistMatchMode::Prefix,
-                                                                false,
-                                                            );
-                                                            let visible_count = if query.trim().is_empty() {
-                                                                0
-                                                            } else {
-                                                                controller.visible().len()
-                                                            };
-                                                            let expanded = input_owned_text_assist_expanded(
-                                                                &query,
-                                                                &dismissed_query,
-                                                                visible_count,
-                                                            );
-                                                            let active_label = if expanded {
-                                                                controller
-                                                                    .active_match()
-                                                                    .map(|entry| entry.label.as_ref().to_string())
-                                                                    .unwrap_or_else(|| "None".to_string())
-                                                            } else {
-                                                                "None".to_string()
-                                                            };
+                                                        move |cx| {
+                                                            let active_label =
+                                                                name_assist_active.clone();
                                                             proof_compact_readout(
                                                                 cx,
                                                                 active_label,
@@ -1178,13 +1204,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         ),
                                                         |cx| cx.text("Accepted assist"),
                                                         |cx| {
-                                                            let accepted = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_accepted_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                            let accepted = editor_string_model_readout(
+                                                                cx,
+                                                                &editor_name_assist_accepted_model,
+                                                            );
                                                             let readout = if accepted.trim().is_empty() {
                                                                 "None".to_string()
                                                             } else {
@@ -1245,22 +1268,24 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let notes_readout = editor_text_field_readout(
+                                                        cx,
+                                                        &editor_notes_model,
+                                                        &editor_notes_outcome_model,
+                                                    );
+                                                    let notes_committed =
+                                                        notes_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Notes committed"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_notes_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             let readout =
-                                                                committed_line_count_label(&committed);
+                                                                committed_line_count_label(
+                                                                    &notes_committed,
+                                                                );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 readout,
@@ -1272,11 +1297,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let notes_outcome = cx
-                                                        .watch_model(&editor_notes_outcome_model)
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let notes_outcome = notes_readout.outcome;
                                                     if !notes_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -1325,8 +1346,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         cx,
                                         |_cx| None,
                                         move |cx| {
-                                            let fmt = fmt.clone();
-                                            let parse = parse.clone();
                                             let validate = material_validate.clone();
                                             vec![PropertyGrid::new().into_element(
                                                 cx,
@@ -1349,24 +1368,29 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.drag-value-reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Opacity"),
                                                             |cx| {
                                                                 let outcome_model =
                                                                     editor_drag_value_outcome_model
                                                                         .clone();
-                                                                DragValue::new(
+                                                                DragValue::from_presentation(
                                                                     editor_value_model.clone(),
-                                                                    fmt.clone(),
-                                                                    parse.clone(),
+                                                                    fixed_presentation.clone(),
                                                                 )
                                                                 .validate(Some(validate.clone()))
                                                                 .on_outcome(Some(Arc::new(
@@ -1411,12 +1435,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_drag_value_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_drag_value_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -1429,13 +1451,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                     }
 
                                                     if show_roughness {
-                                                        let (roughness_fmt, roughness_parse, _) =
-                                                            editor_percent_presentation().parts();
-                                                        let roughness_fmt: NumericFormatFn<f64> =
-                                                            roughness_fmt;
-                                                        let roughness_parse: NumericParseFn<f64> =
-                                                            roughness_parse;
-
                                                         let model_for_reset =
                                                             editor_roughness_model.clone();
                                                         let on_reset = Arc::new(
@@ -1451,24 +1466,29 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.material.roughness.reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Roughness"),
                                                             |cx| {
-                                                                Slider::new(
+                                                                Slider::from_presentation(
                                                                     editor_roughness_model.clone(),
                                                                     0.0,
                                                                     1.0,
+                                                                    editor_percent_presentation(),
                                                                 )
-                                                                .format(roughness_fmt.clone())
-                                                                .parse(roughness_parse.clone())
                                                                 .options(SliderOptions {
                                                                     a11y_label: Some(Arc::from(
                                                                         "Roughness",
@@ -1493,13 +1513,6 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                     }
 
                                                     if show_metallic {
-                                                        let (metallic_fmt, metallic_parse, _) =
-                                                            editor_percent_presentation().parts();
-                                                        let metallic_fmt: NumericFormatFn<f64> =
-                                                            metallic_fmt;
-                                                        let metallic_parse: NumericParseFn<f64> =
-                                                            metallic_parse;
-
                                                         let model_for_reset =
                                                             editor_metallic_model.clone();
                                                         let on_reset = Arc::new(
@@ -1515,24 +1528,29 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.material.metallic.reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Metallic"),
                                                             |cx| {
-                                                                Slider::new(
+                                                                Slider::from_presentation(
                                                                     editor_metallic_model.clone(),
                                                                     0.0,
                                                                     1.0,
+                                                                    editor_percent_presentation(),
                                                                 )
-                                                                .format(metallic_fmt.clone())
-                                                                .parse(metallic_parse.clone())
                                                                 .options(SliderOptions {
                                                                     a11y_label: Some(Arc::from(
                                                                         "Metallic",
@@ -1699,10 +1717,11 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         |_cx| None,
                                         move |cx| {
                                             let stops: Vec<GradientDemoStop> = cx
-                                                .watch_model(&editor_gradient_stops_model)
-                                                .paint()
-                                                .cloned()
-                                                .unwrap_or_default();
+                                                .data()
+                                                .selector_model_paint(
+                                                    &editor_gradient_stops_model,
+                                                    |stops| stops,
+                                                );
 
                                             let on_remove: fret_ui_editor::composites::OnGradientStopAction =
                                                 Arc::new({
@@ -1809,12 +1828,12 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         |_cx| None,
                                         move |cx| {
                                             let validate = advanced_validate.clone();
-                                            let (fmt_f64, parse_f64, _) =
-                                                editor_fixed_decimals_presentation().parts();
-                                            let fmt_f64: fret_ui_editor::controls::NumericFormatFn<f64> =
-                                                fmt_f64;
-                                            let parse_f64: fret_ui_editor::controls::NumericParseFn<f64> =
-                                                parse_f64;
+                                            let fixed_presentation =
+                                                editor_fixed_decimals_presentation();
+                                            let position_presentation =
+                                                editor_position_presentation();
+                                            let transform_presentations =
+                                                editor_transform_presentations();
                                             let fmt_i32: fret_ui_editor::controls::NumericFormatFn<i32> =
                                                 Arc::new(|v| Arc::from(format!("{v}")));
                                             let parse_i32: fret_ui_editor::controls::NumericParseFn<i32> =
@@ -1847,26 +1866,31 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
 
                                                         rows.push(row_cx.row_with(
                                                             cx,
-                                                            PropertyRow::new().reset(Some(
-                                                                PropertyRowReset::new(on_reset)
+                                                            PropertyRow::new()
+                                                                .options(
+                                                                    row_cx.row_options.clone(),
+                                                                )
+                                                                .reset(Some(
+                                                                    PropertyRowReset::new(
+                                                                        on_reset,
+                                                                    )
                                                                     .options(
                                                                         fret_ui_editor::composites::PropertyRowResetOptions {
                                                                             test_id: Some(Arc::from("imui-editor-proof.editor.advanced.position.reset")),
                                                                             ..Default::default()
                                                                         },
                                                                     ),
-                                                            )),
+                                                                )),
                                                             |cx| cx.text("Position"),
                                                             |cx| {
                                                                 let outcome_model =
                                                                     editor_position_outcome_model
                                                                         .clone();
-                                                                Vec3Edit::new(
+                                                                Vec3Edit::from_presentation(
                                                                     editor_pos_x.clone(),
                                                                     editor_pos_y.clone(),
                                                                     editor_pos_z.clone(),
-                                                                    fmt_f64.clone(),
-                                                                    parse_f64.clone(),
+                                                                    position_presentation.clone(),
                                                                 )
                                                                 .on_axis_outcome(Some(Arc::new(
                                                                     move |host, action_cx, outcome: VecEditAxisOutcome| {
@@ -1895,12 +1919,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_position_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_position_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -1975,7 +1997,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 let outcome_model =
                                                                     editor_transform_outcome_model
                                                                         .clone();
-                                                                TransformEdit::new(
+                                                                TransformEdit::from_presentations(
                                                                     (
                                                                         editor_pos_x.clone(),
                                                                         editor_pos_y.clone(),
@@ -1991,8 +2013,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                         editor_scl_y.clone(),
                                                                         editor_scl_z.clone(),
                                                                     ),
-                                                                    fmt_f64.clone(),
-                                                                    parse_f64.clone(),
+                                                                    transform_presentations.clone(),
                                                                 )
                                                                 .on_axis_outcome(Some(Arc::new(
                                                                     move |host,
@@ -2022,12 +2043,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_transform_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_transform_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -2124,10 +2143,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                     cx,
                                                                     |cx| cx.text("Exposure"),
                                                                     |cx| {
-                                                                        NumericInput::new(
+                                                                        NumericInput::from_presentation(
                                                                             editor_exposure_model.clone(),
-                                                                            fmt_f64.clone(),
-                                                                            parse_f64.clone(),
+                                                                            fixed_presentation.clone(),
                                                                         )
                                                                         .validate(Some(validate.clone()))
                                                                         .options(NumericInputOptions {
@@ -2260,37 +2278,37 @@ fn render_authoring_parity_shared_state(
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let name = cx
-        .get_model_cloned(&name_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let value = cx
-        .get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let blend = cx
-        .get_model_copied(&slider_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let enabled = cx
-        .get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)
-        .unwrap_or(false);
-    let shading = cx
-        .get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)
-        .unwrap_or(None);
-
-    let name_line = if name.trim().is_empty() {
-        "shared name: <empty>".to_string()
-    } else {
-        format!("shared name: {name}")
-    };
-    let value_line = format!("shared value: {value:.3}");
-    let blend_line = format!("shared blend: {:.0}%", blend * 100.0);
-    let enabled_line = format!("shared enabled: {enabled}");
-    let shading_line = match shading.as_deref() {
-        Some("lit") => "shared mode: lit (Lit)".to_string(),
-        Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
-        Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
-        Some(other) => format!("shared mode: {other}"),
-        None => "shared mode: <none>".to_string(),
-    };
+    let shared = cx.data().selector_model_paint(
+        (
+            &name_model,
+            &drag_value_model,
+            &slider_model,
+            &enabled_model,
+            &shading_model,
+        ),
+        |(name, value, blend, enabled, shading)| AuthoringParitySharedStateReadout {
+            name_line: if name.trim().is_empty() {
+                "shared name: <empty>".to_string()
+            } else {
+                format!("shared name: {name}")
+            },
+            value_line: format!("shared value: {value:.3}"),
+            blend_line: format!("shared blend: {:.0}%", blend * 100.0),
+            enabled_line: format!("shared enabled: {enabled}"),
+            shading_line: match shading.as_deref() {
+                Some("lit") => "shared mode: lit (Lit)".to_string(),
+                Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
+                Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
+                Some(other) => format!("shared mode: {other}"),
+                None => "shared mode: <none>".to_string(),
+            },
+        },
+    );
+    let name_line = shared.name_line;
+    let value_line = shared.value_line;
+    let blend_line = shared.blend_line;
+    let enabled_line = shared.enabled_line;
+    let shading_line = shared.shading_line;
 
     fret_ui_kit::ui::v_flex_build(move |cx, out| {
         let name_line_row = name_line.clone();
@@ -2342,8 +2360,8 @@ fn render_authoring_parity_declarative_group(
     shading_model: Model<Option<Arc<str>>>,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let (value_fmt, value_parse, value_affixes) = authoring_parity_value_presentation().parts();
-    let (blend_fmt, blend_parse, _) = authoring_parity_blend_presentation().parts();
+    let value_presentation = authoring_parity_value_presentation();
+    let blend_presentation = authoring_parity_blend_presentation();
 
     PropertyGroup::new("Declarative authoring")
         .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -2391,17 +2409,14 @@ fn render_authoring_parity_declarative_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Value"),
                         |cx| {
-                            DragValue::new(
+                            DragValue::from_presentation(
                                 drag_value_model.clone(),
-                                value_fmt.clone(),
-                                value_parse.clone(),
+                                value_presentation.clone(),
                             )
                             .options(fret_ui_editor::controls::DragValueOptions {
                                 id_source: Some(Arc::from(
                                     "authoring-parity.declarative.drag-value",
                                 )),
-                                prefix: value_affixes.prefix.clone(),
-                                suffix: value_affixes.suffix.clone(),
                                 test_id: Some(Arc::from(
                                     "imui-editor-proof.authoring.declarative.value",
                                 )),
@@ -2417,14 +2432,17 @@ fn render_authoring_parity_declarative_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Blend"),
                         |cx| {
-                            Slider::new(slider_model.clone(), 0.0, 1.0)
-                                .format(blend_fmt.clone())
-                                .parse(blend_parse.clone())
-                                .options(authoring_parity_blend_slider_options(
-                                    "authoring-parity.declarative.slider",
-                                    "imui-editor-proof.authoring.declarative.blend",
-                                ))
-                                .into_element(cx)
+                            Slider::from_presentation(
+                                slider_model.clone(),
+                                0.0,
+                                1.0,
+                                blend_presentation.clone(),
+                            )
+                            .options(authoring_parity_blend_slider_options(
+                                "authoring-parity.declarative.slider",
+                                "imui-editor-proof.authoring.declarative.blend",
+                            ))
+                            .into_element(cx)
                         },
                         |_cx| None,
                     ));
@@ -2485,8 +2503,8 @@ fn render_authoring_parity_imui_group(
     shading_model: Model<Option<Arc<str>>>,
     shading_items: Arc<[EnumSelectItem]>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let (value_fmt, value_parse, value_affixes) = authoring_parity_value_presentation().parts();
-    let (blend_fmt, blend_parse, _) = authoring_parity_blend_presentation().parts();
+    let value_presentation = authoring_parity_value_presentation();
+    let blend_presentation = authoring_parity_blend_presentation();
 
     PropertyGroup::new("imui authoring")
         .options(fret_ui_editor::composites::PropertyGroupOptions {
@@ -2534,24 +2552,19 @@ fn render_authoring_parity_imui_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Value"),
                         |cx| {
-                            let value_fmt = value_fmt.clone();
-                            let value_parse = value_parse.clone();
-                            let value_affixes = value_affixes.clone();
+                            let value_presentation = value_presentation.clone();
                             render_authoring_parity_imui_host(cx, move |ui| {
                                 editor_imui::drag_value(
                                     ui,
-                                    DragValue::new(
+                                    DragValue::from_presentation(
                                         drag_value_model.clone(),
-                                        value_fmt.clone(),
-                                        value_parse.clone(),
+                                        value_presentation.clone(),
                                     )
                                     .options(
                                         fret_ui_editor::controls::DragValueOptions {
                                             id_source: Some(Arc::from(
                                                 "authoring-parity.imui.drag-value",
                                             )),
-                                            prefix: value_affixes.prefix.clone(),
-                                            suffix: value_affixes.suffix.clone(),
                                             test_id: Some(Arc::from(
                                                 "imui-editor-proof.authoring.imui.value",
                                             )),
@@ -2570,18 +2583,22 @@ fn render_authoring_parity_imui_group(
                         PropertyRow::new().options(row_cx.row_options.clone()),
                         |cx| cx.text("Blend"),
                         |cx| {
-                            let blend_fmt = blend_fmt.clone();
-                            let blend_parse = blend_parse.clone();
+                            let blend_presentation = blend_presentation.clone();
                             render_authoring_parity_imui_host(cx, move |ui| {
                                 editor_imui::slider(
                                     ui,
-                                    Slider::new(slider_model.clone(), 0.0, 1.0)
-                                        .format(blend_fmt.clone())
-                                        .parse(blend_parse.clone())
-                                        .options(authoring_parity_blend_slider_options(
+                                    Slider::from_presentation(
+                                        slider_model.clone(),
+                                        0.0,
+                                        1.0,
+                                        blend_presentation.clone(),
+                                    )
+                                    .options(
+                                        authoring_parity_blend_slider_options(
                                             "authoring-parity.imui.slider",
                                             "imui-editor-proof.authoring.imui.blend",
-                                        )),
+                                        ),
+                                    ),
                                 );
                             })
                             .into_element(cx)
@@ -3080,7 +3097,7 @@ impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
             &root_name,
             move |cx| {
                 let target = embedded::models(&*cx.app, cx.window)
-                    .and_then(|m| cx.watch_model(&m.target).paint().copied())
+                    .map(|m| cx.data().selector_model_paint(&m.target, |target| target))
                     .unwrap_or_default();
 
                 vec![
@@ -3354,18 +3371,36 @@ mod tests {
     }
 
     #[test]
+    fn advanced_transform_proof_uses_heterogeneous_numeric_presentations() {
+        let position = editor_position_presentation();
+        let rotation = editor_rotation_presentation();
+        let scale = editor_transform_presentations().scale;
+
+        assert_eq!(position.format()(1.25).as_ref(), "1.250");
+        assert_eq!(position.chrome_suffix().map(Arc::as_ref), Some("m"));
+        assert_eq!(rotation.format()(90.0).as_ref(), "90°");
+        assert!(rotation.chrome_suffix().is_none());
+        assert_eq!(scale.format()(1.0).as_ref(), "100%");
+        assert!(scale.chrome_suffix().is_none());
+    }
+
+    #[test]
     fn committed_line_count_label_tracks_multiline_readout() {
         assert_eq!(
             committed_line_count_label(
                 "Multiline TextField (v1)\n- uses TextArea\n- clear affordance\n"
             ),
-            "3 lines committed"
+            "3 lines"
         );
-        assert_eq!(
-            committed_line_count_label("Line A\nLine B"),
-            "2 lines committed"
-        );
-        assert_eq!(committed_line_count_label("Solo"), "1 line committed");
-        assert_eq!(committed_line_count_label(""), "0 lines committed");
+        assert_eq!(committed_line_count_label("Line A\nLine B"), "2 lines");
+        assert_eq!(committed_line_count_label("Solo"), "1 line");
+        assert_eq!(committed_line_count_label(""), "0 lines");
+    }
+
+    #[test]
+    fn committed_char_count_label_tracks_password_readout() {
+        assert_eq!(committed_char_count_label(""), "0 chars");
+        assert_eq!(committed_char_count_label("a"), "1 char");
+        assert_eq!(committed_char_count_label("abc"), "3 chars");
     }
 }

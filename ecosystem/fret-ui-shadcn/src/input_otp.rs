@@ -24,6 +24,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::overlay_motion;
+use crate::text_value_model::IntoTextValueModel;
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
@@ -197,9 +198,9 @@ impl std::fmt::Debug for InputOtp {
 }
 
 impl InputOtp {
-    pub fn new(model: Model<String>) -> Self {
+    pub fn new(model: impl IntoTextValueModel) -> Self {
         Self {
-            model,
+            model: model.into_text_value_model(),
             a11y_label: None,
             labelled_by_element: None,
             control_id: None,
@@ -1038,6 +1039,24 @@ pub enum InputOtpPart {
     Group(InputOtpGroup),
     Slot(InputOtpSlot),
     Separator(InputOtpSeparator),
+}
+
+impl From<InputOtpGroup> for InputOtpPart {
+    fn from(value: InputOtpGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<InputOtpSlot> for InputOtpPart {
+    fn from(value: InputOtpSlot) -> Self {
+        Self::Slot(value)
+    }
+}
+
+impl From<InputOtpSeparator> for InputOtpPart {
+    fn from(value: InputOtpSeparator) -> Self {
+        Self::Separator(value)
+    }
 }
 
 impl InputOtpPart {

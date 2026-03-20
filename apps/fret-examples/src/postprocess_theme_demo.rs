@@ -12,7 +12,6 @@ use fret_core::scene::{
     DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
 };
 use fret_core::{Color, Corners, Edges, EffectId, Px};
-use fret_runtime::Model;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
@@ -128,28 +127,25 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 #[derive(Debug, Clone, Copy)]
 struct DemoEffect(EffectId);
 
-#[derive(Debug)]
 struct ThemePostprocessState {
-    enabled: Model<bool>,
-    compare: Model<bool>,
+    enabled: LocalState<bool>,
+    compare: LocalState<bool>,
 
-    theme: Model<Option<Arc<str>>>,
-    theme_open: Model<bool>,
+    theme: LocalState<Option<Arc<str>>>,
+    theme_open: LocalState<bool>,
 
-    chromatic_offset_px: Model<Vec<f32>>,
-    scanline_strength: Model<Vec<f32>>,
-    scanline_spacing_px: Model<Vec<f32>>,
-    vignette_strength: Model<Vec<f32>>,
-    grain_strength: Model<Vec<f32>>,
-    grain_scale: Model<Vec<f32>>,
+    chromatic_offset_px: LocalState<Vec<f32>>,
+    scanline_strength: LocalState<Vec<f32>>,
+    scanline_spacing_px: LocalState<Vec<f32>>,
+    vignette_strength: LocalState<Vec<f32>>,
+    grain_strength: LocalState<Vec<f32>>,
+    grain_scale: LocalState<Vec<f32>>,
 
-    retro_pixel_scale: Model<Vec<f32>>,
-    retro_dither: Model<bool>,
+    retro_pixel_scale: LocalState<Vec<f32>>,
+    retro_dither: LocalState<bool>,
 }
 
-struct ThemePostprocessView {
-    st: ThemePostprocessState,
-}
+struct ThemePostprocessView;
 
 #[derive(Clone)]
 struct ThemePostprocessViewSettings {
@@ -178,43 +174,29 @@ fn install_custom_effect(app: &mut KernelApp, effects: &mut dyn fret_core::Custo
 }
 
 impl ThemePostprocessState {
-    fn reset(models: &mut fret_runtime::ModelStore, st: &ThemePostprocessState) {
-        let _ = models.update(&st.enabled, |v| *v = true);
-        let _ = models.update(&st.compare, |v| *v = true);
-        let _ = models.update(&st.theme, |v| *v = Some(Arc::from("cyberpunk")));
-        let _ = models.update(&st.chromatic_offset_px, |v| *v = vec![4.0]);
-        let _ = models.update(&st.scanline_strength, |v| *v = vec![0.32]);
-        let _ = models.update(&st.scanline_spacing_px, |v| *v = vec![3.0]);
-        let _ = models.update(&st.vignette_strength, |v| *v = vec![0.6]);
-        let _ = models.update(&st.grain_strength, |v| *v = vec![0.12]);
-        let _ = models.update(&st.grain_scale, |v| *v = vec![1.5]);
-        let _ = models.update(&st.retro_pixel_scale, |v| *v = vec![10.0]);
-        let _ = models.update(&st.retro_dither, |v| *v = true);
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            enabled: cx.state().local_init(|| true),
+            compare: cx.state().local_init(|| true),
+            theme: cx
+                .state()
+                .local_init(|| Option::<Arc<str>>::Some(Arc::from("cyberpunk"))),
+            theme_open: cx.state().local_init(|| false),
+            chromatic_offset_px: cx.state().local_init(|| vec![4.0]),
+            scanline_strength: cx.state().local_init(|| vec![0.32]),
+            scanline_spacing_px: cx.state().local_init(|| vec![3.0]),
+            vignette_strength: cx.state().local_init(|| vec![0.6]),
+            grain_strength: cx.state().local_init(|| vec![0.12]),
+            grain_scale: cx.state().local_init(|| vec![1.5]),
+            retro_pixel_scale: cx.state().local_init(|| vec![10.0]),
+            retro_dither: cx.state().local_init(|| true),
+        }
     }
 }
 
 impl View for ThemePostprocessView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        Self {
-            st: ThemePostprocessState {
-                enabled: app.models_mut().insert(true),
-                compare: app.models_mut().insert(true),
-                theme: app
-                    .models_mut()
-                    .insert(Option::<Arc<str>>::Some(Arc::from("cyberpunk"))),
-                theme_open: app.models_mut().insert(false),
-
-                chromatic_offset_px: app.models_mut().insert(vec![4.0]),
-                scanline_strength: app.models_mut().insert(vec![0.32]),
-                scanline_spacing_px: app.models_mut().insert(vec![3.0]),
-                vignette_strength: app.models_mut().insert(vec![0.6]),
-                grain_strength: app.models_mut().insert(vec![0.12]),
-                grain_scale: app.models_mut().insert(vec![1.5]),
-
-                retro_pixel_scale: app.models_mut().insert(vec![10.0]),
-                retro_dither: app.models_mut().insert(true),
-            },
-        }
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
@@ -225,47 +207,29 @@ impl View for ThemePostprocessView {
             .into();
         };
 
-        let enabled = self.st.enabled.clone();
-        let compare = self.st.compare.clone();
-        let theme = self.st.theme.clone();
-        let retro_dither = self.st.retro_dither.clone();
-        let enabled_deps = enabled.clone();
-        let compare_deps = compare.clone();
-        let theme_deps = theme.clone();
-        let retro_dither_deps = retro_dither.clone();
-        let view_settings: ThemePostprocessViewSettings = cx.data().selector(
-            move |cx| {
-                cx.observe_model(&enabled_deps, Invalidation::Layout);
-                cx.observe_model(&compare_deps, Invalidation::Layout);
-                cx.observe_model(&theme_deps, Invalidation::Layout);
-                cx.observe_model(&retro_dither_deps, Invalidation::Layout);
-                (
-                    cx.app.models().revision(&enabled_deps).unwrap_or(0),
-                    cx.app.models().revision(&compare_deps).unwrap_or(0),
-                    cx.app.models().revision(&theme_deps).unwrap_or(0),
-                    cx.app.models().revision(&retro_dither_deps).unwrap_or(0),
-                )
-            },
-            move |cx| ThemePostprocessViewSettings {
-                enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
-                compare: cx.app.models().get_cloned(&compare).unwrap_or(true),
-                theme: cx.app.models().get_cloned(&theme).unwrap_or_default(),
-                retro_dither: cx.app.models().get_cloned(&retro_dither).unwrap_or(true),
+        let mut st = ThemePostprocessState::new(cx);
+        let view_settings: ThemePostprocessViewSettings = cx.data().selector_layout(
+            (&st.enabled, &st.compare, &st.theme, &st.retro_dither),
+            |(enabled, compare, theme, retro_dither)| ThemePostprocessViewSettings {
+                enabled,
+                compare,
+                theme,
+                retro_dither,
             },
         );
 
-        let chromatic_offset_px = watch_first_f32(cx, &self.st.chromatic_offset_px, 2.0);
-        let scanline_strength = watch_first_f32(cx, &self.st.scanline_strength, 0.18);
-        let scanline_spacing_px = watch_first_f32(cx, &self.st.scanline_spacing_px, 3.0);
-        let vignette_strength = watch_first_f32(cx, &self.st.vignette_strength, 0.35);
-        let grain_strength = watch_first_f32(cx, &self.st.grain_strength, 0.06);
-        let grain_scale = watch_first_f32(cx, &self.st.grain_scale, 1.5);
+        let chromatic_offset_px = watch_first_f32(cx, &st.chromatic_offset_px, 2.0);
+        let scanline_strength = watch_first_f32(cx, &st.scanline_strength, 0.18);
+        let scanline_spacing_px = watch_first_f32(cx, &st.scanline_spacing_px, 3.0);
+        let vignette_strength = watch_first_f32(cx, &st.vignette_strength, 0.35);
+        let grain_strength = watch_first_f32(cx, &st.grain_strength, 0.06);
+        let grain_scale = watch_first_f32(cx, &st.grain_scale, 1.5);
 
-        let retro_pixel_scale = watch_first_f32(cx, &self.st.retro_pixel_scale, 10.0);
+        let retro_pixel_scale = watch_first_f32(cx, &st.retro_pixel_scale, 10.0);
 
         let inspector = inspector(
             cx,
-            &mut self.st,
+            &mut st,
             view_settings.theme.as_deref().unwrap_or("cyberpunk"),
             chromatic_offset_px,
             scanline_strength,
@@ -293,13 +257,33 @@ impl View for ThemePostprocessView {
             view_settings.retro_dither,
         );
 
-        cx.actions().models::<act::Reset>({
-            let st = self.clone_for_reset();
-            move |models| {
-                ThemePostprocessState::reset(models, &st);
-                true
-            }
-        });
+        cx.actions().local(&st.enabled).set::<act::Reset>(true);
+        cx.actions().local(&st.compare).set::<act::Reset>(true);
+        cx.actions()
+            .local(&st.theme)
+            .set::<act::Reset>(Some(Arc::<str>::from("cyberpunk")));
+        cx.actions()
+            .local(&st.chromatic_offset_px)
+            .set::<act::Reset>(vec![4.0]);
+        cx.actions()
+            .local(&st.scanline_strength)
+            .set::<act::Reset>(vec![0.32]);
+        cx.actions()
+            .local(&st.scanline_spacing_px)
+            .set::<act::Reset>(vec![3.0]);
+        cx.actions()
+            .local(&st.vignette_strength)
+            .set::<act::Reset>(vec![0.6]);
+        cx.actions()
+            .local(&st.grain_strength)
+            .set::<act::Reset>(vec![0.12]);
+        cx.actions()
+            .local(&st.grain_scale)
+            .set::<act::Reset>(vec![1.5]);
+        cx.actions()
+            .local(&st.retro_pixel_scale)
+            .set::<act::Reset>(vec![10.0]);
+        cx.actions().local(&st.retro_dither).set::<act::Reset>(true);
 
         let root = ui::h_flex(move |cx| {
             let inspector = inspector.into_element(cx);
@@ -315,25 +299,6 @@ impl View for ThemePostprocessView {
     }
 }
 
-impl ThemePostprocessView {
-    fn clone_for_reset(&self) -> ThemePostprocessState {
-        ThemePostprocessState {
-            enabled: self.st.enabled.clone(),
-            compare: self.st.compare.clone(),
-            theme: self.st.theme.clone(),
-            theme_open: self.st.theme_open.clone(),
-            chromatic_offset_px: self.st.chromatic_offset_px.clone(),
-            scanline_strength: self.st.scanline_strength.clone(),
-            scanline_spacing_px: self.st.scanline_spacing_px.clone(),
-            vignette_strength: self.st.vignette_strength.clone(),
-            grain_strength: self.st.grain_strength.clone(),
-            grain_scale: self.st.grain_scale.clone(),
-            retro_pixel_scale: self.st.retro_pixel_scale.clone(),
-            retro_dither: self.st.retro_dither.clone(),
-        }
-    }
-}
-
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     let mut c = fret_ui_kit::colors::linear_from_hex_rgb(
         ((r as u32) << 16) | ((g as u32) << 8) | (b as u32),
@@ -342,12 +307,8 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     c
 }
 
-fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    model
-        .layout_in(cx)
-        .read_ref(|v| v.first().copied().unwrap_or(default))
-        .ok()
-        .unwrap_or(default)
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
+    model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn inspector(
@@ -365,19 +326,19 @@ fn inspector(
 ) -> impl IntoUiElement<KernelApp> + use<> {
     let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
-    let enabled_model = st.enabled.clone();
-    let compare_model = st.compare.clone();
-    let theme_model = st.theme.clone();
-    let theme_open_model = st.theme_open.clone();
+    let enabled_model = st.enabled.clone_model();
+    let compare_model = st.compare.clone_model();
+    let theme_model = st.theme.clone_model();
+    let theme_open_model = st.theme_open.clone_model();
 
-    let chromatic_model = st.chromatic_offset_px.clone();
-    let scanline_strength_model = st.scanline_strength.clone();
-    let scanline_spacing_model = st.scanline_spacing_px.clone();
-    let vignette_model = st.vignette_strength.clone();
-    let grain_strength_model = st.grain_strength.clone();
-    let grain_scale_model = st.grain_scale.clone();
-    let retro_pixel_scale_model = st.retro_pixel_scale.clone();
-    let retro_dither_model = st.retro_dither.clone();
+    let chromatic_state = st.chromatic_offset_px.clone();
+    let scanline_strength_state = st.scanline_strength.clone();
+    let scanline_spacing_state = st.scanline_spacing_px.clone();
+    let vignette_state = st.vignette_strength.clone();
+    let grain_strength_state = st.grain_strength.clone();
+    let grain_scale_state = st.grain_scale.clone();
+    let retro_pixel_scale_state = st.retro_pixel_scale.clone();
+    let retro_dither_model = st.retro_dither.clone_model();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(380.0));
@@ -508,31 +469,31 @@ fn inspector(
                         shadcn::Separator::new().into_element(cx),
                         retro_pixel_row,
                         retro_dither_row,
-                        shadcn::Slider::new(chromatic_model.clone())
+                        shadcn::Slider::new(chromatic_state.clone())
                             .range(0.0, 6.0)
                             .step(0.25)
                             .into_element(cx),
-                        shadcn::Slider::new(vignette_model.clone())
+                        shadcn::Slider::new(vignette_state.clone())
                             .range(0.0, 0.9)
                             .step(0.01)
                             .into_element(cx),
-                        shadcn::Slider::new(scanline_strength_model.clone())
+                        shadcn::Slider::new(scanline_strength_state.clone())
                             .range(0.0, 0.5)
                             .step(0.01)
                             .into_element(cx),
-                        shadcn::Slider::new(scanline_spacing_model.clone())
+                        shadcn::Slider::new(scanline_spacing_state.clone())
                             .range(1.0, 10.0)
                             .step(0.25)
                             .into_element(cx),
-                        shadcn::Slider::new(grain_strength_model.clone())
+                        shadcn::Slider::new(grain_strength_state.clone())
                             .range(0.0, 0.2)
                             .step(0.01)
                             .into_element(cx),
-                        shadcn::Slider::new(grain_scale_model.clone())
+                        shadcn::Slider::new(grain_scale_state.clone())
                             .range(0.25, 6.0)
                             .step(0.05)
                             .into_element(cx),
-                        shadcn::Slider::new(retro_pixel_scale_model.clone())
+                        shadcn::Slider::new(retro_pixel_scale_state.clone())
                             .range(2.0, 24.0)
                             .step(1.0)
                             .into_element(cx),

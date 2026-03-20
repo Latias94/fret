@@ -9,11 +9,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
+use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus, with_query_client};
-use fret_runtime::Model;
 use fret_ui::element::{
     ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
     TextProps,
@@ -132,10 +131,6 @@ fn download_remote_image(url: &str) -> Result<RemoteImageData, QueryError> {
 
 struct MarkdownDemoState {
     markdown: Arc<str>,
-    wrap_code: Model<bool>,
-    cap_code_height: Model<bool>,
-    expanded_code_blocks: Model<HashSet<markdown::BlockId>>,
-    pending_anchor: Model<Option<Arc<str>>>,
     scroll: fret_ui::scroll::ScrollHandle,
     anchor_regions: Rc<RefCell<HashMap<Arc<str>, fret_ui::GlobalElementId>>>,
     demo_svg_bytes: Arc<[u8]>,
@@ -147,7 +142,7 @@ struct MarkdownDemoView {
 }
 
 impl MarkdownDemoView {
-    fn on_link_activate(pending_anchor: Model<Option<Arc<str>>>) -> markdown::OnLinkActivate {
+    fn on_link_activate(pending_anchor: LocalState<Option<Arc<str>>>) -> markdown::OnLinkActivate {
         Arc::new(move |host, cx, _reason, link| {
             let href = link.href.trim();
             if let Some(fragment) = href.strip_prefix('#') {
@@ -156,7 +151,7 @@ impl MarkdownDemoView {
                     return;
                 }
                 let fragment: Arc<str> = Arc::from(fragment.to_string());
-                let _ = host.models_mut().update(&pending_anchor, |v| {
+                let _ = pending_anchor.update_in(host.models_mut(), |v| {
                     *v = Some(fragment.clone());
                 });
                 host.request_redraw(cx.window);
@@ -178,6 +173,7 @@ impl MarkdownDemoView {
     fn maybe_scroll_pending_anchor(
         &mut self,
         cx: &mut AppUi<'_, '_>,
+        pending_anchor: &LocalState<Option<Arc<str>>>,
         viewport_region: Option<fret_ui::GlobalElementId>,
         padding_top: Px,
     ) {
@@ -185,7 +181,7 @@ impl MarkdownDemoView {
             return;
         };
 
-        let pending = self.st.pending_anchor.layout(cx).value_or_default();
+        let pending = pending_anchor.layout_value(cx);
         let Some(fragment) = pending.as_deref() else {
             return;
         };
@@ -218,20 +214,12 @@ impl MarkdownDemoView {
                 .set_offset(Point::new(prev.x, Px(prev.y.0 + delta_y)));
         }
 
-        let _ = cx
-            .app
-            .models_mut()
-            .update(&self.st.pending_anchor, |v| *v = None);
+        let _ = pending_anchor.set_in(cx.app.models_mut(), None);
     }
 }
 
 impl View for MarkdownDemoView {
-    fn init(app: &mut KernelApp, _window: AppWindowId) -> Self {
-        let wrap_code = app.models_mut().insert(false);
-        let cap_code_height = app.models_mut().insert(true);
-        let expanded_code_blocks = app.models_mut().insert(HashSet::new());
-        let pending_anchor = app.models_mut().insert::<Option<Arc<str>>>(None);
-
+    fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
         let markdown: Arc<str> = Arc::from(
             r##"# Markdown Demo
 
@@ -336,10 +324,6 @@ $$
         Self {
             st: MarkdownDemoState {
                 markdown,
-                wrap_code,
-                cap_code_height,
-                expanded_code_blocks,
-                pending_anchor,
                 scroll: fret_ui::scroll::ScrollHandle::default(),
                 anchor_regions: Rc::new(RefCell::new(HashMap::new())),
                 demo_svg_bytes,
@@ -349,6 +333,11 @@ $$
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
+        let wrap_code_state = cx.state().local_init(|| false);
+        let cap_code_height_state = cx.state().local_init(|| true);
+        let expanded_code_blocks_state = cx.state().local_init(HashSet::new);
+        let pending_anchor_state = cx.state().local_init(|| None::<Arc<str>>);
+
         if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES) {
             let _ = with_query_client(cx.app, |client, _app| {
                 client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
@@ -357,31 +346,27 @@ $$
 
         cx.actions()
             .transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
-
-        cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({
-            let expanded = self.st.expanded_code_blocks.clone();
-            move |host, _action_cx, id| {
-                let _ = host.models_mut().update(&expanded, |set| {
-                    if set.contains(&id) {
-                        set.remove(&id);
-                    } else {
-                        set.insert(id);
-                    }
-                });
+        cx.actions()
+            .local(&expanded_code_blocks_state)
+            .payload_update_if::<act::ToggleCodeBlockExpand>(|set, id| {
+                if set.contains(&id) {
+                    set.remove(&id);
+                } else {
+                    set.insert(id);
+                }
                 true
-            }
-        });
+            });
 
         self.st.anchor_regions.borrow_mut().clear();
 
         let theme = cx.theme_snapshot();
         let padding_md = theme.metric_token("metric.padding.md");
 
-        let wrap_enabled = self.st.wrap_code.layout(cx).value_or_default();
-        let cap_enabled = self.st.cap_code_height.layout(cx).value_or_default();
+        let wrap_enabled = wrap_code_state.layout_value(cx);
+        let cap_enabled = cap_code_height_state.layout_value(cx);
 
         let mut components = markdown::MarkdownComponents::<KernelApp>::default();
-        components.on_link_activate = Some(Self::on_link_activate(self.st.pending_anchor.clone()));
+        components.on_link_activate = Some(Self::on_link_activate(pending_anchor_state.clone()));
         components.code_block_ui.wrap = if wrap_enabled {
             fret_code_view::CodeBlockWrap::Word
         } else {
@@ -392,13 +377,11 @@ $$
         components.code_block_ui.scrollbar_y_on_hover = true;
 
         if cap_enabled {
-            let expanded_for_resolver = self.st.expanded_code_blocks.clone();
+            let expanded_for_resolver = expanded_code_blocks_state.clone();
             components.code_block_ui_resolver = Some(Arc::new(move |cx, info, options| {
-                cx.observe_model(&expanded_for_resolver, Invalidation::Layout);
-                let expanded = cx
-                    .app
-                    .models()
-                    .read(&expanded_for_resolver, |set| set.contains(&info.id))
+                let expanded = expanded_for_resolver
+                    .layout_in(cx)
+                    .read_ref(|set| set.contains(&info.id))
                     .ok()
                     .unwrap_or(false);
                 if expanded {
@@ -407,13 +390,11 @@ $$
                 }
             }));
 
-            let expanded_for_actions = self.st.expanded_code_blocks.clone();
+            let expanded_for_actions = expanded_code_blocks_state.clone();
             components.code_block_actions = Some(Arc::new(move |cx, info| {
-                cx.observe_model(&expanded_for_actions, Invalidation::Layout);
-                let expanded = cx
-                    .app
-                    .models()
-                    .read(&expanded_for_actions, |set| set.contains(&info.id))
+                let expanded = expanded_for_actions
+                    .layout_in(cx)
+                    .read_ref(|set| set.contains(&info.id))
                     .ok()
                     .unwrap_or(false);
 
@@ -598,22 +579,7 @@ $$
                 .into_element(cx)
         }));
 
-        let expanded_count = cx.data().selector(
-            |cx| {
-                cx.observe_model(&self.st.expanded_code_blocks, Invalidation::Layout);
-                cx.app
-                    .models()
-                    .revision(&self.st.expanded_code_blocks)
-                    .unwrap_or(0)
-            },
-            |cx| {
-                cx.app
-                    .models()
-                    .read(&self.st.expanded_code_blocks, |set| set.len())
-                    .ok()
-                    .unwrap_or(0)
-            },
-        );
+        let expanded_count = expanded_code_blocks_state.layout_read_ref(cx, |set| set.len());
 
         let toggles = ui::h_flex(|cx| {
             [
@@ -621,14 +587,14 @@ $$
                     "wrap code: {}",
                     if wrap_enabled { "on" } else { "off" }
                 )),
-                shadcn::Switch::new(self.st.wrap_code.clone())
+                shadcn::Switch::new(wrap_code_state.clone_model())
                     .a11y_label("Wrap code blocks")
                     .into_element(cx),
                 cx.text(format!(
                     "cap code height: {}",
                     if cap_enabled { "on" } else { "off" }
                 )),
-                shadcn::Switch::new(self.st.cap_code_height.clone())
+                shadcn::Switch::new(cap_code_height_state.clone_model())
                     .a11y_label("Cap code block height")
                     .into_element(cx),
                 shadcn::Button::new("Refresh remote images")
@@ -680,7 +646,7 @@ $$
         .padding_px(padding_md)
         .into_element(cx);
 
-        self.maybe_scroll_pending_anchor(cx, scroll_viewport, padding_md);
+        self.maybe_scroll_pending_anchor(cx, &pending_anchor_state, scroll_viewport, padding_md);
 
         ui::container(|_cx| [content])
             .bg(ColorRef::Color(theme.color_token("background")))

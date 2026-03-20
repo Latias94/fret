@@ -55,6 +55,9 @@ fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", optional = true }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide", "icons-ui-semantic-lucide"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-metal.workspace = true
+
 [[bin]]
 name = "ui_gallery"
 path = "src/bin/ui_gallery.rs"

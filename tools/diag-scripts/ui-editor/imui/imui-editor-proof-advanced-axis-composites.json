@@ -131,7 +131,7 @@
         "kind": "test_id",
         "id": "imui-editor-proof.editor.advanced.transform.scale.x.typing.input"
       },
-      "text": "2.500"
+      "text": "250"
     },
     { "type": "press_key", "key": "enter" },
     {
@@ -142,7 +142,7 @@
           "kind": "test_id",
           "id": "imui-editor-proof.editor.advanced.transform.scale.x.value"
         },
-        "text": "2.500"
+        "text": "250%"
       },
       "timeout_frames": 240
     },
@@ -154,7 +154,7 @@
           "kind": "test_id",
           "id": "imui-editor-proof.editor.advanced.transform.scale.y.value"
         },
-        "text": "2.500"
+        "text": "250%"
       },
       "timeout_frames": 240
     },
@@ -166,7 +166,7 @@
           "kind": "test_id",
           "id": "imui-editor-proof.editor.advanced.transform.scale.z.value"
         },
-        "text": "2.500"
+        "text": "250%"
       },
       "timeout_frames": 240
     },

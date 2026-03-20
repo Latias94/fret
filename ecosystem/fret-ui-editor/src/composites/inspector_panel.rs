@@ -21,8 +21,12 @@ use crate::controls::{
     EditorTextCancelBehavior, EditorTextSelectionBehavior, MiniSearchBox, MiniSearchBoxOptions,
     TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextFieldOptions,
 };
+use crate::primitives::EditorDensity;
+use crate::primitives::colors::{
+    editor_panel_background, editor_panel_border, editor_panel_header_background,
+    editor_panel_header_border,
+};
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
-use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
 pub struct InspectorPanelSearchAssistOptions {
@@ -146,24 +150,10 @@ impl InspectorPanel {
                 let gap = self.options.gap.unwrap_or(metrics.panel_gap);
                 let header_gap = self.options.header_gap.unwrap_or(metrics.panel_header_gap);
                 let padding = self.options.padding.unwrap_or_else(|| Edges::all(Px(0.0)));
-                let header_bg = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BG)
-                    .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BG))
-                    .or_else(|| theme.color_by_key("muted"))
-                    .unwrap_or_else(|| theme.color_token("background"));
-                let header_border = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_HEADER_BORDER)
-                    .or_else(|| theme.color_by_key(EditorTokenKeys::PROPERTY_HEADER_BORDER))
-                    .or_else(|| theme.color_by_key("border"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
-                let panel_bg = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BG)
-                    .or_else(|| theme.color_by_key("card"))
-                    .unwrap_or_else(|| theme.color_token("background"));
-                let panel_border = theme
-                    .color_by_key(EditorTokenKeys::PROPERTY_PANEL_BORDER)
-                    .or_else(|| theme.color_by_key("border"))
-                    .unwrap_or_else(|| theme.color_token("foreground"));
+                let header_bg = editor_panel_header_background(theme);
+                let header_border = editor_panel_header_border(theme);
+                let panel_bg = editor_panel_background(theme);
+                let panel_border = editor_panel_border(theme);
                 let radius = theme.metric_token("metric.radius.sm");
                 (
                     density,

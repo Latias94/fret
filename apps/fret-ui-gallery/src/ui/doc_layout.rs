@@ -104,10 +104,6 @@ impl DocSection {
         self
     }
 
-    pub(in crate::ui) fn code_rust(self, code: impl Into<Arc<str>>) -> Self {
-        self.code("rust", code)
-    }
-
     pub(in crate::ui) fn code_from_file_region(
         self,
         language: &'static str,

@@ -142,6 +142,7 @@ mod context_menu;
 mod data_table;
 mod date_picker;
 mod dialog;
+mod direction;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -791,6 +792,10 @@ pub(super) fn preview_kbd(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
 pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     select::preview_select(cx)
+}
+
+pub(super) fn preview_direction(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
+    direction::preview_direction(cx)
 }
 
 pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {

@@ -26,6 +26,7 @@ use fret_ui_kit::{
     resolve_override_slot, resolve_override_slot_opt, ui,
 };
 
+use crate::bool_model::IntoBoolModel;
 use crate::overlay_motion;
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
@@ -302,9 +303,9 @@ impl std::fmt::Debug for Toggle {
 }
 
 impl Toggle {
-    pub fn new(model: Model<bool>) -> Self {
+    pub fn new(model: impl IntoBoolModel) -> Self {
         Self {
-            model: Some(model),
+            model: Some(model.into_bool_model()),
             pressed_snapshot: None,
             default_pressed: false,
             label: None,
@@ -892,7 +893,7 @@ impl Toggle {
 /// Builder-preserving controlled helper for the common toggle authoring path.
 pub fn toggle<H: UiHost, I, T>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<bool>,
+    model: impl IntoBoolModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> Toggle
 where

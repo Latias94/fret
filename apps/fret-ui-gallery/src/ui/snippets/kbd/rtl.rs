@@ -9,30 +9,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ui::v_stack(|cx| {
             vec![
                 shadcn::KbdGroup::new([
-                    shadcn::Kbd::from_children([shadcn::raw::kbd::kbd_icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.command"),
-                    )])
-                    .into_element(cx),
-                    shadcn::Kbd::from_children([shadcn::raw::kbd::kbd_icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.arrow-big-up"),
-                    )])
-                    .into_element(cx),
-                    shadcn::Kbd::from_children([shadcn::raw::kbd::kbd_icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.option"),
-                    )])
-                    .into_element(cx),
-                    shadcn::Kbd::from_children([shadcn::raw::kbd::kbd_icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.chevron-up"),
-                    )])
-                    .into_element(cx),
+                    shadcn::Kbd::new("⌘").into_element(cx),
+                    shadcn::Kbd::new("⇧").into_element(cx),
+                    shadcn::Kbd::new("⌥").into_element(cx),
+                    shadcn::Kbd::new("⌃").into_element(cx),
                 ])
                 .into_element(cx),
                 shadcn::KbdGroup::new([
                     shadcn::Kbd::new("Ctrl").into_element(cx),
+                    ui::text("+").into_element(cx),
                     shadcn::Kbd::new("B").into_element(cx),
                 ])
                 .into_element(cx),

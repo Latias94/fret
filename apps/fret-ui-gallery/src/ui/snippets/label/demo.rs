@@ -2,31 +2,28 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::Px;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let email = cx.local_model(String::new);
-    let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
-    let id = ControlId::from("ui-gallery-label-email");
+    let checked = cx.local_model_keyed("ui_gallery_label_demo_checked", || false);
+    let id = ControlId::from("ui-gallery-label-demo-checkbox");
 
-    ui::v_stack(|cx| {
+    ui::h_flex(|cx| {
         vec![
-            shadcn::Label::new("Your email address")
+            shadcn::Checkbox::new(checked)
+                .a11y_label("Accept terms and conditions")
+                .control_id(id.clone())
+                .test_id("ui-gallery-label-demo-checkbox")
+                .into_element(cx),
+            shadcn::Label::new("Accept terms and conditions")
                 .for_control(id.clone())
                 .test_id("ui-gallery-label-demo-label")
-                .into_element(cx),
-            shadcn::Input::new(email)
-                .placeholder("you@example.com")
-                .control_id(id)
-                .test_id("ui-gallery-label-demo-input")
                 .into_element(cx),
         ]
     })
     .gap(Space::N2)
-    .items_start()
-    .layout(max_w)
+    .items_center()
     .into_element(cx)
     .test_id("ui-gallery-label-demo")
 }

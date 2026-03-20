@@ -96,7 +96,7 @@ fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u
 }
 
 fn prepared_glyph_font_identity(glyph: &ParleyGlyph) -> (u64, u32) {
-    (glyph.font.data.id(), glyph.font.index)
+    (glyph.font.data_id(), glyph.font.face_index())
 }
 
 fn prepared_glyph_variation_key(glyph: &ParleyGlyph) -> u64 {
@@ -104,15 +104,11 @@ fn prepared_glyph_variation_key(glyph: &ParleyGlyph) -> u64 {
 }
 
 fn prepared_glyph_synthesis_embolden(glyph: &ParleyGlyph) -> bool {
-    glyph.synthesis.embolden()
+    glyph.synthesis.embolden
 }
 
 fn prepared_glyph_synthesis_skew_degrees(glyph: &ParleyGlyph) -> i8 {
-    glyph
-        .synthesis
-        .skew()
-        .unwrap_or(0.0)
-        .clamp(i8::MIN as f32, i8::MAX as f32) as i8
+    glyph.synthesis.skew_degrees
 }
 
 fn record_prepared_glyph_face_usage(

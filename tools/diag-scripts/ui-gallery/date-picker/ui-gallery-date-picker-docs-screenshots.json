@@ -129,7 +129,7 @@
       "timeout_frames": 600
     },
     {
-      "type": "click",
+      "type": "activate",
       "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob-trigger" }
     },
     {

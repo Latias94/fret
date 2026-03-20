@@ -477,6 +477,7 @@ fn maybe_init_asset_scaffold(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsStr;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn make_temp_dir(prefix: &str) -> PathBuf {
@@ -487,6 +488,99 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("{prefix}-{nonce}"));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         dir
+    }
+
+    fn repo_workspace_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .expect("repo workspace root should resolve")
+    }
+
+    fn make_repo_local_dir(prefix: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        let dir = repo_workspace_root()
+            .join("local")
+            .join(format!("{prefix}-{nonce}"));
+        std::fs::create_dir_all(&dir).expect("create repo-local test dir");
+        dir
+    }
+
+    fn cargo_check_generated_app(out_dir: &Path) {
+        let repo_root = repo_workspace_root();
+        let target_name = out_dir
+            .file_name()
+            .and_then(OsStr::to_str)
+            .expect("generated app dir should have a final path segment");
+        let target_dir = repo_root
+            .join("target")
+            .join("fretboard-generated-app-checks")
+            .join(target_name);
+
+        let status = Command::new("cargo")
+            .arg("check")
+            .arg("--quiet")
+            .current_dir(out_dir)
+            .env("CARGO_TARGET_DIR", &target_dir)
+            .status()
+            .expect("spawn cargo check for generated app");
+
+        assert!(
+            status.success(),
+            "generated app cargo check failed for {} with status {status}",
+            out_dir.display()
+        );
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    struct ScaffoldCompileCase {
+        template: NewTemplate,
+        package_name: &'static str,
+        opts: ScaffoldOptions,
+    }
+
+    fn scaffold_template_case(
+        workspace_root: &Path,
+        suite_root: &Path,
+        case: ScaffoldCompileCase,
+    ) -> PathBuf {
+        let out_dir = suite_root.join(case.package_name);
+        let result = match case.template {
+            NewTemplate::Empty => init_empty_at(&out_dir, case.package_name, false),
+            NewTemplate::Hello => init_hello_at(
+                workspace_root,
+                &out_dir,
+                case.package_name,
+                case.opts,
+                false,
+            ),
+            NewTemplate::SimpleTodo => init_simple_todo_at(
+                workspace_root,
+                &out_dir,
+                case.package_name,
+                case.opts,
+                false,
+            ),
+            NewTemplate::Todo => init_todo_at(
+                workspace_root,
+                &out_dir,
+                case.package_name,
+                case.opts,
+                false,
+            ),
+        };
+
+        result.unwrap_or_else(|err| {
+            panic!(
+                "scaffold should succeed for {:?} at {}: {err}",
+                case.template,
+                out_dir.display()
+            )
+        });
+        out_dir
     }
 
     fn opts_with_ui_assets() -> ScaffoldOptions {
@@ -559,5 +653,88 @@ mod tests {
         .expect("simple todo scaffold should succeed");
 
         assert!(!out_dir.join("assets").exists());
+    }
+
+    #[test]
+    fn default_onboarding_templates_generate_projects_that_compile() {
+        // Generated app manifests rely on repo-relative path dependencies, so this test scaffolds
+        // inside the real workspace under the ignored `local/` tree and then runs cargo check
+        // against the generated manifests.
+        let workspace_root = repo_workspace_root();
+        let suite_root = make_repo_local_dir("fretboard-scaffold-compile");
+        let cases = [
+            ScaffoldCompileCase {
+                template: NewTemplate::Hello,
+                package_name: "hello-app",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: false,
+                    ui_assets: false,
+                },
+            },
+            ScaffoldCompileCase {
+                template: NewTemplate::SimpleTodo,
+                package_name: "simple-todo-app",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: false,
+                    ui_assets: false,
+                },
+            },
+            ScaffoldCompileCase {
+                template: NewTemplate::Todo,
+                package_name: "todo-app",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: false,
+                    ui_assets: false,
+                },
+            },
+        ];
+
+        for case in cases {
+            let out_dir = scaffold_template_case(&workspace_root, &suite_root, case);
+            cargo_check_generated_app(&out_dir);
+        }
+    }
+
+    #[test]
+    fn key_scaffold_variants_generate_projects_that_compile() {
+        let workspace_root = repo_workspace_root();
+        let suite_root = make_repo_local_dir("fretboard-scaffold-variants");
+        let cases = [
+            ScaffoldCompileCase {
+                template: NewTemplate::Hello,
+                package_name: "hello-radix-palette",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Radix,
+                    command_palette: true,
+                    ui_assets: false,
+                },
+            },
+            ScaffoldCompileCase {
+                template: NewTemplate::SimpleTodo,
+                package_name: "simple-todo-assets-palette",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Lucide,
+                    command_palette: true,
+                    ui_assets: true,
+                },
+            },
+            ScaffoldCompileCase {
+                template: NewTemplate::Todo,
+                package_name: "todo-radix-assets-palette",
+                opts: ScaffoldOptions {
+                    icon_pack: IconPack::Radix,
+                    command_palette: true,
+                    ui_assets: true,
+                },
+            },
+        ];
+
+        for case in cases {
+            let out_dir = scaffold_template_case(&workspace_root, &suite_root, case);
+            cargo_check_generated_app(&out_dir);
+        }
     }
 }

@@ -19,8 +19,8 @@ impl View for ImUiHelloView {
         let count_state = cx.state().local_init(|| 0u32);
         let enabled_state = cx.state().local_init(|| false);
 
-        let count = count_state.layout(cx).value_or_default();
-        let enabled = enabled_state.paint(cx).value_or_default();
+        let count = count_state.layout_value(cx);
+        let enabled = enabled_state.paint_value(cx);
 
         fret_imui::imui_vstack(cx.elements(), |ui| {
             use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;

@@ -1,16 +1,19 @@
 use anyhow::Context as _;
-use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret::advanced;
+use fret::advanced::prelude::{LocalState, TrackedStateExt as _};
+use fret::advanced::view::{AppUiRenderRootState, render_root_with_app_ui};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
@@ -23,14 +26,15 @@ use time::Date;
 
 pub struct DemoWindowState {
     ui: UiTree<App>,
-    form_state: Model<FormState>,
+    app_ui_root: AppUiRenderRootState,
+    form_state: LocalState<FormState>,
     registry: FormRegistry,
-    name: Model<String>,
-    email: Model<String>,
-    role: Model<Option<Arc<str>>>,
-    role_open: Model<bool>,
-    start_date: Model<Option<Date>>,
-    status: Model<Arc<str>>,
+    name: LocalState<String>,
+    email: LocalState<String>,
+    role: LocalState<Option<Arc<str>>>,
+    role_open: LocalState<bool>,
+    start_date: LocalState<Option<Date>>,
+    status: LocalState<Arc<str>>,
 }
 
 #[derive(Default)]
@@ -38,41 +42,42 @@ pub struct FormDemoDriver;
 
 impl FormDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
-        let name = app.models_mut().insert(String::new());
-        let email = app.models_mut().insert(String::new());
-        let role = app.models_mut().insert(None);
-        let role_open = app.models_mut().insert(false);
-        let start_date = app.models_mut().insert(None::<Date>);
+        let name = LocalState::from_model(app.models_mut().insert(String::new()));
+        let email = LocalState::from_model(app.models_mut().insert(String::new()));
+        let role = LocalState::from_model(app.models_mut().insert(None));
+        let role_open = LocalState::from_model(app.models_mut().insert(false));
+        let start_date = LocalState::from_model(app.models_mut().insert(None::<Date>));
 
         let mut form_state = FormState::default();
         form_state.validate_mode = FormValidateMode::OnSubmit;
-        let form_state = app.models_mut().insert(form_state);
+        let form_state = LocalState::from_model(app.models_mut().insert(form_state));
 
-        let status = app.models_mut().insert(Arc::from("Idle"));
+        let status = LocalState::from_model(app.models_mut().insert(Arc::from("Idle")));
 
         let mut registry = FormRegistry::new();
-        registry.register_field("name", name.clone(), String::new(), |v| {
+        registry.register_field("name", name.clone_model(), String::new(), |v| {
             required_trimmed(v, "Name is required")
         });
-        registry.register_field("email", email.clone(), String::new(), |v| {
+        registry.register_field("email", email.clone_model(), String::new(), |v| {
             first_error([
                 required_trimmed(v, "Email is required"),
                 (!v.contains('@')).then(|| Arc::from("Email must contain '@'")),
             ])
         });
-        registry.register_field("role", role.clone(), None, |v| {
+        registry.register_field("role", role.clone_model(), None, |v| {
             v.is_none().then(|| Arc::from("Role is required"))
         });
-        registry.register_field("start_date", start_date.clone(), None, |v| {
+        registry.register_field("start_date", start_date.clone_model(), None, |v| {
             v.is_none().then(|| Arc::from("Start date is required"))
         });
-        registry.register_into_form_state(app, &form_state);
+        registry.register_into_form_state(app, form_state.model());
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
         DemoWindowState {
             ui,
+            app_ui_root: AppUiRenderRootState::default(),
             form_state,
             registry,
             name,
@@ -111,10 +116,11 @@ fn handle_model_changes(
     context: WinitWindowContext<'_, DemoWindowState>,
     changed: &[fret_app::ModelId],
 ) {
-    context
-        .state
-        .registry
-        .handle_model_changes(context.app, &context.state.form_state, changed);
+    context.state.registry.handle_model_changes(
+        context.app,
+        context.state.form_state.model(),
+        changed,
+    );
     context
         .state
         .ui
@@ -153,30 +159,32 @@ fn handle_command(
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
         }
         "form_demo.reset" => {
-            let _ = app.models_mut().update(&state.name, |v| v.clear());
-            let _ = app.models_mut().update(&state.email, |v| v.clear());
-            let _ = app.models_mut().update(&state.role, |v| *v = None);
-            let _ = app.models_mut().update(&state.role_open, |v| *v = false);
-            let _ = app.models_mut().update(&state.start_date, |v| *v = None);
-            let _ = app.models_mut().update(&state.form_state, |st| st.reset());
+            let _ = state
+                .name
+                .update_in(app.models_mut(), |v: &mut String| v.clear());
+            let _ = state
+                .email
+                .update_in(app.models_mut(), |v: &mut String| v.clear());
+            let _ = state.role.set_in(app.models_mut(), None);
+            let _ = state.role_open.set_in(app.models_mut(), false);
+            let _ = state.start_date.set_in(app.models_mut(), None);
+            let _ = state
+                .form_state
+                .update_in(app.models_mut(), |st: &mut FormState| st.reset());
             state
                 .registry
-                .register_into_form_state(app, &state.form_state);
-            let _ = app
-                .models_mut()
-                .update(&state.status, |v| *v = Arc::from("Reset"));
+                .register_into_form_state(app, state.form_state.model());
+            let _ = state.status.set_in(app.models_mut(), Arc::from("Reset"));
             app.request_redraw(window);
         }
         "form_demo.submit" => {
-            let ok = state.registry.submit(app, &state.form_state);
+            let ok = state.registry.submit(app, state.form_state.model());
             let msg = if ok {
                 "Submitted (valid)"
             } else {
                 "Submitted (errors)"
             };
-            let _ = app
-                .models_mut()
-                .update(&state.status, |v| *v = Arc::from(msg));
+            let _ = state.status.set_in(app.models_mut(), Arc::from(msg));
             app.request_redraw(window);
         }
         _ => {}
@@ -233,31 +241,20 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
     let start_date = state.start_date.clone();
     let form_state = state.form_state.clone();
     let status = state.status.clone();
-    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-        .render_root("form-demo", move |cx| {
-            cx.observe_model(&form_state, Invalidation::Layout);
-            cx.observe_model(&name, Invalidation::Layout);
-            cx.observe_model(&email, Invalidation::Layout);
-            cx.observe_model(&role, Invalidation::Layout);
-            cx.observe_model(&start_date, Invalidation::Layout);
-            cx.observe_model(&status, Invalidation::Layout);
-
+    let root = render_root_with_app_ui(
+        declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds),
+        "form-demo",
+        &mut state.app_ui_root,
+        move |cx| {
             let theme = cx.theme_snapshot();
             let padding = theme.metric_token("metric.padding.md");
 
-            let (submit_count, valid, dirty) = cx
-                .app
-                .models()
-                .read(&form_state, |st| {
-                    (st.submit_count, st.is_valid(), st.is_dirty())
-                })
+            let (submit_count, valid, dirty) = form_state
+                .layout(cx)
+                .read_ref(|st| (st.submit_count, st.is_valid(), st.is_dirty()))
                 .unwrap_or((0, true, false));
 
-            let status_text = cx
-                .app
-                .models()
-                .read(&status, |v| Arc::clone(v))
-                .unwrap_or_else(|_| Arc::from("Idle"));
+            let status_text = status.layout_value(cx);
 
             let mut root_layout = LayoutStyle::default();
             root_layout.size.width = Length::Fill;
@@ -292,24 +289,24 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
             let form = {
                 shadcn::Form::new(vec![
                     shadcn::FormField::new(
-                        form_state.clone(),
+                        form_state.clone_model(),
                         "name",
-                        vec![shadcn::Input::new(name.clone()).into_element(cx)],
+                        vec![shadcn::Input::new(name.clone_model()).into_element(cx)],
                     )
                     .label("Name")
                     .into_element(cx),
                     shadcn::FormField::new(
-                        form_state.clone(),
+                        form_state.clone_model(),
                         "email",
-                        vec![shadcn::Input::new(email.clone()).into_element(cx)],
+                        vec![shadcn::Input::new(email.clone_model()).into_element(cx)],
                     )
                     .label("Email")
                     .into_element(cx),
                     shadcn::FormField::new(
-                        form_state.clone(),
+                        form_state.clone_model(),
                         "role",
                         vec![
-                            shadcn::Select::new(role.clone(), role_open.clone())
+                            shadcn::Select::new(&role, &role_open)
                                 .a11y_label("Role")
                                 .value(shadcn::SelectValue::new().placeholder("Pick a role"))
                                 .items([
@@ -323,12 +320,12 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                     .label("Role")
                     .into_element(cx),
                     shadcn::FormField::new(
-                        form_state.clone(),
+                        form_state.clone_model(),
                         "start_date",
                         vec![
                             shadcn::DatePicker::new_controllable(
                                 cx,
-                                Some(start_date.clone()),
+                                Some(start_date.clone_model()),
                                 None,
                                 None,
                                 false,
@@ -384,7 +381,9 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                     )]
                 },
             )]
-        });
+            .into()
+        },
+    );
 
     state.ui.set_root(root);
     OverlayController::render(&mut state.ui, app, services, window, bounds);
@@ -445,7 +444,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::advanced::run_native_with_fn_driver_with_hooks(
+    advanced::run_native_with_fn_driver_with_hooks(
         config,
         app,
         FormDemoDriver::default(),

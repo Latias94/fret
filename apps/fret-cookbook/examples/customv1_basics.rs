@@ -144,11 +144,14 @@ impl View for CustomV1BasicsView {
         let strength_state = cx.state().local_init(|| 0.35f32);
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleEnabled>(&enabled_state);
+            .local(&enabled_state)
+            .toggle_bool::<act::ToggleEnabled>();
         cx.actions()
-            .local_set::<act::SetStrengthLow, f32>(&strength_state, 0.20f32);
+            .local(&strength_state)
+            .set::<act::SetStrengthLow>(0.20f32);
         cx.actions()
-            .local_set::<act::SetStrengthHigh, f32>(&strength_state, 0.75f32);
+            .local(&strength_state)
+            .set::<act::SetStrengthHigh>(0.75f32);
 
         let caps_supported = cx
             .app

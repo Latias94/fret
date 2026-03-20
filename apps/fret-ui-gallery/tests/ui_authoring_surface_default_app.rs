@@ -659,8 +659,8 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/context_menu.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo)",
-            "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Submenu\", submenu)",
             "DocSection::build(cx, \"Shortcuts\", shortcuts)",
             "DocSection::build(cx, \"Groups\", groups)",
@@ -670,11 +670,12 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Destructive\", destructive)",
             "DocSection::build(cx, \"Sides\", sides)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
-            "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Submenu\", submenu)",
             "DocSection::new(\"Shortcuts\", shortcuts)",
             "DocSection::new(\"Groups\", groups)",
@@ -684,7 +685,293 @@ fn context_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Destructive\", destructive)",
             "DocSection::new(\"Sides\", sides)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
         ],
+    );
+}
+
+#[test]
+fn context_menu_default_snippets_prefer_the_typed_compose_root_lane() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/usage.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::ContextMenu::uncontrolled(cx)", ".compose()"],
+            &[],
+        );
+    }
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "No extra generic heterogeneous children API is currently warranted: the explicit `ContextMenuEntry` tree is the Fret-equivalent structured surface for upstream nested menu children, and a generic children lane would add hidden scope/collection contracts without unlocking new behavior."
+        ),
+        "src/ui/pages/context_menu.rs should record why ContextMenu stays on the explicit entry-tree surface instead of widening to a generic children API"
+    );
+}
+
+#[test]
+fn context_menu_docs_examples_keep_dashed_context_region_triggers() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[
+                "shadcn::AspectRatio::with_child(content)",
+                "DashPatternV1::new(Px(4.0), Px(4.0), Px(0.0))",
+            ],
+        );
+        let path = manifest_path(relative_path);
+        assert!(
+            !normalized.contains("shadcn::Button::new("),
+            "{} should keep the docs-like dashed context region instead of regressing to an outline button trigger",
+            path.display()
+        );
+    }
+
+    assert_normalized_markers_present(
+        "src/ui/snippets/context_menu/rtl.rs",
+        &[".side(shadcn::DropdownMenuSide::InlineEnd)"],
+    );
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "The RTL example now exercises logical-side placement directly: `ContextMenuContent::side(shadcn::DropdownMenuSide::InlineEnd)` matches the upstream Base UI docs while submenu chevrons still follow direction-provider parity."
+        ),
+        "src/ui/pages/context_menu.rs should record that the RTL example now uses logical `inline-end` placement directly"
+    );
+}
+
+#[test]
+fn context_menu_docs_examples_keep_pointer_aware_trigger_copy() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        assert_normalized_markers_present(
+            relative_path,
+            &[
+                "primary_pointer_is_coarse(cx, Invalidation::Layout, false)",
+                "Long press",
+            ],
+        );
+    }
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "Docs-backed trigger copy now adapts to the committed primary pointer capability, so touch-first windows read `Long press here` / `Long press (...)` without needing any new context-menu mechanism work."
+        ),
+        "src/ui/pages/context_menu.rs should record that docs-backed trigger copy now adapts to fine/coarse pointer capability"
+    );
+}
+
+#[test]
+fn context_menu_usage_and_basic_examples_stay_docs_aligned() {
+    let usage = read("src/ui/snippets/context_menu/usage.rs");
+    assert!(
+        usage.contains("shadcn::ContextMenuTrigger::build("),
+        "src/ui/snippets/context_menu/usage.rs should keep teaching the named `ContextMenuTrigger` surface from the upstream docs usage block"
+    );
+
+    let basic = read("src/ui/snippets/context_menu/basic.rs");
+    assert!(
+        basic.contains("shadcn::ContextMenuItem::new(\"Back\")")
+            && basic.contains("shadcn::ContextMenuItem::new(\"Forward\")")
+            && basic.contains(".disabled(true)")
+            && basic.contains("shadcn::ContextMenuItem::new(\"Reload\")"),
+        "src/ui/snippets/context_menu/basic.rs should stay aligned with the upstream Basic example (`Back`, disabled `Forward`, `Reload`)"
+    );
+}
+
+#[test]
+fn context_menu_rtl_example_keeps_the_richer_upstream_preview_shape() {
+    let rtl = read("src/ui/snippets/context_menu/rtl.rs");
+    assert!(
+        rtl.contains("ContextMenuContent::new()")
+            && rtl.contains(".side(shadcn::DropdownMenuSide::InlineEnd)")
+            && rtl.contains("ContextMenuItem::new(\"Navigation\")")
+            && rtl.contains("ContextMenuItem::new(\"More Tools\")")
+            && rtl.contains("ContextMenuCheckboxItem::from_checked(")
+            && rtl.contains("ContextMenuRadioGroup::from_value("),
+        "src/ui/snippets/context_menu/rtl.rs should keep the richer upstream RTL preview shape while preserving explicit `inline-end` placement"
+    );
+
+    let page = read("src/ui/pages/context_menu.rs");
+    assert!(
+        page.contains(
+            "The RTL preview now stays closer to the upstream Base UI example shape too: dual submenus, checkbox toggles, and a radio group all render under `LayoutDirection::Rtl` while keeping the explicit `inline-end` teaching point."
+        ),
+        "src/ui/pages/context_menu.rs should record that the RTL section now keeps the richer upstream preview structure"
+    );
+}
+
+#[test]
+fn context_menu_checkboxes_and_radio_examples_stay_docs_aligned() {
+    let checkboxes = read("src/ui/snippets/context_menu/checkboxes.rs");
+    assert!(
+        checkboxes.contains("ContextMenuGroup::new(vec![")
+            && checkboxes.contains("\"Show Bookmarks Bar\"")
+            && checkboxes.contains("\"Show Full URLs\"")
+            && checkboxes.contains("\"Show Developer Tools\""),
+        "src/ui/snippets/context_menu/checkboxes.rs should stay aligned with the upstream checkbox labels and grouped structure"
+    );
+
+    let radio = read("src/ui/snippets/context_menu/radio.rs");
+    assert!(
+        radio.contains("ContextMenuLabel::new(\"People\")")
+            && radio.contains("ContextMenuLabel::new(\"Theme\")")
+            && radio.contains("\"Pedro Duarte\"")
+            && radio.contains("\"Colm Tuite\"")
+            && radio.contains("\"Light\"")
+            && radio.contains("\"Dark\"")
+            && radio.contains("\"System\""),
+        "src/ui/snippets/context_menu/radio.rs should keep both upstream radio groups (`People` and `Theme`)"
+    );
+}
+
+#[test]
+fn context_menu_groups_and_icons_examples_stay_docs_aligned() {
+    let groups = read("src/ui/snippets/context_menu/groups.rs");
+    assert!(
+        groups.contains("ContextMenuLabel::new(\"File\")")
+            && groups.contains("\"New File\"")
+            && groups.contains("\"Open File\"")
+            && groups.contains("\"Save\"")
+            && groups.contains("ContextMenuLabel::new(\"Edit\")")
+            && groups.contains("\"Undo\"")
+            && groups.contains("\"Redo\"")
+            && groups.contains("\"Cut\"")
+            && groups.contains("\"Copy\"")
+            && groups.contains("\"Paste\"")
+            && groups.contains("\"Delete\"")
+            && groups.contains("ContextMenuShortcut::new(\"⌘N\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘O\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘S\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘Z\")")
+            && groups.contains("ContextMenuShortcut::new(\"⇧⌘Z\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘X\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘C\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌘V\")")
+            && groups.contains("ContextMenuShortcut::new(\"⌫\")"),
+        "src/ui/snippets/context_menu/groups.rs should keep the upstream groups example shape (`File`, `Edit`, clipboard actions, destructive `Delete`) with matching shortcuts"
+    );
+
+    let icons = read("src/ui/snippets/context_menu/icons.rs");
+    assert!(
+        icons.contains("\"Copy\"")
+            && icons.contains("\"Cut\"")
+            && icons.contains("\"Paste\"")
+            && icons.contains("\"Delete\"")
+            && icons.contains("IconId::new_static(\"lucide.copy\")")
+            && icons.contains("IconId::new_static(\"lucide.scissors\")")
+            && icons.contains("IconId::new_static(\"lucide.clipboard-paste\")")
+            && icons.contains("IconId::new_static(\"lucide.trash\")")
+            && icons.contains("ContextMenuGroup::new(vec!["),
+        "src/ui/snippets/context_menu/icons.rs should keep the upstream icons example shape (`Copy`, `Cut`, `Paste`, destructive `Delete`) with the matching lucide icons"
+    );
+}
+
+#[test]
+fn context_menu_submenu_shortcuts_destructive_and_demo_examples_stay_docs_aligned() {
+    let submenu = read("src/ui/snippets/context_menu/submenu.rs");
+    assert!(
+        submenu.contains("ContextMenuShortcut::new(\"⌘C\")")
+            && submenu.contains("ContextMenuShortcut::new(\"⌘X\")")
+            && submenu.contains("\"Save Page...\"")
+            && submenu.contains("\"Create Shortcut...\"")
+            && submenu.contains("\"Name Window...\"")
+            && submenu.contains("\"Developer Tools\"")
+            && submenu.contains("\"Delete\"")
+            && submenu.contains("ContextMenuGroup::new(vec!["),
+        "src/ui/snippets/context_menu/submenu.rs should stay aligned with the upstream submenu example (copy/cut shortcuts plus the grouped More Tools submenu)"
+    );
+
+    let shortcuts = read("src/ui/snippets/context_menu/shortcuts.rs");
+    assert!(
+        shortcuts.contains("\"Back\"")
+            && shortcuts.contains("\"Forward\"")
+            && shortcuts.contains(".disabled(true)")
+            && shortcuts.contains("\"Reload\"")
+            && shortcuts.contains("\"Save\"")
+            && shortcuts.contains("\"Save As...\"")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘[\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘]\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘R\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⌘S\")")
+            && shortcuts.contains("ContextMenuShortcut::new(\"⇧⌘S\")"),
+        "src/ui/snippets/context_menu/shortcuts.rs should keep the upstream shortcuts example (`Back`, disabled `Forward`, `Reload`, `Save`, `Save As...`) with matching accelerators"
+    );
+
+    let destructive = read("src/ui/snippets/context_menu/destructive.rs");
+    assert!(
+        destructive.contains("\"Edit\"")
+            && destructive.contains("\"Share\"")
+            && destructive.contains("\"Delete\"")
+            && destructive.contains("IconId::new_static(\"lucide.pencil\")")
+            && destructive.contains("IconId::new_static(\"lucide.share\")")
+            && destructive.contains("IconId::new_static(\"lucide.trash\")")
+            && destructive.contains("ContextMenuItemVariant::Destructive"),
+        "src/ui/snippets/context_menu/destructive.rs should stay aligned with the upstream destructive example (`Edit`, `Share`, destructive `Delete`) and matching lucide icons"
+    );
+
+    let demo = read("src/ui/snippets/context_menu/demo.rs");
+    assert!(
+        demo.contains(".min_width(Px(192.0))")
+            && demo.contains(".submenu_min_width(Px(176.0))")
+            && demo.contains("ContextMenuSub::new(")
+            && demo.contains("ContextMenuShortcut::new(\"⌘[\")")
+            && demo.contains("\"Show Bookmarks\"")
+            && demo.contains("\"Show Full URLs\"")
+            && demo.contains("\"Pedro Duarte\"")
+            && demo.contains("\"Colm Tuite\""),
+        "src/ui/snippets/context_menu/demo.rs should keep the upstream combined docs example shape, including the `w-48` content width and `w-44` submenu width"
+    );
+
+    let sides = read("src/ui/snippets/context_menu/sides.rs");
+    assert!(
+        sides.contains("\"Right click (top)\"")
+            && sides.contains("\"Right click (right)\"")
+            && sides.contains("\"Right click (bottom)\"")
+            && sides.contains("\"Right click (left)\"")
+            && sides.contains("DropdownMenuSide::Top")
+            && sides.contains("DropdownMenuSide::Right")
+            && sides.contains("DropdownMenuSide::Bottom")
+            && sides.contains("DropdownMenuSide::Left"),
+        "src/ui/snippets/context_menu/sides.rs should keep the upstream sides example labels and explicit side assignments for top/right/bottom/left"
     );
 }
 
@@ -752,6 +1039,23 @@ fn menu_snippets_keep_build_parts_only_for_the_intentional_parts_example() {
             path.display()
         );
     }
+}
+
+#[test]
+fn dropdown_menu_page_records_why_it_stays_on_the_explicit_entry_tree_surface() {
+    let page = read("src/ui/pages/dropdown_menu.rs");
+    assert!(
+        page.contains(
+            "No extra generic heterogeneous children API is currently warranted: the explicit `DropdownMenuEntry` tree is the Fret-equivalent structured surface for upstream nested menu children, and a generic children lane would add hidden scope/collection contracts without unlocking new behavior."
+        ),
+        "src/ui/pages/dropdown_menu.rs should record why DropdownMenu stays on the explicit entry-tree surface instead of widening to a generic children API"
+    );
+    assert!(
+        page.contains(
+            "The lead `Demo` preview now keeps the official `dropdown-menu-demo.tsx` row order more closely, including the `Keyboard shortcuts` action and the ungrouped `GitHub` / `Support` / `API` rows after the second separator."
+        ),
+        "src/ui/pages/dropdown_menu.rs should record the docs-surface alignment choices for the lead demo preview"
+    );
 }
 
 #[test]
@@ -1016,15 +1320,15 @@ fn navigation_menu_and_pagination_pages_keep_their_dual_lane_story() {
     let pagination_page = read("src/ui/pages/pagination.rs");
     assert!(
         pagination_page.contains(
-            "Prefer the typed wrapper family for first-party authoring: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` keep the upstream parts model while avoiding pre-landed child assembly at the call site."
+            "`Usage` now teaches the upstream-shaped parts lane directly: `Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` already support explicit composable children without needing an extra generic `compose()` API."
         ),
-        "src/ui/pages/pagination.rs should keep the compact wrapper lane explicit"
+        "src/ui/pages/pagination.rs should keep the upstream-shaped parts lane explicit"
     );
     assert!(
         pagination_page.contains(
-            "`Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` remain the upstream-shaped lane on the same family rather than an advanced-only escape hatch."
+            "`Compact Builder` keeps the Fret shorthand lane explicit for common app call sites: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` reduce child landing noise without replacing the upstream-shaped parts surface."
         ),
-        "src/ui/pages/pagination.rs should keep the upstream-shaped parts lane explicit"
+        "src/ui/pages/pagination.rs should keep the compact wrapper lane explicit"
     );
 }
 
@@ -1066,6 +1370,70 @@ fn dropdown_menu_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Parts\", parts)",
         ],
+    );
+}
+
+#[test]
+fn dropdown_menu_remaining_examples_stay_base_docs_aligned() {
+    let checkboxes = read("src/ui/snippets/dropdown_menu/checkboxes.rs");
+    assert!(
+        checkboxes.contains(".min_width(Px(160.0))"),
+        "src/ui/snippets/dropdown_menu/checkboxes.rs should keep the base docs `w-40` content width"
+    );
+    assert!(
+        !checkboxes.contains(".min_width(Px(224.0))"),
+        "src/ui/snippets/dropdown_menu/checkboxes.rs should not drift back to the old `w-56` width"
+    );
+
+    let checkboxes_icons = read("src/ui/snippets/dropdown_menu/checkboxes_icons.rs");
+    assert!(
+        checkboxes_icons.contains("Button::new(\"Notifications\")")
+            && checkboxes_icons.contains("DropdownMenuLabel::new(\"Notification Preferences\")")
+            && checkboxes_icons.contains("\"Email notifications\"")
+            && checkboxes_icons.contains("\"SMS notifications\"")
+            && checkboxes_icons.contains("\"Push notifications\"")
+            && checkboxes_icons.contains("IconId::new_static(\"lucide.mail\")")
+            && checkboxes_icons.contains("IconId::new_static(\"lucide.message-square\")")
+            && checkboxes_icons.contains("IconId::new_static(\"lucide.bell\")")
+            && checkboxes_icons.contains(".min_width(Px(192.0))"),
+        "src/ui/snippets/dropdown_menu/checkboxes_icons.rs should stay aligned with the base docs notifications example, including labels, icons, and `w-48` width"
+    );
+
+    let radio_group = read("src/ui/snippets/dropdown_menu/radio_group.rs");
+    assert!(
+        radio_group.contains(".min_width(Px(128.0))"),
+        "src/ui/snippets/dropdown_menu/radio_group.rs should keep the base docs `w-32` content width"
+    );
+    assert!(
+        !radio_group.contains(".min_width(Px(224.0))"),
+        "src/ui/snippets/dropdown_menu/radio_group.rs should not drift back to the old `w-56` width"
+    );
+
+    let avatar = read("src/ui/snippets/dropdown_menu/avatar.rs");
+    assert!(
+        avatar.contains("demo_image(cx)")
+            && avatar.contains("AvatarImage::maybe(avatar_image)")
+            && avatar.contains(".when_image_missing(avatar_image)")
+            && avatar.contains(".delay_ms(120)"),
+        "src/ui/snippets/dropdown_menu/avatar.rs should keep the shared demo image + fallback pipeline from the upstream avatar example"
+    );
+    assert!(
+        !avatar.contains(".min_width(Px("),
+        "src/ui/snippets/dropdown_menu/avatar.rs should not reintroduce an explicit content width absent from the base docs example"
+    );
+
+    let rtl = read("src/ui/snippets/dropdown_menu/rtl.rs");
+    assert!(
+        rtl.contains("with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {")
+            && rtl.contains(".align(shadcn::DropdownMenuAlign::End)")
+            && rtl.contains(".min_width(Px(144.0))")
+            && rtl.contains("DropdownMenuSubTrigger::new(\"الحساب\")")
+            && rtl.contains("DropdownMenuSubTrigger::new(\"دعوة المستخدمين\")")
+            && rtl.contains("DropdownMenuSubTrigger::new(\"المزيد\")")
+            && rtl.contains("DropdownMenuCheckboxItem::from_checked(")
+            && rtl.contains("DropdownMenuRadioGroup::from_value(")
+            && rtl.contains("DropdownMenuItem::new(\"تسجيل الخروج\")"),
+        "src/ui/snippets/dropdown_menu/rtl.rs should keep the richer base docs RTL preview shape: submenu stack, checkbox section, radio group, end alignment, and destructive logout"
     );
 }
 
@@ -1300,6 +1668,7 @@ fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input_group/text.rs",
             "src/ui/snippets/input_group/textarea.rs",
             "src/ui/snippets/input_group/tooltip.rs",
+            "src/ui/snippets/input_group/usage.rs",
         ],
         &[
             "use fret::{UiChild, UiCx};",
@@ -1390,6 +1759,14 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
         "src/ui/pages/input_group.rs should keep the compact shorthand as the first-party usage lane"
     );
     assert!(
+        page.contains(".code_rust_from_file_region(snippets::usage::SOURCE, \"example\")"),
+        "src/ui/pages/input_group.rs should show the compact shorthand Usage section from a real snippet file"
+    );
+    assert!(
+        !page.contains(".code_rust("),
+        "src/ui/pages/input_group.rs should avoid page-local hand-written Rust strings for Usage"
+    );
+    assert!(
         page.contains(
             "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane."
         ),
@@ -1401,6 +1778,12 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
         ),
         "src/ui/pages/input_group.rs should keep nested dropdown triggers on the default DropdownMenu compose lane when no lower-level adapter seam is needed"
     );
+    assert!(
+        page.contains(
+            "`Custom Input` now uses the narrow `custom_input(...)` / `custom_textarea(...)` seam for caller-owned controls; a generic root `children(...)` API is still intentionally absent."
+        ),
+        "src/ui/pages/input_group.rs should document the narrow custom-control seam instead of widening InputGroup to generic root children"
+    );
 }
 
 #[test]
@@ -1410,6 +1793,7 @@ fn input_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input/badge.rs",
             "src/ui/snippets/input/basic.rs",
             "src/ui/snippets/input/button_group.rs",
+            "src/ui/snippets/input/demo.rs",
             "src/ui/snippets/input/disabled.rs",
             "src/ui/snippets/input/field.rs",
             "src/ui/snippets/input/field_group.rs",
@@ -1441,6 +1825,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/input.rs",
         &[
+            "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Field\", field)",
@@ -1459,6 +1844,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Label Association\", label)",
         ],
         &[
+            "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Field\", field)",
@@ -1483,6 +1869,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/field/anatomy.rs",
             "src/ui/snippets/field/checkbox.rs",
             "src/ui/snippets/field/choice_card.rs",
             "src/ui/snippets/field/field_group.rs",
@@ -1495,6 +1882,7 @@ fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/field/slider.rs",
             "src/ui/snippets/field/switch.rs",
             "src/ui/snippets/field/textarea.rs",
+            "src/ui/snippets/field/usage.rs",
             "src/ui/snippets/field/validation_and_errors.rs",
         ],
         &[
@@ -1612,6 +2000,7 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
             "src/ui/snippets/input_otp/alphanumeric.rs",
+            "src/ui/snippets/input_otp/compact_builder.rs",
             "src/ui/snippets/input_otp/controlled.rs",
             "src/ui/snippets/input_otp/demo.rs",
             "src/ui/snippets/input_otp/disabled.rs",
@@ -1632,10 +2021,7 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/input_otp",
-        &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
-            ".into_element_parts(",
-        ],
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 }
 
@@ -1645,6 +2031,7 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/input_otp.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"About\", about)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Pattern\", pattern)",
             "DocSection::build(cx, \"Separator\", separator)",
@@ -1655,9 +2042,12 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Alphanumeric\", alphanumeric)",
             "DocSection::build(cx, \"Form\", form)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Compact Builder\", compact_builder)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"About\", about)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Pattern\", pattern)",
             "DocSection::new(\"Separator\", separator)",
@@ -1668,14 +2058,37 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Alphanumeric\", alphanumeric)",
             "DocSection::new(\"Form\", form)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Compact Builder\", compact_builder)",
         ],
     );
 }
 
 #[test]
-fn selected_input_otp_snippets_prefer_compact_root_builder() {
+fn input_otp_gallery_keeps_docs_bridge_and_compact_builder_lanes_distinct() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/input_otp/usage.rs",
+        &[
+            "shadcn::InputOTP::new(",
+            ".into_element_parts(",
+            "shadcn::InputOTPGroup::new([",
+            "shadcn::InputOTPSeparator::default().into()",
+        ],
+        &[],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/input_otp/compact_builder.rs",
+        &[
+            "shadcn::InputOTP::new(",
+            ".group_size(Some(3))",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
+    );
+
     for relative_path in [
         "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/compact_builder.rs",
         "src/ui/snippets/input_otp/controlled.rs",
         "src/ui/snippets/input_otp/demo.rs",
         "src/ui/snippets/input_otp/disabled.rs",
@@ -1685,7 +2098,6 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
         "src/ui/snippets/input_otp/pattern.rs",
         "src/ui/snippets/input_otp/rtl.rs",
         "src/ui/snippets/input_otp/separator.rs",
-        "src/ui/snippets/input_otp/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -1696,10 +2108,10 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
 
     for relative_path in [
         "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/compact_builder.rs",
         "src/ui/snippets/input_otp/demo.rs",
         "src/ui/snippets/input_otp/disabled.rs",
         "src/ui/snippets/input_otp/form.rs",
-        "src/ui/snippets/input_otp/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -1722,9 +2134,21 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
     let page = read("src/ui/pages/input_otp.rs");
     assert!(
         page.contains(
-            "First-party examples now prefer the compact `InputOTP::new(model)` root builder with `length(...)` and `group_size(...)`; `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` remain the upstream-shaped bridge when callers explicitly want that shape."
+            "`Usage` now mirrors the upstream parts-shaped docs lane, while `Compact Builder` keeps `InputOTP::new(model)` plus `group_size(...)` visible as the Fret shorthand after the docs path."
         ),
-        "src/ui/pages/input_otp.rs should keep the compact root story explicit"
+        "src/ui/pages/input_otp.rs should explain the split between the docs bridge and the compact shorthand"
+    );
+    assert!(
+        page.contains(
+            "`InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` already cover the docs-shaped composition bridge, so a separate generic children API is not needed here."
+        ),
+        "src/ui/pages/input_otp.rs should explain why the existing bridge is sufficient"
+    );
+    assert!(
+        page.contains(
+            "Preview mirrors the shadcn Input OTP docs path first: Demo, About, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL, API Reference. `Compact Builder` stays as the explicit Fret shorthand follow-up."
+        ),
+        "src/ui/pages/input_otp.rs should mirror the shadcn docs path before the compact follow-up"
     );
 }
 
@@ -2039,13 +2463,14 @@ fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
     let drawer_page = read("src/ui/pages/drawer.rs");
     assert!(
         drawer_page.contains(
-            "`Usage` is the default copyable `compose()` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
+            "`Usage` is the default copyable `children([...])` path, while `Snap Points` stays a Vaul/Fret policy follow-up rather than a separate root-authoring lane."
         ),
-        "src/ui/pages/drawer.rs should distinguish the default compose() lane from the Vaul/Fret follow-up lane"
+        "src/ui/pages/drawer.rs should distinguish the default children() lane from the Vaul/Fret follow-up lane"
     );
     assert!(
-        drawer_page.contains("Default copyable `compose()` path for common Drawer call sites."),
-        "src/ui/pages/drawer.rs should label Usage as the default copyable compose() path"
+        drawer_page
+            .contains("Default copyable `children([...])` path for common Drawer call sites."),
+        "src/ui/pages/drawer.rs should label Usage as the default copyable children() path"
     );
     assert!(
         drawer_page.contains(
@@ -2056,22 +2481,65 @@ fn drawer_page_marks_usage_as_default_and_snap_points_as_follow_up() {
 }
 
 #[test]
-fn drawer_snap_points_snippet_prefers_compose_root_path() {
+fn drawer_snippets_prefer_children_root_path() {
+    for relative_path in [
+        "src/ui/snippets/drawer/demo.rs",
+        "src/ui/snippets/drawer/usage.rs",
+        "src/ui/snippets/drawer/scrollable_content.rs",
+        "src/ui/snippets/drawer/sides.rs",
+        "src/ui/snippets/drawer/responsive_dialog.rs",
+        "src/ui/snippets/drawer/rtl.rs",
+        "src/ui/snippets/drawer/snap_points.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[".children([", "shadcn::DrawerPart::trigger("],
+        );
+        assert!(
+            normalized.contains("shadcn::DrawerPart::content_with("),
+            "{} should keep Drawer content on the default children() lane",
+            manifest_path(relative_path).display()
+        );
+    }
+}
+
+#[test]
+fn drawer_snap_points_snippet_prefers_children_root_path() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/snap_points.rs",
         &[
             "shadcn::Drawer::new_controllable(cx, None, false)",
             ".snap_points(vec![",
-            ".compose()",
-            ".trigger(shadcn::DrawerTrigger::build(",
+            ".children([",
+            "shadcn::DrawerPart::trigger(shadcn::DrawerTrigger::build(",
+            "shadcn::DrawerPart::content_with(",
             "shadcn::DrawerClose::from_scope().build(",
         ],
         &[
             "let open = cx.local_model(|| false);",
             "shadcn::Drawer::new(open)",
             ".toggle_model(",
+            ".compose()",
         ],
     );
+}
+
+#[test]
+fn curated_drawer_snippets_prefer_drawer_close_scope_for_footer_close_actions() {
+    for relative_path in [
+        "src/ui/snippets/drawer/demo.rs",
+        "src/ui/snippets/drawer/usage.rs",
+        "src/ui/snippets/drawer/scrollable_content.rs",
+        "src/ui/snippets/drawer/sides.rs",
+        "src/ui/snippets/drawer/responsive_dialog.rs",
+        "src/ui/snippets/drawer/rtl.rs",
+        "src/ui/snippets/drawer/snap_points.rs",
+    ] {
+        assert_normalized_markers_present(
+            relative_path,
+            &["shadcn::DrawerClose::from_scope().build("],
+        );
+    }
 }
 
 #[test]
@@ -2450,9 +2918,12 @@ fn skeleton_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn pagination_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/pagination/compact_builder.rs",
+            "src/ui/snippets/pagination/custom_text.rs",
             "src/ui/snippets/pagination/demo.rs",
             "src/ui/snippets/pagination/extras.rs",
             "src/ui/snippets/pagination/icons_only.rs",
+            "src/ui/snippets/pagination/routing.rs",
             "src/ui/snippets/pagination/rtl.rs",
             "src/ui/snippets/pagination/simple.rs",
             "src/ui/snippets/pagination/usage.rs",
@@ -2479,7 +2950,10 @@ fn pagination_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Simple\", simple)",
             "DocSection::build(cx, \"Icons Only\", icons_only)",
+            "DocSection::build(cx, \"Routing\", routing)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Custom Text\", custom_text)",
+            "DocSection::build(cx, \"Compact Builder\", compact_builder)",
             "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
@@ -2487,7 +2961,10 @@ fn pagination_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Simple\", simple)",
             "DocSection::new(\"Icons Only\", icons_only)",
+            "DocSection::new(\"Routing\", routing)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Custom Text\", custom_text)",
+            "DocSection::new(\"Compact Builder\", compact_builder)",
         ],
     );
 }
@@ -4124,18 +4601,18 @@ fn data_table_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/data_table.rs",
         &[
-            "DocSection::build(cx, \"Default Recipe\", default_demo)",
-            "DocSection::build(cx, \"Advanced Reference\", basic_demo)",
-            "DocSection::build(cx, \"Advanced Guide\", guide_demo)",
-            "DocSection::build(cx, \"Advanced RTL\", rtl_demo)",
-            "DocSection::build(cx, \"Reference Outline\", code_preview)",
+            "DocSection::build(cx, \"Default Recipe (Fret)\", default_demo)",
+            "DocSection::build(cx, \"Basic Table\", basic_demo)",
+            "DocSection::build(cx, \"Guide Demo\", guide_demo)",
+            "DocSection::build(cx, \"RTL\", rtl_demo)",
+            "DocSection::build(cx, \"Guide Outline\", code_preview)",
         ],
         &[
-            "DocSection::new(\"Default Recipe\", default_demo)",
-            "DocSection::new(\"Advanced Reference\", basic_demo)",
-            "DocSection::new(\"Advanced Guide\", guide_demo)",
-            "DocSection::new(\"Advanced RTL\", rtl_demo)",
-            "DocSection::new(\"Reference Outline\", code_preview)",
+            "DocSection::new(\"Default Recipe (Fret)\", default_demo)",
+            "DocSection::new(\"Basic Table\", basic_demo)",
+            "DocSection::new(\"Guide Demo\", guide_demo)",
+            "DocSection::new(\"RTL\", rtl_demo)",
+            "DocSection::new(\"Guide Outline\", code_preview)",
         ],
     );
 }
@@ -5703,10 +6180,10 @@ fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement(
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
-                "fn trigger_surface<H: UiHost>(label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+                "fn trigger_surface<H: UiHost>(fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
             ],
             &[
-                "fn trigger_surface<H: UiHost>(label: &'static str, test_id: &'static str,) -> AnyElement",
+                "fn trigger_surface<H: UiHost>(fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> AnyElement",
             ],
         );
     }
@@ -5724,12 +6201,12 @@ fn selected_context_menu_snippet_helpers_prefer_into_ui_element_over_anyelement(
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/context_menu/sides.rs",
         &[
-            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
-            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, test_id: &'static str,) -> AnyElement",
-            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> AnyElement",
+            "fn trigger_surface<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, test_id: &'static str,) -> AnyElement",
+            "fn side_menu<H: UiHost>(cx: &mut ElementContext<'_, H>, fine_label: &'static str, coarse_label: &'static str, side: shadcn::DropdownMenuSide, trigger_test_id: &'static str, content_test_id: &'static str,) -> AnyElement",
         ],
     );
 }
@@ -5785,6 +6262,9 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
 #[test]
 fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
+        "src/ui/snippets/pagination/routing.rs",
         "src/ui/snippets/pagination/simple.rs",
         "src/ui/snippets/pagination/usage.rs",
     ] {
@@ -5799,14 +6279,15 @@ fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() 
 }
 
 #[test]
-fn selected_pagination_snippets_prefer_pagination_wrapper_family() {
+fn selected_pagination_snippets_keep_wrapper_and_parts_lanes_explicit() {
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
         "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/icons_only.rs",
         "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
-        "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -5824,16 +6305,38 @@ fn selected_pagination_snippets_prefer_pagination_wrapper_family() {
     }
 
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
         "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
-        "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &["shadcn::pagination_link(|cx|"],
             &["shadcn::PaginationLink::new("],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/pagination/routing.rs",
+        "src/ui/snippets/pagination/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::Pagination::new(",
+                "shadcn::PaginationContent::new(",
+                "shadcn::PaginationItem::new(",
+                "shadcn::PaginationLink::new(",
+            ],
+            &[
+                "shadcn::pagination(|cx|",
+                "shadcn::pagination_content(|cx|",
+                "shadcn::pagination_item(",
+                "shadcn::pagination_link(|cx|",
+            ],
         );
     }
 }
@@ -6558,10 +7061,27 @@ fn selected_radio_group_snippets_prefer_builder_preserving_helpers() {
 
 #[test]
 fn field_page_usage_prefers_field_wrapper_family() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/pages/field.rs",
-        &["shadcn::field_set(|cx| {", "shadcn::field_group(|cx| {"],
-        &["shadcn::FieldSet::new(", "shadcn::FieldGroup::new("],
+    let page = read("src/ui/pages/field.rs");
+    let usage = read("src/ui/snippets/field/usage.rs");
+    assert!(
+        usage.contains("shadcn::field_set(|cx| {"),
+        "src/ui/snippets/field/usage.rs should keep the docs-aligned wrapper-family usage lane"
+    );
+    assert!(
+        usage.contains("shadcn::field_group(|cx| {"),
+        "src/ui/snippets/field/usage.rs should keep the grouped docs-aligned wrapper-family usage lane"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::usage::SOURCE, \"example\")"),
+        "src/ui/pages/field.rs should show the Usage section from a real snippet file"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::anatomy::SOURCE, \"example\")"),
+        "src/ui/pages/field.rs should show the Anatomy section from a real snippet file"
+    );
+    assert!(
+        !page.contains(".code_rust("),
+        "src/ui/pages/field.rs should avoid page-local hand-written Rust strings for docs-facing sections"
     );
 }
 
@@ -7369,10 +7889,10 @@ fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/sides.rs",
         &[
-            "fn side_button<H: UiHost>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> impl IntoUiElement<H> + use<H>",
+            "fn side_button<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn side_button<H: UiHost>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> AnyElement",
+            "fn side_button<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, title: &'static str, direction: shadcn::DrawerDirection, open: Model<bool>, test_id_prefix: &'static str,) -> AnyElement",
         ],
     );
 

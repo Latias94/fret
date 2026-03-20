@@ -11,17 +11,17 @@ pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Label::new(text)` is the Fret equivalent of the upstream `<Label />`; `for_control(...)` covers the documented association path.",
+        "`Label::new(text)` remains the copyable docs-path surface; the lead demo now mirrors the official checkbox preview, while `for_control(...)` covers the documented association path.",
         "`Label` remains a lightweight text primitive; form structure, helper text, and error presentation belong to `Field`, `FieldLabel`, and related field parts.",
         "`Label::for_control(...)` plus a control-side `control_id(...)` is the Fret bridge for the upstream `htmlFor` / `id` pairing and keeps click-to-focus behavior out of page code.",
-        "No extra generic children / `asChild` / `compose()` surface is needed here: upstream composition already happens around the label rather than through the label primitive itself.",
-        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+        "We intentionally do not widen `Label` into a generic compound-children API here: the current shadcn/base/radix docs path only needs text children plus association, while richer clickable label subtrees already have a recipe-owned home in `FieldLabel::wrap(...)`.",
+        "Mechanism fixes in this pass stay narrow: disabled associated-label opacity now matches the upstream `opacity-50` outcome, and plain associated labels no longer let ambient pressable shells suppress the documented click-to-toggle path.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .description("Public surface summary and ownership notes.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Basic label above an input.")
+        .description("Official checkbox + label preview from the docs page.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .description("Copyable minimal usage for `Label` plus control association.")
@@ -36,7 +36,7 @@ pub(super) fn preview_label(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Label docs path first: Demo, Usage, Label in Field, RTL, and API Reference.",
+            "Preview mirrors the shadcn Label docs path first: checkbox Demo, Usage, Label in Field, RTL, and API Reference.",
         ),
         vec![demo, usage, label_in_field, rtl, api_reference],
     );

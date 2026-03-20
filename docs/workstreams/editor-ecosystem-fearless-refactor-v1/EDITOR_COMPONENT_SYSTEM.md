@@ -201,6 +201,8 @@ Recommended authoring rule:
 - when a first-party editor surface needs a reusable numeric text story plus optional control
   chrome affixes, prefer `NumericPresentation<T>` over open-coded `(format, parse, prefix, suffix)`
   bundles,
+- prefer per-control `from_presentation(...)` constructors when the target control/composite
+  exposes one, so first-party surfaces keep that bundling rule visible at the callsite,
 - keep unit-bearing text that is part of the editable representation inside the formatter/parser
   pair (for example `90°`),
 - and reserve control chrome affixes for joined non-editable segments such as currency or timing

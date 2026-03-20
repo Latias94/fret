@@ -11,21 +11,26 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .entries_parts(
             shadcn::MenubarContent::new(),
             [
-                shadcn::MenubarItem::new("New Tab")
-                    .action(CommandId::new("ui_gallery.menubar.usage.new_tab"))
-                    .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx))
-                    .into(),
-                shadcn::MenubarItem::new("New Window")
-                    .action(CommandId::new("ui_gallery.menubar.usage.new_window"))
-                    .into(),
+                shadcn::MenubarGroup::new([
+                    shadcn::MenubarItem::new("New Tab")
+                        .action(CommandId::new("ui_gallery.menubar.usage.new_tab"))
+                        .trailing(shadcn::MenubarShortcut::new("⌘T").into_element(cx))
+                        .into(),
+                    shadcn::MenubarItem::new("New Window")
+                        .action(CommandId::new("ui_gallery.menubar.usage.new_window"))
+                        .into(),
+                ])
+                .into(),
                 shadcn::MenubarSeparator::new().into(),
-                shadcn::MenubarItem::new("Share")
-                    .action(CommandId::new("ui_gallery.menubar.usage.share"))
-                    .into(),
-                shadcn::MenubarSeparator::new().into(),
-                shadcn::MenubarItem::new("Print")
-                    .action(CommandId::new("ui_gallery.menubar.usage.print"))
-                    .into(),
+                shadcn::MenubarGroup::new([
+                    shadcn::MenubarItem::new("Share")
+                        .action(CommandId::new("ui_gallery.menubar.usage.share"))
+                        .into(),
+                    shadcn::MenubarItem::new("Print")
+                        .action(CommandId::new("ui_gallery.menubar.usage.print"))
+                        .into(),
+                ])
+                .into(),
             ],
         );
 

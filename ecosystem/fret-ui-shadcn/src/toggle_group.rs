@@ -23,7 +23,9 @@ use fret_ui_kit::{
     resolve_override_slot_opt,
 };
 
+use crate::optional_text_value_model::IntoOptionalTextValueModel;
 use crate::test_id::test_id_slug;
+use crate::text_vec_model::IntoTextVecModel;
 use crate::toggle::{ToggleSize, ToggleVariant};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -343,10 +345,10 @@ impl std::fmt::Debug for ToggleGroup {
 }
 
 impl ToggleGroup {
-    pub fn single(model: Model<Option<Arc<str>>>) -> Self {
+    pub fn single(model: impl IntoOptionalTextValueModel) -> Self {
         Self {
             model: ToggleGroupModel::Single {
-                model: Some(model),
+                model: Some(model.into_optional_text_value_model()),
                 default_value: None,
             },
             items: Vec::new(),
@@ -391,10 +393,10 @@ impl ToggleGroup {
         }
     }
 
-    pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
+    pub fn multiple(model: impl IntoTextVecModel) -> Self {
         Self {
             model: ToggleGroupModel::Multiple {
-                model: Some(model),
+                model: Some(model.into_text_vec_model()),
                 default_value: Vec::new(),
             },
             items: Vec::new(),
@@ -1025,7 +1027,7 @@ impl ToggleGroup {
 /// Builder-preserving controlled helper for the common single-select toggle-group path.
 pub fn toggle_group_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
+    model: impl IntoOptionalTextValueModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> ToggleGroup
 where
@@ -1049,7 +1051,7 @@ where
 /// Builder-preserving controlled helper for the common multi-select toggle-group path.
 pub fn toggle_group_multiple<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Vec<Arc<str>>>,
+    model: impl IntoTextVecModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> ToggleGroup
 where

@@ -76,9 +76,11 @@ impl View for OverlayBasicsView {
         let underlay_bumps_state = cx.state().local::<u32>();
 
         cx.actions()
-            .local_set::<act::OpenDialog, bool>(&dialog_open_state, true);
+            .local(&dialog_open_state)
+            .set::<act::OpenDialog>(true);
         cx.actions()
-            .local_update::<act::BumpUnderlay, u32>(&underlay_bumps_state, |v| {
+            .local(&underlay_bumps_state)
+            .update::<act::BumpUnderlay>(|v| {
                 *v = v.saturating_add(1);
             });
         cx.actions()
@@ -86,11 +88,10 @@ impl View for OverlayBasicsView {
         cx.actions()
             .availability::<act::BumpUnderlay>(|_host, _acx| CommandAvailability::Available);
 
-        let dialog_open_for_dialog = dialog_open_state.clone_model();
         let dialog_open_for_footer = dialog_open_state.clone_model();
         let dialog_open_for_close = dialog_open_state.clone_model();
 
-        let bumps = underlay_bumps_state.layout(cx).value_or(0);
+        let bumps = underlay_bumps_state.layout_value(cx);
         let enabled = cx.action_is_enabled(&cmd_bump);
         let enabled_label = if enabled {
             "Enabled"
@@ -108,7 +109,7 @@ impl View for OverlayBasicsView {
             .map(|seq| format_sequence(Platform::current(), &seq))
             .unwrap_or_else(|| "Unbound".to_string());
 
-        let dialog = shadcn::Dialog::new(dialog_open_for_dialog).into_element(
+        let dialog = shadcn::Dialog::new(&dialog_open_state).into_element(
             cx,
             move |cx| {
                 let content = ui::v_flex(|cx| {

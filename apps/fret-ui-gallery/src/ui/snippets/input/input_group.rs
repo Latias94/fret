@@ -9,18 +9,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(String::new);
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
 
     shadcn::Field::new([
         shadcn::FieldLabel::new("Website URL").into_element(cx),
         shadcn::InputGroup::new(value)
             .a11y_label("Website URL")
+            .placeholder("example.com")
             .leading([shadcn::InputGroupText::new("https://").into_element(cx)])
-            .trailing([
-                shadcn::InputGroupText::new(".com").into_element(cx),
-                shadcn::InputGroupButton::new("Info")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .into_element(cx),
-            ])
+            .trailing([icon::icon(cx, icon_id("lucide.info"))])
             .refine_layout(max_w_xs)
             .into_element(cx),
     ])

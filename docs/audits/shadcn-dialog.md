@@ -52,8 +52,13 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: `DialogClose` is available as an explicit close affordance recipe (close button parity).
 - Pass: `DialogClose::from_scope()` is available as recipe-layer sugar for content-local close
   buttons while preserving `DialogClose::new(open)` as the explicit constructor.
+- Pass: `Dialog::children([...])` provides a root-level part-children builder that is closer to
+  upstream nested children composition while still lowering into the existing recipe-layer slots.
 - Pass: `Dialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
+- Pass: `DialogContent::build(...)` is the typed content-side companion on that same recipe lane,
+  so first-party snippets no longer need to pre-land `DialogHeader` / `DialogFooter` trees into a
+  raw `DialogContent::new([...])` array.
 
 ### Dismissal behavior
 
@@ -88,6 +93,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn dialog::tests`
+- `cargo test -p fret-ui-shadcn --lib dialog::tests::dialog_content_build_accepts_builder_first_sections_surface -- --exact`
 - Contract test: `dialog_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Contract test: `dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `dialog_open_change_events_complete_without_animation`
@@ -119,15 +125,23 @@ Fret now exposes `DialogClose::from_scope()` as recipe-layer sugar.
 
 ## Authoring note: `compose()`
 
-`Dialog::compose()` is a recipe-layer bridge for authors who want a more composable part-based
+`Dialog::children([...])` is now the default copyable root path for first-party docs/examples.
+
+- Scope: root-level part collection that stays closer to upstream nested children composition.
+- Parts: use `DialogPart::trigger(...)`, `DialogPart::content(...)`, and optional
+  `DialogPart::portal(...)` / `DialogPart::overlay(...)`.
+- Layering: this still lowers into the same recipe-layer trigger/content slots and does **not**
+  change the underlying overlay/focus/dismiss mechanism.
+
+`Dialog::compose()` remains a recipe-layer bridge for authors who want a more explicit builder
 style than the raw closure root.
 
 - Scope: ergonomics only; it lowers into `Dialog::into_element_parts(...)`.
 - Default teaching path: first-party examples now prefer
-  `Dialog::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`.
+  `Dialog::new_controllable(cx, None, false).children([DialogPart::trigger(...), DialogPart::content(...)])`.
 - Focused follow-up lane: explicit `DialogTrigger` / `DialogPortal` / `DialogOverlay` ownership
-  stays documented through a dedicated `Parts` example rather than replacing the default copyable
-  path.
+  still stays documented through a dedicated `Parts` example rather than replacing the default
+  copyable path.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
 - Limitation: this is still not a full React-style nested children API; Fret stores already-built
   elements and assembles them at the final call site.

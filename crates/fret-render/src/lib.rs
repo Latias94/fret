@@ -59,12 +59,13 @@ pub use fret_render_wgpu::{
     RenderTargetColorRange, RenderTargetColorSpace, RenderTargetDescriptor,
     RenderTargetIngestStrategy, RenderTargetMatrixCoefficients, RenderTargetMetadata,
     RenderTargetOrientation, RenderTargetRotation, RenderTargetTransferFunction, Renderer,
-    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceState,
-    SvgAlphaMask, SvgRgbaImage, SystemFontRescanResult, SystemFontRescanSeed, TextFontFamilyConfig,
-    UploadedRgba8Image, WgpuAdapterSelectionSnapshot, WgpuAllocatorReportFrameSample,
-    WgpuAllocatorReportFrameStore, WgpuContext, WgpuHubReportCounts, WgpuHubReportFrameSample,
-    WgpuHubReportFrameStore, create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image,
-    upload_rgba8_image, viewport_overlay, write_rgba8_texture_region,
+    RendererCapabilities, RendererPerfFrameSample, RendererPerfFrameStore, SurfaceAcquireError,
+    SurfaceState, SvgAlphaMask, SvgRgbaImage, SystemFontRescanResult, SystemFontRescanSeed,
+    TextFontFamilyConfig, UploadedRgba8Image, WgpuAdapterSelectionSnapshot,
+    WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuContext,
+    WgpuHubReportCounts, WgpuHubReportFrameSample, WgpuHubReportFrameStore,
+    create_rgba8_image_storage, upload_alpha_mask, upload_rgba_image, upload_rgba8_image,
+    viewport_overlay, write_rgba8_texture_region,
 };
 
 #[cfg(not(any(feature = "backend-wgpu")))]

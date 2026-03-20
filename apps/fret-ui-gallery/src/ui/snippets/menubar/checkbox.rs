@@ -27,87 +27,98 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     });
     let state_now = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
-    let view = shadcn::MenubarMenu::new("View").entries([
-        shadcn::MenubarEntry::CheckboxItem(
-            shadcn::MenubarCheckboxItem::from_checked(
-                state_now.view_bookmarks_bar,
-                "Always Show Bookmarks Bar",
-            )
-            .on_checked_change({
-                let state = state.clone();
-                move |host, _action_cx, checked| {
-                    let _ = host
-                        .models_mut()
-                        .update(&state, |st| st.view_bookmarks_bar = checked);
-                }
-            })
-            .action(CommandId::new(
-                "ui_gallery.menubar.checkbox.view_bookmarks_bar",
-            )),
-        ),
-        shadcn::MenubarEntry::CheckboxItem(
-            shadcn::MenubarCheckboxItem::from_checked(
-                state_now.view_full_urls,
-                "Always Show Full URLs",
-            )
-            .on_checked_change({
-                let state = state.clone();
-                move |host, _action_cx, checked| {
-                    let _ = host
-                        .models_mut()
-                        .update(&state, |st| st.view_full_urls = checked);
-                }
-            })
-            .action(CommandId::new("ui_gallery.menubar.checkbox.view_full_urls")),
-        ),
-        shadcn::MenubarEntry::Separator,
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("Reload")
-                .action(CommandId::new("ui_gallery.menubar.checkbox.reload"))
-                .inset(true)
-                .trailing(shadcn::MenubarShortcut::new("⌘R").into_element(cx)),
-        ),
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("Force Reload")
-                .action(CommandId::new("ui_gallery.menubar.checkbox.force_reload"))
-                .disabled(true)
-                .inset(true)
-                .trailing(shadcn::MenubarShortcut::new("⇧⌘R").into_element(cx)),
-        ),
-    ]);
+    let view = shadcn::MenubarTrigger::new("View")
+        .into_menu()
+        .entries_parts(
+            shadcn::MenubarContent::new().min_width(Px(256.0)),
+            [
+                shadcn::MenubarGroup::new([
+                    shadcn::MenubarCheckboxItem::from_checked(
+                        state_now.view_bookmarks_bar,
+                        "Always Show Bookmarks Bar",
+                    )
+                    .on_checked_change({
+                        let state = state.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&state, |st| st.view_bookmarks_bar = checked);
+                        }
+                    })
+                    .action(CommandId::new(
+                        "ui_gallery.menubar.checkbox.view_bookmarks_bar",
+                    ))
+                    .into(),
+                    shadcn::MenubarCheckboxItem::from_checked(
+                        state_now.view_full_urls,
+                        "Always Show Full URLs",
+                    )
+                    .on_checked_change({
+                        let state = state.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&state, |st| st.view_full_urls = checked);
+                        }
+                    })
+                    .action(CommandId::new("ui_gallery.menubar.checkbox.view_full_urls"))
+                    .into(),
+                ])
+                .into(),
+                shadcn::MenubarSeparator::new().into(),
+                shadcn::MenubarGroup::new([
+                    shadcn::MenubarItem::new("Reload")
+                        .action(CommandId::new("ui_gallery.menubar.checkbox.reload"))
+                        .inset(true)
+                        .trailing(shadcn::MenubarShortcut::new("⌘R").into_element(cx))
+                        .into(),
+                    shadcn::MenubarItem::new("Force Reload")
+                        .action(CommandId::new("ui_gallery.menubar.checkbox.force_reload"))
+                        .disabled(true)
+                        .inset(true)
+                        .trailing(shadcn::MenubarShortcut::new("⇧⌘R").into_element(cx))
+                        .into(),
+                ])
+                .into(),
+            ],
+        );
 
-    let format = shadcn::MenubarMenu::new("Format").entries([
-        shadcn::MenubarEntry::CheckboxItem(
-            shadcn::MenubarCheckboxItem::from_checked(
-                state_now.format_strikethrough,
-                "Strikethrough",
-            )
-            .on_checked_change({
-                let state = state.clone();
-                move |host, _action_cx, checked| {
-                    let _ = host
-                        .models_mut()
-                        .update(&state, |st| st.format_strikethrough = checked);
-                }
-            })
-            .action(CommandId::new(
-                "ui_gallery.menubar.checkbox.format_strikethrough",
-            )),
-        ),
-        shadcn::MenubarEntry::CheckboxItem(
-            shadcn::MenubarCheckboxItem::from_checked(state_now.format_code, "Code")
+    let format = shadcn::MenubarTrigger::new("Format")
+        .into_menu()
+        .entries_parts(
+            shadcn::MenubarContent::new(),
+            [shadcn::MenubarGroup::new([
+                shadcn::MenubarCheckboxItem::from_checked(
+                    state_now.format_strikethrough,
+                    "Strikethrough",
+                )
                 .on_checked_change({
                     let state = state.clone();
                     move |host, _action_cx, checked| {
                         let _ = host
                             .models_mut()
-                            .update(&state, |st| st.format_code = checked);
+                            .update(&state, |st| st.format_strikethrough = checked);
                     }
                 })
-                .action(CommandId::new("ui_gallery.menubar.checkbox.format_code")),
-        ),
-        shadcn::MenubarEntry::CheckboxItem(
-            shadcn::MenubarCheckboxItem::from_checked(state_now.format_superscript, "Superscript")
+                .action(CommandId::new(
+                    "ui_gallery.menubar.checkbox.format_strikethrough",
+                ))
+                .into(),
+                shadcn::MenubarCheckboxItem::from_checked(state_now.format_code, "Code")
+                    .on_checked_change({
+                        let state = state.clone();
+                        move |host, _action_cx, checked| {
+                            let _ = host
+                                .models_mut()
+                                .update(&state, |st| st.format_code = checked);
+                        }
+                    })
+                    .action(CommandId::new("ui_gallery.menubar.checkbox.format_code"))
+                    .into(),
+                shadcn::MenubarCheckboxItem::from_checked(
+                    state_now.format_superscript,
+                    "Superscript",
+                )
                 .on_checked_change({
                     let state = state.clone();
                     move |host, _action_cx, checked| {
@@ -118,9 +129,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 })
                 .action(CommandId::new(
                     "ui_gallery.menubar.checkbox.format_superscript",
-                )),
-        ),
-    ]);
+                ))
+                .into(),
+            ])
+            .into()],
+        );
 
     shadcn::Menubar::new([view, format])
         .refine_layout(width)

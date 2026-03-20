@@ -30,7 +30,7 @@ fn side_content<H: UiHost>(
     .items_stretch()
     .into_element(cx);
 
-    shadcn::HoverCardContent::new(vec![body])
+    shadcn::HoverCardContent::build(cx, |_cx| [body])
         .test_id(test_id)
         .side(side)
         .align(align)

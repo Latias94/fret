@@ -18,11 +18,12 @@ impl View for ToggleBasicsView {
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let pressed_state = cx.state().local_init(|| false);
-        let pressed = pressed_state.layout(cx).value_or(false);
+        let pressed = pressed_state.layout_value(cx);
         let status = if pressed { "Pressed" } else { "Not pressed" };
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleBookmark>(&pressed_state);
+            .local(&pressed_state)
+            .toggle_bool::<act::ToggleBookmark>();
 
         let toggle = shadcn::Toggle::from_pressed(pressed)
             .action(act::ToggleBookmark)

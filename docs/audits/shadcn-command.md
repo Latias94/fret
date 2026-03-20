@@ -83,6 +83,7 @@ Key upstream semantics:
 
 - `cargo test -p fret-ui-shadcn --lib command::tests`
 - Contract test: `command_dialog_open_change_builders_set_handlers`
+- Contract test: `command_dialog_test_id_builders_forward_to_palette_semantics`
 - Reason mapping test: `command_dialog_open_change_reason_maps_dismiss_reasons`
 - Reason behavior test: `command_dialog_open_change_with_reason_reports_item_press_when_close_on_select`
 - shadcn-web golden + gates:
@@ -101,6 +102,11 @@ Key upstream semantics:
     - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_option_height_matches`
     - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_option_insets_match`
     - Tiny viewport variants: `*_tiny_viewport` (ensures the web-style “centered even when overflowing” behavior stays aligned)
+  - UI Gallery docs-surface gate:
+    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_core_examples_keep_upstream_aligned_targets_present`
+    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_docs_demo_keeps_upstream_max_width --features gallery-chart`
+    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_basic_opens_dialog_with_default_recipe_a11y_label --features gallery-chart`
+    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_follow_up_sections_remain_explicit_after_docs_aligned_examples --features gallery-chart`
 
 ## Follow-ups (non-P0)
 
@@ -108,4 +114,23 @@ Key upstream semantics:
   `command(...)` / `CommandPalette` remain the default story; if split `CommandInput/List/Item`
   authoring is ever promoted, it should happen behind an explicit shared context contract rather
   than ad-hoc surface growth.
+- Docs surface: UI Gallery now mirrors the upstream docs path after skipping `Installation`
+  (`Demo`, `About`, `Usage`, `Basic`, `Shortcuts`, `Groups`, `Scrollable`, `RTL`, `API Reference`)
+  before Fret-only `Loading` / `Action-first` follow-ups; the default copyable `Usage` lane stays
+  explicit about the root-story divergence (`CommandPalette` instead of literal split children).
+- Demo surface: the lead `Demo` snippet now keeps the upstream `max-w-sm` width cap and stops
+  overriding root chrome with a gallery-local shadow; recipe-owned border/radius remain on the
+  component default lane.
+- Basic surface: the `Basic` snippet now mirrors the upstream minimal dialog teaching lane more
+  closely by using an explicit `Open Menu` trigger, a `Suggestions` group with the three upstream
+  rows, and the recipe-default dialog a11y label (`Command palette`) instead of a gallery-local
+  label override.
+- Example surface split: `Shortcuts`, `Groups`, `Scrollable`, and `RTL` now stay on the upstream
+  docs lane, while the previous Fret-only cmdk behavior demos (`disablePointerSelection`,
+  controlled active value, `shouldFilter=false`, and `forceMount`) move to an explicit
+  `Behavior Demos` follow-up section instead of overloading the docs examples.
+- Recipe surface: `CommandDialog` now forwards the same palette test-id builders
+  (`test_id_input`, `list_test_id`, `test_id_item_prefix`, `test_id_heading_prefix`) so
+  docs-aligned dialog examples can remain automation-friendly without dropping back to embedded
+  `CommandPalette` just for selectors.
 - Composability: if split authoring (`CommandInput`/`CommandList`/`CommandItem`) becomes a goal, introduce a shared context model (query + active + selection) with an explicit contract/ADR first.

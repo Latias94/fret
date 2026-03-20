@@ -21,8 +21,8 @@ impl Renderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret clip-mask pipeline layout"),
             bind_group_layouts: &[
-                &self.globals.uniform_bind_group_layout,
-                &self.effect_params.clip_mask_param_bind_group_layout,
+                Some(&self.globals.uniform_bind_group_layout),
+                Some(&self.effect_params.clip_mask_param_bind_group_layout),
             ],
             immediate_size: 0,
         });

@@ -15,6 +15,7 @@
 
 use std::sync::Arc;
 
+use fret::advanced::view::UiCxDataExt as _;
 use fret_app::{App, Effect};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::{
@@ -35,7 +36,6 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, Space, UiExt};
@@ -138,6 +138,24 @@ struct DemoControls {
     debug_input: Model<bool>,
 }
 
+impl DemoControls {
+    fn reset_in(&self, models: &mut fret_runtime::ModelStore) {
+        let _ = models.update(&self.enabled, |v| *v = true);
+        let _ = models.update(&self.mode, |v| *v = Some(Arc::from("backdrop")));
+        let _ = models.update(&self.quality, |v| *v = Some(Arc::from("high")));
+        let _ = models.update(&self.sampling, |v| *v = Some(Arc::from("linear")));
+        let _ = models.update(&self.uv_span, |v| *v = vec![1.0]);
+        let _ = models.update(&self.strength_px, |v| *v = vec![14.0]);
+        let _ = models.update(&self.max_sample_offset_px, |v| *v = vec![18.0]);
+        let _ = models.update(&self.tint_strength, |v| *v = vec![0.8]);
+        let _ = models.update(&self.blur_radius_px, |v| *v = vec![12.0]);
+        let _ = models.update(&self.blur_downsample, |v| *v = vec![1.0]);
+        let _ = models.update(&self.lens_corner_radius_px, |v| *v = vec![24.0]);
+        let _ = models.update(&self.tile_corner_radius_px, |v| *v = vec![18.0]);
+        let _ = models.update(&self.debug_input, |v| *v = false);
+    }
+}
+
 pub struct CustomEffectV2WebWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
@@ -216,150 +234,90 @@ impl CustomEffectV2WebDriver {
         cx: &mut ElementContext<'_, App>,
         controls: &DemoControls,
     ) -> CustomEffectV2WebViewSettings {
-        let enabled = controls.enabled.clone();
-        let mode = controls.mode.clone();
-        let quality = controls.quality.clone();
-        let sampling = controls.sampling.clone();
-        let uv_span = controls.uv_span.clone();
-        let strength_px = controls.strength_px.clone();
-        let max_sample_offset_px = controls.max_sample_offset_px.clone();
-        let tint_strength = controls.tint_strength.clone();
-        let blur_radius_px = controls.blur_radius_px.clone();
-        let blur_downsample = controls.blur_downsample.clone();
-        let lens_corner_radius_px = controls.lens_corner_radius_px.clone();
-        let tile_corner_radius_px = controls.tile_corner_radius_px.clone();
-        let debug_input = controls.debug_input.clone();
-        let enabled_deps = enabled.clone();
-        let mode_deps = mode.clone();
-        let quality_deps = quality.clone();
-        let sampling_deps = sampling.clone();
-        let uv_span_deps = uv_span.clone();
-        let strength_px_deps = strength_px.clone();
-        let max_sample_offset_px_deps = max_sample_offset_px.clone();
-        let tint_strength_deps = tint_strength.clone();
-        let blur_radius_px_deps = blur_radius_px.clone();
-        let blur_downsample_deps = blur_downsample.clone();
-        let lens_corner_radius_px_deps = lens_corner_radius_px.clone();
-        let tile_corner_radius_px_deps = tile_corner_radius_px.clone();
-        let debug_input_deps = debug_input.clone();
-        cx.data().selector(
-            move |cx| {
-                cx.observe_model(&enabled_deps, Invalidation::Paint);
-                cx.observe_model(&mode_deps, Invalidation::Paint);
-                cx.observe_model(&quality_deps, Invalidation::Paint);
-                cx.observe_model(&sampling_deps, Invalidation::Paint);
-                cx.observe_model(&uv_span_deps, Invalidation::Paint);
-                cx.observe_model(&strength_px_deps, Invalidation::Paint);
-                cx.observe_model(&max_sample_offset_px_deps, Invalidation::Paint);
-                cx.observe_model(&tint_strength_deps, Invalidation::Paint);
-                cx.observe_model(&blur_radius_px_deps, Invalidation::Paint);
-                cx.observe_model(&blur_downsample_deps, Invalidation::Paint);
-                cx.observe_model(&lens_corner_radius_px_deps, Invalidation::Paint);
-                cx.observe_model(&tile_corner_radius_px_deps, Invalidation::Paint);
-                cx.observe_model(&debug_input_deps, Invalidation::Paint);
-                [
-                    cx.app.models().revision(&enabled_deps).unwrap_or(0),
-                    cx.app.models().revision(&mode_deps).unwrap_or(0),
-                    cx.app.models().revision(&quality_deps).unwrap_or(0),
-                    cx.app.models().revision(&sampling_deps).unwrap_or(0),
-                    cx.app.models().revision(&uv_span_deps).unwrap_or(0),
-                    cx.app.models().revision(&strength_px_deps).unwrap_or(0),
-                    cx.app
-                        .models()
-                        .revision(&max_sample_offset_px_deps)
-                        .unwrap_or(0),
-                    cx.app.models().revision(&tint_strength_deps).unwrap_or(0),
-                    cx.app.models().revision(&blur_radius_px_deps).unwrap_or(0),
-                    cx.app.models().revision(&blur_downsample_deps).unwrap_or(0),
-                    cx.app
-                        .models()
-                        .revision(&lens_corner_radius_px_deps)
-                        .unwrap_or(0),
-                    cx.app
-                        .models()
-                        .revision(&tile_corner_radius_px_deps)
-                        .unwrap_or(0),
-                    cx.app.models().revision(&debug_input_deps).unwrap_or(0),
-                ]
-            },
-            move |cx| CustomEffectV2WebViewSettings {
-                enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
-                mode_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&mode)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "backdrop".to_string()),
-                quality_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&quality)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "high".to_string()),
-                sampling_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&sampling)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "linear".to_string()),
-                uv_span: cx
-                    .app
-                    .models()
-                    .get_cloned(&uv_span)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(1.0)
-                    .clamp(0.05, 1.0),
-                strength_px: cx
-                    .app
-                    .models()
-                    .get_cloned(&strength_px)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(14.0)
-                    .clamp(0.0, 24.0),
-                max_sample_offset_px: cx
-                    .app
-                    .models()
-                    .get_cloned(&max_sample_offset_px)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(18.0)
-                    .clamp(0.0, 96.0),
-                tint_strength: cx
-                    .app
-                    .models()
-                    .get_cloned(&tint_strength)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(0.8)
-                    .clamp(0.0, 1.0),
-                blur_radius_px: cx
-                    .app
-                    .models()
-                    .get_cloned(&blur_radius_px)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(12.0)
-                    .clamp(0.0, 48.0),
-                blur_downsample: cx
-                    .app
-                    .models()
-                    .get_cloned(&blur_downsample)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(1.0)
-                    .round()
-                    .clamp(1.0, 4.0) as u32,
-                lens_corner_radius_px: cx
-                    .app
-                    .models()
-                    .get_cloned(&lens_corner_radius_px)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(24.0)
-                    .clamp(0.0, 64.0),
-                tile_corner_radius_px: cx
-                    .app
-                    .models()
-                    .get_cloned(&tile_corner_radius_px)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(18.0)
-                    .clamp(0.0, 64.0),
-                debug_input: cx.app.models().get_cloned(&debug_input).unwrap_or(false),
+        cx.data().selector_model_paint(
+            (
+                &controls.enabled,
+                &controls.mode,
+                &controls.quality,
+                &controls.sampling,
+                &controls.uv_span,
+                &controls.strength_px,
+                &controls.max_sample_offset_px,
+                &controls.tint_strength,
+                &controls.blur_radius_px,
+                &controls.blur_downsample,
+                &controls.lens_corner_radius_px,
+                &controls.tile_corner_radius_px,
+                &controls.debug_input,
+            ),
+            |(
+                enabled,
+                mode,
+                quality,
+                sampling,
+                uv_span,
+                strength_px,
+                max_sample_offset_px,
+                tint_strength,
+                blur_radius_px,
+                blur_downsample,
+                lens_corner_radius_px,
+                tile_corner_radius_px,
+                debug_input,
+            )| {
+                CustomEffectV2WebViewSettings {
+                    enabled,
+                    mode_value: mode
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "backdrop".to_string()),
+                    quality_value: quality
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "high".to_string()),
+                    sampling_value: sampling
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "linear".to_string()),
+                    uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
+                    strength_px: strength_px
+                        .first()
+                        .copied()
+                        .unwrap_or(14.0)
+                        .clamp(0.0, 24.0),
+                    max_sample_offset_px: max_sample_offset_px
+                        .first()
+                        .copied()
+                        .unwrap_or(18.0)
+                        .clamp(0.0, 96.0),
+                    tint_strength: tint_strength
+                        .first()
+                        .copied()
+                        .unwrap_or(0.8)
+                        .clamp(0.0, 1.0),
+                    blur_radius_px: blur_radius_px
+                        .first()
+                        .copied()
+                        .unwrap_or(12.0)
+                        .clamp(0.0, 48.0),
+                    blur_downsample: blur_downsample
+                        .first()
+                        .copied()
+                        .unwrap_or(1.0)
+                        .round()
+                        .clamp(1.0, 4.0) as u32,
+                    lens_corner_radius_px: lens_corner_radius_px
+                        .first()
+                        .copied()
+                        .unwrap_or(24.0)
+                        .clamp(0.0, 64.0),
+                    tile_corner_radius_px: tile_corner_radius_px
+                        .first()
+                        .copied()
+                        .unwrap_or(18.0)
+                        .clamp(0.0, 64.0),
+                    debug_input,
+                }
             },
         )
     }
@@ -389,46 +347,6 @@ impl CustomEffectV2WebDriver {
             "auto" => EffectQuality::Auto,
             _ => EffectQuality::Auto,
         }
-    }
-
-    fn reset_controls(app: &mut App, controls: &DemoControls) {
-        let _ = app.models_mut().update(&controls.enabled, |v| *v = true);
-        let _ = app
-            .models_mut()
-            .update(&controls.mode, |v| *v = Some(Arc::from("backdrop")));
-        let _ = app
-            .models_mut()
-            .update(&controls.quality, |v| *v = Some(Arc::from("high")));
-        let _ = app
-            .models_mut()
-            .update(&controls.sampling, |v| *v = Some(Arc::from("linear")));
-        let _ = app
-            .models_mut()
-            .update(&controls.uv_span, |v| *v = vec![1.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.strength_px, |v| *v = vec![14.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.max_sample_offset_px, |v| *v = vec![18.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.tint_strength, |v| *v = vec![0.8]);
-        let _ = app
-            .models_mut()
-            .update(&controls.blur_radius_px, |v| *v = vec![12.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.blur_downsample, |v| *v = vec![1.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.lens_corner_radius_px, |v| *v = vec![24.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.tile_corner_radius_px, |v| *v = vec![18.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.debug_input, |v| *v = false);
     }
 
     fn install_custom_effect_and_input(
@@ -719,20 +637,7 @@ impl CustomEffectV2WebDriver {
 
         let reset_controls = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
-            let models = host.models_mut();
-            let _ = models.update(&reset_controls.enabled, |v| *v = true);
-            let _ = models.update(&reset_controls.mode, |v| *v = Some(Arc::from("backdrop")));
-            let _ = models.update(&reset_controls.quality, |v| *v = Some(Arc::from("high")));
-            let _ = models.update(&reset_controls.sampling, |v| *v = Some(Arc::from("linear")));
-            let _ = models.update(&reset_controls.uv_span, |v| *v = vec![1.0]);
-            let _ = models.update(&reset_controls.strength_px, |v| *v = vec![14.0]);
-            let _ = models.update(&reset_controls.max_sample_offset_px, |v| *v = vec![18.0]);
-            let _ = models.update(&reset_controls.tint_strength, |v| *v = vec![0.8]);
-            let _ = models.update(&reset_controls.blur_radius_px, |v| *v = vec![12.0]);
-            let _ = models.update(&reset_controls.blur_downsample, |v| *v = vec![1.0]);
-            let _ = models.update(&reset_controls.lens_corner_radius_px, |v| *v = vec![24.0]);
-            let _ = models.update(&reset_controls.tile_corner_radius_px, |v| *v = vec![18.0]);
-            let _ = models.update(&reset_controls.debug_input, |v| *v = false);
+            reset_controls.reset_in(host.models_mut());
         });
 
         let mut layout = LayoutStyle::default();
@@ -1281,7 +1186,7 @@ fn handle_event(
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyR
     {
-        CustomEffectV2WebDriver::reset_controls(app, &state.controls);
+        state.controls.reset_in(app.models_mut());
         app.request_redraw(window);
     }
 

@@ -50,12 +50,14 @@ Key upstream behaviors/surfaces:
   which keeps typed `MenubarEntry` ownership explicit for Fret-first call sites.
 - Pass: `MenubarTrigger::into_menu().entries_parts(...)` already acts as the recipe-level
   composition bridge for shadcn-style `MenubarTrigger` / `MenubarContent` authoring.
-- Pass: First-party gallery examples now treat that `entries_parts(...)` path as the upstream-shaped
-  copyable lane, while a focused `Parts` example stays on the same lane rather than being taught as
-  an advanced escape hatch.
+- Pass: First-party gallery examples now keep the docs-path snippets (`Usage`, `Checkbox`, `Radio`,
+  `Submenu`, `With Icons`, `RTL`) on that `entries_parts(...)` lane, while a focused `Parts`
+  example stays explicit after the docs path.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `Menubar`
   today. The root already consumes typed `MenubarMenu` values, and the parts bridge keeps content
   entry modeling explicit without weakening menu semantics.
+- Pass: UI Gallery now exposes an explicit `API Reference` section that records the owner split and
+  why a generic heterogeneous children API is still unnecessary for this family.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 - Pass: Close auto-focus outcomes match Radix Menubar’s `onCloseAutoFocus` policy:

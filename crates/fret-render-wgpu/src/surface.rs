@@ -1,4 +1,4 @@
-use crate::RenderError;
+use crate::{RenderError, SurfaceAcquireError};
 
 fn env_var_trimmed(name: &str) -> Option<String> {
     let raw = std::env::var(name).ok()?;
@@ -108,8 +108,17 @@ impl<'window> SurfaceState<'window> {
 
     pub fn get_current_frame_view(
         &self,
-    ) -> Result<(wgpu::SurfaceTexture, wgpu::TextureView), wgpu::SurfaceError> {
-        let frame = self.surface.get_current_texture()?;
+    ) -> Result<(wgpu::SurfaceTexture, wgpu::TextureView), SurfaceAcquireError> {
+        let frame = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(frame)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+            wgpu::CurrentSurfaceTexture::Timeout => return Err(SurfaceAcquireError::Timeout),
+            wgpu::CurrentSurfaceTexture::Occluded | wgpu::CurrentSurfaceTexture::Validation => {
+                return Err(SurfaceAcquireError::Other);
+            }
+            wgpu::CurrentSurfaceTexture::Outdated => return Err(SurfaceAcquireError::Outdated),
+            wgpu::CurrentSurfaceTexture::Lost => return Err(SurfaceAcquireError::Lost),
+        };
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());

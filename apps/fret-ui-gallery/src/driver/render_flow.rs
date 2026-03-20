@@ -4,20 +4,20 @@ use fret_app::{App, Model};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
-use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
     SpacerProps,
 };
+use fret_ui::Invalidation;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
-    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
-    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
+    chrome, debug_hud, debug_stats, inspector, menubar, settings_sheet, shell, status_bar, toaster,
+    ui_gallery_bisect_flags, UiGalleryDriver, UiGalleryWindowState,
 };
 
 pub(super) struct PreparedFrame {
@@ -884,6 +884,44 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_search_click_navigates_to_navigation_menu_page() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+
+        click_test_id_center(&mut rendered, "ui-gallery-nav-search");
+        let _ = rendered
+            .app
+            .models_mut()
+            .update(&rendered.state.nav_query, |query| {
+                *query = "navigation_menu".to_string();
+            });
+        render_gallery_frame(&mut rendered);
+
+        click_test_id_center(&mut rendered, "ui-gallery-nav-navigation-menu");
+        render_gallery_frame(&mut rendered);
+
+        let selected_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after filtered sidebar click");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should carry the filtered sidebar page");
+        let semantics_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after filtered sidebar click");
+
+        assert_eq!(selected_after.as_ref(), PAGE_NAVIGATION_MENU);
+        assert_eq!(routed_page.as_ref(), PAGE_NAVIGATION_MENU);
+        assert!(
+            find_node_by_test_id(semantics_snapshot, "ui-gallery-page-navigation-menu").is_some(),
+            "expected navigation menu page semantics after clicking the filtered sidebar result"
+        );
+    }
+
+    #[test]
     fn workspace_tab_next_command_updates_selected_page_and_layout() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
 
@@ -1714,6 +1752,7 @@ mod tests {
         assert_chart_gallery_example_is_present("ui-gallery-chart-grid-axis-spec");
     }
 
+    #[cfg(any(feature = "gallery-dev", feature = "gallery-chart"))]
     fn assert_chart_gallery_example_is_present(target_test_id: &str) {
         let mut rendered = render_gallery_page_with_bootstrapped_app(crate::spec::PAGE_CHART);
         scroll_test_id_into_gallery_viewport(&mut rendered, target_test_id);
@@ -2150,10 +2189,48 @@ mod tests {
     }
 
     #[test]
+    fn gallery_empty_demo_keeps_upstream_action_row_and_link_separation() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_EMPTY);
+
+        for target in [
+            "ui-gallery-empty-demo-actions",
+            "ui-gallery-empty-demo-create-project",
+            "ui-gallery-empty-demo-import-project",
+            "ui-gallery-empty-demo-learn-more",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+        }
+
+        let actions = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-actions");
+        let create = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-create-project");
+        let import = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-import-project");
+        let learn_more = visual_bounds_by_test_id(&rendered, "ui-gallery-empty-demo-learn-more");
+
+        let create_center_y = create.origin.y.0 + create.size.height.0 * 0.5;
+        let import_center_y = import.origin.y.0 + import.size.height.0 * 0.5;
+        let create_right = create.origin.x.0 + create.size.width.0;
+        let actions_bottom = actions.origin.y.0 + actions.size.height.0;
+
+        assert!(
+            (create_center_y - import_center_y).abs() <= 2.0,
+            "expected Empty demo actions to stay on the same row: actions={actions:?} create={create:?} import={import:?}"
+        );
+        assert!(
+            create_right <= import.origin.x.0 + 2.0,
+            "expected Empty demo primary action to remain before the secondary action without overlap: actions={actions:?} create={create:?} import={import:?}"
+        );
+        assert!(
+            learn_more.origin.y.0 >= actions_bottom + 6.0,
+            "expected Empty demo link CTA to stay separated below the action row: actions={actions:?} learn_more={learn_more:?}"
+        );
+    }
+
+    #[test]
     fn gallery_input_core_examples_keep_upstream_aligned_targets_present() {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INPUT);
 
         for target in [
+            "ui-gallery-input-demo-content",
             "ui-gallery-input-usage-content",
             "ui-gallery-input-basic-content",
             "ui-gallery-input-field-content",
@@ -2212,6 +2289,94 @@ mod tests {
             assert!(
                 bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
                 "expected Button page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_command_core_examples_keep_upstream_aligned_targets_present() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_COMMAND);
+
+        for target in [
+            "ui-gallery-command-docs-demo-content",
+            "ui-gallery-command-about-content",
+            "ui-gallery-command-usage-content",
+            "ui-gallery-command-basic-content",
+            "ui-gallery-command-shortcuts-content",
+            "ui-gallery-command-groups-content",
+            "ui-gallery-command-scrollable-content",
+            "ui-gallery-command-rtl-content",
+            "ui-gallery-command-api-reference-content",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Command page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gallery_command_docs_demo_keeps_upstream_max_width() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_COMMAND);
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-command-docs-demo");
+
+        let bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-command-docs-demo");
+        let expected_width = 384.0;
+        let epsilon = 1.0;
+
+        assert!(
+            (bounds.size.width.0 - expected_width).abs() <= epsilon,
+            "expected Command demo width to stay aligned with upstream max-w-sm: bounds={bounds:?} expected_width={expected_width} epsilon={epsilon}"
+        );
+    }
+
+    #[test]
+    fn gallery_command_basic_opens_dialog_with_default_recipe_a11y_label() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_COMMAND);
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-command-basic-trigger.chrome",
+        );
+        click_test_id_center(&mut rendered, "ui-gallery-command-basic-trigger.chrome");
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after opening command basic dialog");
+
+        let dialog = snapshot.nodes.iter().find(|node| {
+            node.role == SemanticsRole::Dialog && node.label.as_deref() == Some("Command palette")
+        });
+
+        assert!(
+            dialog.is_some(),
+            "expected Basic command example to open a dialog named `Command palette`; dialog_labels={:?}",
+            snapshot
+                .nodes
+                .iter()
+                .filter(|node| node.role == SemanticsRole::Dialog)
+                .map(|node| node.label.clone())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn gallery_command_follow_up_sections_remain_explicit_after_docs_aligned_examples() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_COMMAND);
+
+        for target in [
+            "ui-gallery-command-behavior-demos-title",
+            "ui-gallery-command-loading-title",
+            "ui-gallery-command-action-first-view-runtime-title",
+        ] {
+            scroll_test_id_into_gallery_viewport(&mut rendered, target);
+            let bounds = visual_bounds_by_test_id(&rendered, target);
+            assert!(
+                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                "expected Command follow-up target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
     }
@@ -3057,8 +3222,8 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page()
-     {
+    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
+    ) {
         assert_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
             PAGE_SCROLL_AREA,
             "ui-gallery-scroll-area-drag-baseline-y-scrollbar",

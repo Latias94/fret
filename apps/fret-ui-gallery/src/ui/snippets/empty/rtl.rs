@@ -2,19 +2,40 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
+use fret_icons::IconId;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let query = cx.local_model_keyed("query", String::new);
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let icon = icon::icon(cx, fret_icons::IconId::new_static("lucide.folder-search"));
-        let input = shadcn::InputGroup::new(query)
-            .a11y_label("RTL search")
-            .leading([shadcn::InputGroupText::new("亘丨孬").into_element(cx)])
-            .trailing([shadcn::InputGroupText::new("/").into_element(cx)])
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
-            .test_id("ui-gallery-empty-rtl-input-group")
+        let icon = icon::icon(cx, IconId::new_static("lucide.folder-code"));
+        let actions = ui::h_row(|cx| {
+            vec![
+                shadcn::Button::new("إنشاء مشروع")
+                    .test_id("ui-gallery-empty-rtl-create-project")
+                    .into_element(cx),
+                shadcn::Button::new("استيراد مشروع")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-empty-rtl-import-project")
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx)
+        .test_id("ui-gallery-empty-rtl-actions");
+        let learn_more = shadcn::Button::new("تعرف على المزيد")
+            .variant(shadcn::ButtonVariant::Link)
+            .size(shadcn::ButtonSize::Sm)
+            .render(shadcn::ButtonRender::Link {
+                href: Arc::from("https://example.com/projects"),
+                target: None,
+                rel: None,
+            })
+            .trailing_icon(IconId::new_static("lucide.arrow-up-right"))
+            .on_activate(Arc::new(|_host, _acx, _reason| {}))
+            .test_id("ui-gallery-empty-rtl-learn-more")
             .into_element(cx);
 
         shadcn::empty(|cx| {
@@ -25,15 +46,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         cx;
                         shadcn::empty_media(|cx| ui::children![cx; icon])
                             .variant(shadcn::EmptyMediaVariant::Icon),
-                        shadcn::empty_title("RTL Empty State"),
+                        shadcn::empty_title("لا توجد مشاريع بعد"),
                         shadcn::empty_description(
-                            "This empty state uses RTL direction context for layout and alignment.",
+                            "لم تقم بإنشاء أي مشاريع بعد. ابدأ بإنشاء مشروعك الأول.",
                         ),
                     ]
                 }),
-                shadcn::empty_content(|cx| {
-                    ui::children![cx; input, shadcn::Button::new("Create Project"),]
-                }),
+                shadcn::empty_content(|cx| ui::children![cx; actions]),
+                learn_more,
             ]
         })
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))

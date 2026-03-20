@@ -22,14 +22,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .items_stretch()
         .into_element(cx);
 
+        let content = shadcn::HoverCardContent::build(cx, |_cx| [body])
+            .test_id("ui-gallery-hover-card-rtl-content")
+            .side(shadcn::HoverCardSide::Left);
+
         shadcn::HoverCard::new(
             cx,
             shadcn::Button::new("مرر هنا")
                 .variant(shadcn::ButtonVariant::Outline)
                 .test_id("ui-gallery-hover-card-rtl-trigger"),
-            shadcn::HoverCardContent::new(vec![body])
-                .test_id("ui-gallery-hover-card-rtl-content")
-                .side(shadcn::HoverCardSide::Left),
+            content,
         )
         .open_delay_frames(10)
         .close_delay_frames(10)

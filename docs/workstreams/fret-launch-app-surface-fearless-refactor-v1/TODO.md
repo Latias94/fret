@@ -65,6 +65,9 @@ Companion docs:
   - [x] `fret-framework` for manual assembly
   - [x] `fret-launch` for advanced integration
 - [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` implementation paths, and rename `FnDriver`-backed helper entrypoints to `build_fn_driver()` and return concrete `FnDriver<...>` helper types where that keeps the advanced posture explicit (`chart_demo`, `bars_demo`, `error_bars_demo`, `area_demo`, `candlestick_demo`, `grouped_bars_demo`, `stacked_bars_demo`, `horizontal_bars_demo`, `histogram_demo`, `plot_demo`, `plot_image_demo`, `heatmap_demo`, `histogram2d_demo`, `inf_lines_demo`, `linked_cursor_demo`, `category_line_demo`, `stairs_demo`, `stems_demo`, `tags_demo`, `plot3d_demo`, `date_picker_demo`, `datatable_demo`, `form_demo`, `simple_todo_demo`, `plot_stress_demo`, `canvas_datagrid_stress_demo`, `sonner_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `ime_smoke_demo`, `docking_demo`, `container_queries_docking_demo`, `workspace_shell_demo`, `docking_arbitration_demo`, `node_graph_legacy_demo`, `node_graph_domain_demo`, `gizmo3d_demo`, `components_gallery`, `custom_effect_v2_identity_web_demo`, `custom_effect_v2_glass_chrome_web_demo`, `custom_effect_v3_web_demo`, `first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`).
+  - Note: the custom-effect web demos in this batch are advanced/manual harness examples; their
+    inclusion here is evidence about launch/driver posture, not about the default app-lane
+    authoring surface.
 - [x] Migrate the remaining heavy direct `WinitAppDriver` example impls (`components_gallery`) after their local harness glue is split into reviewable free-hook helpers.
 - [x] Add one minimal advanced example that shows the supported launch escape hatch without exposing unnecessary internals.
 - [x] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.

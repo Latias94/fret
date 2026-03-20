@@ -300,7 +300,7 @@ fn native_default_common_fallback_families() -> &'static [&'static str] {
     })
 }
 
-pub fn default_common_fallback_families(shaper: &ParleyShaper) -> &'static [&'static str] {
+pub(crate) fn default_common_fallback_families(shaper: &ParleyShaper) -> &'static [&'static str] {
     // Bundled-only mode should be explicit and deterministic on both wasm and native.
     if !shaper.system_fonts_enabled() {
         return bundled_only_default_common_fallback_families();
@@ -335,7 +335,7 @@ pub fn default_common_fallback_families(shaper: &ParleyShaper) -> &'static [&'st
     }
 }
 
-pub fn first_available_family_id(
+pub(crate) fn first_available_family_id(
     shaper: &mut ParleyShaper,
     candidates: &[&str],
 ) -> Option<ParleyFamilyId> {
@@ -354,7 +354,7 @@ pub fn common_fallback_stack_suffix(
     effective_common_fallback_candidates(common_fallback_config, defaults).join(", ")
 }
 
-pub fn effective_common_fallback_candidates(
+pub(crate) fn effective_common_fallback_candidates(
     common_fallback_config: &[String],
     defaults: &'static [&'static str],
 ) -> Vec<String> {
@@ -382,7 +382,7 @@ pub fn effective_common_fallback_candidates(
     families
 }
 
-pub fn common_fallback_stack_suffix_max_families() -> usize {
+pub(crate) fn common_fallback_stack_suffix_max_families() -> usize {
     static MAX: OnceLock<usize> = OnceLock::new();
     *MAX.get_or_init(|| {
         // Keep the explicit per-style fallback list bounded to avoid pathological slowdowns when
@@ -459,7 +459,7 @@ fn update_key_normalized_static_str_list(
     }
 }
 
-pub fn default_sans_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
+pub(crate) fn default_sans_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
     if !shaper.system_fonts_enabled() {
         return fret_fonts::default_profile().ui_sans_families;
     }
@@ -486,7 +486,7 @@ pub fn default_sans_candidates(shaper: &ParleyShaper) -> &'static [&'static str]
     }
 }
 
-pub fn default_monospace_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
+pub(crate) fn default_monospace_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
     if !shaper.system_fonts_enabled() {
         return fret_fonts::default_profile().ui_mono_families;
     }
@@ -513,7 +513,7 @@ pub fn default_monospace_candidates(shaper: &ParleyShaper) -> &'static [&'static
     }
 }
 
-pub fn default_serif_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
+pub(crate) fn default_serif_candidates(shaper: &ParleyShaper) -> &'static [&'static str] {
     if !shaper.system_fonts_enabled() {
         return fret_fonts::default_profile().ui_serif_families;
     }

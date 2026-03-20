@@ -14,6 +14,7 @@
 
 use std::sync::Arc;
 
+use fret::advanced::view::UiCxDataExt as _;
 use fret_app::{App, Effect};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::{
@@ -34,7 +35,6 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
-use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, Space, UiExt};
@@ -93,6 +93,18 @@ struct DemoControls {
     uv_span: Model<Vec<f32>>,
     mix01: Model<Vec<f32>>,
     debug_input: Model<bool>,
+}
+
+impl DemoControls {
+    fn reset_in(&self, models: &mut fret_runtime::ModelStore) {
+        let _ = models.update(&self.enabled, |v| *v = true);
+        let _ = models.update(&self.mode, |v| *v = Some(Arc::from("backdrop")));
+        let _ = models.update(&self.quality, |v| *v = Some(Arc::from("high")));
+        let _ = models.update(&self.sampling, |v| *v = Some(Arc::from("linear")));
+        let _ = models.update(&self.uv_span, |v| *v = vec![1.0]);
+        let _ = models.update(&self.mix01, |v| *v = vec![0.65]);
+        let _ = models.update(&self.debug_input, |v| *v = false);
+    }
 }
 
 pub struct CustomEffectV2IdentityWebWindowState {
@@ -161,74 +173,35 @@ impl CustomEffectV2IdentityWebDriver {
         cx: &mut ElementContext<'_, App>,
         controls: &DemoControls,
     ) -> CustomEffectV2IdentityWebViewSettings {
-        let enabled = controls.enabled.clone();
-        let mode = controls.mode.clone();
-        let quality = controls.quality.clone();
-        let sampling = controls.sampling.clone();
-        let uv_span = controls.uv_span.clone();
-        let mix01 = controls.mix01.clone();
-        let debug_input = controls.debug_input.clone();
-        let enabled_deps = enabled.clone();
-        let mode_deps = mode.clone();
-        let quality_deps = quality.clone();
-        let sampling_deps = sampling.clone();
-        let uv_span_deps = uv_span.clone();
-        let mix01_deps = mix01.clone();
-        let debug_input_deps = debug_input.clone();
-        cx.data().selector(
-            move |cx| {
-                cx.observe_model(&enabled_deps, Invalidation::Paint);
-                cx.observe_model(&mode_deps, Invalidation::Paint);
-                cx.observe_model(&quality_deps, Invalidation::Paint);
-                cx.observe_model(&sampling_deps, Invalidation::Paint);
-                cx.observe_model(&uv_span_deps, Invalidation::Paint);
-                cx.observe_model(&mix01_deps, Invalidation::Paint);
-                cx.observe_model(&debug_input_deps, Invalidation::Paint);
-                [
-                    cx.app.models().revision(&enabled_deps).unwrap_or(0),
-                    cx.app.models().revision(&mode_deps).unwrap_or(0),
-                    cx.app.models().revision(&quality_deps).unwrap_or(0),
-                    cx.app.models().revision(&sampling_deps).unwrap_or(0),
-                    cx.app.models().revision(&uv_span_deps).unwrap_or(0),
-                    cx.app.models().revision(&mix01_deps).unwrap_or(0),
-                    cx.app.models().revision(&debug_input_deps).unwrap_or(0),
-                ]
-            },
-            move |cx| CustomEffectV2IdentityWebViewSettings {
-                enabled: cx.app.models().get_cloned(&enabled).unwrap_or(true),
-                mode_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&mode)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "backdrop".to_string()),
-                quality_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&quality)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "high".to_string()),
-                sampling_value: cx
-                    .app
-                    .models()
-                    .get_cloned(&sampling)
-                    .and_then(|value| value.as_ref().map(|value| value.to_string()))
-                    .unwrap_or_else(|| "linear".to_string()),
-                uv_span: cx
-                    .app
-                    .models()
-                    .get_cloned(&uv_span)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(1.0)
-                    .clamp(0.05, 1.0),
-                mix01: cx
-                    .app
-                    .models()
-                    .get_cloned(&mix01)
-                    .and_then(|value| value.first().copied())
-                    .unwrap_or(0.65)
-                    .clamp(0.0, 1.0),
-                debug_input: cx.app.models().get_cloned(&debug_input).unwrap_or(false),
+        cx.data().selector_model_paint(
+            (
+                &controls.enabled,
+                &controls.mode,
+                &controls.quality,
+                &controls.sampling,
+                &controls.uv_span,
+                &controls.mix01,
+                &controls.debug_input,
+            ),
+            |(enabled, mode, quality, sampling, uv_span, mix01, debug_input)| {
+                CustomEffectV2IdentityWebViewSettings {
+                    enabled,
+                    mode_value: mode
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "backdrop".to_string()),
+                    quality_value: quality
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "high".to_string()),
+                    sampling_value: sampling
+                        .as_ref()
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "linear".to_string()),
+                    uv_span: uv_span.first().copied().unwrap_or(1.0).clamp(0.05, 1.0),
+                    mix01: mix01.first().copied().unwrap_or(0.65).clamp(0.0, 1.0),
+                    debug_input,
+                }
             },
         )
     }
@@ -258,28 +231,6 @@ impl CustomEffectV2IdentityWebDriver {
             "auto" => EffectQuality::Auto,
             _ => EffectQuality::Auto,
         }
-    }
-
-    fn reset_controls(app: &mut App, controls: &DemoControls) {
-        let _ = app.models_mut().update(&controls.enabled, |v| *v = true);
-        let _ = app
-            .models_mut()
-            .update(&controls.mode, |v| *v = Some(Arc::from("backdrop")));
-        let _ = app
-            .models_mut()
-            .update(&controls.quality, |v| *v = Some(Arc::from("high")));
-        let _ = app
-            .models_mut()
-            .update(&controls.sampling, |v| *v = Some(Arc::from("linear")));
-        let _ = app
-            .models_mut()
-            .update(&controls.uv_span, |v| *v = vec![1.0]);
-        let _ = app
-            .models_mut()
-            .update(&controls.mix01, |v| *v = vec![0.65]);
-        let _ = app
-            .models_mut()
-            .update(&controls.debug_input, |v| *v = false);
     }
 
     fn install_custom_effect_and_input(
@@ -551,14 +502,7 @@ impl CustomEffectV2IdentityWebDriver {
 
         let reset_controls = controls.clone();
         let reset = on_activate_request_redraw(move |host| {
-            let models = host.models_mut();
-            let _ = models.update(&reset_controls.enabled, |v| *v = true);
-            let _ = models.update(&reset_controls.mode, |v| *v = Some(Arc::from("backdrop")));
-            let _ = models.update(&reset_controls.quality, |v| *v = Some(Arc::from("high")));
-            let _ = models.update(&reset_controls.sampling, |v| *v = Some(Arc::from("linear")));
-            let _ = models.update(&reset_controls.uv_span, |v| *v = vec![1.0]);
-            let _ = models.update(&reset_controls.mix01, |v| *v = vec![0.65]);
-            let _ = models.update(&reset_controls.debug_input, |v| *v = false);
+            reset_controls.reset_in(host.models_mut());
         });
 
         let mut layout = LayoutStyle::default();
@@ -1016,7 +960,7 @@ fn handle_event(
     if let fret_core::Event::KeyDown { key, .. } = event
         && *key == KeyCode::KeyR
     {
-        CustomEffectV2IdentityWebDriver::reset_controls(app, &state.controls);
+        state.controls.reset_in(app.models_mut());
         app.request_redraw(window);
     }
 

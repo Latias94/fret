@@ -23,7 +23,9 @@ use crate::primitives::chrome::{
     joined_text_area_style, joined_text_input_style, resolve_editor_text_area_field_style,
     resolve_editor_text_field_style,
 };
-use crate::primitives::input_group::{editor_clear_button_segment, editor_joined_input_frame};
+use crate::primitives::input_group::{
+    editor_clear_button_segment, editor_clear_button_segment_multiline, editor_joined_input_frame,
+};
 use crate::primitives::style::EditorStyle;
 use crate::primitives::text_entry::{
     EditorTextCancelBehavior, EditorTextSelectionBehavior, editor_text_entry_focus_state,
@@ -159,7 +161,7 @@ impl Default for TextFieldOptions {
             selection_behavior: EditorTextSelectionBehavior::PreserveSelection,
             cancel_behavior: EditorTextCancelBehavior::None,
             multiline: false,
-            stable_line_boxes: false,
+            stable_line_boxes: true,
             min_height: None,
         }
     }
@@ -644,14 +646,26 @@ impl TextField {
                     })
                 };
 
-                vec![editor_clear_button_segment(
-                    cx,
-                    density,
-                    enabled_for_paint,
-                    Arc::from("Clear text"),
-                    clear_test_id.clone(),
-                    on_activate,
-                )]
+                if multiline {
+                    vec![editor_clear_button_segment_multiline(
+                        cx,
+                        density,
+                        frame_chrome,
+                        enabled_for_paint,
+                        Arc::from("Clear text"),
+                        clear_test_id.clone(),
+                        on_activate,
+                    )]
+                } else {
+                    vec![editor_clear_button_segment(
+                        cx,
+                        density,
+                        enabled_for_paint,
+                        Arc::from("Clear text"),
+                        clear_test_id.clone(),
+                        on_activate,
+                    )]
+                }
             },
         );
 
@@ -896,7 +910,7 @@ fn is_multiline_buffered_commit_shortcut(down: KeyDownCx) -> bool {
 mod tests {
     use super::{
         BufferedTextFieldFocusPlan, BufferedTextFieldPendingBlurPlan, TextFieldBlurBehavior,
-        plan_buffered_text_field_focus_transition,
+        TextFieldOptions, plan_buffered_text_field_focus_transition,
     };
 
     #[test]
@@ -1023,5 +1037,10 @@ mod tests {
                 pending_blur: BufferedTextFieldPendingBlurPlan::Clear,
             }
         );
+    }
+
+    #[test]
+    fn text_field_defaults_to_stable_line_boxes() {
+        assert!(TextFieldOptions::default().stable_line_boxes);
     }
 }

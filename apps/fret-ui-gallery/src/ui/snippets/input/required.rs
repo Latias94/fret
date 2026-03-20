@@ -26,9 +26,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         label,
         shadcn::Input::new(value)
             .a11y_label("Required field")
+            .aria_required(true)
             .placeholder("This field is required")
             .into_element(cx),
-        shadcn::FieldDescription::new("Mark required fields clearly in labels.").into_element(cx),
+        shadcn::FieldDescription::new("This field must be filled out.").into_element(cx),
     ])
     .refine_layout(max_w_xs)
     .into_element(cx)

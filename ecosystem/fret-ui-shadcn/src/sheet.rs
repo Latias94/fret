@@ -1,4 +1,6 @@
+use std::cell::Cell;
 use std::marker::PhantomData;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextWrap};
@@ -6,7 +8,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges, Overflow,
-    PositionStyle, SemanticsDecoration, SizeStyle,
+    PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
@@ -16,12 +18,15 @@ use fret_ui_kit::declarative::{
     occlusion_insets_or_zero, safe_area_insets_or_zero, viewport_queries,
 };
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, OverlayController,
-    OverlayPresence, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+    OverlayPresence, OverlayRequest, Space, UiPatch, UiPatchTarget, UiSupportsChrome,
+    UiSupportsLayout, ui,
 };
 
+use crate::bool_model::IntoBoolModel;
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 use fret_ui_kit::typography::scope_description_text;
@@ -255,6 +260,14 @@ pub enum SheetSide {
     Bottom,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SheetModalMode {
+    #[default]
+    Modal,
+    NonModal,
+    TrapFocus,
+}
+
 /// shadcn/ui `Sheet` (v4).
 ///
 /// This is a modal overlay (barrier-backed) installed via the component-layer overlay manager.
@@ -263,6 +276,7 @@ pub enum SheetSide {
 pub struct Sheet {
     open: Model<bool>,
     side: SheetSide,
+    modal_mode: SheetModalMode,
     size_override: Option<SheetSizeOverride>,
     max_size_override: Option<Px>,
     overlay_closable: bool,
@@ -296,6 +310,7 @@ impl std::fmt::Debug for Sheet {
         f.debug_struct("Sheet")
             .field("open", &"<model>")
             .field("side", &self.side)
+            .field("modal_mode", &self.modal_mode)
             .field("size_override", &self.size_override)
             .field("max_size_override", &self.max_size_override)
             .field("overlay_closable", &self.overlay_closable)
@@ -318,10 +333,12 @@ impl std::fmt::Debug for Sheet {
 }
 
 impl Sheet {
-    pub fn new(open: Model<bool>) -> Self {
+    pub fn new(open: impl IntoBoolModel) -> Self {
+        let open = open.into_bool_model();
         Self {
             open,
             side: SheetSide::default(),
+            modal_mode: SheetModalMode::Modal,
             size_override: None,
             max_size_override: None,
             overlay_closable: true,
@@ -408,6 +425,42 @@ impl Sheet {
         self
     }
 
+    /// Enables or disables the modal overlay barrier.
+    ///
+    /// Default: `true`.
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal_mode = if modal {
+            SheetModalMode::Modal
+        } else {
+            SheetModalMode::NonModal
+        };
+        self
+    }
+
+    /// Sets the sheet modal policy in one call.
+    ///
+    /// - `SheetModalMode::Modal`: installs a barrier-backed modal overlay.
+    /// - `SheetModalMode::NonModal`: outside pointer interaction stays enabled.
+    /// - `SheetModalMode::TrapFocus`: traps Tab focus inside the sheet while keeping outside
+    ///   pointer interaction enabled.
+    pub fn modal_mode(mut self, mode: SheetModalMode) -> Self {
+        self.modal_mode = mode;
+        self
+    }
+
+    /// Base UI-style trap-focus mode.
+    ///
+    /// This differs from `modal(true)`: keyboard focus stays within the sheet, but outside pointer
+    /// interactions remain enabled.
+    pub fn modal_trap_focus(mut self, trap: bool) -> Self {
+        self.modal_mode = if trap {
+            SheetModalMode::TrapFocus
+        } else {
+            SheetModalMode::NonModal
+        };
+        self
+    }
+
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
         self.overlay_color = Some(overlay_color);
         self
@@ -488,7 +541,13 @@ impl Sheet {
 
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = radix_dialog::dialog_root_name(id);
+            let modal = matches!(self.modal_mode, SheetModalMode::Modal);
+            let trap_focus_only = matches!(self.modal_mode, SheetModalMode::TrapFocus);
+            let overlay_root_name = if modal {
+                radix_dialog::dialog_root_name(id)
+            } else {
+                format!("window-overlays.dismissible-sheet.{:x}", id.0)
+            };
 
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
@@ -517,13 +576,36 @@ impl Sheet {
 
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
-                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(true);
+                let on_dismiss_request = if !modal && !self.overlay_closable {
+                    let user = self.on_dismiss_request.clone();
+                    Some(Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              req: &mut fret_ui::action::DismissRequestCx| {
+                            if let Some(user) = user.as_ref() {
+                                user(host, action_cx, req);
+                            }
+                            if !req.default_prevented()
+                                && matches!(
+                                    req.reason,
+                                    fret_ui::action::DismissReason::OutsidePress { .. }
+                                        | fret_ui::action::DismissReason::FocusOutside
+                                )
+                            {
+                                req.prevent_default();
+                            }
+                        },
+                    ) as OnDismissRequest)
+                } else {
+                    self.on_dismiss_request.clone()
+                };
+                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(modal);
                 let (on_dismiss_request_for_request, on_close_auto_focus) =
                     radix_dialog::dialog_close_auto_focus_guard_hooks(
                         cx,
                         policy,
                         self.open.clone(),
-                        self.on_dismiss_request.clone(),
+                        on_dismiss_request,
                         self.on_close_auto_focus.clone(),
                     );
 
@@ -562,39 +644,57 @@ impl Sheet {
                 let viewport_width = viewport_bounds.size.width;
                 let viewport_height = viewport_bounds.size.height;
                 let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+                let popup_initial_focus = Rc::new(Cell::new(None));
+                let popup_initial_focus_for_children = popup_initial_focus.clone();
                 let overlay_children = portal_inherited::with_root_name_inheriting(
                     cx,
                     &overlay_root_name,
                     portal_inherited,
                     |cx| {
-                        let mut barrier_overlay_color = overlay_color;
-                        barrier_overlay_color.a =
-                            (barrier_overlay_color.a * opacity).max(0.0).min(1.0);
-                        let barrier_fill = cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
+                        let overlay_fill = |cx: &mut ElementContext<'_, H>| {
+                            let mut barrier_overlay_color = overlay_color;
+                            barrier_overlay_color.a =
+                                (barrier_overlay_color.a * opacity).max(0.0).min(1.0);
+                            cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    background: Some(barrier_overlay_color),
+                                    shadow: None,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: None,
+                                    corner_radii: Corners::all(Px(0.0)),
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)).into(),
-                                background: Some(barrier_overlay_color),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: Corners::all(Px(0.0)),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::new(),
-                        );
+                                |_cx| Vec::new(),
+                            )
+                        };
 
                         let content =
                             with_sheet_open_provider(cx, open_for_children.clone(), |cx| {
                                 with_sheet_side_provider(cx, sheet_side, |cx| content(cx))
                             });
+                        let content = if modal {
+                            content
+                        } else {
+                            cx.semantics_with_id(
+                                SemanticsProps {
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                move |_cx, popup_focus_id| {
+                                    popup_initial_focus_for_children.set(Some(popup_focus_id));
+                                    vec![content]
+                                },
+                            )
+                        };
                         let vertical_auto_max_height_fraction = if vertical_auto_max_height_fraction
                             .is_finite()
                             && vertical_auto_max_height_fraction > 0.0
@@ -837,27 +937,56 @@ impl Sheet {
                             vec![wrapper],
                         );
 
-                        radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
-                            cx,
-                            open_for_children.clone(),
-                            dialog_options.clone(),
-                            on_dismiss_request_for_barrier.clone(),
-                            [barrier_fill],
-                            content,
-                        )
+                        let content = if trap_focus_only {
+                            focus_scope_prim::focus_trap(cx, move |_cx| vec![content])
+                        } else {
+                            content
+                        };
+
+                        if modal {
+                            let barrier_fill = overlay_fill(cx);
+                            radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
+                                cx,
+                                open_for_children.clone(),
+                                dialog_options.clone(),
+                                on_dismiss_request_for_barrier.clone(),
+                                [barrier_fill],
+                                content,
+                            )
+                        } else {
+                            let visual_scrim = cx.hit_test_gate(false, |cx| vec![overlay_fill(cx)]);
+                            [visual_scrim, content]
+                                .into_iter()
+                                .collect::<fret_ui::element::Elements>()
+                        }
                     },
                 );
 
-                let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
-                    id,
-                    id,
-                    open,
-                    overlay_presence,
-                    dialog_options,
-                    on_dismiss_request_for_request,
-                    overlay_children,
-                );
-                radix_dialog::request_modal_dialog(cx, request);
+                if modal {
+                    let request =
+                        radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
+                            id,
+                            id,
+                            open,
+                            overlay_presence,
+                            dialog_options,
+                            on_dismiss_request_for_request,
+                            overlay_children,
+                        );
+                    radix_dialog::request_modal_dialog(cx, request);
+                } else {
+                    let mut request =
+                        OverlayRequest::dismissible_popover(id, id, open, overlay_presence, {
+                            overlay_children.into_iter().collect::<Vec<_>>()
+                        });
+                    request.root_name = Some(overlay_root_name);
+                    request.initial_focus =
+                        popup_initial_focus.get().or(dialog_options.initial_focus);
+                    request.on_open_auto_focus = dialog_options.on_open_auto_focus.clone();
+                    request.on_close_auto_focus = dialog_options.on_close_auto_focus.clone();
+                    request.dismissible_on_dismiss_request = on_dismiss_request_for_request;
+                    OverlayController::request(cx, request);
+                }
             }
 
             trigger
@@ -1618,6 +1747,21 @@ mod tests {
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
+    fn scene_contains_full_window_solid_quad(
+        scene: &fret_core::Scene,
+        bounds: Rect,
+        color: fret_core::Color,
+    ) -> bool {
+        scene.ops().iter().any(|op| {
+            matches!(
+                op,
+                fret_core::SceneOp::Quad {
+                    rect, background, ..
+                } if *rect == bounds && background.paint == fret_core::Paint::Solid(color).into()
+            )
+        })
+    }
+
     #[test]
     fn sheet_trigger_build_push_ui_accepts_late_landed_child() {
         let window = AppWindowId::default();
@@ -1743,6 +1887,21 @@ mod tests {
 
         let b = Sheet::new(open).disable_pointer_dismissal(false);
         assert!(b.overlay_closable);
+    }
+
+    #[test]
+    fn sheet_modal_mode_alias_sets_expected_mode() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let modal = Sheet::new(open.clone()).modal(true);
+        assert_eq!(modal.modal_mode, SheetModalMode::Modal);
+
+        let non_modal = Sheet::new(open.clone()).modal(false);
+        assert_eq!(non_modal.modal_mode, SheetModalMode::NonModal);
+
+        let trap_focus = Sheet::new(open).modal_trap_focus(true);
+        assert_eq!(trap_focus.modal_mode, SheetModalMode::TrapFocus);
     }
 
     #[test]
@@ -2483,13 +2642,14 @@ mod tests {
         trigger_id.expect("trigger id")
     }
 
-    fn render_sheet_frame_with_auto_focus_hooks(
+    fn render_sheet_frame_with_auto_focus_hooks_and_mode(
         ui: &mut UiTree<App>,
         app: &mut App,
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        modal_mode: SheetModalMode,
         overlay_closable: bool,
         side: SheetSide,
         underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
@@ -2548,6 +2708,7 @@ mod tests {
 
                 let sheet = Sheet::new(open.clone())
                     .side(side)
+                    .modal_mode(modal_mode)
                     .overlay_closable(overlay_closable)
                     .size(Px(300.0))
                     .on_open_auto_focus(on_open_auto_focus.clone())
@@ -2586,6 +2747,41 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    fn render_sheet_frame_with_auto_focus_hooks(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        overlay_closable: bool,
+        side: SheetSide,
+        underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_id_cell: Option<Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>>>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        initial_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+        on_close_auto_focus: Option<OnCloseAutoFocus>,
+    ) -> fret_ui::elements::GlobalElementId {
+        render_sheet_frame_with_auto_focus_hooks_and_mode(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            open,
+            SheetModalMode::Modal,
+            overlay_closable,
+            side,
+            underlay_id_out,
+            underlay_id_cell,
+            content_id_out,
+            initial_focus_id_out,
+            on_open_auto_focus,
+            on_close_auto_focus,
+        )
     }
 
     fn render_sheet_frame_with_open_auto_focus_redirect_target(
@@ -3681,6 +3877,262 @@ mod tests {
             app.models().get_copied(&underlay_activated),
             Some(true),
             "underlay should activate once the barrier is removed"
+        );
+    }
+
+    #[test]
+    fn sheet_non_modal_focuses_popup_root_on_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(fret_runtime::FrameId(1));
+        let trigger = render_sheet_frame_with_auto_focus_hooks_and_mode(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            SheetModalMode::NonModal,
+            true,
+            SheetSide::Right,
+            underlay_id.clone(),
+            None,
+            content_id.clone(),
+            initial_focus_id.clone(),
+            None,
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(fret_runtime::FrameId(2));
+        let _ = render_sheet_frame_with_auto_focus_hooks_and_mode(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            SheetModalMode::NonModal,
+            true,
+            SheetSide::Right,
+            underlay_id,
+            None,
+            content_id.clone(),
+            initial_focus_id.clone(),
+            None,
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content = content_id.get().expect("sheet content element");
+        let content_node =
+            fret_ui::elements::node_for_element(&mut app, window, content).expect("content node");
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("focusable");
+        let focused = ui.focus().expect("focused popup root");
+
+        let mut focused_is_content_ancestor = false;
+        let mut current = Some(content_node);
+        while let Some(node) = current {
+            if node == focused {
+                focused_is_content_ancestor = true;
+                break;
+            }
+            current = ui.node_parent(node);
+        }
+
+        assert!(
+            focused_is_content_ancestor,
+            "expected non-modal sheet to focus a popup-root ancestor of the content"
+        );
+        assert_ne!(
+            Some(focused),
+            Some(initial_focus_node),
+            "expected non-modal sheet to avoid auto-focusing the first focusable descendant"
+        );
+    }
+
+    #[test]
+    fn sheet_non_modal_overlay_color_renders_visual_scrim_without_blocking_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let scrim_color = fret_core::Color {
+            r: 0.11,
+            g: 0.27,
+            b: 0.63,
+            a: 0.38,
+        };
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(fret_runtime::FrameId(frame));
+                OverlayController::begin_frame(app, window);
+
+                let open = open.clone();
+                let underlay_id = underlay_id.clone();
+                let underlay_activated = underlay_activated.clone();
+
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "sheet-non-modal-scrim",
+                    |cx| {
+                        let underlay = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                underlay_id.set(Some(id));
+                                cx.pressable_set_bool(&underlay_activated, true);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let trigger = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |_cx, _st| Vec::new(),
+                        );
+
+                        let sheet = Sheet::new(open.clone())
+                            .side(SheetSide::Right)
+                            .modal_mode(SheetModalMode::NonModal)
+                            .overlay_closable(false)
+                            .overlay_color(scrim_color)
+                            .size(Px(300.0))
+                            .into_element(
+                                cx,
+                                |_cx| trigger,
+                                |cx| {
+                                    SheetContent::new(vec![ui::raw_text("sheet").into_element(cx)])
+                                        .into_element(cx)
+                                },
+                            );
+
+                        vec![underlay, sheet]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 2;
+        for i in 0..settle_frames {
+            render_frame(&mut ui, &mut app, &mut services, 2 + i as u64);
+        }
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(
+            scene_contains_full_window_solid_quad(&scene, bounds, scrim_color),
+            "expected non-modal sheet to paint a visual scrim with the configured overlay color"
+        );
+
+        let underlay_element = underlay_id.get().expect("underlay id");
+        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
+            .expect("underlay node");
+        let click = Point::new(Px(180.0), Px(520.0));
+        let hit = ui.debug_hit_test(click).hit.expect("click hit");
+        assert!(
+            ui.debug_node_path(hit).contains(&underlay_node),
+            "expected click through the visual scrim to reach the underlay"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(true));
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected non-modal visual scrim to stay click-through instead of behaving like a modal barrier"
         );
     }
 

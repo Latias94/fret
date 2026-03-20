@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, GridProps, MainAlign,
-    PressableKeyActivation, PressableProps, SemanticsDecoration,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, FlexProps, GridProps, Length,
+    MainAlign, PressableKeyActivation, PressableProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography::scope_description_text;
@@ -19,9 +20,49 @@ use fret_ui_kit::{
 
 use crate::overlay_motion;
 
+const ITEM_MEDIA_MARKER_PREFIX: &str = "fret-ui-shadcn.item-media";
+const ITEM_DESCRIPTION_MARKER_PREFIX: &str = "fret-ui-shadcn.item-description";
+
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default `ease-in-out`: cubic-bezier(0.4, 0, 0.2, 1)
     fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
+}
+
+fn matches_marker(marker: &str, prefix: &str) -> bool {
+    marker == prefix
+        || (marker.starts_with(prefix)
+            && marker
+                .as_bytes()
+                .get(prefix.len())
+                .is_some_and(|b| *b == b':'))
+}
+
+fn attach_item_marker(el: AnyElement, prefix: &str) -> AnyElement {
+    let marker: Arc<str> = Arc::from(format!("{prefix}:{}", el.id.0));
+    el.key_context(marker)
+}
+
+fn element_has_item_marker(element: &AnyElement, prefix: &str) -> bool {
+    element
+        .key_context
+        .as_deref()
+        .is_some_and(|marker| matches_marker(marker, prefix))
+}
+
+fn subtree_has_item_description_marker(element: &AnyElement) -> bool {
+    element_has_item_marker(element, ITEM_DESCRIPTION_MARKER_PREFIX)
+        || element
+            .children
+            .iter()
+            .any(subtree_has_item_description_marker)
+}
+
+fn patch_item_media_for_description(mut element: AnyElement, offset: Px) -> AnyElement {
+    if let ElementKind::Container(props) = &mut element.kind {
+        props.layout.flex.align_self = Some(CrossAlign::Start);
+        props.layout.margin.top = offset.into();
+    }
+    element
 }
 
 fn item_size_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> ItemSize {
@@ -401,7 +442,7 @@ impl ItemMedia {
             let gap = MetricRef::space(Space::N2).resolve(theme);
             (props, inner_layout, gap)
         };
-        cx.container(props, move |cx| {
+        let element = cx.container(props, move |cx| {
             vec![cx.flex(
                 FlexProps {
                     layout: inner_layout,
@@ -414,7 +455,8 @@ impl ItemMedia {
                 },
                 move |_cx| children,
             )]
-        })
+        });
+        attach_item_marker(element, ITEM_MEDIA_MARKER_PREFIX)
     }
 }
 
@@ -636,14 +678,28 @@ impl ItemFooter {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
+enum ItemTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
+#[derive(Debug)]
 pub struct ItemTitle {
-    text: Arc<str>,
+    content: ItemTitleContent,
 }
 
 impl ItemTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: ItemTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: ItemTitleContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -664,25 +720,112 @@ impl ItemTitle {
             (fg, px, line_height)
         };
 
-        ui::text(self.text)
-            .text_size_px(px)
-            .fixed_line_box_px(line_height)
-            .line_box_in_bounds()
-            .font_medium()
-            .text_color(ColorRef::Color(fg))
-            .truncate()
-            .into_element(cx)
+        match self.content {
+            ItemTitleContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .fixed_line_box_px(line_height)
+                .line_box_in_bounds()
+                .font_medium()
+                .text_color(ColorRef::Color(fg))
+                .truncate()
+                .into_element(cx),
+            ItemTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_item_title_text_style_recursive(child, px, line_height);
+                }
+
+                let mut children =
+                    current_color::scope_children(cx, ColorRef::Color(fg), |_cx| children);
+
+                match children.len() {
+                    0 => ui::text("")
+                        .text_size_px(px)
+                        .fixed_line_box_px(line_height)
+                        .line_box_in_bounds()
+                        .font_medium()
+                        .text_color(ColorRef::Color(fg))
+                        .truncate()
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::h_row(move |_cx| children)
+                        .gap(Space::N2)
+                        .items_center()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                }
+            }
+        }
     }
 }
 
-#[derive(Debug, Clone)]
+fn patch_item_title_text_style_recursive(el: &mut AnyElement, px: Px, line_height: Px) {
+    fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = FontWeight::MEDIUM;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        *style = Some(style_value);
+    }
+
+    fn ensure_fill_width(layout: &mut fret_ui::element::LayoutStyle) {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+    }
+
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            patch_text_style(&mut props.style, px, line_height);
+            ensure_fill_width(&mut props.layout);
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Ellipsis;
+        }
+        ElementKind::StyledText(props) => {
+            patch_text_style(&mut props.style, px, line_height);
+            ensure_fill_width(&mut props.layout);
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Ellipsis;
+        }
+        ElementKind::SelectableText(props) => {
+            patch_text_style(&mut props.style, px, line_height);
+            ensure_fill_width(&mut props.layout);
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Ellipsis;
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_item_title_text_style_recursive(child, px, line_height);
+    }
+}
+
+#[derive(Debug)]
+enum ItemDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
+#[derive(Debug)]
 pub struct ItemDescription {
-    text: Arc<str>,
+    content: ItemDescriptionContent,
 }
 
 impl ItemDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: ItemDescriptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: ItemDescriptionContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -696,16 +839,37 @@ impl ItemDescription {
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
         let max_h = Px(line_height.0 * 2.0);
 
-        scope_description_text(
-            ui::raw_text(self.text)
-                .wrap(TextWrap::Word)
-                .overflow(TextOverflow::Clip)
-                .max_h(max_h)
-                .overflow_hidden()
-                .into_element(cx),
-            &theme,
-            "component.item.description",
-        )
+        let element = match self.content {
+            ItemDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .max_h(max_h)
+                    .overflow_hidden()
+                    .into_element(cx),
+                &theme,
+                "component.item.description",
+            ),
+            ItemDescriptionContent::Children(mut children) => {
+                let content = match children.len() {
+                    0 => ui::raw_text("")
+                        .wrap(TextWrap::Word)
+                        .overflow(TextOverflow::Clip)
+                        .max_h(max_h)
+                        .overflow_hidden()
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N1)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                };
+                scope_description_text(content, &theme, "component.item.description")
+            }
+        };
+
+        attach_item_marker(element, ITEM_DESCRIPTION_MARKER_PREFIX)
     }
 }
 
@@ -870,6 +1034,7 @@ impl Item {
             pressable_layout,
             pressable_size,
             radius,
+            media_description_offset,
             focus_ring,
         ) = {
             let theme = Theme::global(&*cx.app);
@@ -882,6 +1047,7 @@ impl Item {
             let pressable_layout = decl_style::layout_style(theme, layout.clone());
             let pressable_size = pressable_layout.size;
             let radius = item_radius(theme);
+            let media_description_offset = MetricRef::space(Space::N0p5).resolve(theme);
             let focus_ring = decl_style::focus_ring(theme, radius);
             (
                 gap,
@@ -891,11 +1057,27 @@ impl Item {
                 pressable_layout,
                 pressable_size,
                 radius,
+                media_description_offset,
                 focus_ring,
             )
         };
 
         let children = self.children;
+        let has_description = children.iter().any(subtree_has_item_description_marker);
+        let children = if has_description {
+            children
+                .into_iter()
+                .map(|child| {
+                    if element_has_item_marker(&child, ITEM_MEDIA_MARKER_PREFIX) {
+                        patch_item_media_for_description(child, media_description_offset)
+                    } else {
+                        child
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            children
+        };
         let enabled = self.enabled;
         let on_click = self.on_click;
         let on_activate = self.on_activate;
@@ -1081,14 +1263,14 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButtons, PathCommand, Point, Px, Rect, Size as CoreSize, Size,
-        SvgId, SvgService,
+        AppWindowId, AttributedText, FontWeight, Modifiers, MouseButtons, PathCommand, Point, Px,
+        Rect, Size as CoreSize, Size, SvgId, SvgService, TextSpan,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
-    use fret_ui::element::{ElementKind, PressableKeyActivation, SpacingLength};
+    use fret_ui::element::{ElementKind, Length, PressableKeyActivation, SpacingLength};
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
     use std::cell::Cell;
@@ -1259,6 +1441,93 @@ mod tests {
     }
 
     #[test]
+    fn item_description_children_scope_inherited_text_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemDescription::new_children([cx.text("Nested description")]).into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected ItemDescription::new_children(single child) to keep the text node");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+
+        let theme = fret_ui::Theme::global(&app).snapshot();
+        assert_eq!(
+            element.inherited_text_style.as_ref(),
+            Some(&fret_ui_kit::typography::description_text_refinement(
+                &theme,
+                "component.item.description",
+            ))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(&theme))
+        );
+    }
+
+    #[test]
+    fn item_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = AttributedText::new(
+                Arc::<str>::from("Item title rendered from a rich text child"),
+                Arc::<[TextSpan]>::from([TextSpan::new(
+                    "Item title rendered from a rich text child".len(),
+                )]),
+            );
+
+            ItemTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let ElementKind::StyledText(props) = &element.kind else {
+            panic!(
+                "expected ItemTitle::new_children(single child) to keep the rich text node, got {:?}",
+                element.kind
+            );
+        };
+
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected ItemTitle children to receive explicit title text style");
+        let theme = Theme::global(&app);
+        let expected_px = theme
+            .metric_by_key("component.item.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.item.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, FontWeight::MEDIUM);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(
+            element.inherited_foreground,
+            Some(
+                theme
+                    .color_by_key("foreground")
+                    .unwrap_or_else(|| theme.color_token("foreground"))
+            )
+        );
+    }
+
+    #[test]
     fn item_link_stamps_link_role_and_enter_only_key_activation() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1330,6 +1599,73 @@ mod tests {
         };
         let expected_gap = MetricRef::space(Space::N0p5).resolve(theme);
         assert_eq!(content_props.gap, SpacingLength::Px(expected_gap));
+    }
+
+    #[test]
+    fn item_media_with_description_self_starts_and_offsets_from_top() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let media = ItemMedia::new([ui::text("m").into_element(cx)])
+                .variant(ItemMediaVariant::Icon)
+                .into_element(cx)
+                .test_id("media");
+            let content = ItemContent::new([
+                ItemTitle::new("Title").into_element(cx),
+                ItemDescription::new("Description").into_element(cx),
+            ])
+            .into_element(cx);
+            Item::new([media, content]).into_element(cx)
+        });
+
+        let media = find_element_by_test_id(&element, "media").expect("media element");
+        let ElementKind::Container(media_props) = &media.kind else {
+            panic!("expected media to remain a container");
+        };
+        let theme = Theme::global(&app);
+        let expected_offset = MetricRef::space(Space::N0p5).resolve(theme);
+
+        assert_eq!(media_props.layout.flex.align_self, Some(CrossAlign::Start));
+        assert_eq!(media_props.layout.margin.top, expected_offset.into());
+    }
+
+    #[test]
+    fn item_media_without_description_keeps_default_cross_axis_alignment() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let media = ItemMedia::new([ui::text("m").into_element(cx)])
+                .variant(ItemMediaVariant::Icon)
+                .into_element(cx)
+                .test_id("media");
+            let content =
+                ItemContent::new([ItemTitle::new("Title").into_element(cx)]).into_element(cx);
+            Item::new([media, content]).into_element(cx)
+        });
+
+        let media = find_element_by_test_id(&element, "media").expect("media element");
+        let ElementKind::Container(media_props) = &media.kind else {
+            panic!("expected media to remain a container");
+        };
+
+        assert_eq!(media_props.layout.flex.align_self, None);
+        assert_eq!(media_props.layout.margin.top, Px(0.0).into());
     }
 
     #[test]

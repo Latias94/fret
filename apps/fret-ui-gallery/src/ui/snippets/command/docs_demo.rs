@@ -7,19 +7,18 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let last_action = super::last_action_model(cx);
     let query = cx.local_model(String::new);
-    let on_select = super::on_select_for_last_action(last_action.clone());
+    let noop: fret_ui::action::OnActivate = Arc::new(|_host, _action_cx, _reason| {});
 
     let icon_id = fret_icons::IconId::new_static;
     let entries: Vec<shadcn::CommandEntry> = vec![
         shadcn::CommandGroup::new([
             shadcn::CommandItem::new("Calendar")
                 .leading_icon(icon_id("lucide.calendar"))
-                .on_select_action(on_select(Arc::from("command.docs-demo.calendar"))),
+                .on_select_action(noop.clone()),
             shadcn::CommandItem::new("Search Emoji")
                 .leading_icon(icon_id("lucide.smile"))
-                .on_select_action(on_select(Arc::from("command.docs-demo.search-emoji"))),
+                .on_select_action(noop.clone()),
             shadcn::CommandItem::new("Calculator")
                 .leading_icon(icon_id("lucide.calculator"))
                 .disabled(true),
@@ -31,15 +30,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::CommandItem::new("Profile")
                 .leading_icon(icon_id("lucide.user"))
                 .shortcut("⌘P")
-                .on_select_action(on_select(Arc::from("command.docs-demo.profile"))),
+                .on_select_action(noop.clone()),
             shadcn::CommandItem::new("Billing")
                 .leading_icon(icon_id("lucide.credit-card"))
                 .shortcut("⌘B")
-                .on_select_action(on_select(Arc::from("command.docs-demo.billing"))),
+                .on_select_action(noop.clone()),
             shadcn::CommandItem::new("Settings")
                 .leading_icon(icon_id("lucide.settings"))
                 .shortcut("⌘S")
-                .on_select_action(on_select(Arc::from("command.docs-demo.settings"))),
+                .on_select_action(noop.clone()),
         ])
         .heading("Settings")
         .into(),
@@ -49,11 +48,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .placeholder("Type a command or search...")
         .empty_text("No results found.")
         .a11y_label("Command docs demo")
-        .refine_style(ChromeRefinement::default().shadow(ShadowPreset::Md))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(Px(450.0))
+                .max_w(Px(384.0))
                 .min_w_0(),
         )
         .entries(entries)

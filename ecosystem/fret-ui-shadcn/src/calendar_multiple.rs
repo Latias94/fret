@@ -20,6 +20,8 @@ use time::{Date, OffsetDateTime, Weekday};
 use crate::calendar::{
     CalendarLocale, clamp_start_month, date_in_month_bounds, max_start_month, month_le, month_lt,
 };
+use crate::calendar_month_model::IntoCalendarMonthModel;
+use crate::date_vec_model::IntoDateVecModel;
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
@@ -77,10 +79,10 @@ impl std::fmt::Debug for CalendarMultiple {
 }
 
 impl CalendarMultiple {
-    pub fn new(month: Model<CalendarMonth>, selected: Model<Vec<Date>>) -> Self {
+    pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoDateVecModel) -> Self {
         Self {
-            month,
-            selected,
+            month: month.into_calendar_month_model(),
+            selected: selected.into_date_vec_model(),
             number_of_months: 1,
             locale: CalendarLocale::default(),
             month_bounds: None,

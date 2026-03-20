@@ -18,7 +18,6 @@ use fret_core::scene::{
 };
 use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
 use fret_render::RendererCapabilities;
-use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -186,12 +185,8 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
     Color { r, g, b, a }
 }
 
-fn watch_first_f32(cx: &mut UiCx<'_>, model: &Model<Vec<f32>>, default: f32) -> f32 {
-    model
-        .layout_in(cx)
-        .read_ref(|v| v.first().copied().unwrap_or(default))
-        .ok()
-        .unwrap_or(default)
+fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
+    model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn build_chain(
@@ -353,53 +348,54 @@ struct LiquidGlassCustomV2Effect(Option<EffectId>);
 #[derive(Clone, Copy)]
 struct LiquidGlassCustomV3Effect(Option<EffectId>);
 
-#[derive(Clone)]
 struct LiquidGlassState {
-    show_fake: Model<bool>,
-    show_warp: Model<bool>,
-    show_warp_v2: Model<bool>,
-    show_custom_v2: Model<bool>,
-    show_custom_v3: Model<bool>,
-    custom_v3_pair: Model<bool>,
-    custom_v3_source_group: Model<bool>,
-    show_inspector: Model<bool>,
-    animate: Model<bool>,
-    phase_speed: Model<Vec<f32>>,
+    show_fake: LocalState<bool>,
+    show_warp: LocalState<bool>,
+    show_warp_v2: LocalState<bool>,
+    show_custom_v2: LocalState<bool>,
+    show_custom_v3: LocalState<bool>,
+    custom_v3_pair: LocalState<bool>,
+    custom_v3_source_group: LocalState<bool>,
+    show_inspector: LocalState<bool>,
+    animate: LocalState<bool>,
+    phase_speed: LocalState<Vec<f32>>,
 
     warp_map_size: (u32, u32),
     warp_map_key: ImageAssetKey,
     warp_map_rgba: Arc<Vec<u8>>,
 
-    warp_strength_px: Model<Vec<f32>>,
-    warp_scale_px: Model<Vec<f32>>,
-    warp_phase: Model<Vec<f32>>,
-    warp_chroma_px: Model<Vec<f32>>,
+    warp_strength_px: LocalState<Vec<f32>>,
+    warp_scale_px: LocalState<Vec<f32>>,
+    warp_phase: LocalState<Vec<f32>>,
+    warp_chroma_px: LocalState<Vec<f32>>,
 
-    lens_radius_px: Model<Vec<f32>>,
+    lens_radius_px: LocalState<Vec<f32>>,
 
-    custom_edge_falloff_px: Model<Vec<f32>>,
-    custom_rim_strength: Model<Vec<f32>>,
-    custom_shadow_strength: Model<Vec<f32>>,
-    custom_grain_strength: Model<Vec<f32>>,
-    custom_grain_scale: Model<Vec<f32>>,
+    custom_edge_falloff_px: LocalState<Vec<f32>>,
+    custom_rim_strength: LocalState<Vec<f32>>,
+    custom_shadow_strength: LocalState<Vec<f32>>,
+    custom_grain_strength: LocalState<Vec<f32>>,
+    custom_grain_scale: LocalState<Vec<f32>>,
 
-    custom_v3_dispersion: Model<Vec<f32>>,
-    custom_v3_bevel_strength: Model<Vec<f32>>,
-    custom_v3_bevel_angle_deg: Model<Vec<f32>>,
-    custom_v3_bevel_secondary: Model<Vec<f32>>,
+    custom_v3_dispersion: LocalState<Vec<f32>>,
+    custom_v3_bevel_strength: LocalState<Vec<f32>>,
+    custom_v3_bevel_angle_deg: LocalState<Vec<f32>>,
+    custom_v3_bevel_secondary: LocalState<Vec<f32>>,
 
-    blur_radius_px: Model<Vec<f32>>,
-    blur_downsample: Model<Vec<f32>>,
-    saturation: Model<Vec<f32>>,
-    brightness: Model<Vec<f32>>,
-    contrast: Model<Vec<f32>>,
+    blur_radius_px: LocalState<Vec<f32>>,
+    blur_downsample: LocalState<Vec<f32>>,
+    saturation: LocalState<Vec<f32>>,
+    brightness: LocalState<Vec<f32>>,
+    contrast: LocalState<Vec<f32>>,
 
-    use_backdrop: Model<bool>,
-    use_dither: Model<bool>,
+    use_backdrop: LocalState<bool>,
+    use_dither: LocalState<bool>,
 }
 
 struct LiquidGlassView {
-    st: LiquidGlassState,
+    warp_map_size: (u32, u32),
+    warp_map_key: ImageAssetKey,
+    warp_map_rgba: Arc<Vec<u8>>,
 }
 
 #[derive(Clone)]
@@ -462,52 +458,165 @@ fn install_custom_effects(app: &mut KernelApp, effects: &mut dyn fret_core::Cust
 }
 
 impl LiquidGlassState {
-    fn reset(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
-        let _ = models.update(&st.show_fake, |v| *v = true);
-        let _ = models.update(&st.show_warp, |v| *v = true);
-        let _ = models.update(&st.show_warp_v2, |v| *v = false);
-        let _ = models.update(&st.show_custom_v2, |v| *v = false);
-        let _ = models.update(&st.show_custom_v3, |v| *v = false);
-        let _ = models.update(&st.custom_v3_pair, |v| *v = false);
-        let _ = models.update(&st.custom_v3_source_group, |v| *v = false);
-        let _ = models.update(&st.show_inspector, |v| *v = false);
-        let _ = models.update(&st.animate, |v| *v = true);
-        let _ = models.update(&st.phase_speed, |v| *v = vec![0.65]);
-        let _ = models.update(&st.warp_strength_px, |v| *v = vec![10.0]);
-        let _ = models.update(&st.warp_scale_px, |v| *v = vec![72.0]);
-        let _ = models.update(&st.warp_phase, |v| *v = vec![0.0]);
-        let _ = models.update(&st.warp_chroma_px, |v| *v = vec![2.0]);
-        let _ = models.update(&st.lens_radius_px, |v| *v = vec![20.0]);
-        let _ = models.update(&st.custom_edge_falloff_px, |v| *v = vec![18.0]);
-        let _ = models.update(&st.custom_rim_strength, |v| *v = vec![0.65]);
-        let _ = models.update(&st.custom_shadow_strength, |v| *v = vec![0.55]);
-        let _ = models.update(&st.custom_grain_strength, |v| *v = vec![0.06]);
-        let _ = models.update(&st.custom_grain_scale, |v| *v = vec![1.0]);
-        let _ = models.update(&st.custom_v3_dispersion, |v| *v = vec![0.55]);
-        let _ = models.update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
-        let _ = models.update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
-        let _ = models.update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
-        let _ = models.update(&st.blur_radius_px, |v| *v = vec![16.0]);
-        let _ = models.update(&st.blur_downsample, |v| *v = vec![2.0]);
-        let _ = models.update(&st.saturation, |v| *v = vec![1.10]);
-        let _ = models.update(&st.brightness, |v| *v = vec![1.02]);
-        let _ = models.update(&st.contrast, |v| *v = vec![1.02]);
-        let _ = models.update(&st.use_backdrop, |v| *v = true);
-        let _ = models.update(&st.use_dither, |v| *v = true);
+    fn new(
+        cx: &mut AppUi<'_, '_>,
+        warp_map_size: (u32, u32),
+        warp_map_key: ImageAssetKey,
+        warp_map_rgba: Arc<Vec<u8>>,
+    ) -> Self {
+        Self {
+            // Important: keep these defaults stable because perf scripts/baselines assume them.
+            // - v1 baseline expects fake + v1 visible by default.
+            // - v2 script toggles fake/v1 off and v2 on deterministically.
+            show_fake: cx.state().local_init(|| true),
+            show_warp: cx.state().local_init(|| true),
+            show_warp_v2: cx.state().local_init(|| false),
+            show_custom_v2: cx.state().local_init(|| false),
+            show_custom_v3: cx.state().local_init(|| false),
+            custom_v3_pair: cx.state().local_init(|| false),
+            custom_v3_source_group: cx.state().local_init(|| false),
+            show_inspector: cx.state().local_init(|| false),
+            animate: cx.state().local_init(|| true),
+            phase_speed: cx.state().local_init(|| vec![0.65]),
+
+            warp_map_size,
+            warp_map_key,
+            warp_map_rgba,
+
+            warp_strength_px: cx.state().local_init(|| vec![10.0]),
+            warp_scale_px: cx.state().local_init(|| vec![72.0]),
+            warp_phase: cx.state().local_init(|| vec![0.0]),
+            warp_chroma_px: cx.state().local_init(|| vec![2.0]),
+
+            lens_radius_px: cx.state().local_init(|| vec![20.0]),
+
+            custom_edge_falloff_px: cx.state().local_init(|| vec![18.0]),
+            custom_rim_strength: cx.state().local_init(|| vec![0.65]),
+            custom_shadow_strength: cx.state().local_init(|| vec![0.55]),
+            custom_grain_strength: cx.state().local_init(|| vec![0.06]),
+            custom_grain_scale: cx.state().local_init(|| vec![1.0]),
+
+            custom_v3_dispersion: cx.state().local_init(|| vec![0.55]),
+            custom_v3_bevel_strength: cx.state().local_init(|| vec![1.0]),
+            custom_v3_bevel_angle_deg: cx.state().local_init(|| vec![45.0]),
+            custom_v3_bevel_secondary: cx.state().local_init(|| vec![1.0]),
+
+            // Keep defaults stable: perf scripts/baselines assume a visible blur chain.
+            blur_radius_px: cx.state().local_init(|| vec![16.0]),
+            blur_downsample: cx.state().local_init(|| vec![2.0]),
+            saturation: cx.state().local_init(|| vec![1.10]),
+            brightness: cx.state().local_init(|| vec![1.02]),
+            contrast: cx.state().local_init(|| vec![1.02]),
+
+            use_backdrop: cx.state().local_init(|| true),
+            use_dither: cx.state().local_init(|| true),
+        }
     }
 
-    fn apply_custom_v3_bevel_preset(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
-        let _ = models.update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
-        let _ = models.update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
-        let _ = models.update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
-    }
+    fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+        cx.actions().local(&self.show_fake).set::<act::Reset>(true);
+        cx.actions().local(&self.show_warp).set::<act::Reset>(true);
+        cx.actions()
+            .local(&self.show_warp_v2)
+            .set::<act::Reset>(false);
+        cx.actions()
+            .local(&self.show_custom_v2)
+            .set::<act::Reset>(false);
+        cx.actions()
+            .local(&self.show_custom_v3)
+            .set::<act::Reset>(false);
+        cx.actions()
+            .local(&self.custom_v3_pair)
+            .set::<act::Reset>(false);
+        cx.actions()
+            .local(&self.custom_v3_source_group)
+            .set::<act::Reset>(false);
+        cx.actions()
+            .local(&self.show_inspector)
+            .set::<act::Reset>(false);
+        cx.actions().local(&self.animate).set::<act::Reset>(true);
+        cx.actions()
+            .local(&self.phase_speed)
+            .set::<act::Reset>(vec![0.65]);
+        cx.actions()
+            .local(&self.warp_strength_px)
+            .set::<act::Reset>(vec![10.0]);
+        cx.actions()
+            .local(&self.warp_scale_px)
+            .set::<act::Reset>(vec![72.0]);
+        cx.actions()
+            .local(&self.warp_phase)
+            .set::<act::Reset>(vec![0.0]);
+        cx.actions()
+            .local(&self.warp_chroma_px)
+            .set::<act::Reset>(vec![2.0]);
+        cx.actions()
+            .local(&self.lens_radius_px)
+            .set::<act::Reset>(vec![20.0]);
+        cx.actions()
+            .local(&self.custom_edge_falloff_px)
+            .set::<act::Reset>(vec![18.0]);
+        cx.actions()
+            .local(&self.custom_rim_strength)
+            .set::<act::Reset>(vec![0.65]);
+        cx.actions()
+            .local(&self.custom_shadow_strength)
+            .set::<act::Reset>(vec![0.55]);
+        cx.actions()
+            .local(&self.custom_grain_strength)
+            .set::<act::Reset>(vec![0.06]);
+        cx.actions()
+            .local(&self.custom_grain_scale)
+            .set::<act::Reset>(vec![1.0]);
+        cx.actions()
+            .local(&self.custom_v3_dispersion)
+            .set::<act::Reset>(vec![0.55]);
+        cx.actions()
+            .local(&self.custom_v3_bevel_strength)
+            .set::<act::Reset>(vec![1.0]);
+        cx.actions()
+            .local(&self.custom_v3_bevel_angle_deg)
+            .set::<act::Reset>(vec![45.0]);
+        cx.actions()
+            .local(&self.custom_v3_bevel_secondary)
+            .set::<act::Reset>(vec![1.0]);
+        cx.actions()
+            .local(&self.blur_radius_px)
+            .set::<act::Reset>(vec![16.0]);
+        cx.actions()
+            .local(&self.blur_downsample)
+            .set::<act::Reset>(vec![2.0]);
+        cx.actions()
+            .local(&self.saturation)
+            .set::<act::Reset>(vec![1.10]);
+        cx.actions()
+            .local(&self.brightness)
+            .set::<act::Reset>(vec![1.02]);
+        cx.actions()
+            .local(&self.contrast)
+            .set::<act::Reset>(vec![1.02]);
+        cx.actions()
+            .local(&self.use_backdrop)
+            .set::<act::Reset>(true);
+        cx.actions().local(&self.use_dither).set::<act::Reset>(true);
 
-    fn disable_custom_v3_bevel(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
-        let _ = models.update(&st.custom_v3_bevel_strength, |v| *v = vec![0.0]);
-    }
+        cx.actions()
+            .local(&self.custom_v3_bevel_strength)
+            .set::<act::ApplyCustomV3BevelPreset>(vec![1.0]);
+        cx.actions()
+            .local(&self.custom_v3_bevel_angle_deg)
+            .set::<act::ApplyCustomV3BevelPreset>(vec![45.0]);
+        cx.actions()
+            .local(&self.custom_v3_bevel_secondary)
+            .set::<act::ApplyCustomV3BevelPreset>(vec![1.0]);
 
-    fn toggle_inspector(models: &mut fret_runtime::ModelStore, st: &LiquidGlassState) {
-        let _ = models.update(&st.show_inspector, |v| *v = !*v);
+        cx.actions()
+            .local(&self.custom_v3_bevel_strength)
+            .set::<act::DisableCustomV3Bevel>(vec![0.0]);
+
+        cx.actions()
+            .local(&self.show_inspector)
+            .toggle_bool::<act::ToggleInspector>();
     }
 }
 
@@ -523,88 +632,25 @@ impl View for LiquidGlassView {
         );
         let warp_map_rgba = Arc::new(warp_map_rgba);
 
+        let _ = app;
+
         Self {
-            st: LiquidGlassState {
-                // Important: keep these defaults stable because perf scripts/baselines assume them.
-                // - v1 baseline expects fake + v1 visible by default.
-                // - v2 script toggles fake/v1 off and v2 on deterministically.
-                show_fake: app.models_mut().insert(true),
-                show_warp: app.models_mut().insert(true),
-                show_warp_v2: app.models_mut().insert(false),
-                show_custom_v2: app.models_mut().insert(false),
-                show_custom_v3: app.models_mut().insert(false),
-                custom_v3_pair: app.models_mut().insert(false),
-                custom_v3_source_group: app.models_mut().insert(false),
-                show_inspector: app.models_mut().insert(false),
-                animate: app.models_mut().insert(true),
-                phase_speed: app.models_mut().insert(vec![0.65]),
-
-                warp_map_size,
-                warp_map_key,
-                warp_map_rgba,
-
-                warp_strength_px: app.models_mut().insert(vec![10.0]),
-                warp_scale_px: app.models_mut().insert(vec![72.0]),
-                warp_phase: app.models_mut().insert(vec![0.0]),
-                warp_chroma_px: app.models_mut().insert(vec![2.0]),
-
-                lens_radius_px: app.models_mut().insert(vec![20.0]),
-
-                custom_edge_falloff_px: app.models_mut().insert(vec![18.0]),
-                custom_rim_strength: app.models_mut().insert(vec![0.65]),
-                custom_shadow_strength: app.models_mut().insert(vec![0.55]),
-                custom_grain_strength: app.models_mut().insert(vec![0.06]),
-                custom_grain_scale: app.models_mut().insert(vec![1.0]),
-
-                custom_v3_dispersion: app.models_mut().insert(vec![0.55]),
-                custom_v3_bevel_strength: app.models_mut().insert(vec![1.0]),
-                custom_v3_bevel_angle_deg: app.models_mut().insert(vec![45.0]),
-                custom_v3_bevel_secondary: app.models_mut().insert(vec![1.0]),
-
-                // Keep defaults stable: perf scripts/baselines assume a visible blur chain.
-                blur_radius_px: app.models_mut().insert(vec![16.0]),
-                blur_downsample: app.models_mut().insert(vec![2.0]),
-                saturation: app.models_mut().insert(vec![1.10]),
-                brightness: app.models_mut().insert(vec![1.02]),
-                contrast: app.models_mut().insert(vec![1.02]),
-
-                use_backdrop: app.models_mut().insert(true),
-                use_dither: app.models_mut().insert(true),
-            },
+            warp_map_size,
+            warp_map_key,
+            warp_map_rgba,
         }
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        cx.actions().models::<act::Reset>({
-            let st = self.st.clone();
-            move |models| {
-                LiquidGlassState::reset(models, &st);
-                true
-            }
-        });
-        cx.actions().models::<act::ApplyCustomV3BevelPreset>({
-            let st = self.st.clone();
-            move |models| {
-                LiquidGlassState::apply_custom_v3_bevel_preset(models, &st);
-                true
-            }
-        });
-        cx.actions().models::<act::DisableCustomV3Bevel>({
-            let st = self.st.clone();
-            move |models| {
-                LiquidGlassState::disable_custom_v3_bevel(models, &st);
-                true
-            }
-        });
-        cx.actions().models::<act::ToggleInspector>({
-            let st = self.st.clone();
-            move |models| {
-                LiquidGlassState::toggle_inspector(models, &st);
-                true
-            }
-        });
+        let mut st = LiquidGlassState::new(
+            cx,
+            self.warp_map_size,
+            self.warp_map_key,
+            self.warp_map_rgba.clone(),
+        );
+        st.bind_actions(cx);
 
-        view(cx, &mut self.st)
+        view(cx, &mut st)
     }
 }
 
@@ -617,120 +663,79 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
     let right = Px(24.0);
     let bottom = Px(24.0);
 
-    let show_fake_model = st.show_fake.clone();
-    let show_warp_model = st.show_warp.clone();
-    let show_warp_v2_model = st.show_warp_v2.clone();
-    let show_custom_v2_model = st.show_custom_v2.clone();
-    let show_custom_v3_model = st.show_custom_v3.clone();
-    let custom_v3_pair_model = st.custom_v3_pair.clone();
-    let custom_v3_source_group_model = st.custom_v3_source_group.clone();
-    let custom_v3_dispersion_model = st.custom_v3_dispersion.clone();
-    let animate_model = st.animate.clone();
-    let phase_speed_model = st.phase_speed.clone();
-    let show_inspector_model = st.show_inspector.clone();
+    let show_fake_switch_model = st.show_fake.clone_model();
+    let show_warp_switch_model = st.show_warp.clone_model();
+    let show_warp_v2_switch_model = st.show_warp_v2.clone_model();
+    let show_custom_v2_switch_model = st.show_custom_v2.clone_model();
+    let show_custom_v3_switch_model = st.show_custom_v3.clone_model();
+    let custom_v3_pair_switch_model = st.custom_v3_pair.clone_model();
+    let custom_v3_source_group_switch_model = st.custom_v3_source_group.clone_model();
+    let show_inspector_switch_model = st.show_inspector.clone_model();
+    let animate_switch_model = st.animate.clone_model();
+    let phase_speed_state = st.phase_speed.clone();
+    let use_backdrop_switch_model = st.use_backdrop.clone_model();
+    let use_dither_switch_model = st.use_dither.clone_model();
 
-    let warp_strength_model = st.warp_strength_px.clone();
-    let warp_scale_model = st.warp_scale_px.clone();
-    let warp_phase_model = st.warp_phase.clone();
-    let warp_chroma_model = st.warp_chroma_px.clone();
+    let warp_strength_state = st.warp_strength_px.clone();
+    let warp_scale_state = st.warp_scale_px.clone();
+    let warp_phase_state = st.warp_phase.clone();
+    let warp_chroma_state = st.warp_chroma_px.clone();
 
-    let lens_radius_model = st.lens_radius_px.clone();
+    let lens_radius_state = st.lens_radius_px.clone();
 
-    let custom_edge_model = st.custom_edge_falloff_px.clone();
-    let custom_rim_model = st.custom_rim_strength.clone();
-    let custom_shadow_model = st.custom_shadow_strength.clone();
-    let custom_grain_model = st.custom_grain_strength.clone();
-    let custom_grain_scale_model = st.custom_grain_scale.clone();
+    let custom_edge_state = st.custom_edge_falloff_px.clone();
+    let custom_rim_state = st.custom_rim_strength.clone();
+    let custom_shadow_state = st.custom_shadow_strength.clone();
+    let custom_grain_state = st.custom_grain_strength.clone();
+    let custom_grain_scale_state = st.custom_grain_scale.clone();
 
-    let custom_v3_bevel_strength_model = st.custom_v3_bevel_strength.clone();
-    let custom_v3_bevel_angle_model = st.custom_v3_bevel_angle_deg.clone();
-    let custom_v3_bevel_secondary_model = st.custom_v3_bevel_secondary.clone();
+    let custom_v3_dispersion_state = st.custom_v3_dispersion.clone();
+    let custom_v3_bevel_strength_state = st.custom_v3_bevel_strength.clone();
+    let custom_v3_bevel_angle_state = st.custom_v3_bevel_angle_deg.clone();
+    let custom_v3_bevel_secondary_state = st.custom_v3_bevel_secondary.clone();
 
-    let blur_radius_model = st.blur_radius_px.clone();
-    let blur_downsample_model = st.blur_downsample.clone();
-    let saturation_model = st.saturation.clone();
-    let brightness_model = st.brightness.clone();
-    let contrast_model = st.contrast.clone();
+    let blur_radius_state = st.blur_radius_px.clone();
+    let blur_downsample_state = st.blur_downsample.clone();
+    let saturation_state = st.saturation.clone();
+    let brightness_state = st.brightness.clone();
+    let contrast_state = st.contrast.clone();
 
-    let use_backdrop_model = st.use_backdrop.clone();
-    let use_dither_model = st.use_dither.clone();
-
-    let show_fake = st.show_fake.clone();
-    let show_warp = st.show_warp.clone();
-    let show_warp_v2 = st.show_warp_v2.clone();
-    let show_custom_v2 = st.show_custom_v2.clone();
-    let show_custom_v3 = st.show_custom_v3.clone();
-    let custom_v3_pair = st.custom_v3_pair.clone();
-    let show_fake_switch_model = show_fake_model.clone();
-    let show_warp_switch_model = show_warp_model.clone();
-    let show_warp_v2_switch_model = show_warp_v2_model.clone();
-    let show_custom_v2_switch_model = show_custom_v2_model.clone();
-    let show_custom_v3_switch_model = show_custom_v3_model.clone();
-    let custom_v3_pair_switch_model = custom_v3_pair_model.clone();
-    let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector(
-        move |cx| {
-            cx.observe_model(&show_fake_model, Invalidation::Layout);
-            cx.observe_model(&show_warp_model, Invalidation::Layout);
-            cx.observe_model(&show_warp_v2_model, Invalidation::Layout);
-            cx.observe_model(&show_custom_v2_model, Invalidation::Layout);
-            cx.observe_model(&show_custom_v3_model, Invalidation::Layout);
-            cx.observe_model(&custom_v3_pair_model, Invalidation::Layout);
-            (
-                cx.app.models().revision(&show_fake_model).unwrap_or(0),
-                cx.app.models().revision(&show_warp_model).unwrap_or(0),
-                cx.app.models().revision(&show_warp_v2_model).unwrap_or(0),
-                cx.app.models().revision(&show_custom_v2_model).unwrap_or(0),
-                cx.app.models().revision(&show_custom_v3_model).unwrap_or(0),
-                cx.app.models().revision(&custom_v3_pair_model).unwrap_or(0),
-            )
-        },
-        move |cx| LiquidGlassVisibilitySettings {
-            show_fake: cx.app.models().get_cloned(&show_fake).unwrap_or(true),
-            show_warp: cx.app.models().get_cloned(&show_warp).unwrap_or(true),
-            show_warp_v2: cx.app.models().get_cloned(&show_warp_v2).unwrap_or(false),
-            show_custom_v2: cx.app.models().get_cloned(&show_custom_v2).unwrap_or(false),
-            show_custom_v3: cx.app.models().get_cloned(&show_custom_v3).unwrap_or(false),
-            custom_v3_pair: cx.app.models().get_cloned(&custom_v3_pair).unwrap_or(false),
+    let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector_layout(
+        (
+            &st.show_fake,
+            &st.show_warp,
+            &st.show_warp_v2,
+            &st.show_custom_v2,
+            &st.show_custom_v3,
+            &st.custom_v3_pair,
+        ),
+        |(show_fake, show_warp, show_warp_v2, show_custom_v2, show_custom_v3, custom_v3_pair)| {
+            LiquidGlassVisibilitySettings {
+                show_fake,
+                show_warp,
+                show_warp_v2,
+                show_custom_v2,
+                show_custom_v3,
+                custom_v3_pair,
+            }
         },
     );
-    let custom_v3_source_group = st.custom_v3_source_group.clone();
-    let show_inspector = st.show_inspector.clone();
-    let animate = st.animate.clone();
-    let use_backdrop = st.use_backdrop.clone();
-    let use_dither = st.use_dither.clone();
-    let custom_v3_source_group_switch_model = custom_v3_source_group_model.clone();
-    let show_inspector_switch_model = show_inspector_model.clone();
-    let animate_switch_model = animate_model.clone();
-    let use_backdrop_switch_model = use_backdrop_model.clone();
-    let use_dither_switch_model = use_dither_model.clone();
-    let mode_settings: LiquidGlassModeSettings = cx.data().selector(
-        move |cx| {
-            cx.observe_model(&custom_v3_source_group_model, Invalidation::Layout);
-            cx.observe_model(&show_inspector_model, Invalidation::Layout);
-            cx.observe_model(&animate_model, Invalidation::Layout);
-            cx.observe_model(&use_backdrop_model, Invalidation::Layout);
-            cx.observe_model(&use_dither_model, Invalidation::Layout);
-            (
-                cx.app
-                    .models()
-                    .revision(&custom_v3_source_group_model)
-                    .unwrap_or(0),
-                cx.app.models().revision(&show_inspector_model).unwrap_or(0),
-                cx.app.models().revision(&animate_model).unwrap_or(0),
-                cx.app.models().revision(&use_backdrop_model).unwrap_or(0),
-                cx.app.models().revision(&use_dither_model).unwrap_or(0),
-            )
-        },
-        move |cx| LiquidGlassModeSettings {
-            custom_v3_source_group: cx
-                .app
-                .models()
-                .get_cloned(&custom_v3_source_group)
-                .unwrap_or(false),
-            show_inspector: cx.app.models().get_cloned(&show_inspector).unwrap_or(true),
-            animate: cx.app.models().get_cloned(&animate).unwrap_or(true),
-            use_backdrop: cx.app.models().get_cloned(&use_backdrop).unwrap_or(true),
-            use_dither: cx.app.models().get_cloned(&use_dither).unwrap_or(true),
+    let mode_settings: LiquidGlassModeSettings = cx.data().selector_layout(
+        (
+            &st.custom_v3_source_group,
+            &st.show_inspector,
+            &st.animate,
+            &st.use_backdrop,
+            &st.use_dither,
+        ),
+        |(custom_v3_source_group, show_inspector, animate, use_backdrop, use_dither)| {
+            LiquidGlassModeSettings {
+                custom_v3_source_group,
+                show_inspector,
+                animate,
+                use_backdrop,
+                use_dither,
+            }
         },
     );
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
@@ -1632,7 +1637,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Lens radius (px)",
                                             format!("{lens_radius_px:.1}"),
                                         ),
-                                        shadcn::Slider::new(lens_radius_model.clone())
+                                        shadcn::Slider::new(lens_radius_state.clone())
                                             .range(0.0, 64.0)
                                             .step(0.5)
                                             .into_element(cx),
@@ -1648,7 +1653,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Warp strength (px)",
                                             format!("{warp_strength_px:.1}"),
                                         ),
-                                        shadcn::Slider::new(warp_strength_model.clone())
+                                        shadcn::Slider::new(warp_strength_state.clone())
                                             .range(0.0, BackdropWarpV1::MAX_STRENGTH_PX.0)
                                             .step(0.25)
                                             .into_element(cx),
@@ -1660,7 +1665,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let warp_scale_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Warp scale (px)", format!("{warp_scale_px:.0}")),
-                                        shadcn::Slider::new(warp_scale_model.clone())
+                                        shadcn::Slider::new(warp_scale_state.clone())
                                             .range(BackdropWarpV1::MIN_SCALE_PX.0, 256.0)
                                             .step(1.0)
                                             .into_element(cx),
@@ -1676,7 +1681,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Chromatic aberration (px)",
                                             format!("{warp_chroma_px:.2}"),
                                         ),
-                                        shadcn::Slider::new(warp_chroma_model.clone())
+                                        shadcn::Slider::new(warp_chroma_state.clone())
                                             .range(
                                                 0.0,
                                                 BackdropWarpV1::MAX_CHROMATIC_ABERRATION_PX.0,
@@ -1695,7 +1700,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 edge falloff (px)",
                                             format!("{custom_edge_falloff_px:.1}"),
                                         ),
-                                        shadcn::Slider::new(custom_edge_model.clone())
+                                        shadcn::Slider::new(custom_edge_state.clone())
                                             .range(0.0, 64.0)
                                             .step(0.25)
                                             .into_element(cx),
@@ -1711,7 +1716,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 rim strength",
                                             format!("{custom_rim_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_rim_model.clone())
+                                        shadcn::Slider::new(custom_rim_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1727,7 +1732,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 shadow strength",
                                             format!("{custom_shadow_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_shadow_model.clone())
+                                        shadcn::Slider::new(custom_shadow_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1743,7 +1748,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 grain strength",
                                             format!("{custom_grain_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_grain_model.clone())
+                                        shadcn::Slider::new(custom_grain_state.clone())
                                             .range(0.0, 0.25)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1759,7 +1764,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV2 grain scale",
                                             format!("{custom_grain_scale:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_grain_scale_model.clone())
+                                        shadcn::Slider::new(custom_grain_scale_state.clone())
                                             .range(0.25, 6.0)
                                             .step(0.05)
                                             .into_element(cx),
@@ -1775,7 +1780,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV3 bevel strength",
                                             format!("{custom_v3_bevel_strength:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_v3_bevel_strength_model.clone())
+                                        shadcn::Slider::new(custom_v3_bevel_strength_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx)
@@ -1794,7 +1799,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV3 bevel light angle (deg)",
                                             format!("{custom_v3_bevel_angle_deg:.0}"),
                                         ),
-                                        shadcn::Slider::new(custom_v3_bevel_angle_model.clone())
+                                        shadcn::Slider::new(custom_v3_bevel_angle_state.clone())
                                             .range(0.0, 360.0)
                                             .step(1.0)
                                             .into_element(cx)
@@ -1814,7 +1819,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             format!("{custom_v3_bevel_secondary:.2}"),
                                         ),
                                         shadcn::Slider::new(
-                                            custom_v3_bevel_secondary_model.clone(),
+                                            custom_v3_bevel_secondary_state.clone(),
                                         )
                                         .range(0.0, 1.0)
                                         .step(0.01)
@@ -1834,7 +1839,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "CustomV3 dispersion",
                                             format!("{custom_v3_dispersion:.2}"),
                                         ),
-                                        shadcn::Slider::new(custom_v3_dispersion_model.clone())
+                                        shadcn::Slider::new(custom_v3_dispersion_state.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx)
@@ -1849,7 +1854,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let phase_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Phase", format!("{phase:.2}")),
-                                        shadcn::Slider::new(warp_phase_model.clone())
+                                        shadcn::Slider::new(warp_phase_state.clone())
                                             .range(0.0, 12.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1861,7 +1866,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let speed_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Phase speed", format!("{phase_speed:.2}")),
-                                        shadcn::Slider::new(phase_speed_model.clone())
+                                        shadcn::Slider::new(phase_speed_state.clone())
                                             .range(0.0, 2.0)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1877,7 +1882,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                             "Blur radius (px)",
                                             format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
                                         ),
-                                        shadcn::Slider::new(blur_radius_model.clone())
+                                        shadcn::Slider::new(blur_radius_state.clone())
                                             .range(0.0, 48.0)
                                             .step(0.5)
                                             .into_element(cx),
@@ -1889,7 +1894,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let downsample_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Blur downsample", format!("{blur_downsample}x")),
-                                        shadcn::Slider::new(blur_downsample_model.clone())
+                                        shadcn::Slider::new(blur_downsample_state.clone())
                                             .range(1.0, 4.0)
                                             .step(1.0)
                                             .into_element(cx),
@@ -1901,7 +1906,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let sat_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Saturation", format!("{saturation:.2}")),
-                                        shadcn::Slider::new(saturation_model.clone())
+                                        shadcn::Slider::new(saturation_state.clone())
                                             .range(0.6, 1.8)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1913,7 +1918,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let bright_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Brightness", format!("{brightness:.2}")),
-                                        shadcn::Slider::new(brightness_model.clone())
+                                        shadcn::Slider::new(brightness_state.clone())
                                             .range(0.8, 1.3)
                                             .step(0.01)
                                             .into_element(cx),
@@ -1925,7 +1930,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                 let contrast_row = ui::v_flex(|cx| {
                                     vec![
                                         label_row(cx, "Contrast", format!("{contrast:.2}")),
-                                        shadcn::Slider::new(contrast_model.clone())
+                                        shadcn::Slider::new(contrast_state.clone())
                                             .range(0.8, 1.3)
                                             .step(0.01)
                                             .into_element(cx),

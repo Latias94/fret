@@ -740,6 +740,8 @@ fn command_cx<'a>(
         focus: Some(node),
         invalidations: Vec::new(),
         requested_focus: None,
+        notify_requested: false,
+        notify_requested_location: None,
         stop_propagation: false,
     }
 }
@@ -1402,6 +1404,7 @@ fn event_cx<'a>(
         pointer_hit_is_text_input: false,
         pointer_hit_is_pressable: false,
         pointer_hit_pressable_target: None,
+        pointer_hit_pressable_target_in_descendant_subtree: false,
         prevented_default_actions,
         pointer_id: None,
         scale_factor: 1.0,

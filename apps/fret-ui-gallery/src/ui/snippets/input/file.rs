@@ -38,9 +38,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         ])
         .into_element(cx),
     );
-    children.push(
-        shadcn::FieldDescription::new("Native file picking uses a file dialog.").into_element(cx),
-    );
+    children.push(shadcn::FieldDescription::new("Select a picture to upload.").into_element(cx));
     if !selected.is_empty() {
         children.push(
             shadcn::raw::typography::muted(format!("Selected file: {selected}"))

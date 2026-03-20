@@ -31,7 +31,6 @@ fret-imui = { path = "../../ecosystem/fret-imui", optional = true }
 fret-genui-core = { path = "../../ecosystem/fret-genui-core", optional = true }
 fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn", optional = true }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", default-features = false, optional = true }
-fret-query = { path = "../../ecosystem/fret-query", default-features = false, features = ["ui"], optional = true }
 serde_json = { workspace = true, optional = true }
 fret-render = { path = "../../crates/fret-render", optional = true }
 fret-launch = { path = "../../crates/fret-launch", optional = true }
@@ -52,8 +51,9 @@ cookbook-diag = ["fret/diagnostics", "fret-bootstrap/diagnostics"]
 cookbook-assets = ["dep:fret-assets", "dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
+cookbook-date-picker = ["dep:fret-ui-kit"]
 cookbook-image-assets = ["dep:fret-ui-assets"]
-cookbook-query = ["fret/state-query", "dep:fret-query"]
+cookbook-query = ["fret/state-query"]
 cookbook-router = ["fret/router"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
@@ -111,6 +111,10 @@ required-features = ["cookbook-renderer"]
 [[example]]
 name = "data_table_basics"
 required-features = ["cookbook-table"]
+
+[[example]]
+name = "date_picker_basics"
+required-features = ["cookbook-date-picker"]
 
 [[example]]
 name = "image_asset_cache_basics"

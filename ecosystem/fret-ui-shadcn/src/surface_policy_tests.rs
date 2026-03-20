@@ -4,11 +4,17 @@ const ADVANCED_RS: &str = include_str!("advanced.rs");
 const README: &str = include_str!("../README.md");
 const ACCORDION_RS: &str = include_str!("accordion.rs");
 const ALERT_RS: &str = include_str!("alert.rs");
+const BUTTON_RS: &str = include_str!("button.rs");
 const AVATAR_RS: &str = include_str!("avatar.rs");
 const BADGE_RS: &str = include_str!("badge.rs");
 const BREADCRUMB_RS: &str = include_str!("breadcrumb.rs");
 const BUTTON_GROUP_RS: &str = include_str!("button_group.rs");
+const CALENDAR_RS: &str = include_str!("calendar.rs");
+const CALENDAR_HIJRI_RS: &str = include_str!("calendar_hijri.rs");
+const CALENDAR_MULTIPLE_RS: &str = include_str!("calendar_multiple.rs");
+const CALENDAR_RANGE_RS: &str = include_str!("calendar_range.rs");
 const COLLAPSIBLE_RS: &str = include_str!("collapsible.rs");
+const CHART_RS: &str = include_str!("chart.rs");
 const CARD_RS: &str = include_str!("card.rs");
 const CAROUSEL_RS: &str = include_str!("carousel.rs");
 const EMPTY_RS: &str = include_str!("empty.rs");
@@ -18,6 +24,13 @@ const UI_EXT_DATA_RS: &str = include_str!("ui_ext/data.rs");
 const ALERT_DIALOG_RS: &str = include_str!("alert_dialog.rs");
 const COMMAND_RS: &str = include_str!("command.rs");
 const CONTEXT_MENU_RS: &str = include_str!("context_menu.rs");
+const DATA_GRID_CANVAS_RS: &str = include_str!("data_grid_canvas.rs");
+const DATA_TABLE_RS: &str = include_str!("data_table.rs");
+const DATA_TABLE_CONTROLS_RS: &str = include_str!("data_table_controls.rs");
+const DATA_TABLE_RECIPES_RS: &str = include_str!("data_table_recipes.rs");
+const DATE_PICKER_RS: &str = include_str!("date_picker.rs");
+const DATE_PICKER_WITH_PRESETS_RS: &str = include_str!("date_picker_with_presets.rs");
+const DATE_RANGE_PICKER_RS: &str = include_str!("date_range_picker.rs");
 const DIALOG_RS: &str = include_str!("dialog.rs");
 const DRAWER_RS: &str = include_str!("drawer.rs");
 const DROPDOWN_MENU_RS: &str = include_str!("dropdown_menu.rs");
@@ -30,6 +43,7 @@ const KBD_RS: &str = include_str!("kbd.rs");
 const MENUBAR_RS: &str = include_str!("menubar.rs");
 const NAVIGATION_MENU_RS: &str = include_str!("navigation_menu.rs");
 const NATIVE_SELECT_RS: &str = include_str!("native_select.rs");
+const SELECT_RS: &str = include_str!("select.rs");
 const PAGINATION_RS: &str = include_str!("pagination.rs");
 const POPOVER_RS: &str = include_str!("popover.rs");
 const SEPARATOR_RS: &str = include_str!("separator.rs");
@@ -47,6 +61,7 @@ const TOOLTIP_RS: &str = include_str!("tooltip.rs");
 const TYPOGRAPHY_RS: &str = include_str!("typography.rs");
 const CHECKBOX_RS: &str = include_str!("checkbox.rs");
 const COMBOBOX_RS: &str = include_str!("combobox.rs");
+const COMBOBOX_CHIPS_RS: &str = include_str!("combobox_chips.rs");
 const PROGRESS_RS: &str = include_str!("progress.rs");
 const RADIO_GROUP_RS: &str = include_str!("radio_group.rs");
 const RESIZABLE_RS: &str = include_str!("resizable.rs");
@@ -54,7 +69,9 @@ const SCROLL_AREA_RS: &str = include_str!("scroll_area.rs");
 const SWITCH_RS: &str = include_str!("switch.rs");
 const TABS_RS: &str = include_str!("tabs.rs");
 const EXTRAS_BANNER_RS: &str = include_str!("extras/banner.rs");
+const EXTRAS_RATING_RS: &str = include_str!("extras/rating.rs");
 const EXTRAS_TICKER_RS: &str = include_str!("extras/ticker.rs");
+const MEDIA_IMAGE_RS: &str = include_str!("media_image.rs");
 const UI_BUILDER_EXT_BREADCRUMB_RS: &str = include_str!("ui_builder_ext/breadcrumb.rs");
 const UI_BUILDER_EXT_COLLAPSIBLE_RS: &str = include_str!("ui_builder_ext/collapsible.rs");
 const UI_BUILDER_EXT_COMMAND_DIALOG_RS: &str = include_str!("ui_builder_ext/command_dialog.rs");
@@ -122,6 +139,31 @@ fn public_anyelement_signatures(source: &str) -> Vec<String> {
         };
         let signature = &tail[..end];
         if signature.contains("-> AnyElement") {
+            out.push(signature.trim().to_owned());
+        }
+        rest = &tail[end..];
+    }
+
+    out
+}
+
+fn public_model_backed_fn_signatures(source: &str) -> Vec<String> {
+    let normalized = source.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut out = Vec::new();
+    let mut rest = normalized.as_str();
+
+    while let Some(start) = rest.find("pub fn ") {
+        let tail = &rest[start..];
+        let end_brace = tail.find('{');
+        let end_semi = tail.find(';');
+        let end = match (end_brace, end_semi) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => tail.len(),
+        };
+        let signature = &tail[..end];
+        if signature.contains("Model<") {
             out.push(signature.trim().to_owned());
         }
         rest = &tail[end..];
@@ -911,12 +953,16 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "accordion.rs",
             ACCORDION_RS,
             &[
-                "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn single(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn multiple(model: impl IntoTextVecModel) -> Self {",
+                "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
-                "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
+                "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoTextVecModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Accordion where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = AccordionItem>,",
             ][..],
             &[
+                "pub fn single(model: Model<Option<Arc<str>>>) -> Self {",
+                "pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {",
                 "pub fn accordion_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
                 "pub fn accordion_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AccordionItem>,",
@@ -947,12 +993,18 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "checkbox.rs",
             CHECKBOX_RS,
             &[
-                "pub fn checkbox<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H>",
-                "pub fn checkbox_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H>",
+                "pub fn new(model: impl IntoBoolModel) -> Self {",
+                "pub fn new_tristate(model: impl IntoCheckedStateModel) -> Self {",
+                "pub fn new_optional(model: impl IntoOptionalBoolModel) -> Self {",
+                "pub fn checkbox<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
+                "pub fn checkbox_opt<H: UiHost, M: IntoOptionalBoolModel>( model: M, ) -> impl IntoUiElement<H> + use<H, M>",
             ][..],
             &[
                 "pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
                 "pub fn checkbox_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
+                "pub fn new(model: Model<bool>) -> Self {",
+                "pub fn new_tristate(model: Model<CheckedState>) -> Self {",
+                "pub fn new_optional(model: Model<Option<bool>>) -> Self {",
             ][..],
         ),
         (
@@ -969,9 +1021,11 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "input_group.rs",
             INPUT_GROUP_RS,
             &[
+                "impl InputGroup { pub fn new(model: impl IntoTextValueModel) -> Self {",
                 "pub fn input_group<H: UiHost>(group: InputGroup) -> impl IntoUiElement<H> + use<H> {",
             ][..],
             &[
+                "pub fn new(model: Model<String>) -> Self {",
                 "pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement",
             ][..],
         ),
@@ -986,9 +1040,13 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
         (
             "input_otp.rs",
             INPUT_OTP_RS,
-            &["pub fn input_otp<H: UiHost>(otp: InputOtp) -> impl IntoUiElement<H> + use<H> {"][..],
+            &[
+                "impl InputOtp { pub fn new(model: impl IntoTextValueModel) -> Self {",
+                "pub fn input_otp<H: UiHost>(otp: InputOtp) -> impl IntoUiElement<H> + use<H> {",
+            ][..],
             &[
                 "pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> AnyElement",
+                "pub fn new(model: Model<String>) -> Self {",
             ][..],
         ),
         (
@@ -1004,26 +1062,165 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             ][..],
         ),
         (
+            "calendar.rs",
+            CALENDAR_RS,
+            &[
+                "pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel) -> Self {",
+            ][..],
+            &["pub fn new(month: Model<CalendarMonth>, selected: Model<Option<Date>>) -> Self {"][..],
+        ),
+        (
+            "calendar_multiple.rs",
+            CALENDAR_MULTIPLE_RS,
+            &[
+                "pub fn new(month: impl IntoCalendarMonthModel, selected: impl IntoDateVecModel) -> Self {",
+            ][..],
+            &["pub fn new(month: Model<CalendarMonth>, selected: Model<Vec<Date>>) -> Self {"][..],
+        ),
+        (
+            "calendar_range.rs",
+            CALENDAR_RANGE_RS,
+            &[
+                "pub fn new( month: impl IntoCalendarMonthModel, selected: impl IntoDateRangeSelectionModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new(month: Model<CalendarMonth>, selected: Model<DateRangeSelection>) -> Self {",
+            ][..],
+        ),
+        (
+            "calendar_hijri.rs",
+            CALENDAR_HIJRI_RS,
+            &[
+                "pub fn new(month: impl IntoSolarHijriMonthModel, selected: impl IntoOptionalDateModel) -> Self {",
+            ][..],
+            &["pub fn new(month: Model<SolarHijriMonth>, selected: Model<Option<Date>>) -> Self {"]
+                [..],
+        ),
+        (
             "navigation_menu.rs",
             NAVIGATION_MENU_RS,
             &[
-                "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn new( model: impl IntoOptionalTextValueModel, children: impl IntoIterator<Item = AnyElement>, ) -> Self {",
+                "pub fn child(model: impl IntoOptionalTextValueModel, child: AnyElement) -> Self {",
             ][..],
             &[
                 "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
+                "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
+                "pub fn child(model: Model<Option<Arc<str>>>, child: AnyElement) -> Self {",
             ][..],
+        ),
+        (
+            "combobox.rs",
+            COMBOBOX_RS,
+            &[
+                "pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {",
+            ][..],
+            &["pub fn new(model: Model<Option<Arc<str>>>, open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "combobox_chips.rs",
+            COMBOBOX_CHIPS_RS,
+            &["pub fn new(values: impl IntoTextVecModel, open: impl IntoBoolModel) -> Self {"][..],
+            &["pub fn new(values: Model<Vec<Arc<str>>>, open: Model<bool>) -> Self {"][..],
         ),
         (
             "native_select.rs",
             NATIVE_SELECT_RS,
             &[
-                "pub fn native_select(model: Model<Option<Arc<str>>>, open: Model<bool>) -> NativeSelect {",
+                "pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {",
+                "pub fn native_select( model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel, ) -> NativeSelect {",
             ][..],
             &[
                 "pub fn native_select<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, open: Model<bool>, placeholder: Arc<str>, options: &[NativeSelectOption], optgroups: &[NativeSelectOptGroup], control_id: Option<ControlId>, test_id_prefix: Option<Arc<str>>, trigger_test_id: Option<Arc<str>>, a11y_label: Option<Arc<str>>, aria_invalid: bool, disabled: bool, size: NativeSelectSize, chrome: ChromeRefinement, layout: LayoutRefinement, ) -> AnyElement",
             ][..],
+        ),
+        (
+            "date_picker.rs",
+            DATE_PICKER_RS,
+            &[
+                "pub fn new( open: impl IntoBoolModel, month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<Option<Date>>, ) -> Self {",
+            ][..],
+        ),
+        (
+            "date_picker_with_presets.rs",
+            DATE_PICKER_WITH_PRESETS_RS,
+            &[
+                "pub fn new( open: impl IntoBoolModel, month: impl IntoCalendarMonthModel, selected: impl IntoOptionalDateModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<Option<Date>>, ) -> Self {",
+            ][..],
+        ),
+        (
+            "date_range_picker.rs",
+            DATE_RANGE_PICKER_RS,
+            &[
+                "pub fn new( open: impl IntoBoolModel, month: impl IntoCalendarMonthModel, selected: impl IntoDateRangeSelectionModel, ) -> Self {",
+            ][..],
+            &[
+                "pub fn new( open: Model<bool>, month: Model<CalendarMonth>, selected: Model<DateRangeSelection>, ) -> Self {",
+            ][..],
+        ),
+        (
+            "data_table_controls.rs",
+            DATA_TABLE_CONTROLS_RS,
+            &[
+                "pub fn new(checked: impl IntoBoolModel, label: impl Into<Arc<str>>) -> Self {",
+                "pub fn new( open: impl IntoBoolModel, items: impl IntoIterator<Item = DataTableViewOptionItem>, ) -> Self {",
+                "pub fn new(model: impl IntoTextValueModel) -> Self {",
+            ][..],
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {",
+                "pub fn new( open: Model<bool>, items: impl IntoIterator<Item = DataTableViewOptionItem>, ) -> Self {",
+                "pub fn new(model: Model<String>) -> Self {",
+            ][..],
+        ),
+        (
+            "collapsible.rs",
+            COLLAPSIBLE_RS,
+            &[
+                "impl Collapsible { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open: Some(open),",
+            ][..],
+            &["impl Collapsible { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "dialog.rs",
+            DIALOG_RS,
+            &[
+                "impl Dialog { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open, overlay_closable: true,",
+            ][..],
+            &["impl Dialog { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "drawer.rs",
+            DRAWER_RS,
+            &[
+                "impl Drawer { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open: open.clone(),",
+            ][..],
+            &["impl Drawer { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "sheet.rs",
+            SHEET_RS,
+            &[
+                "impl Sheet { pub fn new(open: impl IntoBoolModel) -> Self { let open = open.into_bool_model(); Self { open, side: SheetSide::default(),",
+            ][..],
+            &["impl Sheet { pub fn new(open: Model<bool>) -> Self {"][..],
+        ),
+        (
+            "select.rs",
+            SELECT_RS,
+            &[
+                "pub fn new(model: impl IntoOptionalTextValueModel, open: impl IntoBoolModel) -> Self {",
+            ][..],
+            &[][..],
         ),
         (
             "kbd.rs",
@@ -1038,31 +1235,46 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
         (
             "progress.rs",
             PROGRESS_RS,
-            &["pub fn progress<H: UiHost>(model: Model<f32>) -> impl IntoUiElement<H> + use<H>"][..],
+            &[
+                "pub fn new(model: impl IntoFloatValueModel) -> Self {",
+                "pub fn from_value(value: f32) -> Self {",
+                "pub fn from_optional_value(value: Option<f32>) -> Self {",
+                "pub fn new_opt(model: impl IntoOptionalFloatValueModel) -> Self {",
+                "pub fn new_values_first(model: impl IntoFloatVecModel) -> Self {",
+                "pub fn progress<H: UiHost, M: IntoFloatValueModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
+            ][..],
             &[
                 "pub fn progress<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<f32>) -> AnyElement",
+                "pub fn new(model: Model<f32>) -> Self {",
+                "pub fn from_value(value: Model<f32>) -> Self {",
+                "pub fn new_opt(model: Model<Option<f32>>) -> Self {",
+                "pub fn new_values_first(model: Model<Vec<f32>>) -> Self {",
             ][..],
         ),
         (
             "radio_group.rs",
             RADIO_GROUP_RS,
             &[
-                "pub fn radio_group(model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>) -> RadioGroup {",
+                "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn radio_group( model: impl IntoOptionalTextValueModel, items: Vec<RadioGroupItem>, ) -> RadioGroup {",
                 "pub fn radio_group_uncontrolled<T: Into<Arc<str>>>( default_value: Option<T>, items: Vec<RadioGroupItem>, ) -> RadioGroup {",
             ][..],
             &[
                 "pub fn radio_group<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, items: Vec<RadioGroupItem>, ) -> AnyElement",
                 "pub fn radio_group_uncontrolled<H: UiHost, T: Into<Arc<str>>>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, items: Vec<RadioGroupItem>, ) -> AnyElement",
+                "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
             ][..],
         ),
         (
             "resizable.rs",
             RESIZABLE_RS,
             &[
-                "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ResizablePanelGroup where I: IntoIterator<Item = ResizableEntry>,",
+                "pub fn new(model: impl IntoFloatVecModel) -> Self {",
+                "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoFloatVecModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ResizablePanelGroup where I: IntoIterator<Item = ResizableEntry>,",
             ][..],
             &[
                 "pub fn resizable_panel_group<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ResizableEntry>,",
+                "pub fn new(model: Model<Vec<f32>>) -> Self {",
             ][..],
         ),
         (
@@ -1084,42 +1296,53 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
         (
             "slider.rs",
             SLIDER_RS,
-            &["pub fn slider(model: Model<Vec<f32>>) -> Slider {"][..],
+            &[
+                "pub fn new(model: impl IntoFloatVecModel) -> Self {",
+                "pub fn slider(model: impl IntoFloatVecModel) -> Slider {",
+            ][..],
             &[
                 "pub fn slider<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Vec<f32>>, orientation: radix_slider::SliderOrientation, dir: Option<radix_direction::LayoutDirection>, inverted: bool, min: f32, max: f32, step: f32, min_steps_between_thumbs: u32, disabled: bool, control_id: Option<ControlId>, a11y_label: Option<Arc<str>>, test_id: Option<Arc<str>>, on_value_commit: Option<OnValueCommit>, chrome: ChromeRefinement, layout: LayoutRefinement, style: SliderStyle, ) -> AnyElement",
+                "pub fn new(model: Model<Vec<f32>>) -> Self {",
             ][..],
         ),
         (
             "switch.rs",
             SWITCH_RS,
             &[
-                "pub fn switch<H: UiHost>(model: Model<bool>) -> impl IntoUiElement<H> + use<H>",
-                "pub fn switch_opt<H: UiHost>(model: Model<Option<bool>>) -> impl IntoUiElement<H> + use<H>",
+                "pub fn new(model: impl IntoBoolModel) -> Self {",
+                "pub fn switch<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
+                "pub fn new_opt(model: impl IntoOptionalBoolModel) -> Self {",
+                "pub fn switch_opt<H: UiHost, M: IntoOptionalBoolModel>( model: M, ) -> impl IntoUiElement<H> + use<H, M>",
             ][..],
             &[
                 "pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
                 "pub fn switch_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
+                "pub fn new_opt(model: Model<Option<bool>>) -> Self {",
             ][..],
         ),
         (
             "toggle.rs",
             TOGGLE_RS,
             &[
-                "pub fn toggle<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, model: Model<bool>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
+                "pub fn new(model: impl IntoBoolModel) -> Self {",
+                "pub fn toggle<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, model: impl IntoBoolModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
                 "pub fn toggle_uncontrolled<H: UiHost, I, T>( cx: &mut ElementContext<'_, H>, default_pressed: bool, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Toggle where I: IntoIterator<Item = T>, T: IntoUiElement<H>,",
             ][..],
             &[
                 "pub fn toggle<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<bool>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
                 "pub fn toggle_uncontrolled<H: UiHost, I>( cx: &mut ElementContext<'_, H>, default_pressed: bool, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
+                "pub fn new(model: Model<bool>) -> Self {",
             ][..],
         ),
         (
             "toggle_group.rs",
             TOGGLE_GROUP_RS,
             &[
-                "pub fn toggle_group_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn single(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn multiple(model: impl IntoTextVecModel) -> Self {",
+                "pub fn toggle_group_single<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
-                "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoTextVecModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> ToggleGroup where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = ToggleGroupItem>,",
             ][..],
             &[
@@ -1127,6 +1350,7 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Vec<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = ToggleGroupItem>,",
                 "pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>( cx: &mut ElementContext<'_, H>, default_value: V, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where V: IntoIterator, V::Item: Into<Arc<str>>, I: IntoIterator<Item = ToggleGroupItem>,",
+                "pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {",
             ][..],
         ),
         (
@@ -1141,13 +1365,26 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             "tabs.rs",
             TABS_RS,
             &[
-                "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
+                "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
                 "pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> Tabs where I: IntoIterator<Item = TabsItem>,",
             ][..],
             &[
                 "pub fn tabs<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = TabsItem>,",
                 "pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = TabsItem>,",
             ][..],
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            &["impl SidebarInput { pub fn new(model: impl IntoTextValueModel) -> Self {"][..],
+            &["pub fn new(model: Model<String>) -> Self {"][..],
+        ),
+        (
+            "extras/rating.rs",
+            EXTRAS_RATING_RS,
+            &["impl Rating { pub fn new(model: impl IntoU8ValueModel) -> Self {"][..],
+            &["pub fn new(model: Model<u8>) -> Self {"][..],
         ),
     ] {
         let normalized = normalize_ws(source);
@@ -1756,6 +1993,246 @@ fn combobox_surface_uses_generic_popover_anchor_builder_not_combobox_specific_ra
         assert!(
             popover_normalized.contains(&marker),
             "popover.rs should keep the generic builder-first anchor path available for combobox-style anchor overrides"
+        );
+    }
+}
+
+#[test]
+fn selected_public_model_backed_seams_stay_on_audited_allowlist() {
+    for (label, source, expected_signatures) in [
+        (
+            "alert_dialog.rs",
+            ALERT_DIALOG_RS,
+            &[
+                "pub fn new<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn open_model(&self) -> Model<bool>",
+                "pub fn new(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self",
+                "pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "avatar.rs",
+            AVATAR_RS,
+            &[
+                "pub fn model(image: Model<Option<ImageId>>) -> Self",
+                "pub fn when_image_missing_model(mut self, image: Model<Option<ImageId>>) -> Self",
+            ][..],
+        ),
+        (
+            "button.rs",
+            BUTTON_RS,
+            &["pub fn toggle_model(mut self, model: fret_runtime::Model<bool>) -> Self"][..],
+        ),
+        (
+            "calendar.rs",
+            CALENDAR_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, selected: Option<Model<Option<Date>>>, default_selected: Option<Date>, ) -> Self",
+                "pub fn close_on_select(mut self, open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "calendar_multiple.rs",
+            CALENDAR_MULTIPLE_RS,
+            &["pub fn close_on_select(mut self, open: Model<bool>) -> Self"][..],
+        ),
+        (
+            "calendar_range.rs",
+            CALENDAR_RANGE_RS,
+            &["pub fn close_on_select(mut self, open: Model<bool>) -> Self"][..],
+        ),
+        (
+            "carousel.rs",
+            CAROUSEL_RS,
+            &[
+                "pub fn api_snapshot_model(mut self, model: Model<CarouselApiSnapshot>) -> Self",
+                "pub fn api_handle_model(mut self, model: Model<Option<CarouselApi>>) -> Self",
+                "pub fn autoplay_api_handle_model(mut self, model: Model<Option<CarouselAutoplayApi>>) -> Self",
+                "pub fn slides_in_view_snapshot_model( mut self, model: Model<CarouselSlidesInViewSnapshot>, ) -> Self",
+            ][..],
+        ),
+        (
+            "chart.rs",
+            CHART_RS,
+            &[
+                "pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self",
+                "pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self",
+            ][..],
+        ),
+        (
+            "collapsible.rs",
+            COLLAPSIBLE_RS,
+            &[
+                "pub fn into_element_with_open_model<H: UiHost>( self, cx: &mut ElementContext<'_, H>, trigger: impl FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> AnyElement, content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement, ) -> AnyElement",
+                "pub fn new(open: Model<bool>, children: impl IntoIterator<Item = AnyElement>) -> Self",
+                "pub fn collapsible<H: UiHost, Trigger, Content, TriggerEl, ContentEl>( open: Model<bool>, trigger: Trigger, content: Content, ) -> CollapsibleBuild<H, Trigger, Content> where Trigger: FnOnce(&mut ElementContext<'_, H>, bool) -> TriggerEl, Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl, TriggerEl: IntoUiElement<H>, ContentEl: IntoUiElement<H>,",
+                "pub fn collapsible_uncontrolled<H: UiHost, Trigger, Content, TriggerEl, ContentEl>( default_open: bool, trigger: Trigger, content: Content, ) -> CollapsibleUncontrolledBuild<H, Trigger, Content> where Trigger: FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> TriggerEl, Content: FnOnce(&mut ElementContext<'_, H>) -> ContentEl, TriggerEl: IntoUiElement<H>, ContentEl: IntoUiElement<H>,",
+            ][..],
+        ),
+        (
+            "command.rs",
+            COMMAND_RS,
+            &[
+                "pub fn new(model: fret_runtime::Model<String>) -> Self",
+                "pub fn query_model(mut self, model: Model<String>) -> Self",
+                "pub fn highlight_query_model(mut self, model: Model<String>) -> Self",
+                "pub fn new(model: Model<String>, items: impl IntoIterator<Item = CommandItem>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, query: Option<Model<String>>, default_query: String, items: impl IntoIterator<Item = CommandItem>, ) -> Self",
+                "pub fn value(mut self, value: Option<Model<Option<Arc<str>>>>) -> Self",
+                "pub fn new( open: Model<bool>, query: Model<String>, items: impl IntoIterator<Item = CommandItem>, ) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, query: Option<Model<String>>, default_query: String, items: impl IntoIterator<Item = CommandItem>, ) -> Self",
+                "pub fn new_with_host_commands<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Model<bool>, query: Model<String>, ) -> Self",
+                "pub fn value(mut self, value: Option<Model<Option<Arc<str>>>>) -> Self",
+            ][..],
+        ),
+        (
+            "context_menu.rs",
+            CONTEXT_MENU_RS,
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
+                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
+                "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
+                "pub fn from_open(open: Model<bool>) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+            ][..],
+        ),
+        (
+            "data_grid_canvas.rs",
+            DATA_GRID_CANVAS_RS,
+            &["pub fn output_model(mut self, output: Model<DataGridCanvasOutput>) -> Self"][..],
+        ),
+        (
+            "data_table.rs",
+            DATA_TABLE_RS,
+            &[
+                "pub fn output_model(mut self, output: Model<TableViewOutput>) -> Self",
+                "pub fn into_element_retained<H: UiHost + 'static, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, debug_header_cell_test_id_prefix: Option<Arc<str>>, debug_row_test_id_prefix: Option<Arc<str>>, ) -> AnyElement where TData: 'static,",
+                "pub fn into_element<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
+                "pub fn into_element_with_header_cell<H: UiHost, TData>( self, cx: &mut ElementContext<'_, H>, data: Arc<[TData]>, data_revision: u64, state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static, header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, header_cell_at: impl Fn( &mut ElementContext<'_, H>, &ColumnDef<TData>, Option<bool>, ) -> Option<Vec<AnyElement>> + 'static, cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static, ) -> AnyElement where TData: 'static,",
+            ][..],
+        ),
+        (
+            "data_table_recipes.rs",
+            DATA_TABLE_RECIPES_RS,
+            &[
+                "pub fn new( state: Model<TableState>, columns: impl Into<Arc<[ColumnDef<TData>]>>, column_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static, ) -> Self",
+                "pub fn faceted_filter_counts(mut self, counts: Model<HashMap<Arc<str>, usize>>) -> Self",
+                "pub fn new(state: Model<TableState>, output: Model<TableViewOutput>) -> Self",
+            ][..],
+        ),
+        (
+            "date_picker_with_presets.rs",
+            DATE_PICKER_WITH_PRESETS_RS,
+            &["pub fn preset_value_model(mut self, model: Model<Option<Arc<str>>>) -> Self"][..],
+        ),
+        (
+            "dialog.rs",
+            DIALOG_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "dropdown_menu.rs",
+            DROPDOWN_MENU_RS,
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
+                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
+                "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
+                "pub fn from_open(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+            ][..],
+        ),
+        (
+            "drawer.rs",
+            DRAWER_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn snap_point(mut self, snap_point: Model<Option<usize>>) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "extras/banner.rs",
+            EXTRAS_BANNER_RS,
+            &["pub fn visible_model(mut self, visible: Model<bool>) -> Self"][..],
+        ),
+        (
+            "hover_card.rs",
+            HOVER_CARD_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl IntoUiElement<H>, content: impl Into<HoverCardContentArg>, ) -> Self",
+                "pub fn new_controllable_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: AnyElement, content: impl Into<HoverCardContentArg>, ) -> Self",
+                "pub fn open(mut self, open: Option<Model<bool>>) -> Self",
+            ][..],
+        ),
+        (
+            "input_group.rs",
+            INPUT_GROUP_RS,
+            &["pub fn toggle_model(mut self, model: Model<bool>) -> Self"][..],
+        ),
+        (
+            "media_image.rs",
+            MEDIA_IMAGE_RS,
+            &["pub fn model(image: Model<Option<ImageId>>) -> Self"][..],
+        ),
+        (
+            "menubar.rs",
+            MENUBAR_RS,
+            &[
+                "pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self",
+                "pub fn new(value: Model<Option<Arc<str>>>) -> Self",
+                "pub fn new( group_value: Model<Option<Arc<str>>>, value: impl Into<Arc<str>>, label: impl Into<Arc<str>>, ) -> Self",
+            ][..],
+        ),
+        (
+            "popover.rs",
+            POPOVER_RS,
+            &[
+                "pub fn from_open(open: Model<bool>) -> Self",
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: impl IntoUiElement<H>, content: impl IntoUiElement<H>, ) -> Self",
+                "pub fn from_open_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new_controllable_raw<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, trigger: AnyElement, content: AnyElement, ) -> Self",
+            ][..],
+        ),
+        (
+            "sheet.rs",
+            SHEET_RS,
+            &[
+                "pub fn new_controllable<H: UiHost>( cx: &mut ElementContext<'_, H>, open: Option<Model<bool>>, default_open: bool, ) -> Self",
+                "pub fn new(open: Model<bool>) -> Self",
+            ][..],
+        ),
+        (
+            "sidebar.rs",
+            SIDEBAR_RS,
+            &[
+                "pub fn open(mut self, open: Option<Model<bool>>) -> Self",
+                "pub fn open_mobile(mut self, open_mobile: Option<Model<bool>>) -> Self",
+            ][..],
+        ),
+        (
+            "tabs.rs",
+            TABS_RS,
+            &["pub fn new(model: Model<Option<Arc<str>>>) -> Self"][..],
+        ),
+    ] {
+        let actual = public_model_backed_fn_signatures(source)
+            .into_iter()
+            .map(|signature| normalize_ws(&signature))
+            .collect::<Vec<_>>();
+        let expected = expected_signatures
+            .iter()
+            .map(|signature| normalize_ws(signature))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            actual, expected,
+            "{label} changed its selected public `Model<_>` seam budget; update the allowlist audit note and source-policy gate together"
         );
     }
 }

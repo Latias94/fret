@@ -1,7 +1,7 @@
 # Default Todo Authoring Status — 2026-03-17
 
 Status: evidence note
-Last updated: 2026-03-17
+Last updated: 2026-03-18
 
 Related:
 
@@ -50,6 +50,17 @@ Additional public-demo note:
 - `apps/fret-examples/src/simple_todo_demo.rs` is now aligned with the same default app-lane
   authoring story (`View` + `AppUi` + `LocalState<Vec<_>>` + typed/payload actions) instead of
   staying on the older `Model + CommandId + UiTree + RenderRootContext` path.
+
+Refresh note on 2026-03-18:
+
+- a follow-up audit of the current default ladder confirmed that the LocalState read posture is
+  already closed on `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary app-lane
+  reads,
+- `docs/first-hour.md`, the todo scaffold, and the golden-path docs should all keep teaching that
+  same narrowed read story,
+- do not reopen a grouped multi-local read helper from Todo pressure alone unless a new
+  non-Todo proof surface shows repeated ceremony that the current read helpers do not already
+  solve.
 
 ## Current experience verdict
 
@@ -137,6 +148,31 @@ Conclusion:
 
 - selector ergonomics are not blocking the current ladder,
 - but they remain one of the largest visible differences versus shorter authoring stacks.
+
+### 3.5 The ordinary LocalState read path is no longer an open design question
+
+The first-contact app-lane read posture for initialized locals is now narrow and teachable:
+
+- `local.layout_value(cx)`
+- `local.paint_value(cx)`
+- `local.layout_read_ref(cx, |value| ...)`
+- `local.paint_read_ref(cx, |value| ...)`
+
+Raw tracked-read builders still exist and should remain available for explicit cases such as:
+
+- hit-test-phase reads,
+- direct `observe()` / `revision()` access,
+- or call sites that intentionally want non-default fallback behavior.
+
+That means the remaining density in the current Todo ladder is not coming from a missing default
+read helper family, and borrowed projections of larger local slots no longer need to fall back to
+raw `cx.data().selector(...)` just to compute something like `len()`.
+
+Conclusion:
+
+- keep the current LocalState read posture stable,
+- delete stale doc wording when it drifts,
+- and spend future ergonomics budget elsewhere before inventing a grouped multi-local read API.
 
 ### 4. Query usage is now grouped correctly; remaining verbosity is mostly lifecycle policy
 

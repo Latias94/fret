@@ -124,7 +124,7 @@ The view runtime provides:
 
 - `use_state(...)` returns a model-backed local-state handle (`Model<T>`) keyed by the current
   view/callsite,
-- `use_state_keyed(...)` (or `cx.keyed(...)`) is the loop-safe variant,
+- `cx.keyed(...)` is the loop-safe variant for raw `use_state(...)` callsites,
 - `use_selector(...)` / `use_selector_keyed(...)` are backed by `ecosystem/fret-selector`,
 - `use_query(...)` is backed by `ecosystem/fret-query`.
 

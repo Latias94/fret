@@ -12,6 +12,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::resizable as resizable_recipe;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 
+use crate::float_vec_model::IntoFloatVecModel;
+
 pub struct ResizablePanel {
     min_px: Px,
     layout: LayoutRefinement,
@@ -146,10 +148,10 @@ impl std::fmt::Debug for ResizablePanelGroup {
 }
 
 impl ResizablePanelGroup {
-    pub fn new(model: Model<Vec<f32>>) -> Self {
+    pub fn new(model: impl IntoFloatVecModel) -> Self {
         Self {
             axis: fret_core::Axis::Horizontal,
-            model,
+            model: model.into_float_vec_model(),
             disabled: false,
             layout: LayoutRefinement::default(),
             style: None,
@@ -411,7 +413,7 @@ fn resizable_panel_group_with_entries<H: UiHost>(
 /// Builder-preserving helper for the common resizable-panel-group authoring path.
 pub fn resizable_panel_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    model: Model<Vec<f32>>,
+    model: impl IntoFloatVecModel,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> ResizablePanelGroup
 where

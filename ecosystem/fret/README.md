@@ -55,9 +55,15 @@ cargo run --manifest-path local/my-todo/Cargo.toml
 Keep the default authoring model intentionally small:
 
 - use `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state,
-- use `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
+- use `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState reads, and
+  `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when a
+  derived projection should avoid cloning the full slot,
+- keep one or two trivial locals inline; when a view owns several related `LocalState<T>` slots,
+  prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`, then use
+  `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
+- use `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for single-local writes,
 - for view-owned keyed rows, bind payloads with `.action_payload(...)`, prefer
-  `payload_local_update_if::<A>(...)` as the default row-write path,
+  `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path,
 - use `cx.actions().transient::<A>(...)` when the real effect must happen with `&mut App` in
   `render()`,
 - drop to `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs,
@@ -262,13 +268,14 @@ to appear in `fret::app::prelude::*`. Docking similarly lives under `fret::docki
 apps can opt into panel registries, dock ops, and retained-host wiring without turning docking into
 part of the default app prelude. The default design-system surface is similarly curated under
 `fret::shadcn`: keep component names at `shadcn::Button` / `shadcn::Card`, use
-`shadcn::app::install(...)` for app wiring, `shadcn::themes::apply_shadcn_new_york(...)` for
-explicit presets, and `shadcn::raw::*` only when you intentionally need the full underlying crate
-surface. Treat `shadcn::Button` / `shadcn::Card` as the only first-contact component-family lane:
-`shadcn::app::*` and `shadcn::themes::*` are setup lanes, not peer discovery lanes, while
-advanced environment / `UiServices` hooks stay off the curated lane. If you only depend on
-`fret`, reach those hooks through `fret::shadcn::raw::advanced::*`; if you depend on the recipe
-crate directly, use `fret_ui_shadcn::advanced::*`. Reusable ecosystem bundles can share the same
+`shadcn::app::install(...)` for app wiring plus environment-aware host-theme syncing,
+`shadcn::themes::apply_shadcn_new_york(...)` for explicit one-shot/fixed presets, and
+`shadcn::raw::*` only when you intentionally need the full underlying crate surface. Treat
+`shadcn::Button` / `shadcn::Card` as the only first-contact component-family lane:
+`shadcn::app::*` and `shadcn::themes::*` are setup lanes, not peer discovery lanes. Environment /
+`UiServices`-boundary hooks stay off the curated lane: if you only depend on `fret`, reach them
+through `fret::shadcn::raw::advanced::*`; if you depend on the recipe crate directly, use
+`fret_ui_shadcn::advanced::*`. Reusable ecosystem bundles can share the same
 `.setup(...)` seam by implementing
 `fret::integration::InstallIntoApp`; ordinary app docs/examples should still teach plain installer
 functions first. For small app-local composition, it is also acceptable to write

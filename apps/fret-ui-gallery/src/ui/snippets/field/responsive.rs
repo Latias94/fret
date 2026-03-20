@@ -13,10 +13,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let wide_value = cx.watch_model(&wide).layout().copied().unwrap_or(false);
     let max_w = if wide_value { Px(900.0) } else { Px(520.0) };
+    let name_id = "ui-gallery-field-responsive-name";
+    let message_id = "ui-gallery-field-responsive-message";
 
     let width_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
         shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Responsive width").into_element(cx),
+            shadcn::FieldLabel::new("Responsive width")
+                .for_control("ui-gallery-field-responsive-width-switch")
+                .into_element(cx),
             shadcn::FieldDescription::new(
                 "Toggle the container width to exercise responsive orientation via container queries.",
             )
@@ -41,13 +45,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         shadcn::FieldGroup::new([
             shadcn::Field::new([
                 shadcn::FieldContent::new([
-                    shadcn::FieldLabel::new("Name").into_element(cx),
+                    shadcn::FieldLabel::new("Name")
+                        .for_control(name_id)
+                        .into_element(cx),
                     shadcn::FieldDescription::new("Provide your full name for identification.")
                         .into_element(cx),
                 ])
                 .into_element(cx)
                 .test_id("ui-gallery-field-responsive-name-content"),
                 shadcn::Input::new(username)
+                    .control_id(name_id)
                     .placeholder("Evil Rabbit")
                     .a11y_label("Name")
                     .into_element(cx)
@@ -58,13 +65,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::FieldSeparator::new().into_element(cx),
             shadcn::Field::new([
                 shadcn::FieldContent::new([
-                    shadcn::FieldLabel::new("Message").into_element(cx),
+                    shadcn::FieldLabel::new("Message")
+                        .for_control(message_id)
+                        .into_element(cx),
                     shadcn::FieldDescription::new("Keep it short, preferably under 100 chars.")
                         .into_element(cx),
                 ])
                 .into_element(cx),
                 shadcn::Textarea::new(responsive_message)
+                    .control_id(message_id)
                     .a11y_label("Message")
+                    .placeholder("Hello, world!")
                     .refine_layout(LayoutRefinement::default().h_px(Px(96.0)).min_w(Px(280.0)))
                     .into_element(cx),
             ])
