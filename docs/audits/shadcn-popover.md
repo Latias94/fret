@@ -58,6 +58,11 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   which covers common sizing recipes like "content width follows trigger".)
 - Pass: Default root authoring no longer requires a separate `.build(...)` step; the common recipe
   path is `Popover::new(cx, trigger, content)`.
+- Note: Fret intentionally does not add a separate generic `children([...])` / `compose()` root
+  builder for `Popover` today. Unlike modal overlays that need explicit portal/overlay slot
+  assembly, popover authoring is already fully expressed by the root's two required slots plus the
+  explicit advanced seams for managed-open and anchor-aware flows. Another root builder would
+  mostly duplicate the current contract without improving semantics.
 - Note: Unlike modal overlays such as `Dialog` / `AlertDialog` / `Sheet` / `Drawer`, Popover still
   keeps anchor-aware content authoring as a first-class advanced path (`from_open(...).into_element_with_anchor(...)`).
   The sibling `from_open(...).into_element_with(...)` path keeps the managed-open but non-anchor-aware
@@ -121,6 +126,12 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ### Visual parity (new-york)
 
 - Pass: Default `PopoverContent` sizing matches `w-72` (`288px`) and padding matches `p-4`.
+- Pass: `PopoverContent` keeps the panel root fill-width for text wrapping but no longer stretches
+  inline-sized children across the cross axis by default, which better matches the upstream content
+  `div` contract and avoids accidental full-width button hit boxes.
+- Pass: UI Gallery keeps the official docs section order intact and appends a Fret-only regression
+  section afterwards so intrinsic-width child behavior can be gated without mutating the upstream
+  `Basic` / `Align` / `With Form` examples.
 - Pass: Default border/background uses popover tokens (`popover` / `popover.background`, `border`)
   and shadow matches the design-system "md" shadow.
 - Pass: Popover title text defaults to `popover.foreground` / `popover-foreground` (best-effort),
@@ -133,6 +144,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn popover::tests`
+- Contract test: `popover_content_does_not_stretch_children_by_default`
+- UI Gallery diag: `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-inline-children-button-not-stretched.json`
 - Contract test: `popover_modal_mode_alias_sets_expected_mode`
 - Contract test: `popover_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `popover_open_change_events_complete_without_animation`
