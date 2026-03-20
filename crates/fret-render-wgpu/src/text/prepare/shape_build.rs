@@ -70,12 +70,14 @@ fn prepared_shape_face_usages(
 ) -> Vec<TextFontFaceUsage> {
     let mut face_usages: Vec<TextFontFaceUsage> = Vec::with_capacity(face_usage.len());
     for (face, (glyphs, missing)) in face_usage {
+        let (font_data_id, face_index, variation_key, synthesis_embolden, synthesis_skew_degrees) =
+            face.into_parts();
         face_usages.push(TextFontFaceUsage {
-            font_data_id: face.font_data_id,
-            face_index: face.face_index,
-            variation_key: face.variation_key,
-            synthesis_embolden: face.synthesis_embolden,
-            synthesis_skew_degrees: face.synthesis_skew_degrees,
+            font_data_id,
+            face_index,
+            variation_key,
+            synthesis_embolden,
+            synthesis_skew_degrees,
             glyphs,
             missing_glyphs: missing,
         });

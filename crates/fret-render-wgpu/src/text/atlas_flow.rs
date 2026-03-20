@@ -108,13 +108,13 @@ impl TextSystem {
         let Some(font_data) = self
             .face_cache
             .font_data_by_face
-            .get(&(key.font.font_data_id, key.font.face_index))
+            .get(&(key.font.font_data_id(), key.font.face_index()))
         else {
             return;
         };
 
         let Some(font_ref) =
-            parley::swash::FontRef::from_index(font_data.bytes(), key.font.face_index as usize)
+            parley::swash::FontRef::from_index(font_data.bytes(), key.font.face_index() as usize)
         else {
             return;
         };
@@ -144,14 +144,14 @@ impl TextSystem {
         ]);
         render.offset(offset_px);
 
-        if key.font.synthesis_embolden {
+        if key.font.synthesis_embolden() {
             let strength = (font_size / 48.0).clamp(0.25, 1.0);
             render.embolden(strength);
         }
 
-        if key.font.synthesis_skew_degrees != 0 {
+        if key.font.synthesis_skew_degrees() != 0 {
             let angle =
-                parley::swash::zeno::Angle::from_degrees(key.font.synthesis_skew_degrees as f32);
+                parley::swash::zeno::Angle::from_degrees(key.font.synthesis_skew_degrees() as f32);
             let t = parley::swash::zeno::Transform::skew(angle, parley::swash::zeno::Angle::ZERO);
             render.transform(Some(t));
         }

@@ -1822,13 +1822,13 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
     };
 
     assert!(
-        key_light.font.face_index != key_heavy.font.face_index
-            || key_light.font.variation_key != key_heavy.font.variation_key,
+        key_light.font.face_index() != key_heavy.font.face_index()
+            || key_light.font.variation_key() != key_heavy.font.variation_key(),
         "expected axis overrides to participate in font face identity (face_index {} vs {}, variation_key {} vs {})",
-        key_light.font.face_index,
-        key_heavy.font.face_index,
-        key_light.font.variation_key,
-        key_heavy.font.variation_key
+        key_light.font.face_index(),
+        key_heavy.font.face_index(),
+        key_light.font.variation_key(),
+        key_heavy.font.variation_key()
     );
 
     text.atlas_runtime.mask_atlas.reset();
@@ -1921,15 +1921,18 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     };
 
     assert_eq!(
-        key_light.font.font_data_id, key_heavy.font.font_data_id,
+        key_light.font.font_data_id(),
+        key_heavy.font.font_data_id(),
         "expected both weights to use the same font data blob"
     );
     assert_eq!(
-        key_light.font.face_index, key_heavy.font.face_index,
+        key_light.font.face_index(),
+        key_heavy.font.face_index(),
         "expected both weights to use the same face index"
     );
     assert_ne!(
-        key_light.font.variation_key, key_heavy.font.variation_key,
+        key_light.font.variation_key(),
+        key_heavy.font.variation_key(),
         "expected variable font instance coordinates to participate in the face key"
     );
 
@@ -2534,23 +2537,28 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     };
 
     assert_eq!(
-        key_normal.font.font_data_id, key_italic.font.font_data_id,
+        key_normal.font.font_data_id(),
+        key_italic.font.font_data_id(),
         "expected both styles to use the same font data blob"
     );
     assert_eq!(
-        key_normal.font.face_index, key_italic.font.face_index,
+        key_normal.font.face_index(),
+        key_italic.font.face_index(),
         "expected both styles to use the same face index"
     );
     assert_eq!(
-        key_normal.font.variation_key, key_italic.font.variation_key,
+        key_normal.font.variation_key(),
+        key_italic.font.variation_key(),
         "expected both styles to use the same variation coordinates"
     );
     assert_eq!(
-        key_normal.font.synthesis_skew_degrees, 0,
+        key_normal.font.synthesis_skew_degrees(),
+        0,
         "expected the base style to require no faux skew"
     );
     assert_ne!(
-        key_italic.font.synthesis_skew_degrees, 0,
+        key_italic.font.synthesis_skew_degrees(),
+        0,
         "expected italic request to trigger a faux skew when no italic face is available"
     );
 

@@ -86,13 +86,13 @@ fn prepared_glyph_size_bits(glyph: &ParleyGlyph) -> u32 {
 }
 
 fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u32) -> FontFaceKey {
-    FontFaceKey {
+    FontFaceKey::new(
         font_data_id,
         face_index,
-        variation_key: prepared_glyph_variation_key(glyph),
-        synthesis_embolden: prepared_glyph_synthesis_embolden(glyph),
-        synthesis_skew_degrees: prepared_glyph_synthesis_skew_degrees(glyph),
-    }
+        prepared_glyph_variation_key(glyph),
+        prepared_glyph_synthesis_embolden(glyph),
+        prepared_glyph_synthesis_skew_degrees(glyph),
+    )
 }
 
 fn prepared_glyph_font_identity(glyph: &ParleyGlyph) -> (u64, u32) {

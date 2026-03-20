@@ -47,13 +47,13 @@ impl TextSystem {
     ) -> Option<TextDecorationMetricsPx> {
         let usage = shape.font_faces.first()?;
 
-        let face_key = FontFaceKey {
-            font_data_id: usage.font_data_id,
-            face_index: usage.face_index,
-            variation_key: usage.variation_key,
-            synthesis_embolden: usage.synthesis_embolden,
-            synthesis_skew_degrees: usage.synthesis_skew_degrees,
-        };
+        let face_key = FontFaceKey::new(
+            usage.font_data_id,
+            usage.face_index,
+            usage.variation_key,
+            usage.synthesis_embolden,
+            usage.synthesis_skew_degrees,
+        );
 
         let font_data = self
             .face_cache
