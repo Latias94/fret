@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("outside_press.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::ui;
@@ -24,31 +25,42 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .test_id("ui-gallery-drawer-outside-press-trigger"),
                     )),
                     shadcn::DrawerPart::content_with(move |cx| {
-                        shadcn::DrawerContent::new([
-                            shadcn::DrawerHeader::new([
-                                shadcn::DrawerTitle::new("Dismiss on outside press")
-                                    .into_element(cx),
-                                shadcn::DrawerDescription::new(
-                                    "Click the underlay probe outside the panel. The drawer should close and restore focus to the trigger.",
+                        shadcn::DrawerContent::build(|cx, out| {
+                            out.push_ui(
+                                cx,
+                                shadcn::DrawerHeader::build(|cx, out| {
+                                    out.push_ui(
+                                        cx,
+                                        shadcn::DrawerTitle::new("Dismiss on outside press"),
+                                    );
+                                    out.push_ui(
+                                        cx,
+                                        shadcn::DrawerDescription::new(
+                                            "Click the underlay probe outside the panel. The drawer should close and restore focus to the trigger.",
+                                        ),
+                                    );
+                                }),
+                            );
+                            out.push_ui(
+                                cx,
+                                ui::text(
+                                    "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
                                 )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            ui::text(
-                                "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
-                            )
-                            .text_sm()
-                            .into_element(cx),
-                            shadcn::DrawerFooter::new([
-                                shadcn::DrawerClose::from_scope().build(
-                                    cx,
-                                    shadcn::Button::new("Close")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .test_id("ui-gallery-drawer-outside-press-close"),
-                                ),
-                            ])
-                            .into_element(cx),
-                        ])
+                                .text_sm(),
+                            );
+                            out.push_ui(
+                                cx,
+                                shadcn::DrawerFooter::build(|cx, out| {
+                                    let close = shadcn::DrawerClose::from_scope().build(
+                                        cx,
+                                        shadcn::Button::new("Close")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-drawer-outside-press-close"),
+                                    );
+                                    out.push(close);
+                                }),
+                            );
+                        })
                         .into_element(cx)
                         .test_id("ui-gallery-drawer-outside-press-content")
                     }),

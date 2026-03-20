@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 
 use fret_core::{Corners, Edges, Px};
@@ -110,11 +111,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                 let content = ui::v_stack(|cx| {
                     vec![
-                        shadcn::DrawerHeader::new([
-                            shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-                            shadcn::DrawerDescription::new("Set your daily activity goal.")
-                                .into_element(cx),
-                        ])
+                        shadcn::DrawerHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::DrawerTitle::new("Move Goal"));
+                            out.push_ui(
+                                cx,
+                                shadcn::DrawerDescription::new("Set your daily activity goal."),
+                            );
+                        })
                         .into_element(cx),
                         ui::v_stack(|cx| {
                             vec![
@@ -172,14 +175,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .pb(Space::N0)
                         .layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element(cx),
-                        shadcn::DrawerFooter::new([
-                            shadcn::Button::new("Submit").into_element(cx),
-                            shadcn::DrawerClose::from_scope().build(
+                        shadcn::DrawerFooter::build(|cx, out| {
+                            out.push_ui(cx, shadcn::Button::new("Submit"));
+                            let cancel = shadcn::DrawerClose::from_scope().build(
                                 cx,
                                 shadcn::Button::new("Cancel")
                                     .variant(shadcn::ButtonVariant::Outline),
-                            ),
-                        ])
+                            );
+                            out.push(cancel);
+                        })
                         .into_element(cx),
                     ]
                 })
@@ -194,9 +198,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 )
                 .into_element(cx);
 
-                shadcn::DrawerContent::new([content])
-                    .into_element(cx)
-                    .test_id("ui-gallery-drawer-demo-content")
+                shadcn::DrawerContent::build(move |_cx, out| {
+                    out.push(content);
+                })
+                .test_id("ui-gallery-drawer-demo-content")
+                .into_element(cx)
             }),
         ])
         .into_element(cx)

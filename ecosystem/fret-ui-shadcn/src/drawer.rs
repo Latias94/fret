@@ -2502,6 +2502,37 @@ mod tests {
         });
     }
 
+    #[test]
+    fn drawer_content_build_accepts_builder_first_sections() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                DrawerContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        DrawerHeader::build(|cx, out| {
+                            out.push_ui(cx, DrawerTitle::new("Title"));
+                        }),
+                    );
+                    out.push_ui(
+                        cx,
+                        DrawerFooter::build(|cx, out| {
+                            out.push_ui(cx, crate::button::Button::new("Close"));
+                        }),
+                    );
+                })
+                .test_id("content")
+                .into_element(cx)
+            });
+
+        assert!(matches!(
+            element.kind,
+            fret_ui::element::ElementKind::Container(_)
+        ));
+    }
+
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),

@@ -79,6 +79,9 @@ Upstream exports a thin wrapper around `vaul`:
   while managed-open ownership remains explicit on `Drawer::new(open)` / `new_controllable(...)`.
 - Pass: `DrawerContent` / `DrawerHeader` / `DrawerFooter` provide Drawer-specific layout while
   reusing shared dialog substrate building blocks (`Title` / `Description`).
+- Pass: `DrawerContent::build(...)` is the typed content-side companion on that same recipe lane,
+  so first-party snippets no longer need to pre-land `DrawerHeader` / `DrawerFooter` trees into a
+  raw `DrawerContent::new([...])` array.
 - Note: Root authoring still lowers through recipe-layer deferred parts rather than true JSX-style
   nesting, but the default curated surface now matches the upstream mental model more closely via
   `children([...])`.
@@ -147,6 +150,7 @@ Upstream exports a thin wrapper around `vaul`:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
+- `cargo test -p fret-ui-shadcn --lib drawer::tests::drawer_content_build_accepts_builder_first_sections -- --exact`
 - `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`
 - `cargo nextest run -p fret-ui-shadcn drawer_snap_point_model_initializes_to_controlled_index_on_open drawer_snap_points_settle_to_nearest_point_on_release drawer_close_resets_snap_point_model_to_default_index drawer_snap_to_sequential_points_advances_one_step_per_drag`
 - `cargo nextest run -p fret-ui-shadcn drawer_nested_open_blocks_parent_drag_start drawer_nested_open_updates_parent_frontmost_height drawer_nested_close_restores_parent_drag_start`

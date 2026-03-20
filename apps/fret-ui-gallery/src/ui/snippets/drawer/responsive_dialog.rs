@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("responsive_dialog.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::{Px, TextAlign};
 use fret_ui_kit::{IntoUiElement, ui};
@@ -123,28 +124,35 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .into_element(cx);
 
-                shadcn::DrawerContent::new(ui::children![
-                    cx;
-                    shadcn::DrawerHeader::new(ui::children![
-                        cx;
-                        shadcn::DrawerTitle::new("Edit profile"),
-                        shadcn::DrawerDescription::new(
-                            "Make changes to your profile here. Click save when you're done.",
-                        )
-                    ])
-                    .text_align(TextAlign::Start),
-                    form,
-                    shadcn::DrawerFooter::new(ui::children![
-                        cx;
-                        shadcn::DrawerClose::from_scope().build(
-                            cx,
-                            shadcn::Button::new("Cancel")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
-                        )
-                    ])
-                    .refine_style(ChromeRefinement::default().pt(Space::N2)),
-                ])
+                shadcn::DrawerContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        shadcn::DrawerHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::DrawerTitle::new("Edit profile"));
+                            out.push_ui(
+                                cx,
+                                shadcn::DrawerDescription::new(
+                                    "Make changes to your profile here. Click save when you're done.",
+                                ),
+                            );
+                        })
+                        .text_align(TextAlign::Start),
+                    );
+                    out.push(form);
+                    out.push_ui(
+                        cx,
+                        shadcn::DrawerFooter::build(|cx, out| {
+                            let cancel = shadcn::DrawerClose::from_scope().build(
+                                cx,
+                                shadcn::Button::new("Cancel")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .test_id("ui-gallery-drawer-responsive-mobile-cancel"),
+                            );
+                            out.push(cancel);
+                        })
+                        .refine_style(ChromeRefinement::default().pt(Space::N2)),
+                    );
+                })
                 .into_element(cx)
                 .test_id("ui-gallery-drawer-responsive-mobile-content")
             }),
