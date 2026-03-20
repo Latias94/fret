@@ -134,12 +134,7 @@ fn clusters_for_line(
         let x0 = if x0.is_finite() { Px(x0) } else { Px(0.0) };
         let x1 = if x1.is_finite() { Px(x1) } else { Px(0.0) };
 
-        out.push(TextLineCluster {
-            text_range: start..end,
-            x0,
-            x1,
-            is_rtl: c.is_rtl(),
-        });
+        out.push(TextLineCluster::new(start..end, x0, x1, c.is_rtl()));
     }
 
     Arc::from(out)
@@ -235,12 +230,13 @@ pub fn prepare_layout_from_wrapped(
         }
 
         for g in line.glyphs_mut().iter_mut() {
-            if g.id == 0 {
+            if g.id() == 0 {
                 missing_glyphs = missing_glyphs.saturating_add(1);
             }
-            g.x += line_align_offset_px;
-            g.y += line_offset_px;
-            g.text_range = (range.start + g.text_range.start)..(range.start + g.text_range.end);
+            g.set_x(g.x() + line_align_offset_px);
+            g.set_y(g.y() + line_offset_px);
+            let glyph_range = g.text_range();
+            g.set_text_range((range.start + glyph_range.start)..(range.start + glyph_range.end));
         }
 
         let layout = TextLineLayout::new(

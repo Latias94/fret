@@ -11,17 +11,17 @@ pub enum CommonFallbackMode {
 #[derive(Debug, Clone)]
 pub struct TextFallbackPolicyV1 {
     /// Last applied config inputs (runner-owned, portable).
-    pub font_family_config: fret_core::TextFontFamilyConfig,
+    font_family_config: fret_core::TextFontFamilyConfig,
     /// Last applied shaping locale (BCP47).
-    pub locale_bcp47: Option<String>,
+    locale_bcp47: Option<String>,
 
     /// Derived, renderer-internal policy state.
-    pub common_fallback_mode: CommonFallbackMode,
-    pub common_fallback_candidates: Vec<String>,
-    pub common_fallback_stack_suffix: String,
+    common_fallback_mode: CommonFallbackMode,
+    common_fallback_candidates: Vec<String>,
+    common_fallback_stack_suffix: String,
 
     /// Fingerprint of the effective fallback policy, intended for diagnostics + cache invalidation.
-    pub fallback_policy_key: u64,
+    fallback_policy_key: u64,
 }
 
 impl TextFallbackPolicyV1 {
@@ -40,8 +40,47 @@ impl TextFallbackPolicyV1 {
         out
     }
 
+    pub fn font_family_config(&self) -> &fret_core::TextFontFamilyConfig {
+        &self.font_family_config
+    }
+
+    pub fn set_font_family_config(&mut self, font_family_config: fret_core::TextFontFamilyConfig) {
+        self.font_family_config = font_family_config;
+    }
+
+    pub fn locale_bcp47(&self) -> Option<&str> {
+        self.locale_bcp47.as_deref()
+    }
+
+    pub fn set_locale_bcp47(&mut self, locale_bcp47: Option<String>) {
+        self.locale_bcp47 = locale_bcp47;
+    }
+
+    pub fn common_fallback_mode(&self) -> CommonFallbackMode {
+        self.common_fallback_mode
+    }
+
     pub fn prefer_common_fallback(&self) -> bool {
         self.common_fallback_mode == CommonFallbackMode::PreferCommonFallback
+    }
+
+    pub fn common_fallback_candidates(&self) -> &[String] {
+        self.common_fallback_candidates.as_slice()
+    }
+
+    pub fn common_fallback_stack_suffix(&self) -> &str {
+        self.common_fallback_stack_suffix.as_str()
+    }
+
+    pub(crate) fn set_common_fallback_stack_suffix(
+        &mut self,
+        common_fallback_stack_suffix: String,
+    ) {
+        self.common_fallback_stack_suffix = common_fallback_stack_suffix;
+    }
+
+    pub fn fallback_policy_key(&self) -> u64 {
+        self.fallback_policy_key
     }
 
     fn platform_default_common_fallback_mode(shaper: &ParleyShaper) -> CommonFallbackMode {
@@ -630,11 +669,11 @@ mod tests {
     ) -> TextFallbackPolicyV1 {
         let _ = shaper.set_default_locale(locale.map(str::to_string));
         let mut policy = TextFallbackPolicyV1::new(shaper);
-        policy.font_family_config = config;
-        policy.locale_bcp47 = locale.map(str::to_string);
+        policy.set_font_family_config(config);
+        policy.set_locale_bcp47(locale.map(str::to_string));
         policy.refresh_derived(shaper);
-        let _ =
-            shaper.set_common_fallback_stack_suffix(policy.common_fallback_stack_suffix.clone());
+        let _ = shaper
+            .set_common_fallback_stack_suffix(policy.common_fallback_stack_suffix().to_string());
         policy.recompute_key(shaper);
         policy
     }
@@ -684,7 +723,8 @@ mod tests {
         let zh = build_policy(&mut shaper, config, Some("zh-CN"));
 
         assert_ne!(
-            en.fallback_policy_key, zh.fallback_policy_key,
+            en.fallback_policy_key(),
+            zh.fallback_policy_key(),
             "expected locale changes to participate in the fallback policy fingerprint"
         );
     }
@@ -712,7 +752,8 @@ mod tests {
         );
 
         assert_ne!(
-            platform_default.fallback_policy_key, common_fallback.fallback_policy_key,
+            platform_default.fallback_policy_key(),
+            common_fallback.fallback_policy_key(),
             "expected injection-mode changes to participate in the fallback policy fingerprint"
         );
     }
@@ -732,7 +773,8 @@ mod tests {
         let bundled_only_policy = build_policy(&mut bundled_only_shaper, config, Some("en-US"));
 
         assert_ne!(
-            system_policy.fallback_policy_key, bundled_only_policy.fallback_policy_key,
+            system_policy.fallback_policy_key(),
+            bundled_only_policy.fallback_policy_key(),
             "expected system-font availability changes to participate in the fallback policy fingerprint"
         );
     }

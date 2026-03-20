@@ -2,7 +2,7 @@ use super::super::state::{EncodeState, apply_transform_px, bounds_of_quad_points
 use super::super::*;
 
 use super::paint::{PaintMaterialPolicy, paint_to_gpu};
-use crate::text::{GlyphQuadKind, TextDecorationKind};
+use crate::text::{TextDecorationKind, TextRenderGlyphKind};
 use fret_core::{Corners, Edges};
 
 pub(in super::super) fn encode_text(
@@ -16,7 +16,7 @@ pub(in super::super) fn encode_text(
 ) {
     state.flush_quad_batch();
 
-    let Some(blob) = renderer.text_system.blob(blob_id) else {
+    let Some(blob) = renderer.text_system.render_data_for_blob(blob_id) else {
         return;
     };
 
@@ -29,21 +29,21 @@ pub(in super::super) fn encode_text(
             renderer,
             state,
             shadow_origin,
-            blob,
+            &blob,
             fret_core::scene::Paint::Solid(shadow.color).into(),
             None,
             false,
         );
     }
 
-    encode_text_blob(renderer, state, origin, blob, paint, outline, true);
+    encode_text_blob(renderer, state, origin, &blob, paint, outline, true);
 }
 
 fn encode_text_blob(
     renderer: &Renderer,
     state: &mut EncodeState<'_>,
     origin: Point,
-    blob: &crate::text::TextBlob,
+    blob: &crate::text::TextBlobRenderData<'_>,
     paint: fret_core::scene::PaintBindingV1,
     outline: Option<fret_core::scene::TextOutlineV1>,
     draw_decorations: bool,
@@ -59,7 +59,7 @@ fn encode_text_blob(
 
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
-    let baseline = blob.shape.metrics.baseline;
+    let baseline = blob.baseline();
 
     fn paint_representative_color(p: fret_core::scene::Paint) -> Color {
         use fret_core::scene::{MAX_STOPS, Paint};
@@ -130,7 +130,7 @@ fn encode_text_blob(
         }
 
         if let Some(slot) = paint_span
-            && let Some(palette) = blob.paint_palette.as_ref()
+            && let Some(palette) = blob.paint_palette()
             && let Some(Some(c)) = palette.get(slot as usize)
         {
             let mut out = *c;
@@ -141,21 +141,21 @@ fn encode_text_blob(
         base_color_hint
     };
 
-    if draw_decorations && !blob.decorations.is_empty() {
+    if draw_decorations && !blob.decorations().is_empty() {
         for d in blob
-            .decorations
-            .as_ref()
+            .decorations()
             .iter()
-            .filter(|d| d.kind == TextDecorationKind::Underline)
+            .filter(|d| d.kind() == TextDecorationKind::Underline)
         {
+            let decoration_rect = d.rect();
             let rect = Rect::new(
                 Point::new(
-                    Px(origin.x.0 + d.rect.origin.x.0),
-                    Px(origin.y.0 + d.rect.origin.y.0 - baseline.0),
+                    Px(origin.x.0 + decoration_rect.origin.x.0),
+                    Px(origin.y.0 + decoration_rect.origin.y.0 - baseline.0),
                 ),
-                d.rect.size,
+                decoration_rect.size,
             );
-            let bg = resolve_decoration_color(d.paint_span, d.color);
+            let bg = resolve_decoration_color(d.paint_span(), d.color());
             super::encode_quad(
                 renderer,
                 state,
@@ -280,17 +280,17 @@ fn encode_text_blob(
         *group_first_vertex = state.text_vertices.len() as u32;
     };
 
-    for g in blob.shape.glyphs.as_ref() {
+    for g in blob.glyphs() {
         let kind = match g.kind() {
-            GlyphQuadKind::Mask => {
+            TextRenderGlyphKind::Mask => {
                 if outline_params_mask != 0 {
                     TextDrawKind::MaskOutline
                 } else {
                     TextDrawKind::Mask
                 }
             }
-            GlyphQuadKind::Color => TextDrawKind::Color,
-            GlyphQuadKind::Subpixel => {
+            TextRenderGlyphKind::Color => TextDrawKind::Color,
+            TextRenderGlyphKind::Subpixel => {
                 if outline_params_mask != 0 {
                     TextDrawKind::SubpixelOutline
                 } else {
@@ -299,14 +299,12 @@ fn encode_text_blob(
             }
         };
 
-        let Some((atlas_page, uv)) = renderer.text_system.glyph_uv_for_instance(g) else {
-            continue;
-        };
+        let atlas_page = g.atlas_page();
+        let uv = g.uv();
 
-        let (use_palette_override, palette_color) = if let Some(slot) = g.paint_span {
+        let (use_palette_override, palette_color) = if let Some(slot) = g.paint_span() {
             let c = blob
-                .paint_palette
-                .as_ref()
+                .paint_palette()
                 .and_then(|p| p.get(slot as usize).copied().flatten())
                 .unwrap_or(base_color_hint);
             (true, c)
@@ -365,10 +363,11 @@ fn encode_text_blob(
             }
         };
 
-        let lx0 = base_x + g.rect[0] * state.scale_factor;
-        let ly0 = base_y + g.rect[1] * state.scale_factor;
-        let lx1 = lx0 + g.rect[2] * state.scale_factor;
-        let ly1 = ly0 + g.rect[3] * state.scale_factor;
+        let rect = g.rect();
+        let lx0 = base_x + rect[0] * state.scale_factor;
+        let ly0 = base_y + rect[1] * state.scale_factor;
+        let lx1 = lx0 + rect[2] * state.scale_factor;
+        let ly1 = ly0 + rect[3] * state.scale_factor;
         let quad = [
             apply_transform_px(t_px, lx0, ly0),
             apply_transform_px(t_px, lx1, ly0),
@@ -486,21 +485,21 @@ fn encode_text_blob(
         &mut group_bounds_px,
     );
 
-    if !blob.decorations.is_empty() {
+    if !blob.decorations().is_empty() {
         for d in blob
-            .decorations
-            .as_ref()
+            .decorations()
             .iter()
-            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
+            .filter(|d| d.kind() == TextDecorationKind::Strikethrough)
         {
+            let decoration_rect = d.rect();
             let rect = Rect::new(
                 Point::new(
-                    Px(origin.x.0 + d.rect.origin.x.0),
-                    Px(origin.y.0 + d.rect.origin.y.0 - baseline.0),
+                    Px(origin.x.0 + decoration_rect.origin.x.0),
+                    Px(origin.y.0 + decoration_rect.origin.y.0 - baseline.0),
                 ),
-                d.rect.size,
+                decoration_rect.size,
             );
-            let bg = resolve_decoration_color(d.paint_span, d.color);
+            let bg = resolve_decoration_color(d.paint_span(), d.color());
             super::encode_quad(
                 renderer,
                 state,

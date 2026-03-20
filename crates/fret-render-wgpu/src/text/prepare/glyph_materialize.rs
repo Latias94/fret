@@ -1,6 +1,5 @@
-use super::super::atlas::GlyphAtlas;
-use super::super::{GlyphInstance, GlyphQuadKind, TextLine, TextSystem};
-use super::glyph_raster::{PreparedGlyphRaster, insert_prepared_glyph_raster_into_atlas};
+use super::super::{GlyphInstance, TextLine, TextSystem};
+use super::glyph_raster::PreparedGlyphRaster;
 use fret_render_text::FontFaceKey;
 use fret_render_text::{ParleyGlyph, PreparedLine, ResolvedSpan, paint_span_for_text_range};
 use std::collections::HashMap;
@@ -79,8 +78,18 @@ impl TextSystem {
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
-        let atlas = self.prepared_glyph_atlas_mut(raster.kind());
-        insert_prepared_glyph_raster_into_atlas(atlas, raster, epoch);
+        let (glyph_key, width, height, left, top, bytes_per_pixel, data) =
+            raster.into_atlas_insert();
+        self.atlas_runtime.cache_glyph(
+            glyph_key,
+            width,
+            height,
+            left,
+            top,
+            bytes_per_pixel,
+            data,
+            epoch,
+        );
     }
 
     pub(super) fn commit_prepared_glyph_raster(
@@ -94,10 +103,6 @@ impl TextSystem {
         self.insert_prepared_glyph_raster(raster, epoch);
         bounds
     }
-
-    pub(super) fn prepared_glyph_atlas_mut(&mut self, kind: GlyphQuadKind) -> &mut GlyphAtlas {
-        self.atlas_runtime.atlas_mut(kind)
-    }
 }
 
 fn prepared_glyph_paint_span(
@@ -105,7 +110,7 @@ fn prepared_glyph_paint_span(
     glyph: &ParleyGlyph,
 ) -> Option<u16> {
     resolved_spans
-        .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range, glyph.is_rtl))
+        .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range(), glyph.is_rtl()))
 }
 
 fn prepared_glyph_instance(
@@ -117,15 +122,15 @@ fn prepared_glyph_instance(
     paint_span: Option<u16>,
     scale: f32,
 ) -> GlyphInstance {
-    GlyphInstance {
-        rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+    GlyphInstance::new(
+        [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
         paint_span,
-        key: glyph_key,
-    }
+        glyph_key,
+    )
 }
 
 fn prepared_glyph_origin_bins(glyph: &ParleyGlyph) -> (i32, u8, i32, u8) {
-    let (x, x_bin) = super::super::atlas::subpixel_bin_q4(glyph.x);
-    let (y, y_bin) = super::super::atlas::subpixel_bin_y(glyph.y);
+    let (x, x_bin) = super::super::atlas::subpixel_bin_q4(glyph.x());
+    let (y, y_bin) = super::super::atlas::subpixel_bin_y(glyph.y());
     (x, x_bin, y, y_bin)
 }

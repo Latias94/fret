@@ -3,7 +3,11 @@ use super::{TextFontFamilyConfig, TextSystem};
 impl TextSystem {
     pub(super) fn finish_initial_font_bootstrap(&mut self) {
         let _ = self.apply_font_families_inner(
-            &self.font_runtime.fallback_policy.font_family_config.clone(),
+            &self
+                .font_runtime
+                .fallback_policy
+                .font_family_config()
+                .clone(),
         );
         self.font_runtime
             .fallback_policy
@@ -36,11 +40,13 @@ impl TextSystem {
             .filter(|v| parley::swash::text::Language::parse(v).is_some())
             .map(|v| v.to_string());
 
-        if self.font_runtime.fallback_policy.locale_bcp47 == parsed {
+        if self.font_runtime.fallback_policy.locale_bcp47() == parsed.as_deref() {
             return false;
         }
 
-        self.font_runtime.fallback_policy.locale_bcp47 = parsed.clone();
+        self.font_runtime
+            .fallback_policy
+            .set_locale_bcp47(parsed.clone());
         let _ = self.parley_shaper.set_default_locale(parsed);
 
         self.font_runtime.font_db_revision = self.font_runtime.font_db_revision.saturating_add(1);
@@ -65,7 +71,11 @@ impl TextSystem {
         let added = self.parley_shaper.add_fonts(fonts);
         if added > 0 {
             let _ = self.apply_font_families_inner(
-                &self.font_runtime.fallback_policy.font_family_config.clone(),
+                &self
+                    .font_runtime
+                    .fallback_policy
+                    .font_family_config()
+                    .clone(),
             );
             self.font_runtime
                 .fallback_policy
@@ -113,7 +123,11 @@ impl TextSystem {
         // stale injected FamilyIds from hanging around.
         self.font_runtime.generic_injections.clear();
         let _ = self.apply_font_families_inner(
-            &self.font_runtime.fallback_policy.font_family_config.clone(),
+            &self
+                .font_runtime
+                .fallback_policy
+                .font_family_config()
+                .clone(),
         );
 
         self.font_runtime.font_db_revision = self.font_runtime.font_db_revision.saturating_add(1);

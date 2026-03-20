@@ -16,12 +16,12 @@ impl TextSystem {
         let mut hit: Option<(TextMetrics, u32, Arc<TextShape>, bool)> = None;
         if let Some(blob) = self.blob_state.blobs.get_mut(id) {
             self.frame_perf.blob_cache_hits = self.frame_perf.blob_cache_hits.saturating_add(1);
-            let was_released = blob.ref_count == 0;
-            blob.ref_count = blob.ref_count.saturating_add(1);
+            let was_released = blob.is_released();
+            blob.increment_ref_count();
             hit = Some((
-                blob.shape.metrics,
-                blob.shape.missing_glyphs,
-                blob.shape.clone(),
+                blob.shape().metrics(),
+                blob.shape().missing_glyphs(),
+                blob.shape_handle().clone(),
                 was_released,
             ));
         }
@@ -53,10 +53,10 @@ impl TextSystem {
         scale: f32,
         snap_vertical: bool,
     ) -> (TextBlobId, TextMetrics) {
-        let metrics = shape.metrics;
+        let metrics = shape.metrics();
         let decorations =
             self.prepare_blob_decorations(style, scale, &shape, resolved_spans, snap_vertical);
-        self.record_shape_prepare_metrics(shape.missing_glyphs);
+        self.record_shape_prepare_metrics(shape.missing_glyphs());
         self.maybe_record_font_trace_entry(text, style, constraints, &shape);
         let id = self.insert_prepared_blob(shape, paint_palette, decorations);
         self.blob_state.blob_cache.insert(key.clone(), id);
@@ -97,7 +97,7 @@ impl TextSystem {
         resolved_spans
             .map(|spans| {
                 fret_render_text::decorations_for_lines(
-                    shape.lines.as_ref(),
+                    shape.lines(),
                     spans,
                     decoration_metrics,
                     scale,
@@ -117,12 +117,11 @@ impl TextSystem {
         paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
         decorations: Vec<super::super::TextDecoration>,
     ) -> TextBlobId {
-        let id = self.blob_state.blobs.insert(TextBlob {
+        let id = self.blob_state.blobs.insert(TextBlob::new(
             shape,
             paint_palette,
-            decorations: Arc::from(decorations),
-            ref_count: 1,
-        });
+            Arc::from(decorations),
+        ));
         self.frame_perf.blobs_created = self.frame_perf.blobs_created.saturating_add(1);
         id
     }

@@ -1,6 +1,6 @@
 use super::super::{TextShape, TextSystem};
 use fret_core::{TextConstraints, TextStyle};
-use fret_render_text::{FontFaceKey, FontTraceFamilyResolved, TextDecorationMetricsPx};
+use fret_render_text::{FontTraceFamilyResolved, TextDecorationMetricsPx};
 use std::sync::Arc;
 
 impl TextSystem {
@@ -12,20 +12,21 @@ impl TextSystem {
         shape: &Arc<TextShape>,
     ) {
         let mut families: Vec<FontTraceFamilyResolved> =
-            Vec::with_capacity(shape.font_faces.len().max(1));
-        for usage in shape.font_faces.iter() {
+            Vec::with_capacity(shape.font_faces().len().max(1));
+        for usage in shape.font_faces() {
             let family = self
-                .family_name_for_face(usage.font_data_id, usage.face_index)
+                .family_name_for_face(usage.font_data_id(), usage.face_index())
                 .unwrap_or_else(|| {
                     format!(
                         "font_data_id={} face_index={}",
-                        usage.font_data_id, usage.face_index
+                        usage.font_data_id(),
+                        usage.face_index()
                     )
                 });
             families.push(FontTraceFamilyResolved::new(
                 family,
-                usage.glyphs,
-                usage.missing_glyphs,
+                usage.glyphs(),
+                usage.missing_glyphs(),
             ));
         }
         self.font_runtime.font_trace.maybe_record(
@@ -34,7 +35,7 @@ impl TextSystem {
             constraints,
             &self.font_runtime.fallback_policy,
             &self.parley_shaper,
-            shape.missing_glyphs,
+            shape.missing_glyphs(),
             families,
         );
     }
@@ -45,20 +46,14 @@ impl TextSystem {
         scale: f32,
         shape: &Arc<TextShape>,
     ) -> Option<TextDecorationMetricsPx> {
-        let usage = shape.font_faces.first()?;
+        let usage = shape.font_faces().first()?;
 
-        let face_key = FontFaceKey {
-            font_data_id: usage.font_data_id,
-            face_index: usage.face_index,
-            variation_key: usage.variation_key,
-            synthesis_embolden: usage.synthesis_embolden,
-            synthesis_skew_degrees: usage.synthesis_skew_degrees,
-        };
+        let face_key = usage.face_key();
 
         let font_data = self
             .face_cache
             .font_data_by_face
-            .get(&(usage.font_data_id, usage.face_index))?;
+            .get(&(usage.font_data_id(), usage.face_index()))?;
         let coords: &[i16] = self
             .face_cache
             .font_instance_coords_by_face
@@ -69,7 +64,7 @@ impl TextSystem {
         let ppem = style.size.0 * scale;
         fret_render_text::decoration_metrics_px_for_font_bytes(
             font_data.bytes(),
-            usage.face_index,
+            usage.face_index(),
             coords,
             ppem,
         )

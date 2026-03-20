@@ -98,11 +98,11 @@ pub fn apply_font_families_inner(
     injections: &mut GenericFamilyInjectionState,
     config: &fret_core::TextFontFamilyConfig,
 ) -> (bool, bool, bool) {
-    let prev_mode = policy.common_fallback_mode;
+    let prev_mode = policy.common_fallback_mode();
 
-    policy.font_family_config = config.clone();
+    policy.set_font_family_config(config.clone());
     policy.refresh_derived(shaper);
-    let mode_changed = policy.common_fallback_mode != prev_mode;
+    let mode_changed = policy.common_fallback_mode() != prev_mode;
 
     let sans = pick_primary_family_id(
         shaper,
@@ -121,14 +121,14 @@ pub fn apply_font_families_inner(
     );
 
     let (fallback_ids, suffix) = if policy.prefer_common_fallback() {
-        resolve_common_fallback_ids_and_suffix(shaper, &policy.common_fallback_candidates)
+        resolve_common_fallback_ids_and_suffix(shaper, policy.common_fallback_candidates())
     } else {
         (Vec::new(), String::new())
     };
 
-    policy.common_fallback_stack_suffix = suffix;
+    policy.set_common_fallback_stack_suffix(suffix);
     let suffix_changed =
-        shaper.set_common_fallback_stack_suffix(policy.common_fallback_stack_suffix.clone());
+        shaper.set_common_fallback_stack_suffix(policy.common_fallback_stack_suffix().to_string());
 
     let mut changed = false;
     changed |=

@@ -144,16 +144,74 @@ fn style_for_strut_metrics(style: &TextStyle) -> Option<TextStyle> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParleyGlyph {
-    pub id: u32,
-    pub x: f32,
-    pub y: f32,
-    pub advance: f32,
-    pub font: GlyphFontData,
-    pub font_size: f32,
-    pub normalized_coords: Arc<[i16]>,
-    pub synthesis: FontSynthesis,
-    pub text_range: Range<usize>,
-    pub is_rtl: bool,
+    id: u32,
+    x: f32,
+    y: f32,
+    advance: f32,
+    font: GlyphFontData,
+    font_size: f32,
+    normalized_coords: Arc<[i16]>,
+    synthesis: FontSynthesis,
+    text_range: Range<usize>,
+    is_rtl: bool,
+}
+
+impl ParleyGlyph {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn advance(&self) -> f32 {
+        self.advance
+    }
+
+    pub fn x(&self) -> f32 {
+        self.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.y
+    }
+
+    pub fn font(&self) -> &GlyphFontData {
+        &self.font
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.font_size
+    }
+
+    pub fn normalized_coords(&self) -> &Arc<[i16]> {
+        &self.normalized_coords
+    }
+
+    pub fn synthesis(&self) -> FontSynthesis {
+        self.synthesis
+    }
+
+    pub fn text_range(&self) -> Range<usize> {
+        self.text_range.clone()
+    }
+
+    pub fn is_rtl(&self) -> bool {
+        self.is_rtl
+    }
+
+    pub(crate) fn set_is_rtl(&mut self, is_rtl: bool) {
+        self.is_rtl = is_rtl;
+    }
+
+    pub(crate) fn set_text_range(&mut self, text_range: Range<usize>) {
+        self.text_range = text_range;
+    }
+
+    pub(crate) fn set_x(&mut self, x: f32) {
+        self.x = x;
+    }
+
+    pub(crate) fn set_y(&mut self, y: f32) {
+        self.y = y;
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -181,20 +239,35 @@ impl GlyphFontData {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FontSynthesis {
-    pub embolden: bool,
+    embolden: bool,
     /// Faux italic/oblique skew in degrees, clamped for stable cache identity.
-    pub skew_degrees: i8,
+    skew_degrees: i8,
 }
 
 impl FontSynthesis {
-    fn from_parley(synthesis: parley::fontique::Synthesis) -> Self {
+    pub fn new(embolden: bool, skew_degrees: i8) -> Self {
         Self {
-            embolden: synthesis.embolden(),
-            skew_degrees: synthesis
+            embolden,
+            skew_degrees,
+        }
+    }
+
+    pub fn embolden(&self) -> bool {
+        self.embolden
+    }
+
+    pub fn skew_degrees(&self) -> i8 {
+        self.skew_degrees
+    }
+
+    fn from_parley(synthesis: parley::fontique::Synthesis) -> Self {
+        Self::new(
+            synthesis.embolden(),
+            synthesis
                 .skew()
                 .unwrap_or(0.0)
                 .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
-        }
+        )
     }
 }
 
@@ -207,7 +280,7 @@ pub struct ShapedCluster {
 }
 
 impl ShapedCluster {
-    pub fn new(text_range: Range<usize>, x0: f32, x1: f32, is_rtl: bool) -> Self {
+    pub(crate) fn new(text_range: Range<usize>, x0: f32, x1: f32, is_rtl: bool) -> Self {
         Self {
             text_range,
             x0,
@@ -247,7 +320,7 @@ pub struct ShapedLineLayout {
 }
 
 impl ShapedLineLayout {
-    pub fn new(
+    pub(crate) fn new(
         width: f32,
         ascent: f32,
         descent: f32,

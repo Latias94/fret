@@ -1,10 +1,116 @@
-use super::{TextBlob, TextSystem};
-use fret_core::TextBlobId;
+use super::{GlyphInstance, TextBlob, TextDecoration, TextRenderGlyphKind, TextSystem};
+use fret_core::{Color, TextBlobId, geometry::Px};
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TextRenderGlyph {
+    kind: TextRenderGlyphKind,
+    rect: [f32; 4],
+    paint_span: Option<u16>,
+    atlas_page: u16,
+    uv: [f32; 4],
+}
+
+impl TextRenderGlyph {
+    fn new(
+        kind: TextRenderGlyphKind,
+        rect: [f32; 4],
+        paint_span: Option<u16>,
+        atlas_page: u16,
+        uv: [f32; 4],
+    ) -> Self {
+        Self {
+            kind,
+            rect,
+            paint_span,
+            atlas_page,
+            uv,
+        }
+    }
+
+    pub(crate) fn kind(&self) -> TextRenderGlyphKind {
+        self.kind
+    }
+
+    pub(crate) fn rect(&self) -> [f32; 4] {
+        self.rect
+    }
+
+    pub(crate) fn paint_span(&self) -> Option<u16> {
+        self.paint_span
+    }
+
+    pub(crate) fn atlas_page(&self) -> u16 {
+        self.atlas_page
+    }
+
+    pub(crate) fn uv(&self) -> [f32; 4] {
+        self.uv
+    }
+}
+
+pub(crate) struct TextBlobRenderData<'a> {
+    text_system: &'a TextSystem,
+    glyphs: &'a [GlyphInstance],
+    baseline: Px,
+    decorations: &'a [TextDecoration],
+    paint_palette: Option<&'a [Option<Color>]>,
+}
+
+impl<'a> TextBlobRenderData<'a> {
+    fn new(text_system: &'a TextSystem, blob: &'a TextBlob) -> Self {
+        let shape = blob.shape();
+        Self {
+            text_system,
+            glyphs: shape.glyphs(),
+            baseline: shape.metrics().baseline,
+            decorations: blob.decorations(),
+            paint_palette: blob.paint_palette(),
+        }
+    }
+
+    pub(crate) fn baseline(&self) -> Px {
+        self.baseline
+    }
+
+    pub(crate) fn decorations(&self) -> &'a [TextDecoration] {
+        self.decorations
+    }
+
+    pub(crate) fn paint_palette(&self) -> Option<&'a [Option<Color>]> {
+        self.paint_palette
+    }
+
+    pub(crate) fn glyphs(&'a self) -> impl Iterator<Item = TextRenderGlyph> + 'a {
+        self.glyphs.iter().filter_map(|glyph| {
+            let (atlas_page, uv) = self.text_system.glyph_uv_for_instance(glyph)?;
+            Some(TextRenderGlyph::new(
+                glyph.render_kind(),
+                glyph.rect(),
+                glyph.paint_span(),
+                atlas_page,
+                uv,
+            ))
+        })
+    }
+}
+
 impl TextSystem {
-    pub fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
+    pub(super) fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
         self.blob_state.blobs.get(id)
+    }
+
+    pub(super) fn shape_for_blob(&self, id: TextBlobId) -> Option<&super::TextShape> {
+        Some(self.blob(id)?.shape())
+    }
+
+    pub(crate) fn render_data_for_blob(&self, id: TextBlobId) -> Option<TextBlobRenderData<'_>> {
+        Some(TextBlobRenderData::new(self, self.blob(id)?))
+    }
+
+    #[cfg(test)]
+    pub(super) fn shape_handle_for_blob(&self, id: TextBlobId) -> Option<&Arc<super::TextShape>> {
+        Some(self.blob(id)?.shape_handle())
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
@@ -14,17 +120,17 @@ impl TextSystem {
             return;
         };
 
-        if b.ref_count > 1 {
-            b.ref_count = b.ref_count.saturating_sub(1);
+        if b.ref_count() > 1 {
+            b.decrement_ref_count();
             return;
         }
 
-        if b.ref_count == 0 {
+        if b.is_released() {
             return;
         }
 
         if entries > 0 {
-            b.ref_count = 0;
+            b.mark_released();
             self.insert_released_blob(blob, entries);
             return;
         }
@@ -71,7 +177,7 @@ impl TextSystem {
                 .blob_state
                 .blobs
                 .get(evict)
-                .is_some_and(|b| b.ref_count > 0)
+                .is_some_and(|b| b.ref_count() > 0)
             {
                 continue;
             }
@@ -86,7 +192,7 @@ impl TextSystem {
             .blob_state
             .blobs
             .get(blob)
-            .is_some_and(|b| Arc::strong_count(&b.shape) == 2);
+            .is_some_and(|b| Arc::strong_count(b.shape_handle()) == 2);
 
         if let Some(key) = self.blob_state.blob_key_by_id.remove(&blob) {
             self.blob_state.blob_cache.remove(&key);
