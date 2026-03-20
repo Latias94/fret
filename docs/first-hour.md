@@ -62,7 +62,9 @@ Memorize the default app surface before you start editing:
 - startup path: `FretApp::new("my-simple-todo").window("my-simple-todo", (...)).view::<TodoView>()?.run()`
 - render signature: `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`
 - grouped namespaces first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
-- default LocalState reads: `local.layout_value(cx)` / `local.paint_value(cx)`
+- default LocalState reads: `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary reads;
+  `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` for borrowed
+  projections
 - if you intentionally need the raw model-backed hook, make that an advanced choice via
   `use fret::advanced::AppUiRawStateExt;`
 - if you later graduate to the richer `todo` rung and need explicit selector/query nouns, add
@@ -216,6 +218,8 @@ Keep the default path handle-first:
 
 - for view-owned state, prefer `local.paint_value(cx)` / `local.layout_value(cx)` for ordinary
   initialized-local reads
+- use `local.paint_read_ref(cx, |value| ...)` / `local.layout_read_ref(cx, |value| ...)` when you
+  only need a derived value from a larger local slot and want to avoid cloning the whole `T`
 - keep `local.paint(cx)` / `local.layout(cx)` / `local.hit_test(cx)` when you intentionally need
   the explicit tracked-read builder (`observe()`, `revision()`, custom fallback behavior, or
   hit-test-phase access)
@@ -227,6 +231,7 @@ Examples:
 ```rust
 let clicks = clicks_state.paint_value(cx);
 let label = label_state.layout_value(cx);
+let todo_count = todos_state.layout_read_ref(cx, |todos| todos.len());
 ```
 
 If you are unsure, start with `Layout` and tighten later.

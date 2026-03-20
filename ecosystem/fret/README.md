@@ -55,6 +55,9 @@ cargo run --manifest-path local/my-todo/Cargo.toml
 Keep the default authoring model intentionally small:
 
 - use `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state,
+- use `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState reads, and
+  `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when a
+  derived projection should avoid cloning the full slot,
 - use `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
 - use `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for single-local writes,
 - for view-owned keyed rows, bind payloads with `.action_payload(...)`, prefer

@@ -155,6 +155,8 @@ The first-contact app-lane read posture for initialized locals is now narrow and
 
 - `local.layout_value(cx)`
 - `local.paint_value(cx)`
+- `local.layout_read_ref(cx, |value| ...)`
+- `local.paint_read_ref(cx, |value| ...)`
 
 Raw tracked-read builders still exist and should remain available for explicit cases such as:
 
@@ -163,7 +165,8 @@ Raw tracked-read builders still exist and should remain available for explicit c
 - or call sites that intentionally want non-default fallback behavior.
 
 That means the remaining density in the current Todo ladder is not coming from a missing default
-read helper family.
+read helper family, and borrowed projections of larger local slots no longer need to fall back to
+raw `cx.data().selector(...)` just to compute something like `len()`.
 
 Conclusion:
 

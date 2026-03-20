@@ -248,6 +248,26 @@ impl<T> LocalState<T> {
             .expect("LocalState-first app code should always read initialized locals")
     }
 
+    /// Read a derived value from this local through a layout invalidation tracked borrow on the
+    /// default app surface.
+    ///
+    /// Use this when app code only needs a projection (for example: `len()`, membership checks, or
+    /// lightweight formatting) and should not clone the entire `T` just to compute that result.
+    /// Keep raw `layout(cx).read_ref(...)` when you intentionally want the explicit tracked-read
+    /// builder.
+    pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.layout(cx)
+            .read_ref(f)
+            .expect("LocalState-first app code should always read initialized locals")
+    }
+
     /// Read the current local value through a paint invalidation tracked read on the default app
     /// surface.
     ///
@@ -259,6 +279,25 @@ impl<T> LocalState<T> {
     {
         self.paint(cx)
             .value()
+            .expect("LocalState-first app code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a paint invalidation tracked borrow on the
+    /// default app surface.
+    ///
+    /// Use this when paint-time app code only needs a projection and should not clone the whole
+    /// slot. Keep raw `paint(cx).read_ref(...)` when you intentionally want the explicit
+    /// tracked-read builder.
+    pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.paint(cx)
+            .read_ref(f)
             .expect("LocalState-first app code should always read initialized locals")
     }
 
@@ -2864,6 +2903,45 @@ mod tests {
     }
 
     #[test]
+    fn local_state_borrowed_read_helpers_project_without_clone_noise() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        let mut services = FakeUiServices;
+        let local = LocalState::from_model(app.models_mut().insert(vec![1u32, 2, 3]));
+
+        let root = render_root_with_app_ui(
+            fret_ui::declarative::RenderRootContext::new(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+            ),
+            "local-state-borrowed-read",
+            &mut AppUiRenderRootState::default(),
+            |cx| {
+                let layout_len = local.layout_read_ref(cx, |values| values.len());
+                let paint_len = local.paint_read_ref(cx, |values| values.len());
+                assert_eq!(layout_len, 3);
+                assert_eq!(paint_len, 3);
+                cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                    Vec::new()
+                })
+                .into()
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    }
+
+    #[test]
     fn local_state_txn_value_reads_initialized_locals_without_fallback_noise() {
         let mut host = FakeHost::default();
         let draft = LocalState {
@@ -3352,6 +3430,8 @@ mod tests {
         assert!(api_source.contains(
             "pub fn paint_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T"
         ));
+        assert!(api_source.contains("pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>("));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));
@@ -3565,7 +3645,13 @@ mod tests {
             "Read the current local value through a layout invalidation tracked read on the default app"
         ));
         assert!(api_source.contains(
+            "Read a derived value from this local through a layout invalidation tracked borrow on the"
+        ));
+        assert!(api_source.contains(
             "Read the current local value through a paint invalidation tracked read on the default app"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a paint invalidation tracked borrow on the"
         ));
         assert!(
             api_source

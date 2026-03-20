@@ -579,26 +579,7 @@ $$
                 .into_element(cx)
         }));
 
-        let expanded_count = cx.data().selector(
-            {
-                let expanded_code_blocks_state = expanded_code_blocks_state.clone();
-                move |cx| {
-                    expanded_code_blocks_state
-                        .layout_in(cx)
-                        .revision()
-                        .unwrap_or(0)
-                }
-            },
-            {
-                let expanded_code_blocks_state = expanded_code_blocks_state.clone();
-                move |cx| {
-                    expanded_code_blocks_state
-                        .read_in(cx.app.models(), |set| set.len())
-                        .ok()
-                        .unwrap_or(0)
-                }
-            },
-        );
+        let expanded_count = expanded_code_blocks_state.layout_read_ref(cx, |set| set.len());
 
         let toggles = ui::h_flex(|cx| {
             [
