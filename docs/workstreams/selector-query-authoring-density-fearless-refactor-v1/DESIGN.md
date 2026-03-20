@@ -1,6 +1,6 @@
 # Selector / Query Authoring Density (Fearless Refactor v1)
 
-Status: active
+Status: closed closeout lane (query projections landed; selector no-new-API verdict)
 Last updated: 2026-03-20
 
 Related:
@@ -11,6 +11,15 @@ Related:
 - `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`
 - `docs/authoring-golden-path-v2.md`
 - `docs/examples/todo-app-golden-path.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
+
+Closeout reading rule on 2026-03-20:
+
+- treat this document as the historical design record for a now-closed narrow density lane
+- read the shipped outcome from `CLOSEOUT_AUDIT_2026-03-20.md`
+- reopen this lane only if fresh cross-surface evidence shows:
+  - repeated query semantic pressure not already covered by the shipped projections, or
+  - repeated selector borrowed-input pressure beyond the Todo scaffold
 
 ## Why this workstream exists
 
@@ -102,7 +111,7 @@ This selector side needs a more careful audit before code changes.
 - Moving reusable ecosystem crates onto `fret`.
 - Making editor-grade shared-model surfaces look identical to LocalState-first app surfaces.
 
-## Current execution direction
+## Historical execution direction
 
 ### Batch 1
 

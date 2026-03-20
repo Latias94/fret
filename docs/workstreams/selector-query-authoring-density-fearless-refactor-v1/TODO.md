@@ -1,6 +1,6 @@
 # Selector / Query Authoring Density (Fearless Refactor v1) — TODO
 
-Status: active
+Status: Maintenance / historical tracker
 Last updated: 2026-03-20
 
 Companion docs:
@@ -9,8 +9,16 @@ Companion docs:
 - `TARGET_INTERFACE_STATE.md`
 - `MILESTONES.md`
 - `SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
 
-## Current checklist
+Closeout reading rule on 2026-03-20:
+
+- the shipped query helper batch is landed
+- the selector side is closed on a no-new-API verdict
+- read remaining notes below as archived execution evidence, not as an open backlog
+- reopen this lane only with fresh cross-surface evidence beyond the current Todo-heavy pressure
+
+## Historical execution checklist
 
 - [x] Confirm the lane is justified by non-Todo evidence.
 - [x] Freeze router as adjacent-only.
@@ -36,9 +44,9 @@ Execution note on 2026-03-20:
 - selector borrowed-input density is now audited on a no-new-API verdict; reopen only with
   stronger non-Todo proof
 
-## Standing rules
+## Standing guardrails
 
-- [ ] No helper lands from Todo-only pressure.
-- [ ] No batch is complete until code + docs + gates agree.
-- [ ] No shadcn-specific policy leaks into `fret-query`.
-- [ ] No router/history/link expansion enters this lane without fresh evidence.
+- No helper lands from Todo-only pressure.
+- No batch is complete until code + docs + gates agree.
+- No shadcn-specific policy leaks into `fret-query`.
+- No router/history/link expansion enters this lane without fresh evidence.

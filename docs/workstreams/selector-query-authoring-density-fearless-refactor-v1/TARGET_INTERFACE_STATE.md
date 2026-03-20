@@ -8,8 +8,9 @@ Companion docs:
 - `DESIGN.md`
 - `MILESTONES.md`
 - `TODO.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
 
-This file freezes the target posture for the new selector/query density lane.
+This file freezes the shipped target posture for this now-closed selector/query density lane.
 
 ## Target posture
 

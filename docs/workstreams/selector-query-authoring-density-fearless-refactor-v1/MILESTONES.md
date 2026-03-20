@@ -1,6 +1,6 @@
 # Selector / Query Authoring Density (Fearless Refactor v1) — Milestones
 
-Status: active
+Status: Closed closeout lane (query projections landed; selector no-new-API verdict)
 Last updated: 2026-03-20
 
 Related:
@@ -9,6 +9,20 @@ Related:
 - `TARGET_INTERFACE_STATE.md`
 - `TODO.md`
 - `SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
+
+## Current execution stance (2026-03-20)
+
+- Milestone 1 is landed:
+  the shipped query helper batch now covers semantic status text/predicates and refreshing/error
+  presence checks without hiding key/policy/fetch ownership.
+- Milestone 2 is landed on a no-new-API selector verdict:
+  the Todo scaffold remains the strongest pressure point, but the audited non-Todo surfaces do not
+  justify reopening the public selector surface.
+- Milestone 3 is landed:
+  docs, scaffold guidance, first-party proof surfaces, and gates now point at the same shipped
+  selector/query posture.
+- Read `CLOSEOUT_AUDIT_2026-03-20.md` as the final interpretation of this lane.
 
 ## Milestone 0 — Freeze scope
 
@@ -68,3 +82,8 @@ Deliverables:
 
 - docs/templates/examples updated as needed
 - source-policy/tests updated
+
+Closeout note on 2026-03-20:
+
+- this milestone is now satisfied;
+- no further selector/query helper growth is queued inside this lane.
