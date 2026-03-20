@@ -1320,15 +1320,15 @@ fn navigation_menu_and_pagination_pages_keep_their_dual_lane_story() {
     let pagination_page = read("src/ui/pages/pagination.rs");
     assert!(
         pagination_page.contains(
-            "Prefer the typed wrapper family for first-party authoring: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` keep the upstream parts model while avoiding pre-landed child assembly at the call site."
+            "`Usage` now teaches the upstream-shaped parts lane directly: `Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` already support explicit composable children without needing an extra generic `compose()` API."
         ),
-        "src/ui/pages/pagination.rs should keep the compact wrapper lane explicit"
+        "src/ui/pages/pagination.rs should keep the upstream-shaped parts lane explicit"
     );
     assert!(
         pagination_page.contains(
-            "`Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` remain the upstream-shaped lane on the same family rather than an advanced-only escape hatch."
+            "`Compact Builder` keeps the Fret shorthand lane explicit for common app call sites: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` reduce child landing noise without replacing the upstream-shaped parts surface."
         ),
-        "src/ui/pages/pagination.rs should keep the upstream-shaped parts lane explicit"
+        "src/ui/pages/pagination.rs should keep the compact wrapper lane explicit"
     );
 }
 
@@ -2913,9 +2913,12 @@ fn skeleton_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn pagination_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/pagination/compact_builder.rs",
+            "src/ui/snippets/pagination/custom_text.rs",
             "src/ui/snippets/pagination/demo.rs",
             "src/ui/snippets/pagination/extras.rs",
             "src/ui/snippets/pagination/icons_only.rs",
+            "src/ui/snippets/pagination/routing.rs",
             "src/ui/snippets/pagination/rtl.rs",
             "src/ui/snippets/pagination/simple.rs",
             "src/ui/snippets/pagination/usage.rs",
@@ -2942,7 +2945,10 @@ fn pagination_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Simple\", simple)",
             "DocSection::build(cx, \"Icons Only\", icons_only)",
+            "DocSection::build(cx, \"Routing\", routing)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Custom Text\", custom_text)",
+            "DocSection::build(cx, \"Compact Builder\", compact_builder)",
             "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
@@ -2950,7 +2956,10 @@ fn pagination_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Simple\", simple)",
             "DocSection::new(\"Icons Only\", icons_only)",
+            "DocSection::new(\"Routing\", routing)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Custom Text\", custom_text)",
+            "DocSection::new(\"Compact Builder\", compact_builder)",
         ],
     );
 }
@@ -6248,6 +6257,9 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
 #[test]
 fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
+        "src/ui/snippets/pagination/routing.rs",
         "src/ui/snippets/pagination/simple.rs",
         "src/ui/snippets/pagination/usage.rs",
     ] {
@@ -6262,14 +6274,15 @@ fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() 
 }
 
 #[test]
-fn selected_pagination_snippets_prefer_pagination_wrapper_family() {
+fn selected_pagination_snippets_keep_wrapper_and_parts_lanes_explicit() {
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
         "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/icons_only.rs",
         "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
-        "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -6287,16 +6300,38 @@ fn selected_pagination_snippets_prefer_pagination_wrapper_family() {
     }
 
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
         "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
-        "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &["shadcn::pagination_link(|cx|"],
             &["shadcn::PaginationLink::new("],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/pagination/routing.rs",
+        "src/ui/snippets/pagination/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::Pagination::new(",
+                "shadcn::PaginationContent::new(",
+                "shadcn::PaginationItem::new(",
+                "shadcn::PaginationLink::new(",
+            ],
+            &[
+                "shadcn::pagination(|cx|",
+                "shadcn::pagination_content(|cx|",
+                "shadcn::pagination_item(",
+                "shadcn::pagination_link(|cx|",
+            ],
         );
     }
 }

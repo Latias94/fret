@@ -35,6 +35,9 @@ these sources instead:
   and `PaginationEllipsis`.
 - Pass: The common usage path is already representable with explicit children composition:
   `Pagination::new([PaginationContent::new([...]).into_element(cx)])`.
+- Pass: UI Gallery `Usage` now demonstrates that explicit parts/children lane directly instead of
+  teaching only the compact wrapper helpers, so the copyable teaching surface now matches the
+  upstream docs shape more closely.
 - Pass: `PaginationLink::active(true)`, `PaginationLink::size(...)`, `PaginationPrevious::text(...)`,
   `PaginationNext::text(...)`, and `test_id(...)` cover the important shadcn recipe outcomes.
 - Note: Because the explicit parts surface already matches the upstream authoring model, Fret does
@@ -63,14 +66,17 @@ these sources instead:
   `Navigation` landmark role in `fret-core` would let us tighten semantics further.
 - Result: The main drift was semantics parity at the parts boundary (`nav`/`ul`/`li`-like outcomes), not
   default-style ownership. The root and inline layout defaults were already in the right place.
-- Result: Composable children API is already supported via the explicit parts surface, so follow-up work
-  should focus on richer examples or diag gates only if a concrete parity regression appears.
+- Result: Composable children API is already supported via the explicit parts surface; the remaining
+  gap was on the gallery teaching surface, not in the recipe or mechanism layer.
 - Authoring-lane classification: treat `Pagination` as a dual-lane family.
-  First-party app authoring can keep the compact wrapper lane
-  (`pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, `pagination_link(...)`),
-  while the explicit `Pagination` / `PaginationContent` / `PaginationItem` / `PaginationLink`
-  parts surface remains the upstream-shaped lane.
+  `Usage` should teach the explicit `Pagination` / `PaginationContent` / `PaginationItem` /
+  `PaginationLink` parts surface as the upstream-shaped lane, while `Compact Builder` can keep the
+  wrapper shorthand (`pagination(...)`, `pagination_content(...)`, `pagination_item(...)`,
+  `pagination_link(...)`) visible as the Fret ergonomic follow-up.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn --lib pagination_root_is_w_full_and_labeled pagination_content_and_item_emit_list_semantics pagination_link_active_stamps_selected pagination_ellipsis_is_hidden_in_semantics_tree --status-level fail`
+- `cargo check -p fret-ui-gallery`
+- `cargo test -p fret-ui-shadcn --test web_vs_fret_layout pagination_demo`
+- `./target/debug/fretboard diag run tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json --dir /tmp/fret-pagination-diag --session-auto --launch -- ./target/debug/fret-ui-gallery`
