@@ -7,6 +7,15 @@ impl TextSystem {
         self.blob_state.blobs.get(id)
     }
 
+    pub(crate) fn shape_for_blob(&self, id: TextBlobId) -> Option<&super::TextShape> {
+        Some(self.blob(id)?.shape())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn shape_handle_for_blob(&self, id: TextBlobId) -> Option<&Arc<super::TextShape>> {
+        Some(self.blob(id)?.shape_handle())
+    }
+
     pub fn release(&mut self, blob: TextBlobId) {
         let entries = fret_render_text::released_blob_cache_entries();
 

@@ -538,8 +538,8 @@ fn multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor() {
     };
 
     let (blob_id, metrics) = text.prepare(&content, &style, constraints);
-    let blob = text.blob(blob_id).expect("prepared blob");
-    let lines = blob.shape().lines();
+    let shape = text.shape_for_blob(blob_id).expect("prepared shape");
+    let lines = shape.lines();
     assert!(lines.len() > 10, "expected multi-line layout");
 
     let is_pixel_aligned = |logical: Px| {
@@ -666,19 +666,15 @@ fn glyph_cache_key_tracks_scale_factor_below_one() {
     let (blob_a, _metrics_a) = text.prepare(content, &style, constraints_1x);
     let (blob_b, _metrics_b) = text.prepare(content, &style, constraints_half);
 
-    let a = text.blob(blob_a).expect("prepared blob (scale=1.0)");
-    let b = text.blob(blob_b).expect("prepared blob (scale=0.5)");
+    let a = text
+        .shape_for_blob(blob_a)
+        .expect("prepared shape (scale=1.0)");
+    let b = text
+        .shape_for_blob(blob_b)
+        .expect("prepared shape (scale=0.5)");
 
-    let ga = a
-        .shape()
-        .glyphs()
-        .first()
-        .expect("expected at least one glyph");
-    let gb = b
-        .shape()
-        .glyphs()
-        .first()
-        .expect("expected at least one glyph");
+    let ga = a.glyphs().first().expect("expected at least one glyph");
+    let gb = b.glyphs().first().expect("expected at least one glyph");
 
     let size_a = f32::from_bits(ga.key.size_bits);
     let size_b = f32::from_bits(gb.key.size_bits);
@@ -930,10 +926,10 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
 
     for (text_str, label) in cases {
         let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
 
         let mut color_glyphs: Vec<super::GlyphKey> = Vec::new();
-        for g in blob.shape().glyphs() {
+        for g in shape.glyphs() {
             if matches!(g.kind(), super::GlyphQuadKind::Color) {
                 color_glyphs.push(g.key);
             }
@@ -1001,9 +997,9 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
 
     for (text_str, label) in cases {
         let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
 
-        let glyphs = blob.shape().glyphs();
+        let glyphs = shape.glyphs();
         assert!(
             !glyphs.is_empty(),
             "expected shaped glyphs for CJK case {label}"
@@ -1104,8 +1100,8 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -1118,8 +1114,8 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
 
     let (blob_id, _metrics) = text.prepare("你", &style, constraints);
     let glyph_keys: Vec<super::GlyphKey> = {
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape().glyphs().iter().map(|g| g.key).collect()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape.glyphs().iter().map(|g| g.key).collect()
     };
 
     assert!(!glyph_keys.is_empty(), "expected shaped glyphs for CJK");
@@ -1284,8 +1280,8 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -1303,8 +1299,8 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
     };
     let (blob_id, _metrics) = text.prepare("你", &style_named, constraints);
     let glyph_keys: Vec<super::GlyphKey> = {
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape().glyphs().iter().map(|g| g.key).collect()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape.glyphs().iter().map(|g| g.key).collect()
     };
 
     assert!(!glyph_keys.is_empty(), "expected shaped glyphs for CJK");
@@ -1390,8 +1386,8 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("\u{1F600}", &explicit, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -1417,8 +1413,8 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
         let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
 
         let glyph_keys: Vec<super::GlyphKey> = {
-            let blob = text.blob(blob_id).expect("text blob");
-            blob.shape().glyphs().iter().map(|g| g.key).collect()
+            let shape = text.shape_for_blob(blob_id).expect("text shape");
+            shape.glyphs().iter().map(|g| g.key).collect()
         };
         assert!(
             !glyph_keys.is_empty(),
@@ -1819,14 +1815,14 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
 
     let (blob_light, _) = text.prepare_attributed(&rich_light, &base_style, constraints);
     let key_light = {
-        let blob = text.blob(blob_light).expect("text blob");
-        blob.shape().glyphs().first().expect("glyph").key
+        let shape = text.shape_for_blob(blob_light).expect("text shape");
+        shape.glyphs().first().expect("glyph").key
     };
 
     let (blob_heavy, _) = text.prepare_attributed(&rich_heavy, &base_style, constraints);
     let key_heavy = {
-        let blob = text.blob(blob_heavy).expect("text blob");
-        blob.shape().glyphs().first().expect("glyph").key
+        let shape = text.shape_for_blob(blob_heavy).expect("text shape");
+        shape.glyphs().first().expect("glyph").key
     };
 
     assert!(
@@ -1918,14 +1914,14 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
 
     let (blob_light, _) = text.prepare("0", &style_light, constraints);
     let key_light = {
-        let blob = text.blob(blob_light).expect("text blob");
-        blob.shape().glyphs().first().expect("glyph").key
+        let shape = text.shape_for_blob(blob_light).expect("text shape");
+        shape.glyphs().first().expect("glyph").key
     };
 
     let (blob_heavy, _) = text.prepare("0", &style_heavy, constraints);
     let key_heavy = {
-        let blob = text.blob(blob_heavy).expect("text blob");
-        blob.shape().glyphs().first().expect("glyph").key
+        let shape = text.shape_for_blob(blob_heavy).expect("text shape");
+        shape.glyphs().first().expect("glyph").key
     };
 
     assert_eq!(
@@ -2057,17 +2053,15 @@ fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fix
         let (blob_on, _) = text.prepare_attributed(&rich_on, &base_style, constraints);
 
         let glyph_ids_off: Vec<u32> = text
-            .blob(blob_off)
-            .expect("text blob")
-            .shape()
+            .shape_for_blob(blob_off)
+            .expect("text shape")
             .glyphs()
             .iter()
             .map(|g| g.key.glyph_id)
             .collect();
         let glyph_ids_on: Vec<u32> = text
-            .blob(blob_on)
-            .expect("text blob")
-            .shape()
+            .shape_for_blob(blob_on)
+            .expect("text shape")
             .glyphs()
             .iter()
             .map(|g| g.key.glyph_id)
@@ -2240,14 +2234,12 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
                 );
 
                 let shape_off = text
-                    .blob(wrap_off)
-                    .expect("wrapped blob off")
-                    .shape_handle()
+                    .shape_handle_for_blob(wrap_off)
+                    .expect("wrapped shape off")
                     .clone();
                 let shape_on = text
-                    .blob(wrap_on)
-                    .expect("wrapped blob on")
-                    .shape_handle()
+                    .shape_handle_for_blob(wrap_on)
+                    .expect("wrapped shape on")
                     .clone();
 
                 let first_end_off = shape_off.lines().first().map(|l| l.end()).unwrap_or(0);
@@ -2321,11 +2313,13 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
     );
 
     let shape_off = text
-        .blob(blob_off)
-        .expect("blob off")
-        .shape_handle()
+        .shape_handle_for_blob(blob_off)
+        .expect("shape off")
         .clone();
-    let shape_on = text.blob(blob_on).expect("blob on").shape_handle().clone();
+    let shape_on = text
+        .shape_handle_for_blob(blob_on)
+        .expect("shape on")
+        .clone();
 
     let first_end_off = shape_off.lines().first().map(|l| l.end()).unwrap_or(0);
     let first_end_on = shape_on.lines().first().map(|l| l.end()).unwrap_or(0);
@@ -2546,14 +2540,14 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
 
     let (blob_normal, _) = text.prepare("你", &style_normal, constraints);
     let key_normal = {
-        let blob = text.blob(blob_normal).expect("text blob");
-        blob.shape().glyphs().first().expect("glyph").key
+        let shape = text.shape_for_blob(blob_normal).expect("text shape");
+        shape.glyphs().first().expect("glyph").key
     };
 
     let (blob_italic, _) = text.prepare("你", &style_italic, constraints);
     let key_italic = {
-        let blob = text.blob(blob_italic).expect("text blob");
-        blob.shape().glyphs().first().expect("glyph").key
+        let shape = text.shape_for_blob(blob_italic).expect("text shape");
+        shape.glyphs().first().expect("glyph").key
     };
 
     assert_eq!(
@@ -2805,8 +2799,8 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -2836,9 +2830,8 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
         ..Default::default()
     };
     let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
-    let blob = text.blob(blob_id).expect("text blob");
-    let ui_inter_first = blob
-        .shape()
+    let shape = text.shape_for_blob(blob_id).expect("text shape");
+    let ui_inter_first = shape
         .glyphs()
         .iter()
         .map(|g| g.key.font)
@@ -2855,9 +2848,8 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
     };
     let _ = text.set_font_families(&config_serif_first);
     let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
-    let blob = text.blob(blob_id).expect("text blob");
-    let ui_serif_first = blob
-        .shape()
+    let shape = text.shape_for_blob(blob_id).expect("text shape");
+    let ui_serif_first = shape
         .glyphs()
         .iter()
         .map(|g| g.key.font)
@@ -2906,8 +2898,8 @@ fn bundled_only_defaults_use_profile_ui_family_when_config_is_empty() {
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -2920,9 +2912,8 @@ fn bundled_only_defaults_use_profile_ui_family_when_config_is_empty() {
         ..Default::default()
     };
     let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-    let blob = text.blob(blob_id).expect("text blob");
-    let used_faces = blob
-        .shape()
+    let shape = text.shape_for_blob(blob_id).expect("text shape");
+    let used_faces = shape
         .glyphs()
         .iter()
         .map(|g| g.key.font)
@@ -3106,8 +3097,8 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -3125,8 +3116,8 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("你", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -3144,8 +3135,8 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("\u{1F600}", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -3162,16 +3153,16 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
         ..Default::default()
     };
     let (blob_id, _metrics) = text.prepare("m你\u{1F600}", &style, constraints);
-    let blob = text.blob(blob_id).expect("text blob");
+    let shape = text.shape_for_blob(blob_id).expect("text shape");
 
     assert_eq!(
-        blob.shape().missing_glyphs(),
+        shape.missing_glyphs(),
         0,
         "expected mixed-script fallback to avoid tofu when system fonts are absent"
     );
 
     let used_faces: std::collections::HashSet<super::FontFaceKey> =
-        blob.shape().glyphs().iter().map(|g| g.key.font).collect();
+        shape.glyphs().iter().map(|g| g.key.font).collect();
     assert!(
         used_faces.iter().any(|k| expected_inter_faces.contains(k)),
         "expected the UI stack to use {family_inter} for Latin glyphs"
@@ -3186,7 +3177,7 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     );
 
     assert!(
-        blob.shape()
+        shape
             .glyphs()
             .iter()
             .any(|g| g.kind() == super::GlyphQuadKind::Color),
@@ -3262,8 +3253,8 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -3276,8 +3267,8 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("你", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -3290,8 +3281,8 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("\u{1F600}", &style, constraints);
-        let blob = text.blob(blob_id).expect("text blob");
-        blob.shape()
+        let shape = text.shape_for_blob(blob_id).expect("text shape");
+        shape
             .glyphs()
             .iter()
             .map(|g| g.key.font)
@@ -3304,16 +3295,16 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
         ..Default::default()
     };
     let (blob_id, _metrics) = text.prepare("m你\u{1F600}", &style, constraints);
-    let blob = text.blob(blob_id).expect("text blob");
+    let shape = text.shape_for_blob(blob_id).expect("text shape");
 
     assert_eq!(
-        blob.shape().missing_glyphs(),
+        shape.missing_glyphs(),
         0,
         "expected named-family stack to avoid tofu when system fonts are absent"
     );
 
     let used_faces: std::collections::HashSet<super::FontFaceKey> =
-        blob.shape().glyphs().iter().map(|g| g.key.font).collect();
+        shape.glyphs().iter().map(|g| g.key.font).collect();
     assert!(
         used_faces.iter().any(|k| expected_inter_faces.contains(k)),
         "expected the stack to use {family_inter} for Latin glyphs"
