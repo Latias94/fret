@@ -17,11 +17,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .placeholder("Type to search...")
                 .into_element(cx)
                 .into(),
-            shadcn::Button::new("")
+            shadcn::Button::new("Search")
                 .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Icon)
-                .a11y_label("Search")
-                .icon(fret_icons::IconId::new_static("lucide.search"))
                 .into_element(cx)
                 .into(),
         ])

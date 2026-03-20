@@ -2192,6 +2192,7 @@ mod tests {
         let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INPUT);
 
         for target in [
+            "ui-gallery-input-demo-content",
             "ui-gallery-input-usage-content",
             "ui-gallery-input-basic-content",
             "ui-gallery-input-field-content",

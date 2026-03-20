@@ -1778,6 +1778,7 @@ fn input_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input/badge.rs",
             "src/ui/snippets/input/basic.rs",
             "src/ui/snippets/input/button_group.rs",
+            "src/ui/snippets/input/demo.rs",
             "src/ui/snippets/input/disabled.rs",
             "src/ui/snippets/input/field.rs",
             "src/ui/snippets/input/field_group.rs",
@@ -1809,6 +1810,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/input.rs",
         &[
+            "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Field\", field)",
@@ -1827,6 +1829,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Label Association\", label)",
         ],
         &[
+            "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Field\", field)",

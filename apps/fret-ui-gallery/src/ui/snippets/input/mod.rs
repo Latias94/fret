@@ -1,6 +1,7 @@
 pub mod badge;
 pub mod basic;
 pub mod button_group;
+pub mod demo;
 pub mod disabled;
 pub mod field;
 pub mod field_group;
