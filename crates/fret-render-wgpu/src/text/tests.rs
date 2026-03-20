@@ -57,6 +57,22 @@ fn face_keys_for_blob(
         .collect()
 }
 
+fn face_keys_for_explicit_family(
+    text: &mut super::TextSystem,
+    content: &str,
+    family: &str,
+    size: Px,
+    constraints: TextConstraints,
+) -> std::collections::HashSet<super::FontFaceKey> {
+    let style = TextStyle {
+        font: fret_core::FontId::family(family),
+        size,
+        ..Default::default()
+    };
+    let (blob_id, _metrics) = text.prepare(content, &style, constraints);
+    face_keys_for_blob(text, blob_id)
+}
+
 fn first_glyph_key_for_blob(
     text: &super::TextSystem,
     blob_id: fret_core::TextBlobId,
@@ -1135,15 +1151,8 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
         scale_factor: 1.0,
     };
 
-    let expected_cjk_faces = {
-        let explicit = TextStyle {
-            font: fret_core::FontId::family(family_cjk),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
-        face_keys_for_blob(&text, blob_id)
-    };
+    let expected_cjk_faces =
+        face_keys_for_explicit_family(&mut text, "你", family_cjk, Px(24.0), constraints);
     assert!(
         !expected_cjk_faces.is_empty(),
         "expected at least one resolved CJK face for the explicit {family_cjk} family"
@@ -1296,15 +1305,8 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
         scale_factor: 1.0,
     };
 
-    let expected_cjk_faces = {
-        let explicit = TextStyle {
-            font: fret_core::FontId::family(family_cjk),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
-        face_keys_for_blob(&text, blob_id)
-    };
+    let expected_cjk_faces =
+        face_keys_for_explicit_family(&mut text, "你", family_cjk, Px(24.0), constraints);
     assert!(
         !expected_cjk_faces.is_empty(),
         "expected at least one resolved CJK face for the explicit {family_cjk} family"
@@ -1397,20 +1399,8 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
         scale_factor: 1.0,
     };
 
-    let expected_emoji_faces = {
-        let explicit = TextStyle {
-            font: fret_core::FontId::family(family_emoji),
-            size: Px(32.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("\u{1F600}", &explicit, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
+    let expected_emoji_faces =
+        face_keys_for_explicit_family(&mut text, "\u{1F600}", family_emoji, Px(32.0), constraints);
     assert!(
         !expected_emoji_faces.is_empty(),
         "expected at least one resolved emoji face for the explicit {family_emoji} family"
@@ -2767,23 +2757,9 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
         scale_factor: 1.0,
     };
 
-    let faces_for_family = |text: &mut super::TextSystem, family: &str| {
-        let style = TextStyle {
-            font: fret_core::FontId::family(family),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
-
-    let inter_faces = faces_for_family(&mut text, "Inter");
-    let jetbrains_faces = faces_for_family(&mut text, "JetBrains Mono");
+    let inter_faces = face_keys_for_explicit_family(&mut text, "m", "Inter", Px(24.0), constraints);
+    let jetbrains_faces =
+        face_keys_for_explicit_family(&mut text, "m", "JetBrains Mono", Px(24.0), constraints);
     assert!(
         !inter_faces.is_empty() && !jetbrains_faces.is_empty(),
         "expected explicit family shaping to resolve both candidates"
@@ -2805,12 +2781,7 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
         ..Default::default()
     };
     let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
-    let shape = text.shape_for_blob(blob_id).expect("text shape");
-    let ui_inter_first = shape
-        .glyphs()
-        .iter()
-        .map(|g| g.key.font)
-        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+    let ui_inter_first = face_keys_for_blob(&text, blob_id);
     assert!(
         ui_inter_first.iter().any(|face| inter_faces.contains(face)),
         "expected FontId::Ui to resolve through the first configured candidate when Inter is first"
@@ -2823,12 +2794,7 @@ fn ui_generic_resolution_prefers_first_available_configured_candidate() {
     };
     let _ = text.set_font_families(&config_serif_first);
     let (blob_id, _metrics) = text.prepare("m", &style_ui, constraints);
-    let shape = text.shape_for_blob(blob_id).expect("text shape");
-    let ui_serif_first = shape
-        .glyphs()
-        .iter()
-        .map(|g| g.key.font)
-        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+    let ui_serif_first = face_keys_for_blob(&text, blob_id);
     assert!(
         ui_serif_first
             .iter()
@@ -2866,20 +2832,8 @@ fn bundled_only_defaults_use_profile_ui_family_when_config_is_empty() {
         scale_factor: 1.0,
     };
 
-    let expected_faces = {
-        let style = TextStyle {
-            font: fret_core::FontId::family(ui_family),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
+    let expected_faces =
+        face_keys_for_explicit_family(&mut text, "m", ui_family, Px(24.0), constraints);
 
     let style = TextStyle {
         font: fret_core::FontId::ui(),
@@ -2887,12 +2841,7 @@ fn bundled_only_defaults_use_profile_ui_family_when_config_is_empty() {
         ..Default::default()
     };
     let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-    let shape = text.shape_for_blob(blob_id).expect("text shape");
-    let used_faces = shape
-        .glyphs()
-        .iter()
-        .map(|g| g.key.font)
-        .collect::<std::collections::HashSet<super::FontFaceKey>>();
+    let used_faces = face_keys_for_blob(&text, blob_id);
 
     assert!(
         used_faces.iter().any(|face| expected_faces.contains(face)),
@@ -3065,58 +3014,22 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
         scale_factor: 1.0,
     };
 
-    let expected_inter_faces = {
-        let style = TextStyle {
-            font: fret_core::FontId::family(family_inter),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
+    let expected_inter_faces =
+        face_keys_for_explicit_family(&mut text, "m", family_inter, Px(24.0), constraints);
     assert!(
         !expected_inter_faces.is_empty(),
         "expected at least one resolved face for the explicit {family_inter} family"
     );
 
-    let expected_cjk_faces = {
-        let style = TextStyle {
-            font: fret_core::FontId::family(family_cjk),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("你", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
+    let expected_cjk_faces =
+        face_keys_for_explicit_family(&mut text, "你", family_cjk, Px(24.0), constraints);
     assert!(
         !expected_cjk_faces.is_empty(),
         "expected at least one resolved face for the explicit {family_cjk} family"
     );
 
-    let expected_emoji_faces = {
-        let style = TextStyle {
-            font: fret_core::FontId::family(family_emoji),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("\u{1F600}", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
+    let expected_emoji_faces =
+        face_keys_for_explicit_family(&mut text, "\u{1F600}", family_emoji, Px(24.0), constraints);
     assert!(
         !expected_emoji_faces.is_empty(),
         "expected at least one resolved face for the explicit {family_emoji} family"
@@ -3218,48 +3131,12 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
         scale_factor: 1.0,
     };
 
-    let expected_inter_faces = {
-        let style = TextStyle {
-            font: fret_core::FontId::family(family_inter),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("m", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
-    let expected_cjk_faces = {
-        let style = TextStyle {
-            font: fret_core::FontId::family(family_cjk),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("你", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
-    let expected_emoji_faces = {
-        let style = TextStyle {
-            font: fret_core::FontId::family(family_emoji),
-            size: Px(24.0),
-            ..Default::default()
-        };
-        let (blob_id, _metrics) = text.prepare("\u{1F600}", &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
-    };
+    let expected_inter_faces =
+        face_keys_for_explicit_family(&mut text, "m", family_inter, Px(24.0), constraints);
+    let expected_cjk_faces =
+        face_keys_for_explicit_family(&mut text, "你", family_cjk, Px(24.0), constraints);
+    let expected_emoji_faces =
+        face_keys_for_explicit_family(&mut text, "\u{1F600}", family_emoji, Px(24.0), constraints);
 
     let style = TextStyle {
         font: fret_core::FontId::family(family_inter),
