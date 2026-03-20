@@ -10,7 +10,7 @@ use fret_render_text::{
 use std::sync::Arc;
 
 fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
-    let atlas = text.atlas_runtime.atlas(key.kind);
+    let atlas = text.atlas_runtime.atlas_for_key(key);
     let entry = atlas.entry(key).expect("expected atlas entry after ensure");
     atlas
         .pending_upload_bytes_for_entry(entry)

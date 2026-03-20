@@ -1,5 +1,4 @@
-use super::super::atlas::GlyphAtlas;
-use super::super::{GlyphInstance, GlyphQuadKind, TextLine, TextSystem};
+use super::super::{GlyphInstance, TextLine, TextSystem};
 use super::glyph_raster::{PreparedGlyphRaster, insert_prepared_glyph_raster_into_atlas};
 use fret_render_text::FontFaceKey;
 use fret_render_text::{ParleyGlyph, PreparedLine, ResolvedSpan, paint_span_for_text_range};
@@ -79,7 +78,7 @@ impl TextSystem {
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
-        let atlas = self.prepared_glyph_atlas_mut(raster.kind());
+        let atlas = self.atlas_runtime.atlas_mut_for_key(raster.glyph_key());
         insert_prepared_glyph_raster_into_atlas(atlas, raster, epoch);
     }
 
@@ -93,10 +92,6 @@ impl TextSystem {
         let bounds = raster.bounds(x, y);
         self.insert_prepared_glyph_raster(raster, epoch);
         bounds
-    }
-
-    pub(super) fn prepared_glyph_atlas_mut(&mut self, kind: GlyphQuadKind) -> &mut GlyphAtlas {
-        self.atlas_runtime.atlas_mut(kind)
     }
 }
 

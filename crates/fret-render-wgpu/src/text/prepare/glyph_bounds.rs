@@ -49,7 +49,8 @@ impl TextSystem {
         glyph_key: GlyphKey,
         epoch: u64,
     ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
-        self.prepared_glyph_atlas_mut(glyph_key.kind)
+        self.atlas_runtime
+            .atlas_mut_for_key(glyph_key)
             .get(glyph_key, epoch)
             .map(|entry| (glyph_key, entry))
     }

@@ -44,8 +44,8 @@ impl PreparedGlyphRaster {
         )
     }
 
-    pub(super) fn kind(&self) -> GlyphQuadKind {
-        self.glyph_key.kind
+    pub(super) fn glyph_key(&self) -> GlyphKey {
+        self.glyph_key
     }
 }
 

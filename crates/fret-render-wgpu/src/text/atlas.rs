@@ -13,6 +13,16 @@ pub(super) struct GlyphKey {
     pub(super) kind: GlyphQuadKind,
 }
 
+impl GlyphKey {
+    pub(super) fn kind_label(self) -> &'static str {
+        match self.kind {
+            GlyphQuadKind::Mask => "mask",
+            GlyphQuadKind::Color => "color",
+            GlyphQuadKind::Subpixel => "subpixel",
+        }
+    }
+}
+
 pub(super) fn subpixel_bin_q4(pos: f32) -> (i32, u8) {
     // Keep behavior aligned with the legacy 4-way subpixel binning policy.
     let trunc = pos as i32;
