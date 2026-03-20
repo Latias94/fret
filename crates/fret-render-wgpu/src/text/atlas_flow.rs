@@ -1,5 +1,6 @@
 use super::TextSystem;
-use super::atlas::{GlyphKey, GlyphKeyBuckets, subpixel_bin_as_float};
+use super::atlas::{GlyphKey, GlyphKeyBuckets};
+use super::prepare::{glyph_offset_px, glyph_render_sources};
 use fret_core::scene::{Scene, SceneOp};
 
 impl TextSystem {
@@ -94,7 +95,7 @@ impl TextSystem {
             return;
         };
 
-        let font_size = f32::from_bits(key.size_bits).max(1.0);
+        let font_size = parley_glyph_font_size(key);
         let mut scaler_builder = self
             .parley_scale
             .builder(font_ref)
@@ -105,32 +106,23 @@ impl TextSystem {
         }
         let mut scaler = scaler_builder.build();
 
-        let offset_px = parley::swash::zeno::Vector::new(
-            subpixel_bin_as_float(key.x_bin),
-            subpixel_bin_as_float(key.y_bin),
-        );
-        let mut render = parley::swash::scale::Render::new(&[
-            parley::swash::scale::Source::ColorOutline(0),
-            parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
-            parley::swash::scale::Source::Outline,
-        ]);
-        render.offset(offset_px);
-
-        if key.font.synthesis_embolden() {
-            let strength = (font_size / 48.0).clamp(0.25, 1.0);
-            render.embolden(strength);
-        }
-
-        if key.font.synthesis_skew_degrees() != 0 {
-            let angle =
-                parley::swash::zeno::Angle::from_degrees(key.font.synthesis_skew_degrees() as f32);
-            let t = parley::swash::zeno::Transform::skew(angle, parley::swash::zeno::Angle::ZERO);
-            render.transform(Some(t));
-        }
+        let render_sources = glyph_render_sources();
+        let mut render = parley::swash::scale::Render::new(&render_sources);
+        render.offset(glyph_offset_px(key.x_bin, key.y_bin));
+        apply_parley_glyph_synthesis(&mut render, key, font_size);
 
         let Some(image) = render.render(&mut scaler, glyph_id) else {
             return;
         };
+        self.cache_rendered_parley_glyph(key, image, epoch);
+    }
+
+    fn cache_rendered_parley_glyph(
+        &mut self,
+        key: GlyphKey,
+        image: parley::swash::scale::image::Image,
+        epoch: u64,
+    ) {
         if image.placement.width == 0 || image.placement.height == 0 {
             return;
         }
@@ -149,5 +141,27 @@ impl TextSystem {
             image.data,
             epoch,
         );
+    }
+}
+
+fn parley_glyph_font_size(key: GlyphKey) -> f32 {
+    f32::from_bits(key.size_bits).max(1.0)
+}
+
+fn apply_parley_glyph_synthesis(
+    render: &mut parley::swash::scale::Render,
+    key: GlyphKey,
+    font_size: f32,
+) {
+    if key.font.synthesis_embolden() {
+        let strength = (font_size / 48.0).clamp(0.25, 1.0);
+        render.embolden(strength);
+    }
+
+    if key.font.synthesis_skew_degrees() != 0 {
+        let angle =
+            parley::swash::zeno::Angle::from_degrees(key.font.synthesis_skew_degrees() as f32);
+        let t = parley::swash::zeno::Transform::skew(angle, parley::swash::zeno::Angle::ZERO);
+        render.transform(Some(t));
     }
 }

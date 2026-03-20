@@ -110,7 +110,7 @@ fn render_prepared_glyph_image_at_bins(
     x_bin: u8,
     y_bin: u8,
 ) -> Option<parley::swash::scale::image::Image> {
-    let offset_px = super::prepared_glyph_offset_px(x_bin, y_bin);
+    let offset_px = super::glyph_offset_px(x_bin, y_bin);
     render_prepared_glyph_image_with_scaler(scaler, glyph_id, offset_px)
 }
 
@@ -145,15 +145,7 @@ fn render_prepared_glyph_image_with_scaler(
     glyph_id: u16,
     offset_px: parley::swash::zeno::Vector,
 ) -> Option<parley::swash::scale::image::Image> {
-    parley::swash::scale::Render::new(&prepared_glyph_render_sources())
+    parley::swash::scale::Render::new(&super::glyph_render_sources())
         .offset(offset_px)
         .render(scaler, glyph_id)
-}
-
-fn prepared_glyph_render_sources() -> [parley::swash::scale::Source; 3] {
-    [
-        parley::swash::scale::Source::ColorOutline(0),
-        parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
-        parley::swash::scale::Source::Outline,
-    ]
 }
