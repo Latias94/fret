@@ -6,14 +6,30 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct GlyphInstance {
     /// Logical-space rect relative to the text baseline origin.
-    pub rect: [f32; 4],
-    pub paint_span: Option<u16>,
+    rect: [f32; 4],
+    paint_span: Option<u16>,
     pub(super) key: GlyphKey,
 }
 
 impl GlyphInstance {
+    pub(super) fn new(rect: [f32; 4], paint_span: Option<u16>, key: GlyphKey) -> Self {
+        Self {
+            rect,
+            paint_span,
+            key,
+        }
+    }
+
     pub fn kind(&self) -> GlyphQuadKind {
         self.key.kind
+    }
+
+    pub fn rect(&self) -> [f32; 4] {
+        self.rect
+    }
+
+    pub fn paint_span(&self) -> Option<u16> {
+        self.paint_span
     }
 }
 

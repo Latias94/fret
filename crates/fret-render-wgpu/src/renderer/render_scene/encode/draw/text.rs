@@ -304,7 +304,7 @@ fn encode_text_blob(
             continue;
         };
 
-        let (use_palette_override, palette_color) = if let Some(slot) = g.paint_span {
+        let (use_palette_override, palette_color) = if let Some(slot) = g.paint_span() {
             let c = blob
                 .paint_palette
                 .as_ref()
@@ -366,10 +366,11 @@ fn encode_text_blob(
             }
         };
 
-        let lx0 = base_x + g.rect[0] * state.scale_factor;
-        let ly0 = base_y + g.rect[1] * state.scale_factor;
-        let lx1 = lx0 + g.rect[2] * state.scale_factor;
-        let ly1 = ly0 + g.rect[3] * state.scale_factor;
+        let rect = g.rect();
+        let lx0 = base_x + rect[0] * state.scale_factor;
+        let ly0 = base_y + rect[1] * state.scale_factor;
+        let lx1 = lx0 + rect[2] * state.scale_factor;
+        let ly1 = ly0 + rect[3] * state.scale_factor;
         let quad = [
             apply_transform_px(t_px, lx0, ly0),
             apply_transform_px(t_px, lx1, ly0),

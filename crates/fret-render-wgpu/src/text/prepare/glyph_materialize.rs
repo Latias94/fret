@@ -117,11 +117,11 @@ fn prepared_glyph_instance(
     paint_span: Option<u16>,
     scale: f32,
 ) -> GlyphInstance {
-    GlyphInstance {
-        rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
+    GlyphInstance::new(
+        [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
         paint_span,
-        key: glyph_key,
-    }
+        glyph_key,
+    )
 }
 
 fn prepared_glyph_origin_bins(glyph: &ParleyGlyph) -> (i32, u8, i32, u8) {
