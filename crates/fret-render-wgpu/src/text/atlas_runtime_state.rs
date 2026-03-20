@@ -1,5 +1,10 @@
-use super::atlas::{GlyphAtlas, GlyphAtlasEntry, GlyphAtlasInsertError, GlyphKey};
+use super::atlas::{
+    GlyphAtlas, GlyphAtlasEntry, GlyphAtlasInsertError, GlyphKey, TEXT_ATLAS_MAX_PAGES,
+};
 use super::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot};
+
+const TEXT_ATLAS_WIDTH: u32 = 2048;
+const TEXT_ATLAS_HEIGHT: u32 = 2048;
 
 pub(crate) struct TextAtlasRuntimeState {
     mask_atlas: GlyphAtlas,
@@ -9,6 +14,40 @@ pub(crate) struct TextAtlasRuntimeState {
 }
 
 impl TextAtlasRuntimeState {
+    pub(crate) fn bootstrap(device: &wgpu::Device) -> Self {
+        let atlas_sampler = create_atlas_sampler(device);
+        let atlas_bind_group_layout = create_atlas_bind_group_layout(device);
+
+        let mask_atlas = create_text_atlas(
+            device,
+            &atlas_bind_group_layout,
+            &atlas_sampler,
+            "fret glyph mask atlas",
+            wgpu::TextureFormat::R8Unorm,
+        );
+        let color_atlas = create_text_atlas(
+            device,
+            &atlas_bind_group_layout,
+            &atlas_sampler,
+            "fret glyph color atlas",
+            wgpu::TextureFormat::Rgba8UnormSrgb,
+        );
+        let subpixel_atlas = create_text_atlas(
+            device,
+            &atlas_bind_group_layout,
+            &atlas_sampler,
+            "fret glyph subpixel atlas",
+            wgpu::TextureFormat::Rgba8Unorm,
+        );
+
+        Self::new(
+            mask_atlas,
+            color_atlas,
+            subpixel_atlas,
+            atlas_bind_group_layout,
+        )
+    }
+
     pub(crate) fn new(
         mask_atlas: GlyphAtlas,
         color_atlas: GlyphAtlas,
@@ -249,4 +288,61 @@ impl TextAtlasRuntimeState {
             k.kind_label(),
         ))
     }
+}
+
+fn create_atlas_sampler(device: &wgpu::Device) -> wgpu::Sampler {
+    device.create_sampler(&wgpu::SamplerDescriptor {
+        label: Some("fret glyph atlas sampler"),
+        address_mode_u: wgpu::AddressMode::ClampToEdge,
+        address_mode_v: wgpu::AddressMode::ClampToEdge,
+        address_mode_w: wgpu::AddressMode::ClampToEdge,
+        mag_filter: wgpu::FilterMode::Linear,
+        min_filter: wgpu::FilterMode::Linear,
+        mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+        ..Default::default()
+    })
+}
+
+fn create_atlas_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("fret glyph atlas bind group layout"),
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    multisampled: false,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                },
+                count: None,
+            },
+        ],
+    })
+}
+
+fn create_text_atlas(
+    device: &wgpu::Device,
+    atlas_bind_group_layout: &wgpu::BindGroupLayout,
+    atlas_sampler: &wgpu::Sampler,
+    label_prefix: &str,
+    format: wgpu::TextureFormat,
+) -> GlyphAtlas {
+    GlyphAtlas::new(
+        device,
+        atlas_bind_group_layout,
+        atlas_sampler,
+        label_prefix,
+        TEXT_ATLAS_WIDTH,
+        TEXT_ATLAS_HEIGHT,
+        format,
+        0,
+        TEXT_ATLAS_MAX_PAGES,
+    )
 }
