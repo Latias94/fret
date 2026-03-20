@@ -1,7 +1,7 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — TODO
 
 Status: Closed closeout tracker (selector/query closed; action write follow-on handed off)
-Last updated: 2026-03-17
+Last updated: 2026-03-20
 
 Companion docs:
 
@@ -44,6 +44,17 @@ Execution note on 2026-03-17:
   also closed on a non-Todo runtime example via `apps/fret-examples/src/hello_counter_demo.rs`
 - the remaining default app-lane write-side follow-on now lives in
   `docs/workstreams/action-write-surface-fearless-refactor-v1/`
+
+Execution note on 2026-03-20:
+
+- first-party proof/example breadth cleanup is now landed on:
+  - `apps/fret-examples/src/workspace_shell_demo.rs`
+  - `apps/fret-examples/src/editor_notes_demo.rs`
+  - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `apps/fret-examples/src/lib.rs` source-policy gates now lock the grouped explicit shared-model
+  posture on those audited surfaces
+- this lane no longer carries outstanding example/proof tracked-read adoption debt; the remaining
+  adjacent pressure is default-path density and write-side follow-ons outside this closeout tracker
 
 ## Evidence set
 
@@ -116,8 +127,8 @@ Rule:
 - [x] Audit editor-grade compatibility impact on shared-model surfaces.
 - [x] Audit router compatibility after the default surface is chosen.
 - [x] Update docs/templates/examples/gates together for each landed batch.
-  - Current remaining discussion is formal closeout posture, not proof coverage or first-contact
-    docs drift.
+  - Current remaining discussion is formal closeout posture and adjacent follow-on ownership, not
+    proof coverage, proof-surface breadth cleanup, or first-contact docs drift.
 
 ## M0 — Freeze the lane
 

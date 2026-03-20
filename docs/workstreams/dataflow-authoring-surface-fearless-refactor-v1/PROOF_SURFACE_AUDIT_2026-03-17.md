@@ -1,7 +1,7 @@
 # Proof Surface Audit — 2026-03-17
 
 Status: Closeout note
-Last updated: 2026-03-17
+Last updated: 2026-03-20
 
 Related:
 
@@ -79,6 +79,30 @@ Conclusion:
 - they are not evidence that advanced/component code should be rewritten into `selector_layout(...)`
   or `read_layout(cx)`
 
+## Addendum — 2026-03-20
+
+The remaining breadth cleanup on first-party proof/example surfaces is now landed.
+
+Evidence anchors:
+
+- `apps/fret-examples/src/workspace_shell_demo.rs`
+  - shared-model layout readouts now use `cx.data().selector_model_layout(...)`
+- `apps/fret-examples/src/editor_notes_demo.rs`
+  - committed/outcome paint readouts now use `cx.data().selector_model_paint(...)`
+- `apps/fret-examples/src/imui_editor_proof_demo.rs`
+  - proof readouts now use `selector_model_paint(...)` or thin local wrappers
+    (`editor_text_assist_readout`, `editor_text_field_readout`, `editor_string_model_readout`)
+  - legacy `watch_model(...)`, `get_model_cloned(...)`, and `get_model_copied(...)` read spellings
+    are no longer present on the audited readout surfaces
+- `apps/fret-examples/src/lib.rs`
+  - source-policy gates now lock the grouped/shared-model proof posture directly
+
+Conclusion:
+
+- proof/example breadth cleanup is no longer an open item for this lane
+- the remaining explicitness on editor-grade surfaces is intentional ownership and interaction
+  policy, not leftover tracked-read syntax debt
+
 ## Selector proof closeout
 
 The remaining selector proof gap is now closed on a non-Todo runtime surface:
@@ -111,6 +135,8 @@ What is now locked:
 - query default read-side posture is proven on ordinary and editor-grade-compatible surfaces
 - selector default read posture is proven on Todo/template surfaces and on the non-Todo runtime
   `hello_counter_demo`
+- first-party proof/example surfaces no longer carry legacy tracked-read readout spellings for the
+  audited dataflow lane
 
 Any remaining discussion for the broader workstream is therefore a closeout/classification question
 rather than a missing proof-surface question.

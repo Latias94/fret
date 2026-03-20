@@ -143,3 +143,22 @@ That keeps the lane honest:
 
 - M1 stops growing after the justified tracked-read helper already landed,
 - and M2 starts from real non-Todo evidence instead of Todo-only intuition.
+
+## Addendum — 2026-03-20
+
+The M1 breadth-cleanup items called out in this audit are now landed on the audited proof/example
+surfaces:
+
+- `apps/fret-examples/src/workspace_shell_demo.rs`
+- `apps/fret-examples/src/editor_notes_demo.rs`
+- `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `apps/fret-examples/src/lib.rs` source-policy gates
+
+This means the earlier "simple committed/outcome readouts are still M1 adoption cleanup" category
+should now be read as historical evidence that justified the cleanup, not as remaining open work.
+
+The next live design pressure remains what this audit already identified as M2:
+
+- selector/query ceremony on the default path,
+- multi-model derived-state choreography,
+- and authoring density rather than missing tracked-read helpers.
