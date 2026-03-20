@@ -207,7 +207,7 @@ pub struct ShapedCluster {
 }
 
 impl ShapedCluster {
-    pub fn new(text_range: Range<usize>, x0: f32, x1: f32, is_rtl: bool) -> Self {
+    pub(crate) fn new(text_range: Range<usize>, x0: f32, x1: f32, is_rtl: bool) -> Self {
         Self {
             text_range,
             x0,
@@ -247,7 +247,7 @@ pub struct ShapedLineLayout {
 }
 
 impl ShapedLineLayout {
-    pub fn new(
+    pub(crate) fn new(
         width: f32,
         ascent: f32,
         descent: f32,
