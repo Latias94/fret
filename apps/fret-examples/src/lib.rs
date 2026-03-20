@@ -277,6 +277,7 @@ mod authoring_surface_policy_tests {
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
     const ECHARTS_DEMO: &str = include_str!("echarts_demo.rs");
     const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
+    const EDITOR_NOTES_DEMO: &str = include_str!("editor_notes_demo.rs");
     const EMPTY_IDLE_DEMO: &str = include_str!("empty_idle_demo.rs");
     const EMOJI_CONFORMANCE_DEMO: &str = include_str!("emoji_conformance_demo.rs");
     const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
@@ -1957,6 +1958,18 @@ mod authoring_surface_policy_tests {
                 "shadcn::Switch::new(config.keep_prev.clone_model())",
                 "shadcn::Switch::new(config.fail_mode.clone_model())",
                 "config.cancel_mode.open.clone_model()",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            EDITOR_NOTES_DEMO,
+            &[
+                "let (committed_notes, notes_outcome) = cx.data().selector_model_paint(",
+                "(&asset.notes_model, &asset.notes_outcome_model),",
+            ],
+            &[
+                ".watch_model(&asset.notes_model)",
+                ".watch_model(&asset.notes_outcome_model)",
             ],
         );
 

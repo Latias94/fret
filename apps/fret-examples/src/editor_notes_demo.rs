@@ -14,7 +14,7 @@ use fret_ui_editor::controls::{
     EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldOptions,
     TextFieldOutcome,
 };
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, ModelWatchExt as _};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{ColorRef, Space};
 
 const ENV_EDITOR_PRESET: &str = "FRET_EDITOR_NOTES_DEMO_PRESET";
@@ -138,14 +138,10 @@ impl View for EditorNotesDemoView {
         let theme = Theme::global(&*cx.app).snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();
         let asset = self.asset(selected).clone();
-        let committed_notes = cx
-            .watch_model(&asset.notes_model)
-            .paint()
-            .value_or_default();
-        let notes_outcome = cx
-            .watch_model(&asset.notes_outcome_model)
-            .paint()
-            .value_or_else(|| "Idle".to_string());
+        let (committed_notes, notes_outcome) = cx.data().selector_model_paint(
+            (&asset.notes_model, &asset.notes_outcome_model),
+            |(committed_notes, notes_outcome)| (committed_notes, notes_outcome),
+        );
 
         let selection_panel = {
             let header = shadcn::CardHeader::new([
