@@ -11,12 +11,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             shadcn::raw::typography::small("Blog").into_element(cx),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
-                .flex_stretch_cross_axis(true)
                 .into_element(cx),
             shadcn::raw::typography::small("Docs").into_element(cx),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
-                .flex_stretch_cross_axis(true)
                 .into_element(cx),
             shadcn::raw::typography::small("Source").into_element(cx),
         ]

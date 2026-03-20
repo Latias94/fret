@@ -13,23 +13,26 @@ pub(super) fn preview_separator(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Separator::new()` and `Separator::orientation(...)` cover the public surface used by the upstream docs.",
-        "Separator remains a leaf primitive: surrounding width/height negotiation stays caller-owned, while the 1px rule chrome stays recipe-owned.",
-        "Vertical separators often want `.flex_stretch_cross_axis(true)` inside fixed-height flex rows to match the upstream `self-stretch` outcome.",
-        "No extra generic `compose()` / `asChild` surface is needed here because upstream composition happens around the separator rather than through the separator itself.",
-        "This page is docs/public-surface parity work, not a mechanism-layer fix.",
+        "`Separator::new()`, `Separator::orientation(...)`, and `Separator::decorative(...)` cover the public surface that matters for shadcn/Radix/Base UI parity.",
+        "shadcn-style separators stay decorative by default; opt into `.decorative(false)` only when the divider should participate in the accessibility tree as a real separator.",
+        "Vertical separators now translate the upstream `data-vertical:self-stretch` policy directly on the shadcn recipe surface, so callers own surrounding row height but should not need to restate self-stretch in normal docs-path usage.",
+        "Separator remains a leaf primitive: surrounding width/height negotiation stays caller-owned, while the 1px rule chrome and vertical self-stretch default stay recipe-owned.",
+        "No extra generic `children` / `compose()` / `asChild` surface is needed here because upstream composition happens around the separator rather than through the separator itself.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .description("Public surface summary and ownership notes.");
 
     let demo = DocSection::build(cx, "Demo", demo)
+        .description(
+            "Official top-of-page preview from the docs: horizontal copy plus a vertical nav lane.",
+        )
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for `Separator`.")
+        .description("Copyable minimal usage for a decorative separator; use `.decorative(false)` only when the divider should be announced.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let vertical = DocSection::build(cx, "Vertical", vertical)
-        .description("Use `orientation=vertical` for vertical separators.")
+        .description("Use `orientation=vertical`; the shadcn surface already carries the upstream self-stretch default.")
         .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
     let menu = DocSection::build(cx, "Menu", menu)
         .description("Vertical separators between menu-like items with descriptions.")

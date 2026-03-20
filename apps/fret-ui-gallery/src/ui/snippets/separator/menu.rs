@@ -28,12 +28,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             section(cx, "Settings", "Manage preferences").into_element(cx),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
-                .flex_stretch_cross_axis(true)
                 .into_element(cx),
             section(cx, "Account", "Profile & security").into_element(cx),
             shadcn::Separator::new()
                 .orientation(shadcn::SeparatorOrientation::Vertical)
-                .flex_stretch_cross_axis(true)
                 .refine_layout(LayoutRefinement::default().h_px(Px(32.0)))
                 .into_element(cx),
             section(cx, "Help", "Support & docs").into_element(cx),

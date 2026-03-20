@@ -7123,6 +7123,18 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-separator-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-shadcn-extras-kanban-dnd",
       "path": "tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-shadcn-extras-kanban-dnd.json",
       "required_capabilities": [],
