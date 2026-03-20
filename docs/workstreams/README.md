@@ -150,7 +150,7 @@ those files, keep historical names when they are the evidence.
 - `docs/workstreams/imui-ecosystem-facade-v2/` — first 2026-02-06, latest 2026-02-08, 8 markdown docs
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/input-dispatch-v2/` — first 2026-01-22, latest 2026-02-14, 3 markdown docs
-- `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-12, 5 markdown docs
+- `docs/workstreams/into-element-surface-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/launcher-utility-windows-v1/` — first 2026-03-03, latest 2026-03-03, 4 markdown docs
 - `docs/workstreams/length-percentage-semantics-v1/` — first 2026-02-23, latest 2026-02-27, 3 markdown docs
 - `docs/workstreams/localization-i18n-v1/` — first 2026-02-06, latest 2026-02-07, 2 markdown docs

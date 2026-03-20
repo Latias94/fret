@@ -13,6 +13,7 @@ Companion docs:
 - `MILESTONES.md`
 - `TARGET_INTERFACE_STATE.md`
 - `MIGRATION_MATRIX.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
 
 Closeout reading rule on 2026-03-16:
 
@@ -35,6 +36,11 @@ Closeout note on 2026-03-18:
   - `internal_preview_scaffold_retains_only_the_audited_vec_anyelement_seams`
 - future edits in this folder should therefore be limited to drift control and audited seam
   inventory updates, not new conversion-surface design.
+
+Closeout audit note on 2026-03-20:
+
+- the lane now has an explicit closeout audit rather than only distributed sampled notes;
+- treat the remaining checklist/history below as archived evidence, not as an open execution plan.
 
 Historical execution note on 2026-03-13:
 

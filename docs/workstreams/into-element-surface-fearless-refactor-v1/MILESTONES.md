@@ -5,6 +5,14 @@ Last updated: 2026-03-18
 
 This file defines milestones for the workstream in `DESIGN.md`.
 
+Related:
+
+- `DESIGN.md`
+- `TARGET_INTERFACE_STATE.md`
+- `TODO.md`
+- `MIGRATION_MATRIX.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
+
 ## Current execution stance (2026-03-18)
 
 This workstream should now be read as a **maintenance-only closeout lane**, not the current main
@@ -31,6 +39,12 @@ Closeout note on 2026-03-18:
 - this leaves only maintenance-only drift control: keep the intentional raw-seam inventory
   accurate, keep page/snippet family notes aligned, and do not reopen conversion taxonomy design
   unless one of those audited boundaries changes.
+
+Closeout audit note on 2026-03-20:
+
+- the representative closure gates have been re-read as lane-level evidence, not just sampled
+  spot checks;
+- `CLOSEOUT_AUDIT_2026-03-20.md` is now the canonical closeout interpretation for this folder.
 
 Closeout note on 2026-03-15:
 

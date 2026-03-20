@@ -10,6 +10,7 @@ Related:
 - `docs/workstreams/ecosystem-integration-traits-v1/DESIGN.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0148-component-ecosystem-authoring-conventions-v1.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
 
 Closeout reading rule on 2026-03-16:
 
@@ -32,6 +33,12 @@ Closeout note on 2026-03-18:
   - `ecosystem/fret-ui-shadcn/src/surface_policy_tests.rs`
 - this document should now be read strictly as the historical explanation for why the lane existed,
   not as a live design owner for further authoring-surface work.
+
+Closeout audit note on 2026-03-20:
+
+- read `CLOSEOUT_AUDIT_2026-03-20.md` as the final lane-level verdict;
+- this folder no longer owns an active migration queue, only explicit seam inventory and drift
+  control.
 
 This workstream focused on one narrow product-surface problem:
 
