@@ -14,17 +14,17 @@ impl TextSystem {
             return;
         };
 
-        if b.ref_count > 1 {
-            b.ref_count = b.ref_count.saturating_sub(1);
+        if b.ref_count() > 1 {
+            b.decrement_ref_count();
             return;
         }
 
-        if b.ref_count == 0 {
+        if b.is_released() {
             return;
         }
 
         if entries > 0 {
-            b.ref_count = 0;
+            b.mark_released();
             self.insert_released_blob(blob, entries);
             return;
         }
@@ -71,7 +71,7 @@ impl TextSystem {
                 .blob_state
                 .blobs
                 .get(evict)
-                .is_some_and(|b| b.ref_count > 0)
+                .is_some_and(|b| b.ref_count() > 0)
             {
                 continue;
             }
@@ -86,7 +86,7 @@ impl TextSystem {
             .blob_state
             .blobs
             .get(blob)
-            .is_some_and(|b| Arc::strong_count(&b.shape) == 2);
+            .is_some_and(|b| Arc::strong_count(b.shape_handle()) == 2);
 
         if let Some(key) = self.blob_state.blob_key_by_id.remove(&blob) {
             self.blob_state.blob_cache.remove(&key);

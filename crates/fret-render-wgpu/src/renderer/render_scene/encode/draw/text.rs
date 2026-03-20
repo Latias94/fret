@@ -59,7 +59,7 @@ fn encode_text_blob(
 
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
-    let baseline = blob.shape.metrics().baseline;
+    let baseline = blob.shape().metrics().baseline;
 
     fn paint_representative_color(p: fret_core::scene::Paint) -> Color {
         use fret_core::scene::{MAX_STOPS, Paint};
@@ -130,7 +130,7 @@ fn encode_text_blob(
         }
 
         if let Some(slot) = paint_span
-            && let Some(palette) = blob.paint_palette.as_ref()
+            && let Some(palette) = blob.paint_palette()
             && let Some(Some(c)) = palette.get(slot as usize)
         {
             let mut out = *c;
@@ -141,10 +141,9 @@ fn encode_text_blob(
         base_color_hint
     };
 
-    if draw_decorations && !blob.decorations.is_empty() {
+    if draw_decorations && !blob.decorations().is_empty() {
         for d in blob
-            .decorations
-            .as_ref()
+            .decorations()
             .iter()
             .filter(|d| d.kind() == TextDecorationKind::Underline)
         {
@@ -281,7 +280,7 @@ fn encode_text_blob(
         *group_first_vertex = state.text_vertices.len() as u32;
     };
 
-    for g in blob.shape.glyphs() {
+    for g in blob.shape().glyphs() {
         let kind = match g.kind() {
             GlyphQuadKind::Mask => {
                 if outline_params_mask != 0 {
@@ -306,8 +305,7 @@ fn encode_text_blob(
 
         let (use_palette_override, palette_color) = if let Some(slot) = g.paint_span() {
             let c = blob
-                .paint_palette
-                .as_ref()
+                .paint_palette()
                 .and_then(|p| p.get(slot as usize).copied().flatten())
                 .unwrap_or(base_color_hint);
             (true, c)
@@ -488,10 +486,9 @@ fn encode_text_blob(
         &mut group_bounds_px,
     );
 
-    if !blob.decorations.is_empty() {
+    if !blob.decorations().is_empty() {
         for d in blob
-            .decorations
-            .as_ref()
+            .decorations()
             .iter()
             .filter(|d| d.kind() == TextDecorationKind::Strikethrough)
         {

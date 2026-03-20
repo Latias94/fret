@@ -75,7 +75,7 @@ impl TextSystem {
             add_shape(shape);
         }
         for blob in self.blob_state.blobs.values() {
-            add_shape(&blob.shape);
+            add_shape(blob.shape_handle());
         }
 
         let mut blob_paint_palette_bytes_estimate_total: u64 = 0;
@@ -84,7 +84,7 @@ impl TextSystem {
         let mut seen_decorations: HashSet<usize> = HashSet::new();
 
         for blob in self.blob_state.blobs.values() {
-            if let Some(palette) = blob.paint_palette.as_ref() {
+            if let Some(palette) = blob.paint_palette() {
                 let ptr = palette.as_ptr() as usize;
                 if seen_palettes.insert(ptr) {
                     blob_paint_palette_bytes_estimate_total =
@@ -95,11 +95,12 @@ impl TextSystem {
                         );
                 }
             }
-            let ptr = blob.decorations.as_ptr() as usize;
+            let decorations = blob.decorations();
+            let ptr = decorations.as_ptr() as usize;
             if seen_decorations.insert(ptr) {
                 blob_decorations_bytes_estimate_total = blob_decorations_bytes_estimate_total
                     .saturating_add(
-                        ((blob.decorations.len() as u128)
+                        ((decorations.len() as u128)
                             * (std::mem::size_of::<TextDecoration>() as u128))
                             .min(u64::MAX as u128) as u64,
                     );

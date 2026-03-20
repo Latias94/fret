@@ -56,10 +56,61 @@ pub(crate) struct DebugGlyphAtlasLookup {
 
 #[derive(Debug, Clone)]
 pub struct TextBlob {
-    pub shape: Arc<TextShape>,
-    pub paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
-    pub decorations: Arc<[TextDecoration]>,
-    pub(super) ref_count: u32,
+    shape: Arc<TextShape>,
+    paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
+    decorations: Arc<[TextDecoration]>,
+    ref_count: u32,
+}
+
+impl TextBlob {
+    pub(super) fn new(
+        shape: Arc<TextShape>,
+        paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
+        decorations: Arc<[TextDecoration]>,
+    ) -> Self {
+        Self {
+            shape,
+            paint_palette,
+            decorations,
+            ref_count: 1,
+        }
+    }
+
+    pub fn shape(&self) -> &TextShape {
+        self.shape.as_ref()
+    }
+
+    pub(crate) fn shape_handle(&self) -> &Arc<TextShape> {
+        &self.shape
+    }
+
+    pub fn paint_palette(&self) -> Option<&[Option<fret_core::Color>]> {
+        self.paint_palette.as_deref()
+    }
+
+    pub fn decorations(&self) -> &[TextDecoration] {
+        self.decorations.as_ref()
+    }
+
+    pub(crate) fn ref_count(&self) -> u32 {
+        self.ref_count
+    }
+
+    pub(crate) fn increment_ref_count(&mut self) {
+        self.ref_count = self.ref_count.saturating_add(1);
+    }
+
+    pub(crate) fn decrement_ref_count(&mut self) {
+        self.ref_count = self.ref_count.saturating_sub(1);
+    }
+
+    pub(crate) fn mark_released(&mut self) {
+        self.ref_count = 0;
+    }
+
+    pub(crate) fn is_released(&self) -> bool {
+        self.ref_count == 0
+    }
 }
 
 #[derive(Debug, Clone)]
