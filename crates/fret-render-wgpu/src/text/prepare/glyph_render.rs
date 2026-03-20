@@ -110,8 +110,7 @@ fn render_prepared_glyph_image_at_bins(
     x_bin: u8,
     y_bin: u8,
 ) -> Option<parley::swash::scale::image::Image> {
-    let offset_px = super::glyph_offset_px(x_bin, y_bin);
-    render_prepared_glyph_image_with_scaler(scaler, glyph_id, offset_px)
+    super::glyph_render_at_bins(x_bin, y_bin).render(scaler, glyph_id)
 }
 
 fn render_prepared_glyph_image_from_scaler(
@@ -138,14 +137,4 @@ fn apply_prepared_glyph_normalized_coords_values<'a>(
     glyph: &'a ParleyGlyph,
 ) -> parley::swash::scale::ScalerBuilder<'a> {
     scaler_builder.normalized_coords(glyph.normalized_coords().iter())
-}
-
-fn render_prepared_glyph_image_with_scaler(
-    scaler: &mut parley::swash::scale::Scaler<'_>,
-    glyph_id: u16,
-    offset_px: parley::swash::zeno::Vector,
-) -> Option<parley::swash::scale::image::Image> {
-    parley::swash::scale::Render::new(&super::glyph_render_sources())
-        .offset(offset_px)
-        .render(scaler, glyph_id)
 }

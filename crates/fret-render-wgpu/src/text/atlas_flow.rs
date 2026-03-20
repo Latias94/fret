@@ -1,6 +1,6 @@
 use super::TextSystem;
 use super::atlas::{GlyphKey, GlyphKeyBuckets};
-use super::prepare::{glyph_offset_px, glyph_render_sources};
+use super::prepare::glyph_render_at_bins;
 use fret_core::scene::{Scene, SceneOp};
 
 impl TextSystem {
@@ -76,9 +76,7 @@ impl TextSystem {
         }
         let mut scaler = scaler_builder.build();
 
-        let render_sources = glyph_render_sources();
-        let mut render = parley::swash::scale::Render::new(&render_sources);
-        render.offset(glyph_offset_px(key.x_bin, key.y_bin));
+        let mut render = glyph_render_at_bins(key.x_bin, key.y_bin);
         apply_parley_glyph_synthesis(&mut render, key, font_size);
 
         let Some(image) = render.render(&mut scaler, glyph_id) else {

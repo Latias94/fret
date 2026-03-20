@@ -105,10 +105,18 @@ pub(super) fn glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vect
     parley::swash::zeno::Vector::new(subpixel_bin_as_float(x_bin), subpixel_bin_as_float(y_bin))
 }
 
-pub(super) fn glyph_render_sources() -> [parley::swash::scale::Source; 3] {
-    [
-        parley::swash::scale::Source::ColorOutline(0),
-        parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
-        parley::swash::scale::Source::Outline,
-    ]
+const GLYPH_RENDER_SOURCES: [parley::swash::scale::Source; 3] = [
+    parley::swash::scale::Source::ColorOutline(0),
+    parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
+    parley::swash::scale::Source::Outline,
+];
+
+pub(super) fn glyph_render_sources() -> &'static [parley::swash::scale::Source; 3] {
+    &GLYPH_RENDER_SOURCES
+}
+
+pub(super) fn glyph_render_at_bins(x_bin: u8, y_bin: u8) -> parley::swash::scale::Render<'static> {
+    let mut render = parley::swash::scale::Render::new(glyph_render_sources());
+    render.offset(glyph_offset_px(x_bin, y_bin));
+    render
 }
