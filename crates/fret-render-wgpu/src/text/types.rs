@@ -83,7 +83,7 @@ impl DebugGlyphAtlasLookup {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct TextBlob {
+pub(super) struct TextBlob {
     shape: Arc<TextShape>,
     paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
     decorations: Arc<[TextDecoration]>,
@@ -142,7 +142,7 @@ impl TextBlob {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct TextShape {
+pub(super) struct TextShape {
     glyphs: Arc<[GlyphInstance]>,
     metrics: TextMetrics,
     lines: Arc<[TextLine]>,
