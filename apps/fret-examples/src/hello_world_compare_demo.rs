@@ -12,6 +12,8 @@ use fret_runtime::{
 };
 use fret_ui::element::{AnyElement, TextProps};
 use fret_ui_kit::declarative::scheduling::set_continuous_frames;
+#[cfg(target_os = "macos")]
+use objc2_metal::MTLDevice as _;
 use serde_json::json;
 
 const TEST_ID_ROOT: &str = "hello_world_compare.root";
@@ -992,7 +994,7 @@ fn current_metal_allocated_size_bytes(device: &wgpu::Device) -> Option<u64> {
     unsafe {
         device
             .as_hal::<wgpu::hal::api::Metal>()
-            .map(|device| device.raw_device().current_allocated_size() as u64)
+            .map(|device| device.raw_device().currentAllocatedSize() as u64)
     }
 }
 

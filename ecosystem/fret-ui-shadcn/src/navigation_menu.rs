@@ -474,12 +474,12 @@ impl std::fmt::Debug for NavigationMenuLink {
 
 impl NavigationMenuLink {
     pub fn new(
-        model: Model<Option<Arc<str>>>,
+        model: impl IntoOptionalTextValueModel,
         children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         let children = children.into_iter().collect();
         Self {
-            model,
+            model: model.into_optional_text_value_model(),
             children,
             label: None,
             test_id: None,
@@ -496,7 +496,7 @@ impl NavigationMenuLink {
         }
     }
 
-    pub fn child(model: Model<Option<Arc<str>>>, child: AnyElement) -> Self {
+    pub fn child(model: impl IntoOptionalTextValueModel, child: AnyElement) -> Self {
         Self::new(model, vec![child])
     }
 

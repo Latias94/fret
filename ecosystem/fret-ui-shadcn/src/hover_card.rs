@@ -1204,6 +1204,23 @@ impl HoverCardContent {
         }
     }
 
+    /// Builder-first variant that late-lands hover-card content children at `into_element(cx)`
+    /// time.
+    #[track_caller]
+    pub fn build<H: UiHost, I, F, T>(cx: &mut ElementContext<'_, H>, f: F) -> Self
+    where
+        F: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        let children = f(cx)
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect::<Vec<_>>();
+
+        Self::new(children)
+    }
+
     pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(test_id.into());
         self
@@ -1342,6 +1359,29 @@ mod tests {
             assert_eq!(out.len(), 1);
             assert!(matches!(out[0].kind, ElementKind::Container(_)));
             assert!(out[0].inherited_foreground.is_some());
+        });
+    }
+
+    #[test]
+    fn hover_card_content_build_accepts_late_landed_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content =
+                HoverCardContent::build(cx, |_cx| [crate::card::Card::build(|_cx, _out| {})])
+                    .into_element(cx);
+
+            assert!(matches!(content.kind, ElementKind::Container(_)));
+            assert_eq!(content.children.len(), 1);
+            assert!(matches!(
+                content.children[0].kind,
+                ElementKind::Container(_)
+            ));
         });
     }
 

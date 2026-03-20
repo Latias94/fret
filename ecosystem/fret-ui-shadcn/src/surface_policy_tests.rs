@@ -994,6 +994,7 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
             CHECKBOX_RS,
             &[
                 "pub fn new(model: impl IntoBoolModel) -> Self {",
+                "pub fn new_tristate(model: impl IntoCheckedStateModel) -> Self {",
                 "pub fn new_optional(model: impl IntoOptionalBoolModel) -> Self {",
                 "pub fn checkbox<H: UiHost, M: IntoBoolModel>(model: M) -> impl IntoUiElement<H> + use<H, M>",
                 "pub fn checkbox_opt<H: UiHost, M: IntoOptionalBoolModel>( model: M, ) -> impl IntoUiElement<H> + use<H, M>",
@@ -1002,6 +1003,7 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement",
                 "pub fn checkbox_opt<H: UiHost>( cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>, ) -> AnyElement",
                 "pub fn new(model: Model<bool>) -> Self {",
+                "pub fn new_tristate(model: Model<CheckedState>) -> Self {",
                 "pub fn new_optional(model: Model<Option<bool>>) -> Self {",
             ][..],
         ),
@@ -1101,11 +1103,14 @@ fn public_thin_constructors_or_wrappers_prefer_typed_conversion_outputs_when_no_
                 "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: impl IntoOptionalTextValueModel, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> NavigationMenu where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn new(model: impl IntoOptionalTextValueModel) -> Self {",
+                "pub fn new( model: impl IntoOptionalTextValueModel, children: impl IntoIterator<Item = AnyElement>, ) -> Self {",
+                "pub fn child(model: impl IntoOptionalTextValueModel, child: AnyElement) -> Self {",
             ][..],
             &[
                 "pub fn navigation_menu<H: UiHost, I>( cx: &mut ElementContext<'_, H>, model: Model<Option<Arc<str>>>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>( cx: &mut ElementContext<'_, H>, default_value: Option<T>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I, ) -> AnyElement where I: IntoIterator<Item = NavigationMenuItem>,",
                 "pub fn new(model: Model<Option<Arc<str>>>) -> Self {",
+                "pub fn child(model: Model<Option<Arc<str>>>, child: AnyElement) -> Self {",
             ][..],
         ),
         (

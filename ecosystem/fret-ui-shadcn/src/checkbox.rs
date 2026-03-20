@@ -29,6 +29,7 @@ use fret_ui_kit::{
 };
 
 use crate::bool_model::IntoBoolModel;
+use crate::checked_state_model::IntoCheckedStateModel;
 use crate::optional_bool_model::IntoOptionalBoolModel;
 use crate::overlay_motion;
 
@@ -145,9 +146,9 @@ impl Checkbox {
         }
     }
 
-    pub fn new_tristate(model: Model<CheckedState>) -> Self {
+    pub fn new_tristate(model: impl IntoCheckedStateModel) -> Self {
         Self {
-            checked: CheckboxCheckedModel::TriState(model),
+            checked: CheckboxCheckedModel::TriState(model.into_checked_state_model()),
             aria_invalid: false,
             disabled: false,
             control_id: None,

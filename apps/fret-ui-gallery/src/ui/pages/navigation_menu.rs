@@ -13,7 +13,7 @@ pub(super) fn preview_navigation_menu(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "`navigation_menu(cx, model, |cx| ..)` is now the default first-party root helper, while `NavigationMenu::new(model)` remains available when callers want the explicit root builder seam.",
-        "`NavigationMenuRoot/List/Item/Trigger/Content/Link/Viewport/Indicator` remain the upstream-shaped lane on the same family rather than an advanced escape hatch.",
+        "`NavigationMenuRoot/List/Item/Trigger/Content/Link/Viewport/Indicator` remain the upstream-shaped lane on the same family rather than an advanced escape hatch, and `NavigationMenuLink::{new, child}` now accept the same narrow single-selection bridge as the compact root lane.",
         "Top-level docs-style links now map to a contentless `NavigationMenuItem` with `href` / `target` / `rel`; trigger chrome stays recipe-owned instead of leaking page-level classes into the component default.",
         "`navigation_menu_trigger_style()` intentionally stays a typed layout helper; hover/open chrome remains recipe-owned, while `w-full` / `min-w-0` / width negotiation remain caller-owned.",
         "Container query toggle is a Fret-specific extra used to audit viewport-vs-container breakpoint behavior.",
