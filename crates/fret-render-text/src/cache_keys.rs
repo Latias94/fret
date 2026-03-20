@@ -10,31 +10,31 @@ use std::{
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TextBlobKey {
-    pub text: Arc<str>,
-    pub spans_shaping_key: u64,
-    pub spans_paint_key: u64,
-    pub backend: u8,
-    pub font: fret_core::FontId,
-    pub font_stack_key: u64,
-    pub size_bits: u32,
-    pub weight: u16,
-    pub slant: u8,
-    pub line_height_bits: Option<u32>,
-    pub line_height_em_bits: Option<u32>,
-    pub line_height_policy: u8,
-    pub leading_distribution: u8,
-    pub strut_force: u8,
-    pub strut_font: Option<fret_core::FontId>,
-    pub strut_size_bits: Option<u32>,
-    pub strut_line_height_bits: Option<u32>,
-    pub strut_line_height_em_bits: Option<u32>,
-    pub strut_leading_distribution: Option<u8>,
-    pub letter_spacing_bits: Option<u32>,
-    pub max_width_bits: Option<u32>,
-    pub wrap: TextWrap,
-    pub overflow: TextOverflow,
-    pub align: u8,
-    pub scale_bits: u32,
+    text: Arc<str>,
+    spans_shaping_key: u64,
+    spans_paint_key: u64,
+    backend: u8,
+    font: fret_core::FontId,
+    font_stack_key: u64,
+    size_bits: u32,
+    weight: u16,
+    slant: u8,
+    line_height_bits: Option<u32>,
+    line_height_em_bits: Option<u32>,
+    line_height_policy: u8,
+    leading_distribution: u8,
+    strut_force: u8,
+    strut_font: Option<fret_core::FontId>,
+    strut_size_bits: Option<u32>,
+    strut_line_height_bits: Option<u32>,
+    strut_line_height_em_bits: Option<u32>,
+    strut_leading_distribution: Option<u8>,
+    letter_spacing_bits: Option<u32>,
+    max_width_bits: Option<u32>,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    align: u8,
+    scale_bits: u32,
 }
 
 impl TextBlobKey {
@@ -133,35 +133,43 @@ impl TextBlobKey {
         out.spans_paint_key = spans_paint_fingerprint(&rich.spans);
         out
     }
+
+    pub fn text_arc(&self) -> &Arc<str> {
+        &self.text
+    }
+
+    pub fn set_backend(&mut self, backend: u8) {
+        self.backend = backend;
+    }
 }
 
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TextShapeKey {
-    pub text: Arc<str>,
-    pub spans_shaping_key: u64,
-    pub backend: u8,
-    pub font: fret_core::FontId,
-    pub font_stack_key: u64,
-    pub size_bits: u32,
-    pub weight: u16,
-    pub slant: u8,
-    pub line_height_bits: Option<u32>,
-    pub line_height_em_bits: Option<u32>,
-    pub line_height_policy: u8,
-    pub leading_distribution: u8,
-    pub strut_force: u8,
-    pub strut_font: Option<fret_core::FontId>,
-    pub strut_size_bits: Option<u32>,
-    pub strut_line_height_bits: Option<u32>,
-    pub strut_line_height_em_bits: Option<u32>,
-    pub strut_leading_distribution: Option<u8>,
-    pub letter_spacing_bits: Option<u32>,
-    pub max_width_bits: Option<u32>,
-    pub wrap: TextWrap,
-    pub overflow: TextOverflow,
-    pub align: u8,
-    pub scale_bits: u32,
+    text: Arc<str>,
+    spans_shaping_key: u64,
+    backend: u8,
+    font: fret_core::FontId,
+    font_stack_key: u64,
+    size_bits: u32,
+    weight: u16,
+    slant: u8,
+    line_height_bits: Option<u32>,
+    line_height_em_bits: Option<u32>,
+    line_height_policy: u8,
+    leading_distribution: u8,
+    strut_force: u8,
+    strut_font: Option<fret_core::FontId>,
+    strut_size_bits: Option<u32>,
+    strut_line_height_bits: Option<u32>,
+    strut_line_height_em_bits: Option<u32>,
+    strut_leading_distribution: Option<u8>,
+    letter_spacing_bits: Option<u32>,
+    max_width_bits: Option<u32>,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    align: u8,
+    scale_bits: u32,
 }
 
 impl TextShapeKey {
@@ -198,26 +206,26 @@ impl TextShapeKey {
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TextMeasureKey {
-    pub font: fret_core::FontId,
-    pub font_stack_key: u64,
-    pub size_bits: u32,
-    pub weight: u16,
-    pub slant: u8,
-    pub line_height_bits: Option<u32>,
-    pub line_height_em_bits: Option<u32>,
-    pub line_height_policy: u8,
-    pub leading_distribution: u8,
-    pub strut_force: u8,
-    pub strut_font: Option<fret_core::FontId>,
-    pub strut_size_bits: Option<u32>,
-    pub strut_line_height_bits: Option<u32>,
-    pub strut_line_height_em_bits: Option<u32>,
-    pub strut_leading_distribution: Option<u8>,
-    pub letter_spacing_bits: Option<u32>,
-    pub max_width_bits: Option<u32>,
-    pub wrap: TextWrap,
-    pub overflow: TextOverflow,
-    pub scale_bits: u32,
+    font: fret_core::FontId,
+    font_stack_key: u64,
+    size_bits: u32,
+    weight: u16,
+    slant: u8,
+    line_height_bits: Option<u32>,
+    line_height_em_bits: Option<u32>,
+    line_height_policy: u8,
+    leading_distribution: u8,
+    strut_force: u8,
+    strut_font: Option<fret_core::FontId>,
+    strut_size_bits: Option<u32>,
+    strut_line_height_bits: Option<u32>,
+    strut_line_height_em_bits: Option<u32>,
+    strut_leading_distribution: Option<u8>,
+    letter_spacing_bits: Option<u32>,
+    max_width_bits: Option<u32>,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    scale_bits: u32,
 }
 
 impl TextMeasureKey {
