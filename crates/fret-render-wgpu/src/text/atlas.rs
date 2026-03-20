@@ -1,7 +1,13 @@
-use super::types::GlyphQuadKind;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
 use fret_render_text::FontFaceKey;
 use std::collections::{HashMap, HashSet};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum GlyphQuadKind {
+    Mask,
+    Color,
+    Subpixel,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct GlyphKey {
@@ -10,7 +16,7 @@ pub(super) struct GlyphKey {
     pub(super) size_bits: u32,
     pub(super) x_bin: u8,
     pub(super) y_bin: u8,
-    pub(super) kind: GlyphQuadKind,
+    kind: GlyphQuadKind,
 }
 
 const GLYPH_KEY_LOOKUP_KIND_ORDER: [GlyphQuadKind; 3] = [
@@ -20,7 +26,7 @@ const GLYPH_KEY_LOOKUP_KIND_ORDER: [GlyphQuadKind; 3] = [
 ];
 
 impl GlyphKey {
-    pub(super) fn new(
+    fn new(
         font: FontFaceKey,
         glyph_id: u32,
         size_bits: u32,
@@ -125,7 +131,7 @@ impl GlyphKeyBuckets {
     }
 }
 
-pub(super) fn glyph_image_content_metadata(
+fn glyph_image_content_metadata(
     content: parley::swash::scale::image::Content,
 ) -> (GlyphQuadKind, u32) {
     match content {

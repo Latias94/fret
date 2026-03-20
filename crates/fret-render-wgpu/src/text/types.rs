@@ -47,13 +47,6 @@ impl GlyphInstance {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum GlyphQuadKind {
-    Mask,
-    Color,
-    Subpixel,
-}
-
 #[derive(Debug, Clone, Copy, serde::Serialize)]
 pub(crate) struct DebugGlyphAtlasLookup {
     font_data_id: u64,
