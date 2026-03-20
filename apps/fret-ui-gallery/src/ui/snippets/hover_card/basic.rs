@@ -27,12 +27,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .items_stretch()
     .into_element(cx);
 
+    let content = shadcn::HoverCardContent::build(cx, |_cx| [body])
+        .test_id("ui-gallery-hover-card-basic-content");
+
     shadcn::HoverCard::new(
         cx,
         shadcn::Button::new("Hover")
             .variant(shadcn::ButtonVariant::Outline)
             .test_id("ui-gallery-hover-card-basic-trigger"),
-        shadcn::HoverCardContent::new(vec![body]).test_id("ui-gallery-hover-card-basic-content"),
+        content,
     )
     .into_element(cx)
     .test_id("ui-gallery-hover-card-basic")
