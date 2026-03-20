@@ -1717,10 +1717,11 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         |_cx| None,
                                         move |cx| {
                                             let stops: Vec<GradientDemoStop> = cx
-                                                .watch_model(&editor_gradient_stops_model)
-                                                .paint()
-                                                .cloned()
-                                                .unwrap_or_default();
+                                                .data()
+                                                .selector_model_paint(
+                                                    &editor_gradient_stops_model,
+                                                    |stops| stops,
+                                                );
 
                                             let on_remove: fret_ui_editor::composites::OnGradientStopAction =
                                                 Arc::new({
@@ -3096,7 +3097,7 @@ impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
             &root_name,
             move |cx| {
                 let target = embedded::models(&*cx.app, cx.window)
-                    .and_then(|m| cx.watch_model(&m.target).paint().copied())
+                    .map(|m| cx.data().selector_model_paint(&m.target, |target| target))
                     .unwrap_or_default();
 
                 vec![
