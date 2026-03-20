@@ -241,6 +241,80 @@ struct PendingUpload {
     data: Vec<u8>,
 }
 
+#[derive(Debug)]
+struct PreparedTextureUpload {
+    origin: wgpu::Origin3d,
+    extent: wgpu::Extent3d,
+    bytes_per_row: u32,
+    rows_per_image: u32,
+    bytes: Vec<u8>,
+}
+
+impl PendingUpload {
+    fn into_texture_upload(self) -> Option<PreparedTextureUpload> {
+        if self.w == 0 || self.h == 0 {
+            return None;
+        }
+
+        let bytes_per_row = self.w.saturating_mul(self.bytes_per_pixel);
+        if bytes_per_row == 0 {
+            return None;
+        }
+
+        let expected_len = (bytes_per_row as usize).saturating_mul(self.h as usize);
+        debug_assert_eq!(self.data.len(), expected_len);
+        if self.data.len() != expected_len {
+            return None;
+        }
+
+        let aligned_bytes_per_row = align_upload_bytes_per_row(bytes_per_row);
+        let bytes = if aligned_bytes_per_row == bytes_per_row {
+            self.data
+        } else {
+            align_upload_bytes(&self.data, bytes_per_row, aligned_bytes_per_row, self.h)
+        };
+
+        Some(PreparedTextureUpload {
+            origin: wgpu::Origin3d {
+                x: self.x,
+                y: self.y,
+                z: 0,
+            },
+            extent: wgpu::Extent3d {
+                width: self.w,
+                height: self.h,
+                depth_or_array_layers: 1,
+            },
+            bytes_per_row: aligned_bytes_per_row,
+            rows_per_image: self.h,
+            bytes,
+        })
+    }
+}
+
+fn align_upload_bytes_per_row(bytes_per_row: u32) -> u32 {
+    let aligned_bytes_per_row = bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+        * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    aligned_bytes_per_row.max(bytes_per_row)
+}
+
+fn align_upload_bytes(
+    data: &[u8],
+    bytes_per_row: u32,
+    aligned_bytes_per_row: u32,
+    height: u32,
+) -> Vec<u8> {
+    let mut owned = vec![0; (aligned_bytes_per_row as usize).saturating_mul(height as usize)];
+    for row in 0..height as usize {
+        let src0 = row.saturating_mul(bytes_per_row as usize);
+        let src1 = src0.saturating_add(bytes_per_row as usize);
+        let dst0 = row.saturating_mul(aligned_bytes_per_row as usize);
+        let dst1 = dst0.saturating_add(bytes_per_row as usize);
+        owned[dst0..dst1].copy_from_slice(&data[src0..src1]);
+    }
+    owned
+}
+
 #[derive(Debug, Clone, Copy)]
 struct PaddedGlyphSize {
     w_pad: u32,
@@ -744,73 +818,34 @@ impl GlyphAtlas {
     pub(super) fn flush_uploads(&mut self, queue: &wgpu::Queue) {
         for page in &mut self.pages {
             for upload in std::mem::take(&mut page.pending) {
-                if upload.w == 0 || upload.h == 0 {
+                let Some(upload) = upload.into_texture_upload() else {
                     continue;
-                }
-
-                let bytes_per_row = upload.w.saturating_mul(upload.bytes_per_pixel);
-                if bytes_per_row == 0 {
-                    continue;
-                }
-
-                let expected_len = (bytes_per_row as usize).saturating_mul(upload.h as usize);
-                debug_assert_eq!(upload.data.len(), expected_len);
-                if upload.data.len() != expected_len {
-                    continue;
-                }
-
-                let aligned_bytes_per_row = bytes_per_row
-                    .div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
-                    * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-                let aligned_bytes_per_row = aligned_bytes_per_row.max(bytes_per_row);
-
-                let mut owned: Vec<u8> = Vec::new();
-                let bytes: &[u8] = if aligned_bytes_per_row == bytes_per_row {
-                    &upload.data
-                } else {
-                    owned.resize(
-                        (aligned_bytes_per_row as usize).saturating_mul(upload.h as usize),
-                        0,
-                    );
-                    for row in 0..upload.h as usize {
-                        let src0 = row.saturating_mul(bytes_per_row as usize);
-                        let src1 = src0.saturating_add(bytes_per_row as usize);
-                        let dst0 = row.saturating_mul(aligned_bytes_per_row as usize);
-                        let dst1 = dst0.saturating_add(bytes_per_row as usize);
-                        owned[dst0..dst1].copy_from_slice(&upload.data[src0..src1]);
-                    }
-                    &owned
                 };
 
                 self.perf.uploads = self.perf.uploads.saturating_add(1);
-                self.perf.upload_bytes = self.perf.upload_bytes.saturating_add(bytes.len() as u64);
+                self.perf.upload_bytes = self
+                    .perf
+                    .upload_bytes
+                    .saturating_add(upload.bytes.len() as u64);
                 self.perf_frame.upload_bytes = self
                     .perf_frame
                     .upload_bytes
-                    .saturating_add(bytes.len() as u64);
+                    .saturating_add(upload.bytes.len() as u64);
 
                 queue.write_texture(
                     wgpu::TexelCopyTextureInfo {
                         texture: &page.texture,
                         mip_level: 0,
-                        origin: wgpu::Origin3d {
-                            x: upload.x,
-                            y: upload.y,
-                            z: 0,
-                        },
+                        origin: upload.origin,
                         aspect: wgpu::TextureAspect::All,
                     },
-                    bytes,
+                    &upload.bytes,
                     wgpu::TexelCopyBufferLayout {
                         offset: 0,
-                        bytes_per_row: Some(aligned_bytes_per_row),
-                        rows_per_image: Some(upload.h),
+                        bytes_per_row: Some(upload.bytes_per_row),
+                        rows_per_image: Some(upload.rows_per_image),
                     },
-                    wgpu::Extent3d {
-                        width: upload.w,
-                        height: upload.h,
-                        depth_or_array_layers: 1,
-                    },
+                    upload.extent,
                 );
             }
         }
