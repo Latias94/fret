@@ -3,14 +3,14 @@ pub const SOURCE: &str = include_str!("file_tree_demo.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_ui::action::ActionCx;
-use fret_ui::element::{Length, SemanticsDecoration, SizeStyle, TextProps};
+use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
 
-fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + use<> {
+fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> AnyElement {
     cx.text_props(TextProps {
         layout: fret_ui::element::LayoutStyle {
             size: SizeStyle {
@@ -28,7 +28,6 @@ fn invisible_marker(cx: &mut UiCx<'_>, test_id: &'static str) -> impl UiChild + 
         align: fret_core::TextAlign::Start,
         ink_overflow: Default::default(),
     })
-    .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)
@@ -102,10 +101,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let mut out = vec![tree];
     if selected_value.as_deref() == Some("src/lib.rs") {
-        out.push(invisible_marker(cx, "ui-ai-file-tree-selected-marker").into_element(cx));
+        out.push(invisible_marker(cx, "ui-ai-file-tree-selected-marker"));
     }
     if copied_value {
-        out.push(invisible_marker(cx, "ui-ai-file-tree-action-marker").into_element(cx));
+        out.push(invisible_marker(cx, "ui-ai-file-tree-action-marker"));
     }
 
     ui::v_flex(move |_cx| out)

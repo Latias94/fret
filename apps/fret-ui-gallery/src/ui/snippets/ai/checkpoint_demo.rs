@@ -5,6 +5,7 @@ use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
@@ -56,7 +57,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let restore_to_checkpoint = {
         let visible_message_count_model = visible_message_count_model.clone();
-        move |host, acx| {
+        move |host: &mut dyn UiActionHost, acx: ActionCx| {
             let _ = host
                 .models_mut()
                 .update(&visible_message_count_model, |count| {
@@ -68,7 +69,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let reset_demo = {
         let visible_message_count_model = visible_message_count_model.clone();
-        move |host, acx| {
+        move |host: &mut dyn UiActionHost, acx: ActionCx| {
             let _ = host
                 .models_mut()
                 .update(&visible_message_count_model, |count| {
@@ -85,50 +86,57 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         })
         .unwrap_or_else(|| cx.text("The preview currently shows the latest conversation state."));
 
-    let transcript = ui::v_flex(move |cx| {
-        let mut out: Vec<AnyElement> = Vec::new();
+    let conversation = ui_ai::Conversation::new([])
+        .content_revision(visible_message_count as u64)
+        .test_id("ui-ai-checkpoint-conversation")
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_full()
+                .min_w_0()
+                .min_h_0(),
+        )
+        .into_element_with_children(cx, move |cx| {
+            let mut content_children: Vec<AnyElement> = Vec::new();
 
-        for (idx, message) in INITIAL_MESSAGES
-            .iter()
-            .enumerate()
-            .take(visible_message_count)
-        {
-            let bubble = ui_ai::Message::new(
-                message.role,
-                [
-                    ui_ai::MessageContent::new(message.role, [cx.text(message.content)])
-                        .into_element(cx),
-                ],
-            )
-            .into_element(cx);
-            out.push(bubble);
-
-            if let Some(checkpoint) = INITIAL_CHECKPOINTS
+            for (idx, message) in INITIAL_MESSAGES
                 .iter()
-                .find(|checkpoint| checkpoint.message_count == idx + 1)
-                .copied()
+                .enumerate()
+                .take(visible_message_count)
             {
-                out.push(
-                    ui_ai::Checkpoint::new([
-                        ui_ai::CheckpointIcon::default().into_element(cx),
-                        ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])
-                            .tooltip(checkpoint.tooltip)
-                            .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
-                            .test_id("ui-ai-checkpoint-trigger")
-                            .on_activate(cx.actions().listen(restore_to_checkpoint.clone()))
+                let bubble = ui_ai::Message::new(
+                    message.role,
+                    [
+                        ui_ai::MessageContent::new(message.role, [cx.text(message.content)])
                             .into_element(cx),
-                    ])
-                    .test_id("ui-ai-checkpoint-row")
-                    .into_element(cx),
-                );
-            }
-        }
+                    ],
+                )
+                .into_element(cx);
+                content_children.push(bubble);
 
-        out
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0().mt(Space::N3))
-    .gap(Space::N5)
-    .into_element(cx);
+                if let Some(checkpoint) = INITIAL_CHECKPOINTS
+                    .iter()
+                    .find(|checkpoint| checkpoint.message_count == idx + 1)
+                    .copied()
+                {
+                    content_children.push(
+                        ui_ai::Checkpoint::new([
+                            ui_ai::CheckpointIcon::default().into_element(cx),
+                            ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])
+                                .tooltip(checkpoint.tooltip)
+                                .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
+                                .test_id("ui-ai-checkpoint-trigger")
+                                .on_activate(cx.actions().listen(restore_to_checkpoint.clone()))
+                                .into_element(cx),
+                        ])
+                        .test_id("ui-ai-checkpoint-row")
+                        .into_element(cx),
+                    );
+                }
+            }
+
+            vec![ui_ai::ConversationContent::new(content_children).into_element(cx)]
+        });
 
     let conversation_shell_props = cx.with_theme(|theme| {
         let chrome = ChromeRefinement::default()
@@ -147,7 +155,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .min_h_0(),
         )
     });
-    let conversation_shell = cx.container(conversation_shell_props, move |_cx| vec![transcript]);
+    let conversation_shell = cx.container(conversation_shell_props, move |_cx| vec![conversation]);
     let conversation_shell = ui::h_flex(move |_cx| vec![conversation_shell])
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .justify_center()
@@ -176,7 +184,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "The `Checkpoint` component provides a way to mark specific points in a conversation history and restore the chat to that state.",
             ),
             cx.text(
-                "Hover the trigger to preview the tooltip, then activate it to restore the conversation.",
+                "Docs-aligned composition: `Conversation` + `Message` + `Checkpoint`. Hover the trigger to preview the tooltip, then activate it to restore the conversation.",
             ),
             controls,
             restored_marker,

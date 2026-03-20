@@ -47,8 +47,7 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let component = body.test_id("ui-gallery-resizable").into_element(cx);
     let page = ui::v_flex(move |_cx| vec![component])
         .layout(LayoutRefinement::default().w_full().min_w_0())
-        .items_start()
-        .test_id("ui-gallery-page-resizable");
+        .items_start();
 
     vec![page.into_element(cx)]
 }

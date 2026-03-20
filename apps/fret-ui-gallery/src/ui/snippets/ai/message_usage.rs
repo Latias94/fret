@@ -5,7 +5,7 @@ use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
-use fret_ui::action::OnActivate;
+use fret_ui::action::{ActionCx, OnActivate, UiActionHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
@@ -61,7 +61,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let set_action = |label: &'static str| {
         let last_action_model = last_action_model.clone();
-        move |host, action_cx| {
+        move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
             let _ = host.models_mut().update(&last_action_model, |value| {
                 *value = Some(Arc::<str>::from(label));
             });

@@ -4,20 +4,20 @@ use fret_app::{App, Model};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
+use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
     SpacerProps,
 };
-use fret_ui::Invalidation;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
-    chrome, debug_hud, debug_stats, inspector, menubar, settings_sheet, shell, status_bar, toaster,
-    ui_gallery_bisect_flags, UiGalleryDriver, UiGalleryWindowState,
+    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
+    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
 };
 
 pub(super) struct PreparedFrame {
@@ -1354,6 +1354,80 @@ mod tests {
         render_gallery_frame(rendered);
     }
 
+    fn move_pointer_test_id_center(
+        rendered: &mut RenderedGalleryPage,
+        target_test_id: &str,
+    ) -> Point {
+        let target_bounds = visual_bounds_by_test_id(rendered, target_test_id);
+        let position = Point::new(
+            Px(target_bounds.origin.x.0 + target_bounds.size.width.0 * 0.5),
+            Px(target_bounds.origin.y.0 + target_bounds.size.height.0 * 0.5),
+        );
+
+        rendered.state.ui.dispatch_event(
+            &mut rendered.app,
+            &mut rendered.services,
+            &Event::Pointer(PointerEvent::Move {
+                position,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        render_gallery_frame(rendered);
+
+        position
+    }
+
+    #[cfg(feature = "gallery-dev")]
+    fn assert_gallery_tooltip_panel_opens(page: &str, trigger_test_id: &str, panel_test_id: &str) {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(page);
+        scroll_test_id_into_gallery_viewport(&mut rendered, trigger_test_id);
+        wait_until_test_id_exists(&mut rendered, trigger_test_id, 12);
+
+        let hover_position = move_pointer_test_id_center(&mut rendered, trigger_test_id);
+        for _ in 0..8 {
+            let snapshot = rendered
+                .state
+                .ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot while waiting for tooltip panel");
+            if find_node_by_test_id(snapshot, panel_test_id).is_some() {
+                return;
+            }
+            render_gallery_frame(&mut rendered);
+        }
+
+        let snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after tooltip hover wait");
+        let (trigger_bounds, described_by_len, present_test_ids) = {
+            let trigger = node_by_test_id(snapshot, trigger_test_id);
+            let present_test_ids = snapshot
+                .nodes
+                .iter()
+                .filter_map(|node| node.test_id.as_deref())
+                .filter(|test_id| {
+                    test_id.contains("tooltip")
+                        || test_id.contains("checkpoint")
+                        || test_id == &trigger_test_id
+                        || test_id == &panel_test_id
+                })
+                .map(str::to_owned)
+                .collect::<Vec<_>>();
+            (trigger.bounds, trigger.described_by.len(), present_test_ids)
+        };
+        let hit_chain = hit_chain_at(&mut rendered, hover_position);
+
+        panic!(
+            "expected tooltip panel to open in gallery shell: page={page} trigger_test_id={trigger_test_id} panel_test_id={panel_test_id} trigger_bounds={:?} described_by_len={} hit_chain={hit_chain:?} present_test_ids={present_test_ids:?}",
+            trigger_bounds, described_by_len,
+        );
+    }
+
     fn wheel_test_id_center(
         rendered: &mut RenderedGalleryPage,
         target_test_id: &str,
@@ -1707,6 +1781,26 @@ mod tests {
         assert!(
             find_node_by_test_id(snapshot, "ui-gallery-chart-first-chart-tooltip").is_some(),
             "expected the auto-wired chart tooltip to appear on the First Chart gallery section"
+        );
+    }
+
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn ai_prompt_input_docs_tooltip_opens_in_gallery_shell() {
+        assert_gallery_tooltip_panel_opens(
+            PAGE_AI_PROMPT_INPUT_DOCS_DEMO,
+            "ui-gallery-ai-prompt-input-docs-search",
+            "ui-gallery-ai-prompt-input-docs-search-tooltip-panel",
+        );
+    }
+
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn ai_checkpoint_tooltip_opens_in_gallery_shell() {
+        assert_gallery_tooltip_panel_opens(
+            PAGE_AI_CHECKPOINT_DEMO,
+            "ui-ai-checkpoint-trigger",
+            "ui-ai-checkpoint-tooltip-panel",
         );
     }
 
@@ -3227,8 +3321,8 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
-    ) {
+    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page()
+     {
         assert_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
             PAGE_SCROLL_AREA,
             "ui-gallery-scroll-area-drag-baseline-y-scrollbar",
