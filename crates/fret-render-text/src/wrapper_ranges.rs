@@ -34,17 +34,17 @@ pub(crate) fn wrap_grapheme_range(
         let slice = &text[offset..end];
         let full = shape_slice(shaper, text, base, spans, offset..end, scale);
 
-        if full.width <= max_width_px + 0.5 {
+        if full.width() <= max_width_px + 0.5 {
             lines.push(full);
             line_ranges.push(offset..end);
             break;
         }
 
-        let mut cut_end = wrap_grapheme_cut_end(slice, &full.clusters, max_width_px);
+        let mut cut_end = wrap_grapheme_cut_end(slice, full.clusters(), max_width_px);
         cut_end = clamp_to_grapheme_boundary_down(slice, cut_end);
 
         if cut_end == 0 {
-            cut_end = first_cluster_end(slice, &full.clusters);
+            cut_end = first_cluster_end(slice, full.clusters());
             cut_end = clamp_to_grapheme_boundary_up(slice, cut_end);
         }
         if cut_end == 0 {
@@ -52,8 +52,8 @@ pub(crate) fn wrap_grapheme_range(
         }
 
         let mut kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
-        if kept.width > max_width_px + 0.5 && cut_end > 0 {
-            let cut2 = cut_end_for_available(&slice[..cut_end], &kept.clusters, max_width_px);
+        if kept.width() > max_width_px + 0.5 && cut_end > 0 {
+            let cut2 = cut_end_for_available(&slice[..cut_end], kept.clusters(), max_width_px);
             if cut2 > 0 && cut2 < cut_end {
                 cut_end = clamp_to_grapheme_boundary_down(slice, cut2);
                 kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
@@ -106,17 +106,17 @@ pub(crate) fn wrap_grapheme_range_measure_only(
         let slice = &text[offset..end];
         let full = shape_slice_measure_only(shaper, text, base, spans, offset..end, scale);
 
-        if full.width <= max_width_px + 0.5 {
+        if full.width() <= max_width_px + 0.5 {
             lines.push(full);
             line_ranges.push(offset..end);
             break;
         }
 
-        let mut cut_end = wrap_grapheme_cut_end(slice, &full.clusters, max_width_px);
+        let mut cut_end = wrap_grapheme_cut_end(slice, full.clusters(), max_width_px);
         cut_end = clamp_to_grapheme_boundary_down(slice, cut_end);
 
         if cut_end == 0 {
-            cut_end = first_cluster_end(slice, &full.clusters);
+            cut_end = first_cluster_end(slice, full.clusters());
             cut_end = clamp_to_grapheme_boundary_up(slice, cut_end);
         }
         if cut_end == 0 {
@@ -125,8 +125,8 @@ pub(crate) fn wrap_grapheme_range_measure_only(
 
         let mut kept =
             shape_slice_measure_only(shaper, text, base, spans, offset..(offset + cut_end), scale);
-        if kept.width > max_width_px + 0.5 && cut_end > 0 {
-            let cut2 = cut_end_for_available(&slice[..cut_end], &kept.clusters, max_width_px);
+        if kept.width() > max_width_px + 0.5 && cut_end > 0 {
+            let cut2 = cut_end_for_available(&slice[..cut_end], kept.clusters(), max_width_px);
             if cut2 > 0 && cut2 < cut_end {
                 cut_end = clamp_to_grapheme_boundary_down(slice, cut2);
                 kept = shape_slice_measure_only(

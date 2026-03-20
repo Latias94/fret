@@ -35,7 +35,7 @@ objc = "0.2"
 pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
 slotmap = "1"
 smallvec = "1"
 smol_str = { version = "0.2", features = ["serde"] }
@@ -48,14 +48,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-tracy = { version = "0.11.4", default-features = false, features = ["enable", "callstack-inlines"] }
 notify = "8"
 web-time = "1"
-zbus = { version = "5.13.2", default-features = false, features = ["blocking"] }
+zbus = { version = "5.14.0", default-features = false, features = ["blocking"] }
 rustc-hash = "2"
 fluent-bundle = "0.16.0"
 fluent-fallback = "0.7.2"
 fluent-syntax = "0.12.0"
 unic-langid = "0.9"
 parley = "0.7.0"
-read-fonts = "0.35.0"
+read-fonts = "0.37.0"
 swash = { version = "0.2.6", features = ["scale"] }
 unicode-script = "0.5.8"
 unicode-segmentation = "1.12.0"
@@ -63,27 +63,27 @@ unicode-ident = "1.0.13"
 ropey = "1.6.1"
 arboard = "3.4.1"
 rfd = "0.17"
-webbrowser = "1.0.4"
-wgpu = "28.0.0"
+webbrowser = "1.2.0"
+wgpu = "29.0.0"
 winit = { version = "0.31.0-beta.2", features = ["android-game-activity"] }
-naga = { version = "28.0.0", features = ["wgsl-in"] }
+naga = { version = "29.0.0", features = ["wgsl-in"] }
 renderdog = "0.2.0"
 renderdog-automation = "0.2.0"
 mimalloc = "0.1.48"
 tikv-jemallocator = "0.6.0"
 uuid = { version = "1", features = ["v4", "v5", "serde", "js"] }
-lyon = "1"
+lyon = "1.0.19"
 glam = "0.30"
 etagere = "0.2.15"
-resvg = { version = "0.46.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
-usvg = { version = "0.46.0", default-features = false }
+resvg = { version = "0.47.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
+usvg = { version = "0.47.0", default-features = false }
 rust-embed = { version = "8.9.0", features = ["include-exclude"] }
 windows-sys = { version = "0.61.0", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_ProcessStatus", "Win32_UI_Input_Ime", "Win32_UI_WindowsAndMessaging"] }
 windows = "0.62.2"
 virtualizer = "0.4.0"
 keyboard-types = { version = "0.8.3", features = ["serde"] }
 rstar = "0.12"
-kurbo = "0.11"
+kurbo = "0.13"
 pulldown-cmark = "0.13"
 mdstream = "0.2.0"
 mathjax_svg = "3.2.0"

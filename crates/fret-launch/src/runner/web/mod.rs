@@ -45,7 +45,7 @@ struct GfxState {
     ctx: WgpuContext,
     surface_state: SurfaceState<'static>,
     renderer: Renderer,
-    last_surface_error: Option<wgpu::SurfaceError>,
+    last_surface_error: Option<fret_render::SurfaceAcquireError>,
     diag_keepalive_redraw: bool,
 }
 

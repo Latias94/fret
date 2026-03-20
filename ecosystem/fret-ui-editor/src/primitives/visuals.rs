@@ -12,7 +12,7 @@ use super::{
     chrome::ResolvedEditorFrameChrome,
     colors::{
         editor_accent, editor_border, editor_invalid_border, editor_invalid_foreground,
-        editor_muted_foreground,
+        editor_muted_foreground, editor_subtle_bg,
     },
 };
 
@@ -93,7 +93,7 @@ impl<'a> EditorWidgetVisuals<'a> {
             return None;
         }
 
-        Some(self.hover_overlay_bg(self.theme.color_token("background"), hovered, pressed))
+        Some(self.hover_overlay_bg(editor_subtle_bg(self.theme), hovered, pressed))
     }
 
     pub(crate) fn icon_button_border(
@@ -326,7 +326,7 @@ pub(crate) fn editor_icon_button_border(
 mod tests {
     use fret_app::App;
     use fret_core::{Color, Edges, Px};
-    use fret_ui::Theme;
+    use fret_ui::{Theme, ThemeConfig};
 
     use super::*;
 
@@ -462,6 +462,38 @@ mod tests {
         assert_eq!(
             widget_visuals.control_invalid_fg(),
             theme.color_token("destructive")
+        );
+    }
+
+    #[test]
+    fn icon_button_bg_prefers_editor_subtle_bg_over_host_background() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors
+                .insert("background".to_string(), "#ffffff".to_string());
+            cfg.colors.insert(
+                EditorTokenKeys::TEXT_FIELD_BG.to_string(),
+                "#141b24".to_string(),
+            );
+            cfg.colors.insert(
+                EditorTokenKeys::CHROME_ACCENT.to_string(),
+                "#355a86".to_string(),
+            );
+            theme.apply_config_patch(&cfg);
+        });
+
+        let theme = Theme::global(&app);
+        let hovered = editor_icon_button_bg(theme, true, true, false)
+            .expect("hovered icon button should render a background");
+
+        assert_eq!(
+            hovered,
+            hover_overlay_bg(theme, editor_subtle_bg(theme), true, false)
+        );
+        assert_ne!(
+            hovered,
+            hover_overlay_bg(theme, theme.color_token("background"), true, false)
         );
     }
 }

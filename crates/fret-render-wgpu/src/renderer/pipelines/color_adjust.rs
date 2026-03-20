@@ -111,20 +111,23 @@ impl Renderer {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret color-adjust pipeline layout"),
-            bind_group_layouts: &[&bind_group_layout],
+            bind_group_layouts: &[Some(&bind_group_layout)],
             immediate_size: 0,
         });
         let masked_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret color-adjust masked pipeline layout"),
-                bind_group_layouts: &[&self.globals.uniform_bind_group_layout, &bind_group_layout],
+                bind_group_layouts: &[
+                    Some(&self.globals.uniform_bind_group_layout),
+                    Some(&bind_group_layout),
+                ],
                 immediate_size: 0,
             });
         let mask_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret color-adjust mask pipeline layout"),
             bind_group_layouts: &[
-                &self.globals.uniform_bind_group_layout,
-                &mask_bind_group_layout,
+                Some(&self.globals.uniform_bind_group_layout),
+                Some(&mask_bind_group_layout),
             ],
             immediate_size: 0,
         });

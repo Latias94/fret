@@ -4,18 +4,83 @@ use std::sync::Arc;
 #[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct ResolvedSpan {
-    pub start: usize,
-    pub end: usize,
-    pub slot: u16,
-    pub fg: Option<fret_core::Color>,
-    pub underline: Option<ResolvedDecoration>,
-    pub strikethrough: Option<ResolvedDecoration>,
+    start: usize,
+    end: usize,
+    slot: u16,
+    fg: Option<fret_core::Color>,
+    underline: Option<ResolvedDecoration>,
+    strikethrough: Option<ResolvedDecoration>,
 }
 
 #[doc(hidden)]
 #[derive(Clone, Debug)]
-pub struct ResolvedDecoration {
-    pub color: Option<fret_core::Color>,
+pub(crate) struct ResolvedDecoration {
+    color: Option<fret_core::Color>,
+}
+
+impl ResolvedDecoration {
+    fn new(color: Option<fret_core::Color>) -> Self {
+        Self { color }
+    }
+
+    pub(crate) fn color(&self) -> Option<fret_core::Color> {
+        self.color
+    }
+}
+
+impl ResolvedSpan {
+    pub fn new(start: usize, end: usize, slot: u16, fg: Option<fret_core::Color>) -> Self {
+        Self {
+            start,
+            end,
+            slot,
+            fg,
+            underline: None,
+            strikethrough: None,
+        }
+    }
+
+    fn with_decorations(
+        start: usize,
+        end: usize,
+        slot: u16,
+        fg: Option<fret_core::Color>,
+        underline: Option<ResolvedDecoration>,
+        strikethrough: Option<ResolvedDecoration>,
+    ) -> Self {
+        Self {
+            start,
+            end,
+            slot,
+            fg,
+            underline,
+            strikethrough,
+        }
+    }
+
+    pub fn start(&self) -> usize {
+        self.start
+    }
+
+    pub fn end(&self) -> usize {
+        self.end
+    }
+
+    pub fn slot(&self) -> u16 {
+        self.slot
+    }
+
+    pub fn fg(&self) -> Option<fret_core::Color> {
+        self.fg
+    }
+
+    pub(crate) fn underline(&self) -> Option<&ResolvedDecoration> {
+        self.underline.as_ref()
+    }
+
+    pub(crate) fn strikethrough(&self) -> Option<&ResolvedDecoration> {
+        self.strikethrough.as_ref()
+    }
 }
 
 #[doc(hidden)]
@@ -36,22 +101,20 @@ pub fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Reso
         }
         if span.len != 0 {
             let slot = u16::try_from(out.len()).ok()?;
-            out.push(ResolvedSpan {
-                start: offset,
+            out.push(ResolvedSpan::with_decorations(
+                offset,
                 end,
                 slot,
-                fg: span.paint.fg,
-                underline: span
-                    .paint
+                span.paint.fg,
+                span.paint
                     .underline
                     .as_ref()
-                    .map(|u| ResolvedDecoration { color: u.color }),
-                strikethrough: span
-                    .paint
+                    .map(|u| ResolvedDecoration::new(u.color)),
+                span.paint
                     .strikethrough
                     .as_ref()
-                    .map(|s| ResolvedDecoration { color: s.color }),
-            });
+                    .map(|s| ResolvedDecoration::new(s.color)),
+            ));
         }
         offset = end;
     }
@@ -165,6 +228,6 @@ pub fn paint_span_for_text_range(
     };
     spans
         .iter()
-        .find(|s| idx >= s.start && idx < s.end)
-        .map(|s| s.slot)
+        .find(|s| idx >= s.start() && idx < s.end())
+        .map(ResolvedSpan::slot)
 }

@@ -292,7 +292,7 @@ impl TextMeasureKey {
 
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TextMeasureShapingKey {
+pub(crate) struct TextMeasureShapingKey {
     pub text_hash: u64,
     pub text_len: usize,
     pub spans_shaping_key: u64,
@@ -316,7 +316,7 @@ pub struct TextMeasureShapingKey {
 }
 
 #[doc(hidden)]
-pub fn hash_text(text: &str) -> u64 {
+pub(crate) fn hash_text(text: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text.hash(&mut hasher);
     hasher.finish()

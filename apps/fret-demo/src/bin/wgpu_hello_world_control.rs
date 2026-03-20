@@ -243,12 +243,14 @@ impl WgpuHelloWorldControlApp {
                 self.schedule_next_redraw();
             }
             Err(RenderError::SurfaceAcquireFailed { source }) => match source {
-                wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated => {
+                fret_render::SurfaceAcquireError::Lost
+                | fret_render::SurfaceAcquireError::Outdated => {
                     let size = gpu.window.surface_size();
                     self.resize(size);
                 }
-                wgpu::SurfaceError::OutOfMemory => event_loop.exit(),
-                wgpu::SurfaceError::Timeout | wgpu::SurfaceError::Other => {
+                fret_render::SurfaceAcquireError::OutOfMemory => event_loop.exit(),
+                fret_render::SurfaceAcquireError::Timeout
+                | fret_render::SurfaceAcquireError::Other => {
                     eprintln!("{WINDOW_TITLE}: surface acquire failed: {source:?}");
                 }
             },

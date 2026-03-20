@@ -22,11 +22,11 @@ impl TextSystem {
                         usage.font_data_id, usage.face_index
                     )
                 });
-            families.push(FontTraceFamilyResolved {
+            families.push(FontTraceFamilyResolved::new(
                 family,
-                glyphs: usage.glyphs,
-                missing_glyphs: usage.missing_glyphs,
-            });
+                usage.glyphs,
+                usage.missing_glyphs,
+            ));
         }
         self.font_runtime.font_trace.maybe_record(
             text,
@@ -68,7 +68,7 @@ impl TextSystem {
 
         let ppem = style.size.0 * scale;
         fret_render_text::decoration_metrics_px_for_font_bytes(
-            font_data.data.data(),
+            font_data.bytes(),
             usage.face_index,
             coords,
             ppem,
@@ -90,7 +90,7 @@ impl TextSystem {
             .font_data_by_face
             .get(&(font_data_id, face_index))?;
         let name =
-            fret_render_text::best_family_name_from_font_bytes(font_data.data.data(), face_index)?;
+            fret_render_text::best_family_name_from_font_bytes(font_data.bytes(), face_index)?;
         self.face_cache
             .font_face_family_name_cache
             .insert((font_data_id, face_index), name.clone());

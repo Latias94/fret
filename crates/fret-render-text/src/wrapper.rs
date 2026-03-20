@@ -15,13 +15,47 @@ use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WrappedLayout {
-    pub text_len: usize,
-    pub kept_end: usize,
-    pub line_ranges: Vec<Range<usize>>,
-    pub lines: Vec<ShapedLineLayout>,
+    text_len: usize,
+    kept_end: usize,
+    line_ranges: Vec<Range<usize>>,
+    lines: Vec<ShapedLineLayout>,
 }
 
 impl WrappedLayout {
+    pub(crate) fn new(
+        text_len: usize,
+        kept_end: usize,
+        line_ranges: Vec<Range<usize>>,
+        lines: Vec<ShapedLineLayout>,
+    ) -> Self {
+        Self {
+            text_len,
+            kept_end,
+            line_ranges,
+            lines,
+        }
+    }
+
+    pub fn text_len(&self) -> usize {
+        self.text_len
+    }
+
+    pub fn kept_end(&self) -> usize {
+        self.kept_end
+    }
+
+    pub fn line_ranges(&self) -> &[Range<usize>] {
+        &self.line_ranges
+    }
+
+    pub fn lines(&self) -> &[ShapedLineLayout] {
+        &self.lines
+    }
+
+    pub fn into_parts(self) -> (usize, usize, Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+        (self.text_len, self.kept_end, self.line_ranges, self.lines)
+    }
+
     #[allow(dead_code)]
     pub fn hit_test_x(&self, line_index: usize, x: f32) -> (usize, CaretAffinity) {
         let Some(line) = self.lines.get(line_index) else {
@@ -31,7 +65,7 @@ impl WrappedLayout {
             return (0, CaretAffinity::Downstream);
         };
 
-        let (idx_local, affinity) = hit_test_x(&line.clusters, x, range.len());
+        let (idx_local, affinity) = hit_test_x(line.clusters(), x, range.len());
         let mut idx = range.start.saturating_add(idx_local);
         if idx > self.kept_end {
             idx = self.kept_end;
@@ -67,15 +101,15 @@ pub fn wrap_with_constraints(
             ..
         } => {
             let out = wrap_none_ellipsis(shaper, input, text_len, max_width.0 * scale, scale);
-            WrappedLayout {
+            WrappedLayout::new(
                 text_len,
-                kept_end: out.kept_end,
-                line_ranges: vec![Range {
+                out.kept_end,
+                vec![Range {
                     start: 0,
                     end: out.kept_end,
                 }],
-                lines: vec![out.line],
-            }
+                vec![out.line],
+            )
         }
         TextConstraints {
             max_width: Some(max_width),
@@ -97,21 +131,21 @@ pub fn wrap_with_constraints(
             wrap: TextWrap::Grapheme,
             ..
         } => wrap_grapheme(shaper, input, text_len, max_width.0 * scale, scale),
-        _ => WrappedLayout {
+        _ => WrappedLayout::new(
             text_len,
-            kept_end: text_len,
-            line_ranges: vec![Range {
+            text_len,
+            vec![Range {
                 start: 0,
                 end: text_len,
             }],
-            lines: vec![shaper.shape_single_line(input, scale)],
-        },
+            vec![shaper.shape_single_line(input, scale)],
+        ),
     }
 }
 
 /// Wraps text for measurement only.
 ///
-/// The returned `lines[*].glyphs` is intentionally empty to avoid per-glyph work in layout.
+/// The returned `lines[*].glyphs()` is intentionally empty to avoid per-glyph work in layout.
 pub fn wrap_with_constraints_measure_only(
     shaper: &mut ParleyShaper,
     input: TextInputRef<'_>,
@@ -139,16 +173,16 @@ pub fn wrap_with_constraints_measure_only(
             ..
         } => {
             let mut line = shaper.shape_single_line_metrics(input, scale);
-            line.width = max_width.0 * scale;
-            WrappedLayout {
+            line.set_width(max_width.0 * scale);
+            WrappedLayout::new(
                 text_len,
-                kept_end: text_len,
-                line_ranges: vec![Range {
+                text_len,
+                vec![Range {
                     start: 0,
                     end: text_len,
                 }],
-                lines: vec![line],
-            }
+                vec![line],
+            )
         }
         TextConstraints {
             max_width: Some(max_width),
@@ -170,15 +204,15 @@ pub fn wrap_with_constraints_measure_only(
             wrap: TextWrap::Grapheme,
             ..
         } => wrap_grapheme_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
-        _ => WrappedLayout {
+        _ => WrappedLayout::new(
             text_len,
-            kept_end: text_len,
-            line_ranges: vec![Range {
+            text_len,
+            vec![Range {
                 start: 0,
                 end: text_len,
             }],
-            lines: vec![shaper.shape_single_line_metrics(input, scale)],
-        },
+            vec![shaper.shape_single_line_metrics(input, scale)],
+        ),
     }
 }
 
@@ -219,12 +253,7 @@ fn wrap_word(
     let (line_ranges, lines) =
         wrap_word_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_word_break(
@@ -242,12 +271,7 @@ fn wrap_word_break(
     let (line_ranges, lines) =
         wrap_word_break_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_grapheme(
@@ -265,12 +289,7 @@ fn wrap_grapheme(
     let (line_ranges, lines) =
         wrap_grapheme_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 pub(crate) fn wrap_word_measure_only(
@@ -288,12 +307,7 @@ pub(crate) fn wrap_word_measure_only(
     let (line_ranges, lines) =
         wrap_word_range_measure_only(shaper, text, base, spans, 0..text_len, max_width_px, scale);
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_word_break_measure_only(
@@ -318,12 +332,7 @@ fn wrap_word_break_measure_only(
         scale,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 fn wrap_grapheme_measure_only(
@@ -348,12 +357,7 @@ fn wrap_grapheme_measure_only(
         scale,
     );
 
-    WrappedLayout {
-        text_len,
-        kept_end: text_len,
-        line_ranges,
-        lines,
-    }
+    WrappedLayout::new(text_len, text_len, line_ranges, lines)
 }
 
 #[cfg(test)]
@@ -452,9 +456,9 @@ mod tests {
         assert!(wrapped.kept_end < text.len());
         assert!(
             wrapped.lines[0]
-                .clusters
+                .clusters()
                 .iter()
-                .any(|c| c.text_range == (wrapped.kept_end..wrapped.kept_end)),
+                .any(|c| c.text_range() == (wrapped.kept_end..wrapped.kept_end)),
             "expected a synthetic zero-length cluster for ellipsis mapping"
         );
 
@@ -486,9 +490,9 @@ mod tests {
         assert_eq!(wrapped.lines.len(), 1);
         assert!(wrapped.kept_end < text.len());
         assert!(
-            wrapped.lines[0].width <= 80.0 + 0.5,
+            wrapped.lines[0].width() <= 80.0 + 0.5,
             "expected truncated line width to fit within constraints, got {}",
-            wrapped.lines[0].width
+            wrapped.lines[0].width()
         );
     }
 
@@ -568,7 +572,7 @@ mod tests {
             word.lines.len() >= 2,
             "expected the fixture text to wrap under the chosen width"
         );
-        let word_last = word.lines.last().unwrap().width;
+        let word_last = word.lines.last().unwrap().width();
 
         let balanced = wrap_with_constraints_measure_only(
             &mut shaper,
@@ -583,13 +587,16 @@ mod tests {
         );
 
         assert_eq!(balanced.lines.len(), word.lines.len());
-        let balanced_last = balanced.lines.last().unwrap().width;
+        let balanced_last = balanced.lines.last().unwrap().width();
         assert!(
             balanced_last + 0.5 >= word_last,
             "expected balanced wrap to avoid a shorter last line; word_last={word_last} balanced_last={balanced_last}"
         );
         assert!(
-            balanced.lines.iter().all(|l| l.width <= max_width.0 + 0.5),
+            balanced
+                .lines
+                .iter()
+                .all(|l| l.width() <= max_width.0 + 0.5),
             "expected balanced lines to respect max_width"
         );
     }
@@ -763,7 +770,7 @@ mod tests {
         let Some(font_a) = a
             .lines
             .first()
-            .and_then(|l| l.glyphs.first())
+            .and_then(|l| l.glyphs().first())
             .map(|g| g.font_size)
         else {
             panic!("expected shaped glyphs for scale=1.0");
@@ -771,7 +778,7 @@ mod tests {
         let Some(font_b) = b
             .lines
             .first()
-            .and_then(|l| l.glyphs.first())
+            .and_then(|l| l.glyphs().first())
             .map(|g| g.font_size)
         else {
             panic!("expected shaped glyphs for scale=0.5");
@@ -914,7 +921,7 @@ mod tests {
 
         assert_eq!(wrapped.lines.len(), 1);
         assert!(
-            wrapped.lines[0].width > 1.0,
+            wrapped.lines[0].width() > 1.0,
             "expected word-wrap to keep a single token unbroken and allow overflow"
         );
     }
@@ -960,18 +967,22 @@ mod tests {
         for (range, line) in wrapped.line_ranges.iter().zip(wrapped.lines.iter()) {
             let slice = &text[range.clone()];
             let expected = shaper.shape_single_line_metrics(TextInputRef::plain(slice, &base), 1.0);
-            let delta = (expected.width - line.width).abs();
+            let delta = (expected.width() - line.width()).abs();
             assert!(
                 delta <= 0.75,
                 "expected wrapped line width to match shaped slice; slice={:?} expected={} actual={} delta={}",
                 slice,
-                expected.width,
-                line.width,
+                expected.width(),
+                line.width(),
                 delta
             );
         }
 
-        let max_line_w = wrapped.lines.iter().map(|l| l.width).fold(0.0f32, f32::max);
+        let max_line_w = wrapped
+            .lines
+            .iter()
+            .map(|l| l.width())
+            .fold(0.0f32, f32::max);
         assert!(
             max_line_w > 0.0,
             "expected non-zero min-content width for non-empty text"
@@ -1205,15 +1216,15 @@ mod tests {
         let first = &wrapped.lines[0];
         for (i, line) in wrapped.lines.iter().enumerate() {
             assert!(
-                (line.line_height - 18.0).abs() < 0.01,
+                (line.line_height() - 18.0).abs() < 0.01,
                 "expected fixed strut line_height=18px; line[{i}] line_height={}",
-                line.line_height
+                line.line_height()
             );
             assert!(
-                (line.baseline - first.baseline).abs() < 0.01,
+                (line.baseline() - first.baseline()).abs() < 0.01,
                 "expected strut baseline to be stable across fallback glyphs; line[{i}] baseline={} first={}",
-                line.baseline,
-                first.baseline
+                line.baseline(),
+                first.baseline()
             );
         }
     }
@@ -1265,10 +1276,10 @@ mod tests {
         assert_eq!(full.line_ranges, measure.line_ranges);
         assert_eq!(full.lines.len(), measure.lines.len());
         for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
-            assert!((a.width - b.width).abs() < 0.01);
-            assert!((a.line_height - b.line_height).abs() < 0.01);
+            assert!((a.width() - b.width()).abs() < 0.01);
+            assert!((a.line_height() - b.line_height()).abs() < 0.01);
         }
-        assert!(measure.lines.iter().all(|l| l.glyphs.is_empty()));
+        assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));
     }
 
     #[test]
@@ -1304,10 +1315,10 @@ mod tests {
         assert_eq!(full.line_ranges, measure.line_ranges);
         assert_eq!(full.lines.len(), measure.lines.len());
         for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
-            assert!((a.width - b.width).abs() < 0.01);
-            assert!((a.line_height - b.line_height).abs() < 0.01);
+            assert!((a.width() - b.width()).abs() < 0.01);
+            assert!((a.line_height() - b.line_height()).abs() < 0.01);
         }
-        assert!(measure.lines.iter().all(|l| l.glyphs.is_empty()));
+        assert!(measure.lines.iter().all(|l| l.glyphs().is_empty()));
     }
 
     #[test]

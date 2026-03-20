@@ -2270,7 +2270,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                     .device
                     .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                         label: Some("gizmo3d demo pipeline layout"),
-                        bind_group_layouts: &[&bind_group_layout],
+                        bind_group_layouts: &[Some(&bind_group_layout)],
                         immediate_size: 0,
                     });
 

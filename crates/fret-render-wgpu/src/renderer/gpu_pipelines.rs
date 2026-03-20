@@ -325,8 +325,8 @@ impl GpuPipelines {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret viewport pipeline layout"),
             bind_group_layouts: &[
-                &globals.uniform_bind_group_layout,
-                &globals.viewport_bind_group_layout,
+                Some(&globals.uniform_bind_group_layout),
+                Some(&globals.viewport_bind_group_layout),
             ],
             immediate_size: 0,
         });

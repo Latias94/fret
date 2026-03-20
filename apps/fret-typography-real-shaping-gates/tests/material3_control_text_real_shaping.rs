@@ -62,17 +62,19 @@ fn material3_control_text_keeps_metrics_stable_across_fallback_runs() {
             fret_render_text::prepare_layout_from_wrapped(text, wrapped, constraints, scale, true);
 
         assert_eq!(
-            prepared.metrics.size.height, expected_line_height,
+            prepared.metrics().size.height,
+            expected_line_height,
             "expected fixed line boxes to keep height stable: text={text:?}, metrics={:?}",
-            prepared.metrics
+            prepared.metrics()
         );
         assert_eq!(
-            prepared.lines[0].layout.height, expected_line_height,
+            prepared.lines()[0].layout().height,
+            expected_line_height,
             "expected first line height to match fixed line box: text={text:?}, line={:?}",
-            prepared.lines[0].layout
+            prepared.lines()[0].layout()
         );
 
-        prepared.metrics.baseline
+        prepared.metrics().baseline
     };
 
     let baseline_ascii = baseline_for("Settings");

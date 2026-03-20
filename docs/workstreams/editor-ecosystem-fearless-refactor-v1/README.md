@@ -2,7 +2,7 @@
 
 Status: **in progress**
 
-Last updated: **2026-03-16**
+Last updated: **2026-03-18**
 
 Goal: turn Fret's editor-facing crates into one coherent product line without collapsing crate
 boundaries, creating a second widget library, or coupling reusable editor surfaces to one design
@@ -50,6 +50,10 @@ Current checkpoint:
 - shared inspector layout metrics now drive `PropertyRow`, `PropertyGrid`,
   `PropertyGridVirtualized`, `PropertyGroup`, and `InspectorPanel`,
 - the row grammar is now explicit (`label lane -> value lane -> reset slot -> status/actions slot`),
+- the promoted `imui_editor_proof_demo` rows now also stay on that same lane grammar all the way
+  through resettable proof cases: drag-value, material sliders, and advanced position rows now
+  feed `row_cx.row_options` back into `PropertyRow`, so the proof surface no longer bypasses the
+  shared reset/status slot caps when those rows add local reset affordances,
 - optional trailing lanes now collapse when a row has no reset/status affordance, while the shared
   wide-inspector value cap was raised so review surfaces stop stranding common editor fields at
   half-panel width,
@@ -106,6 +110,15 @@ Current checkpoint:
 - popup-shell geometry is now editor-owned too: `editor.popup.radius` plus
   `editor.popup.shadow_*` let the dense preset keep a tighter popup silhouette/elevation without
   reintroducing widget-local popup tuning in each control,
+- popup list row chrome now also has a narrower shared editor seam:
+  `TextAssistField` and `EnumSelect` both reuse the internal `popup_list` primitive for row gap,
+  row radius, row text style, active/disabled palette, content-height budgeting, and popup
+  placement margins, which removes one more pocket of per-control popup heuristics without
+  promoting a wider fake "universal popup" API too early,
+- the focused popup gates were rerun again on **2026-03-18** against that shared row seam, and
+  the promoted `Name assist` / `EnumSelect` popup captures still keep row highlight, text density,
+  and popup placement stable without reopening the clear-button / selected-row drift that used to
+  live in per-control popup heuristics,
 - editor numeric text-entry now also has a shared baseline policy for "replace current value on
   initial typed edit", so affixed `NumericInput` / `DragValue` / `Slider` flows behave more like
   editor fields than generic app forms, `DragValue` / `Slider` double-click typing now routes
@@ -191,6 +204,18 @@ Current checkpoint:
   surfaces, and `workspace_shell_demo` can opt into that flow via
   `FRET_WORKSPACE_SHELL_EDITOR_PRESET` without changing its default neutral shell setup,
 - the default proof surface can produce reviewable overview / typing / validation screenshots,
+- the latest default proof rerun on **2026-03-18** also confirms those resettable proof rows still
+  fit the shared lane grammar after routing them through shared row options instead of proof-local
+  `PropertyRow` defaults,
+- the same proof-local density pass now also keeps committed/outcome text shorter on non-empty
+  proof readouts (`Commit` / `Cancel`, `N lines`, `N chars`) so screenshot review stays focused on
+  the controls rather than long diagnostic phrasing once those rows are populated,
+- the matching dense proof rerun on **2026-03-18** also passed after that wording compaction, so
+  the tighter `imgui_like_dense` right lane still reads cleanly once those proof rows become
+  non-empty,
+- a fresh same-day rerun against the current worktree kept those proof screenshots stable too, so
+  popup-list unification plus the proof-row lane/readout cleanup now share one evidence story
+  rather than relying on older captures from before the latest seam extraction,
 - the full authoring proof surface now also has a focused affordance screenshot gate for populated
   text-field clear buttons and percent slider readouts so icon alignment and affix composition stay
   reviewable under proof-demo refactors,
@@ -268,13 +293,12 @@ Current checkpoint:
   `tools/diag-scripts/ui-editor/imui/imui-editor-proof-enum-select-selected-row-reveal.json`, and
   `tools/diag-scripts/ui-editor/imui/imui-editor-proof-gradient-stop-color-popup-screenshots.json`
   now keep popup geometry and chrome reviewable without reopening the full proof surface manually,
-- and the remaining foundation cleanup is now mostly about promoting the next layer above that
-  baseline: only the popup/scroll/selection behaviors that gain real multi-consumer evidence should
-  move further into shared kit policy, alongside richer password/history integrations, a decision
-  on whether the new app-local `PreserveDraft` notes surface should stay app-owned until a second
-  declarative consumer appears, and final cleanup for the remaining non-empty proof-local
-  status/readout density plus dense-preset lane calibration now that the worst wide-inspector
-  slack, trailing idle-lane waste, and idle proof-row height have all been pulled back.
+- and the remaining foundation cleanup is now mostly about keeping this baseline boring and
+  reviewable: only popup/scroll/selection behaviors with real multi-consumer evidence should move
+  further into shared kit policy, richer password/history integrations still need a second
+  consumer story, the app-local `PreserveDraft` notes surface still needs an ownership decision,
+  and the next practical step is to split the current foundation closure into reviewable grouped
+  commits before any new promoted editor component work resumes.
 
 Until those are in better shape, new promoted reusable components should be treated as lower
 priority than baseline correction.

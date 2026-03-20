@@ -43,22 +43,8 @@ fn subpixel_mask_to_alpha_uses_channel_max() {
 #[test]
 fn paint_span_for_text_range_is_directional_across_span_boundary() {
     let spans = vec![
-        ResolvedSpan {
-            start: 0,
-            end: 3,
-            slot: 0,
-            fg: None,
-            underline: None,
-            strikethrough: None,
-        },
-        ResolvedSpan {
-            start: 3,
-            end: 6,
-            slot: 1,
-            fg: None,
-            underline: None,
-            strikethrough: None,
-        },
+        ResolvedSpan::new(0, 3, 0, None),
+        ResolvedSpan::new(3, 6, 1, None),
     ];
 
     // Cluster spans the boundary (2..4). We cannot split the glyph, so we pick a deterministic

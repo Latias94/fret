@@ -134,10 +134,10 @@ impl TextSystem {
             mask_atlas: self.atlas_runtime.mask_atlas.diagnostics_snapshot(),
             color_atlas: self.atlas_runtime.color_atlas.diagnostics_snapshot(),
             subpixel_atlas: self.atlas_runtime.subpixel_atlas.diagnostics_snapshot(),
-            registered_font_blobs_count: font_db.registered_font_blobs_count,
-            registered_font_blobs_total_bytes: font_db.registered_font_blobs_total_bytes,
-            family_id_cache_entries: font_db.family_id_cache_entries,
-            baseline_metrics_cache_entries: font_db.baseline_metrics_cache_entries,
+            registered_font_blobs_count: font_db.registered_font_blobs_count(),
+            registered_font_blobs_total_bytes: font_db.registered_font_blobs_total_bytes(),
+            family_id_cache_entries: font_db.family_id_cache_entries(),
+            baseline_metrics_cache_entries: font_db.baseline_metrics_cache_entries(),
         }
     }
 

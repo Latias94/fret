@@ -3,7 +3,6 @@ use fret_core::{
     FontId, TextInputRef, TextLineHeightPolicy, TextShapingStyle, TextSlant, TextSpan, TextStyle,
 };
 use parley::FontContext;
-use parley::FontData;
 use parley::Layout;
 use parley::LayoutContext;
 use parley::fontique::{FamilyId, GenericFamily};
@@ -149,33 +148,180 @@ pub struct ParleyGlyph {
     pub x: f32,
     pub y: f32,
     pub advance: f32,
-    pub font: FontData,
+    pub font: GlyphFontData,
     pub font_size: f32,
     pub normalized_coords: Arc<[i16]>,
-    pub synthesis: parley::fontique::Synthesis,
+    pub synthesis: FontSynthesis,
     pub text_range: Range<usize>,
     pub is_rtl: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GlyphFontData {
+    inner: parley::FontData,
+}
+
+impl GlyphFontData {
+    fn from_parley(inner: parley::FontData) -> Self {
+        Self { inner }
+    }
+
+    pub fn data_id(&self) -> u64 {
+        self.inner.data.id()
+    }
+
+    pub fn face_index(&self) -> u32 {
+        self.inner.index
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        self.inner.data.data()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FontSynthesis {
+    pub embolden: bool,
+    /// Faux italic/oblique skew in degrees, clamped for stable cache identity.
+    pub skew_degrees: i8,
+}
+
+impl FontSynthesis {
+    fn from_parley(synthesis: parley::fontique::Synthesis) -> Self {
+        Self {
+            embolden: synthesis.embolden(),
+            skew_degrees: synthesis
+                .skew()
+                .unwrap_or(0.0)
+                .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapedCluster {
-    pub text_range: Range<usize>,
-    pub x0: f32,
-    pub x1: f32,
-    pub is_rtl: bool,
+    text_range: Range<usize>,
+    x0: f32,
+    x1: f32,
+    is_rtl: bool,
+}
+
+impl ShapedCluster {
+    pub fn new(text_range: Range<usize>, x0: f32, x1: f32, is_rtl: bool) -> Self {
+        Self {
+            text_range,
+            x0,
+            x1,
+            is_rtl,
+        }
+    }
+
+    pub fn text_range(&self) -> Range<usize> {
+        self.text_range.clone()
+    }
+
+    pub fn x0(&self) -> f32 {
+        self.x0
+    }
+
+    pub fn x1(&self) -> f32 {
+        self.x1
+    }
+
+    pub fn is_rtl(&self) -> bool {
+        self.is_rtl
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShapedLineLayout {
-    pub width: f32,
-    pub ascent: f32,
-    pub descent: f32,
-    pub ink_ascent: f32,
-    pub ink_descent: f32,
-    pub baseline: f32,
-    pub line_height: f32,
-    pub glyphs: Vec<ParleyGlyph>,
-    pub clusters: Vec<ShapedCluster>,
+    width: f32,
+    ascent: f32,
+    descent: f32,
+    ink_ascent: f32,
+    ink_descent: f32,
+    baseline: f32,
+    line_height: f32,
+    glyphs: Vec<ParleyGlyph>,
+    clusters: Vec<ShapedCluster>,
+}
+
+impl ShapedLineLayout {
+    pub fn new(
+        width: f32,
+        ascent: f32,
+        descent: f32,
+        ink_ascent: f32,
+        ink_descent: f32,
+        baseline: f32,
+        line_height: f32,
+        glyphs: Vec<ParleyGlyph>,
+        clusters: Vec<ShapedCluster>,
+    ) -> Self {
+        Self {
+            width,
+            ascent,
+            descent,
+            ink_ascent,
+            ink_descent,
+            baseline,
+            line_height,
+            glyphs,
+            clusters,
+        }
+    }
+
+    pub fn clusters(&self) -> &[ShapedCluster] {
+        &self.clusters
+    }
+
+    pub fn take_clusters(&mut self) -> Vec<ShapedCluster> {
+        std::mem::take(&mut self.clusters)
+    }
+
+    pub fn width(&self) -> f32 {
+        self.width
+    }
+
+    pub(crate) fn set_width(&mut self, width: f32) {
+        self.width = width;
+    }
+
+    pub fn ascent(&self) -> f32 {
+        self.ascent
+    }
+
+    pub fn descent(&self) -> f32 {
+        self.descent
+    }
+
+    pub fn ink_ascent(&self) -> f32 {
+        self.ink_ascent
+    }
+
+    pub fn ink_descent(&self) -> f32 {
+        self.ink_descent
+    }
+
+    pub fn baseline(&self) -> f32 {
+        self.baseline
+    }
+
+    pub fn line_height(&self) -> f32 {
+        self.line_height
+    }
+
+    pub fn glyphs(&self) -> &[ParleyGlyph] {
+        &self.glyphs
+    }
+
+    pub fn glyphs_mut(&mut self) -> &mut [ParleyGlyph] {
+        &mut self.glyphs
+    }
+
+    pub fn take_glyphs(&mut self) -> Vec<ParleyGlyph> {
+        std::mem::take(&mut self.glyphs)
+    }
 }
 
 pub struct ParleyShaper {
@@ -480,10 +626,10 @@ impl ParleyShaper {
         let mut run_x = metrics.offset;
         for run in line.runs() {
             let font = run.font();
-            let font_data = font.clone();
+            let font_data = GlyphFontData::from_parley(font.clone());
             let font_size = run.font_size();
             let normalized_coords: Arc<[i16]> = Arc::from(run.normalized_coords());
-            let synthesis = run.synthesis();
+            let synthesis = FontSynthesis::from_parley(run.synthesis());
 
             for cluster in run.visual_clusters() {
                 let cluster_range = cluster.text_range();
@@ -509,12 +655,12 @@ impl ParleyShaper {
                 }
 
                 run_x = cluster_x0 + cluster.advance();
-                clusters.push(ShapedCluster {
-                    text_range: cluster_range,
-                    x0: cluster_x0,
-                    x1: run_x,
-                    is_rtl: cluster.is_rtl(),
-                });
+                clusters.push(ShapedCluster::new(
+                    cluster_range,
+                    cluster_x0,
+                    run_x,
+                    cluster.is_rtl(),
+                ));
             }
         }
 
@@ -740,12 +886,12 @@ impl ParleyShaper {
                 let cluster_range = cluster.text_range();
                 let cluster_x0 = run_x;
                 run_x = cluster_x0 + cluster.advance();
-                clusters.push(ShapedCluster {
-                    text_range: cluster_range,
-                    x0: cluster_x0,
-                    x1: run_x,
-                    is_rtl: cluster.is_rtl(),
-                });
+                clusters.push(ShapedCluster::new(
+                    cluster_range,
+                    cluster_x0,
+                    run_x,
+                    cluster.is_rtl(),
+                ));
             }
         }
 
@@ -917,10 +1063,10 @@ impl ParleyShaper {
             let mut run_x = metrics.offset;
             for run in line.runs() {
                 let font = run.font();
-                let font_data = font.clone();
+                let font_data = GlyphFontData::from_parley(font.clone());
                 let font_size = run.font_size();
                 let normalized_coords: Arc<[i16]> = Arc::from(run.normalized_coords());
-                let synthesis = run.synthesis();
+                let synthesis = FontSynthesis::from_parley(run.synthesis());
 
                 for cluster in run.visual_clusters() {
                     let cluster_range = cluster.text_range();
@@ -951,12 +1097,12 @@ impl ParleyShaper {
                     }
 
                     run_x = cluster_x0 + cluster.advance();
-                    clusters.push(ShapedCluster {
-                        text_range: adjusted_range,
-                        x0: cluster_x0,
-                        x1: run_x,
-                        is_rtl: cluster.is_rtl(),
-                    });
+                    clusters.push(ShapedCluster::new(
+                        adjusted_range,
+                        cluster_x0,
+                        run_x,
+                        cluster.is_rtl(),
+                    ));
                 }
             }
 
@@ -1453,7 +1599,7 @@ mod tests {
         assert!(
             !entries0
                 .iter()
-                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+                .any(|e| e.family().eq_ignore_ascii_case("Inter")),
             "expected catalog entries to be empty of Inter before adding bundled fonts"
         );
 
@@ -1475,7 +1621,7 @@ mod tests {
         assert!(
             entries1
                 .iter()
-                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+                .any(|e| e.family().eq_ignore_ascii_case("Inter")),
             "expected catalog entries to include Inter after adding bundled fonts"
         );
         assert_eq!(
@@ -1490,7 +1636,8 @@ mod tests {
         let mut shaper = ParleyShaper::new_without_system_fonts();
         let snapshot0 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot0.catalog_entries_build_count, 0,
+            snapshot0.catalog_entries_build_count(),
+            0,
             "expected no catalog builds before first enumeration"
         );
 
@@ -1501,11 +1648,12 @@ mod tests {
         );
         let snapshot1 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot1.catalog_entries_build_count, 1,
+            snapshot1.catalog_entries_build_count(),
+            1,
             "expected first cold enumeration to build the catalog exactly once"
         );
         assert!(
-            snapshot1.all_font_catalog_entries_cache_present,
+            snapshot1.all_font_catalog_entries_cache_present(),
             "expected catalog cache to be populated after first enumeration"
         );
 
@@ -1518,7 +1666,8 @@ mod tests {
         }
         let snapshot2 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot2.catalog_entries_build_count, 1,
+            snapshot2.catalog_entries_build_count(),
+            1,
             "expected repeated cached enumerations not to rebuild the catalog"
         );
 
@@ -1526,11 +1675,12 @@ mod tests {
         assert!(added > 0, "expected bundled fonts to load");
         let snapshot3 = shaper.font_db_diagnostics_snapshot();
         assert!(
-            !snapshot3.all_font_catalog_entries_cache_present,
+            !snapshot3.all_font_catalog_entries_cache_present(),
             "expected add_fonts to invalidate the catalog cache"
         );
         assert_eq!(
-            snapshot3.catalog_entries_build_count, 1,
+            snapshot3.catalog_entries_build_count(),
+            1,
             "expected invalidation alone not to rebuild the catalog"
         );
 
@@ -1538,12 +1688,13 @@ mod tests {
         assert!(
             entries1
                 .iter()
-                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+                .any(|e| e.family().eq_ignore_ascii_case("Inter")),
             "expected rebuilt catalog to include bundled fonts after invalidation"
         );
         let snapshot4 = shaper.font_db_diagnostics_snapshot();
         assert_eq!(
-            snapshot4.catalog_entries_build_count, 2,
+            snapshot4.catalog_entries_build_count(),
+            2,
             "expected the first post-invalidation enumeration to rebuild exactly once"
         );
     }
@@ -1650,9 +1801,9 @@ mod tests {
         let input = TextInputRef::plain("hello", &style);
 
         let layout = shaper.shape_single_line(input, 1.0);
-        assert!(layout.width >= 0.0);
-        assert!(!layout.glyphs.is_empty());
-        assert!(!layout.clusters.is_empty());
+        assert!(layout.width() >= 0.0);
+        assert!(!layout.glyphs().is_empty());
+        assert!(!layout.clusters().is_empty());
     }
 
     #[test]
@@ -1911,7 +2062,7 @@ mod tests {
         let mut shaper = ParleyShaper::new();
         let entries = shaper.all_font_catalog_entries();
         assert!(
-            entries.iter().all(|e| !e.is_monospace_candidate),
+            entries.iter().all(|e| !e.is_monospace_candidate()),
             "expected monospace candidates to be suppressed when probe is disabled"
         );
 

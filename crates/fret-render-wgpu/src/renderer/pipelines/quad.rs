@@ -39,8 +39,8 @@ impl Renderer {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("fret quad pipeline layout"),
                 bind_group_layouts: &[
-                    &self.globals.uniform_bind_group_layout,
-                    self.geometry_upload_state.quad_instances_layout(),
+                    Some(&self.globals.uniform_bind_group_layout),
+                    Some(self.geometry_upload_state.quad_instances_layout()),
                 ],
                 immediate_size: 0,
             });

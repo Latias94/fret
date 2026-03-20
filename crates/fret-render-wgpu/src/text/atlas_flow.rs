@@ -114,7 +114,7 @@ impl TextSystem {
         };
 
         let Some(font_ref) =
-            parley::swash::FontRef::from_index(font_data.data.data(), key.font.face_index as usize)
+            parley::swash::FontRef::from_index(font_data.bytes(), key.font.face_index as usize)
         else {
             return;
         };

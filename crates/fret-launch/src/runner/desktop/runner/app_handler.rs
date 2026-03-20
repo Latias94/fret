@@ -2150,7 +2150,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     if let Err(err) = draw_result {
                         match err {
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::Lost,
+                                source: fret_render::SurfaceAcquireError::Lost,
                             } => {
                                 let size = state.window.surface_size();
                                 surface.resize(&context.device, size.width, size.height);
@@ -2169,7 +2169,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::Outdated,
+                                source: fret_render::SurfaceAcquireError::Outdated,
                             } => {
                                 let size = state.window.surface_size();
                                 surface.resize(&context.device, size.width, size.height);
@@ -2188,7 +2188,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::Timeout,
+                                source: fret_render::SurfaceAcquireError::Timeout,
                             } => {
                                 // Transient on some platforms (especially during startup / resize).
                                 // Schedule a one-shot redraw so the window doesn't stay blank until
@@ -2202,7 +2202,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {
-                                source: wgpu::SurfaceError::OutOfMemory,
+                                source: fret_render::SurfaceAcquireError::OutOfMemory,
                             } => {
                                 self.dispatcher.shutdown();
                                 event_loop.exit();
