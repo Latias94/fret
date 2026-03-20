@@ -6,7 +6,7 @@
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Navigates to the Select page via the left nav search.",
-      "Captures representative screenshots for the docs-aligned path plus the Fret-only composable parts section and its code tab."
+      "Captures representative screenshots for the docs-aligned path plus the Fret-only composable parts and rich items sections, including their code tabs."
     ]
   },
   "steps": [
@@ -83,6 +83,22 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-rich-items-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.05-rich-items-preview" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-rich-items-tabs-trigger-code" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.06-rich-items-code" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-select-api-reference-content" },
       "delta_y": -120.0,
       "require_fully_within_container": true,
@@ -91,7 +107,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.05-api-reference" },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-docs.07-api-reference" },
     { "type": "capture_bundle", "label": "ui-gallery-select-docs" }
   ]
 }
