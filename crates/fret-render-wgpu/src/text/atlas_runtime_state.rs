@@ -1,4 +1,4 @@
-use super::atlas::{GlyphAtlas, GlyphAtlasEntry, GlyphKey, TEXT_ATLAS_MAX_PAGES};
+use super::atlas::{GlyphAtlas, GlyphKey, TEXT_ATLAS_MAX_PAGES};
 use super::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot};
 
 const TEXT_ATLAS_WIDTH: u32 = 2048;
@@ -172,43 +172,23 @@ impl TextAtlasRuntimeState {
         y: i32,
         epoch: u64,
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
-        let entry = self.get(key, epoch)?;
-        Some((
-            key,
-            x as f32 + entry.placement_left as f32,
-            y as f32 - entry.placement_top as f32,
-            entry.w as f32,
-            entry.h as f32,
-        ))
+        let (x0, y0, w, h) = self
+            .atlas_mut_for_key(key)
+            .touch_bounds_for_key(key, x, y, epoch)?;
+        Some((key, x0, y0, w, h))
     }
 
     pub(super) fn touch_if_present(&mut self, key: GlyphKey, epoch: u64) -> bool {
-        self.get(key, epoch).is_some()
+        self.atlas_mut_for_key(key).touch_if_present(key, epoch)
     }
 
     #[cfg(test)]
     pub(super) fn contains_key(&self, key: GlyphKey) -> bool {
-        self.atlas_for_key(key).entry(key).is_some()
+        self.atlas_for_key(key).contains_key(key)
     }
 
     pub(super) fn uv_for_key(&self, key: GlyphKey) -> Option<(u16, [f32; 4])> {
-        let atlas = self.atlas_for_key(key);
-        let entry = atlas.entry(key)?;
-        let (w, h) = atlas.dimensions();
-        if w == 0 || h == 0 {
-            return None;
-        }
-        let w = w as f32;
-        let h = h as f32;
-        let u0 = entry.x as f32 / w;
-        let v0 = entry.y as f32 / h;
-        let u1 = (entry.x.saturating_add(entry.w) as f32) / w;
-        let v1 = (entry.y.saturating_add(entry.h) as f32) / h;
-        Some((entry.page, [u0, v0, u1, v1]))
-    }
-
-    fn get(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
-        self.atlas_mut_for_key(key).get(key, epoch)
+        self.atlas_for_key(key).uv_for_key(key)
     }
 
     pub(super) fn dec_pin_bucket(
@@ -258,9 +238,7 @@ impl TextAtlasRuntimeState {
 
     #[cfg(test)]
     pub(super) fn pending_upload_bytes_for_key(&self, key: GlyphKey) -> Option<Vec<u8>> {
-        let entry = self.atlas_for_key(key).entry(key)?;
-        self.atlas_for_key(key)
-            .pending_upload_bytes_for_entry(entry)
+        self.atlas_for_key(key).pending_upload_bytes_for_key(key)
     }
 
     pub(super) fn debug_lookup_mask_entry(

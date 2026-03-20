@@ -489,8 +489,38 @@ impl GlyphAtlas {
         (self.width, self.height)
     }
 
-    pub(super) fn entry(&self, key: GlyphKey) -> Option<GlyphAtlasEntry> {
-        self.glyphs.get(&key).copied()
+    pub(super) fn touch_bounds_for_key(
+        &mut self,
+        key: GlyphKey,
+        x: i32,
+        y: i32,
+        epoch: u64,
+    ) -> Option<(f32, f32, f32, f32)> {
+        let entry = self.get(key, epoch)?;
+        Some((
+            x as f32 + entry.placement_left as f32,
+            y as f32 - entry.placement_top as f32,
+            entry.w as f32,
+            entry.h as f32,
+        ))
+    }
+
+    pub(super) fn touch_if_present(&mut self, key: GlyphKey, epoch: u64) -> bool {
+        self.get(key, epoch).is_some()
+    }
+
+    pub(super) fn uv_for_key(&self, key: GlyphKey) -> Option<(u16, [f32; 4])> {
+        let entry = self.glyphs.get(&key).copied()?;
+        let w = self.width as f32;
+        let h = self.height as f32;
+        if w == 0.0 || h == 0.0 {
+            return None;
+        }
+        let u0 = entry.x as f32 / w;
+        let v0 = entry.y as f32 / h;
+        let u1 = (entry.x.saturating_add(entry.w) as f32) / w;
+        let v1 = (entry.y.saturating_add(entry.h) as f32) / h;
+        Some((entry.page, [u0, v0, u1, v1]))
     }
 
     pub(super) fn find_key_for_bounds(
@@ -508,7 +538,13 @@ impl GlyphAtlas {
     }
 
     #[cfg(test)]
-    pub(super) fn pending_upload_bytes_for_entry(&self, entry: GlyphAtlasEntry) -> Option<Vec<u8>> {
+    pub(super) fn contains_key(&self, key: GlyphKey) -> bool {
+        self.glyphs.contains_key(&key)
+    }
+
+    #[cfg(test)]
+    pub(super) fn pending_upload_bytes_for_key(&self, key: GlyphKey) -> Option<Vec<u8>> {
+        let entry = self.glyphs.get(&key).copied()?;
         let page_idx = entry.page as usize;
         self.pages.get(page_idx).and_then(|page| {
             page.pending
