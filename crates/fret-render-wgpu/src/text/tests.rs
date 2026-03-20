@@ -15,6 +15,81 @@ fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) 
         .expect("expected pending upload for ensured glyph")
 }
 
+fn prepared_shape_for_blob(
+    text: &super::TextSystem,
+    blob_id: fret_core::TextBlobId,
+) -> &super::TextShape {
+    text.shape_for_blob(blob_id).expect("text shape")
+}
+
+fn glyph_keys_for_blob(
+    text: &super::TextSystem,
+    blob_id: fret_core::TextBlobId,
+) -> Vec<super::GlyphKey> {
+    prepared_shape_for_blob(text, blob_id)
+        .glyphs()
+        .iter()
+        .map(|glyph| glyph.key)
+        .collect()
+}
+
+fn glyph_keys_for_blob_matching(
+    text: &super::TextSystem,
+    blob_id: fret_core::TextBlobId,
+    mut predicate: impl FnMut(&super::GlyphInstance) -> bool,
+) -> Vec<super::GlyphKey> {
+    prepared_shape_for_blob(text, blob_id)
+        .glyphs()
+        .iter()
+        .filter(|glyph| predicate(glyph))
+        .map(|glyph| glyph.key)
+        .collect()
+}
+
+fn face_keys_for_blob(
+    text: &super::TextSystem,
+    blob_id: fret_core::TextBlobId,
+) -> std::collections::HashSet<super::FontFaceKey> {
+    prepared_shape_for_blob(text, blob_id)
+        .glyphs()
+        .iter()
+        .map(|glyph| glyph.key.font)
+        .collect()
+}
+
+fn first_glyph_key_for_blob(
+    text: &super::TextSystem,
+    blob_id: fret_core::TextBlobId,
+) -> super::GlyphKey {
+    prepared_shape_for_blob(text, blob_id)
+        .glyphs()
+        .first()
+        .expect("glyph")
+        .key
+}
+
+fn ensure_glyph_cached_in_expected_atlas(
+    text: &mut super::TextSystem,
+    key: super::GlyphKey,
+    epoch: u64,
+    context: &str,
+) {
+    text.ensure_glyph_in_atlas(key, epoch);
+    assert!(
+        text.atlas_runtime.contains_key(key),
+        "expected glyph to be present in the atlas selected by its key ({context})"
+    );
+}
+
+fn rasterized_pending_upload_bytes(
+    text: &mut super::TextSystem,
+    key: super::GlyphKey,
+    epoch: u64,
+) -> Vec<u8> {
+    text.ensure_glyph_in_atlas(key, epoch);
+    pending_upload_bytes_for_key(text, key)
+}
+
 fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
     text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
@@ -924,14 +999,7 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
 
     for (text_str, label) in cases {
         let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-
-        let mut color_glyphs: Vec<super::GlyphKey> = Vec::new();
-        for g in shape.glyphs() {
-            if g.is_color() {
-                color_glyphs.push(g.key);
-            }
-        }
+        let color_glyphs = glyph_keys_for_blob_matching(&text, blob_id, |glyph| glyph.is_color());
 
         assert!(
             !color_glyphs.is_empty(),
@@ -940,11 +1008,7 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
 
         let epoch = 1;
         for key in color_glyphs {
-            text.ensure_glyph_in_atlas(key, epoch);
-            assert!(
-                text.atlas_runtime.contains_key(key),
-                "expected color glyph to be present in color atlas after ensure ({label})"
-            );
+            ensure_glyph_cached_in_expected_atlas(&mut text, key, epoch, label);
         }
     }
 }
@@ -995,20 +1059,14 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
 
     for (text_str, label) in cases {
         let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-
-        let glyphs = shape.glyphs();
+        let glyph_keys = glyph_keys_for_blob(&text, blob_id);
         assert!(
-            !glyphs.is_empty(),
+            !glyph_keys.is_empty(),
             "expected shaped glyphs for CJK case {label}"
         );
 
-        let mut non_color: Vec<super::GlyphKey> = Vec::new();
-        for g in glyphs {
-            if g.is_mask_or_subpixel() {
-                non_color.push(g.key);
-            }
-        }
+        let non_color =
+            glyph_keys_for_blob_matching(&text, blob_id, |glyph| glyph.is_mask_or_subpixel());
 
         assert!(
             !non_color.is_empty(),
@@ -1017,18 +1075,7 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
 
         let epoch = 1;
         for key in non_color {
-            text.ensure_glyph_in_atlas(key, epoch);
-            if key.is_mask() {
-                assert!(
-                    text.atlas_runtime.contains_key(key),
-                    "expected mask glyph to be present in mask atlas after ensure ({label})"
-                );
-            } else if key.is_subpixel() {
-                assert!(
-                    text.atlas_runtime.contains_key(key),
-                    "expected subpixel glyph to be present in subpixel atlas after ensure ({label})"
-                );
-            }
+            ensure_glyph_cached_in_expected_atlas(&mut text, key, epoch, label);
         }
     }
 }
@@ -1095,12 +1142,7 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        face_keys_for_blob(&text, blob_id)
     };
     assert!(
         !expected_cjk_faces.is_empty(),
@@ -1108,10 +1150,7 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
     );
 
     let (blob_id, _metrics) = text.prepare("你", &style, constraints);
-    let glyph_keys: Vec<super::GlyphKey> = {
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape.glyphs().iter().map(|g| g.key).collect()
-    };
+    let glyph_keys = glyph_keys_for_blob(&text, blob_id);
 
     assert!(!glyph_keys.is_empty(), "expected shaped glyphs for CJK");
 
@@ -1129,18 +1168,7 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
             continue;
         }
 
-        text.ensure_glyph_in_atlas(key, epoch);
-        if key.is_mask() {
-            assert!(
-                text.atlas_runtime.contains_key(key),
-                "expected ensured CJK glyph to be present in the mask atlas"
-            );
-        } else if key.is_subpixel() {
-            assert!(
-                text.atlas_runtime.contains_key(key),
-                "expected ensured CJK glyph to be present in the subpixel atlas"
-            );
-        }
+        ensure_glyph_cached_in_expected_atlas(&mut text, key, epoch, "cjk fallback glyph");
     }
 }
 
@@ -1275,12 +1303,7 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
             ..Default::default()
         };
         let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
-        let shape = text.shape_for_blob(blob_id).expect("text shape");
-        shape
-            .glyphs()
-            .iter()
-            .map(|g| g.key.font)
-            .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        face_keys_for_blob(&text, blob_id)
     };
     assert!(
         !expected_cjk_faces.is_empty(),
@@ -1407,10 +1430,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
     for (text_str, label) in cases {
         let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
 
-        let glyph_keys: Vec<super::GlyphKey> = {
-            let shape = text.shape_for_blob(blob_id).expect("text shape");
-            shape.glyphs().iter().map(|g| g.key).collect()
-        };
+        let glyph_keys = glyph_keys_for_blob(&text, blob_id);
         assert!(
             !glyph_keys.is_empty(),
             "expected shaped glyphs for emoji case {label}"
@@ -1438,11 +1458,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
 
         let epoch = 1;
         for key in color_keys {
-            text.ensure_glyph_in_atlas(key, epoch);
-            assert!(
-                text.atlas_runtime.contains_key(key),
-                "expected ensured emoji glyph to be present in the color atlas ({label})"
-            );
+            ensure_glyph_cached_in_expected_atlas(&mut text, key, epoch, label);
         }
     }
 }
@@ -1809,16 +1825,10 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
     assert_eq!(rich_light.spans[0].shaping.axes[0].tag, "wght");
 
     let (blob_light, _) = text.prepare_attributed(&rich_light, &base_style, constraints);
-    let key_light = {
-        let shape = text.shape_for_blob(blob_light).expect("text shape");
-        shape.glyphs().first().expect("glyph").key
-    };
+    let key_light = first_glyph_key_for_blob(&text, blob_light);
 
     let (blob_heavy, _) = text.prepare_attributed(&rich_heavy, &base_style, constraints);
-    let key_heavy = {
-        let shape = text.shape_for_blob(blob_heavy).expect("text shape");
-        shape.glyphs().first().expect("glyph").key
-    };
+    let key_heavy = first_glyph_key_for_blob(&text, blob_heavy);
 
     assert!(
         key_light.font.face_index() != key_heavy.font.face_index()
@@ -1833,13 +1843,11 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
     text.atlas_runtime.reset();
     let epoch = 1;
 
-    text.ensure_glyph_in_atlas(key_light, epoch);
-    let bytes_light = pending_upload_bytes_for_key(&text, key_light);
+    let bytes_light = rasterized_pending_upload_bytes(&mut text, key_light, epoch);
 
     text.atlas_runtime.reset();
 
-    text.ensure_glyph_in_atlas(key_heavy, epoch);
-    let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
+    let bytes_heavy = rasterized_pending_upload_bytes(&mut text, key_heavy, epoch);
 
     assert_ne!(
         bytes_light, bytes_heavy,
@@ -1904,16 +1912,10 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     };
 
     let (blob_light, _) = text.prepare("0", &style_light, constraints);
-    let key_light = {
-        let shape = text.shape_for_blob(blob_light).expect("text shape");
-        shape.glyphs().first().expect("glyph").key
-    };
+    let key_light = first_glyph_key_for_blob(&text, blob_light);
 
     let (blob_heavy, _) = text.prepare("0", &style_heavy, constraints);
-    let key_heavy = {
-        let shape = text.shape_for_blob(blob_heavy).expect("text shape");
-        shape.glyphs().first().expect("glyph").key
-    };
+    let key_heavy = first_glyph_key_for_blob(&text, blob_heavy);
 
     assert_eq!(
         key_light.font.font_data_id(),
@@ -1935,13 +1937,11 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     text.atlas_runtime.reset();
     let epoch = 1;
 
-    text.ensure_glyph_in_atlas(key_light, epoch);
-    let bytes_light = pending_upload_bytes_for_key(&text, key_light);
+    let bytes_light = rasterized_pending_upload_bytes(&mut text, key_light, epoch);
 
     text.atlas_runtime.reset();
 
-    text.ensure_glyph_in_atlas(key_heavy, epoch);
-    let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
+    let bytes_heavy = rasterized_pending_upload_bytes(&mut text, key_heavy, epoch);
 
     assert_ne!(
         bytes_light, bytes_heavy,
@@ -2526,16 +2526,10 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     };
 
     let (blob_normal, _) = text.prepare("你", &style_normal, constraints);
-    let key_normal = {
-        let shape = text.shape_for_blob(blob_normal).expect("text shape");
-        shape.glyphs().first().expect("glyph").key
-    };
+    let key_normal = first_glyph_key_for_blob(&text, blob_normal);
 
     let (blob_italic, _) = text.prepare("你", &style_italic, constraints);
-    let key_italic = {
-        let shape = text.shape_for_blob(blob_italic).expect("text shape");
-        shape.glyphs().first().expect("glyph").key
-    };
+    let key_italic = first_glyph_key_for_blob(&text, blob_italic);
 
     assert_eq!(
         key_normal.font.font_data_id(),
@@ -2566,13 +2560,11 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     text.atlas_runtime.reset();
     let epoch = 1;
 
-    text.ensure_glyph_in_atlas(key_normal, epoch);
-    let bytes_normal = pending_upload_bytes_for_key(&text, key_normal);
+    let bytes_normal = rasterized_pending_upload_bytes(&mut text, key_normal, epoch);
 
     text.atlas_runtime.reset();
 
-    text.ensure_glyph_in_atlas(key_italic, epoch);
-    let bytes_italic = pending_upload_bytes_for_key(&text, key_italic);
+    let bytes_italic = rasterized_pending_upload_bytes(&mut text, key_italic, epoch);
 
     assert_ne!(
         bytes_normal, bytes_italic,
