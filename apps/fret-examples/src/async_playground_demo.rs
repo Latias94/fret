@@ -970,7 +970,7 @@ fn query_result_view(
             .text_sm()
             .into_element(cx),
         QueryStatus::Loading => {
-            let kept = policy.keep_previous_data_while_loading && state.data.is_some();
+            let kept = policy.keep_previous_data_while_loading && state.is_refreshing();
             ui::text(if kept {
                 "Loading… (keepPreviousDataWhileLoading=true)"
             } else {
@@ -1138,15 +1138,17 @@ fn status_badge(
             .into_element(cx);
     };
 
-    let mut label = format!("{:?}", diag.status);
+    let mut label = diag.status.as_str().to_string();
     if diag.stale == Some(true) {
         label.push_str(" (stale)");
     }
 
-    let variant = match diag.status {
-        QueryStatus::Success => shadcn::BadgeVariant::Default,
-        QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-        QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
+    let variant = if diag.status.is_success() {
+        shadcn::BadgeVariant::Default
+    } else if diag.status.is_error() {
+        shadcn::BadgeVariant::Destructive
+    } else {
+        shadcn::BadgeVariant::Secondary
     };
 
     shadcn::Badge::new(label).variant(variant).into_element(cx)
