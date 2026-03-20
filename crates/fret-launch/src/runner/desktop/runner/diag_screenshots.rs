@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 use fret_diag_protocol::{
     DiagScreenshotRequestV1, DiagScreenshotResultEntryV1, DiagScreenshotResultFileV1,
@@ -40,7 +39,7 @@ pub(crate) struct DiagScreenshotCapture {
     trigger_path: PathBuf,
     result_path: PathBuf,
     result_trigger_path: PathBuf,
-    last_trigger_mtime: Option<SystemTime>,
+    last_trigger_stamp: Option<u64>,
     pending_by_window_ffi: HashMap<u64, PendingCapture>,
 }
 
@@ -120,21 +119,20 @@ impl DiagScreenshotCapture {
             trigger_path,
             result_path,
             result_trigger_path,
-            last_trigger_mtime: None,
+            last_trigger_stamp: None,
             pending_by_window_ffi: HashMap::new(),
         })
     }
 
     pub(crate) fn poll(&mut self) {
-        let modified = match std::fs::metadata(&self.trigger_path).and_then(|m| m.modified()) {
-            Ok(m) => m,
-            Err(_) => return,
+        let stamp = match read_touch_stamp(&self.trigger_path) {
+            Some(stamp) => stamp,
+            None => return,
         };
-
-        if self.last_trigger_mtime.is_some_and(|prev| prev >= modified) {
+        if self.last_trigger_stamp.is_some_and(|prev| prev >= stamp) {
             return;
         }
-        self.last_trigger_mtime = Some(modified);
+        self.last_trigger_stamp = Some(stamp);
 
         let bytes = match std::fs::read(&self.request_path) {
             Ok(b) => b,
@@ -170,6 +168,10 @@ impl DiagScreenshotCapture {
                 },
             );
         }
+    }
+
+    pub(crate) fn has_pending_for_window(&self, window_ffi: u64) -> bool {
+        self.pending_by_window_ffi.contains_key(&window_ffi)
     }
 
     pub(crate) fn begin_capture_for_window(
@@ -499,6 +501,14 @@ fn touch_stamp_file(path: &Path, stamp: u64) {
     let _ = std::fs::write(path, format!("{stamp}\n").as_bytes());
 }
 
+fn read_touch_stamp(path: &Path) -> Option<u64> {
+    let bytes = std::fs::read(path).ok()?;
+    let text = std::str::from_utf8(&bytes).ok()?;
+    text.lines()
+        .rev()
+        .find_map(|line| line.trim().parse::<u64>().ok())
+}
+
 fn env_flag_default_false(name: &str) -> bool {
     let Ok(v) = std::env::var(name) else {
         return false;
@@ -508,4 +518,110 @@ fn env_flag_default_false(name: &str) -> bool {
         return true;
     }
     !matches!(v.as_str(), "0" | "false" | "no" | "off")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(label: &str) -> PathBuf {
+        let unique = format!(
+            "fret-diag-screenshot-tests-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or_default()
+        );
+        let dir = std::env::temp_dir().join(unique);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    fn write_request(
+        request_path: &Path,
+        trigger_path: &Path,
+        stamp: u64,
+        request_id: &str,
+        window: u64,
+    ) {
+        let req = DiagScreenshotRequestV1 {
+            schema_version: 1,
+            out_dir: "target/fret-diag".to_string(),
+            bundle_dir_name: "bundle".to_string(),
+            request_id: Some(request_id.to_string()),
+            windows: vec![fret_diag_protocol::DiagScreenshotWindowRequestV1 {
+                window,
+                tick_id: 7,
+                frame_id: 11,
+                scale_factor: 2.0,
+            }],
+        };
+        let bytes = serde_json::to_vec_pretty(&req).expect("serialize request");
+        std::fs::write(request_path, bytes).expect("write request");
+        touch_stamp_file(trigger_path, stamp);
+    }
+
+    #[test]
+    fn poll_reads_touch_stamp_and_tracks_pending_window() {
+        let dir = temp_dir("poll_reads_touch_stamp");
+        let request_path = dir.join("screenshots.request.json");
+        let trigger_path = dir.join("screenshots.touch");
+        let result_path = dir.join("screenshots.result.json");
+        let result_trigger_path = dir.join("screenshots.result.touch");
+
+        write_request(&request_path, &trigger_path, 1, "req-1", 41);
+
+        let mut capture = DiagScreenshotCapture {
+            request_path,
+            trigger_path,
+            result_path,
+            result_trigger_path,
+            last_trigger_stamp: None,
+            pending_by_window_ffi: HashMap::new(),
+        };
+
+        capture.poll();
+
+        assert!(capture.has_pending_for_window(41));
+        assert_eq!(capture.last_trigger_stamp, Some(1));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn poll_ignores_stale_touch_stamp_and_accepts_newer_one() {
+        let dir = temp_dir("poll_ignores_stale_touch_stamp");
+        let request_path = dir.join("screenshots.request.json");
+        let trigger_path = dir.join("screenshots.touch");
+        let result_path = dir.join("screenshots.result.json");
+        let result_trigger_path = dir.join("screenshots.result.touch");
+
+        write_request(&request_path, &trigger_path, 2, "req-1", 41);
+
+        let mut capture = DiagScreenshotCapture {
+            request_path: request_path.clone(),
+            trigger_path: trigger_path.clone(),
+            result_path,
+            result_trigger_path,
+            last_trigger_stamp: None,
+            pending_by_window_ffi: HashMap::new(),
+        };
+
+        capture.poll();
+        assert!(capture.has_pending_for_window(41));
+
+        capture.pending_by_window_ffi.clear();
+        write_request(&request_path, &trigger_path, 2, "req-2", 42);
+        capture.poll();
+        assert!(
+            !capture.has_pending_for_window(42),
+            "same touch stamp should not be treated as a new screenshot request"
+        );
+
+        write_request(&request_path, &trigger_path, 3, "req-3", 43);
+        capture.poll();
+        assert!(capture.has_pending_for_window(43));
+        assert_eq!(capture.last_trigger_stamp, Some(3));
+        let _ = std::fs::remove_dir_all(dir);
+    }
 }

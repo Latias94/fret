@@ -2386,6 +2386,26 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             return;
         }
 
+        #[cfg(feature = "diag-screenshots")]
+        let pending_diag_screenshot_windows: Vec<fret_core::AppWindowId> =
+            if let Some(diag) = self.diag_screenshots.as_mut() {
+                diag.poll();
+                self.windows
+                    .keys()
+                    .filter(|window| diag.has_pending_for_window(window.data().as_ffi()))
+                    .collect()
+            } else {
+                Vec::new()
+            };
+        #[cfg(feature = "diag-screenshots")]
+        for window in pending_diag_screenshot_windows {
+            let _ = self.request_window_redraw_with_reason(
+                window,
+                fret_runtime::RunnerFrameDriveReason::EffectRedraw,
+            );
+            self.raf_windows.request(window);
+        }
+
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
             // Only attempt to (re)create missing surfaces after winit has indicated surfaces may
