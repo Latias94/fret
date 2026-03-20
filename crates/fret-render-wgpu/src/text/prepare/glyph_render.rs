@@ -63,12 +63,12 @@ impl TextSystem {
         glyph: &'a ParleyGlyph,
         font_ref: parley::swash::FontRef<'a>,
     ) -> parley::swash::scale::Scaler<'a> {
-        let scaler_builder = prepared_glyph_scaler_builder_with_normalized_coords(
+        super::build_glyph_scaler(
             &mut self.parley_scale,
-            glyph,
             font_ref,
-        );
-        scaler_builder.build()
+            glyph.font_size(),
+            prepared_glyph_normalized_coords(glyph),
+        )
     }
 }
 
@@ -76,32 +76,12 @@ fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::
     parley::swash::FontRef::from_index(glyph.font().bytes(), glyph.font().face_index() as usize)
 }
 
-fn prepared_glyph_scaler_size(glyph: &ParleyGlyph) -> f32 {
-    glyph.font_size().max(1.0)
-}
-
 pub(super) fn prepared_glyph_has_normalized_coords(glyph: &ParleyGlyph) -> bool {
     !glyph.normalized_coords().is_empty()
 }
 
-fn prepared_glyph_scaler_builder<'a>(
-    parley_scale: &'a mut parley::swash::scale::ScaleContext,
-    glyph: &'a ParleyGlyph,
-    font_ref: parley::swash::FontRef<'a>,
-) -> parley::swash::scale::ScalerBuilder<'a> {
-    parley_scale
-        .builder(font_ref)
-        .size(prepared_glyph_scaler_size(glyph))
-        .hint(false)
-}
-
-fn prepared_glyph_scaler_builder_with_normalized_coords<'a>(
-    parley_scale: &'a mut parley::swash::scale::ScaleContext,
-    glyph: &'a ParleyGlyph,
-    font_ref: parley::swash::FontRef<'a>,
-) -> parley::swash::scale::ScalerBuilder<'a> {
-    let scaler_builder = prepared_glyph_scaler_builder(parley_scale, glyph, font_ref);
-    apply_prepared_glyph_normalized_coords(scaler_builder, glyph)
+fn prepared_glyph_normalized_coords(glyph: &ParleyGlyph) -> Option<&[i16]> {
+    prepared_glyph_has_normalized_coords(glyph).then_some(glyph.normalized_coords())
 }
 
 fn render_prepared_glyph_image_at_bins(
@@ -120,21 +100,4 @@ fn render_prepared_glyph_image_from_scaler(
     y_bin: u8,
 ) -> Option<parley::swash::scale::image::Image> {
     render_prepared_glyph_image_at_bins(scaler, glyph_id, x_bin, y_bin)
-}
-
-fn apply_prepared_glyph_normalized_coords<'a>(
-    scaler_builder: parley::swash::scale::ScalerBuilder<'a>,
-    glyph: &'a ParleyGlyph,
-) -> parley::swash::scale::ScalerBuilder<'a> {
-    if !prepared_glyph_has_normalized_coords(glyph) {
-        return scaler_builder;
-    }
-    apply_prepared_glyph_normalized_coords_values(scaler_builder, glyph)
-}
-
-fn apply_prepared_glyph_normalized_coords_values<'a>(
-    scaler_builder: parley::swash::scale::ScalerBuilder<'a>,
-    glyph: &'a ParleyGlyph,
-) -> parley::swash::scale::ScalerBuilder<'a> {
-    scaler_builder.normalized_coords(glyph.normalized_coords().iter())
 }

@@ -120,3 +120,19 @@ pub(super) fn glyph_render_at_bins(x_bin: u8, y_bin: u8) -> parley::swash::scale
     render.offset(glyph_offset_px(x_bin, y_bin));
     render
 }
+
+pub(super) fn build_glyph_scaler<'a>(
+    parley_scale: &'a mut parley::swash::scale::ScaleContext,
+    font_ref: parley::swash::FontRef<'a>,
+    font_size: f32,
+    normalized_coords: Option<&'a [i16]>,
+) -> parley::swash::scale::Scaler<'a> {
+    let mut scaler_builder = parley_scale
+        .builder(font_ref)
+        .size(font_size.max(1.0))
+        .hint(false);
+    if let Some(coords) = normalized_coords.filter(|coords| !coords.is_empty()) {
+        scaler_builder = scaler_builder.normalized_coords(coords.iter());
+    }
+    scaler_builder.build()
+}

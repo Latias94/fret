@@ -1,6 +1,6 @@
 use super::TextSystem;
 use super::atlas::{GlyphKey, GlyphKeyBuckets};
-use super::prepare::glyph_render_at_bins;
+use super::prepare::{build_glyph_scaler, glyph_render_at_bins};
 use fret_core::scene::{Scene, SceneOp};
 
 impl TextSystem {
@@ -66,15 +66,13 @@ impl TextSystem {
         };
 
         let font_size = parley_glyph_font_size(key);
-        let mut scaler_builder = self
-            .parley_scale
-            .builder(font_ref)
-            .size(font_size)
-            .hint(false);
-        if let Some(coords) = self.face_cache.font_instance_coords_by_face.get(&key.font) {
-            scaler_builder = scaler_builder.normalized_coords(coords.iter());
-        }
-        let mut scaler = scaler_builder.build();
+        let normalized_coords = self.cached_face_normalized_coords(key);
+        let mut scaler = build_glyph_scaler(
+            &mut self.parley_scale,
+            font_ref,
+            font_size,
+            normalized_coords.as_deref(),
+        );
 
         let mut render = glyph_render_at_bins(key.x_bin, key.y_bin);
         apply_parley_glyph_synthesis(&mut render, key, font_size);
@@ -109,6 +107,13 @@ impl TextSystem {
             image.data,
             epoch,
         );
+    }
+
+    fn cached_face_normalized_coords(&self, key: GlyphKey) -> Option<std::sync::Arc<[i16]>> {
+        self.face_cache
+            .font_instance_coords_by_face
+            .get(&key.font)
+            .cloned()
     }
 
     fn release_pin_bucket(&mut self, bucket: usize) {
