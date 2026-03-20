@@ -82,7 +82,7 @@ fn prepared_glyph_id(glyph: &ParleyGlyph) -> Option<u16> {
 }
 
 fn prepared_glyph_size_bits(glyph: &ParleyGlyph) -> u32 {
-    glyph.font_size.to_bits()
+    glyph.font_size().to_bits()
 }
 
 fn prepared_glyph_face_key(glyph: &ParleyGlyph, font_data_id: u64, face_index: u32) -> FontFaceKey {

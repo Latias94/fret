@@ -771,7 +771,7 @@ mod tests {
             .lines
             .first()
             .and_then(|l| l.glyphs().first())
-            .map(|g| g.font_size)
+            .map(|g| g.font_size())
         else {
             panic!("expected shaped glyphs for scale=1.0");
         };
@@ -779,7 +779,7 @@ mod tests {
             .lines
             .first()
             .and_then(|l| l.glyphs().first())
-            .map(|g| g.font_size)
+            .map(|g| g.font_size())
         else {
             panic!("expected shaped glyphs for scale=0.5");
         };

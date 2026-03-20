@@ -72,7 +72,7 @@ fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::
 }
 
 fn prepared_glyph_scaler_size(glyph: &ParleyGlyph) -> f32 {
-    glyph.font_size.max(1.0)
+    glyph.font_size().max(1.0)
 }
 
 pub(super) fn prepared_glyph_has_normalized_coords(glyph: &ParleyGlyph) -> bool {
