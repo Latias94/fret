@@ -1989,6 +1989,7 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
             "src/ui/snippets/input_otp/alphanumeric.rs",
+            "src/ui/snippets/input_otp/compact_builder.rs",
             "src/ui/snippets/input_otp/controlled.rs",
             "src/ui/snippets/input_otp/demo.rs",
             "src/ui/snippets/input_otp/disabled.rs",
@@ -2009,10 +2010,7 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/input_otp",
-        &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
-            ".into_element_parts(",
-        ],
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 }
 
@@ -2022,6 +2020,7 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/input_otp.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"About\", about)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Pattern\", pattern)",
             "DocSection::build(cx, \"Separator\", separator)",
@@ -2032,9 +2031,12 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Alphanumeric\", alphanumeric)",
             "DocSection::build(cx, \"Form\", form)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Compact Builder\", compact_builder)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"About\", about)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Pattern\", pattern)",
             "DocSection::new(\"Separator\", separator)",
@@ -2045,14 +2047,37 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Alphanumeric\", alphanumeric)",
             "DocSection::new(\"Form\", form)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Compact Builder\", compact_builder)",
         ],
     );
 }
 
 #[test]
-fn selected_input_otp_snippets_prefer_compact_root_builder() {
+fn input_otp_gallery_keeps_docs_bridge_and_compact_builder_lanes_distinct() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/input_otp/usage.rs",
+        &[
+            "shadcn::InputOTP::new(",
+            ".into_element_parts(",
+            "shadcn::InputOTPGroup::new([",
+            "shadcn::InputOTPSeparator::default().into()",
+        ],
+        &[],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/input_otp/compact_builder.rs",
+        &[
+            "shadcn::InputOTP::new(",
+            ".group_size(Some(3))",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
+    );
+
     for relative_path in [
         "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/compact_builder.rs",
         "src/ui/snippets/input_otp/controlled.rs",
         "src/ui/snippets/input_otp/demo.rs",
         "src/ui/snippets/input_otp/disabled.rs",
@@ -2062,7 +2087,6 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
         "src/ui/snippets/input_otp/pattern.rs",
         "src/ui/snippets/input_otp/rtl.rs",
         "src/ui/snippets/input_otp/separator.rs",
-        "src/ui/snippets/input_otp/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -2073,10 +2097,10 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
 
     for relative_path in [
         "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/compact_builder.rs",
         "src/ui/snippets/input_otp/demo.rs",
         "src/ui/snippets/input_otp/disabled.rs",
         "src/ui/snippets/input_otp/form.rs",
-        "src/ui/snippets/input_otp/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -2099,9 +2123,21 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
     let page = read("src/ui/pages/input_otp.rs");
     assert!(
         page.contains(
-            "First-party examples now prefer the compact `InputOTP::new(model)` root builder with `length(...)` and `group_size(...)`; `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` remain the upstream-shaped bridge when callers explicitly want that shape."
+            "`Usage` now mirrors the upstream parts-shaped docs lane, while `Compact Builder` keeps `InputOTP::new(model)` plus `group_size(...)` visible as the Fret shorthand after the docs path."
         ),
-        "src/ui/pages/input_otp.rs should keep the compact root story explicit"
+        "src/ui/pages/input_otp.rs should explain the split between the docs bridge and the compact shorthand"
+    );
+    assert!(
+        page.contains(
+            "`InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` already cover the docs-shaped composition bridge, so a separate generic children API is not needed here."
+        ),
+        "src/ui/pages/input_otp.rs should explain why the existing bridge is sufficient"
+    );
+    assert!(
+        page.contains(
+            "Preview mirrors the shadcn Input OTP docs path first: Demo, About, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL, API Reference. `Compact Builder` stays as the explicit Fret shorthand follow-up."
+        ),
+        "src/ui/pages/input_otp.rs should mirror the shadcn docs path before the compact follow-up"
     );
 }
 

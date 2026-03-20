@@ -1041,6 +1041,24 @@ pub enum InputOtpPart {
     Separator(InputOtpSeparator),
 }
 
+impl From<InputOtpGroup> for InputOtpPart {
+    fn from(value: InputOtpGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<InputOtpSlot> for InputOtpPart {
+    fn from(value: InputOtpSlot) -> Self {
+        Self::Slot(value)
+    }
+}
+
+impl From<InputOtpSeparator> for InputOtpPart {
+    fn from(value: InputOtpSeparator) -> Self {
+        Self::Separator(value)
+    }
+}
+
 impl InputOtpPart {
     pub fn group(group: InputOtpGroup) -> Self {
         Self::Group(group)
