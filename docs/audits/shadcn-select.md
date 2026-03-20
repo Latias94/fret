@@ -78,9 +78,26 @@ examples in `repo-ref/ui`.
 - Pass: `aria-invalid=true` border and focus ring (including shadcn's invalid ring color overrides) match
   shadcn-web (`select-demo.invalid`, `select-demo.invalid-focus`).
 
+### Gallery / docs parity
+
+- Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Align Item With Trigger`,
+  `Groups`, `Scrollable`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.
+- Pass: `Label Association`, `Field Builder Association`, and `Diag Surface` stay as explicit Fret follow-ups after
+  `API Reference`, so first-party docs stay source-aligned without dropping the existing stable
+  `test_id` surfaces used by `tools/diag-scripts/ui-gallery/select/*`.
+- Pass: the default copyable lane stays on `Select::new(...)` / `new_controllable(...)` plus the
+  direct builder chain, while `Select::into_element_parts(...)` + `SelectContent::with_entries(...)`
+  remains the focused composable parts adapter when callers want the upstream nested call-site
+  shape.
+- Pass: no extra generic arbitrary-children API is warranted for `Select`; the option tree is
+  intentionally typed as `SelectEntry` / `SelectGroup` / `SelectItem` / `SelectLabel` /
+  `SelectSeparator`, and the mechanism/runtime work was already in place before this docs-surface
+  alignment pass.
+
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib select`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app select_page_uses_typed_doc_sections_for_app_facing_snippets --status-level fail`
 - `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json --dir target/fret-diag-select-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-select cargo run -p fret-ui-gallery`
 - Contract test: `select_disabled_hides_content_even_when_open_model_true`
 - Contract test: `select_open_change_events_emit_change_and_complete_after_settle`

@@ -2741,6 +2741,7 @@ name = "fret-ui-ai"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-assets",
  "fret-canvas",
  "fret-code-view",
  "fret-core",
@@ -2748,6 +2749,7 @@ dependencies = [
  "fret-markdown",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-assets",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-webview",

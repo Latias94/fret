@@ -70,6 +70,32 @@
       "type": "wait_until"
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-diag-surface"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-diag-surface"
+      },
+      "delta_y": -180.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1200
+    },
+    {
       "predicate": {
         "kind": "exists",
         "target": {
