@@ -14,7 +14,12 @@ impl TextSystem {
     ) -> Option<PreparedGlyphRaster> {
         let image = self.render_prepared_glyph_image(glyph, glyph_id, x_bin, y_bin)?;
         self.render_prepared_glyph_raster_from_image(
-            glyph.id, image, face_key, size_bits, x_bin, y_bin,
+            glyph.id(),
+            image,
+            face_key,
+            size_bits,
+            x_bin,
+            y_bin,
         )
     }
 

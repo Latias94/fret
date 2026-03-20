@@ -144,7 +144,7 @@ fn style_for_strut_metrics(style: &TextStyle) -> Option<TextStyle> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParleyGlyph {
-    pub id: u32,
+    id: u32,
     pub x: f32,
     pub y: f32,
     advance: f32,
@@ -157,6 +157,10 @@ pub struct ParleyGlyph {
 }
 
 impl ParleyGlyph {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
     pub fn advance(&self) -> f32 {
         self.advance
     }

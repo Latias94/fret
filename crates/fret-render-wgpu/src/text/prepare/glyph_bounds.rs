@@ -119,7 +119,14 @@ impl TextSystem {
         epoch: u64,
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
         self.resolve_prepared_glyph_atlas_hit_bounds(
-            face_key, glyph.id, size_bits, x_bin, y_bin, x, y, epoch,
+            face_key,
+            glyph.id(),
+            size_bits,
+            x_bin,
+            y_bin,
+            x,
+            y,
+            epoch,
         )
         .or_else(|| {
             self.materialize_prepared_glyph_miss(

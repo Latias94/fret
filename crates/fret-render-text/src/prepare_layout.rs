@@ -235,7 +235,7 @@ pub fn prepare_layout_from_wrapped(
         }
 
         for g in line.glyphs_mut().iter_mut() {
-            if g.id == 0 {
+            if g.id() == 0 {
                 missing_glyphs = missing_glyphs.saturating_add(1);
             }
             g.x += line_align_offset_px;

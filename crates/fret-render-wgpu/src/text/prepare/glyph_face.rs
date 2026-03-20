@@ -28,7 +28,7 @@ impl TextSystem {
         let (font_data_id, face_index) = prepared_glyph_font_identity(glyph);
         let face_key = prepared_glyph_face_key(glyph, font_data_id, face_index);
         self.cache_prepared_glyph_face_data(glyph, face_key, font_data_id, face_index);
-        record_prepared_glyph_face_usage(face_usage, face_key, glyph.id);
+        record_prepared_glyph_face_usage(face_usage, face_key, glyph.id());
         face_key
     }
 
@@ -78,7 +78,7 @@ fn prepared_glyph_context(
 }
 
 fn prepared_glyph_id(glyph: &ParleyGlyph) -> Option<u16> {
-    u16::try_from(glyph.id).ok()
+    u16::try_from(glyph.id()).ok()
 }
 
 fn prepared_glyph_size_bits(glyph: &ParleyGlyph) -> u32 {
