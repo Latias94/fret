@@ -1,5 +1,5 @@
 use super::super::TextSystem;
-use super::super::atlas::{GlyphAtlasEntry, GlyphKey};
+use super::super::atlas::GlyphKey;
 use super::glyph_raster::prepared_glyph_lookup_keys;
 use fret_render_text::{FontFaceKey, ParleyGlyph};
 
@@ -11,24 +11,27 @@ impl TextSystem {
         size_bits: u32,
         x_bin: u8,
         y_bin: u8,
+        x: i32,
+        y: i32,
         epoch: u64,
-    ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
+    ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
         for glyph_key in prepared_glyph_lookup_keys(face_key, glyph_id, size_bits, x_bin, y_bin) {
-            if let Some(hit) = self.lookup_prepared_glyph_atlas_entry(glyph_key, epoch) {
+            if let Some(hit) = self.lookup_prepared_glyph_bounds_for_key(glyph_key, x, y, epoch) {
                 return Some(hit);
             }
         }
         None
     }
 
-    fn lookup_prepared_glyph_atlas_entry(
+    fn lookup_prepared_glyph_bounds_for_key(
         &mut self,
         glyph_key: GlyphKey,
+        x: i32,
+        y: i32,
         epoch: u64,
-    ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
+    ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
         self.atlas_runtime
-            .get(glyph_key, epoch)
-            .map(|entry| (glyph_key, entry))
+            .prepared_bounds_for_key(glyph_key, x, y, epoch)
     }
 
     fn materialize_prepared_glyph_miss(
@@ -76,11 +79,7 @@ impl TextSystem {
         y: i32,
         epoch: u64,
     ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
-        let (glyph_key, entry) =
-            self.lookup_prepared_glyph_atlas(face_key, glyph_id, size_bits, x_bin, y_bin, epoch)?;
-        Some(prepared_glyph_bounds_from_atlas_entry(
-            glyph_key, entry, x, y,
-        ))
+        self.lookup_prepared_glyph_atlas(face_key, glyph_id, size_bits, x_bin, y_bin, x, y, epoch)
     }
 
     fn resolve_prepared_glyph_hit_or_miss_bounds(
@@ -111,19 +110,4 @@ impl TextSystem {
             )
         })
     }
-}
-
-fn prepared_glyph_bounds_from_atlas_entry(
-    glyph_key: GlyphKey,
-    entry: GlyphAtlasEntry,
-    x: i32,
-    y: i32,
-) -> (GlyphKey, f32, f32, f32, f32) {
-    (
-        glyph_key,
-        x as f32 + entry.placement_left as f32,
-        y as f32 - entry.placement_top as f32,
-        entry.w as f32,
-        entry.h as f32,
-    )
 }

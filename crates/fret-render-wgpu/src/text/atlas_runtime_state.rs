@@ -167,12 +167,37 @@ impl TextAtlasRuntimeState {
         }
     }
 
-    pub(super) fn dimensions_for_key(&self, key: GlyphKey) -> (u32, u32) {
-        self.atlas_for_key(key).dimensions()
+    pub(super) fn prepared_bounds_for_key(
+        &mut self,
+        key: GlyphKey,
+        x: i32,
+        y: i32,
+        epoch: u64,
+    ) -> Option<(GlyphKey, f32, f32, f32, f32)> {
+        let entry = self.get(key, epoch)?;
+        Some((
+            key,
+            x as f32 + entry.placement_left as f32,
+            y as f32 - entry.placement_top as f32,
+            entry.w as f32,
+            entry.h as f32,
+        ))
     }
 
-    pub(super) fn entry(&self, key: GlyphKey) -> Option<GlyphAtlasEntry> {
-        self.atlas_for_key(key).entry(key)
+    pub(super) fn uv_for_key(&self, key: GlyphKey) -> Option<(u16, [f32; 4])> {
+        let atlas = self.atlas_for_key(key);
+        let entry = atlas.entry(key)?;
+        let (w, h) = atlas.dimensions();
+        if w == 0 || h == 0 {
+            return None;
+        }
+        let w = w as f32;
+        let h = h as f32;
+        let u0 = entry.x as f32 / w;
+        let v0 = entry.y as f32 / h;
+        let u1 = (entry.x.saturating_add(entry.w) as f32) / w;
+        let v1 = (entry.y.saturating_add(entry.h) as f32) / h;
+        Some((entry.page, [u0, v0, u1, v1]))
     }
 
     pub(super) fn get(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
@@ -226,7 +251,7 @@ impl TextAtlasRuntimeState {
 
     #[cfg(test)]
     pub(super) fn pending_upload_bytes_for_key(&self, key: GlyphKey) -> Option<Vec<u8>> {
-        let entry = self.entry(key)?;
+        let entry = self.atlas_for_key(key).entry(key)?;
         self.atlas_for_key(key)
             .pending_upload_bytes_for_entry(entry)
     }

@@ -165,18 +165,7 @@ impl TextSystem {
     }
 
     pub(super) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
-        let entry = self.atlas_runtime.entry(glyph.key)?;
-        let (w, h) = self.atlas_runtime.dimensions_for_key(glyph.key);
-        let w = w as f32;
-        let h = h as f32;
-        if w <= 0.0 || h <= 0.0 {
-            return None;
-        }
-        let u0 = entry.x as f32 / w;
-        let v0 = entry.y as f32 / h;
-        let u1 = (entry.x.saturating_add(entry.w) as f32) / w;
-        let v1 = (entry.y.saturating_add(entry.h) as f32) / h;
-        Some((entry.page, [u0, v0, u1, v1]))
+        self.atlas_runtime.uv_for_key(glyph.key)
     }
 
     pub(crate) fn debug_mask_atlas_dims(&self) -> (u32, u32) {
