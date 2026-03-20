@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("responsive.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -135,45 +136,62 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 })
                             },
                             move |cx| {
-                                shadcn::DrawerContent::new([
-                                    shadcn::DrawerHeader::new([
-                                        shadcn::DrawerTitle::new("Navigate to").into_element(cx),
-                                        shadcn::DrawerDescription::new(
-                                            "Select a page to navigate to.",
-                                        )
-                                        .into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                    cx.container(
-                                        fret_ui::element::ContainerProps {
-                                            layout: Default::default(),
-                                            padding: fret_core::Edges::all(fret_core::Px(16.0))
-                                                .into(),
-                                            ..Default::default()
-                                        },
-                                        move |cx| {
-                                            vec![ui::v_stack(move |cx| {
-                                                    overflow_items
-                                                        .iter()
-                                                        .map(|(label, _href)| {
-                                                            fret_ui_kit::ui::text( *label)
-                                                                .into_element(cx)
-                                                        })
-                                                        .collect::<Vec<_>>()
-                                                })
-                                                    .gap(Space::N1)
-                                                    .items_stretch().into_element(cx)]
-                                        },
-                                    ),
-                                    shadcn::DrawerFooter::new([shadcn::Button::new("Close")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .on_activate(close.clone())
-                                        .test_id(
-                                            "ui-gallery-breadcrumb-responsive-drawer-close",
-                                        )
-                                        .into_element(cx)])
-                                    .into_element(cx),
-                                ])
+                                let body = cx.container(
+                                    fret_ui::element::ContainerProps {
+                                        layout: Default::default(),
+                                        padding: fret_core::Edges::all(fret_core::Px(16.0)).into(),
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![
+                                            ui::v_stack(move |cx| {
+                                                overflow_items
+                                                    .iter()
+                                                    .map(|(label, _href)| {
+                                                        fret_ui_kit::ui::text(*label)
+                                                            .into_element(cx)
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                            })
+                                            .gap(Space::N1)
+                                            .items_stretch()
+                                            .into_element(cx),
+                                        ]
+                                    },
+                                );
+
+                                shadcn::DrawerContent::build(|cx, out| {
+                                    out.push_ui(
+                                        cx,
+                                        shadcn::DrawerHeader::build(|cx, out| {
+                                            out.push_ui(
+                                                cx,
+                                                shadcn::DrawerTitle::new("Navigate to"),
+                                            );
+                                            out.push_ui(
+                                                cx,
+                                                shadcn::DrawerDescription::new(
+                                                    "Select a page to navigate to.",
+                                                ),
+                                            );
+                                        }),
+                                    );
+                                    out.push(body);
+                                    out.push_ui(
+                                        cx,
+                                        shadcn::DrawerFooter::build(|cx, out| {
+                                            out.push_ui(
+                                                cx,
+                                                shadcn::Button::new("Close")
+                                                    .variant(shadcn::ButtonVariant::Outline)
+                                                    .on_activate(close.clone())
+                                                    .test_id(
+                                                        "ui-gallery-breadcrumb-responsive-drawer-close",
+                                                    ),
+                                            );
+                                        }),
+                                    );
+                                })
                                 .into_element(cx)
                                 .test_id("ui-gallery-breadcrumb-responsive-drawer-content")
                             },

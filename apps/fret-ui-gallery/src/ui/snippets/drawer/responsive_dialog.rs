@@ -81,17 +81,23 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .into_element(cx)
         },
         move |cx| {
-            shadcn::DialogContent::new(ui::children![
-                cx;
-                shadcn::DialogHeader::new(ui::children![
-                    cx;
-                    shadcn::DialogTitle::new("Edit profile"),
-                    shadcn::DialogDescription::new(
-                        "Make changes to your profile here. Click save when you're done.",
-                    )
-                ]),
-                profile_form(cx, desktop_email.clone(), desktop_username.clone(), None),
-            ])
+            let form = profile_form(cx, desktop_email.clone(), desktop_username.clone(), None)
+                .into_element(cx);
+            shadcn::DialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::DialogHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::DialogTitle::new("Edit profile"));
+                        out.push_ui(
+                            cx,
+                            shadcn::DialogDescription::new(
+                                "Make changes to your profile here. Click save when you're done.",
+                            ),
+                        );
+                    }),
+                );
+                out.push(form);
+            })
             .refine_layout(LayoutRefinement::default().max_w(Px(425.0)))
             .into_element(cx)
             .test_id("ui-gallery-drawer-responsive-desktop-content")
