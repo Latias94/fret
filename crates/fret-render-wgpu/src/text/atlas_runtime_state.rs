@@ -2,10 +2,10 @@ use super::atlas::{GlyphAtlas, GlyphAtlasEntry, GlyphAtlasInsertError, GlyphKey}
 use super::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot};
 
 pub(crate) struct TextAtlasRuntimeState {
-    pub(crate) mask_atlas: GlyphAtlas,
-    pub(crate) color_atlas: GlyphAtlas,
-    pub(crate) subpixel_atlas: GlyphAtlas,
-    pub(crate) atlas_bind_group_layout: wgpu::BindGroupLayout,
+    mask_atlas: GlyphAtlas,
+    color_atlas: GlyphAtlas,
+    subpixel_atlas: GlyphAtlas,
+    atlas_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl TextAtlasRuntimeState {
