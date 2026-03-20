@@ -1234,6 +1234,7 @@ impl FieldLabel {
         let fg = fg.clone();
         let test_id = self.test_id.clone();
         let render_text = self.render_text;
+        let suppress_nested_pressable_forwarding = wrap_children.is_some();
 
         let control_snapshot = cx
             .app
@@ -1298,7 +1299,9 @@ impl FieldLabel {
                             let control_snapshot_on_pointer = control_snapshot.clone();
                             cx.pointer_region_add_on_pointer_down(Arc::new(
                                 move |host, acx, down| {
-                                    if down.hit_pressable_target.is_some() {
+                                    if suppress_nested_pressable_forwarding
+                                        && down.hit_pressable_target.is_some()
+                                    {
                                         return false;
                                     }
 
@@ -1347,7 +1350,9 @@ impl FieldLabel {
                                 if !up.is_click {
                                     return true;
                                 }
-                                if up.down_hit_pressable_target.is_some() {
+                                if suppress_nested_pressable_forwarding
+                                    && up.down_hit_pressable_target.is_some()
+                                {
                                     return false;
                                 }
                                 let control = host
@@ -2658,6 +2663,117 @@ mod tests {
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
                 pointer_id: fret_core::PointerId(1),
                 position: label_position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(ui.focus(), Some(control_focus_target));
+    }
+
+    #[test]
+    fn field_label_click_focuses_registered_control_inside_ancestor_pressable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<String> = app.models_mut().insert(String::new());
+        let control_id = ControlId::from("email");
+        let control_id_for_render = control_id.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-field-label-ancestor-pressable-focus-forwarding",
+            |cx| {
+                vec![cx.pressable(
+                    fret_ui::element::PressableProps::default(),
+                    move |cx, _state| {
+                        vec![
+                            cx.column(fret_ui::element::ColumnProps::default(), move |cx| {
+                                vec![
+                                    FieldLabel::new("Email")
+                                        .for_control(control_id_for_render.clone())
+                                        .test_id("field.label.ancestor_pressable")
+                                        .into_element(cx),
+                                    crate::input::Input::new(model.clone())
+                                        .control_id(control_id_for_render.clone())
+                                        .into_element(cx),
+                                ]
+                            }),
+                        ]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
+        let label_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("field.label.ancestor_pressable"))
+            .map(|n| n.id)
+            .expect("expected label semantics node");
+        let label_bounds = ui
+            .debug_node_bounds(label_node)
+            .expect("expected label bounds");
+        let label_center = Point::new(
+            Px(label_bounds.origin.x.0 + label_bounds.size.width.0 * 0.5),
+            Px(label_bounds.origin.y.0 + label_bounds.size.height.0 * 0.5),
+        );
+
+        let registry_model = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "shadcn-field-label-ancestor-pressable-focus-forwarding-registry",
+            |cx| control_registry_model(cx),
+        );
+        let control_focus_target = app
+            .models()
+            .read(&registry_model, |reg| {
+                reg.control_for(window, &control_id)
+                    .map(|entry| entry.element)
+            })
+            .ok()
+            .flatten()
+            .and_then(|element| fret_ui::elements::node_for_element(&mut app, window, element))
+            .expect("expected registered control focus target");
+
+        assert_eq!(ui.focus(), None);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(2),
+                position: label_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(2),
+                position: label_center,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 is_click: true,
