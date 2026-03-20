@@ -22,11 +22,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .a11y_label("Search")
         .leading([search_icon])
         .trailing([
-            shadcn::Kbd::from_children([shadcn::raw::kbd::kbd_icon(
-                cx,
-                fret_icons::IconId::new_static("lucide.command"),
-            )])
-            .into_element(cx),
+            shadcn::Kbd::new("⌘").into_element(cx),
             shadcn::Kbd::new("K").into_element(cx),
         ])
         .trailing_has_kbd(true)

@@ -34,6 +34,16 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-demo" } },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-usage-tabs" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-api-reference-content" } },
+      "timeout_frames": 240
+    },
     { "type": "capture_bundle", "label": "ui-gallery-kbd-docs-smoke" }
   ]
 }
