@@ -57,13 +57,14 @@ pub(super) fn preview_ai_attachments_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> 
         "Compound composition is already available in Rust via `Attachment::into_element_with_children(...)` plus `AttachmentPreview/Info/Remove::from_context()`.",
         "Inline hover previews stay on the `fret_ui_ai` surface through `AttachmentHoverCard`, `AttachmentHoverCardTrigger`, and `AttachmentHoverCardContent`.",
         "Snippet code is now self-contained for copy/paste: preview media comes from deterministic in-memory RGBA sources instead of UI Gallery-only asset glue.",
+        "When apps only have an image URL, `AttachmentPreview` now routes that through Fret's capability-gated asset loading path; docs snippets still stay deterministic by using in-memory previews.",
     ])
     .test_id("ui-gallery-ai-attachments-features");
     let parts = parts_table(cx).test_id("ui-gallery-ai-attachments-parts");
     let notes = doc_layout::notes_block([
         "Audit result: the core runtime/mechanism layer looked healthy; the main drift was in component/public-surface teaching rather than `crates/fret-ui` contracts.",
-        "The largest remaining API gap versus AI Elements is preview transport: upstream examples are URL-first, while Fret currently teaches deterministic renderer-owned previews (`ImageId`) for cross-platform self-drawn rendering.",
-        "That gap means the docs page needs to explain compound composition and preview ownership explicitly instead of implying a DOM-style `url` preview path everywhere.",
+        "Remote image URLs now work as a capability-gated preview input, while explicit `ImageId` previews still stay the most deterministic path for first-party docs and native demos.",
+        "The main remaining transport gap versus AI Elements is richer non-image remote previewing: upstream can lean on DOM `<video>`/browser media, while Fret still falls back to category icons for video/audio in this self-drawn surface.",
         "Existing diag coverage is already in place for grid remove flow and screenshot capture, so this pass focuses on authoring-surface correctness rather than new runtime gates.",
     ])
     .test_id("ui-gallery-ai-attachments-notes");

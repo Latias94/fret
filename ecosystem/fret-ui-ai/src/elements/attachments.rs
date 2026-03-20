@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 
+use fret_assets::{AssetKindHint, AssetLocator, AssetRequest};
 use fret_core::{Color, Corners, ImageId, Px, SemanticsRole, TextOverflow, TextWrap, ViewportFit};
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -13,6 +14,7 @@ use fret_ui::element::{
     Length, MarginEdge, PressableA11y, PressableProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -239,6 +241,37 @@ pub fn attachment_label_for(data: &AttachmentData) -> Arc<str> {
 #[inline]
 pub fn get_attachment_label(data: &AttachmentData) -> Arc<str> {
     attachment_label_for(data)
+}
+
+fn attachment_preview_request_for(data: &AttachmentData) -> Option<AssetRequest> {
+    match data {
+        AttachmentData::File(file)
+            if media_category_for(data) == AttachmentMediaCategory::Image =>
+        {
+            file.url.as_ref().map(|url| {
+                AssetRequest::new(AssetLocator::url(url.as_ref()))
+                    .with_kind_hint(AssetKindHint::Image)
+            })
+        }
+        _ => None,
+    }
+}
+
+fn resolve_attachment_preview_image<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    data: &AttachmentData,
+) -> Option<ImageId> {
+    match data {
+        AttachmentData::File(file) => {
+            if let Some(image) = file.preview_image {
+                return Some(image);
+            }
+
+            let request = attachment_preview_request_for(data)?;
+            cx.use_image_source_state_from_asset_request(&request).image
+        }
+        AttachmentData::SourceDocument(_) => None,
+    }
 }
 
 fn media_category_icon(category: AttachmentMediaCategory) -> IconId {
@@ -836,11 +869,10 @@ impl AttachmentPreview {
         wrapper.corner_radii = Corners::all(corner);
         wrapper.snap_to_device_pixels = true;
 
-        let content = match parts.data() {
-            AttachmentData::File(file)
-                if category == AttachmentMediaCategory::Image && file.preview_image.is_some() =>
-            {
-                let image = file.preview_image.unwrap();
+        let preview_image = resolve_attachment_preview_image(cx, parts.data());
+
+        let content = match preview_image {
+            Some(image) if category == AttachmentMediaCategory::Image => {
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
@@ -1532,5 +1564,35 @@ mod tests {
 
             assert_eq!(trigger.id, child_id);
         });
+    }
+
+    #[test]
+    fn attachment_preview_request_uses_url_for_image_files() {
+        let data = AttachmentData::File(
+            AttachmentFileData::new("att-image")
+                .filename("preview.png")
+                .media_type("image/png")
+                .url("https://example.com/preview.png"),
+        );
+
+        let request = attachment_preview_request_for(&data).expect("image URL request");
+
+        assert_eq!(
+            request,
+            AssetRequest::new(AssetLocator::url("https://example.com/preview.png"))
+                .with_kind_hint(AssetKindHint::Image)
+        );
+    }
+
+    #[test]
+    fn attachment_preview_request_skips_non_image_urls() {
+        let data = AttachmentData::File(
+            AttachmentFileData::new("att-video")
+                .filename("demo.mp4")
+                .media_type("video/mp4")
+                .url("https://example.com/demo.mp4"),
+        );
+
+        assert!(attachment_preview_request_for(&data).is_none());
     }
 }
