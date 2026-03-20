@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("scrollable_content.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
@@ -55,17 +56,21 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .viewport_test_id("ui-gallery-dialog-scrollable-viewport")
             .into_element(cx);
 
-            shadcn::DialogContent::new(ui::children![
-                cx;
-                shadcn::DialogHeader::new(ui::children![
-                    cx;
-                    shadcn::DialogTitle::new("Scrollable Content"),
-                    shadcn::DialogDescription::new(
-                        "Long content can scroll while the header stays in view.",
-                    )
-                ]),
-                scroll_body,
-            ])
+            shadcn::DialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::DialogHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::DialogTitle::new("Scrollable Content"));
+                        out.push_ui(
+                            cx,
+                            shadcn::DialogDescription::new(
+                                "Long content can scroll while the header stays in view.",
+                            ),
+                        );
+                    }),
+                );
+                out.push(scroll_body);
+            })
             .into_element(cx)
             .test_id("ui-gallery-dialog-scrollable-content")
         },
