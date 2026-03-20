@@ -1026,8 +1026,9 @@ fn query_result_view(
 }
 
 fn active_mode(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> FetchMode {
-    cx.data()
-        .selector_layout(&locals.tabs, |tab| match tab.as_deref() {
+    locals
+        .tabs
+        .layout_read_ref_in(cx, |tab| match tab.as_deref() {
             Some("sync") => FetchMode::Sync,
             _ => FetchMode::Async,
         })
@@ -1066,8 +1067,7 @@ fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> Qu
 
 fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
-    cx.data()
-        .selector_layout(&config.fail_mode, |fail_mode| fail_mode)
+    config.fail_mode.layout_value_in(cx)
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {

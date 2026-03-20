@@ -124,7 +124,7 @@ fn view(
     let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
-    let status = cx.data().selector_layout(&st.status, |status| status);
+    let status = st.status.layout_value_in(cx);
 
     let effective_style = cx
         .app

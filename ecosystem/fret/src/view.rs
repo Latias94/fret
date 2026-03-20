@@ -337,6 +337,32 @@ impl<T> LocalState<T> {
         self.watch_in(cx).paint()
     }
 
+    /// Read the current local value through a paint invalidation tracked read on helper-heavy
+    /// `ElementContext` bridge surfaces.
+    pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>(&'m self, cx: &'cx mut ElementContext<'a, H>) -> T
+    where
+        T: Any + Clone,
+    {
+        self.paint_in(cx)
+            .value()
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a paint invalidation tracked borrow on
+    /// helper-heavy `ElementContext` bridge surfaces.
+    pub fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.paint_in(cx)
+            .read_ref(f)
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
     /// Convenience bridge over [`LocalState::watch_in`] for layout invalidation reads.
     pub fn layout_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
@@ -346,6 +372,35 @@ impl<T> LocalState<T> {
         T: Any,
     {
         self.watch_in(cx).layout()
+    }
+
+    /// Read the current local value through a layout invalidation tracked read on helper-heavy
+    /// `ElementContext` bridge surfaces.
+    pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> T
+    where
+        T: Any + Clone,
+    {
+        self.layout_in(cx)
+            .value()
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a layout invalidation tracked borrow on
+    /// helper-heavy `ElementContext` bridge surfaces.
+    pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.layout_in(cx)
+            .read_ref(f)
+            .expect("LocalState bridge code should always read initialized locals")
     }
 
     /// Convenience bridge over [`LocalState::watch_in`] for hit-test invalidation reads.
@@ -2942,6 +2997,48 @@ mod tests {
     }
 
     #[test]
+    fn local_state_bridge_read_helpers_project_without_clone_noise() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        let mut services = FakeUiServices;
+        let local = LocalState::from_model(app.models_mut().insert(vec![1u32, 2, 3]));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "local-state-bridge-read",
+            |cx| {
+                let layout_values = local.layout_value_in(cx);
+                let layout_len = local.layout_read_ref_in(cx, |values| values.len());
+                let paint_values = local.paint_value_in(cx);
+                let paint_len = local.paint_read_ref_in(cx, |values| values.len());
+                assert_eq!(layout_values, vec![1u32, 2, 3]);
+                assert_eq!(layout_len, 3);
+                assert_eq!(paint_values, vec![1u32, 2, 3]);
+                assert_eq!(paint_len, 3);
+                vec![
+                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                        Vec::new()
+                    })
+                    .into(),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    }
+
+    #[test]
     fn local_state_txn_value_reads_initialized_locals_without_fallback_noise() {
         let mut host = FakeHost::default();
         let draft = LocalState {
@@ -3432,6 +3529,10 @@ mod tests {
         ));
         assert!(api_source.contains("pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>("));
         assert!(api_source.contains("pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("pub fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));
@@ -3657,6 +3758,18 @@ mod tests {
             api_source
                 .contains("Observe/read this local from helper-heavy `ElementContext` surfaces.")
         );
+        assert!(api_source.contains(
+            "Read the current local value through a paint invalidation tracked read on helper-heavy"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a paint invalidation tracked borrow on"
+        ));
+        assert!(api_source.contains(
+            "Read the current local value through a layout invalidation tracked read on helper-heavy"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a layout invalidation tracked borrow on"
+        ));
         assert!(api_source.contains(
             "This trait is intentionally omitted from `fret::app::prelude::*` and reexported from"
         ));

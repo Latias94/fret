@@ -1851,7 +1851,7 @@ mod authoring_surface_policy_tests {
                 "let a_overlap_clicked_state = cx.state().local_init(|| false);",
                 "\"Window A\",",
                 "open_a_state.model(),",
-                "let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);",
+                "let clicked = a_overlap_clicked_state.paint_value_in(cx);",
                 "\"Mode\",",
                 "select_mode_state.model(),",
             ],
@@ -1859,6 +1859,7 @@ mod authoring_surface_policy_tests {
                 "open_a: app.models_mut().insert(true)",
                 "select_mode: app.models_mut().insert(None::<Arc<str>>)",
                 "a_overlap_clicked: app.models_mut().insert(false)",
+                "let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);",
                 "&self.open_a",
                 "read_model(",
                 "&self.a_overlap_clicked",
@@ -2188,9 +2189,9 @@ mod authoring_surface_policy_tests {
                 "let dark = locals.dark.layout_value(cx);",
                 "fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {",
                 "let query_inputs = tracked_query_inputs(cx, &locals);",
-                "cx.data().selector_layout(&locals.tabs, |tab| match tab.as_deref() {",
+                "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
                 "let policy_settings: QueryPolicySettings = cx.data().selector_layout(",
-                "cx.data().selector_layout(&config.fail_mode, |fail_mode| fail_mode)",
+                "config.fail_mode.layout_value_in(cx)",
             ],
             &[
                 "let selected = cx.watch_model(&self.st.selected).layout().value_or_default();",
@@ -2205,7 +2206,9 @@ mod authoring_surface_policy_tests {
                 "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
                 "let cache_s = config.cache_time_s.layout_in(cx).value_or_default();",
                 "let keep_prev = config.keep_prev.layout_in(cx).value_or_default();",
+                "cx.data().selector_layout(&locals.tabs, |tab| match tab.as_deref() {",
                 "let policy_settings: QueryPolicySettings = cx.data().selector(",
+                "cx.data().selector_layout(&config.fail_mode, |fail_mode| fail_mode)",
                 "config.fail_mode.layout_in(cx).value_or_default()",
             ],
         );
@@ -2531,11 +2534,12 @@ mod authoring_surface_policy_tests {
             LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
             &[
                 "status: LocalState<Arc<str>>,",
-                "let status = cx.data().selector_layout(&st.status, |status| status);",
+                "let status = st.status.layout_value_in(cx);",
             ],
             &[
                 "cx.watch_model(&st.status)",
                 "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+                "let status = cx.data().selector_layout(&st.status, |status| status);",
                 "status: fret_runtime::Model<Arc<str>>,",
             ],
         );
