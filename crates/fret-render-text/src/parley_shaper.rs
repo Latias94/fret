@@ -153,7 +153,7 @@ pub struct ParleyGlyph {
     normalized_coords: Arc<[i16]>,
     synthesis: FontSynthesis,
     pub text_range: Range<usize>,
-    pub is_rtl: bool,
+    is_rtl: bool,
 }
 
 impl ParleyGlyph {
@@ -179,6 +179,14 @@ impl ParleyGlyph {
 
     pub fn synthesis(&self) -> FontSynthesis {
         self.synthesis
+    }
+
+    pub fn is_rtl(&self) -> bool {
+        self.is_rtl
+    }
+
+    pub(crate) fn set_is_rtl(&mut self, is_rtl: bool) {
+        self.is_rtl = is_rtl;
     }
 }
 
