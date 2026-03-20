@@ -240,7 +240,8 @@ pub fn prepare_layout_from_wrapped(
             }
             g.x += line_align_offset_px;
             g.y += line_offset_px;
-            g.text_range = (range.start + g.text_range.start)..(range.start + g.text_range.end);
+            let glyph_range = g.text_range();
+            g.set_text_range((range.start + glyph_range.start)..(range.start + glyph_range.end));
         }
 
         let layout = TextLineLayout::new(

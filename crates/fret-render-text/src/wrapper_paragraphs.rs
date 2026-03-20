@@ -383,7 +383,7 @@ pub(crate) fn wrap_none_ellipsis(
     let mut glyphs: Vec<ParleyGlyph> = kept.take_glyphs();
     glyphs.extend(ellipsis.take_glyphs().into_iter().map(|mut g| {
         g.x += ellipsis_start_x;
-        g.text_range = empty_range_at(cut_end);
+        g.set_text_range(empty_range_at(cut_end));
         g.set_is_rtl(false);
         g
     }));

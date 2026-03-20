@@ -152,7 +152,7 @@ pub struct ParleyGlyph {
     font_size: f32,
     normalized_coords: Arc<[i16]>,
     synthesis: FontSynthesis,
-    pub text_range: Range<usize>,
+    text_range: Range<usize>,
     is_rtl: bool,
 }
 
@@ -181,12 +181,20 @@ impl ParleyGlyph {
         self.synthesis
     }
 
+    pub fn text_range(&self) -> Range<usize> {
+        self.text_range.clone()
+    }
+
     pub fn is_rtl(&self) -> bool {
         self.is_rtl
     }
 
     pub(crate) fn set_is_rtl(&mut self, is_rtl: bool) {
         self.is_rtl = is_rtl;
+    }
+
+    pub(crate) fn set_text_range(&mut self, text_range: Range<usize>) {
+        self.text_range = text_range;
     }
 }
 

@@ -105,7 +105,7 @@ fn prepared_glyph_paint_span(
     glyph: &ParleyGlyph,
 ) -> Option<u16> {
     resolved_spans
-        .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range, glyph.is_rtl()))
+        .and_then(|spans| paint_span_for_text_range(spans, &glyph.text_range(), glyph.is_rtl()))
 }
 
 fn prepared_glyph_instance(
