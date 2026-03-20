@@ -14,11 +14,28 @@ pub(super) struct GlyphKey {
 }
 
 impl GlyphKey {
+    pub(super) fn is_mask(self) -> bool {
+        matches!(self.kind, GlyphQuadKind::Mask)
+    }
+
+    pub(super) fn is_color(self) -> bool {
+        matches!(self.kind, GlyphQuadKind::Color)
+    }
+
+    pub(super) fn is_subpixel(self) -> bool {
+        matches!(self.kind, GlyphQuadKind::Subpixel)
+    }
+
     pub(super) fn kind_label(self) -> &'static str {
-        match self.kind {
-            GlyphQuadKind::Mask => "mask",
-            GlyphQuadKind::Color => "color",
-            GlyphQuadKind::Subpixel => "subpixel",
+        if self.is_mask() {
+            "mask"
+        } else if self.is_color() {
+            "color"
+        } else if self.is_subpixel() {
+            "subpixel"
+        } else {
+            debug_assert!(false, "unknown glyph quad kind");
+            "mask"
         }
     }
 
@@ -40,16 +57,12 @@ pub(super) struct GlyphKeyBuckets {
 
 impl GlyphKeyBuckets {
     pub(super) fn insert(&mut self, key: GlyphKey) {
-        match key.kind {
-            GlyphQuadKind::Mask => {
-                self.mask.insert(key);
-            }
-            GlyphQuadKind::Color => {
-                self.color.insert(key);
-            }
-            GlyphQuadKind::Subpixel => {
-                self.subpixel.insert(key);
-            }
+        if key.is_color() {
+            self.color.insert(key);
+        } else if key.is_subpixel() {
+            self.subpixel.insert(key);
+        } else {
+            self.mask.insert(key);
         }
     }
 

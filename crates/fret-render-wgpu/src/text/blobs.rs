@@ -1,4 +1,4 @@
-use super::{GlyphInstance, GlyphQuadKind, TextBlob, TextDecoration, TextSystem};
+use super::{GlyphInstance, TextBlob, TextDecoration, TextSystem};
 use fret_core::{Color, TextBlobId, geometry::Px};
 use std::sync::Arc;
 
@@ -7,16 +7,6 @@ pub(crate) enum TextRenderGlyphKind {
     Mask,
     Color,
     Subpixel,
-}
-
-impl From<GlyphQuadKind> for TextRenderGlyphKind {
-    fn from(value: GlyphQuadKind) -> Self {
-        match value {
-            GlyphQuadKind::Mask => Self::Mask,
-            GlyphQuadKind::Color => Self::Color,
-            GlyphQuadKind::Subpixel => Self::Subpixel,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -66,6 +56,16 @@ impl TextRenderGlyph {
     }
 }
 
+fn render_kind_for_glyph(glyph: &GlyphInstance) -> TextRenderGlyphKind {
+    if glyph.is_color() {
+        TextRenderGlyphKind::Color
+    } else if glyph.is_subpixel() {
+        TextRenderGlyphKind::Subpixel
+    } else {
+        TextRenderGlyphKind::Mask
+    }
+}
+
 pub(crate) struct TextBlobRenderData<'a> {
     text_system: &'a TextSystem,
     glyphs: &'a [GlyphInstance],
@@ -102,7 +102,7 @@ impl<'a> TextBlobRenderData<'a> {
         self.glyphs.iter().filter_map(|glyph| {
             let (atlas_page, uv) = self.text_system.glyph_uv_for_instance(glyph)?;
             Some(TextRenderGlyph::new(
-                glyph.kind().into(),
+                render_kind_for_glyph(glyph),
                 glyph.rect(),
                 glyph.paint_span(),
                 atlas_page,

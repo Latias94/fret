@@ -928,7 +928,7 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
 
         let mut color_glyphs: Vec<super::GlyphKey> = Vec::new();
         for g in shape.glyphs() {
-            if matches!(g.kind(), super::GlyphQuadKind::Color) {
+            if g.is_color() {
                 color_glyphs.push(g.key);
             }
         }
@@ -1005,11 +1005,8 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
 
         let mut non_color: Vec<super::GlyphKey> = Vec::new();
         for g in glyphs {
-            match g.kind() {
-                super::GlyphQuadKind::Mask | super::GlyphQuadKind::Subpixel => {
-                    non_color.push(g.key);
-                }
-                super::GlyphQuadKind::Color => {}
+            if g.is_mask_or_subpixel() {
+                non_color.push(g.key);
             }
         }
 
@@ -1021,16 +1018,16 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
         let epoch = 1;
         for key in non_color {
             text.ensure_glyph_in_atlas(key, epoch);
-            match key.kind {
-                super::GlyphQuadKind::Mask => assert!(
+            if key.is_mask() {
+                assert!(
                     text.atlas_runtime.get(key, epoch).is_some(),
                     "expected mask glyph to be present in mask atlas after ensure ({label})"
-                ),
-                super::GlyphQuadKind::Subpixel => assert!(
+                );
+            } else if key.is_subpixel() {
+                assert!(
                     text.atlas_runtime.get(key, epoch).is_some(),
                     "expected subpixel glyph to be present in subpixel atlas after ensure ({label})"
-                ),
-                super::GlyphQuadKind::Color => {}
+                );
             }
         }
     }
@@ -1133,16 +1130,16 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
         }
 
         text.ensure_glyph_in_atlas(key, epoch);
-        match key.kind {
-            super::GlyphQuadKind::Mask => assert!(
+        if key.is_mask() {
+            assert!(
                 text.atlas_runtime.get(key, epoch).is_some(),
                 "expected ensured CJK glyph to be present in the mask atlas"
-            ),
-            super::GlyphQuadKind::Subpixel => assert!(
+            );
+        } else if key.is_subpixel() {
+            assert!(
                 text.atlas_runtime.get(key, epoch).is_some(),
                 "expected ensured CJK glyph to be present in the subpixel atlas"
-            ),
-            super::GlyphQuadKind::Color => {}
+            );
         }
     }
 }
@@ -1432,7 +1429,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
         let color_keys: Vec<super::GlyphKey> = emoji_keys
             .iter()
             .copied()
-            .filter(|k| k.kind == super::GlyphQuadKind::Color)
+            .filter(|k| k.is_color())
             .collect();
         assert!(
             !color_keys.is_empty(),
@@ -3175,10 +3172,7 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     );
 
     assert!(
-        shape
-            .glyphs()
-            .iter()
-            .any(|g| g.kind() == super::GlyphQuadKind::Color),
+        shape.glyphs().iter().any(|g| g.is_color()),
         "expected at least one color glyph for emoji"
     );
 }

@@ -20,8 +20,22 @@ impl GlyphInstance {
         }
     }
 
-    pub(super) fn kind(&self) -> GlyphQuadKind {
-        self.key.kind
+    pub(super) fn is_color(&self) -> bool {
+        self.key.is_color()
+    }
+
+    #[cfg(test)]
+    pub(super) fn is_mask(&self) -> bool {
+        self.key.is_mask()
+    }
+
+    pub(super) fn is_subpixel(&self) -> bool {
+        self.key.is_subpixel()
+    }
+
+    #[cfg(test)]
+    pub(super) fn is_mask_or_subpixel(&self) -> bool {
+        self.is_mask() || self.is_subpixel()
     }
 
     pub(crate) fn rect(&self) -> [f32; 4] {
