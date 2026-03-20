@@ -1,7 +1,6 @@
-use super::atlas::{GlyphKey, subpixel_bin_as_float};
-use super::{GlyphQuadKind, TextSystem};
+use super::TextSystem;
+use super::atlas::{GlyphKey, GlyphKeyBuckets, subpixel_bin_as_float};
 use fret_core::scene::{Scene, SceneOp};
-use std::collections::HashSet;
 
 impl TextSystem {
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
@@ -40,9 +39,7 @@ impl TextSystem {
             .subpixel_atlas
             .dec_live_refs(&old_subpixel);
 
-        let mut mask_keys: HashSet<GlyphKey> = HashSet::new();
-        let mut color_keys: HashSet<GlyphKey> = HashSet::new();
-        let mut subpixel_keys: HashSet<GlyphKey> = HashSet::new();
+        let mut pinned_keys = GlyphKeyBuckets::default();
 
         for op in scene.ops() {
             let SceneOp::Text { text, .. } = *op else {
@@ -52,24 +49,12 @@ impl TextSystem {
                 continue;
             };
             for glyph in blob.shape().glyphs() {
-                match glyph.kind() {
-                    GlyphQuadKind::Mask => {
-                        mask_keys.insert(glyph.key);
-                    }
-                    GlyphQuadKind::Color => {
-                        color_keys.insert(glyph.key);
-                    }
-                    GlyphQuadKind::Subpixel => {
-                        subpixel_keys.insert(glyph.key);
-                    }
-                }
+                pinned_keys.insert(glyph.key);
             }
         }
 
         let epoch = frame_index;
-        let new_mask: Vec<GlyphKey> = mask_keys.into_iter().collect();
-        let new_color: Vec<GlyphKey> = color_keys.into_iter().collect();
-        let new_subpixel: Vec<GlyphKey> = subpixel_keys.into_iter().collect();
+        let (new_mask, new_color, new_subpixel) = pinned_keys.into_pin_bucket();
 
         for &key in &new_mask {
             self.ensure_glyph_in_atlas(key, epoch);
@@ -158,14 +143,9 @@ impl TextSystem {
             return;
         }
 
-        let (image_kind, bytes_per_pixel) = match image.content {
-            parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
-            parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
-            parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
-        };
-        if image_kind != key.kind {
+        let Some(bytes_per_pixel) = key.bytes_per_pixel_for_image_content(image.content) else {
             return;
-        }
+        };
 
         let _ = self.atlas_runtime.get_or_insert(
             key,

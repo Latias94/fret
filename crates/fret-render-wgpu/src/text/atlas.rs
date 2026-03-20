@@ -1,7 +1,7 @@
 use super::GlyphQuadKind;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
 use fret_render_text::FontFaceKey;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct GlyphKey {
@@ -20,6 +20,55 @@ impl GlyphKey {
             GlyphQuadKind::Color => "color",
             GlyphQuadKind::Subpixel => "subpixel",
         }
+    }
+
+    pub(super) fn bytes_per_pixel_for_image_content(
+        self,
+        content: parley::swash::scale::image::Content,
+    ) -> Option<u32> {
+        let (kind, bytes_per_pixel) = glyph_image_content_metadata(content);
+        (kind == self.kind).then_some(bytes_per_pixel)
+    }
+}
+
+#[derive(Default)]
+pub(super) struct GlyphKeyBuckets {
+    mask: HashSet<GlyphKey>,
+    color: HashSet<GlyphKey>,
+    subpixel: HashSet<GlyphKey>,
+}
+
+impl GlyphKeyBuckets {
+    pub(super) fn insert(&mut self, key: GlyphKey) {
+        match key.kind {
+            GlyphQuadKind::Mask => {
+                self.mask.insert(key);
+            }
+            GlyphQuadKind::Color => {
+                self.color.insert(key);
+            }
+            GlyphQuadKind::Subpixel => {
+                self.subpixel.insert(key);
+            }
+        }
+    }
+
+    pub(super) fn into_pin_bucket(self) -> (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>) {
+        (
+            self.mask.into_iter().collect(),
+            self.color.into_iter().collect(),
+            self.subpixel.into_iter().collect(),
+        )
+    }
+}
+
+pub(super) fn glyph_image_content_metadata(
+    content: parley::swash::scale::image::Content,
+) -> (GlyphQuadKind, u32) {
+    match content {
+        parley::swash::scale::image::Content::Mask => (GlyphQuadKind::Mask, 1),
+        parley::swash::scale::image::Content::Color => (GlyphQuadKind::Color, 4),
+        parley::swash::scale::image::Content::SubpixelMask => (GlyphQuadKind::Subpixel, 4),
     }
 }
 

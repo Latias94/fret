@@ -1,5 +1,5 @@
 use super::super::GlyphQuadKind;
-use super::super::atlas::{GlyphAtlas, GlyphKey};
+use super::super::atlas::{GlyphAtlas, GlyphKey, glyph_image_content_metadata};
 use fret_render_text::FontFaceKey;
 
 pub(super) struct PreparedGlyphRaster {
@@ -100,6 +100,23 @@ pub(super) fn prepared_glyph_lookup_key(
     prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind)
 }
 
+const PREPARED_GLYPH_ATLAS_LOOKUP_KIND_ORDER: [GlyphQuadKind; 3] = [
+    GlyphQuadKind::Color,
+    GlyphQuadKind::Subpixel,
+    GlyphQuadKind::Mask,
+];
+
+pub(super) fn prepared_glyph_lookup_keys(
+    face_key: FontFaceKey,
+    glyph_id: u32,
+    size_bits: u32,
+    x_bin: u8,
+    y_bin: u8,
+) -> [GlyphKey; 3] {
+    PREPARED_GLYPH_ATLAS_LOOKUP_KIND_ORDER
+        .map(|kind| prepared_glyph_lookup_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind))
+}
+
 fn prepared_glyph_raster_from_image_with_placement(
     face_key: FontFaceKey,
     glyph_id: u32,
@@ -132,19 +149,10 @@ fn prepared_glyph_raster_placement(
 fn prepared_glyph_raster_metadata(
     content: parley::swash::scale::image::Content,
 ) -> PreparedGlyphRasterMetadata {
-    match content {
-        parley::swash::scale::image::Content::Mask => PreparedGlyphRasterMetadata {
-            kind: GlyphQuadKind::Mask,
-            bytes_per_pixel: 1,
-        },
-        parley::swash::scale::image::Content::Color => PreparedGlyphRasterMetadata {
-            kind: GlyphQuadKind::Color,
-            bytes_per_pixel: 4,
-        },
-        parley::swash::scale::image::Content::SubpixelMask => PreparedGlyphRasterMetadata {
-            kind: GlyphQuadKind::Subpixel,
-            bytes_per_pixel: 4,
-        },
+    let (kind, bytes_per_pixel) = glyph_image_content_metadata(content);
+    PreparedGlyphRasterMetadata {
+        kind,
+        bytes_per_pixel,
     }
 }
 

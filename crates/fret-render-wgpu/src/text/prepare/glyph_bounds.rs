@@ -1,13 +1,7 @@
+use super::super::TextSystem;
 use super::super::atlas::{GlyphAtlasEntry, GlyphKey};
-use super::super::{GlyphQuadKind, TextSystem};
-use super::glyph_raster::prepared_glyph_lookup_key;
+use super::glyph_raster::prepared_glyph_lookup_keys;
 use fret_render_text::{FontFaceKey, ParleyGlyph};
-
-const PREPARED_GLYPH_ATLAS_LOOKUP_ORDER: [GlyphQuadKind; 3] = [
-    GlyphQuadKind::Color,
-    GlyphQuadKind::Subpixel,
-    GlyphQuadKind::Mask,
-];
 
 impl TextSystem {
     fn lookup_prepared_glyph_atlas(
@@ -19,29 +13,12 @@ impl TextSystem {
         y_bin: u8,
         epoch: u64,
     ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
-        for kind in PREPARED_GLYPH_ATLAS_LOOKUP_ORDER {
-            if let Some(hit) = self.lookup_prepared_glyph_atlas_kind(
-                face_key, glyph_id, size_bits, x_bin, y_bin, kind, epoch,
-            ) {
+        for glyph_key in prepared_glyph_lookup_keys(face_key, glyph_id, size_bits, x_bin, y_bin) {
+            if let Some(hit) = self.lookup_prepared_glyph_atlas_entry(glyph_key, epoch) {
                 return Some(hit);
             }
         }
         None
-    }
-
-    fn lookup_prepared_glyph_atlas_kind(
-        &mut self,
-        face_key: FontFaceKey,
-        glyph_id: u32,
-        size_bits: u32,
-        x_bin: u8,
-        y_bin: u8,
-        kind: GlyphQuadKind,
-        epoch: u64,
-    ) -> Option<(GlyphKey, GlyphAtlasEntry)> {
-        let glyph_key =
-            prepared_glyph_lookup_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
-        self.lookup_prepared_glyph_atlas_entry(glyph_key, epoch)
     }
 
     fn lookup_prepared_glyph_atlas_entry(
