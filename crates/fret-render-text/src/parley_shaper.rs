@@ -146,7 +146,7 @@ fn style_for_strut_metrics(style: &TextStyle) -> Option<TextStyle> {
 pub struct ParleyGlyph {
     id: u32,
     x: f32,
-    pub y: f32,
+    y: f32,
     advance: f32,
     font: GlyphFontData,
     font_size: f32,
@@ -167,6 +167,10 @@ impl ParleyGlyph {
 
     pub fn x(&self) -> f32 {
         self.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.y
     }
 
     pub fn font(&self) -> &GlyphFontData {
@@ -203,6 +207,10 @@ impl ParleyGlyph {
 
     pub(crate) fn set_x(&mut self, x: f32) {
         self.x = x;
+    }
+
+    pub(crate) fn set_y(&mut self, y: f32) {
+        self.y = y;
     }
 }
 
