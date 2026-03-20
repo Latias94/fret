@@ -16,7 +16,9 @@ pub(in super::super) fn encode_text(
 ) {
     state.flush_quad_batch();
 
-    let Some(blob) = renderer.text_system.blob(blob_id) else {
+    let Some((glyphs, baseline, decorations, paint_palette)) =
+        renderer.text_system.render_data_for_blob(blob_id)
+    else {
         return;
     };
 
@@ -29,21 +31,38 @@ pub(in super::super) fn encode_text(
             renderer,
             state,
             shadow_origin,
-            blob,
+            glyphs,
+            baseline,
+            decorations,
+            paint_palette,
             fret_core::scene::Paint::Solid(shadow.color).into(),
             None,
             false,
         );
     }
 
-    encode_text_blob(renderer, state, origin, blob, paint, outline, true);
+    encode_text_blob(
+        renderer,
+        state,
+        origin,
+        glyphs,
+        baseline,
+        decorations,
+        paint_palette,
+        paint,
+        outline,
+        true,
+    );
 }
 
 fn encode_text_blob(
     renderer: &Renderer,
     state: &mut EncodeState<'_>,
     origin: Point,
-    blob: &crate::text::TextBlob,
+    glyphs: &[crate::text::GlyphInstance],
+    baseline: Px,
+    decorations: &[crate::text::TextDecoration],
+    paint_palette: Option<&[Option<Color>]>,
     paint: fret_core::scene::PaintBindingV1,
     outline: Option<fret_core::scene::TextOutlineV1>,
     draw_decorations: bool,
@@ -59,7 +78,6 @@ fn encode_text_blob(
 
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
-    let baseline = blob.shape().metrics().baseline;
 
     fn paint_representative_color(p: fret_core::scene::Paint) -> Color {
         use fret_core::scene::{MAX_STOPS, Paint};
@@ -130,7 +148,7 @@ fn encode_text_blob(
         }
 
         if let Some(slot) = paint_span
-            && let Some(palette) = blob.paint_palette()
+            && let Some(palette) = paint_palette
             && let Some(Some(c)) = palette.get(slot as usize)
         {
             let mut out = *c;
@@ -141,9 +159,8 @@ fn encode_text_blob(
         base_color_hint
     };
 
-    if draw_decorations && !blob.decorations().is_empty() {
-        for d in blob
-            .decorations()
+    if draw_decorations && !decorations.is_empty() {
+        for d in decorations
             .iter()
             .filter(|d| d.kind() == TextDecorationKind::Underline)
         {
@@ -280,7 +297,7 @@ fn encode_text_blob(
         *group_first_vertex = state.text_vertices.len() as u32;
     };
 
-    for g in blob.shape().glyphs() {
+    for g in glyphs {
         let kind = match g.kind() {
             GlyphQuadKind::Mask => {
                 if outline_params_mask != 0 {
@@ -304,8 +321,7 @@ fn encode_text_blob(
         };
 
         let (use_palette_override, palette_color) = if let Some(slot) = g.paint_span() {
-            let c = blob
-                .paint_palette()
+            let c = paint_palette
                 .and_then(|p| p.get(slot as usize).copied().flatten())
                 .unwrap_or(base_color_hint);
             (true, c)
@@ -486,9 +502,8 @@ fn encode_text_blob(
         &mut group_bounds_px,
     );
 
-    if !blob.decorations().is_empty() {
-        for d in blob
-            .decorations()
+    if !decorations.is_empty() {
+        for d in decorations
             .iter()
             .filter(|d| d.kind() == TextDecorationKind::Strikethrough)
         {

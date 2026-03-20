@@ -52,7 +52,8 @@ pub use self::types::TextFontFamilyConfig;
 #[cfg(test)]
 pub(crate) use self::types::subpixel_mask_to_alpha;
 pub(crate) use self::types::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot, TextFontFaceUsage};
-pub(crate) use self::types::{GlyphInstance, GlyphQuadKind, TextBlob, TextLine, TextShape};
+pub(crate) use self::types::{GlyphInstance, GlyphQuadKind, TextLine};
+use self::types::{TextBlob, TextShape};
 
 pub struct TextSystem {
     parley_shaper: ParleyShaper,

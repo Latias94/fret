@@ -1,18 +1,37 @@
-use super::{TextBlob, TextSystem};
+use super::{GlyphInstance, TextBlob, TextDecoration, TextSystem};
 use fret_core::TextBlobId;
 use std::sync::Arc;
 
 impl TextSystem {
-    pub(crate) fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
+    pub(super) fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
         self.blob_state.blobs.get(id)
     }
 
-    pub(crate) fn shape_for_blob(&self, id: TextBlobId) -> Option<&super::TextShape> {
+    pub(super) fn shape_for_blob(&self, id: TextBlobId) -> Option<&super::TextShape> {
         Some(self.blob(id)?.shape())
     }
 
+    pub(crate) fn render_data_for_blob(
+        &self,
+        id: TextBlobId,
+    ) -> Option<(
+        &[GlyphInstance],
+        fret_core::geometry::Px,
+        &[TextDecoration],
+        Option<&[Option<fret_core::Color>]>,
+    )> {
+        let blob = self.blob(id)?;
+        let shape = blob.shape();
+        Some((
+            shape.glyphs(),
+            shape.metrics().baseline,
+            blob.decorations(),
+            blob.paint_palette(),
+        ))
+    }
+
     #[cfg(test)]
-    pub(crate) fn shape_handle_for_blob(&self, id: TextBlobId) -> Option<&Arc<super::TextShape>> {
+    pub(super) fn shape_handle_for_blob(&self, id: TextBlobId) -> Option<&Arc<super::TextShape>> {
         Some(self.blob(id)?.shape_handle())
     }
 
