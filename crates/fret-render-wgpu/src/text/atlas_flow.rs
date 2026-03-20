@@ -69,7 +69,7 @@ impl TextSystem {
     }
 
     pub(super) fn ensure_glyph_in_atlas(&mut self, key: GlyphKey, epoch: u64) {
-        if self.atlas_runtime.get(key, epoch).is_some() {
+        if self.atlas_runtime.touch_if_present(key, epoch) {
             return;
         }
 

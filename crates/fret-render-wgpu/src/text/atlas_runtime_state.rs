@@ -184,6 +184,15 @@ impl TextAtlasRuntimeState {
         ))
     }
 
+    pub(super) fn touch_if_present(&mut self, key: GlyphKey, epoch: u64) -> bool {
+        self.get(key, epoch).is_some()
+    }
+
+    #[cfg(test)]
+    pub(super) fn contains_key(&self, key: GlyphKey) -> bool {
+        self.atlas_for_key(key).entry(key).is_some()
+    }
+
     pub(super) fn uv_for_key(&self, key: GlyphKey) -> Option<(u16, [f32; 4])> {
         let atlas = self.atlas_for_key(key);
         let entry = atlas.entry(key)?;
@@ -200,7 +209,7 @@ impl TextAtlasRuntimeState {
         Some((entry.page, [u0, v0, u1, v1]))
     }
 
-    pub(super) fn get(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
+    fn get(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
         self.atlas_mut_for_key(key).get(key, epoch)
     }
 

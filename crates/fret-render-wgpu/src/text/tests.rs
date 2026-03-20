@@ -942,7 +942,7 @@ fn emoji_sequences_use_color_quads_when_color_font_is_available() {
         for key in color_glyphs {
             text.ensure_glyph_in_atlas(key, epoch);
             assert!(
-                text.atlas_runtime.get(key, epoch).is_some(),
+                text.atlas_runtime.contains_key(key),
                 "expected color glyph to be present in color atlas after ensure ({label})"
             );
         }
@@ -1020,12 +1020,12 @@ fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() 
             text.ensure_glyph_in_atlas(key, epoch);
             if key.is_mask() {
                 assert!(
-                    text.atlas_runtime.get(key, epoch).is_some(),
+                    text.atlas_runtime.contains_key(key),
                     "expected mask glyph to be present in mask atlas after ensure ({label})"
                 );
             } else if key.is_subpixel() {
                 assert!(
-                    text.atlas_runtime.get(key, epoch).is_some(),
+                    text.atlas_runtime.contains_key(key),
                     "expected subpixel glyph to be present in subpixel atlas after ensure ({label})"
                 );
             }
@@ -1132,12 +1132,12 @@ fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are
         text.ensure_glyph_in_atlas(key, epoch);
         if key.is_mask() {
             assert!(
-                text.atlas_runtime.get(key, epoch).is_some(),
+                text.atlas_runtime.contains_key(key),
                 "expected ensured CJK glyph to be present in the mask atlas"
             );
         } else if key.is_subpixel() {
             assert!(
-                text.atlas_runtime.get(key, epoch).is_some(),
+                text.atlas_runtime.contains_key(key),
                 "expected ensured CJK glyph to be present in the subpixel atlas"
             );
         }
@@ -1440,7 +1440,7 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
         for key in color_keys {
             text.ensure_glyph_in_atlas(key, epoch);
             assert!(
-                text.atlas_runtime.get(key, epoch).is_some(),
+                text.atlas_runtime.contains_key(key),
                 "expected ensured emoji glyph to be present in the color atlas ({label})"
             );
         }
