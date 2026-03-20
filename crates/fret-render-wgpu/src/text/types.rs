@@ -20,7 +20,7 @@ impl GlyphInstance {
         }
     }
 
-    pub(crate) fn kind(&self) -> GlyphQuadKind {
+    pub(super) fn kind(&self) -> GlyphQuadKind {
         self.key.kind
     }
 
@@ -34,7 +34,7 @@ impl GlyphInstance {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum GlyphQuadKind {
+pub(super) enum GlyphQuadKind {
     Mask,
     Color,
     Subpixel,

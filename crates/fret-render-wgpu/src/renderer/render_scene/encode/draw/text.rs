@@ -2,7 +2,7 @@ use super::super::state::{EncodeState, apply_transform_px, bounds_of_quad_points
 use super::super::*;
 
 use super::paint::{PaintMaterialPolicy, paint_to_gpu};
-use crate::text::{GlyphQuadKind, TextDecorationKind};
+use crate::text::{TextDecorationKind, TextRenderGlyphKind};
 use fret_core::{Corners, Edges};
 
 pub(in super::super) fn encode_text(
@@ -282,15 +282,15 @@ fn encode_text_blob(
 
     for g in blob.glyphs() {
         let kind = match g.kind() {
-            GlyphQuadKind::Mask => {
+            TextRenderGlyphKind::Mask => {
                 if outline_params_mask != 0 {
                     TextDrawKind::MaskOutline
                 } else {
                     TextDrawKind::Mask
                 }
             }
-            GlyphQuadKind::Color => TextDrawKind::Color,
-            GlyphQuadKind::Subpixel => {
+            TextRenderGlyphKind::Color => TextDrawKind::Color,
+            TextRenderGlyphKind::Subpixel => {
                 if outline_params_mask != 0 {
                     TextDrawKind::SubpixelOutline
                 } else {

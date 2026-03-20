@@ -197,11 +197,23 @@ impl TextSystem {
         Some((entry.page, [u0, v0, u1, v1]))
     }
 
-    pub(crate) fn debug_atlas_dims(&self, kind: GlyphQuadKind) -> (u32, u32) {
+    fn debug_atlas_dims_for_kind(&self, kind: GlyphQuadKind) -> (u32, u32) {
         self.atlas_runtime.atlas(kind).dimensions()
     }
 
-    pub(crate) fn debug_lookup_glyph_atlas_entry(
+    pub(crate) fn debug_mask_atlas_dims(&self) -> (u32, u32) {
+        self.debug_atlas_dims_for_kind(GlyphQuadKind::Mask)
+    }
+
+    pub(crate) fn debug_color_atlas_dims(&self) -> (u32, u32) {
+        self.debug_atlas_dims_for_kind(GlyphQuadKind::Color)
+    }
+
+    pub(crate) fn debug_subpixel_atlas_dims(&self) -> (u32, u32) {
+        self.debug_atlas_dims_for_kind(GlyphQuadKind::Subpixel)
+    }
+
+    fn debug_lookup_glyph_atlas_entry_for_kind(
         &self,
         kind: GlyphQuadKind,
         page: u16,
@@ -230,5 +242,38 @@ impl TextSystem {
                 GlyphQuadKind::Subpixel => "subpixel",
             },
         ))
+    }
+
+    pub(crate) fn debug_lookup_mask_glyph_atlas_entry(
+        &self,
+        page: u16,
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    ) -> Option<DebugGlyphAtlasLookup> {
+        self.debug_lookup_glyph_atlas_entry_for_kind(GlyphQuadKind::Mask, page, x, y, w, h)
+    }
+
+    pub(crate) fn debug_lookup_color_glyph_atlas_entry(
+        &self,
+        page: u16,
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    ) -> Option<DebugGlyphAtlasLookup> {
+        self.debug_lookup_glyph_atlas_entry_for_kind(GlyphQuadKind::Color, page, x, y, w, h)
+    }
+
+    pub(crate) fn debug_lookup_subpixel_glyph_atlas_entry(
+        &self,
+        page: u16,
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    ) -> Option<DebugGlyphAtlasLookup> {
+        self.debug_lookup_glyph_atlas_entry_for_kind(GlyphQuadKind::Subpixel, page, x, y, w, h)
     }
 }

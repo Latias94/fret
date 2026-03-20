@@ -1,5 +1,5 @@
 use super::{OrderedDraw, SceneEncoding, TextDrawKind, TextVertex};
-use crate::text::{DebugGlyphAtlasLookup, GlyphQuadKind};
+use crate::text::DebugGlyphAtlasLookup;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
@@ -160,14 +160,43 @@ pub(super) struct RenderTextDumpState {
     bytes: Vec<u8>,
 }
 
-fn atlas_kind_for_text_draw(kind: TextDrawKind) -> (JsonAtlasKind, GlyphQuadKind) {
+fn atlas_kind_for_text_draw(kind: TextDrawKind) -> JsonAtlasKind {
+    match kind {
+        TextDrawKind::Mask | TextDrawKind::MaskOutline => JsonAtlasKind::Mask,
+        TextDrawKind::Color => JsonAtlasKind::Color,
+        TextDrawKind::Subpixel | TextDrawKind::SubpixelOutline => JsonAtlasKind::Subpixel,
+    }
+}
+
+fn atlas_dims_for_text_draw(
+    text_system: &crate::text::TextSystem,
+    kind: TextDrawKind,
+) -> (u32, u32) {
+    match kind {
+        TextDrawKind::Mask | TextDrawKind::MaskOutline => text_system.debug_mask_atlas_dims(),
+        TextDrawKind::Color => text_system.debug_color_atlas_dims(),
+        TextDrawKind::Subpixel | TextDrawKind::SubpixelOutline => {
+            text_system.debug_subpixel_atlas_dims()
+        }
+    }
+}
+
+fn lookup_glyph_atlas_entry_for_text_draw(
+    text_system: &crate::text::TextSystem,
+    kind: TextDrawKind,
+    page: u16,
+    x: u32,
+    y: u32,
+    w: u32,
+    h: u32,
+) -> Option<DebugGlyphAtlasLookup> {
     match kind {
         TextDrawKind::Mask | TextDrawKind::MaskOutline => {
-            (JsonAtlasKind::Mask, GlyphQuadKind::Mask)
+            text_system.debug_lookup_mask_glyph_atlas_entry(page, x, y, w, h)
         }
-        TextDrawKind::Color => (JsonAtlasKind::Color, GlyphQuadKind::Color),
+        TextDrawKind::Color => text_system.debug_lookup_color_glyph_atlas_entry(page, x, y, w, h),
         TextDrawKind::Subpixel | TextDrawKind::SubpixelOutline => {
-            (JsonAtlasKind::Subpixel, GlyphQuadKind::Subpixel)
+            text_system.debug_lookup_subpixel_glyph_atlas_entry(page, x, y, w, h)
         }
     }
 }
@@ -214,7 +243,7 @@ impl RenderTextDumpState {
                 continue;
             };
 
-            let (atlas_kind_json, atlas_kind) = atlas_kind_for_text_draw(draw.kind);
+            let atlas_kind_json = atlas_kind_for_text_draw(draw.kind);
 
             let first = draw.first_vertex as usize;
             let count = draw.vertex_count as usize;
@@ -245,7 +274,7 @@ impl RenderTextDumpState {
                 continue;
             };
 
-            let (atlas_w, atlas_h) = text_system.debug_atlas_dims(atlas_kind);
+            let (atlas_w, atlas_h) = atlas_dims_for_text_draw(text_system, draw.kind);
             if draw.vertex_count < 6 {
                 continue;
             }
@@ -269,8 +298,9 @@ impl RenderTextDumpState {
                 let u1 = glyph_vs[2].uv[0];
                 let v1 = glyph_vs[2].uv[1];
                 let atlas_xywh = uv_to_atlas_xywh(u0, v0, u1, v1, atlas_w, atlas_h);
-                let glyph = text_system.debug_lookup_glyph_atlas_entry(
-                    atlas_kind,
+                let glyph = lookup_glyph_atlas_entry_for_text_draw(
+                    text_system,
+                    draw.kind,
                     draw.atlas_page,
                     atlas_xywh[0],
                     atlas_xywh[1],

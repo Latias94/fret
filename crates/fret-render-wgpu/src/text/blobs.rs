@@ -2,9 +2,26 @@ use super::{GlyphInstance, GlyphQuadKind, TextBlob, TextDecoration, TextSystem};
 use fret_core::{Color, TextBlobId, geometry::Px};
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TextRenderGlyphKind {
+    Mask,
+    Color,
+    Subpixel,
+}
+
+impl From<GlyphQuadKind> for TextRenderGlyphKind {
+    fn from(value: GlyphQuadKind) -> Self {
+        match value {
+            GlyphQuadKind::Mask => Self::Mask,
+            GlyphQuadKind::Color => Self::Color,
+            GlyphQuadKind::Subpixel => Self::Subpixel,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TextRenderGlyph {
-    kind: GlyphQuadKind,
+    kind: TextRenderGlyphKind,
     rect: [f32; 4],
     paint_span: Option<u16>,
     atlas_page: u16,
@@ -13,7 +30,7 @@ pub(crate) struct TextRenderGlyph {
 
 impl TextRenderGlyph {
     fn new(
-        kind: GlyphQuadKind,
+        kind: TextRenderGlyphKind,
         rect: [f32; 4],
         paint_span: Option<u16>,
         atlas_page: u16,
@@ -28,7 +45,7 @@ impl TextRenderGlyph {
         }
     }
 
-    pub(crate) fn kind(&self) -> GlyphQuadKind {
+    pub(crate) fn kind(&self) -> TextRenderGlyphKind {
         self.kind
     }
 
@@ -85,7 +102,7 @@ impl<'a> TextBlobRenderData<'a> {
         self.glyphs.iter().filter_map(|glyph| {
             let (atlas_page, uv) = self.text_system.glyph_uv_for_instance(glyph)?;
             Some(TextRenderGlyph::new(
-                glyph.kind(),
+                glyph.kind().into(),
                 glyph.rect(),
                 glyph.paint_span(),
                 atlas_page,
