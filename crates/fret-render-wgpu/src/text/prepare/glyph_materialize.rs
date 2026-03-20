@@ -80,7 +80,7 @@ impl TextSystem {
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
         let (glyph_key, width, height, left, top, bytes_per_pixel, data) =
             raster.into_atlas_insert();
-        let _ = self.atlas_runtime.get_or_insert(
+        self.atlas_runtime.cache_glyph(
             glyph_key,
             width,
             height,

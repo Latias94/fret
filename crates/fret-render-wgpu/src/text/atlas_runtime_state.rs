@@ -1,6 +1,4 @@
-use super::atlas::{
-    GlyphAtlas, GlyphAtlasEntry, GlyphAtlasInsertError, GlyphKey, TEXT_ATLAS_MAX_PAGES,
-};
+use super::atlas::{GlyphAtlas, GlyphAtlasEntry, GlyphKey, TEXT_ATLAS_MAX_PAGES};
 use super::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot};
 
 const TEXT_ATLAS_WIDTH: u32 = 2048;
@@ -235,7 +233,7 @@ impl TextAtlasRuntimeState {
         self.subpixel_atlas.inc_live_refs(subpixel);
     }
 
-    pub(super) fn get_or_insert(
+    pub(super) fn cache_glyph(
         &mut self,
         key: GlyphKey,
         w: u32,
@@ -245,8 +243,8 @@ impl TextAtlasRuntimeState {
         bytes_per_pixel: u32,
         data: Vec<u8>,
         epoch: u64,
-    ) -> Result<GlyphAtlasEntry, GlyphAtlasInsertError> {
-        self.atlas_mut_for_key(key).get_or_insert(
+    ) {
+        let _ = self.atlas_mut_for_key(key).get_or_insert(
             key,
             w,
             h,
@@ -255,7 +253,7 @@ impl TextAtlasRuntimeState {
             bytes_per_pixel,
             data,
             epoch,
-        )
+        );
     }
 
     #[cfg(test)]

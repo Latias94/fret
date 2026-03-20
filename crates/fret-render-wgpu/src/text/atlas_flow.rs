@@ -139,7 +139,7 @@ impl TextSystem {
             return;
         };
 
-        let _ = self.atlas_runtime.get_or_insert(
+        self.atlas_runtime.cache_glyph(
             key,
             image.placement.width,
             image.placement.height,
