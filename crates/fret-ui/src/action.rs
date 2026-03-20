@@ -186,6 +186,11 @@ pub struct PointerDownCx {
     /// "click-to-focus unless the event target is inside a button" without requiring selector
     /// mechanisms in the component layer.
     pub hit_pressable_target: Option<crate::GlobalElementId>,
+    /// `true` when `hit_pressable_target` is a strict descendant of the current action target.
+    ///
+    /// This excludes ambient ancestor pressables and the current target itself, so wrapper
+    /// policies can suppress forwarding only for genuinely nested interactive descendants.
+    pub hit_pressable_target_in_descendant_subtree: bool,
 }
 
 /// Pointer move payload for component-owned pointer handlers.
@@ -326,6 +331,9 @@ pub struct PointerUpCx {
     /// intended for policy decisions like suppressing row selection when the click started inside
     /// a nested button.
     pub down_hit_pressable_target: Option<crate::GlobalElementId>,
+    /// `true` when `down_hit_pressable_target` was a strict descendant of the current action
+    /// target on pointer down.
+    pub down_hit_pressable_target_in_descendant_subtree: bool,
 }
 
 /// Key down payload for component-owned key handlers.

@@ -1344,21 +1344,23 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     false
                 };
-            let pointer_hit_pressable_target =
+            let pointer_hit_pressable =
                 if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
                     && let Some(window) = self.window
                 {
-                    chain.iter().find_map(|(node_id, _)| {
-                        crate::declarative::element_record_for_node(app, window, *node_id).and_then(
-                            |record| {
-                                matches!(
-                                    &record.instance,
-                                    crate::declarative::ElementInstance::Pressable(_)
-                                )
-                                .then_some(record.element)
-                            },
-                        )
-                    })
+                    chain
+                        .iter()
+                        .enumerate()
+                        .find_map(|(chain_index, (node_id, _))| {
+                            crate::declarative::element_record_for_node(app, window, *node_id)
+                                .and_then(|record| {
+                                    matches!(
+                                        &record.instance,
+                                        crate::declarative::ElementInstance::Pressable(_)
+                                    )
+                                    .then_some((record.element, chain_index))
+                                })
+                        })
                 } else {
                     None
                 };
@@ -1383,8 +1385,19 @@ impl<H: UiHost> UiTree<H> {
                     trace_enabled,
                     || tracing::trace_span!("fret.ui.dispatch.widget_capture"),
                     || {
-                        for (node_id, event_for_node) in chain.iter().rev() {
+                        for (chain_index, (node_id, event_for_node)) in
+                            chain.iter().enumerate().rev()
+                        {
                             let node_id = *node_id;
+                            let (
+                                pointer_hit_pressable_target,
+                                pointer_hit_pressable_target_in_descendant_subtree,
+                            ) = pointer_hit_pressable.map_or(
+                                (None, false),
+                                |(target, pressable_index)| {
+                                    (Some(target), pressable_index < chain_index)
+                                },
+                            );
                             let (
                                 invalidations,
                                 requested_focus,
@@ -1413,6 +1426,7 @@ impl<H: UiHost> UiTree<H> {
                                     pointer_hit_is_text_input,
                                     pointer_hit_is_pressable,
                                     pointer_hit_pressable_target,
+                                    pointer_hit_pressable_target_in_descendant_subtree,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -1566,7 +1580,17 @@ impl<H: UiHost> UiTree<H> {
                     trace_enabled,
                     || tracing::trace_span!("fret.ui.dispatch.widget_bubble"),
                     || {
-                        for (node_id, event_for_node) in chain {
+                        for (chain_index, (node_id, event_for_node)) in chain.iter().enumerate() {
+                            let node_id = *node_id;
+                            let (
+                                pointer_hit_pressable_target,
+                                pointer_hit_pressable_target_in_descendant_subtree,
+                            ) = pointer_hit_pressable.map_or(
+                                (None, false),
+                                |(target, pressable_index)| {
+                                    (Some(target), pressable_index < chain_index)
+                                },
+                            );
                             let (
                                 invalidations,
                                 requested_focus,
@@ -1595,6 +1619,7 @@ impl<H: UiHost> UiTree<H> {
                                     pointer_hit_is_text_input,
                                     pointer_hit_is_pressable,
                                     pointer_hit_pressable_target,
+                                    pointer_hit_pressable_target_in_descendant_subtree,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -1817,6 +1842,7 @@ impl<H: UiHost> UiTree<H> {
                                     pointer_hit_is_text_input: false,
                                     pointer_hit_is_pressable: false,
                                     pointer_hit_pressable_target: None,
+                                    pointer_hit_pressable_target_in_descendant_subtree: false,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -1961,6 +1987,7 @@ impl<H: UiHost> UiTree<H> {
                                     pointer_hit_is_text_input: false,
                                     pointer_hit_is_pressable: false,
                                     pointer_hit_pressable_target: None,
+                                    pointer_hit_pressable_target_in_descendant_subtree: false,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -2127,6 +2154,7 @@ impl<H: UiHost> UiTree<H> {
                         pointer_hit_is_text_input: false,
                         pointer_hit_is_pressable: false,
                         pointer_hit_pressable_target: None,
+                        pointer_hit_pressable_target_in_descendant_subtree: false,
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,

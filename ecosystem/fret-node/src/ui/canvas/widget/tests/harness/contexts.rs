@@ -22,6 +22,7 @@ pub(crate) fn event_cx<'a>(
         pointer_hit_is_text_input: false,
         pointer_hit_is_pressable: false,
         pointer_hit_pressable_target: None,
+        pointer_hit_pressable_target_in_descendant_subtree: false,
         prevented_default_actions,
         children: &[],
         focus: None,

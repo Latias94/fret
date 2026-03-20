@@ -1300,7 +1300,7 @@ impl FieldLabel {
                             cx.pointer_region_add_on_pointer_down(Arc::new(
                                 move |host, acx, down| {
                                     if suppress_nested_pressable_forwarding
-                                        && down.hit_pressable_target.is_some()
+                                        && down.hit_pressable_target_in_descendant_subtree
                                     {
                                         return false;
                                     }
@@ -1351,7 +1351,7 @@ impl FieldLabel {
                                     return true;
                                 }
                                 if suppress_nested_pressable_forwarding
-                                    && up.down_hit_pressable_target.is_some()
+                                    && up.down_hit_pressable_target_in_descendant_subtree
                                 {
                                     return false;
                                 }
@@ -2783,6 +2783,132 @@ mod tests {
         );
 
         assert_eq!(ui.focus(), Some(control_focus_target));
+    }
+
+    #[test]
+    fn field_label_wrap_click_invokes_registered_control_inside_ancestor_pressable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<bool> = app.models_mut().insert(true);
+        let model_for_render = model.clone();
+        let control_id = ControlId::from("field.wrap.checkbox");
+        let control_id_for_render = control_id.clone();
+
+        let root =
+            fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "shadcn-field-label-wrap-ancestor-pressable-action-forwarding",
+                |cx| {
+                    vec![cx.pressable(
+                        fret_ui::element::PressableProps::default(),
+                        move |cx, _state| {
+                            vec![FieldLabel::new("Enable notifications")
+                            .for_control(control_id_for_render.clone())
+                            .test_id("field.label.wrap.ancestor_pressable")
+                            .wrap([Field::new([
+                                crate::checkbox::Checkbox::new(model_for_render.clone())
+                                    .control_id(control_id_for_render.clone())
+                                    .a11y_label("Enable notifications")
+                                    .test_id("field.wrap.control")
+                                    .into_element(cx),
+                                FieldContent::new([
+                                    FieldTitle::new("Enable notifications").into_element(cx),
+                                    FieldDescription::new(
+                                        "You can enable or disable notifications at any time.",
+                                    )
+                                    .into_element(cx),
+                                ])
+                                .into_element(cx),
+                            ])
+                            .orientation(FieldOrientation::Horizontal)
+                            .into_element(cx)])
+                            .into_element(cx)]
+                        },
+                    )]
+                },
+            );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
+        let label_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("field.label.wrap.ancestor_pressable"))
+            .map(|n| n.id)
+            .expect("expected wrapped field label semantics node");
+        let control_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("field.wrap.control"))
+            .map(|n| n.id)
+            .expect("expected wrapped checkbox semantics node");
+
+        let label_bounds = ui
+            .debug_node_bounds(label_node)
+            .expect("expected wrapped label bounds");
+        let control_bounds = ui
+            .debug_node_bounds(control_node)
+            .expect("expected wrapped checkbox bounds");
+
+        let y_mid = Px(label_bounds.origin.y.0 + label_bounds.size.height.0 * 0.5);
+        let x0 = label_bounds.origin.x.0;
+        let w = label_bounds.size.width.0;
+        let label_position = [
+            Point::new(Px(x0 + 4.0), y_mid),
+            Point::new(Px(x0 + w * 0.25), y_mid),
+            Point::new(Px(x0 + w * 0.75), y_mid),
+            Point::new(Px(x0 + w - 4.0), y_mid),
+        ]
+        .into_iter()
+        .find(|p| label_bounds.contains(*p) && !control_bounds.contains(*p))
+        .expect("expected a point in wrapped label bounds outside the checkbox");
+
+        assert_eq!(app.models().get_copied(&model), Some(true));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(3),
+                position: label_position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(3),
+                position: label_position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&model),
+            Some(false),
+            "expected wrapped FieldLabel click to invoke the registered checkbox action inside an ancestor pressable"
+        );
     }
 
     #[test]

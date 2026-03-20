@@ -75,6 +75,12 @@ pub struct EventCx<'a, H: UiHost> {
     /// (e.g. `PointerRegion`, `Pressable`) so policy-level hooks can distinguish nested pressable
     /// targets (e.g. "row click" vs "button inside row").
     pub pointer_hit_pressable_target: Option<crate::GlobalElementId>,
+    /// `true` when `pointer_hit_pressable_target` is a strict descendant of the current event
+    /// target in the hit-test chain.
+    ///
+    /// This excludes ambient ancestor pressables and the current target itself, so policy hooks
+    /// can suppress forwarding only for truly nested interactive descendants.
+    pub pointer_hit_pressable_target_in_descendant_subtree: bool,
     pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
