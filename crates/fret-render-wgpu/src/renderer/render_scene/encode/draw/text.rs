@@ -146,16 +146,17 @@ fn encode_text_blob(
             .decorations
             .as_ref()
             .iter()
-            .filter(|d| d.kind == TextDecorationKind::Underline)
+            .filter(|d| d.kind() == TextDecorationKind::Underline)
         {
+            let decoration_rect = d.rect();
             let rect = Rect::new(
                 Point::new(
-                    Px(origin.x.0 + d.rect.origin.x.0),
-                    Px(origin.y.0 + d.rect.origin.y.0 - baseline.0),
+                    Px(origin.x.0 + decoration_rect.origin.x.0),
+                    Px(origin.y.0 + decoration_rect.origin.y.0 - baseline.0),
                 ),
-                d.rect.size,
+                decoration_rect.size,
             );
-            let bg = resolve_decoration_color(d.paint_span, d.color);
+            let bg = resolve_decoration_color(d.paint_span(), d.color());
             super::encode_quad(
                 renderer,
                 state,
@@ -491,16 +492,17 @@ fn encode_text_blob(
             .decorations
             .as_ref()
             .iter()
-            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
+            .filter(|d| d.kind() == TextDecorationKind::Strikethrough)
         {
+            let decoration_rect = d.rect();
             let rect = Rect::new(
                 Point::new(
-                    Px(origin.x.0 + d.rect.origin.x.0),
-                    Px(origin.y.0 + d.rect.origin.y.0 - baseline.0),
+                    Px(origin.x.0 + decoration_rect.origin.x.0),
+                    Px(origin.y.0 + decoration_rect.origin.y.0 - baseline.0),
                 ),
-                d.rect.size,
+                decoration_rect.size,
             );
-            let bg = resolve_decoration_color(d.paint_span, d.color);
+            let bg = resolve_decoration_color(d.paint_span(), d.color());
             super::encode_quad(
                 renderer,
                 state,

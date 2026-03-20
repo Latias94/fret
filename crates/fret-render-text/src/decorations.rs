@@ -10,20 +10,74 @@ pub enum TextDecorationKind {
 
 #[derive(Debug, Clone)]
 pub struct TextDecoration {
-    pub kind: TextDecorationKind,
+    kind: TextDecorationKind,
     /// Rect in the same coordinate space as selection rects (y=0 at the top of the text box).
-    pub rect: Rect,
+    rect: Rect,
     /// When present, uses `paint_palette[paint_span]` as the base color if no explicit override exists.
-    pub paint_span: Option<u16>,
+    paint_span: Option<u16>,
     /// Optional explicit decoration color override.
-    pub color: Option<Color>,
+    color: Option<Color>,
+}
+
+impl TextDecoration {
+    pub fn new(
+        kind: TextDecorationKind,
+        rect: Rect,
+        paint_span: Option<u16>,
+        color: Option<Color>,
+    ) -> Self {
+        Self {
+            kind,
+            rect,
+            paint_span,
+            color,
+        }
+    }
+
+    pub fn kind(&self) -> TextDecorationKind {
+        self.kind
+    }
+
+    pub fn rect(&self) -> Rect {
+        self.rect
+    }
+
+    pub fn paint_span(&self) -> Option<u16> {
+        self.paint_span
+    }
+
+    pub fn color(&self) -> Option<Color> {
+        self.color
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct TextDecorationMetricsPx {
-    pub underline_offset_px: f32,
-    pub strikeout_offset_px: f32,
-    pub stroke_size_px: f32,
+    underline_offset_px: f32,
+    strikeout_offset_px: f32,
+    stroke_size_px: f32,
+}
+
+impl TextDecorationMetricsPx {
+    pub fn new(underline_offset_px: f32, strikeout_offset_px: f32, stroke_size_px: f32) -> Self {
+        Self {
+            underline_offset_px,
+            strikeout_offset_px,
+            stroke_size_px,
+        }
+    }
+
+    pub fn underline_offset_px(&self) -> f32 {
+        self.underline_offset_px
+    }
+
+    pub fn strikeout_offset_px(&self) -> f32 {
+        self.strikeout_offset_px
+    }
+
+    pub fn stroke_size_px(&self) -> f32 {
+        self.stroke_size_px
+    }
 }
 
 pub fn decoration_metrics_px_for_font_bytes(
@@ -45,11 +99,11 @@ pub fn decoration_metrics_px_for_font_bytes(
         return None;
     }
 
-    Some(TextDecorationMetricsPx {
-        underline_offset_px: m.underline_offset,
-        strikeout_offset_px: m.strikeout_offset,
-        stroke_size_px: m.stroke_size,
-    })
+    Some(TextDecorationMetricsPx::new(
+        m.underline_offset,
+        m.strikeout_offset,
+        m.stroke_size,
+    ))
 }
 
 pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
@@ -80,7 +134,7 @@ pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
         let max_thickness_px = line_height_px.max(1.0);
 
         let (thickness_px, underline_y, strike_y) = if let Some(m) = metrics_px {
-            let raw = m.stroke_size_px.abs().max(1.0).min(max_thickness_px);
+            let raw = m.stroke_size_px().abs().max(1.0).min(max_thickness_px);
             let thickness_px = if snap_vertical {
                 raw.round().max(1.0)
             } else {
@@ -90,7 +144,7 @@ pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
             // Swash metrics are expressed in the typical typographic coordinate system where
             // positive Y points upward. Convert to our Y-down coordinate space by subtracting
             // from the baseline.
-            let underline_top_px_raw = baseline_px - m.underline_offset_px;
+            let underline_top_px_raw = baseline_px - m.underline_offset_px();
             let underline_bottom_px_raw = underline_top_px_raw + thickness_px;
             let underline_bottom_px = if snap_vertical {
                 underline_bottom_px_raw.round()
@@ -102,7 +156,7 @@ pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
             let underline_top_px =
                 (underline_bottom_px - thickness_px).clamp(line_top_px, max_top_px);
 
-            let strike_top_px_raw = baseline_px - m.strikeout_offset_px;
+            let strike_top_px_raw = baseline_px - m.strikeout_offset_px();
             let strike_bottom_px_raw = strike_top_px_raw + thickness_px;
             let strike_bottom_px = if snap_vertical {
                 strike_bottom_px_raw.round()
@@ -168,21 +222,21 @@ pub fn decorations_for_lines<L: TextLineDecorationGeometry>(
             let width = Px((right.0 - left.0).max(thickness.0));
 
             if let Some(underline) = span.underline() {
-                out.push(TextDecoration {
-                    kind: TextDecorationKind::Underline,
-                    rect: Rect::new(Point::new(left, underline_y), Size::new(width, thickness)),
-                    paint_span: Some(span.slot()),
-                    color: underline.color(),
-                });
+                out.push(TextDecoration::new(
+                    TextDecorationKind::Underline,
+                    Rect::new(Point::new(left, underline_y), Size::new(width, thickness)),
+                    Some(span.slot()),
+                    underline.color(),
+                ));
             }
 
             if let Some(strikethrough) = span.strikethrough() {
-                out.push(TextDecoration {
-                    kind: TextDecorationKind::Strikethrough,
-                    rect: Rect::new(Point::new(left, strike_y), Size::new(width, thickness)),
-                    paint_span: Some(span.slot()),
-                    color: strikethrough.color(),
-                });
+                out.push(TextDecoration::new(
+                    TextDecorationKind::Strikethrough,
+                    Rect::new(Point::new(left, strike_y), Size::new(width, thickness)),
+                    Some(span.slot()),
+                    strikethrough.color(),
+                ));
             }
         }
     }
@@ -312,11 +366,11 @@ mod tests {
 
         let underlines: Vec<_> = decorations
             .iter()
-            .filter(|d| d.kind == TextDecorationKind::Underline)
+            .filter(|d| d.kind() == TextDecorationKind::Underline)
             .collect();
         let strikes: Vec<_> = decorations
             .iter()
-            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
+            .filter(|d| d.kind() == TextDecorationKind::Strikethrough)
             .collect();
         assert!(!underlines.is_empty(), "expected underline decorations");
         assert!(!strikes.is_empty(), "expected strikethrough decorations");
@@ -327,16 +381,17 @@ mod tests {
         };
 
         for d in underlines.iter().chain(strikes.iter()) {
+            let rect = d.rect();
             assert!(
-                is_pixel_aligned(d.rect.origin.y),
+                is_pixel_aligned(rect.origin.y),
                 "expected decoration y to be pixel-aligned"
             );
             assert!(
-                is_pixel_aligned(d.rect.size.height),
+                is_pixel_aligned(rect.size.height),
                 "expected decoration height to be pixel-aligned"
             );
 
-            let h_px = d.rect.size.height.0 * scale_factor;
+            let h_px = rect.size.height.0 * scale_factor;
             assert!(
                 h_px >= 1.0 - 1e-3,
                 "expected a visible decoration thickness (>= 1px), got {h_px}"
@@ -347,11 +402,11 @@ mod tests {
             );
 
             assert!(
-                d.rect.origin.y.0 >= -1e-3,
+                rect.origin.y.0 >= -1e-3,
                 "expected decoration to stay within the text box (top)"
             );
             assert!(
-                d.rect.origin.y.0 + d.rect.size.height.0 <= prepared.metrics().size.height.0 + 1e-3,
+                rect.origin.y.0 + rect.size.height.0 <= prepared.metrics().size.height.0 + 1e-3,
                 "expected decoration to stay within the text box (bottom)"
             );
         }
