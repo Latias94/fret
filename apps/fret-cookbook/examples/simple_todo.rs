@@ -30,6 +30,81 @@ struct TodoRow {
     text: Arc<str>,
 }
 
+struct TodoLocals {
+    draft: LocalState<String>,
+    next_id: LocalState<u64>,
+    todos: LocalState<Vec<TodoRow>>,
+}
+
+impl TodoLocals {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            draft: cx.state().local::<String>(),
+            next_id: cx.state().local_init(|| 3u64),
+            todos: cx.state().local_init(|| {
+                vec![
+                    TodoRow {
+                        id: 1,
+                        done: false,
+                        text: Arc::from("Use keyed rows for dynamic lists"),
+                    },
+                    TodoRow {
+                        id: 2,
+                        done: true,
+                        text: Arc::from("Try the shadcn theme tokens"),
+                    },
+                ]
+            }),
+        }
+    }
+
+    fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+        cx.actions()
+            .locals_with((&self.draft, &self.next_id, &self.todos))
+            .on::<act::Add>(|tx, (draft, next_id, todos)| {
+                let text = tx.value(&draft).trim().to_string();
+                if text.is_empty() {
+                    return false;
+                }
+
+                let id = tx.value(&next_id);
+                let _ = tx.update(&next_id, |value| *value = value.saturating_add(1));
+
+                if !tx.update(&todos, |rows| {
+                    rows.push(TodoRow {
+                        id,
+                        done: false,
+                        text: Arc::from(text),
+                    });
+                }) {
+                    return false;
+                }
+                tx.set(&draft, String::new())
+            });
+
+        cx.actions()
+            .locals_with(&self.todos)
+            .on::<act::ClearDone>(|tx, todos| {
+                tx.update_if(&todos, |rows| {
+                    let before = rows.len();
+                    rows.retain(|row| !row.done);
+                    rows.len() != before
+                })
+            });
+
+        cx.actions()
+            .local(&self.todos)
+            .payload_update_if::<act::Toggle>(|rows, id| {
+                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                    row.done = !row.done;
+                    true
+                } else {
+                    false
+                }
+            });
+    }
+}
+
 struct SimpleTodoView;
 
 impl View for SimpleTodoView {
@@ -40,28 +115,11 @@ impl View for SimpleTodoView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let theme = Theme::global(&*cx.app).snapshot();
         let theme_for_rows = theme.clone();
+        let locals = TodoLocals::new(cx);
+        locals.bind_actions(cx);
 
-        let draft_state = cx.state().local::<String>();
-        let next_id_state = cx.state().local_init(|| 3u64);
-        let todos_state = cx.state().local_init(|| {
-            vec![
-                TodoRow {
-                    id: 1,
-                    done: false,
-                    text: Arc::from("Use keyed rows for dynamic lists"),
-                },
-                TodoRow {
-                    id: 2,
-                    done: true,
-                    text: Arc::from("Try the shadcn theme tokens"),
-                },
-            ]
-        });
-
-        bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);
-
-        let todos = todos_state.layout_value(cx);
-        let draft_value = draft_state.layout_value(cx);
+        let todos = locals.todos.layout_value(cx);
+        let draft_value = locals.draft.layout_value(cx);
 
         let done_count = todos.iter().filter(|row| row.done).count();
         let total_count = todos.len();
@@ -92,7 +150,7 @@ impl View for SimpleTodoView {
             .action(act::Add)
             .test_id(TEST_ID_ADD);
 
-        let input = shadcn::Input::new(&draft_state)
+        let input = shadcn::Input::new(&locals.draft)
             .a11y_label("New task")
             .placeholder("Add a task?")
             .submit_action(act::Add)
@@ -123,7 +181,7 @@ impl View for SimpleTodoView {
                     ui::children![cx;
                         shadcn::card_title("Simple todo"),
                         shadcn::card_description(
-                            "LocalState<Vec<_>> + typed actions + keyed lists (no selector/query).",
+                            "Grouped view locals + LocalState<Vec<_>> + typed actions + keyed lists (no selector/query).",
                         ),
                         header_actions,
                     ]
@@ -144,57 +202,6 @@ impl View for SimpleTodoView {
 
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card)
     }
-}
-
-fn bind_todo_actions(
-    cx: &mut AppUi<'_, '_>,
-    draft_state: &LocalState<String>,
-    next_id_state: &LocalState<u64>,
-    todos_state: &LocalState<Vec<TodoRow>>,
-) {
-    cx.actions()
-        .locals_with((draft_state, next_id_state, todos_state))
-        .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
-            let text = tx.value(&draft_state).trim().to_string();
-            if text.is_empty() {
-                return false;
-            }
-
-            let id = tx.value(&next_id_state);
-            let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
-
-            if !tx.update(&todos_state, |rows| {
-                rows.push(TodoRow {
-                    id,
-                    done: false,
-                    text: Arc::from(text),
-                });
-            }) {
-                return false;
-            }
-            tx.set(&draft_state, String::new())
-        });
-
-    cx.actions()
-        .locals_with(todos_state)
-        .on::<act::ClearDone>(|tx, todos_state| {
-            tx.update_if(&todos_state, |rows| {
-                let before = rows.len();
-                rows.retain(|row| !row.done);
-                rows.len() != before
-            })
-        });
-
-    cx.actions()
-        .local(todos_state)
-        .payload_update_if::<act::Toggle>(|rows, id| {
-            if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
-                row.done = !row.done;
-                true
-            } else {
-                false
-            }
-        });
 }
 
 fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {

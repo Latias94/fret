@@ -21,6 +21,69 @@ const TEST_ID_VALID: &str = "cookbook.form_basics.valid";
 const TEST_ID_SUBMIT: &str = "cookbook.form_basics.submit";
 const TEST_ID_RESET: &str = "cookbook.form_basics.reset";
 
+#[derive(Clone)]
+struct FormBasicsLocals {
+    name: LocalState<String>,
+    email: LocalState<String>,
+    error: LocalState<Option<String>>,
+}
+
+impl FormBasicsLocals {
+    fn new(cx: &mut AppUi<'_, '_>) -> Self {
+        Self {
+            name: cx.state().local::<String>(),
+            email: cx.state().local::<String>(),
+            error: cx.state().local::<Option<String>>(),
+        }
+    }
+
+    fn validate_in(&self, models: &mut fret_runtime::ModelStore) -> Option<String> {
+        let name = self
+            .name
+            .read_in(models, Clone::clone)
+            .ok()
+            .unwrap_or_default();
+        let email = self
+            .email
+            .read_in(models, Clone::clone)
+            .ok()
+            .unwrap_or_default();
+        FormBasicsView::validate(&name, &email)
+    }
+
+    fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+        cx.actions()
+            .locals_with((&self.name, &self.email, &self.error))
+            .on::<act::Submit>(|tx, (name, email, error)| {
+                let name = tx.value(&name);
+                let email = tx.value(&email);
+                let err = FormBasicsView::validate(&name, &email);
+                tx.set(&error, err)
+            });
+
+        cx.actions()
+            .locals_with((&self.name, &self.email, &self.error))
+            .on::<act::Reset>(|tx, (name, email, error)| {
+                let ok = tx.set(&name, String::new());
+                let ok = tx.set(&email, String::new()) && ok;
+                tx.set(&error, None) && ok
+            });
+
+        cx.actions().availability::<act::Submit>({
+            let locals = self.clone();
+            move |host, _acx| {
+                if locals.validate_in(host.models_mut()).is_none() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+        });
+        cx.actions()
+            .availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
+    }
+}
+
 struct FormBasicsView;
 
 impl FormBasicsView {
@@ -36,16 +99,6 @@ impl FormBasicsView {
         }
         None
     }
-
-    fn validate_in(
-        models: &mut fret_runtime::ModelStore,
-        name: &LocalState<String>,
-        email: &LocalState<String>,
-    ) -> Option<String> {
-        let name = name.read_in(models, Clone::clone).ok().unwrap_or_default();
-        let email = email.read_in(models, Clone::clone).ok().unwrap_or_default();
-        Self::validate(&name, &email)
-    }
 }
 
 impl View for FormBasicsView {
@@ -54,53 +107,19 @@ impl View for FormBasicsView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let name_state = cx.state().local::<String>();
-        let email_state = cx.state().local::<String>();
-        let error_state = cx.state().local::<Option<String>>();
+        let locals = FormBasicsLocals::new(cx);
+        locals.bind_actions(cx);
 
-        let name = name_state.layout_value(cx);
-        let email = email_state.layout_value(cx);
-        let error = error_state.layout_value(cx);
+        let name = locals.name.layout_value(cx);
+        let email = locals.email.layout_value(cx);
+        let error = locals.error.layout_value(cx);
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
-
-        cx.actions()
-            .locals_with((&name_state, &email_state, &error_state))
-            .on::<act::Submit>(|tx, (name_state, email_state, error_state)| {
-                let name = tx.value(&name_state);
-                let email = tx.value(&email_state);
-                let err = FormBasicsView::validate(&name, &email);
-                tx.set(&error_state, err)
-            });
-
-        cx.actions()
-            .locals_with((&name_state, &email_state, &error_state))
-            .on::<act::Reset>(|tx, (name_state, email_state, error_state)| {
-                let ok = tx.set(&name_state, String::new());
-                let ok = tx.set(&email_state, String::new()) && ok;
-                tx.set(&error_state, None) && ok
-            });
-
-        cx.actions().availability::<act::Submit>({
-            let name_state = name_state.clone();
-            let email_state = email_state.clone();
-            move |host, _acx| {
-                if FormBasicsView::validate_in(host.models_mut(), &name_state, &email_state)
-                    .is_none()
-                {
-                    CommandAvailability::Available
-                } else {
-                    CommandAvailability::Blocked
-                }
-            }
-        });
-        cx.actions()
-            .availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
 
         let name_input = ui::v_flex(|cx| {
             ui::children![cx;
                 shadcn::Label::new("Name"),
-                shadcn::Input::new(&name_state)
+                shadcn::Input::new(&locals.name)
                     .a11y_label("Name")
                     .placeholder("Jane Doe")
                     .test_id(TEST_ID_NAME),
@@ -111,7 +130,7 @@ impl View for FormBasicsView {
         let email_input = ui::v_flex(|cx| {
             ui::children![cx;
                 shadcn::Label::new("Email"),
-                shadcn::Input::new(&email_state)
+                shadcn::Input::new(&locals.email)
                     .a11y_label("Email")
                     .placeholder("jane@example.com")
                     .submit_action(act::Submit)

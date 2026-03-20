@@ -44,6 +44,7 @@ Unless a document says otherwise:
 - Dataflow authoring surface (closed closeout lane for selector/query + ecosystem/router boundary conclusions): `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`
 - Into-element surface cleanup (closed closeout lane for conversion-vocabulary collapse and typed first-party teaching surfaces): `docs/workstreams/into-element-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/into-element-surface-fearless-refactor-v1/MIGRATION_MATRIX.md`, and `docs/workstreams/into-element-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
 - Selector/query authoring density (closed closeout lane for the remaining default-path selector/query density question): `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TODO.md`, `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/SELECTOR_BORROWED_INPUT_AUDIT_2026-03-20.md`, and `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
+- View-locals authoring (closed closeout lane for grouped view-owned `LocalState<T>` organization): `docs/workstreams/view-locals-authoring-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TODO.md`, and `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
 - Action write surface (closed closeout lane for the default app-lane write budget): `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/action-write-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/action-write-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-17.md`
 - App composition density follow-on (closeout / maintenance lane: M1 closed on a no-new-API verdict, M2 closed on grouped query invalidation, router excluded): `docs/workstreams/app-composition-density-follow-on-v1/DESIGN.md`, `docs/workstreams/app-composition-density-follow-on-v1/TARGET_INTERFACE_STATE.md`, `docs/workstreams/app-composition-density-follow-on-v1/MILESTONES.md`, and `docs/workstreams/app-composition-density-follow-on-v1/TODO.md`
 - Local-state architecture follow-on (closed decision lane; reopen only with fresh cross-surface evidence): `docs/workstreams/local-state-architecture-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/local-state-architecture-fearless-refactor-v1/TODO.md`, and `docs/workstreams/local-state-architecture-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
@@ -144,10 +145,15 @@ now taught as `LocalState` + view runtime + typed actions.
   - Workstream: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/DESIGN.md`
   - Target state: `docs/workstreams/dataflow-authoring-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
   - Scope note: the selector/query posture and ecosystem/router boundary are closed there; write-side follow-on moved out
-- Selector/query authoring density (active narrow follow-on):
+- Selector/query authoring density (closed narrow closeout lane):
   - Workstream: `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/DESIGN.md`
   - Target state: `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
-  - Scope note: this lane starts after the dataflow closeout and only targets remaining selector/query density, not ownership or router scope
+  - Scope note: this lane is now closed on query semantic projections plus a no-new-API selector verdict; read the closeout before reopening
+- View-locals authoring (closed closeout lane):
+  - Workstream: `docs/workstreams/view-locals-authoring-fearless-refactor-v1/DESIGN.md`
+  - Target state: `docs/workstreams/view-locals-authoring-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
+  - Closeout: `docs/workstreams/view-locals-authoring-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-20.md`
+  - Scope note: this lane now closes on the shipped `1-2 inline / 3+ bundle` rule; reopen only if fresh cross-surface evidence exceeds the closeout audit
 - Action write surface follow-on (closed closeout lane for the default app-lane write budget):
   - Workstream: `docs/workstreams/action-write-surface-fearless-refactor-v1/DESIGN.md`
   - Target state: `docs/workstreams/action-write-surface-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -182,7 +188,8 @@ now taught as `LocalState` + view runtime + typed actions.
 - Keyed row payloads (default when rows are view-owned): `fret::payload_actions!` + `ui::for_each_keyed(...)` + `.action_payload(...)`, with `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row write path.
 - Default entrypoints (recommended mental model):
   - `LocalState<T>` / `LocalState<Vec<_>>` - default for view-owned state, including starter keyed lists.
-  - `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` - default for most typed UI actions that coordinate view-owned `LocalState<T>` slots.
+  - Keep one or two trivial locals inline; once a view owns several related `LocalState<T>` slots, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`.
+  - `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` - default transaction form inside that bundle for typed UI actions coordinating view-owned `LocalState<T>` slots.
   - `cx.actions().transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `cx.actions().models::<A>(|models| ...)` - drop down when coordinating shared `Model<T>` graphs (cross-view ownership).
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` - use this only when a control exposes activation glue rather than a narrower widget-owned app-facing helper. Import `use fret::app::AppActivateExt as _;` explicitly for that bridge; raw `on_activate*` helper families stay component/advanced-oriented.

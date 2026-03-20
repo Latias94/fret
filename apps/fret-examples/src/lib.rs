@@ -630,11 +630,10 @@ mod authoring_surface_policy_tests {
     fn todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(TODO_DEMO);
         assert_avoids_legacy_conversion_names(TODO_DEMO);
-        assert!(
-            TODO_DEMO
-                .contains("bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);")
-        );
-        assert!(TODO_DEMO.contains("fn bind_todo_actions("));
+        assert!(TODO_DEMO.contains("struct TodoLocals {"));
+        assert!(TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
+        assert!(TODO_DEMO.contains("locals.bind_actions(cx);"));
+        assert!(TODO_DEMO.contains("fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {"));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
     }
@@ -643,8 +642,10 @@ mod authoring_surface_policy_tests {
     fn simple_todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
-        assert!(SIMPLE_TODO_DEMO.contains("fn bind_todo_actions("));
-        assert!(SIMPLE_TODO_DEMO.contains(".local(todos_state)"));
+        assert!(SIMPLE_TODO_DEMO.contains("struct TodoLocals {"));
+        assert!(SIMPLE_TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
+        assert!(SIMPLE_TODO_DEMO.contains("locals.bind_actions(cx);"));
+        assert!(SIMPLE_TODO_DEMO.contains(".local(&self.todos)"));
         assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Remove>(|rows, id| {"));
         assert!(SIMPLE_TODO_DEMO.contains("ui_app_driver::UiAppDriver::new("));
@@ -1779,21 +1780,23 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             TODO_DEMO,
             &[
-                "let draft_state = cx.state().local::<String>();",
-                "let next_id_state = cx.state().local_init(|| 4u64);",
-                "let todos = todos_state.layout_value(cx);",
-                "let draft_value = draft_state.layout_value(cx);",
-                ".locals_with((draft_state, next_id_state, todos_state))",
-                ".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {",
-                "let text = tx.value(&draft_state).trim().to_string();",
-                "let id = tx.value(&next_id_state);",
-                ".locals_with(todos_state)",
-                ".on::<act::ClearDone>(|tx, todos_state| {",
-                "cx.actions().local(todos_state)",
+                "struct TodoLocals {",
+                "let locals = TodoLocals::new(cx);",
+                "locals.bind_actions(cx);",
+                "let todos = locals.todos.layout_value(cx);",
+                "let draft_value = locals.draft.layout_value(cx);",
+                ".locals_with((&self.draft, &self.next_id, &self.todos))",
+                ".on::<act::Add>(|tx, (draft, next_id, todos)| {",
+                "let text = tx.value(&draft).trim().to_string();",
+                "let id = tx.value(&next_id);",
+                ".locals_with(&self.todos)",
+                ".on::<act::ClearDone>(|tx, todos| {",
+                "cx.actions().local(&self.todos)",
                 ".payload_update_if::<act::Toggle>(|rows, id| {",
                 ".payload_update_if::<act::Remove>(|rows, id| {",
             ],
             &[
+                "bind_todo_actions(",
                 "cx.use_local::<String>()",
                 "cx.on_action_notify_models::<act::Add>",
                 "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
