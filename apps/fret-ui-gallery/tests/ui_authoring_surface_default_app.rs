@@ -1769,6 +1769,12 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
         ),
         "src/ui/pages/input_group.rs should keep nested dropdown triggers on the default DropdownMenu compose lane when no lower-level adapter seam is needed"
     );
+    assert!(
+        page.contains(
+            "`Custom Input` now uses the narrow `custom_input(...)` / `custom_textarea(...)` seam for caller-owned controls; a generic root `children(...)` API is still intentionally absent."
+        ),
+        "src/ui/pages/input_group.rs should document the narrow custom-control seam instead of widening InputGroup to generic root children"
+    );
 }
 
 #[test]

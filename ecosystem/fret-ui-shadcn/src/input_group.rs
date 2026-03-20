@@ -50,6 +50,7 @@ pub enum InputGroupControlKind {
 pub struct InputGroup {
     model: Model<String>,
     control: InputGroupControlKind,
+    custom_control: Option<AnyElement>,
     test_id: Option<Arc<str>>,
     control_test_id: Option<Arc<str>>,
     control_id: Option<ControlId>,
@@ -84,6 +85,7 @@ impl std::fmt::Debug for InputGroup {
         f.debug_struct("InputGroup")
             .field("model", &"<model>")
             .field("control", &self.control)
+            .field("custom_control", &self.custom_control.is_some())
             .field("test_id", &self.test_id.as_deref())
             .field("control_test_id", &self.control_test_id.as_deref())
             .field(
@@ -119,6 +121,7 @@ impl InputGroup {
         Self {
             model: model.into_text_value_model(),
             control: InputGroupControlKind::Input,
+            custom_control: None,
             test_id: None,
             control_test_id: None,
             control_id: None,
@@ -156,6 +159,26 @@ impl InputGroup {
 
     pub fn textarea(self) -> Self {
         self.control(InputGroupControlKind::Textarea)
+    }
+
+    /// Replaces the built-in input with a caller-owned control while preserving InputGroup chrome,
+    /// addon routing, focus-ring ownership, and control-id wiring.
+    ///
+    /// The caller owns the inner control's chrome, placeholder, and input behavior.
+    pub fn custom_input(mut self, control: AnyElement) -> Self {
+        self.control = InputGroupControlKind::Input;
+        self.custom_control = Some(control);
+        self
+    }
+
+    /// Replaces the built-in textarea with a caller-owned multiline control while preserving
+    /// InputGroup chrome, block addon routing, focus-ring ownership, and control-id wiring.
+    ///
+    /// The caller owns the inner control's chrome, placeholder, and input behavior.
+    pub fn custom_textarea(mut self, control: AnyElement) -> Self {
+        self.control = InputGroupControlKind::Textarea;
+        self.custom_control = Some(control);
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -466,6 +489,7 @@ impl InputGroup {
         let trailing_has_kbd = self.trailing_has_kbd;
         let aria_invalid = self.aria_invalid;
         let control = self.control;
+        let custom_control = self.custom_control;
         let a11y_label = self.a11y_label;
         let submit_command = self.submit_command;
         let cancel_command = self.cancel_command;
@@ -754,105 +778,115 @@ impl InputGroup {
                     };
 
                 if is_block_layout {
-                    let mut control_el = match control {
-                        InputGroupControlKind::Input => {
-                            let (resolved_pad_inline_start, resolved_pad_inline_end) =
-                                rtl::inline_start_end_pair(
+                    let mut control_el = if let Some(mut custom_control) = custom_control {
+                        if let Some(test_id) = control_test_id.clone() {
+                            custom_control = custom_control.test_id(test_id);
+                        }
+                        if let Some(label) = a11y_label.clone() {
+                            custom_control = custom_control.a11y_label(label);
+                        }
+                        custom_control
+                    } else {
+                        match control {
+                            InputGroupControlKind::Input => {
+                                let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                                    rtl::inline_start_end_pair(
+                                        dir,
+                                        resolved.padding.left,
+                                        resolved.padding.right,
+                                    );
+                                let pad_inline_start = if leading.is_empty() {
+                                    resolved_pad_inline_start
+                                } else {
+                                    compact_px
+                                };
+                                let pad_inline_end = if trailing.is_empty() {
+                                    resolved_pad_inline_end
+                                } else {
+                                    compact_px
+                                };
+
+                                let mut chrome =
+                                    TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
+                                chrome.padding = rtl::padding_edges_with_inline_start_end(
                                     dir,
+                                    resolved.padding.top,
+                                    resolved.padding.bottom,
+                                    pad_inline_start,
+                                    pad_inline_end,
+                                );
+                                chrome.corner_radii = Corners::all(Px(0.0));
+                                chrome.border = Edges::all(Px(0.0));
+                                chrome.background = Color::TRANSPARENT;
+                                chrome.border_color = resolved.border_color;
+                                chrome.border_color_focused = resolved.border_color_focused;
+                                chrome.focus_ring = None;
+                                chrome.text_color = resolved.text_color;
+                                chrome.caret_color = resolved.text_color;
+                                chrome.selection_color = resolved.selection_color;
+                                chrome.preedit_color = chrome.text_color;
+                                chrome.preedit_underline_color = chrome.text_color;
+
+                                let mut input = TextInputProps::new(model.clone());
+                                input.a11y_label = a11y_label.clone();
+                                input.test_id = control_test_id.clone();
+                                input.placeholder = placeholder.clone();
+                                input.submit_command = submit_command;
+                                input.cancel_command = cancel_command;
+                                input.enabled = !disabled;
+                                input.focusable = !disabled;
+                                input.chrome = chrome;
+                                input.text_style = input_text_style.clone();
+                                input.layout = {
+                                    let theme = Theme::global(&*cx.app);
+                                    decl_style::layout_style(
+                                        theme,
+                                        LayoutRefinement::default()
+                                            .w_full()
+                                            .min_w_0()
+                                            .min_h(block_control_min_height),
+                                    )
+                                };
+                                cx.text_input(input)
+                            }
+                            InputGroupControlKind::Textarea => {
+                                let mut chrome = TextAreaStyle::default();
+                                chrome.padding_x = rtl::padding_x_from_physical_edges_max(
                                     resolved.padding.left,
                                     resolved.padding.right,
                                 );
-                            let pad_inline_start = if leading.is_empty() {
-                                resolved_pad_inline_start
-                            } else {
-                                compact_px
-                            };
-                            let pad_inline_end = if trailing.is_empty() {
-                                resolved_pad_inline_end
-                            } else {
-                                compact_px
-                            };
+                                chrome.padding_y = textarea_py;
+                                chrome.background = Color::TRANSPARENT;
+                                chrome.border = Edges::all(Px(0.0));
+                                chrome.border_color = resolved.border_color;
+                                chrome.border_color_focused = resolved.border_color_focused;
+                                chrome.corner_radii = Corners::all(Px(0.0));
+                                chrome.text_color = resolved.text_color;
+                                chrome.selection_color = resolved.selection_color;
+                                chrome.caret_color = resolved.text_color;
+                                chrome.preedit_bg_color = resolved.selection_color;
+                                chrome.preedit_underline_color = resolved.selection_color;
+                                chrome.focus_ring = None;
 
-                            let mut chrome =
-                                TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
-                            chrome.padding = rtl::padding_edges_with_inline_start_end(
-                                dir,
-                                resolved.padding.top,
-                                resolved.padding.bottom,
-                                pad_inline_start,
-                                pad_inline_end,
-                            );
-                            chrome.corner_radii = Corners::all(Px(0.0));
-                            chrome.border = Edges::all(Px(0.0));
-                            chrome.background = Color::TRANSPARENT;
-                            chrome.border_color = resolved.border_color;
-                            chrome.border_color_focused = resolved.border_color_focused;
-                            chrome.focus_ring = None;
-                            chrome.text_color = resolved.text_color;
-                            chrome.caret_color = resolved.text_color;
-                            chrome.selection_color = resolved.selection_color;
-                            chrome.preedit_color = chrome.text_color;
-                            chrome.preedit_underline_color = chrome.text_color;
-
-                            let mut input = TextInputProps::new(model.clone());
-                            input.a11y_label = a11y_label.clone();
-                            input.test_id = control_test_id.clone();
-                            input.placeholder = placeholder.clone();
-                            input.submit_command = submit_command;
-                            input.cancel_command = cancel_command;
-                            input.enabled = !disabled;
-                            input.focusable = !disabled;
-                            input.chrome = chrome;
-                            input.text_style = input_text_style.clone();
-                            input.layout = {
-                                let theme = Theme::global(&*cx.app);
-                                decl_style::layout_style(
-                                    theme,
-                                    LayoutRefinement::default()
-                                        .w_full()
-                                        .min_w_0()
-                                        .min_h(block_control_min_height),
-                                )
-                            };
-                            cx.text_input(input)
-                        }
-                        InputGroupControlKind::Textarea => {
-                            let mut chrome = TextAreaStyle::default();
-                            chrome.padding_x = rtl::padding_x_from_physical_edges_max(
-                                resolved.padding.left,
-                                resolved.padding.right,
-                            );
-                            chrome.padding_y = textarea_py;
-                            chrome.background = Color::TRANSPARENT;
-                            chrome.border = Edges::all(Px(0.0));
-                            chrome.border_color = resolved.border_color;
-                            chrome.border_color_focused = resolved.border_color_focused;
-                            chrome.corner_radii = Corners::all(Px(0.0));
-                            chrome.text_color = resolved.text_color;
-                            chrome.selection_color = resolved.selection_color;
-                            chrome.caret_color = resolved.text_color;
-                            chrome.preedit_bg_color = resolved.selection_color;
-                            chrome.preedit_underline_color = resolved.selection_color;
-                            chrome.focus_ring = None;
-
-                            let mut props = TextAreaProps::new(model.clone());
-                            props.a11y_label = a11y_label.clone();
-                            props.test_id = control_test_id.clone();
-                            props.placeholder = placeholder.clone();
-                            props.enabled = !disabled;
-                            props.focusable = !disabled;
-                            props.chrome = chrome;
-                            props.text_style = textarea_text_style.clone();
-                            props.min_height = textarea_min_height;
-                            props.layout = {
-                                let theme = Theme::global(&*cx.app);
-                                let mut layout = LayoutRefinement::default().w_full().min_w_0();
-                                if let Some(max_h) = textarea_max_height {
-                                    layout = layout.max_h(max_h);
-                                }
-                                decl_style::layout_style(theme, layout)
-                            };
-                            cx.text_area(props)
+                                let mut props = TextAreaProps::new(model.clone());
+                                props.a11y_label = a11y_label.clone();
+                                props.test_id = control_test_id.clone();
+                                props.placeholder = placeholder.clone();
+                                props.enabled = !disabled;
+                                props.focusable = !disabled;
+                                props.chrome = chrome;
+                                props.text_style = textarea_text_style.clone();
+                                props.min_height = textarea_min_height;
+                                props.layout = {
+                                    let theme = Theme::global(&*cx.app);
+                                    let mut layout = LayoutRefinement::default().w_full().min_w_0();
+                                    if let Some(max_h) = textarea_max_height {
+                                        layout = layout.max_h(max_h);
+                                    }
+                                    decl_style::layout_style(theme, layout)
+                                };
+                                cx.text_area(props)
+                            }
                         }
                     };
 
@@ -1146,66 +1180,77 @@ impl InputGroup {
                     let overlay = build_wrapper_motion_overlay(cx, control_element_id);
                     vec![layout, overlay]
                 } else {
-                    let (resolved_pad_inline_start, resolved_pad_inline_end) =
-                        rtl::inline_start_end_pair(
+                    let mut control_el = if let Some(mut custom_control) = custom_control {
+                        if let Some(test_id) = control_test_id.clone() {
+                            custom_control = custom_control.test_id(test_id);
+                        }
+                        if let Some(label) = a11y_label.clone() {
+                            custom_control = custom_control.a11y_label(label);
+                        }
+                        custom_control
+                    } else {
+                        let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                            rtl::inline_start_end_pair(
+                                dir,
+                                resolved.padding.left,
+                                resolved.padding.right,
+                            );
+                        let pad_inline_start = if leading.is_empty() {
+                            resolved_pad_inline_start
+                        } else {
+                            compact_px
+                        };
+                        let pad_inline_end = if trailing.is_empty() {
+                            resolved_pad_inline_end
+                        } else {
+                            compact_px
+                        };
+
+                        let mut chrome =
+                            TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
+                        chrome.padding = rtl::padding_edges_with_inline_start_end(
                             dir,
-                            resolved.padding.left,
-                            resolved.padding.right,
+                            resolved.padding.top,
+                            resolved.padding.bottom,
+                            pad_inline_start,
+                            pad_inline_end,
                         );
-                    let pad_inline_start = if leading.is_empty() {
-                        resolved_pad_inline_start
-                    } else {
-                        compact_px
-                    };
-                    let pad_inline_end = if trailing.is_empty() {
-                        resolved_pad_inline_end
-                    } else {
-                        compact_px
-                    };
+                        chrome.corner_radii = Corners::all(Px(0.0));
+                        chrome.border = Edges::all(Px(0.0));
+                        chrome.background = Color::TRANSPARENT;
+                        chrome.border_color = resolved.border_color;
+                        chrome.border_color_focused = resolved.border_color_focused;
+                        chrome.focus_ring = None;
+                        chrome.text_color = resolved.text_color;
+                        chrome.caret_color = resolved.text_color;
+                        chrome.selection_color = resolved.selection_color;
+                        chrome.preedit_color = chrome.text_color;
+                        chrome.preedit_underline_color = chrome.text_color;
 
-                    let mut chrome = TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
-                    chrome.padding = rtl::padding_edges_with_inline_start_end(
-                        dir,
-                        resolved.padding.top,
-                        resolved.padding.bottom,
-                        pad_inline_start,
-                        pad_inline_end,
-                    );
-                    chrome.corner_radii = Corners::all(Px(0.0));
-                    chrome.border = Edges::all(Px(0.0));
-                    chrome.background = Color::TRANSPARENT;
-                    chrome.border_color = resolved.border_color;
-                    chrome.border_color_focused = resolved.border_color_focused;
-                    chrome.focus_ring = None;
-                    chrome.text_color = resolved.text_color;
-                    chrome.caret_color = resolved.text_color;
-                    chrome.selection_color = resolved.selection_color;
-                    chrome.preedit_color = chrome.text_color;
-                    chrome.preedit_underline_color = chrome.text_color;
+                        let mut input = TextInputProps::new(model.clone());
+                        input.a11y_label = a11y_label.clone();
+                        input.test_id = control_test_id.clone();
+                        input.placeholder = placeholder.clone();
+                        input.submit_command = submit_command;
+                        input.cancel_command = cancel_command;
+                        input.enabled = !disabled;
+                        input.focusable = !disabled;
+                        input.chrome = chrome;
+                        input.text_style = input_text_style.clone();
+                        input.layout = {
+                            let theme = Theme::global(&*cx.app);
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default()
+                                    .flex_1()
+                                    .h_full()
+                                    .min_w_0()
+                                    .min_h(resolved.min_height),
+                            )
+                        };
 
-                    let mut input = TextInputProps::new(model.clone());
-                    input.a11y_label = a11y_label.clone();
-                    input.test_id = control_test_id.clone();
-                    input.placeholder = placeholder.clone();
-                    input.submit_command = submit_command;
-                    input.cancel_command = cancel_command;
-                    input.enabled = !disabled;
-                    input.focusable = !disabled;
-                    input.chrome = chrome;
-                    input.text_style = input_text_style.clone();
-                    input.layout = {
-                        let theme = Theme::global(&*cx.app);
-                        decl_style::layout_style(
-                            theme,
-                            LayoutRefinement::default()
-                                .flex_1()
-                                .h_full()
-                                .min_w_0()
-                                .min_h(resolved.min_height),
-                        )
+                        cx.text_input(input)
                     };
-
-                    let mut control_el = cx.text_input(input);
                     let control_element_id = control_el.id;
                     let control_focus_target = (!disabled).then_some(control_element_id);
 
@@ -1594,6 +1639,8 @@ pub enum InputGroupPart {
     Addon(InputGroupAddon),
     Input(InputGroupInput),
     Textarea(InputGroupTextarea),
+    CustomInput(AnyElement),
+    CustomTextarea(AnyElement),
 }
 
 impl InputGroupPart {
@@ -1607,6 +1654,14 @@ impl InputGroupPart {
 
     pub fn textarea(textarea: InputGroupTextarea) -> Self {
         Self::Textarea(textarea)
+    }
+
+    pub fn custom_input(control: AnyElement) -> Self {
+        Self::CustomInput(control)
+    }
+
+    pub fn custom_textarea(control: AnyElement) -> Self {
+        Self::CustomTextarea(control)
     }
 }
 
@@ -1718,6 +1773,14 @@ impl InputGroup {
                     if let Some(max_h) = textarea.max_height {
                         group.textarea_max_height = Some(max_h);
                     }
+                }
+                InputGroupPart::CustomInput(control) => {
+                    group.control = InputGroupControlKind::Input;
+                    group.custom_control = Some(control);
+                }
+                InputGroupPart::CustomTextarea(control) => {
+                    group.control = InputGroupControlKind::Textarea;
+                    group.custom_control = Some(control);
                 }
             }
         }
@@ -2361,6 +2424,59 @@ mod tests {
             let props = find_text_input(&el).expect("expected text input in InputGroup");
             assert_eq!(props.placeholder.as_deref(), Some("placeholder"));
         });
+    }
+
+    #[test]
+    fn input_group_custom_control_stamps_group_control_test_id_and_a11y_label() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_custom_control_test_id",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let custom = cx
+                    .text_area(TextAreaProps::new(model.clone()))
+                    .a11y_role(SemanticsRole::TextField);
+
+                let el = InputGroup::new(model)
+                    .custom_textarea(custom)
+                    .control_test_id("input-group.custom.control")
+                    .a11y_label("Custom control")
+                    .into_element(cx);
+
+                let mut found_test_id = false;
+                let mut found_label = false;
+
+                fn walk(node: &AnyElement, found_test_id: &mut bool, found_label: &mut bool) {
+                    if let Some(sem) = node.semantics_decoration.as_ref() {
+                        if sem.test_id.as_deref() == Some("input-group.custom.control") {
+                            *found_test_id = true;
+                        }
+                        if sem.label.as_deref() == Some("Custom control") {
+                            *found_label = true;
+                        }
+                    }
+                    for child in &node.children {
+                        walk(child, found_test_id, found_label);
+                    }
+                }
+
+                walk(&el, &mut found_test_id, &mut found_label);
+                assert!(
+                    found_test_id,
+                    "expected custom control to inherit control_test_id"
+                );
+                assert!(
+                    found_label,
+                    "expected custom control to inherit group a11y_label"
+                );
+            },
+        );
     }
 
     #[test]

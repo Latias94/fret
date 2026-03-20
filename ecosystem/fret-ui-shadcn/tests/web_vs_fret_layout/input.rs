@@ -4271,10 +4271,25 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
                         )
                         .into_element(cx);
 
-                    let group = shadcn::InputGroup::new(model.clone())
-                        .textarea()
-                        .textarea_min_height(Px(web_textarea.rect.h))
+                    let control = shadcn::Textarea::new(model.clone())
                         .a11y_label("Golden:input-group-custom:textarea")
+                        .placeholder("Autoresize textarea...")
+                        .min_height(Px(web_textarea.rect.h))
+                        .resizable(false)
+                        .stable_line_boxes(false)
+                        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                        .refine_style(
+                            ChromeRefinement::default()
+                                .border_width(Px(0.0))
+                                .shadow_none()
+                                .bg(ColorRef::Color(fret_core::Color::TRANSPARENT))
+                                .px_3()
+                                .py_2p5(),
+                        )
+                        .into_element(cx);
+
+                    let group = shadcn::InputGroup::new(model.clone())
+                        .custom_textarea(control)
                         .block_end(vec![submit])
                         .into_element(cx);
 

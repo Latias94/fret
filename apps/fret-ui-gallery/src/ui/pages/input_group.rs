@@ -44,7 +44,7 @@ pub(super) fn preview_input_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "The current parity work here is page/public-surface alignment, not a mechanism bug.",
         "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane.",
         "The `Dropdown` example intentionally stays on `DropdownMenu::compose()`; swapping the trigger to `InputGroupButton` does not by itself require falling back to `build_parts(...)`.",
-        "`Custom Input` is expressed as composition via slots / parts (no dedicated \"custom control\" type).",
+        "`Custom Input` now uses the narrow `custom_input(...)` / `custom_textarea(...)` seam for caller-owned controls; a generic root `children(...)` API is still intentionally absent.",
         "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
     ]);
     let align = DocSection::build(cx, "Align", align)
@@ -124,7 +124,7 @@ shadcn::InputGroup::new(query)
         .test_id_prefix("ui-gallery-input-group-textarea")
         .code_rust_from_file_region(snippets::textarea::SOURCE, "example");
     let custom_input = DocSection::build(cx, "Custom Input", custom_input)
-        .description("Custom/extended input chrome via slots.")
+        .description("Caller-owned control embedded via `custom_textarea(...)` while the group still owns chrome/addons.")
         .test_id_prefix("ui-gallery-input-group-custom-input")
         .code_rust_from_file_region(snippets::custom_input::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

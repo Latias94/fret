@@ -401,6 +401,9 @@ Recent fixes:
   - `InputGroupButton` is now available (xs/sm/icon sizes) to support input-group compositions.
   - `InputGroupButton` no longer forces a fill-width content row for text buttons, matching the
     upstream shrink-to-fit behavior.
+  - `InputGroup` now exposes narrow `custom_input(...)` / `custom_textarea(...)` seams so the
+    upstream `Custom Input` docs example can be taught as a real caller-owned control composition
+    instead of a pseudo-custom textarea variant.
   - UI gallery dropdown demo now uses the real chevron-down icon (`lucide.chevron-down`) instead of
     a text placeholder.
 - Conformance gates:
