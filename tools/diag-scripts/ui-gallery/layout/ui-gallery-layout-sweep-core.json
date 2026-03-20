@@ -24,38 +24,12 @@
       "type": "wait_until"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "alt": false,
-        "ctrl": true,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
       "text": "intro",
-      "type": "type_text"
+      "type": "set_text_value"
     },
     {
       "n": 2,
@@ -115,38 +89,12 @@
       "type": "capture_bundle"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "alt": false,
-        "ctrl": true,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
       "text": "layout",
-      "type": "type_text"
+      "type": "set_text_value"
     },
     {
       "n": 2,
@@ -206,38 +154,12 @@
       "type": "capture_bundle"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "alt": false,
-        "ctrl": true,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
       "text": "scroll",
-      "type": "type_text"
+      "type": "set_text_value"
     },
     {
       "n": 2,
@@ -297,38 +219,12 @@
       "type": "capture_bundle"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "alt": false,
-        "ctrl": true,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
       "text": "tabs",
-      "type": "type_text"
+      "type": "set_text_value"
     },
     {
       "n": 2,
@@ -388,38 +284,12 @@
       "type": "capture_bundle"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "alt": false,
-        "ctrl": true,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
       "text": "accordion",
-      "type": "type_text"
+      "type": "set_text_value"
     },
     {
       "n": 2,
@@ -479,38 +349,12 @@
       "type": "capture_bundle"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "alt": false,
-        "ctrl": true,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "text": "overlay",
-      "type": "type_text"
+      "text": "radix",
+      "type": "set_text_value"
     },
     {
       "n": 2,
@@ -570,38 +414,12 @@
       "type": "capture_bundle"
     },
     {
-      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "click"
-    },
-    {
-      "key": "a",
-      "modifiers": {
-        "alt": false,
-        "ctrl": true,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "backspace",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
       "text": "resizable",
-      "type": "type_text"
+      "type": "set_text_value"
     },
     {
       "n": 2,
