@@ -5,6 +5,7 @@ use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Invalidation;
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -57,7 +58,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let append_messages = {
         let messages_model = messages_model.clone();
-        move |host, acx| {
+        move |host: &mut dyn UiActionHost, acx: ActionCx| {
             let existing = host
                 .models_mut()
                 .get_cloned(&messages_model)

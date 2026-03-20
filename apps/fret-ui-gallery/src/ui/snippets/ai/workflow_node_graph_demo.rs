@@ -23,6 +23,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
     use fret_runtime::Model;
+    use fret_ui::action::{ActionCx, UiActionHost};
     use fret_ui::element::{LayoutStyle, SemanticsProps};
     use fret_ui::retained_bridge::RetainedSubtreeProps;
     use fret_ui_kit::declarative::style as decl_style;
@@ -266,32 +267,50 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         }
     }
 
+    #[derive(Clone)]
+    struct DemoSurfaceState {
+        binding: NodeGraphSurfaceBinding,
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        view_queue: Model<NodeGraphViewQueue>,
+    }
+
     let binding_slot = cx.keyed_slot_id("binding");
     let bounds = cx.local_model_keyed("bounds", || None::<fret_core::Rect>);
-    let binding = cx.state_for(
+    let surface = cx.state_for(
         binding_slot,
-        || None::<NodeGraphSurfaceBinding>,
+        || None::<DemoSurfaceState>,
         |slot| slot.clone(),
     );
-    let binding = match binding {
-        Some(binding) => binding,
+    let surface = match surface {
+        Some(surface) => surface,
         None => {
             let graph_value = build_demo_graph(GraphId::from_u128(42));
             let graph = cx.app.models_mut().insert(graph_value.clone());
-            let view = cx.app.models_mut().insert(NodeGraphViewState::default());
+            let view_state = cx.app.models_mut().insert(NodeGraphViewState::default());
             let view_queue = cx.app.models_mut().insert(NodeGraphViewQueue::default());
             let store = cx.app.models_mut().insert(NodeGraphStore::new(
                 graph_value,
                 NodeGraphViewState::default(),
             ));
-            let controller = NodeGraphController::new(store).bind_view_queue_transport(view_queue);
-            let binding = NodeGraphSurfaceBinding::from_models(graph, view, controller);
+            let controller =
+                NodeGraphController::new(store).bind_view_queue_transport(view_queue.clone());
+            let surface = DemoSurfaceState {
+                binding: NodeGraphSurfaceBinding::from_models(
+                    graph.clone(),
+                    view_state.clone(),
+                    controller,
+                ),
+                graph,
+                view_state,
+                view_queue,
+            };
             cx.state_for(
                 binding_slot,
-                || None::<NodeGraphSurfaceBinding>,
+                || None::<DemoSurfaceState>,
                 |slot| {
                     if slot.is_none() {
-                        *slot = Some(binding.clone());
+                        *slot = Some(surface.clone());
                     }
                     slot.clone()
                         .expect("workflow node graph binding slot must be initialized")
@@ -299,6 +318,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             )
         }
     };
+    let binding = surface.binding.clone();
 
     let max_w = LayoutRefinement::default()
         .w_full()
@@ -306,14 +326,18 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .min_w_0();
 
     let zoom_in = {
-        let binding = binding.clone();
         let bounds = bounds.clone();
-        move |host, _cx| {
+        let view_state = surface.view_state.clone();
+        let view_queue = surface.view_queue.clone();
+        move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
 
-            let (pan, zoom) = binding.viewport(host);
+            let (pan, zoom) = host
+                .models_mut()
+                .read(&view_state, |state| (state.pan, state.zoom))
+                .unwrap_or((CanvasPoint::default(), 1.0));
             let next_zoom = {
                 let z = if zoom.is_finite() && zoom > 0.0 {
                     zoom
@@ -323,19 +347,26 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 (z * 1.10).min(4.0)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = binding.set_viewport(host, pan, zoom);
+            let _ = host.models_mut().update(&view_queue, |queue| {
+                queue.push_set_viewport(pan, zoom);
+            });
+            host.request_redraw(action_cx.window);
         }
     };
 
     let zoom_out = {
-        let binding = binding.clone();
         let bounds = bounds.clone();
-        move |host, _cx| {
+        let view_state = surface.view_state.clone();
+        let view_queue = surface.view_queue.clone();
+        move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
             let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
                 return;
             };
 
-            let (pan, zoom) = binding.viewport(host);
+            let (pan, zoom) = host
+                .models_mut()
+                .read(&view_state, |state| (state.pan, state.zoom))
+                .unwrap_or((CanvasPoint::default(), 1.0));
             let next_zoom = {
                 let z = if zoom.is_finite() && zoom > 0.0 {
                     zoom
@@ -345,25 +376,37 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 (z / 1.10).max(0.15)
             };
             let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
-            let _ = binding.set_viewport(host, pan, zoom);
+            let _ = host.models_mut().update(&view_queue, |queue| {
+                queue.push_set_viewport(pan, zoom);
+            });
+            host.request_redraw(action_cx.window);
         }
     };
 
     let fit_view = {
-        let binding = binding.clone();
-        move |host, _cx| {
-            let nodes = binding
-                .graph_snapshot(host)
-                .map(|graph| graph.nodes.keys().copied().collect::<Vec<_>>())
+        let graph = surface.graph.clone();
+        let view_queue = surface.view_queue.clone();
+        move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
+            let nodes = host
+                .models_mut()
+                .read(&graph, |graph| {
+                    graph.nodes.keys().copied().collect::<Vec<_>>()
+                })
                 .unwrap_or_default();
-            let _ = binding.fit_view_nodes(host, nodes);
+            let _ = host.models_mut().update(&view_queue, |queue| {
+                queue.push_frame_nodes(nodes);
+            });
+            host.request_redraw(action_cx.window);
         }
     };
 
     let reset_view = {
-        let binding = binding.clone();
-        move |host, _cx| {
-            let _ = binding.set_viewport(host, CanvasPoint::default(), 1.0);
+        let view_queue = surface.view_queue.clone();
+        move |host: &mut dyn UiActionHost, action_cx: ActionCx| {
+            let _ = host.models_mut().update(&view_queue, |queue| {
+                queue.push_set_viewport(CanvasPoint::default(), 1.0);
+            });
+            host.request_redraw(action_cx.window);
         }
     };
 
@@ -448,7 +491,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         layout.size.width = fret_ui::element::Length::Fill;
         layout.size.height = fret_ui::element::Length::Fill;
 
-        let props = RetainedSubtreeProps::new::<H>(move |ui| {
+        let props = RetainedSubtreeProps::new::<fret::app::App>(move |ui| {
             use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
             let editor = ui.create_node_retained(NodeGraphEditor::new());
