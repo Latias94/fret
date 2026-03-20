@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("media.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_shadcn::facade as shadcn;
@@ -23,28 +24,38 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         Some(Px(32.0)),
                         None,
                     );
+                    let media = shadcn::AlertDialogMedia::new(icon).into_element(cx);
 
-                    out.push(
-                        shadcn::AlertDialogHeader::new([
-                            shadcn::AlertDialogTitle::new("Share this project?").into_element(cx),
-                            shadcn::AlertDialogDescription::new(
-                                "Anyone with the link will be able to view and edit this project.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .media(shadcn::AlertDialogMedia::new(icon).into_element(cx))
-                        .into_element(cx),
+                    out.push_ui(
+                        cx,
+                        shadcn::AlertDialogHeader::build(|cx, out| {
+                            out.push_ui(
+                                cx,
+                                shadcn::AlertDialogTitle::new("Share this project?"),
+                            );
+                            out.push_ui(
+                                cx,
+                                shadcn::AlertDialogDescription::new(
+                                    "Anyone with the link will be able to view and edit this project.",
+                                ),
+                            );
+                        })
+                        .media(media),
                     );
-                    out.push(
-                        shadcn::AlertDialogFooter::new([
-                            shadcn::AlertDialogCancel::from_scope("Cancel")
-                                .test_id("ui-gallery-alert-dialog-media-cancel")
-                                .into_element(cx),
-                            shadcn::AlertDialogAction::from_scope("Share")
-                                .test_id("ui-gallery-alert-dialog-media-action")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
+                    out.push_ui(
+                        cx,
+                        shadcn::AlertDialogFooter::build(|cx, out| {
+                            out.push_ui(
+                                cx,
+                                shadcn::AlertDialogCancel::from_scope("Cancel")
+                                    .test_id("ui-gallery-alert-dialog-media-cancel"),
+                            );
+                            out.push_ui(
+                                cx,
+                                shadcn::AlertDialogAction::from_scope("Share")
+                                    .test_id("ui-gallery-alert-dialog-media-action"),
+                            );
+                        }),
                     );
                 })
                 .test_id("ui-gallery-alert-dialog-media-content"),

@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("rich_content.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use std::sync::Arc;
 
@@ -59,13 +60,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .into_element(cx);
 
-            let header = shadcn::AlertDialogHeader::new(vec![
-                shadcn::AlertDialogTitle::new_children([cx.styled_text(rich_title_text())])
-                    .into_element(cx),
-                shadcn::AlertDialogDescription::new_children([description_body]).into_element(cx),
-            ])
-            .into_element(cx);
-
             let cancel_visual = ui::h_row(|cx| {
                 vec![
                     icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
@@ -86,23 +80,44 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             .items_center()
             .into_element(cx);
 
-            let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::from_scope("Cancel")
-                    .children([cancel_visual])
-                    .a11y_label("Cancel deletion")
-                    .test_id("ui-gallery-alert-dialog-rich-content-cancel")
-                    .into_element(cx),
-                shadcn::AlertDialogAction::from_scope("Delete project")
-                    .children([action_visual])
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .test_id("ui-gallery-alert-dialog-rich-content-action")
-                    .into_element(cx),
-            ])
-            .into_element(cx);
-
-            shadcn::AlertDialogContent::new(vec![header, footer])
-                .into_element(cx)
-                .test_id("ui-gallery-alert-dialog-rich-content")
+            shadcn::AlertDialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::AlertDialogHeader::build(|cx, out| {
+                        let title = shadcn::AlertDialogTitle::new_children([cx
+                            .styled_text(rich_title_text())]);
+                        out.push_ui(
+                            cx,
+                            title,
+                        );
+                        out.push_ui(
+                            cx,
+                            shadcn::AlertDialogDescription::new_children([description_body]),
+                        );
+                    }),
+                );
+                out.push_ui(
+                    cx,
+                    shadcn::AlertDialogFooter::build(|cx, out| {
+                        out.push_ui(
+                            cx,
+                            shadcn::AlertDialogCancel::from_scope("Cancel")
+                                .children([cancel_visual])
+                                .a11y_label("Cancel deletion")
+                                .test_id("ui-gallery-alert-dialog-rich-content-cancel"),
+                        );
+                        out.push_ui(
+                            cx,
+                            shadcn::AlertDialogAction::from_scope("Delete project")
+                                .children([action_visual])
+                                .variant(shadcn::ButtonVariant::Destructive)
+                                .test_id("ui-gallery-alert-dialog-rich-content-action"),
+                        );
+                    }),
+                );
+            })
+            .test_id("ui-gallery-alert-dialog-rich-content")
+            .into_element(cx)
         })
         .into_element(cx)
 }
