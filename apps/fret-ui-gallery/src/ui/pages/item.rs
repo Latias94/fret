@@ -28,6 +28,7 @@ pub(super) fn preview_item(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Item::new([...])` plus `ItemMedia`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`, `ItemGroup`, and `ItemHeader` matches the upstream slot model directly, while `item_sized(...)` and `item_group(...)` are the preferred thin helpers on first-party teaching surfaces.",
         "`ItemRender::Link` is the Fret equivalent of the upstream `render={<a ... />}` pattern and keeps link semantics on the pressable root rather than burying them in a nested child.",
+        "`ItemTitle::new_children([...])` and `ItemDescription::new_children([...])` keep slot-local rich child composition available for styled text or mixed inline content without widening the `Item` root API.",
         "Intrinsic item chrome, slot spacing, and size presets remain recipe-owned because the upstream component source defines those defaults on the item itself.",
         "Caller-owned layout stays explicit for `max-w-*`, grid placement, page columns, and broader list composition. The recipe should not absorb those negotiation rules.",
         "No extra generic `asChild` / `compose()` surface is needed here: the existing slot parts and `ItemRender::Link` already cover the documented composition model.",
