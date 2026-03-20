@@ -46,9 +46,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .p_4()
     .into_element(cx);
 
-    let area = shadcn::scroll_area(cx, |_cx| [rail])
+    let viewport = shadcn::ScrollAreaViewport::new([rail])
         .axis(fret_ui::element::ScrollAxis::X)
-        .viewport_test_id("ui-gallery-scroll-area-horizontal-viewport")
+        .viewport_test_id("ui-gallery-scroll-area-horizontal-viewport");
+
+    let area = shadcn::ScrollAreaRoot::new(viewport)
+        .scrollbar(
+            shadcn::ScrollBar::new()
+                .orientation(shadcn::ScrollAreaScrollbarOrientation::Horizontal),
+        )
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
         .attach_semantics(

@@ -58,7 +58,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .p_4()
     .into_element(cx);
 
-    let area = shadcn::scroll_area(cx, |_cx| [content])
+    let area = shadcn::ScrollArea::new([content])
         .axis(fret_ui::element::ScrollAxis::Y)
         .viewport_test_id("ui-gallery-scroll-area-demo-viewport")
         .refine_layout(LayoutRefinement::default().w_full().h_full())

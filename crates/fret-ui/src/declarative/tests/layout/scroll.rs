@@ -605,6 +605,364 @@ fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
 }
 
 #[test]
+fn scroll_touch_pan_bubbles_to_ancestor_when_axis_mismatch() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(140.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let outer_handle = crate::scroll::ScrollHandle::default();
+    let inner_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-touch-pan-bubbles-to-ancestor-axis-mismatch",
+        |cx| {
+            let outer_handle = outer_handle.clone();
+            let inner_handle = inner_handle.clone();
+
+            let mut outer_layout = crate::element::LayoutStyle::default();
+            outer_layout.size.width = crate::element::Length::Fill;
+            outer_layout.size.height = crate::element::Length::Px(Px(80.0));
+            outer_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: outer_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(outer_handle),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0).into(),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let mut inner_layout = crate::element::LayoutStyle::default();
+                            inner_layout.size.width = crate::element::Length::Fill;
+                            inner_layout.size.height = crate::element::Length::Px(Px(20.0));
+                            inner_layout.overflow = crate::element::Overflow::Clip;
+
+                            let inner = cx.scroll(
+                                crate::element::ScrollProps {
+                                    layout: inner_layout,
+                                    axis: crate::element::ScrollAxis::X,
+                                    scroll_handle: Some(inner_handle),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![cx.row(crate::element::RowProps::default(), |cx| {
+                                        (0..6)
+                                            .map(|i| {
+                                                cx.container(
+                                                    crate::element::ContainerProps {
+                                                        layout: crate::element::LayoutStyle {
+                                                            size: crate::element::SizeStyle {
+                                                                width: crate::element::Length::Px(
+                                                                    Px(60.0),
+                                                                ),
+                                                                height: crate::element::Length::Px(
+                                                                    Px(20.0),
+                                                                ),
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    move |cx| vec![cx.text(format!("x{i}"))],
+                                                )
+                                            })
+                                            .collect::<Vec<_>>()
+                                    })]
+                                },
+                            );
+
+                            let mut children = Vec::new();
+                            for i in 0..16 {
+                                children.push(cx.text(format!("row{i}")));
+                            }
+                            children.insert(2, inner);
+                            children
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        outer_handle.offset().y.0.abs() <= 0.01,
+        "expected initial outer scroll offset to be 0, got={:?}",
+        outer_handle.offset().y
+    );
+    assert!(
+        inner_handle.offset().x.0.abs() <= 0.01,
+        "expected initial inner scroll offset to be 0, got={:?}",
+        inner_handle.offset().x
+    );
+    assert!(
+        outer_handle.max_offset().y.0 > 0.01,
+        "expected outer scroll to be scrollable; max_offset={:?} viewport={:?} content={:?}",
+        outer_handle.max_offset(),
+        outer_handle.viewport_size(),
+        outer_handle.content_size()
+    );
+
+    let outer_scroll_node = ui.children(root)[0];
+    let outer_column_node = ui.children(outer_scroll_node)[0];
+    let inner_scroll_node = ui.children(outer_column_node)[2];
+    let inner_bounds = ui
+        .debug_node_bounds(inner_scroll_node)
+        .expect("inner bounds");
+    let start = fret_core::Point::new(
+        Px(inner_bounds.origin.x.0 + 5.0),
+        Px(inner_bounds.origin.y.0 + 5.0),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
+            position: fret_core::Point::new(start.x, Px(start.y.0 - 40.0)),
+            buttons: MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert!(
+        outer_handle.offset().y.0 > 0.01,
+        "expected vertical touch pan on inner horizontal scroll to bubble to ancestor Y scroll; outer_offset={:?} inner_offset={:?}",
+        outer_handle.offset(),
+        inner_handle.offset()
+    );
+    assert!(
+        inner_handle.offset().x.0.abs() <= 0.01,
+        "expected vertical touch pan on inner horizontal scroll to not move inner X offset; got={:?}",
+        inner_handle.offset()
+    );
+}
+
+#[test]
+fn scroll_touch_pan_bubbles_past_pressable_capture_when_axis_mismatch() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(140.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let outer_handle = crate::scroll::ScrollHandle::default();
+    let inner_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-touch-pan-bubbles-past-pressable-capture-axis-mismatch",
+        |cx| {
+            let outer_handle = outer_handle.clone();
+            let inner_handle = inner_handle.clone();
+
+            let mut pressable_layout = crate::element::LayoutStyle::default();
+            pressable_layout.size.width = crate::element::Length::Fill;
+            pressable_layout.size.height = crate::element::Length::Fill;
+
+            let mut outer_layout = crate::element::LayoutStyle::default();
+            outer_layout.size.width = crate::element::Length::Fill;
+            outer_layout.size.height = crate::element::Length::Px(Px(80.0));
+            outer_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.pressable(
+                crate::element::PressableProps {
+                    layout: pressable_layout,
+                    ..Default::default()
+                },
+                move |cx, _state| {
+                    vec![cx.scroll(
+                        crate::element::ScrollProps {
+                            layout: outer_layout,
+                            axis: crate::element::ScrollAxis::Y,
+                            scroll_handle: Some(outer_handle),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.column(
+                                crate::element::ColumnProps {
+                                    gap: Px(0.0).into(),
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let mut inner_layout = crate::element::LayoutStyle::default();
+                                    inner_layout.size.width = crate::element::Length::Fill;
+                                    inner_layout.size.height =
+                                        crate::element::Length::Px(Px(20.0));
+                                    inner_layout.overflow = crate::element::Overflow::Clip;
+
+                                    let inner = cx.scroll(
+                                        crate::element::ScrollProps {
+                                            layout: inner_layout,
+                                            axis: crate::element::ScrollAxis::X,
+                                            scroll_handle: Some(inner_handle),
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![cx.row(
+                                                crate::element::RowProps::default(),
+                                                |cx| {
+                                                    (0..6)
+                                                        .map(|i| {
+                                                            cx.container(
+                                                                crate::element::ContainerProps {
+                                                                    layout:
+                                                                        crate::element::LayoutStyle {
+                                                                            size: crate::element::SizeStyle {
+                                                                                width: crate::element::Length::Px(Px(60.0)),
+                                                                                height: crate::element::Length::Px(Px(20.0)),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                    ..Default::default()
+                                                                },
+                                                                move |cx| {
+                                                                    vec![cx.text(format!("x{i}"))]
+                                                                },
+                                                            )
+                                                        })
+                                                        .collect::<Vec<_>>()
+                                                },
+                                            )]
+                                        },
+                                    );
+
+                                    let mut children = Vec::new();
+                                    for i in 0..16 {
+                                        children.push(cx.text(format!("row{i}")));
+                                    }
+                                    children.insert(2, inner);
+                                    children
+                                },
+                            )]
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        outer_handle.offset().y.0.abs() <= 0.01,
+        "expected initial outer scroll offset to be 0, got={:?}",
+        outer_handle.offset().y
+    );
+    assert!(
+        inner_handle.offset().x.0.abs() <= 0.01,
+        "expected initial inner scroll offset to be 0, got={:?}",
+        inner_handle.offset().x
+    );
+    assert!(
+        outer_handle.max_offset().y.0 > 0.01,
+        "expected outer scroll to be scrollable; max_offset={:?} viewport={:?} content={:?}",
+        outer_handle.max_offset(),
+        outer_handle.viewport_size(),
+        outer_handle.content_size()
+    );
+
+    let pressable_node = ui.children(root)[0];
+    let outer_scroll_node = ui.children(pressable_node)[0];
+    let outer_column_node = ui.children(outer_scroll_node)[0];
+    let inner_scroll_node = ui.children(outer_column_node)[2];
+    let inner_bounds = ui
+        .debug_node_bounds(inner_scroll_node)
+        .expect("inner bounds");
+    let start = fret_core::Point::new(
+        Px(inner_bounds.origin.x.0 + 5.0),
+        Px(inner_bounds.origin.y.0 + 5.0),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
+            position: fret_core::Point::new(start.x, Px(start.y.0 - 40.0)),
+            buttons: MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert!(
+        outer_handle.offset().y.0 > 0.01,
+        "expected vertical touch pan to bubble past the pressable capture into the ancestor Y scroll; outer_offset={:?} inner_offset={:?}",
+        outer_handle.offset(),
+        inner_handle.offset()
+    );
+    assert!(
+        inner_handle.offset().x.0.abs() <= 0.01,
+        "expected the inner X scroll to ignore the dominant vertical touch pan under pressable capture; got={:?}",
+        inner_handle.offset()
+    );
+}
+
+#[test]
 fn scroll_translation_does_not_force_layout_engine_solves() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

@@ -14,9 +14,11 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/scroll-area.mdx`
+- Docs page (Radix): `repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx`
+- Docs page (Base UI): `repo-ref/ui/apps/v4/content/docs/components/base/scroll-area.mdx`
 - Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/scroll-area.tsx`
 - Registry demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/scroll-area-demo.tsx`
+- Registry horizontal demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/scroll-area-horizontal-demo.tsx`
 - Underlying primitive: Radix `@radix-ui/react-scroll-area`
 
 ## Fret implementation
@@ -32,8 +34,12 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Pass: Exposes a composable `ScrollAreaRoot` / `ScrollAreaViewport` / `ScrollAreaScrollbar` /
   `ScrollAreaCorner` surface (Radix-shaped), while keeping the compact `ScrollArea::new(children)`
   builder for convenience.
-- Note: Because both the compact builder and the Radix-shaped parts surface already exist, Fret does
-  not need an additional generic `compose()` builder for this component.
+- Pass: The typed parts surface already covers the upstream `ScrollArea` + `ScrollBar` teaching
+  story without adding an untyped arbitrary-children API. The UI Gallery docs lane should prefer
+  `ScrollArea::new(...)` for the wrapper story and use `ScrollAreaRoot::new(...).scrollbar(...)`
+  when the example needs explicit extra scrollbar composition.
+- Note: Because both the compact builder and the Radix-shaped parts surface already exist, Fret
+  does not need an additional generic `compose()` builder for this component right now.
 - Pass: Supports passing a `ScrollHandle` when consumers need programmatic scrolling.
 - Pass: Mirrors the Radix `Viewport` content minimum width behavior: the scroll content bounds are
   clamped to at least the viewport bounds so `w-full` descendants do not collapse under
@@ -56,6 +62,18 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Pass: Viewport paints a focus-visible ring (`focus-visible:ring-[3px]`) via a focusable wrapper
   semantics node inside a focus-ring container (`decl_style::focus_ring`). This keeps the viewport
   input-transparent so touch-pan scrolling still targets the `Scroll` mechanism.
+
+### Docs / teaching surface
+
+- Pass: The UI Gallery page can now mirror the upstream docs flow first (`Demo`, `Usage`,
+  `Horizontal`, `RTL`, `API Reference`) before introducing Fret-only follow-ups.
+- Pass: The copyable docs lane teaches `ScrollArea::new(...)` instead of promoting the
+  Fret-specific `scroll_area(...)` helper as the primary shadcn-aligned surface.
+- Pass: The `Horizontal` docs example can stay copyable while exposing the `ScrollBar`
+  vocabulary via the explicit typed parts lane.
+- Note: Base UI's additional `Content` / `Thumb` headless parts remain informative references, but
+  they do not need promoted shadcn-lane public wrappers in Fret today because the runtime owns the
+  viewport content wrapper and thumb implementation details.
 
 ## Validation
 

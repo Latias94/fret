@@ -195,6 +195,7 @@ pub struct UiTree<H: UiHost> {
     base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
     captured: HashMap<PointerId, NodeId>,
+    active_touch_drag_target: HashMap<PointerId, GlobalElementId>,
     last_pointer_move_hit: HashMap<PointerId, Option<NodeId>>,
     touch_pointer_down_outside_candidates: HashMap<PointerId, TouchPointerDownOutsideCandidate>,
     hit_test_path_cache: Option<HitTestPathCache>,

@@ -4,20 +4,20 @@ use fret_app::{App, Model};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
+use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
     SpacerProps,
 };
-use fret_ui::Invalidation;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
-    chrome, debug_hud, debug_stats, inspector, menubar, settings_sheet, shell, status_bar, toaster,
-    ui_gallery_bisect_flags, UiGalleryDriver, UiGalleryWindowState,
+    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
+    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
 };
 
 pub(super) struct PreparedFrame {
@@ -1636,6 +1636,7 @@ mod tests {
             "expected test_id={target_test_id} to appear within {max_frames} frames; present_test_ids={present:?}"
         );
     }
+    #[cfg(feature = "gallery-dev")]
     fn hit_chain_at(rendered: &mut RenderedGalleryPage, position: Point) -> Vec<String> {
         let snapshot = rendered
             .state
@@ -1772,6 +1773,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gallery-dev")]
     fn assert_inner_viewport_vertical_touch_pan_is_owned_by_editor(
         page: &str,
         viewport_test_id: &str,
@@ -1845,6 +1847,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gallery-dev")]
     fn assert_inner_viewport_vertical_scroll_is_owned_by_editor(
         page: &str,
         viewport_test_id: &str,
@@ -2797,6 +2800,33 @@ mod tests {
     }
 
     #[test]
+    fn scroll_area_notes_section_keeps_stable_height_while_scrolling_into_view() {
+        assert_notes_section_keeps_stable_height_while_scrolling_into_view(
+            PAGE_SCROLL_AREA,
+            "ui-gallery-scroll-area-notes-content",
+        );
+    }
+
+    #[test]
+    fn scroll_area_visible_section_contents_do_not_overlap_while_scrolling() {
+        assert_visible_section_contents_do_not_overlap_while_scrolling(
+            PAGE_SCROLL_AREA,
+            &[
+                "ui-gallery-scroll-area-demo-content",
+                "ui-gallery-scroll-area-usage-content",
+                "ui-gallery-scroll-area-horizontal-content",
+                "ui-gallery-scroll-area-rtl-content",
+                "ui-gallery-scroll-area-api-reference-content",
+                "ui-gallery-scroll-area-compact-helper-content",
+                "ui-gallery-scroll-area-nested-scroll-routing-content",
+                "docsec-scrollbar-drag-baseline-content",
+                "docsec-expand-at-bottom-content",
+                "ui-gallery-scroll-area-notes-content",
+            ],
+        );
+    }
+
+    #[test]
     fn carousel_focus_and_duration_controls_stay_within_preview_card_content() {
         assert_targets_stay_within_preview_card_content(
             PAGE_CAROUSEL,
@@ -3227,8 +3257,8 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
-    ) {
+    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page()
+     {
         assert_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
             PAGE_SCROLL_AREA,
             "ui-gallery-scroll-area-drag-baseline-y-scrollbar",

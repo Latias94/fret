@@ -1109,7 +1109,57 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut pointer_hit: Option<NodeId> = None;
-        let target = if let Some(captured) = captured {
+        let locked_touch_drag_target = match event {
+            Event::Pointer(PointerEvent::Move {
+                pointer_id,
+                buttons,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            }) if buttons.left || buttons.right || buttons.middle => self
+                .active_touch_drag_target
+                .get(pointer_id)
+                .copied()
+                .and_then(|element| {
+                    self.window
+                        .and_then(|window| crate::elements::node_for_element(app, window, element))
+                })
+                .filter(|node| node_in_active_layers(*node)),
+            _ => None,
+        };
+        let touch_drag_target_override = match (captured, locked_touch_drag_target, event) {
+            (
+                Some(captured_node),
+                Some(locked_node),
+                Event::Pointer(PointerEvent::Move {
+                    buttons,
+                    pointer_type: fret_core::PointerType::Touch,
+                    ..
+                }),
+            ) if buttons.left || buttons.right || buttons.middle => {
+                let captured_is_pressable = self
+                    .window
+                    .and_then(|window| {
+                        crate::declarative::element_record_for_node(app, window, captured_node)
+                    })
+                    .is_some_and(|record| {
+                        matches!(
+                            record.instance,
+                            crate::declarative::ElementInstance::Pressable(_)
+                        )
+                    });
+
+                if captured_is_pressable && captured_node != locked_node {
+                    Some(locked_node)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        let touch_drag_reroute_from_pressable_capture = touch_drag_target_override.is_some();
+        let target = if let Some(target) = touch_drag_target_override {
+            Some(target)
+        } else if let Some(captured) = captured {
             Some(captured)
         } else if let Some(target) = internal_drag_target {
             Some(target)
@@ -1147,6 +1197,41 @@ impl<H: UiHost> UiTree<H> {
                 hit
             };
             pointer_hit = hit;
+
+            if let Event::Pointer(PointerEvent::Down {
+                pointer_id,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            }) = event
+            {
+                let element =
+                    hit.filter(|node| node_in_active_layers(*node))
+                        .and_then(|mut node| {
+                            let window = self.window?;
+                            loop {
+                                let record =
+                                    crate::declarative::element_record_for_node(app, window, node);
+                                if let Some(record) = record
+                                    && matches!(
+                                        record.instance,
+                                        crate::declarative::ElementInstance::Scroll(_)
+                                            | crate::declarative::ElementInstance::VirtualList(_)
+                                    )
+                                {
+                                    return Some(record.element);
+                                }
+                                node = self.nodes.get(node).and_then(|n| n.parent)?;
+                            }
+                        });
+                match element {
+                    Some(element) => {
+                        self.active_touch_drag_target.insert(*pointer_id, element);
+                    }
+                    None => {
+                        self.active_touch_drag_target.remove(pointer_id);
+                    }
+                }
+            }
 
             if let Event::Pointer(PointerEvent::Move {
                 buttons,
@@ -1196,11 +1281,14 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            hit.or_else(|| {
-                matches!(event, Event::InternalDrag(_)).then_some(self.last_internal_drag_target)?
-            })
-            .or(barrier_root)
-            .or(Some(default_root))
+            locked_touch_drag_target
+                .or(hit)
+                .or_else(|| {
+                    matches!(event, Event::InternalDrag(_))
+                        .then_some(self.last_internal_drag_target)?
+                })
+                .or(barrier_root)
+                .or(Some(default_root))
         } else {
             match event {
                 Event::SetTextSelection { .. } => {
@@ -1221,6 +1309,22 @@ impl<H: UiHost> UiTree<H> {
         let Some(mut node_id) = target else {
             return;
         };
+
+        match event {
+            Event::Pointer(PointerEvent::Up {
+                pointer_id,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            })
+            | Event::PointerCancel(fret_core::PointerCancelEvent {
+                pointer_id,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            }) => {
+                self.active_touch_drag_target.remove(pointer_id);
+            }
+            _ => {}
+        }
 
         if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
             && pointer_down_outside.suppress_hit_test_dispatch
@@ -1371,7 +1475,8 @@ impl<H: UiHost> UiTree<H> {
                 | Event::Pointer(PointerEvent::PinchGesture { .. })
                 | Event::PointerCancel(..) => true,
                 Event::Pointer(PointerEvent::Move { buttons, .. }) => {
-                    captured.is_some() || buttons.left || buttons.right || buttons.middle
+                    !touch_drag_reroute_from_pressable_capture
+                        && (captured.is_some() || buttons.left || buttons.right || buttons.middle)
                 }
                 _ => false,
             };
@@ -1768,7 +1873,10 @@ impl<H: UiHost> UiTree<H> {
 
                             let captured_now = event_pointer_id_for_capture
                                 .and_then(|p| self.captured.get(&p).copied());
-                            if captured_now.is_some() || stop_propagation {
+                            if (captured_now.is_some()
+                                && !touch_drag_reroute_from_pressable_capture)
+                                || stop_propagation
+                            {
                                 break;
                             }
                         }

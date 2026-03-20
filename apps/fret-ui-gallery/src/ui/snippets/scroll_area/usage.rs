@@ -17,7 +17,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .p_4()
     .into_element(cx);
 
-    shadcn::scroll_area(cx, |_cx| [content])
+    shadcn::ScrollArea::new([content])
         .refine_layout(LayoutRefinement::default().w_px(Px(350.0)).h_px(Px(200.0)))
         .into_element(cx)
         .test_id("ui-gallery-scroll-area-usage")

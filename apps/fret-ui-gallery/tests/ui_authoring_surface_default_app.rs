@@ -6825,17 +6825,46 @@ fn selected_resizable_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 
 #[test]
 fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement() {
-    for relative_path in [
+    assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/scroll_area/usage.rs",
+        &["shadcn::ScrollArea::new([content])"],
+        &["shadcn::scroll_area("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/scroll_area/demo.rs",
+        &[
+            "fn tag_row(tag: Arc<str>) -> impl IntoUiElement<fret_app::App> + use<>",
+            "shadcn::ScrollArea::new([content])",
+        ],
+        &[
+            "fn tag_row(tag: Arc<str>) -> AnyElement",
+            "shadcn::scroll_area(",
+            "shadcn::ScrollArea::build(",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/scroll_area/horizontal.rs",
+        &[
+            "shadcn::ScrollAreaViewport::new([rail])",
+            "shadcn::ScrollAreaRoot::new(viewport)",
+            "shadcn::ScrollBar::new()",
+        ],
+        &["shadcn::scroll_area(", "shadcn::ScrollArea::new("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/scroll_area/rtl.rs",
-    ] {
-        assert_selected_generic_helpers_prefer_into_ui_element(
-            relative_path,
-            &["shadcn::scroll_area("],
-            &["shadcn::ScrollArea::new("],
-        );
-    }
+        &["shadcn::ScrollArea::new([content])"],
+        &["shadcn::scroll_area("],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/scroll_area/compact_helper.rs",
+        &["shadcn::scroll_area(cx, |_cx| [content])"],
+        &["shadcn::ScrollArea::new("],
+    );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/scroll_area/nested_scroll_routing.rs",
@@ -6848,18 +6877,6 @@ fn selected_scroll_area_snippet_helpers_prefer_into_ui_element_over_anyelement()
             "fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> AnyElement",
             "shadcn::ScrollArea::new([inner_rail])",
             "shadcn::ScrollArea::new([outer_body])",
-        ],
-    );
-
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/snippets/scroll_area/demo.rs",
-        &[
-            "fn tag_row(tag: Arc<str>) -> impl IntoUiElement<fret_app::App> + use<>",
-            "shadcn::scroll_area(cx, |_cx| [content])",
-        ],
-        &[
-            "fn tag_row(tag: Arc<str>) -> AnyElement",
-            "shadcn::ScrollArea::build(",
         ],
     );
 

@@ -6,6 +6,7 @@
 //!
 //! Keep `ui-gallery-scroll-area-*` `test_id`s stable: diag scripts depend on them.
 
+pub mod compact_helper;
 pub mod demo;
 pub mod horizontal;
 pub mod nested_scroll_routing;

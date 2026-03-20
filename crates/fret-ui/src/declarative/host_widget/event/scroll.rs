@@ -1,4 +1,5 @@
 use super::ElementHostWidget;
+use crate::declarative::frame::element_record_for_node;
 use crate::declarative::prelude::*;
 use fret_core::Modifiers;
 
@@ -109,6 +110,24 @@ fn clear_pressed_pressable_if_any<H: UiHost>(cx: &mut EventCx<'_, H>, window: Ap
     if let Some(prev_node) = crate::elements::set_pressed_pressable(&mut *cx.app, window, None) {
         cx.invalidate(prev_node, Invalidation::Paint);
     }
+}
+
+fn foreign_touch_capture_is_pressable<H: UiHost>(
+    cx: &mut EventCx<'_, H>,
+    window: AppWindowId,
+) -> bool {
+    let Some(captured) = cx.captured else {
+        return false;
+    };
+    if captured == cx.node {
+        return false;
+    }
+    element_record_for_node(&mut *cx.app, window, captured).is_some_and(|record| {
+        matches!(
+            record.instance,
+            crate::declarative::frame::ElementInstance::Pressable(_)
+        )
+    })
 }
 
 fn apply_virtual_list_scroll_delta<H: UiHost>(
@@ -299,9 +318,19 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         }) => {
             if *pointer_type == fret_core::PointerType::Touch {
                 let foreign_capture = cx.captured.is_some_and(|n| n != cx.node);
+                let foreign_capture_is_pressable =
+                    foreign_capture && foreign_touch_capture_is_pressable(cx, window);
                 match cx.input_ctx.dispatch_phase {
-                    fret_runtime::InputDispatchPhase::Capture if !foreign_capture => return true,
-                    fret_runtime::InputDispatchPhase::Bubble if foreign_capture => return true,
+                    fret_runtime::InputDispatchPhase::Capture
+                        if !foreign_capture || foreign_capture_is_pressable =>
+                    {
+                        return true;
+                    }
+                    fret_runtime::InputDispatchPhase::Bubble
+                        if foreign_capture && !foreign_capture_is_pressable =>
+                    {
+                        return true;
+                    }
                     _ => {}
                 }
             }
@@ -582,9 +611,19 @@ pub(super) fn handle_scroll<H: UiHost>(
                 return true;
             }
             let foreign_capture = cx.captured.is_some_and(|n| n != cx.node);
+            let foreign_capture_is_pressable =
+                foreign_capture && foreign_touch_capture_is_pressable(cx, window);
             match cx.input_ctx.dispatch_phase {
-                fret_runtime::InputDispatchPhase::Capture if !foreign_capture => return true,
-                fret_runtime::InputDispatchPhase::Bubble if foreign_capture => return true,
+                fret_runtime::InputDispatchPhase::Capture
+                    if !foreign_capture || foreign_capture_is_pressable =>
+                {
+                    return true;
+                }
+                fret_runtime::InputDispatchPhase::Bubble
+                    if foreign_capture && !foreign_capture_is_pressable =>
+                {
+                    return true;
+                }
                 _ => {}
             }
             let Some(delta) =
