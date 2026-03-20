@@ -168,7 +168,8 @@ pub(super) fn tooltip(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             "Tooltip: hover intent + placement",
         )]
     })
-    .test_id("ui-gallery-tooltip-content");
+    .test_id("ui-gallery-tooltip-content")
+    .into_element(cx);
     let tooltip_a = shadcn::Tooltip::new(
         cx,
         shadcn::Button::new("Tooltip A (delay)")
@@ -187,7 +188,8 @@ pub(super) fn tooltip(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             "Skip-delay window should open this immediately after closing A.",
         )]
     })
-    .test_id("ui-gallery-tooltip-skip-content");
+    .test_id("ui-gallery-tooltip-skip-content")
+    .into_element(cx);
     let tooltip_b = shadcn::Tooltip::new(
         cx,
         shadcn::Button::new("Tooltip B (skip delay)")
@@ -220,16 +222,19 @@ pub(super) fn tooltip(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 pub(super) fn hover_card(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use std::time::Duration;
 
+    let hover_card_content = shadcn::HoverCardContent::new(vec![
+        cx.text("HoverCard content (overlay-root)"),
+        cx.text("Move pointer from trigger to content."),
+    ])
+    .test_id("ui-gallery-hovercard-content")
+    .into_element(cx);
+
     shadcn::HoverCard::new(
         cx,
         shadcn::Button::new("HoverCard (hover)")
             .variant(shadcn::ButtonVariant::Outline)
             .test_id("ui-gallery-hovercard-trigger"),
-        shadcn::HoverCardContent::new(vec![
-            cx.text("HoverCard content (overlay-root)"),
-            cx.text("Move pointer from trigger to content."),
-        ])
-        .test_id("ui-gallery-hovercard-content"),
+        hover_card_content,
     )
     .open_delay(Duration::from_millis(700))
     .close_delay(Duration::from_millis(300))
@@ -257,7 +262,7 @@ pub(super) fn popover(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl UiChild
     shadcn::Popover::from_open(popover_open.clone())
         .auto_focus(true)
         .on_dismiss_request(Some(popover_on_dismiss))
-        .into_element(
+        .into_element_with(
             cx,
             |cx| {
                 shadcn::Button::new("Popover")
@@ -544,7 +549,7 @@ pub(super) fn portal_geometry(cx: &mut UiCx<'_>, models: &OverlayModels) -> impl
         .side_offset(Px(8.0))
         .window_margin(Px(8.0))
         .arrow(true)
-        .into_element(
+        .into_element_with(
             cx,
             |cx| {
                 shadcn::Button::new("Portal geometry (scroll + clamp)")

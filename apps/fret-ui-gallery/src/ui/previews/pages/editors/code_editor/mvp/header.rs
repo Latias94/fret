@@ -103,6 +103,7 @@ pub(super) fn build_header(
                 }),
                 cx.keyed("word-boundary-gate", |cx| {
                     gates::word_boundary_gate(cx, theme, word_gate_handle.clone())
+                        .into_element(cx)
                 }),
                 cx.keyed("word-boundary-soft-wrap-gate", |cx| {
                     gates::word_boundary_soft_wrap_gate(
@@ -110,15 +111,19 @@ pub(super) fn build_header(
                         theme,
                         word_gate_soft_wrap_handle.clone(),
                     )
+                    .into_element(cx)
                 }),
                 cx.keyed("a11y-selection-gate", |cx| {
                     gates::a11y_selection_gate(cx, theme, a11y_selection_gate_handle.clone())
+                        .into_element(cx)
                 }),
                 cx.keyed("a11y-composition-gate", |cx| {
                     gates::a11y_composition_gate(cx, theme, a11y_composition_gate_handle.clone())
+                        .into_element(cx)
                 }),
                 cx.keyed("a11y-selection-wrap-gate", |cx| {
                     gates::a11y_selection_wrap_gate(cx, theme, a11y_selection_wrap_gate_handle.clone())
+                        .into_element(cx)
                 }),
                 cx.keyed("a11y-composition-wrap-gate", |cx| {
                     gates::a11y_composition_wrap_gate(
@@ -126,6 +131,7 @@ pub(super) fn build_header(
                         theme,
                         a11y_composition_wrap_gate_handle.clone(),
                     )
+                    .into_element(cx)
                 }),
                 cx.keyed("a11y-composition-drag-gate", |cx| {
                     gates::a11y_composition_drag_gate(
@@ -133,6 +139,7 @@ pub(super) fn build_header(
                         theme,
                         a11y_composition_drag_gate_handle.clone(),
                     )
+                    .into_element(cx)
                 }),
                 word_boundary::word_boundary_controls(
                     cx,

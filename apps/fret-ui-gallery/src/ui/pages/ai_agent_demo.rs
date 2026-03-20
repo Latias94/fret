@@ -29,6 +29,5 @@ pub(super) fn preview_ai_agent_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<An
         ],
     );
 
-    #[rustfmt::skip]
-    vec![body.test_id("ui-gallery-page-ai-agent-demo").into_element(cx)]
+    vec![body.into_element(cx)]
 }

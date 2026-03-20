@@ -79,6 +79,5 @@ pub(super) fn preview_ai_voice_selector_demo(cx: &mut UiCx<'_>, _theme: &Theme) 
         ],
     );
 
-    let body = body.test_id("ui-gallery-page-ai-voice-selector-demo");
     vec![body.into_element(cx)]
 }

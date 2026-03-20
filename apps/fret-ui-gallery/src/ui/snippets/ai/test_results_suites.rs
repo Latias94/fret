@@ -10,9 +10,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let test_parts = |cx: &mut UiCx<'_>| {
         ui::children![
             cx;
-            ui_ai::TestStatus::from_context(),
-            ui_ai::TestName::from_context(),
-            ui_ai::TestDuration::from_context(),
+            ui_ai::TestStatus::from_context().into_element(cx),
+            ui_ai::TestName::from_context().into_element(cx),
+            ui_ai::TestDuration::from_context().into_element(cx),
         ]
     };
 

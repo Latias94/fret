@@ -47,5 +47,5 @@ pub(super) fn preview_direction(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         vec![demo, usage, use_direction, composed_children, api_reference],
     );
 
-    vec![body.test_id("ui-gallery-page-direction").into_element(cx)]
+    vec![body.into_element(cx)]
 }
