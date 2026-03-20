@@ -36,26 +36,8 @@
       "type": "assert",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-tabs" }
+        "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-docs-demo" }
       }
-    },
-    {
-      "type": "assert",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-link-component-tabs" }
-      }
-    },
-
-    {
-      "type": "ensure_visible",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-navigation-menu-section-title-notes"
-      },
-      "within_window": true,
-      "padding_px": 8.0,
-      "timeout_frames": 600
     },
     {
       "type": "assert",
@@ -63,7 +45,30 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-section-title-notes"
+          "id": "ui-gallery-navigation-menu-link-component-docs"
+        }
+      }
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-navigation-menu-notes-title"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-navigation-menu-notes-title"
         }
       }
     },

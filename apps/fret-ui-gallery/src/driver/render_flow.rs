@@ -4,20 +4,20 @@ use fret_app::{App, Model};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
-use fret_ui::Invalidation;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
     SpacerProps,
 };
+use fret_ui::Invalidation;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
 use fret_workspace::{WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget};
 use std::sync::Arc;
 
 use super::{
-    UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
-    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
+    chrome, debug_hud, debug_stats, inspector, menubar, settings_sheet, shell, status_bar, toaster,
+    ui_gallery_bisect_flags, UiGalleryDriver, UiGalleryWindowState,
 };
 
 pub(super) struct PreparedFrame {
@@ -880,6 +880,44 @@ mod tests {
         assert!(
             find_node_by_test_id(semantics_snapshot, "ui-gallery-page-layout").is_some(),
             "expected layout page semantics after clicking the sidebar"
+        );
+    }
+
+    #[test]
+    fn sidebar_search_click_navigates_to_navigation_menu_page() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+
+        click_test_id_center(&mut rendered, "ui-gallery-nav-search");
+        let _ = rendered
+            .app
+            .models_mut()
+            .update(&rendered.state.nav_query, |query| {
+                *query = "navigation_menu".to_string();
+            });
+        render_gallery_frame(&mut rendered);
+
+        click_test_id_center(&mut rendered, "ui-gallery-nav-navigation-menu");
+        render_gallery_frame(&mut rendered);
+
+        let selected_after = rendered
+            .app
+            .models()
+            .get_cloned(&rendered.state.selected_page)
+            .expect("selected page model should exist after filtered sidebar click");
+        let routed_page =
+            super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                .expect("page router should carry the filtered sidebar page");
+        let semantics_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after filtered sidebar click");
+
+        assert_eq!(selected_after.as_ref(), PAGE_NAVIGATION_MENU);
+        assert_eq!(routed_page.as_ref(), PAGE_NAVIGATION_MENU);
+        assert!(
+            find_node_by_test_id(semantics_snapshot, "ui-gallery-page-navigation-menu").is_some(),
+            "expected navigation menu page semantics after clicking the filtered sidebar result"
         );
     }
 
@@ -3184,8 +3222,8 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page()
-     {
+    fn scroll_area_drag_baseline_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
+    ) {
         assert_scrollbar_thumb_drag_advances_inner_viewport_without_advancing_gallery_page(
             PAGE_SCROLL_AREA,
             "ui-gallery-scroll-area-drag-baseline-y-scrollbar",
