@@ -93,12 +93,29 @@ examples in `repo-ref/ui`.
   intentionally typed as `SelectEntry` / `SelectGroup` / `SelectItem` / `SelectLabel` /
   `SelectSeparator`, and the mechanism/runtime work was already in place before this docs-surface
   alignment pass.
+- Pass: richer item rows are now documented via typed `SelectItemText` / `SelectTextRun` surfaces in
+  UI Gallery, which is sufficient for the current shadcn-aligned select lane without widening items
+  to arbitrary child trees.
+
+### Base UI advanced examples (non-blocking gaps)
+
+- Not implemented by current public surface: Base UI's `multiple` example. Fret's `Select`
+  remains a single-select `Model<Option<Arc<str>>>` recipe today; this is a public-surface choice,
+  not an overlay/runtime defect.
+- Not implemented by current public surface: Base UI's object-value + custom trigger renderer
+  example (`defaultValue={plans[0]}`, `itemToStringValue(...)`, custom `SelectValue` children).
+  Current Fret `Select` is intentionally text-keyed and does not yet expose object-valued items or
+  trigger-side custom value rendering.
+- Recommendation: treat both as a separate public-surface workstream. Do not widen the current
+  shadcn-aligned `Select` recipe ad hoc while doing docs or mechanism parity. Use `Combobox` for
+  multi-select/chips-style authoring today.
 
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib select`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app select_page_uses_typed_doc_sections_for_app_facing_snippets --status-level fail`
 - `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json --dir target/fret-diag-select-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-select cargo run -p fret-ui-gallery`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-docs-screenshots.json --dir target/fret-diag-select-docs-rich-items --session-auto --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery`
 - Contract test: `select_disabled_hides_content_even_when_open_model_true`
 - Contract test: `select_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `select_open_change_events_complete_without_animation`
@@ -135,5 +152,8 @@ examples in `repo-ref/ui`.
   compact direct chain `.trigger(...).value(...).content(...).entries(...)`;
   `into_element_parts(...)` should remain the focused upstream-shaped adapter seam on that same
   lane, and Fret should not add a generic `compose()` root just for taxonomy symmetry.
+- Public-surface workstream boundary: if Fret decides to pursue Base UI's `multiple` or object-value
+  examples, land that as a separate surface-design task with explicit ownership and regression gates
+  rather than folding it into routine shadcn docs parity work.
 - Consider exposing a Radix-named `SelectContent`-style wrapper that defaults to item-aligned but
   still allows opting into popper mode for arrow-based skins.

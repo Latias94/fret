@@ -33,6 +33,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) stay the default copyable root story.",
         "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` is the current typed equivalent of the upstream nested `SelectTrigger` / `SelectValue` / `SelectContent` children lane.",
         "That composable seam should stay typed and narrow around `SelectEntry` (`SelectGroup` / `SelectItem` / `SelectLabel` / `SelectSeparator`) instead of widening `Select` to arbitrary generic children.",
+        "`Select` remains a single-select text-keyed surface today; Base UI-style object values and multi-select remain separate public-surface work rather than a recipe/mechanism bug.",
         "Width negotiation remains caller-owned at the trigger/root call site; overlay placement, dismissal, scroll buttons, and listbox semantics stay recipe/mechanism-owned in `fret-ui-kit` + `fret-ui-shadcn`.",
         "No new mechanism bug was identified in this pass; the remaining drift was first-party docs discoverability around the already-landed parts surface.",
     ]);
@@ -42,6 +43,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) stay the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story.",
         "`Composable Parts (Fret)` now makes that nested lane explicit with a full copyable example, so app authors do not need a broader generic children API just to match upstream docs ergonomics.",
         "`Rich Items (Fret)` documents the current typed answer to richer `SelectItemText` content: use styled text runs for value + secondary label style instead of widening items to arbitrary child trees.",
+        "Base UI's `multiple` and object-value examples are not blocked on Select overlay mechanics; they would require a separate public-surface expansion beyond the current `Model<Option<Arc<str>>>` contract, so prefer `Combobox` for multi-select today.",
         "Standalone label wiring still uses `FieldLabel::for_control(...)` + `Select::control_id(...)`; inside `Field::build(...)`, Select can inherit the field-local label/description association automatically.",
         "`Composable Parts (Fret)`, `Rich Items (Fret)`, `Label Association`, `Field Builder Association`, and `Diag Surface` stay after `API Reference` as explicit Fret follow-ups so the docs path stays clean without sacrificing existing scripted coverage.",
         "This page keeps stable `test_id`s for `tools/diag-scripts/ui-gallery/select/*`.",
