@@ -1,5 +1,18 @@
 ## Select + Combobox Deep Redesign v1 (Design)
 
+Status note on 2026-03-20:
+
+- the shadcn-aligned `Select` recipe surface is now considered stable for the current default lane:
+  single-select, text-keyed values, typed `SelectEntry`/parts, and typed `SelectItemText` rich-row
+  support,
+- recent UI Gallery/source-alignment work confirmed that the remaining notable Base UI drifts are
+  not overlay/mechanism defects:
+  - `multiple` selection,
+  - object-valued items (`defaultValue={plans[0]}` / `itemToStringValue(...)`),
+  - trigger-side custom value rendering beyond the current text-keyed `SelectValue` contract,
+- treat those as a **public-surface expansion lane** under this workstream, not as routine shadcn
+  docs parity or recipe polish.
+
 ### Context
 
 This workstream exists because `select` and `combobox` are **structurally drifted** relative to
@@ -82,6 +95,22 @@ This workstream should treat these as the “mechanism/policy baseline” and fo
 - Trigger/value/content boundaries are harder to port verbatim.
 - Some “DOM selector” expectations (e.g. slot-based styling) are approximated ad-hoc.
 
+Current clarified boundary on 2026-03-20:
+
+- The current `Select` surface is intentionally:
+  - single-select,
+  - keyed by `Arc<str>`,
+  - typed around `SelectEntry` / `SelectGroup` / `SelectItem` / `SelectLabel` /
+    `SelectSeparator`,
+  - and allows richer row presentation through typed `SelectItemText` / `SelectTextRun`.
+- The current lane does **not** attempt to cover:
+  - Base UI `multiple`,
+  - object-valued items,
+  - render-prop/custom-child `SelectValue` trigger rendering.
+- Therefore, the main remaining `Select` gap is no longer “do we need arbitrary generic children?”.
+  The real open question is whether Fret wants a broader selection/public-value model at all, and
+  how that should relate to existing `Combobox` / chips surfaces.
+
 #### Combobox
 
 - Part naming conflicts and staged renames already happened, but the implementation still has
@@ -99,12 +128,17 @@ This workstream should treat these as the “mechanism/policy baseline” and fo
    tests and UI diagnostics.
 4. Reduce implementation duplication by extracting shared headless primitives into
    `ecosystem/fret-ui-kit` (where appropriate).
+5. If we expand `Select` beyond the current text-keyed single-select contract, do so as an explicit
+   public-surface design with separate gates and migration notes, not as incidental recipe drift.
 
 ### Non-goals
 
 - Pixel-perfect parity with Tailwind/CSS.
 - Recreating a general CSS selector engine.
 - Expanding `crates/fret-ui` contract surface for shadcn policy.
+- Ad hoc widening of `Select` to arbitrary generic children just to mimic DOM nesting.
+- Smuggling Base UI `multiple` / object-value semantics into the current `Select` builder without a
+  dedicated public-surface design and migration plan.
 
 ### Design Approach
 
@@ -181,3 +215,23 @@ Examples of “must gate” outcomes:
 - arrow navigation and selection semantics,
 - typeahead filtering behavior,
 - stable `test_id` surfaces across open/close frames.
+
+### Public-surface expansion boundary (Select)
+
+If this workstream later pursues Base UI-style advanced `Select` examples, the decision should be
+split into explicit sub-questions:
+
+1. Should `Select` gain a first-class multi-select surface, or should Fret keep `Combobox` as the
+   primary multi-select/chips path?
+2. Should object-valued items live on `Select` directly, or should they remain an adapter layer on
+   top of a text-keyed recipe?
+3. If trigger-side custom value rendering is added, can it stay typed and bounded, or does it force
+   a broader render-prop / arbitrary-children surface that would diverge from current Fret
+   authoring goals?
+
+Until those are answered, keep routine `Select` parity work scoped to:
+
+- typed parts,
+- typed rich item text,
+- overlay/focus/keyboard correctness,
+- and source-aligned UI Gallery teaching surfaces.

@@ -1,9 +1,18 @@
 ## Select + Combobox Deep Redesign v1 (TODO + Tracker)
 
-Last updated: 2026-03-02.
+Last updated: 2026-03-20.
 
 This tracker is **workstream-local**. It exists because `select` and `combobox` need deeper
 structural work than the “part surface alignment” stream.
+
+Status note on 2026-03-20:
+
+- `Select` default shadcn-aligned teaching surface is now in a good state for the current lane:
+  direct builder root, typed parts adapter, typed rich item text, docs/diag coverage.
+- The main unresolved Base UI examples (`multiple`, object values, custom trigger value renderers)
+  are now explicitly classified as **public-surface expansion** work, not as recipe/mechanism bugs.
+- That means the `select` row below should be read as “done for the current single-select text-keyed
+  lane, with advanced-surface follow-ups intentionally deferred”.
 
 ### Reference anchors (upstream)
 
@@ -83,8 +92,18 @@ These do not exist upstream but reduce churn when porting examples:
 
 | Component | Target surface | Current state (Fret) | Known gaps / risks | Proposed changes (layer) | Gates | Status |
 |---|---|---|---|---|---|---|
-| `select` | shadcn part surface (`Select*`) + stable `test_id` | Part adapters exist (`Select::into_element_parts` + `SelectContent::with_entries`); call-site parity is mostly achieved in-tree | Composition drift, focus/keyboard edge cases, automation surfaces not uniformly documented | Extract/align shared listbox substrate (`kit`), keep shadcn defaults (`shadcn`); decide a single focus model and gate it | Unit tests: `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs` (locks trigger + viewport `test_id`), `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs` (KeyB typeahead selects matching item) | Done (with known gaps) |
+| `select` | shadcn part surface (`Select*`) + stable `test_id` | Part adapters exist (`Select::into_element_parts` + `SelectContent::with_entries`); call-site parity is achieved in-tree for the current single-select text-keyed lane | Advanced Base UI examples still out of scope for the current surface: `multiple`, object-valued items, trigger-side custom value rendering | Keep current recipe stable; treat advanced value/selection work as a separate public-surface expansion under this workstream, not as incidental recipe widening | Unit tests: `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs` (locks trigger + viewport `test_id`), `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs` (KeyB typeahead selects matching item); docs/diag gate: `tools/diag-scripts/ui-gallery/select/ui-gallery-select-docs-screenshots.json` | Done (with known gaps) |
 | `combobox` | shadcn part surface (`Combobox*`) + docs-aligned examples | Part adapters exist; legacy option model has been removed; known structural drift remains by design | Input-in-trigger ergonomics, Base UI-style expectations, structural adapter debt | Shared substrate (`kit`), refine part surface + adapters (`shadcn`), document explicit differences | Unit tests: `ecosystem/fret-ui-shadcn/tests/combobox_test_id_prefix_semantics.rs` (locks prefix scheme + item slugging), `ecosystem/fret-ui-shadcn/tests/combobox_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/combobox_filtering.rs` (TextInput filters + Enter selects), `ecosystem/fret-ui-shadcn/src/combobox_chips.rs` (chips adapter part patch gates) | In progress |
+
+### Select advanced-surface follow-up queue
+
+These are intentionally split out from the default `select` lane above.
+
+| Follow-up | Why it is separate | Questions to answer before coding | Suggested owner layer | Status |
+|---|---|---|---|---|
+| `Select` multi-select surface | Changes value model, trigger summary semantics, item selection semantics, and likely overlap with `ComboboxChips` | Should `Select` own multi-select at all? How does it differ from `Combobox` + chips? What is the trigger summary contract? | `fret-ui-kit` substrate + `fret-ui-shadcn` recipe | Deferred (planned) |
+| `Select` object-valued items | Changes the public value contract from `Arc<str>` to keyed object values/adapters | Do we keep the recipe text-keyed internally? Is there a typed adapter boundary? How are stable `test_id`s derived? | likely adapter/public surface in `fret-ui-shadcn` on top of text-keyed kit substrate | Deferred (planned) |
+| Trigger-side custom selected-value rendering | Changes the current `SelectValue` contract and may pressure us toward render-prop children | Can this stay typed and bounded? Do we need a selected-item formatter instead of arbitrary child rendering? | `fret-ui-shadcn` public surface | Deferred (planned) |
 
 ### Proposed `test_id` scheme (for gates + scripted diags)
 
@@ -128,6 +147,11 @@ For multi-select (chips), prefer explicit `test_id`s on chip parts where possibl
 3. **Extract one shared helper in `ecosystem/fret-ui-kit` (reuse-first)**:
    - only if we can’t express the desired outcome with existing `kit` primitives,
    - add a unit test at the kit layer for the helper (not only recipe tests).
+4. **Do not start `Select` multiple/object-value coding from gallery pressure alone**:
+   - first write the public-surface design for value modeling, trigger summary, and overlap with
+     `Combobox`,
+   - then choose whether the next implementation target is `Select`, `Combobox`, or a shared
+     selection substrate.
 
 ### Evidence checklist (fill as we implement)
 
