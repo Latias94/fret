@@ -256,6 +256,12 @@ struct EditorTextAssistReadout {
 }
 
 #[derive(Clone)]
+struct EditorTextFieldReadout {
+    committed: String,
+    outcome: String,
+}
+
+#[derive(Clone)]
 struct AuthoringParitySharedStateReadout {
     name_line: String,
     value_line: String,
@@ -306,6 +312,17 @@ fn editor_text_assist_readout(
             }
         },
     )
+}
+
+fn editor_text_field_readout(
+    cx: &mut UiCx<'_>,
+    committed_model: &Model<String>,
+    outcome_model: &Model<String>,
+) -> EditorTextFieldReadout {
+    cx.data()
+        .selector_model_paint((committed_model, outcome_model), |(committed, outcome)| {
+            EditorTextFieldReadout { committed, outcome }
+        })
 }
 
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
@@ -898,23 +915,24 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let inline_rename_readout =
+                                                        editor_text_field_readout(
+                                                            cx,
+                                                            &editor_inline_rename_model,
+                                                            &editor_inline_rename_outcome_model,
+                                                        );
+                                                    let inline_rename_committed =
+                                                        inline_rename_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Rename committed"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_inline_rename_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             proof_compact_readout(
                                                                 cx,
-                                                                committed,
+                                                                inline_rename_committed.clone(),
                                                                 Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.inline-rename.committed",
                                                                 )),
@@ -923,13 +941,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let inline_rename_outcome = cx
-                                                        .watch_model(
-                                                            &editor_inline_rename_outcome_model,
-                                                        )
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let inline_rename_outcome =
+                                                        inline_rename_readout.outcome;
                                                     if !inline_rename_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -1029,23 +1042,23 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let password_readout = editor_text_field_readout(
+                                                        cx,
+                                                        &editor_password_model,
+                                                        &editor_password_outcome_model,
+                                                    );
+                                                    let password_committed =
+                                                        password_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Secret length"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_password_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             let readout =
                                                                 committed_char_count_label(
-                                                                    &committed,
+                                                                    &password_committed,
                                                                 );
                                                             proof_compact_readout(
                                                                 cx,
@@ -1058,13 +1071,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let password_outcome = cx
-                                                        .watch_model(
-                                                            &editor_password_outcome_model,
-                                                        )
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let password_outcome =
+                                                        password_readout.outcome;
                                                     if !password_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -1262,22 +1270,24 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let notes_readout = editor_text_field_readout(
+                                                        cx,
+                                                        &editor_notes_model,
+                                                        &editor_notes_outcome_model,
+                                                    );
+                                                    let notes_committed =
+                                                        notes_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Notes committed"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_notes_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             let readout =
-                                                                committed_line_count_label(&committed);
+                                                                committed_line_count_label(
+                                                                    &notes_committed,
+                                                                );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 readout,
@@ -1289,11 +1299,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let notes_outcome = cx
-                                                        .watch_model(&editor_notes_outcome_model)
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let notes_outcome = notes_readout.outcome;
                                                     if !notes_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
