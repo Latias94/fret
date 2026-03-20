@@ -246,26 +246,34 @@ impl View for CustomEffectV1View {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let mut st = CustomEffectV1State::new(cx);
 
+        cx.actions().local(&st.enabled).set::<act::Reset>(true);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.enabled, true);
+            .local(&st.blur_radius_px)
+            .set::<act::Reset>(vec![14.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![14.0]);
+            .local(&st.blur_downsample)
+            .set::<act::Reset>(vec![2.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.blur_downsample, vec![2.0]);
+            .local(&st.refraction_height_px)
+            .set::<act::Reset>(vec![20.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.refraction_height_px, vec![20.0]);
+            .local(&st.refraction_amount_px)
+            .set::<act::Reset>(vec![12.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.refraction_amount_px, vec![12.0]);
+            .local(&st.depth_effect)
+            .set::<act::Reset>(vec![0.35]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.depth_effect, vec![0.35]);
+            .local(&st.chromatic_aberration)
+            .set::<act::Reset>(vec![0.75]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.chromatic_aberration, vec![0.75]);
+            .local(&st.corner_radius_px)
+            .set::<act::Reset>(vec![20.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.corner_radius_px, vec![20.0]);
+            .local(&st.grain_strength)
+            .set::<act::Reset>(vec![0.06]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.grain_strength, vec![0.06]);
-        cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.grain_scale, vec![1.0]);
+            .local(&st.grain_scale)
+            .set::<act::Reset>(vec![1.0]);
 
         view(cx, &mut st)
     }

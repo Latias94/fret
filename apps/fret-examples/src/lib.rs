@@ -642,12 +642,9 @@ mod authoring_surface_policy_tests {
         assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
         assert!(SIMPLE_TODO_DEMO.contains("fn bind_todo_actions("));
-        assert!(SIMPLE_TODO_DEMO.contains(
-            "payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
-        assert!(SIMPLE_TODO_DEMO.contains(
-            "payload_local_update_if::<act::Remove, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
+        assert!(SIMPLE_TODO_DEMO.contains(".local(todos_state)"));
+        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
+        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Remove>(|rows, id| {"));
         assert!(SIMPLE_TODO_DEMO.contains("ui_app_driver::UiAppDriver::new("));
         assert!(
             SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_init_window::<SimpleTodoView>,")
@@ -1709,7 +1706,7 @@ mod authoring_surface_policy_tests {
                 ".locals_with((&count_state, &step_state))",
                 ".on::<act::Inc>(|tx, (count_state, step_state)| {",
                 ".on::<act::Dec>(|tx, (count_state, step_state)| {",
-                "cx.actions().local_set::<act::Reset, i64>(&count_state, 0);",
+                "cx.actions().local(&count_state).set::<act::Reset>(0);",
             ],
             &[
                 "cx.use_local_with(|| 0i64)",
@@ -1730,7 +1727,8 @@ mod authoring_surface_policy_tests {
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
                 "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().local(&fail_mode_state)",
+                ".toggle_bool::<act::ToggleFailMode>();",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
@@ -1752,7 +1750,8 @@ mod authoring_surface_policy_tests {
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
                 "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().local(&fail_mode_state)",
+                ".toggle_bool::<act::ToggleFailMode>();",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
@@ -1778,8 +1777,9 @@ mod authoring_surface_policy_tests {
                 "let id = tx.value(&next_id_state);",
                 ".locals_with(todos_state)",
                 ".on::<act::ClearDone>(|tx, todos_state| {",
-                "cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>(",
-                "cx.actions().payload_local_update_if::<act::Remove, Vec<TodoRow>>(",
+                "cx.actions().local(todos_state)",
+                ".payload_update_if::<act::Toggle>(|rows, id| {",
+                ".payload_update_if::<act::Remove>(|rows, id| {",
             ],
             &[
                 "cx.use_local::<String>()",
@@ -1797,7 +1797,7 @@ mod authoring_surface_policy_tests {
             &[
                 "let size_preset_state = cx.state().local_init(|| 1usize);",
                 "let preset = size_preset_state.layout_value(cx);",
-                "cx.actions().local_set::<act::PickSize640, usize>(&size_preset_state, 0);",
+                "cx.actions().local(&size_preset_state).set::<act::PickSize640>(0);",
             ],
             &[
                 "cx.use_local_with(|| 1usize)",
@@ -1924,7 +1924,8 @@ mod authoring_surface_policy_tests {
                 "let global_slow = locals.global_slow.layout_value(cx);",
                 "let namespace_input = locals.namespace_input.layout_value(cx);",
                 ".locals_with((&locals.selected, &locals.namespace_input))",
-                "cx.actions().toggle_local_bool::<act::ToggleTheme>(&locals.dark);",
+                "cx.actions().local(&locals.dark)",
+                ".toggle_bool::<act::ToggleTheme>();",
                 "shadcn::Switch::new(&locals.global_slow)",
                 "shadcn::Tabs::new(&locals.tabs)",
                 "shadcn::Switch::new(&config.keep_prev)",
@@ -1970,9 +1971,11 @@ mod authoring_surface_policy_tests {
                 "corner_radius_px: cx.state().local_init(|| vec![20.0]),",
                 "grain_strength: cx.state().local_init(|| vec![0.06]),",
                 "grain_scale: cx.state().local_init(|| vec![1.0]),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![14.0]);",
-                ".local_set::<act::Reset, Vec<f32>>(&st.grain_scale, vec![1.0]);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.blur_radius_px)",
+                ".set::<act::Reset>(vec![14.0]);",
+                ".local(&st.grain_scale)",
+                ".set::<act::Reset>(vec![1.0]);",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2002,11 +2005,14 @@ mod authoring_surface_policy_tests {
                 "rim_strength: cx.state().local_init(|| vec![0.65]),",
                 "blur_radius_px: cx.state().local_init(|| vec![10.0]),",
                 "debug_input: cx.state().local_init(|| false),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, bool>(&st.use_non_filterable_input, false);",
-                ".local_set::<act::Reset, Option<Arc<str>>>(",
-                ".local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![10.0]);",
-                ".local_set::<act::Reset, bool>(&st.debug_input, false);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.use_non_filterable_input)",
+                ".set::<act::Reset>(false);",
+                ".local(&st.sampling)",
+                ".set::<act::Reset>(Some(Arc::<str>::from(\"linear\")));",
+                ".local(&st.blur_radius_px)",
+                ".set::<act::Reset>(vec![10.0]);",
+                "cx.actions().local(&st.debug_input).set::<act::Reset>(false);",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2031,11 +2037,12 @@ mod authoring_surface_policy_tests {
                 "show_user1_probe: cx.state().local_init(|| false),",
                 "use_non_filterable_user0: cx.state().local_init(|| false),",
                 "use_non_filterable_user1: cx.state().local_init(|| false),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, bool>(&st.show_user0_probe, false);",
-                ".local_set::<act::Reset, bool>(&st.show_user1_probe, false);",
-                ".local_set::<act::Reset, bool>(&st.use_non_filterable_user0, false);",
-                ".local_set::<act::Reset, bool>(&st.use_non_filterable_user1, false);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.show_user0_probe)",
+                ".set::<act::Reset>(false);",
+                ".local(&st.show_user1_probe)",
+                ".local(&st.use_non_filterable_user0)",
+                ".local(&st.use_non_filterable_user1)",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2064,10 +2071,12 @@ mod authoring_surface_policy_tests {
                 "grain_scale: cx.state().local_init(|| vec![1.5]),",
                 "retro_pixel_scale: cx.state().local_init(|| vec![10.0]),",
                 "retro_dither: cx.state().local_init(|| true),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, Option<Arc<str>>>(",
-                ".local_set::<act::Reset, Vec<f32>>(&st.chromatic_offset_px, vec![4.0]);",
-                ".local_set::<act::Reset, bool>(&st.retro_dither, true);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.theme)",
+                ".set::<act::Reset>(Some(Arc::<str>::from(\"cyberpunk\")));",
+                ".local(&st.chromatic_offset_px)",
+                ".set::<act::Reset>(vec![4.0]);",
+                "cx.actions().local(&st.retro_dither).set::<act::Reset>(true);",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2093,9 +2102,11 @@ mod authoring_surface_policy_tests {
                 "show_fake: cx.state().local_init(|| true),",
                 "custom_v3_pair: cx.state().local_init(|| false),",
                 "warp_strength_px: cx.state().local_init(|| vec![10.0]),",
-                "cx.actions().local_set::<act::Reset, bool>(&self.show_fake, true);",
-                ".local_set::<act::Reset, Vec<f32>>(&self.custom_v3_bevel_secondary, vec![1.0]);",
-                ".toggle_local_bool::<act::ToggleInspector>(&self.show_inspector);",
+                "cx.actions().local(&self.show_fake).set::<act::Reset>(true);",
+                ".local(&self.custom_v3_bevel_secondary)",
+                ".set::<act::Reset>(vec![1.0]);",
+                ".local(&self.show_inspector)",
+                ".toggle_bool::<act::ToggleInspector>();",
             ],
             &[
                 "show_fake: app.models_mut().insert(true)",
@@ -2125,7 +2136,8 @@ mod authoring_surface_policy_tests {
             &[
                 "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
-                "cx.actions().payload_local_update_if::<act::ToggleCodeBlockExpand, HashSet<markdown::BlockId>>(",
+                ".local(&expanded_code_blocks_state)",
+                ".payload_update_if::<act::ToggleCodeBlockExpand>(|set, id| {",
                 "let pending = pending_anchor.layout_value(cx);",
                 "let wrap_enabled = wrap_code_state.layout_value(cx);",
                 "let cap_enabled = cap_code_height_state.layout_value(cx);",

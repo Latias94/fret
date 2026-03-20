@@ -144,11 +144,14 @@ impl View for EmbeddedViewportDemoView {
         .into_element(cx);
 
         cx.actions()
-            .local_set::<act::PickSize640, usize>(&size_preset_state, 0);
+            .local(&size_preset_state)
+            .set::<act::PickSize640>(0);
         cx.actions()
-            .local_set::<act::PickSize960, usize>(&size_preset_state, 1);
+            .local(&size_preset_state)
+            .set::<act::PickSize960>(1);
         cx.actions()
-            .local_set::<act::PickSize1280, usize>(&size_preset_state, 2);
+            .local(&size_preset_state)
+            .set::<act::PickSize1280>(2);
 
         embedded_viewport_page(cx.elements(), theme, viewport_card, diag_enabled())
     }

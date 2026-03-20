@@ -238,24 +238,26 @@ impl View for CustomEffectV2View {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let mut st = CustomEffectV2State::new(cx);
 
+        cx.actions().local(&st.enabled).set::<act::Reset>(true);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.enabled, true);
+            .local(&st.use_non_filterable_input)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.use_non_filterable_input, false);
-        cx.actions().local_set::<act::Reset, Option<Arc<str>>>(
-            &st.sampling,
-            Some(Arc::<str>::from("linear")),
-        );
+            .local(&st.sampling)
+            .set::<act::Reset>(Some(Arc::<str>::from("linear")));
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.uv_span, vec![0.25]);
+            .local(&st.uv_span)
+            .set::<act::Reset>(vec![0.25]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.input_strength, vec![0.35]);
+            .local(&st.input_strength)
+            .set::<act::Reset>(vec![0.35]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.rim_strength, vec![0.65]);
+            .local(&st.rim_strength)
+            .set::<act::Reset>(vec![0.65]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![10.0]);
-        cx.actions()
-            .local_set::<act::Reset, bool>(&st.debug_input, false);
+            .local(&st.blur_radius_px)
+            .set::<act::Reset>(vec![10.0]);
+        cx.actions().local(&st.debug_input).set::<act::Reset>(false);
 
         view(cx, &mut st)
     }

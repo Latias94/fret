@@ -646,19 +646,24 @@ fn bind_todo_actions(
         });
 
     cx.actions()
-        .local_update::<act::RefreshTip, u64>(tip_nonce_state, |v| {
+        .local(tip_nonce_state)
+        .update::<act::RefreshTip>(|v| {
             *v = v.saturating_add(1);
         });
 
     cx.actions()
-        .local_set::<act::FilterAll, TodoFilter>(filter_state, TodoFilter::All);
+        .local(filter_state)
+        .set::<act::FilterAll>(TodoFilter::All);
     cx.actions()
-        .local_set::<act::FilterActive, TodoFilter>(filter_state, TodoFilter::Active);
+        .local(filter_state)
+        .set::<act::FilterActive>(TodoFilter::Active);
     cx.actions()
-        .local_set::<act::FilterCompleted, TodoFilter>(filter_state, TodoFilter::Completed);
+        .local(filter_state)
+        .set::<act::FilterCompleted>(TodoFilter::Completed);
 
     cx.actions()
-        .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {
+        .local(todos_state)
+        .payload_update_if::<act::Toggle>(|rows, id| {
             if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                 row.done = !row.done;
                 true
@@ -775,7 +780,7 @@ impl View for HelloView {{
         let click_count_state = cx.state().local::<u32>();
         let click_count_value = click_count_state.layout_value(cx);
 
-        cx.actions().local_update::<act::Click, u32>(&click_count_state, |v| {{
+        cx.actions().local(&click_count_state).update::<act::Click>(|v| {{
             *v = v.saturating_add(1);
         }});
 
@@ -1064,7 +1069,8 @@ fn bind_todo_actions(
         });
 
     cx.actions()
-        .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {
+        .local(todos_state)
+        .payload_update_if::<act::Toggle>(|rows, id| {
             if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                 row.done = !row.done;
                 true
@@ -1241,7 +1247,7 @@ cargo run --release
 - Authoring: view runtime + typed actions + local-state slots (action-first, v2)
 - Hooks: selector + query (v1)
 - State: LocalState-first (`draft`, `filter`, `todos`, id counter, query nonce). Prefer explicit `Model<T>` graphs only when shared ownership or cross-view coordination is the point.
-- Default entrypoints: start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, bind keyed-row payloads via `.action_payload(...)`, use `payload_local_update_if::<A>(...)` as the default row-write path, and use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
+- Default entrypoints: start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, use `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for single-local writes, bind keyed-row payloads via `.action_payload(...)`, use `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path, and use `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` and lower-level payload helpers as cookbook/reference-only host-side glue.
 - Read tracked state values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `cx.actions().transient::<A>(...)` in the handler and consume the transient via `cx.effects().take_transient(...)` in `render()`.
@@ -1322,7 +1328,7 @@ cargo run --release
 {ui_assets_line}
 - Ladder position: second rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed actions + local-state keyed lists (action-first, v2)
-- Default entrypoints: start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, bind per-row payloads via `.action_payload(...)` inside `ui::for_each_keyed(...)`, and handle row writes with `payload_local_update_if::<A>(...)`.
+- Default entrypoints: start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, bind per-row payloads via `.action_payload(...)` inside `ui::for_each_keyed(...)`, and handle row writes with `cx.actions().local(&rows_state).payload_update_if::<A>(...)`.
 - Keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` for activation-only glue instead of reopening raw `on_activate*` on the default path.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - For keyed dynamic lists, prefer `LocalState<Vec<_>>` + payload actions when the rows are view-owned; keep explicit `Model<Vec<_>>` only when shared ownership or runtime coordination is the point.
@@ -1375,7 +1381,7 @@ cargo run --release
 {icons_line}{palette_line}
 - Ladder position: first rung of the default onboarding path (`hello` -> `simple-todo` -> `todo`)
 - Authoring: view runtime + typed unit actions (action-first, v1)
-- Default entrypoints: start with `cx.actions().local_update::<A>(...)`; if a control only exposes activation glue, prefer widget-local `.action(...)` / `.listen(...)` instead of teaching raw `on_activate*` first.
+- Default entrypoints: start with `cx.actions().local(&local).update::<A>(...)`; if a control only exposes activation glue, prefer widget-local `.action(...)` / `.listen(...)` instead of teaching raw `on_activate*` first.
 - Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read local state values near the top of `render()` and keep action handlers on `cx.actions()` when possible.
 - Next: edit `src/main.rs` and replace the view tree
@@ -1445,9 +1451,12 @@ mod tests {
         assert!(!src.contains("tx.value_or_else(&draft_state, String::new)"));
         assert!(src.contains(".submit_action(act::Add)"));
         assert!(!src.contains(".submit_command(act::Add.into())"));
-        assert!(src.contains(".local_update::<act::RefreshTip, u64>("));
-        assert!(src.contains(".local_set::<act::FilterAll, TodoFilter>("));
-        assert!(src.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>("));
+        assert!(src.contains(".local(tip_nonce_state)"));
+        assert!(src.contains(".update::<act::RefreshTip>(|v| {"));
+        assert!(src.contains(".local(filter_state)"));
+        assert!(src.contains(".set::<act::FilterAll>(TodoFilter::All);"));
+        assert!(src.contains(".local(todos_state)"));
+        assert!(src.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(src.contains(
             "let chip_all = filter_chip(TodoFilter::All, filter_value, act::FilterAll);"
         ));
@@ -1457,9 +1466,7 @@ mod tests {
         assert!(src.contains("let chip_completed = filter_chip("));
         assert!(!src.contains("filter_chip(cx, TodoFilter::All, filter_value)"));
         assert!(!src.contains(".action(match filter {"));
-        assert!(src.contains(
-            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
+        assert!(src.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(src.contains("cx.data()"));
         assert!(
             src.contains(".selector_layout((&todos_state, &filter_state), |(todos, filter)| {")
@@ -1545,7 +1552,7 @@ mod tests {
         assert!(src.contains("let click_count_state = cx.state().local::<u32>();"));
         assert!(src.contains("let click_count_value = click_count_state.layout_value(cx);"));
         assert!(!src.contains("click_count_state.layout(cx).value_or(0)"));
-        assert!(src.contains("cx.actions().local_update::<act::Click, u32>"));
+        assert!(src.contains("cx.actions().local(&click_count_state).update::<act::Click>"));
         assert!(!src.contains("cx.on_action_notify_models::<act::Click>"));
         assert!(!src.contains("cx.use_state::<u32>()"));
         assert!(src.contains("ui::single("));
@@ -1589,10 +1596,8 @@ mod tests {
         assert!(!src.contains("tx.value_or_else(&draft_state, String::new)"));
         assert!(src.contains(".submit_action(act::Add)"));
         assert!(!src.contains(".submit_command(act::Add.into())"));
-        assert!(src.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>("));
-        assert!(src.contains(
-            ".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
+        assert!(src.contains(".local(todos_state)"));
+        assert!(src.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(src.contains("fret::payload_actions!([Toggle(u64) ="));
         assert!(src.contains("let draft_state = cx.state().local::<String>();"));
         assert!(src.contains("let next_id_state = cx.state().local_init(|| 3u64);"));
@@ -1687,7 +1692,7 @@ mod tests {
         assert!(hello.contains("Default entrypoints"));
         assert!(hello.contains("cookbook/reference-only host-side glue"));
         assert!(hello.contains("first rung of the default onboarding path"));
-        assert!(hello.contains("`cx.actions().local_update::<A>(...)`"));
+        assert!(hello.contains("`cx.actions().local(&local).update::<A>(...)`"));
         assert!(hello.contains("widget-local `.action(...)` / `.listen(...)`"));
         assert!(!hello.contains("on_action_notify_models"));
         assert!(!hello.contains("use `on_activate*` only for local pressable glue"));
@@ -1700,7 +1705,7 @@ mod tests {
         assert!(simple.contains("Read tracked state near the top of `render()`"));
         assert!(simple.contains("`cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`"));
         assert!(simple.contains("bind per-row payloads via `.action_payload(...)`"));
-        assert!(simple.contains("`payload_local_update_if::<A>(...)`"));
+        assert!(simple.contains("`cx.actions().local(&rows_state).payload_update_if::<A>(...)`"));
         assert!(
             simple
                 .contains("widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)`")
@@ -1730,7 +1735,7 @@ mod tests {
         assert!(todo.contains("State: LocalState-first"));
         assert!(todo.contains("third rung of the default onboarding path"));
         assert!(todo.contains("bind keyed-row payloads via `.action_payload(...)`"));
-        assert!(todo.contains("`payload_local_update_if::<A>(...)` as the default row-write path"));
+        assert!(todo.contains("`cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path"));
         assert!(!todo.contains("`payload_locals::<A>(...)`"));
         assert!(!todo.contains("on_action_notify_locals"));
         assert!(!todo.contains("on_action_notify_transient"));

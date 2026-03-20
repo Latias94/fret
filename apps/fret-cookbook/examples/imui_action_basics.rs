@@ -100,10 +100,9 @@ impl View for ImUiActionBasicsView {
         let count_state = cx.state().local_init(|| 0u32);
         let count_value = count_state.layout_value(cx);
 
-        cx.actions()
-            .local_update::<act::Inc, u32>(&count_state, |v| {
-                *v = v.saturating_add(1);
-            });
+        cx.actions().local(&count_state).update::<act::Inc>(|v| {
+            *v = v.saturating_add(1);
+        });
 
         ui::v_flex(|cx| {
             let genui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {

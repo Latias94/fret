@@ -213,7 +213,8 @@ impl View for CommandsKeymapBasicsView {
         .key_context("cookbook.commands_keymap_basics");
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleAllowCommand>(&allow_command_state);
+            .local(&allow_command_state)
+            .toggle_bool::<act::ToggleAllowCommand>();
 
         cx.actions()
             .locals_with((&panel_open_state, &allow_command_state))

@@ -56,8 +56,9 @@ Keep the default authoring model intentionally small:
 
 - use `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state,
 - use `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
+- use `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for single-local writes,
 - for view-owned keyed rows, bind payloads with `.action_payload(...)`, prefer
-  `payload_local_update_if::<A>(...)` as the default row-write path,
+  `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path,
 - use `cx.actions().transient::<A>(...)` when the real effect must happen with `&mut App` in
   `render()`,
 - drop to `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs,

@@ -340,7 +340,8 @@ impl View for AsyncPlaygroundView {
             });
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleTheme>(&locals.dark);
+            .local(&locals.dark)
+            .toggle_bool::<act::ToggleTheme>();
 
         cx.actions()
             .transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);

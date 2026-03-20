@@ -76,9 +76,11 @@ impl View for OverlayBasicsView {
         let underlay_bumps_state = cx.state().local::<u32>();
 
         cx.actions()
-            .local_set::<act::OpenDialog, bool>(&dialog_open_state, true);
+            .local(&dialog_open_state)
+            .set::<act::OpenDialog>(true);
         cx.actions()
-            .local_update::<act::BumpUnderlay, u32>(&underlay_bumps_state, |v| {
+            .local(&underlay_bumps_state)
+            .update::<act::BumpUnderlay>(|v| {
                 *v = v.saturating_add(1);
             });
         cx.actions()

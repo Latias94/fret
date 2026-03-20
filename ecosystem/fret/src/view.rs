@@ -149,8 +149,8 @@ impl<T> LocalState<T> {
     /// This is a store-only write helper: it does **not** request redraw or mark the current
     /// view-cache root dirty by itself. Use it inside `cx.actions().models::<A>(...)` when the
     /// write participates in a broader model-store transaction, or prefer the grouped
-    /// `cx.actions().local_*` / `payload_local_update_if::<A>(...)` helpers when the local write
-    /// itself should drive rerender.
+    /// `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` /
+    /// `.payload_update_if::<A>(...)` helpers when the local write itself should drive rerender.
     pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
     where
         T: Any,
@@ -1243,11 +1243,23 @@ pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
+#[doc(hidden)]
+pub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T> {
+    cx: &'view mut AppUi<'cx, 'a, H>,
+    local: LocalState<T>,
+}
+
 /// Grouped action/effect registration helpers for extracted `UiCx` child builders on the default
 /// app surface.
 #[doc(hidden)]
 pub struct UiCxActions<'cx, 'a> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
+}
+
+#[doc(hidden)]
+pub struct UiCxActionLocal<'cx, 'a, T> {
+    cx: &'cx mut ElementContext<'a, crate::app::App>,
+    local: LocalState<T>,
 }
 
 #[doc(hidden)]
@@ -1280,6 +1292,58 @@ where
     }
 }
 
+impl<'view, 'cx, 'a, H: UiHost, T> AppUiActionLocal<'view, 'cx, 'a, H, T>
+where
+    T: Any,
+{
+    pub fn update<A>(self, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| update(value))
+            });
+    }
+
+    pub fn set<A>(self, value: T)
+    where
+        A: crate::TypedAction,
+        T: Clone,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.set_action(host, action_cx, value.clone())
+            });
+    }
+
+    pub fn payload_update_if<A>(self, update: impl Fn(&mut T, A::Payload) -> bool + 'static)
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_payload_action_handler::<A>(move |host, action_cx, payload| {
+                local.update_action_if(host, action_cx, |value| update(value, payload))
+            });
+    }
+}
+
+impl<'view, 'cx, 'a, H: UiHost> AppUiActionLocal<'view, 'cx, 'a, H, bool> {
+    pub fn toggle_bool<A>(self)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| *value = !*value)
+            });
+    }
+}
+
 impl<'cx, 'a, C> UiCxLocalsWith<'cx, 'a, C>
 where
     C: Clone + 'static,
@@ -1294,6 +1358,54 @@ where
                 models: host.models_mut(),
             };
             f(&mut tx, captures.clone())
+        });
+    }
+}
+
+impl<'cx, 'a, T> UiCxActionLocal<'cx, 'a, T>
+where
+    T: Any,
+{
+    pub fn update<A>(self, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| update(value))
+        });
+    }
+
+    pub fn set<A>(self, value: T)
+    where
+        A: crate::TypedAction,
+        T: Clone,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.set_action(host, action_cx, value.clone())
+        });
+    }
+
+    pub fn payload_update_if<A>(self, update: impl Fn(&mut T, A::Payload) -> bool + 'static)
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        let local = self.local;
+        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+            local.update_action_if(host, action_cx, |value| update(value, payload))
+        });
+    }
+}
+
+impl<'cx, 'a> UiCxActionLocal<'cx, 'a, bool> {
+    pub fn toggle_bool<A>(self)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| *value = !*value)
         });
     }
 }
@@ -1486,39 +1598,16 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         action_listener(f)
     }
 
-    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    /// Bind a typed action handler against one `LocalState<T>` slot without repeating that handle
+    /// on every helper family.
+    pub fn local<T>(self, local: &LocalState<T>) -> AppUiActionLocal<'view, 'cx, 'a, H, T>
     where
-        A: crate::TypedAction,
         T: Any,
     {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.update_action(host, action_cx, |value| update(value))
-            });
-    }
-
-    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.set_action(host, action_cx, value.clone())
-            });
-    }
-
-    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
-    where
-        A: crate::TypedAction,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.update_action(host, action_cx, |value| *value = !*value)
-            });
+        AppUiActionLocal {
+            cx: self.cx,
+            local: LocalState::clone(local),
+        }
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
@@ -1532,9 +1621,9 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
     /// raw payload-carrier namespace.
     ///
-    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
-    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
-    /// lives in `ModelStore`.
+    /// Prefer `cx.actions().local(&local).payload_update_if::<A>(...)` when the write stays on
+    /// `LocalState<T>`. Use this when the payload targets shared `Model<T>` graphs or
+    /// view-external state that already lives in `ModelStore`.
     pub fn payload_models<A>(
         self,
         f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
@@ -1577,21 +1666,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         });
     }
 
-    pub fn payload_local_update_if<A, T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_payload_action_handler::<A>(move |host, action_cx, payload| {
-                local.update_action_if(host, action_cx, |value| update(value, payload))
-            });
-    }
-
     pub fn availability<A>(
         self,
         f: impl Fn(
@@ -1612,36 +1686,16 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         action_listener(f)
     }
 
-    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    /// Bind a typed action handler against one `LocalState<T>` slot without repeating that handle
+    /// on every helper family.
+    pub fn local<T>(self, local: &LocalState<T>) -> UiCxActionLocal<'cx, 'a, T>
     where
-        A: crate::TypedAction,
         T: Any,
     {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.update_action(host, action_cx, |value| update(value))
-        });
-    }
-
-    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.set_action(host, action_cx, value.clone())
-        });
-    }
-
-    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
-    where
-        A: crate::TypedAction,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.update_action(host, action_cx, |value| *value = !*value)
-        });
+        UiCxActionLocal {
+            cx: self.cx,
+            local: LocalState::clone(local),
+        }
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
@@ -1654,9 +1708,9 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
     /// raw payload-carrier namespace.
     ///
-    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
-    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
-    /// lives in `ModelStore`.
+    /// Prefer `cx.actions().local(&local).payload_update_if::<A>(...)` when the write stays on
+    /// `LocalState<T>`. Use this when the payload targets shared `Model<T>` graphs or
+    /// view-external state that already lives in `ModelStore`.
     pub fn payload_models<A>(
         self,
         f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
@@ -1693,20 +1747,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         uicx_on_action_notify::<A>(self.cx, move |host, action_cx| {
             host.record_transient_event(action_cx, transient_key);
             true
-        });
-    }
-
-    pub fn payload_local_update_if<A, T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
-            local.update_action_if(host, action_cx, |value| update(value, payload))
         });
     }
 
@@ -3338,6 +3378,13 @@ mod tests {
         assert!(!api_source.contains("pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self"));
         assert!(api_source.contains("pub(crate) fn new("));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains(
+            "pub fn local<T>(self, local: &LocalState<T>) -> AppUiActionLocal<'view, 'cx, 'a, H, T>"
+        ));
+        assert!(!api_source.contains("pub fn local_update<A, T>("));
+        assert!(!api_source.contains("pub fn local_set<A, T>("));
+        assert!(!api_source.contains("pub fn toggle_local_bool<A>("));
+        assert!(!api_source.contains("pub fn payload_local_update_if<A, T>("));
         assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
         assert!(api_source.contains("pub fn selector_model_layout<Inputs, TValue>("));
@@ -3376,6 +3423,16 @@ mod tests {
         assert!(api_source.contains(
             "pub fn payload_models<A>(\n        self,\n        f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,"
         ));
+        assert!(
+            api_source.contains(
+                "#[doc(hidden)]\npub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T>"
+            )
+        );
+        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxActionLocal<'cx, 'a, T>"));
+        assert!(api_source.contains("pub fn update<A>(self, update: impl Fn(&mut T) + 'static)"));
+        assert!(api_source.contains("pub fn set<A>(self, value: T)"));
+        assert!(api_source.contains("pub fn toggle_bool<A>(self)"));
+        assert!(api_source.contains("pub fn payload_update_if<A>("));
         assert!(api_source.contains("pub fn locals_with<C>("));
         assert!(api_source.contains(
             "pub fn on<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> bool + 'static)"

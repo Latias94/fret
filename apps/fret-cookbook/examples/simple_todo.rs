@@ -186,7 +186,8 @@ fn bind_todo_actions(
         });
 
     cx.actions()
-        .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {
+        .local(todos_state)
+        .payload_update_if::<act::Toggle>(|rows, id| {
             if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
                 row.done = !row.done;
                 true

@@ -1,6 +1,6 @@
 # Action Write Surface (Fearless Refactor v1) — Target Interface State
 
-Last updated: 2026-03-18
+Last updated: 2026-03-20
 
 Companion docs:
 
@@ -21,9 +21,9 @@ Important constraint:
 
 | Need | Default app lane | Explicit / advanced lane | Reusable ecosystem lane | Owner |
 | --- | --- | --- | --- | --- |
-| Single-local write | one intentionally small companion family on `cx.actions()`: `local_update`, `local_set`, and `toggle_local_bool` | raw model writes remain explicit | no forced `fret` dependency | `ecosystem/fret` |
+| Single-local write | one intentionally small `cx.actions().local(&local)` builder with `.set::<A>(...)`, `.update::<A>(...)`, and `.toggle_bool::<A>()` | raw model writes remain explicit | no forced `fret` dependency | `ecosystem/fret` |
 | Coordinated LocalState transaction | `locals_with((...)).on::<A>(...)` | shared-model coordination remains explicit and there is no retained bare `locals::<A>(...)` fallback | no forced `fret` dependency | `ecosystem/fret` |
-| Keyed payload row write | one canonical row-write helper: `payload_local_update_if::<A>(...)` | collection/model orchestration remains explicit | no forced `fret` dependency | `ecosystem/fret` |
+| Keyed payload row write | one canonical row-write story on the same builder: `cx.actions().local(&rows_state).payload_update_if::<A>(...)` | collection/model orchestration remains explicit | no forced `fret` dependency | `ecosystem/fret` |
 | Multi-local payload transaction | not taught on the default path and no dedicated helper is retained | raw `AppUi::on_payload_action_notify::<A>(...)` remains the explicit fallback unless future proof reopens a narrower helper | no forced `fret` dependency | `ecosystem/fret` |
 | App-only effect handoff | `transient::<A>(...)` stays explicit | host/runtime seams remain explicit | generally app-only | `ecosystem/fret` + existing runtime semantics |
 | Shared model graph coordination | not default | `models::<A>(...)` remains explicit | direct-crate usage remains supported | existing runtime/app semantics |
@@ -37,7 +37,7 @@ Important constraint:
 
 The default app lane should teach:
 
-- one obvious one-slot companion family for semantically distinct writes
+- one obvious single-local builder for semantically distinct writes
 - one obvious coordinated transaction story
 - one obvious keyed payload row-write story
 - explicit `transient::<A>(...)` when the real work belongs in `&mut App`
@@ -54,8 +54,8 @@ It should not teach by default:
 Additional rule:
 
 - `locals_with((...)).on::<A>(...)` remains the primary explicit transaction story
-- the one-slot trio is an intentional companion family, not a second transaction dialect
-- keyed payload row writes teach `payload_local_update_if::<A>(...)` alone on the default path
+- `cx.actions().local(&local)` is the one-slot companion builder, not a second transaction dialect
+- keyed payload row writes teach `cx.actions().local(&rows_state).payload_update_if::<A>(...)` alone on the default path
 
 ### Advanced / editor-grade lane
 
@@ -90,5 +90,8 @@ Do not promote a new write helper into the default path unless:
 Once the final write-side posture is chosen:
 
 - old default-looking spellings should disappear from first-contact docs/templates/examples,
+- displaced helper spellings such as `local_update`, `local_set`, `toggle_local_bool`, and
+  `payload_local_update_if` should stay hidden or be deleted rather than remaining co-equal on the
+  default rustdoc surface,
 - source-policy gates should lock the chosen posture directly,
 - displaced helpers should either become explicit advanced/reference seams or be deleted outright.

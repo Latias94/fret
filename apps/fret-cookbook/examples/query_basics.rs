@@ -54,7 +54,8 @@ impl View for QueryBasicsView {
         }
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
+            .local(&fail_mode)
+            .toggle_bool::<act::ToggleErrorMode>();
         cx.actions()
             .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.actions()

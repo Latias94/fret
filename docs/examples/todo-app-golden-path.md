@@ -231,7 +231,7 @@ Boundary rule:
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
 - for non-payload multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`.
-- for keyed-row payload writes, start with `payload_local_update_if::<A>(...)`.
+- for keyed-row payload writes, start with `cx.actions().local(&rows_state).payload_update_if::<A>(...)`.
 
 ## Actions (UI -> app logic)
 
@@ -252,7 +252,7 @@ mod act {
 impl View for TodoView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let draft = cx.state().local::<String>();
-        cx.actions().local_set::<act::Add, String>(&draft, String::new());
+        cx.actions().local(&draft).set::<act::Add>(String::new());
 
         ui::single(
             cx,
@@ -330,7 +330,8 @@ To invalidate/refetch from app logic:
 // If refetch is just a pure state projection, keep it on the LocalState-first lane
 // (for example, bump a local nonce like `tip_nonce_state`).
 cx.actions()
-    .local_update::<act::RefreshTip, u64>(&tip_nonce_state, |value| {
+    .local(&tip_nonce_state)
+    .update::<act::RefreshTip>(|value| {
         *value = value.saturating_add(1);
     });
 
@@ -351,7 +352,8 @@ In a typical window driver:
 In the view runtime shape, typed action handlers are the boundary where you mutate tracked state and
 request UI updates. Start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for
 LocalState-first flows, use
-`payload_local_update_if::<A>(...)` as the default keyed-row payload write path, drop to
+`cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default keyed-row payload
+write path, drop to
 `cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use
 `cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and
 keep raw `on_action_notify` plus lower-level payload/model seams for cookbook/reference host-side
@@ -385,7 +387,8 @@ cx.actions()
     });
 
 cx.actions()
-    .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
+    .local(&todos_state)
+    .payload_update_if::<act::Toggle>(|rows, id| {
         if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
             row.done = !row.done;
             true

@@ -126,20 +126,14 @@ impl View for EditorNotesDemoView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let selected = cx.state().local_init(|| EditorAssetSelection::Material);
         cx.actions()
-            .local_set::<act::SelectMaterial, EditorAssetSelection>(
-                &selected,
-                EditorAssetSelection::Material,
-            );
+            .local(&selected)
+            .set::<act::SelectMaterial>(EditorAssetSelection::Material);
         cx.actions()
-            .local_set::<act::SelectLight, EditorAssetSelection>(
-                &selected,
-                EditorAssetSelection::Light,
-            );
+            .local(&selected)
+            .set::<act::SelectLight>(EditorAssetSelection::Light);
         cx.actions()
-            .local_set::<act::SelectCamera, EditorAssetSelection>(
-                &selected,
-                EditorAssetSelection::Camera,
-            );
+            .local(&selected)
+            .set::<act::SelectCamera>(EditorAssetSelection::Camera);
 
         let theme = Theme::global(&*cx.app).snapshot();
         let selected = cx.state().watch(&selected).layout().value_or_default();

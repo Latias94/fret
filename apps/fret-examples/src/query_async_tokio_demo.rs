@@ -86,7 +86,8 @@ impl View for QueryAsyncTokioDemoView {
         }
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);
+            .local(&fail_mode_state)
+            .toggle_bool::<act::ToggleFailMode>();
         cx.actions()
             .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.actions()

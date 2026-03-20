@@ -347,17 +347,15 @@ $$
         cx.actions()
             .transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
         cx.actions()
-            .payload_local_update_if::<act::ToggleCodeBlockExpand, HashSet<markdown::BlockId>>(
-                &expanded_code_blocks_state,
-                |set, id| {
-                    if set.contains(&id) {
-                        set.remove(&id);
-                    } else {
-                        set.insert(id);
-                    }
-                    true
-                },
-            );
+            .local(&expanded_code_blocks_state)
+            .payload_update_if::<act::ToggleCodeBlockExpand>(|set, id| {
+                if set.contains(&id) {
+                    set.remove(&id);
+                } else {
+                    set.insert(id);
+                }
+                true
+            });
 
         self.st.anchor_regions.borrow_mut().clear();
 
