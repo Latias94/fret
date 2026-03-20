@@ -303,6 +303,20 @@ fn ui_gallery_nav_to_select_page() -> ScriptV2Builder {
         .wait_frames(2)
         .click(test_id("ui-gallery-nav-select"))
         .wait_exists(test_id("ui-gallery-page-select"), 600)
+        .wait_exists(test_id("ui-gallery-select-diag-surface"), 600)
+        .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
+            container: test_id("ui-gallery-content-scroll"),
+            target: test_id("ui-gallery-select-diag-surface"),
+            delta_x: 0.0,
+            delta_y: -180.0,
+            require_fully_within_container: false,
+            require_fully_within_window: true,
+            padding_px: 24.0,
+            padding_insets_px: None,
+            timeout_frames: 1200,
+        })
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
 }
 
@@ -316,6 +330,20 @@ fn ui_gallery_nav_to_select_page_no_escape() -> ScriptV2Builder {
         .wait_frames(2)
         .click(test_id("ui-gallery-nav-select"))
         .wait_exists(test_id("ui-gallery-page-select"), 600)
+        .wait_exists(test_id("ui-gallery-select-diag-surface"), 600)
+        .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
+            container: test_id("ui-gallery-content-scroll"),
+            target: test_id("ui-gallery-select-diag-surface"),
+            delta_x: 0.0,
+            delta_y: -180.0,
+            require_fully_within_container: false,
+            require_fully_within_window: true,
+            padding_px: 24.0,
+            padding_insets_px: None,
+            timeout_frames: 1200,
+        })
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
 }
 
@@ -922,6 +950,20 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
         .wait_frames(2)
         .click(test_id("ui-gallery-nav-select"))
         .wait_exists(test_id("ui-gallery-page-select"), 600)
+        .wait_exists(test_id("ui-gallery-select-diag-surface"), 600)
+        .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
+            container: test_id("ui-gallery-content-scroll"),
+            target: test_id("ui-gallery-select-diag-surface"),
+            delta_x: 0.0,
+            delta_y: -180.0,
+            require_fully_within_container: false,
+            require_fully_within_window: true,
+            padding_px: 24.0,
+            padding_insets_px: None,
+            timeout_frames: 1200,
+        })
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
         .click_stable(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)

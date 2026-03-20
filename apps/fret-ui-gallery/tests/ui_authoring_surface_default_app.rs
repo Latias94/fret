@@ -1741,6 +1741,7 @@ fn select_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/select/label.rs",
             "src/ui/snippets/select/rtl.rs",
             "src/ui/snippets/select/scrollable.rs",
+            "src/ui/snippets/select/usage.rs",
         ],
         &[
             "use fret::{UiChild, UiCx};",
@@ -1761,6 +1762,8 @@ fn select_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/select.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Label Association\", label)",
             "DocSection::build(cx, \"Diag Surface\", diag_surface)",
             "DocSection::build(cx, \"Align Item With Trigger\", align_item)",
@@ -1772,6 +1775,8 @@ fn select_page_uses_typed_doc_sections_for_app_facing_snippets() {
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Label Association\", label)",
             "DocSection::new(\"Diag Surface\", diag_surface)",
             "DocSection::new(\"Align Item With Trigger\", align_item)",

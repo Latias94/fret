@@ -16,6 +16,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             .into_element(cx)
             .test_id("ui-gallery-select-demo")
     };
+    let usage = snippets::usage::render(cx);
     let label = snippets::label::render(cx);
     let diag_surface = snippets::diag_surface::render(cx);
     let align_item = snippets::align_item_with_trigger::render(cx);
@@ -25,18 +26,37 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let invalid = snippets::invalid::render(cx);
     let rtl = snippets::rtl::render(cx);
 
+    let api_reference = doc_layout::notes_block([
+        "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) stay the default copyable root story.",
+        "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` already covers the upstream-shaped nested `SelectTrigger` / `SelectValue` / `SelectContent` lane when you need composable parts ownership.",
+        "That composable seam should stay typed and narrow around `SelectEntry` (`SelectGroup` / `SelectItem` / `SelectLabel` / `SelectSeparator`) instead of widening `Select` to arbitrary generic children.",
+        "Width negotiation remains caller-owned at the trigger/root call site; overlay placement, dismissal, scroll buttons, and listbox semantics stay recipe/mechanism-owned in `fret-ui-kit` + `fret-ui-shadcn`.",
+        "No new mechanism bug was identified in this pass; the remaining drift was the first-party docs/teaching surface.",
+    ]);
     let notes = doc_layout::notes_block([
         "Select is a Popover + Listbox recipe. Use it for rich overlays and custom interactions.",
+        "Gallery order now mirrors the upstream shadcn/Base UI Select docs path first: `Demo`, `Usage`, `Align Item With Trigger`, `Groups`, `Scrollable`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.",
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) are now the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story.",
+        "`Label Association` and `Diag Surface` stay after `API Reference` as explicit Fret follow-ups so the docs path stays clean without sacrificing existing scripted coverage.",
         "This page keeps stable `test_id`s for `tools/diag-scripts/ui-gallery/select/*`.",
         "Use `SelectTriggerSize::Sm` to match compact shadcn control heights.",
     ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-select-api-reference")
+        .description(
+            "Public surface summary, ownership notes, and the current parts/children guidance.",
+        );
     let notes =
         DocSection::build(cx, "Notes", notes).description("Parity notes and usage guidance.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Minimal shadcn-aligned demo (matches upstream `select-demo.tsx`).")
         .test_id_prefix("ui-gallery-select-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let usage = DocSection::build(cx, "Usage", usage)
+        .description("Copyable minimal usage for the default Select root lane.")
+        .test_id_prefix("ui-gallery-select-usage")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association", label)
         .description("Use `FieldLabel::for_control` + `Select::control_id` so label clicks route to the trigger and open the popup.")
         .test_id_prefix("ui-gallery-select-label")
@@ -73,18 +93,20 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows upstream shadcn Select docs and includes extra probes for parity work (positioning, groups/separators, long-list scrolling, disabled/invalid, RTL).",
+            "Preview mirrors the upstream shadcn/Base UI Select docs path first, then keeps label wiring and diagnostics-specific surfaces as explicit Fret follow-ups.",
         ),
         vec![
             demo,
-            label,
-            diag_surface,
+            usage,
             align_item,
             groups,
             scrollable,
             disabled,
             invalid,
             rtl,
+            api_reference,
+            label,
+            diag_surface,
             notes,
         ],
     );
