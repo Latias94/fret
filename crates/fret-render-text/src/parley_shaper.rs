@@ -239,20 +239,35 @@ impl GlyphFontData {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FontSynthesis {
-    pub embolden: bool,
+    embolden: bool,
     /// Faux italic/oblique skew in degrees, clamped for stable cache identity.
-    pub skew_degrees: i8,
+    skew_degrees: i8,
 }
 
 impl FontSynthesis {
-    fn from_parley(synthesis: parley::fontique::Synthesis) -> Self {
+    pub fn new(embolden: bool, skew_degrees: i8) -> Self {
         Self {
-            embolden: synthesis.embolden(),
-            skew_degrees: synthesis
+            embolden,
+            skew_degrees,
+        }
+    }
+
+    pub fn embolden(&self) -> bool {
+        self.embolden
+    }
+
+    pub fn skew_degrees(&self) -> i8 {
+        self.skew_degrees
+    }
+
+    fn from_parley(synthesis: parley::fontique::Synthesis) -> Self {
+        Self::new(
+            synthesis.embolden(),
+            synthesis
                 .skew()
                 .unwrap_or(0.0)
                 .clamp(i8::MIN as f32, i8::MAX as f32) as i8,
-        }
+        )
     }
 }
 
