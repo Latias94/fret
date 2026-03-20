@@ -2,8 +2,8 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-ai-checkpoint-restore-tooltip",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["ui_gallery", "ai", "checkpoint", "tooltip", "restore", "screenshots"],
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "ai", "checkpoint", "tooltip", "restore"],
     "target_hints": [
       "Run `fret-ui-gallery` with `--features gallery-dev` so AI pages are wired.",
       "Suite sets `FRET_UI_GALLERY_START_PAGE=ai_checkpoint_demo` to avoid sidebar navigation flake."
@@ -23,7 +23,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }
       },
       "timeout_frames": 600
     },
@@ -36,10 +36,21 @@
       "timeout_frames": 600
     },
     {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "delta_x": 0.0,
-      "delta_y": -180.0
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-ai-checkpoint-trigger" },
+      "delta_y": -200.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-checkpoint-trigger" },
+      "stable_frames": 16,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 8 },
     {
@@ -74,7 +85,6 @@
       },
       "timeout_frames": 240
     },
-    { "type": "capture_bundle", "label": "ui-gallery-ai-checkpoint-restore-tooltip" },
-    { "type": "capture_screenshot", "label": "ui-gallery-ai-checkpoint-restore-tooltip" }
+    { "type": "capture_bundle", "label": "ui-gallery-ai-checkpoint-restore-tooltip" }
   ]
 }

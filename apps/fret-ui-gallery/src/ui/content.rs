@@ -12,6 +12,8 @@ pub(crate) fn content_view(
     let (title, origin) = page_meta(selected);
     let page_test_id: Arc<str> =
         Arc::from(format!("ui-gallery-page-{}", selected.replace('_', "-")));
+    // The content shell owns the stable `ui-gallery-page-*` anchor for diagnostics/scripts.
+    // Individual pages should use component/section-specific ids to avoid duplicate semantics ids.
 
     // Avoid viewport-size branching in the header because this content view can be wrapped in a
     // ViewCache root (`FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`). Querying viewport bounds with
@@ -184,10 +186,12 @@ pub(crate) fn content_view(
                 .refine_layout(
                     LayoutRefinement::default()
                         .w_full()
-                        .flex_grow(1.0)
+                        .h_full()
+                        .flex_1()
                         .min_h_0()
                         .min_w_0(),
                 )
+                .viewport_test_id("ui-gallery-content-viewport")
                 .viewport_intrinsic_measure_mode(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
                 );

@@ -53,11 +53,10 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-checkpoint-clicked-marker" }
+        "target": { "kind": "test_id", "id": "ui-ai-checkpoint-restored-marker" }
       },
       "timeout_frames": 240
     },
     { "type": "capture_bundle", "label": "ui-gallery-ai-checkpoint-demo-tooltip" }
   ]
 }
-

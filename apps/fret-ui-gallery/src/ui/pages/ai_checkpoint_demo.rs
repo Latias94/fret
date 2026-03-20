@@ -18,7 +18,7 @@ pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
     let customizable_icon = doc_layout::notes_block([
         "Swap the default bookmark for a product-specific icon while keeping the surrounding checkpoint recipe unchanged.",
         "Custom child content now inherits the same muted foreground baseline as the default bookmark icon.",
-        "`CheckpointIcon::children_many(...)` and `into_element_with_children(...)` make move-only Fret trees feel closer to the official React children API.",
+        "`Checkpoint`, `CheckpointIcon`, and `CheckpointTrigger` now all expose lazy/composable children builders so move-only Fret trees stay close to the official React children API.",
     ]);
     let manual_checkpoints = doc_layout::notes_block([
         "Allow users to manually create checkpoints at important conversation points.",
@@ -39,7 +39,7 @@ pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
         vec![
             DocSection::build(cx, "Usage with AI SDK", demo)
                 .description(
-                    "Build a chat interface with conversation checkpoints that allow users to restore to previous states.",
+                    "Docs-aligned Fret translation of the official conversation checkpoint example.",
                 )
                 .test_id_prefix("ui-gallery-ai-checkpoint-demo")
                 .max_w(Px(980.0))
@@ -69,7 +69,7 @@ pub(super) fn preview_ai_checkpoint_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> V
                 .code_rust_from_file_region(snippets::checkpoint_demo::SOURCE, "branching_conversations")
                 .no_shell(),
             DocSection::build(cx, "Props", props)
-                .description("Fret API surface for `fret_ui_ai::Checkpoint*` builders.")
+                .description("Fret builder surface corresponding to the official `Checkpoint*` component family.")
                 .max_w(Px(980.0)),
         ],
     );
@@ -137,6 +137,13 @@ fn checkpoint_props_table(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 "IntoIterator<Item = AnyElement>",
                 "-",
                 "Button label or richer trigger content.",
+            ],
+            [
+                "CheckpointTrigger",
+                "children_many / into_element_with_children",
+                "builder methods",
+                "None",
+                "Supports multi-node or lazy trigger content when you want a closer analogue to React children composition.",
             ],
             [
                 "CheckpointTrigger",
