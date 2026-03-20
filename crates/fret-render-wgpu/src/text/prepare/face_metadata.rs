@@ -50,16 +50,8 @@ impl TextSystem {
 
         let face_key = usage.face_key();
 
-        let font_data = self
-            .face_cache
-            .font_data_by_face
-            .get(&(usage.font_data_id(), usage.face_index()))?;
-        let coords: &[i16] = self
-            .face_cache
-            .font_instance_coords_by_face
-            .get(&face_key)
-            .map(|v| v.as_ref())
-            .unwrap_or(&[]);
+        let font_data = self.cached_font_data_for_face(usage.font_data_id(), usage.face_index())?;
+        let coords = self.cached_face_normalized_coords(face_key);
 
         let ppem = style.size.0 * scale;
         fret_render_text::decoration_metrics_px_for_font_bytes(
@@ -80,10 +72,7 @@ impl TextSystem {
             return Some(name);
         }
 
-        let font_data = self
-            .face_cache
-            .font_data_by_face
-            .get(&(font_data_id, face_index))?;
+        let font_data = self.cached_font_data_for_face(font_data_id, face_index)?;
         let name =
             fret_render_text::best_family_name_from_font_bytes(font_data.bytes(), face_index)?;
         self.face_cache

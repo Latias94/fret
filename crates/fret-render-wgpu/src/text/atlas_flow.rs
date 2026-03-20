@@ -48,10 +48,8 @@ impl TextSystem {
     }
 
     fn ensure_parley_glyph(&mut self, key: GlyphKey, epoch: u64) {
-        let Some(font_data) = self
-            .face_cache
-            .font_data_by_face
-            .get(&(key.font.font_data_id(), key.font.face_index()))
+        let Some(font_data) =
+            self.cloned_font_data_for_face(key.font.font_data_id(), key.font.face_index())
         else {
             return;
         };
@@ -66,7 +64,7 @@ impl TextSystem {
         };
 
         let font_size = parley_glyph_font_size(key);
-        let normalized_coords = self.cached_face_normalized_coords(key);
+        let normalized_coords = self.cloned_face_normalized_coords(key.font);
         let mut scaler = build_glyph_scaler(
             &mut self.parley_scale,
             font_ref,
@@ -107,13 +105,6 @@ impl TextSystem {
             image.data,
             epoch,
         );
-    }
-
-    fn cached_face_normalized_coords(&self, key: GlyphKey) -> Option<std::sync::Arc<[i16]>> {
-        self.face_cache
-            .font_instance_coords_by_face
-            .get(&key.font)
-            .cloned()
     }
 
     fn release_pin_bucket(&mut self, bucket: usize) {
