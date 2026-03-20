@@ -1,4 +1,4 @@
-use super::GlyphQuadKind;
+use super::types::GlyphQuadKind;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
 use fret_render_text::FontFaceKey;
 use std::collections::{HashMap, HashSet};
@@ -13,7 +13,57 @@ pub(super) struct GlyphKey {
     pub(super) kind: GlyphQuadKind,
 }
 
+const GLYPH_KEY_LOOKUP_KIND_ORDER: [GlyphQuadKind; 3] = [
+    GlyphQuadKind::Color,
+    GlyphQuadKind::Subpixel,
+    GlyphQuadKind::Mask,
+];
+
 impl GlyphKey {
+    pub(super) fn new(
+        font: FontFaceKey,
+        glyph_id: u32,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        kind: GlyphQuadKind,
+    ) -> Self {
+        Self {
+            font,
+            glyph_id,
+            size_bits,
+            x_bin,
+            y_bin,
+            kind,
+        }
+    }
+
+    pub(super) fn from_image_content(
+        font: FontFaceKey,
+        glyph_id: u32,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        content: parley::swash::scale::image::Content,
+    ) -> (Self, u32) {
+        let (kind, bytes_per_pixel) = glyph_image_content_metadata(content);
+        (
+            Self::new(font, glyph_id, size_bits, x_bin, y_bin, kind),
+            bytes_per_pixel,
+        )
+    }
+
+    pub(super) fn lookup_keys(
+        font: FontFaceKey,
+        glyph_id: u32,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+    ) -> [Self; 3] {
+        GLYPH_KEY_LOOKUP_KIND_ORDER
+            .map(|kind| Self::new(font, glyph_id, size_bits, x_bin, y_bin, kind))
+    }
+
     pub(super) fn is_mask(self) -> bool {
         matches!(self.kind, GlyphQuadKind::Mask)
     }

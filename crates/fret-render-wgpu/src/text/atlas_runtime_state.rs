@@ -35,18 +35,22 @@ impl TextAtlasRuntimeState {
     }
 
     fn atlas_for_key(&self, key: GlyphKey) -> &GlyphAtlas {
-        match key.kind {
-            super::GlyphQuadKind::Mask => &self.mask_atlas,
-            super::GlyphQuadKind::Color => &self.color_atlas,
-            super::GlyphQuadKind::Subpixel => &self.subpixel_atlas,
+        if key.is_color() {
+            &self.color_atlas
+        } else if key.is_subpixel() {
+            &self.subpixel_atlas
+        } else {
+            &self.mask_atlas
         }
     }
 
-    pub(super) fn atlas_mut_for_key(&mut self, key: GlyphKey) -> &mut GlyphAtlas {
-        match key.kind {
-            super::GlyphQuadKind::Mask => &mut self.mask_atlas,
-            super::GlyphQuadKind::Color => &mut self.color_atlas,
-            super::GlyphQuadKind::Subpixel => &mut self.subpixel_atlas,
+    fn atlas_mut_for_key(&mut self, key: GlyphKey) -> &mut GlyphAtlas {
+        if key.is_color() {
+            &mut self.color_atlas
+        } else if key.is_subpixel() {
+            &mut self.subpixel_atlas
+        } else {
+            &mut self.mask_atlas
         }
     }
 

@@ -1,5 +1,5 @@
 use super::super::{GlyphInstance, TextLine, TextSystem};
-use super::glyph_raster::{PreparedGlyphRaster, insert_prepared_glyph_raster_into_atlas};
+use super::glyph_raster::PreparedGlyphRaster;
 use fret_render_text::FontFaceKey;
 use fret_render_text::{ParleyGlyph, PreparedLine, ResolvedSpan, paint_span_for_text_range};
 use std::collections::HashMap;
@@ -78,8 +78,18 @@ impl TextSystem {
     }
 
     fn insert_prepared_glyph_raster(&mut self, raster: PreparedGlyphRaster, epoch: u64) {
-        let atlas = self.atlas_runtime.atlas_mut_for_key(raster.glyph_key());
-        insert_prepared_glyph_raster_into_atlas(atlas, raster, epoch);
+        let (glyph_key, width, height, left, top, bytes_per_pixel, data) =
+            raster.into_atlas_insert();
+        let _ = self.atlas_runtime.get_or_insert(
+            glyph_key,
+            width,
+            height,
+            left,
+            top,
+            bytes_per_pixel,
+            data,
+            epoch,
+        );
     }
 
     pub(super) fn commit_prepared_glyph_raster(

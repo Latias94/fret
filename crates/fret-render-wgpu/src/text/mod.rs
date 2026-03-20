@@ -49,7 +49,6 @@ use self::layout_cache_state::TextLayoutCacheState;
 use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
-use self::types::GlyphQuadKind;
 pub use self::types::TextFontFamilyConfig;
 pub(crate) use self::types::TextLine;
 #[cfg(test)]
