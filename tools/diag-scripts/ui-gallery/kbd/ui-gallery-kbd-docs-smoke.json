@@ -36,7 +36,10 @@
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-kbd-usage-tabs" } },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-kbd-usage-tabs-trigger-preview" }
+      },
       "timeout_frames": 240
     },
     {
