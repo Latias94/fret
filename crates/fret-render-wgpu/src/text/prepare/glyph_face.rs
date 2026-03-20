@@ -104,11 +104,11 @@ fn prepared_glyph_variation_key(glyph: &ParleyGlyph) -> u64 {
 }
 
 fn prepared_glyph_synthesis_embolden(glyph: &ParleyGlyph) -> bool {
-    glyph.synthesis.embolden
+    glyph.synthesis().embolden
 }
 
 fn prepared_glyph_synthesis_skew_degrees(glyph: &ParleyGlyph) -> i8 {
-    glyph.synthesis.skew_degrees
+    glyph.synthesis().skew_degrees
 }
 
 fn record_prepared_glyph_face_usage(
