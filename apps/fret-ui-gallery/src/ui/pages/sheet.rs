@@ -22,6 +22,7 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/sheet.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx` and `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx`.",
         "Preview mirrors the shadcn Sheet docs path after `Installation`: `Demo`, `Usage`, `Side`, `No Close Button`, `RTL`, and `API Reference`.",
         "`Sheet::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
+        "`SheetContent::build(...)` is the typed content-side companion on that same lane, so copyable snippets do not need to hand-land already-built content arrays.",
         "Default close affordance lives in `SheetContent`, matching upstream; disable it with `show_close_button(false)`.",
         "`Usage` is the default copyable path; `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",
     ]);
@@ -41,7 +42,9 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let usage = DocSection::build(cx, "Usage", usage)
         .max_w(Px(980.0))
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable shadcn-style composition reference for Sheet.")
+        .description(
+            "Copyable shadcn-style composition reference using typed trigger/content builders.",
+        )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let side = DocSection::build(cx, "Side", side)
         .max_w(Px(980.0))

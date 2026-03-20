@@ -52,6 +52,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
   close buttons while preserving `SheetClose::new(open)` as the explicit constructor.
 - Pass: `Sheet::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
+- Pass: `SheetContent::build(...)` is the typed content-side companion on that same recipe lane,
+  so first-party snippets no longer need to pre-land `SheetHeader` / `SheetFooter` trees into a
+  raw `SheetContent::new([...])` array.
 
 ### Placement & sizing
 
