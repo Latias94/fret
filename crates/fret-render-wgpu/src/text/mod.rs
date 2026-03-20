@@ -41,7 +41,7 @@ use self::atlas::GlyphKey;
 use self::atlas_epoch::TextAtlasEpochState;
 use self::atlas_runtime_state::TextAtlasRuntimeState;
 use self::blob_state::TextBlobState;
-pub(crate) use self::blobs::{TextBlobRenderData, TextRenderGlyphKind};
+pub(crate) use self::blobs::TextBlobRenderData;
 use self::face_cache::TextFaceCacheState;
 use self::font_runtime_state::TextFontRuntimeState;
 use self::frame_perf::TextFramePerfState;
@@ -53,7 +53,9 @@ pub use self::types::TextFontFamilyConfig;
 pub(crate) use self::types::TextLine;
 #[cfg(test)]
 pub(crate) use self::types::subpixel_mask_to_alpha;
-pub(crate) use self::types::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot, TextFontFaceUsage};
+pub(crate) use self::types::{
+    DebugGlyphAtlasLookup, TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyphKind,
+};
 use self::types::{GlyphInstance, TextBlob, TextShape};
 
 pub struct TextSystem {

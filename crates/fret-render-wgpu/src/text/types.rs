@@ -3,6 +3,13 @@ use fret_core::{TextMetrics, geometry::Px};
 use fret_render_text::{FontFaceKey, TextDecoration};
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TextRenderGlyphKind {
+    Mask,
+    Color,
+    Subpixel,
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct GlyphInstance {
     /// Logical-space rect relative to the text baseline origin.
@@ -31,6 +38,16 @@ impl GlyphInstance {
 
     pub(super) fn is_subpixel(&self) -> bool {
         self.key.is_subpixel()
+    }
+
+    pub(crate) fn render_kind(&self) -> TextRenderGlyphKind {
+        if self.is_color() {
+            TextRenderGlyphKind::Color
+        } else if self.is_subpixel() {
+            TextRenderGlyphKind::Subpixel
+        } else {
+            TextRenderGlyphKind::Mask
+        }
     }
 
     #[cfg(test)]
