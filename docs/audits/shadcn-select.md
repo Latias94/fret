@@ -54,6 +54,10 @@ examples in `repo-ref/ui`.
 - Pass: Selecting an item commits `model` and closes the overlay.
 - Pass: Outside press dismissal is delegated to the shared dismissible overlay infra (ADR 0069).
 - Pass: Select behaves like a Radix-style menu overlay: outside pointer-down is consumed (non-click-through).
+- Pass: Label association remains caller-owned via `FieldLabel::for_control(...)` +
+  `Select::control_id(...)`, and the real UI Gallery gate now passes under the shared
+  `FieldLabel` forwarding fix: clicking the label focuses the trigger and opens the popup even
+  inside the gallery's ambient pressable shell.
 - Pass: root-level disabled gate now forces closed-state render semantics (content hidden and trigger
   not exposed as expanded), even when the controlled `open` model is `true`.
 - Pass: Open lifecycle callbacks are available via `Select::on_open_change` and
@@ -77,6 +81,7 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib select`
+- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json --dir target/fret-diag-select-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-select cargo run -p fret-ui-gallery`
 - Contract test: `select_disabled_hides_content_even_when_open_model_true`
 - Contract test: `select_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `select_open_change_events_complete_without_animation`

@@ -67,6 +67,10 @@ Base UI combobox lifecycle semantics.
 - Pass: Trigger/content width behavior matches recipe intent (default track-trigger width; optional fixed width).
 - Pass: Opening auto-focuses the command input, and combobox semantics are reported on the editable surface.
 - Pass: Trigger chrome aligns with shadcn outline-button intent while preserving combobox semantics.
+- Pass: Label association remains recipe-owned via `FieldLabel::for_control(...)` +
+  `Combobox::control_id(...)`, and the real UI Gallery gate now passes under the shared
+  `FieldLabel` forwarding fix: clicking the label focuses the combobox trigger even inside the
+  gallery's ambient pressable shell.
 - Gap: `Combobox::new(...)` defaulted `auto_highlight` to `true`, but Base UI combobox keeps
   first-match highlight opt-in via `autoHighlight`. This is a recipe default drift, not a
   mechanism-layer gap.
@@ -88,7 +92,9 @@ Base UI combobox lifecycle semantics.
 
 ## Conclusion
 
-- Result: This component still does not point to a missing mechanism-layer issue.
+- Result: This component still does not point to a combobox-specific mechanism-layer issue; the
+  recent label-association regression was in the shared `FieldLabel` forwarding path rather than
+  in combobox runtime code.
 - Result: The concrete parity regression here was a recipe default (`auto_highlight`) drifting away
   from Base UI/shadcn semantics, not a missing overlay/focus/hit-testing primitive.
 - Result: Common recipe customization now lands through the direct root builder chain, while the
@@ -115,5 +121,6 @@ Base UI combobox lifecycle semantics.
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_reason_maps_dismiss_reasons`
 - `cargo test -p fret-ui-shadcn --lib combobox_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
 - `cargo test -p fret-ui-shadcn --lib combobox_chips_builder_steps_apply_the_same_patch_surface -- --exact --nocapture`
+- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-label-click-focus.json --dir target/fret-diag-combobox-label-focus-20260320-1 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-combobox cargo run -p fret-ui-gallery`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json --launch -- cargo run -p fret-ui-gallery`
 - `cargo check -p fret-ui-gallery --message-format short`
