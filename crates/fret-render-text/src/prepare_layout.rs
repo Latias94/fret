@@ -134,12 +134,7 @@ fn clusters_for_line(
         let x0 = if x0.is_finite() { Px(x0) } else { Px(0.0) };
         let x1 = if x1.is_finite() { Px(x1) } else { Px(0.0) };
 
-        out.push(TextLineCluster {
-            text_range: start..end,
-            x0,
-            x1,
-            is_rtl: c.is_rtl(),
-        });
+        out.push(TextLineCluster::new(start..end, x0, x1, c.is_rtl()));
     }
 
     Arc::from(out)

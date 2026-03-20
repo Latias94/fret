@@ -271,10 +271,37 @@ pub(crate) fn metrics_for_uniform_lines(
 
 #[derive(Debug, Clone)]
 pub struct TextLineCluster {
-    pub text_range: Range<usize>,
-    pub x0: Px,
-    pub x1: Px,
-    pub is_rtl: bool,
+    text_range: Range<usize>,
+    x0: Px,
+    x1: Px,
+    is_rtl: bool,
+}
+
+impl TextLineCluster {
+    pub(crate) fn new(text_range: Range<usize>, x0: Px, x1: Px, is_rtl: bool) -> Self {
+        Self {
+            text_range,
+            x0,
+            x1,
+            is_rtl,
+        }
+    }
+
+    pub fn text_range(&self) -> Range<usize> {
+        self.text_range.clone()
+    }
+
+    pub fn x0(&self) -> Px {
+        self.x0
+    }
+
+    pub fn x1(&self) -> Px {
+        self.x1
+    }
+
+    pub fn is_rtl(&self) -> bool {
+        self.is_rtl
+    }
 }
 
 pub trait TextLineGeometry {
@@ -386,8 +413,9 @@ pub fn selection_rects_from_lines<L: TextLineGeometry>(
         let clusters = line.clusters();
         if !clusters.is_empty() {
             for c in clusters.iter() {
-                let seg_start = start.max(c.text_range.start);
-                let seg_end = end.min(c.text_range.end);
+                let text_range = c.text_range();
+                let seg_start = start.max(text_range.start);
+                let seg_end = end.min(text_range.end);
                 if seg_start >= seg_end {
                     continue;
                 }
@@ -475,8 +503,9 @@ pub fn selection_rects_from_lines_clipped<L: TextLineGeometry>(
         let clusters = line.clusters();
         if !clusters.is_empty() {
             for c in clusters.iter() {
-                let seg_start = start.max(c.text_range.start);
-                let seg_end = end.min(c.text_range.end);
+                let text_range = c.text_range();
+                let seg_start = start.max(text_range.start);
+                let seg_end = end.min(text_range.end);
                 if seg_start >= seg_end {
                     continue;
                 }
@@ -520,38 +549,41 @@ pub fn selection_rects_from_lines_clipped<L: TextLineGeometry>(
 }
 
 fn cluster_x_from_range(cluster: &TextLineCluster, boundary: usize) -> Px {
-    let start = cluster.text_range.start;
-    let end = cluster.text_range.end;
+    let text_range = cluster.text_range();
+    let start = text_range.start;
+    let end = text_range.end;
     if start == end {
-        return cluster.x0;
+        return cluster.x0();
     }
 
     if boundary <= start {
-        return if cluster.is_rtl {
-            cluster.x1
+        return if cluster.is_rtl() {
+            cluster.x1()
         } else {
-            cluster.x0
+            cluster.x0()
         };
     }
     if boundary >= end {
-        return if cluster.is_rtl {
-            cluster.x0
+        return if cluster.is_rtl() {
+            cluster.x0()
         } else {
-            cluster.x1
+            cluster.x1()
         };
     }
 
     let denom = (end - start) as f32;
     if denom <= 0.0 {
-        return cluster.x0;
+        return cluster.x0();
     }
 
     let mut t = ((boundary - start) as f32 / denom).clamp(0.0, 1.0);
-    if cluster.is_rtl {
+    if cluster.is_rtl() {
         t = 1.0 - t;
     }
-    let w = (cluster.x1.0 - cluster.x0.0).max(0.0);
-    Px((cluster.x0.0 + w * t).max(0.0))
+    let x0 = cluster.x0();
+    let x1 = cluster.x1();
+    let w = (x1.0 - x0.0).max(0.0);
+    Px((x0.0 + w * t).max(0.0))
 }
 
 fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
@@ -726,12 +758,12 @@ mod tests {
         let mut out: Vec<TextLineCluster> = Vec::with_capacity(clusters.len());
         for c in clusters {
             let text_range = c.text_range();
-            out.push(TextLineCluster {
-                text_range: (base_offset + text_range.start)..(base_offset + text_range.end),
-                x0: Px(c.x0().max(0.0)),
-                x1: Px(c.x1().max(0.0)),
-                is_rtl: c.is_rtl(),
-            });
+            out.push(TextLineCluster::new(
+                (base_offset + text_range.start)..(base_offset + text_range.end),
+                Px(c.x0().max(0.0)),
+                Px(c.x1().max(0.0)),
+                c.is_rtl(),
+            ));
         }
         Arc::from(out)
     }
