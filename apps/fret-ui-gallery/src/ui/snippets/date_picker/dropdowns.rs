@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("dropdowns.rs");
 
 // region: example
 use crate::ui::snippets::date_picker::fixed_today;
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
 use fret_ui_headless::calendar::CalendarMonth;
@@ -49,7 +50,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 cx,
                 move |cx| trigger(cx),
                 move |cx| {
-                    shadcn::PopoverContent::new([content(cx)])
+                    shadcn::PopoverContent::build(cx, |cx| [content(cx)])
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
                             LayoutRefinement::default()
@@ -67,15 +68,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             cx,
             move |cx| trigger(cx),
             move |cx| {
-                shadcn::DrawerContent::new([
-                    content(cx),
-                    shadcn::DrawerFooter::new([shadcn::Button::new("Done")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(done_open.clone())
-                        .into_element(cx)
-                        .test_id("ui-gallery-date-picker-dropdowns-done")])
-                    .into_element(cx),
-                ])
+                let calendar = content(cx);
+                shadcn::DrawerContent::build(|cx, out| {
+                    out.push(calendar);
+                    out.push_ui(
+                        cx,
+                        shadcn::DrawerFooter::build(|cx, out| {
+                            out.push_ui(
+                                cx,
+                                shadcn::Button::new("Done")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .toggle_model(done_open.clone())
+                                    .test_id("ui-gallery-date-picker-dropdowns-done"),
+                            );
+                        }),
+                    );
+                })
                 .into_element(cx)
                 .test_id("ui-gallery-date-picker-dropdowns-drawer-content")
             },

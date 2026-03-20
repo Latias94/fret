@@ -288,6 +288,8 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 hit_is_text_input: cx.pointer_hit_is_text_input,
                 hit_is_pressable: cx.pointer_hit_is_pressable,
                 hit_pressable_target: cx.pointer_hit_pressable_target,
+                hit_pressable_target_in_descendant_subtree: cx
+                    .pointer_hit_pressable_target_in_descendant_subtree,
             };
 
             let Some(h) = hook else {
@@ -583,6 +585,18 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     crate::element::PointerRegionState::default,
                     |state| state.last_down.and_then(|d| d.hit_pressable_target),
                 ),
+                down_hit_pressable_target_in_descendant_subtree:
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::element::PointerRegionState::default,
+                        |state| {
+                            state
+                                .last_down
+                                .is_some_and(|d| d.hit_pressable_target_in_descendant_subtree)
+                        },
+                    ),
             };
 
             if let Some(h) = hook {

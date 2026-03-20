@@ -877,10 +877,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let apply_queue_cmd_banner = apply_queue_cmd.clone();
 
     let auto_apply_model = st.auto_apply_standard_actions.clone_model();
-    let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);
+    let auto_apply_enabled = st.auto_apply_standard_actions.layout_value_in(cx);
 
     let auto_fix_model = st.auto_fix_on_apply.clone_model();
-    let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);
+    let _auto_fix_enabled = st.auto_fix_on_apply.layout_value_in(cx);
 
     let count_label: Arc<str> = st
         .genui_state
@@ -1161,7 +1161,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let queue_summary = st.queue_summary.clone();
     let stream_model = st.stream_text.clone();
     let stream_patch_only_model = st.stream_patch_only.clone_model();
-    let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);
+    let stream_patch_only = st.stream_patch_only.layout_value_in(cx);
     let stream_summary = st.stream_summary.clone();
     let stream_error = st.stream_error.clone();
 

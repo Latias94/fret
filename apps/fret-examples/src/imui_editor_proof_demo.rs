@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret::advanced::interop::embedded_viewport as embedded;
-use fret::advanced::view::ViewWindowState;
+use fret::advanced::view::{UiCxDataExt as _, ViewWindowState};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
@@ -247,6 +247,86 @@ fn editor_text_assist_state_label(
     }
 
     format!("Expanded ({visible_count} matches)")
+}
+
+#[derive(Clone)]
+struct EditorTextAssistReadout {
+    state_label: String,
+    active_label: String,
+}
+
+#[derive(Clone)]
+struct EditorTextFieldReadout {
+    committed: String,
+    outcome: String,
+}
+
+#[derive(Clone)]
+struct AuthoringParitySharedStateReadout {
+    name_line: String,
+    value_line: String,
+    blend_line: String,
+    enabled_line: String,
+    shading_line: String,
+}
+
+fn editor_text_assist_readout(
+    cx: &mut UiCx<'_>,
+    items: Arc<[TextAssistItem]>,
+    query_model: &Model<String>,
+    dismissed_query_model: &Model<String>,
+    active_item_id_model: &Model<Option<Arc<str>>>,
+) -> EditorTextAssistReadout {
+    cx.data().selector_model_paint(
+        (query_model, dismissed_query_model, active_item_id_model),
+        move |(query, dismissed_query, active_item_id)| {
+            let controller = controller_with_active_item_id(
+                items.as_ref(),
+                &query,
+                active_item_id.as_ref(),
+                TextAssistMatchMode::Prefix,
+                false,
+            );
+            let visible_count = if query.trim().is_empty() {
+                0
+            } else {
+                controller.visible().len()
+            };
+            let expanded =
+                input_owned_text_assist_expanded(&query, &dismissed_query, visible_count);
+
+            EditorTextAssistReadout {
+                state_label: editor_text_assist_state_label(
+                    &query,
+                    &dismissed_query,
+                    visible_count,
+                ),
+                active_label: if expanded {
+                    controller
+                        .active_match()
+                        .map(|entry| entry.label.as_ref().to_string())
+                        .unwrap_or_else(|| "None".to_string())
+                } else {
+                    "None".to_string()
+                },
+            }
+        },
+    )
+}
+
+fn editor_text_field_readout(
+    cx: &mut UiCx<'_>,
+    committed_model: &Model<String>,
+    outcome_model: &Model<String>,
+) -> EditorTextFieldReadout {
+    cx.data()
+        .selector_model_paint((committed_model, outcome_model), |(committed, outcome)| {
+            EditorTextFieldReadout { committed, outcome }
+        })
+}
+
+fn editor_string_model_readout(cx: &mut UiCx<'_>, model: &Model<String>) -> String {
+    cx.data().selector_model_paint(model, |value| value)
 }
 
 fn editor_demo_name_assist_items(cx: &mut ElementContext<'_, KernelApp>) -> Arc<[TextAssistItem]> {
@@ -839,23 +919,24 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let inline_rename_readout =
+                                                        editor_text_field_readout(
+                                                            cx,
+                                                            &editor_inline_rename_model,
+                                                            &editor_inline_rename_outcome_model,
+                                                        );
+                                                    let inline_rename_committed =
+                                                        inline_rename_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Rename committed"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_inline_rename_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             proof_compact_readout(
                                                                 cx,
-                                                                committed,
+                                                                inline_rename_committed.clone(),
                                                                 Some(Arc::from(
                                                                     "imui-editor-proof.editor.object.inline-rename.committed",
                                                                 )),
@@ -864,13 +945,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let inline_rename_outcome = cx
-                                                        .watch_model(
-                                                            &editor_inline_rename_outcome_model,
-                                                        )
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let inline_rename_outcome =
+                                                        inline_rename_readout.outcome;
                                                     if !inline_rename_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -970,23 +1046,23 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let password_readout = editor_text_field_readout(
+                                                        cx,
+                                                        &editor_password_model,
+                                                        &editor_password_outcome_model,
+                                                    );
+                                                    let password_committed =
+                                                        password_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Secret length"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_password_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             let readout =
                                                                 committed_char_count_label(
-                                                                    &committed,
+                                                                    &password_committed,
                                                                 );
                                                             proof_compact_readout(
                                                                 cx,
@@ -999,13 +1075,8 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let password_outcome = cx
-                                                        .watch_model(
-                                                            &editor_password_outcome_model,
-                                                        )
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let password_outcome =
+                                                        password_readout.outcome;
                                                     if !password_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -1035,13 +1106,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         ),
                                                         |cx| cx.text("Committed"),
                                                         |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_buffered_name_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                            let committed = editor_string_model_readout(
+                                                                cx,
+                                                                &editor_buffered_name_model,
+                                                            );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 committed,
@@ -1075,50 +1143,29 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let name_assist_items =
+                                                        editor_demo_name_assist_items(cx);
+                                                    let name_assist_readout =
+                                                        editor_text_assist_readout(
+                                                            cx,
+                                                            name_assist_items,
+                                                            &editor_name_assist_model,
+                                                            &editor_name_assist_dismissed_query_model,
+                                                            &editor_name_assist_active_item_model,
+                                                        );
+                                                    let name_assist_state =
+                                                        name_assist_readout.state_label.clone();
+                                                    let name_assist_active =
+                                                        name_assist_readout.active_label.clone();
+
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Assist state"),
-                                                        |cx| {
-                                                            let query = cx
-                                                                .watch_model(&editor_name_assist_model)
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let dismissed_query = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_dismissed_query_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let active_item_id = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_active_item_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or(None);
-                                                            let items = editor_demo_name_assist_items(cx);
-                                                            let controller = controller_with_active_item_id(
-                                                                items.as_ref(),
-                                                                &query,
-                                                                active_item_id.as_ref(),
-                                                                TextAssistMatchMode::Prefix,
-                                                                false,
-                                                            );
-                                                            let visible_count = if query.trim().is_empty() {
-                                                                0
-                                                            } else {
-                                                                controller.visible().len()
-                                                            };
-                                                            let state = editor_text_assist_state_label(
-                                                                &query,
-                                                                &dismissed_query,
-                                                                visible_count,
-                                                            );
+                                                        move |cx| {
+                                                            let state = name_assist_state.clone();
                                                             proof_compact_readout(
                                                                 cx,
                                                                 state,
@@ -1136,52 +1183,9 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Active assist"),
-                                                        |cx| {
-                                                            let query = cx
-                                                                .watch_model(&editor_name_assist_model)
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let dismissed_query = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_dismissed_query_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
-                                                            let active_item_id = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_active_item_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or(None);
-                                                            let items = editor_demo_name_assist_items(cx);
-                                                            let controller = controller_with_active_item_id(
-                                                                items.as_ref(),
-                                                                &query,
-                                                                active_item_id.as_ref(),
-                                                                TextAssistMatchMode::Prefix,
-                                                                false,
-                                                            );
-                                                            let visible_count = if query.trim().is_empty() {
-                                                                0
-                                                            } else {
-                                                                controller.visible().len()
-                                                            };
-                                                            let expanded = input_owned_text_assist_expanded(
-                                                                &query,
-                                                                &dismissed_query,
-                                                                visible_count,
-                                                            );
-                                                            let active_label = if expanded {
-                                                                controller
-                                                                    .active_match()
-                                                                    .map(|entry| entry.label.as_ref().to_string())
-                                                                    .unwrap_or_else(|| "None".to_string())
-                                                            } else {
-                                                                "None".to_string()
-                                                            };
+                                                        move |cx| {
+                                                            let active_label =
+                                                                name_assist_active.clone();
                                                             proof_compact_readout(
                                                                 cx,
                                                                 active_label,
@@ -1200,13 +1204,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         ),
                                                         |cx| cx.text("Accepted assist"),
                                                         |cx| {
-                                                            let accepted = cx
-                                                                .watch_model(
-                                                                    &editor_name_assist_accepted_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                            let accepted = editor_string_model_readout(
+                                                                cx,
+                                                                &editor_name_assist_accepted_model,
+                                                            );
                                                             let readout = if accepted.trim().is_empty() {
                                                                 "None".to_string()
                                                             } else {
@@ -1267,22 +1268,24 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
+                                                    let notes_readout = editor_text_field_readout(
+                                                        cx,
+                                                        &editor_notes_model,
+                                                        &editor_notes_outcome_model,
+                                                    );
+                                                    let notes_committed =
+                                                        notes_readout.committed.clone();
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new().options(
                                                             row_cx.row_options.clone(),
                                                         ),
                                                         |cx| cx.text("Notes committed"),
-                                                        |cx| {
-                                                            let committed = cx
-                                                                .watch_model(
-                                                                    &editor_notes_model,
-                                                                )
-                                                                .paint()
-                                                                .cloned()
-                                                                .unwrap_or_default();
+                                                        move |cx| {
                                                             let readout =
-                                                                committed_line_count_label(&committed);
+                                                                committed_line_count_label(
+                                                                    &notes_committed,
+                                                                );
                                                             proof_compact_readout(
                                                                 cx,
                                                                 readout,
@@ -1294,11 +1297,7 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                         |_cx| None,
                                                     ));
 
-                                                    let notes_outcome = cx
-                                                        .watch_model(&editor_notes_outcome_model)
-                                                        .paint()
-                                                        .cloned()
-                                                        .unwrap_or_default();
+                                                    let notes_outcome = notes_readout.outcome;
                                                     if !notes_outcome.trim().is_empty() {
                                                         rows.push(row_cx.row_with(
                                                             cx,
@@ -1436,12 +1435,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_drag_value_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_drag_value_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -1720,10 +1717,11 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                         |_cx| None,
                                         move |cx| {
                                             let stops: Vec<GradientDemoStop> = cx
-                                                .watch_model(&editor_gradient_stops_model)
-                                                .paint()
-                                                .cloned()
-                                                .unwrap_or_default();
+                                                .data()
+                                                .selector_model_paint(
+                                                    &editor_gradient_stops_model,
+                                                    |stops| stops,
+                                                );
 
                                             let on_remove: fret_ui_editor::composites::OnGradientStopAction =
                                                 Arc::new({
@@ -1921,12 +1919,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_position_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_position_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -2047,12 +2043,10 @@ fn render_view(cx: &mut UiCx<'_>) -> ViewElements {
                                                                 .into_element(cx)
                                                             },
                                                             |cx| {
-                                                                let outcome = cx
-                                                                    .get_model_cloned(
-                                                                        &editor_transform_outcome_model,
-                                                                        Invalidation::Paint,
-                                                                    )
-                                                                    .unwrap_or_default();
+                                                                let outcome = editor_string_model_readout(
+                                                                    cx,
+                                                                    &editor_transform_outcome_model,
+                                                                );
                                                                 proof_optional_outcome_readout(
                                                                     cx,
                                                                     outcome,
@@ -2284,37 +2278,37 @@ fn render_authoring_parity_shared_state(
     enabled_model: Model<bool>,
     shading_model: Model<Option<Arc<str>>>,
 ) -> impl IntoUiElement<KernelApp> + use<> {
-    let name = cx
-        .get_model_cloned(&name_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let value = cx
-        .get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let blend = cx
-        .get_model_copied(&slider_model, fret_ui::Invalidation::Paint)
-        .unwrap_or_default();
-    let enabled = cx
-        .get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)
-        .unwrap_or(false);
-    let shading = cx
-        .get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)
-        .unwrap_or(None);
-
-    let name_line = if name.trim().is_empty() {
-        "shared name: <empty>".to_string()
-    } else {
-        format!("shared name: {name}")
-    };
-    let value_line = format!("shared value: {value:.3}");
-    let blend_line = format!("shared blend: {:.0}%", blend * 100.0);
-    let enabled_line = format!("shared enabled: {enabled}");
-    let shading_line = match shading.as_deref() {
-        Some("lit") => "shared mode: lit (Lit)".to_string(),
-        Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
-        Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
-        Some(other) => format!("shared mode: {other}"),
-        None => "shared mode: <none>".to_string(),
-    };
+    let shared = cx.data().selector_model_paint(
+        (
+            &name_model,
+            &drag_value_model,
+            &slider_model,
+            &enabled_model,
+            &shading_model,
+        ),
+        |(name, value, blend, enabled, shading)| AuthoringParitySharedStateReadout {
+            name_line: if name.trim().is_empty() {
+                "shared name: <empty>".to_string()
+            } else {
+                format!("shared name: {name}")
+            },
+            value_line: format!("shared value: {value:.3}"),
+            blend_line: format!("shared blend: {:.0}%", blend * 100.0),
+            enabled_line: format!("shared enabled: {enabled}"),
+            shading_line: match shading.as_deref() {
+                Some("lit") => "shared mode: lit (Lit)".to_string(),
+                Some("unlit") => "shared mode: unlit (Unlit)".to_string(),
+                Some("matcap") => "shared mode: matcap (Matcap)".to_string(),
+                Some(other) => format!("shared mode: {other}"),
+                None => "shared mode: <none>".to_string(),
+            },
+        },
+    );
+    let name_line = shared.name_line;
+    let value_line = shared.value_line;
+    let blend_line = shared.blend_line;
+    let enabled_line = shared.enabled_line;
+    let shading_line = shared.shading_line;
 
     fret_ui_kit::ui::v_flex_build(move |cx, out| {
         let name_line_row = name_line.clone();
@@ -3103,7 +3097,7 @@ impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
             &root_name,
             move |cx| {
                 let target = embedded::models(&*cx.app, cx.window)
-                    .and_then(|m| cx.watch_model(&m.target).paint().copied())
+                    .map(|m| cx.data().selector_model_paint(&m.target, |target| target))
                     .unwrap_or_default();
 
                 vec![

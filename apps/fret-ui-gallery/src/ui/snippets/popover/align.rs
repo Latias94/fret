@@ -7,13 +7,13 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::h_flex(|cx| {
-        let start_content = shadcn::PopoverContent::new([cx.text("Aligned to start")])
+        let start_content = shadcn::PopoverContent::build(cx, |cx| [cx.text("Aligned to start")])
             .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
             .test_id("ui-gallery-popover-align-start-content");
-        let center_content = shadcn::PopoverContent::new([cx.text("Aligned to center")])
+        let center_content = shadcn::PopoverContent::build(cx, |cx| [cx.text("Aligned to center")])
             .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
             .test_id("ui-gallery-popover-align-center-content");
-        let end_content = shadcn::PopoverContent::new([cx.text("Aligned to end")])
+        let end_content = shadcn::PopoverContent::build(cx, |cx| [cx.text("Aligned to end")])
             .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
             .test_id("ui-gallery-popover-align-end-content");
 

@@ -10,23 +10,67 @@
     {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-select" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-select"
+        }
       },
       "timeout_frames": 600,
       "type": "wait_until"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-diag-surface"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-diag-surface"
+      },
+      "delta_y": -180.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1200
     },
     {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-trigger"
+        }
       },
       "timeout_frames": 600,
       "type": "wait_until"
     },
-
-    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }, "type": "click" },
     {
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "button": "left",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-trigger"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        }
+      },
       "timeout_frames": 240,
       "type": "wait_until"
     },
@@ -41,27 +85,70 @@
     {
       "predicate": {
         "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        },
         "min_h_px": 60.0,
         "eps_px": 0.5
       },
       "timeout_frames": 240,
       "type": "wait_until"
     },
-    { "target": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }, "type": "move_pointer" },
-    { "n": 2, "type": "wait_frames" },
-    { "label": "ui-gallery-select-reopen-probe-open-1", "type": "capture_bundle" },
-    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }, "type": "click" },
     {
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-item-apple"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-select-reopen-probe-open-1",
+      "type": "capture_bundle"
+    },
+    {
+      "button": "left",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        }
+      },
       "timeout_frames": 240,
       "type": "wait_until"
     },
-
-    { "n": 2, "type": "wait_frames" },
-    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }, "type": "click" },
     {
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-trigger"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        }
+      },
       "timeout_frames": 240,
       "type": "wait_until"
     },
@@ -76,27 +163,70 @@
     {
       "predicate": {
         "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        },
         "min_h_px": 60.0,
         "eps_px": 0.5
       },
       "timeout_frames": 240,
       "type": "wait_until"
     },
-    { "target": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }, "type": "move_pointer" },
-    { "n": 2, "type": "wait_frames" },
-    { "label": "ui-gallery-select-reopen-probe-open-2", "type": "capture_bundle" },
-    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }, "type": "click" },
     {
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-item-apple"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-select-reopen-probe-open-2",
+      "type": "capture_bundle"
+    },
+    {
+      "button": "left",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        }
+      },
       "timeout_frames": 240,
       "type": "wait_until"
     },
-
-    { "n": 2, "type": "wait_frames" },
-    { "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }, "type": "click" },
     {
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-trigger"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        }
+      },
       "timeout_frames": 240,
       "type": "wait_until"
     },
@@ -111,15 +241,30 @@
     {
       "predicate": {
         "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "target": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        },
         "min_h_px": 60.0,
         "eps_px": 0.5
       },
       "timeout_frames": 240,
       "type": "wait_until"
     },
-    { "target": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }, "type": "move_pointer" },
-    { "n": 2, "type": "wait_frames" },
-    { "label": "ui-gallery-select-reopen-probe-open-3", "type": "capture_bundle" }
+    {
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-item-apple"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-select-reopen-probe-open-3",
+      "type": "capture_bundle"
+    }
   ]
 }

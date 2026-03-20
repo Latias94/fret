@@ -56,6 +56,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   upstream nested children composition while still lowering into the existing recipe-layer slots.
 - Pass: `Dialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
+- Pass: `DialogContent::build(...)` is the typed content-side companion on that same recipe lane,
+  so first-party snippets no longer need to pre-land `DialogHeader` / `DialogFooter` trees into a
+  raw `DialogContent::new([...])` array.
 
 ### Dismissal behavior
 
@@ -90,6 +93,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn dialog::tests`
+- `cargo test -p fret-ui-shadcn --lib dialog::tests::dialog_content_build_accepts_builder_first_sections_surface -- --exact`
 - Contract test: `dialog_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Contract test: `dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `dialog_open_change_events_complete_without_animation`

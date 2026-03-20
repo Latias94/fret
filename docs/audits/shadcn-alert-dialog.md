@@ -63,6 +63,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   `AlertDialog::children([...])` without dropping to `raw::*`.
 - Pass: `AlertDialog::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
+- Pass: `AlertDialogContent::build(...)` is the typed content-side companion on that same recipe
+  lane, so first-party snippets no longer need to pre-land `AlertDialogHeader` /
+  `AlertDialogFooter` trees into a raw `AlertDialogContent::new([...])` array.
 - Note: Public-surface drift still exists compared with full React/JSX nesting. Fret now supports
   root-level part children, but it still collects recipe parts explicitly instead of accepting
   arbitrary nested JSX-like children.
@@ -101,6 +104,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo check -p fret-ui-shadcn`
 - `cargo check -p fret-ui-gallery`
 - `cargo test -p fret-ui-shadcn --lib alert_dialog::tests`
+- `cargo test -p fret-ui-shadcn --lib alert_dialog::tests::alert_dialog_content_build_accepts_builder_first_sections -- --exact`
 - Contract test: `alert_dialog_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `alert_dialog_open_change_events_complete_without_animation`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`

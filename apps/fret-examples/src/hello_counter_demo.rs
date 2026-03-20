@@ -98,13 +98,16 @@ impl View for HelloCounterView {
                 tx.update(&count_state, |value| *value = value.saturating_sub(step))
             });
 
-        cx.actions().local_set::<act::Reset, i64>(&count_state, 0);
+        cx.actions().local(&count_state).set::<act::Reset>(0);
         cx.actions()
-            .local_set::<act::SetStep1, String>(&step_state, "1".to_string());
+            .local(&step_state)
+            .set::<act::SetStep1>("1".to_string());
         cx.actions()
-            .local_set::<act::SetStep5, String>(&step_state, "5".to_string());
+            .local(&step_state)
+            .set::<act::SetStep5>("5".to_string());
         cx.actions()
-            .local_set::<act::SetStep10, String>(&step_state, "10".to_string());
+            .local(&step_state)
+            .set::<act::SetStep10>("10".to_string());
 
         let count_color = if count > 0 {
             theme.color_token("primary")

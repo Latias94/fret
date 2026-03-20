@@ -18,6 +18,7 @@ Companion docs:
 - `TRACKED_READ_AUDIT_2026-03-16.md`
 - `SELECTOR_QUERY_AUDIT_2026-03-16.md`
 - `SELECTOR_QUERY_DIRECTION_2026-03-16.md`
+- `TODO_LADDER_AUDIT_2026-03-20.md`
 - `CHILD_COLLECTION_AUDIT_2026-03-16.md`
 - `CLOSEOUT_AUDIT_2026-03-16.md`
 
@@ -27,6 +28,16 @@ Closeout reading rule on 2026-03-16:
 - remaining unchecked boxes below are archived execution notes, not an active backlog
 - reopen this lane only with fresh cross-surface evidence that the shipped default path has
   regressed or left a new repeated gap outside the already-audited surfaces
+
+Post-closeout addendum on 2026-03-20:
+
+- read `TODO_LADDER_AUDIT_2026-03-20.md` before treating the richer `todo` scaffold as evidence
+  that this lane is still open
+- `simple-todo` is now the stable first-contact baseline for the shipped shorter path
+- the richer `todo` scaffold remains intentionally denser because it exercises selector/query plus
+  a small filter-action write-side surface
+- router is not part of this lane's remaining interpretation unless new cross-surface evidence
+  appears
 
 ## Historical execution checklist
 

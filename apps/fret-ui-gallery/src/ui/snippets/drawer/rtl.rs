@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::app::UiCxActionsExt as _;
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 
 use fret_core::{Corners, Edges, Px};
@@ -109,11 +110,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
                     let content = ui::v_stack(|cx| {
                         vec![
-                            shadcn::DrawerHeader::new([
-                                shadcn::DrawerTitle::new("حرّك الهدف").into_element(cx),
-                                shadcn::DrawerDescription::new("اضبط هدف نشاطك اليومي.")
-                                    .into_element(cx),
-                            ])
+                            shadcn::DrawerHeader::build(|cx, out| {
+                                out.push_ui(cx, shadcn::DrawerTitle::new("حرّك الهدف"));
+                                out.push_ui(
+                                    cx,
+                                    shadcn::DrawerDescription::new("اضبط هدف نشاطك اليومي."),
+                                );
+                            })
                             .into_element(cx),
                             ui::v_stack(|cx| {
                                 vec![
@@ -169,14 +172,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             .pb(Space::N0)
                             .layout(LayoutRefinement::default().w_full().min_w_0())
                             .into_element(cx),
-                            shadcn::DrawerFooter::new([
-                                shadcn::Button::new("إرسال").into_element(cx),
-                                shadcn::DrawerClose::from_scope().build(
+                            shadcn::DrawerFooter::build(|cx, out| {
+                                out.push_ui(cx, shadcn::Button::new("إرسال"));
+                                let cancel = shadcn::DrawerClose::from_scope().build(
                                     cx,
                                     shadcn::Button::new("إلغاء")
                                         .variant(shadcn::ButtonVariant::Outline),
-                                ),
-                            ])
+                                );
+                                out.push(cancel);
+                            })
                             .into_element(cx),
                         ]
                     })
@@ -191,9 +195,11 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     )
                     .into_element(cx);
 
-                    shadcn::DrawerContent::new([content])
-                        .into_element(cx)
-                        .test_id("ui-gallery-drawer-rtl-content")
+                    shadcn::DrawerContent::build(move |_cx, out| {
+                        out.push(content);
+                    })
+                    .test_id("ui-gallery-drawer-rtl-content")
+                    .into_element(cx)
                 }),
             ])
             .into_element(cx)

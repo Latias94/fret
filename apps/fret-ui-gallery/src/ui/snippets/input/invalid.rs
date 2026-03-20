@@ -13,10 +13,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         shadcn::FieldLabel::new("Invalid Input").into_element(cx),
         shadcn::Input::new(value)
             .a11y_label("Invalid input")
+            .placeholder("Error")
             .aria_invalid(true)
             .into_element(cx),
         shadcn::FieldDescription::new("This field contains validation errors.").into_element(cx),
-        shadcn::FieldError::new("Please provide a valid email format.").into_element(cx),
     ])
     .invalid(true)
     .refine_layout(max_w_xs)

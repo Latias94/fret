@@ -308,16 +308,19 @@ impl View for CustomEffectV3View {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let mut st = State::new(cx);
 
+        cx.actions().local(&st.enabled).set::<act::Reset>(true);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.enabled, true);
+            .local(&st.show_user0_probe)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.show_user0_probe, false);
+            .local(&st.show_user1_probe)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.show_user1_probe, false);
+            .local(&st.use_non_filterable_user0)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.use_non_filterable_user0, false);
-        cx.actions()
-            .local_set::<act::Reset, bool>(&st.use_non_filterable_user1, false);
+            .local(&st.use_non_filterable_user1)
+            .set::<act::Reset>(false);
 
         view(cx, &mut st)
     }

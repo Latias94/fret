@@ -46,7 +46,8 @@ When users say “the API feels complex”, it usually comes from these layers b
    default padding/row height, focus policy, dismiss semantics, hover intent, tokens → styles.
    For the `fret` golden path, keep the default first-contact handler surface on
    `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, keyed-row payload binding via `.action_payload(...)`,
-   `payload_local_update_if::<A>(...)` as the default view-owned row-write path,
+   `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default view-owned
+   row-write path,
    `cx.actions().transient::<A>(...)`, and widget `.action(...)` / `.action_payload(...)` when a
    stable action slot exists. Keep the same action-first vocabulary (`.action(...)` /
    `.action_payload(...)` / `.listen(...)`) for activation-only surfaces after an explicit

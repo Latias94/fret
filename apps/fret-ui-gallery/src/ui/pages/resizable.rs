@@ -6,8 +6,8 @@ use fret::UiCx;
 pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
-    let handle = snippets::handle::render(cx);
     let vertical = snippets::vertical::render(cx);
+    let handle = snippets::handle::render(cx);
     let rtl = snippets::rtl::render(cx);
     let notes = snippets::notes::render(cx);
     let notes = DocSection::build(cx, "Notes", notes)
@@ -23,14 +23,14 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         )
         .test_id_prefix("ui-gallery-resizable-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
-    let handle = DocSection::build(cx, "Handle", handle)
-        .description("A handle with a visual grabber (`withHandle`).")
-        .test_id_prefix("ui-gallery-resizable-handle")
-        .code_rust_from_file_region(snippets::handle::SOURCE, "example");
     let vertical = DocSection::build(cx, "Vertical", vertical)
         .description("Vertical orientation.")
         .test_id_prefix("ui-gallery-resizable-vertical")
         .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
+    let handle = DocSection::build(cx, "Handle", handle)
+        .description("A handle with a visual grabber (`withHandle`).")
+        .test_id_prefix("ui-gallery-resizable-handle")
+        .code_rust_from_file_region(snippets::handle::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
         .description("Direction provider coverage for hit-testing and handle affordances.")
         .test_id_prefix("ui-gallery-resizable-rtl")
@@ -39,10 +39,16 @@ pub(super) fn preview_resizable(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Resizable docs flow: Demo -> Usage, with handle, vertical, and RTL examples kept as gallery coverage.",
+            "Preview follows the shadcn Resizable docs flow: Demo, Usage, Vertical, Handle, and RTL. Notes capture the Fret-specific parity conclusions.",
         ),
-        vec![demo, usage, handle, vertical, rtl, notes],
+        vec![demo, usage, vertical, handle, rtl, notes],
     );
 
-    vec![body.test_id("ui-gallery-resizable").into_element(cx)]
+    let component = body.test_id("ui-gallery-resizable").into_element(cx);
+    let page = ui::v_flex(move |_cx| vec![component])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .items_start()
+        .test_id("ui-gallery-page-resizable");
+
+    vec![page.into_element(cx)]
 }

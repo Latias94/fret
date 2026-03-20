@@ -91,13 +91,16 @@ impl View for HelloCounterView {
                 tx.update(&count_state, |value| *value = value.saturating_sub(step))
             });
 
-        cx.actions().local_set::<act::Reset, i64>(&count_state, 0);
+        cx.actions().local(&count_state).set::<act::Reset>(0);
         cx.actions()
-            .local_set::<act::StepPreset1, String>(&step_state, "1".to_string());
+            .local(&step_state)
+            .set::<act::StepPreset1>("1".to_string());
         cx.actions()
-            .local_set::<act::StepPreset5, String>(&step_state, "5".to_string());
+            .local(&step_state)
+            .set::<act::StepPreset5>("5".to_string());
         cx.actions()
-            .local_set::<act::StepPreset10, String>(&step_state, "10".to_string());
+            .local(&step_state)
+            .set::<act::StepPreset10>("10".to_string());
 
         let hero_icon = ui::h_flex(|cx| {
             [icon::icon_with(

@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use fret::app::prelude::*;
 use fret::children::UiElementSinkExt as _;
-use fret::query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus};
+use fret::query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy};
 use fret::style::{ColorRef, Space, Theme, ThemeSnapshot};
 
 mod act {
@@ -56,7 +56,8 @@ impl View for QueryDemoView {
         }
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);
+            .local(&fail_mode_state)
+            .toggle_bool::<act::ToggleFailMode>();
         cx.actions()
             .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.actions()
@@ -75,25 +76,24 @@ impl View for QueryDemoView {
 
         let query_state = query_handle.read_layout(cx);
 
-        let status_label = match query_state.status {
-            QueryStatus::Idle => "Idle",
-            QueryStatus::Loading => "Loading",
-            QueryStatus::Success => "Success",
-            QueryStatus::Error => "Error",
+        let status_label = query_state.status.as_str();
+        let status_variant = if query_state.is_success() {
+            shadcn::BadgeVariant::Default
+        } else if query_state.is_error() {
+            shadcn::BadgeVariant::Destructive
+        } else {
+            shadcn::BadgeVariant::Secondary
         };
-        let status_variant = match query_state.status {
-            QueryStatus::Success => shadcn::BadgeVariant::Default,
-            QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-            QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
-        };
-        let info_line = match query_state.status {
-            QueryStatus::Loading if query_state.data.is_some() => {
-                "Refreshing (kept previous data)?"
-            }
-            QueryStatus::Loading => "Loading?",
-            QueryStatus::Success => "Ready.",
-            QueryStatus::Error => "Fetch failed.",
-            QueryStatus::Idle => "Idle.",
+        let info_line = if query_state.is_refreshing() {
+            "Refreshing (kept previous data)?"
+        } else if query_state.is_loading() {
+            "Loading?"
+        } else if query_state.is_success() {
+            "Ready."
+        } else if query_state.is_error() {
+            "Fetch failed."
+        } else {
+            "Idle."
         };
         let data_line: Arc<str> = query_state
             .data
@@ -105,7 +105,7 @@ impl View for QueryDemoView {
             .as_ref()
             .map(|err| format!("Error: {:?}", err.kind()))
             .unwrap_or_else(|| "Error: <none>".to_string());
-        let error_color = if query_state.error.is_some() {
+        let error_color = if query_state.has_error() {
             theme.color_token("destructive")
         } else {
             theme.color_token("muted-foreground")

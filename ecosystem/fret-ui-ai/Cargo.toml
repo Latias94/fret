@@ -14,9 +14,11 @@ default = []
 webview = ["dep:fret-webview"]
 
 [dependencies]
+fret-assets = { path = "../../crates/fret-assets" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-assets = { path = "../fret-ui-assets", features = ["ui", "image-decode"] }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-ui-shadcn = { path = "../fret-ui-shadcn" }
 fret-icons = { path = "../fret-icons" }

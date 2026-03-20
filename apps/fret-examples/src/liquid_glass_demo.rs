@@ -186,11 +186,7 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
-    model
-        .layout_in(cx)
-        .read_ref(|v| v.first().copied().unwrap_or(default))
-        .ok()
-        .unwrap_or(default)
+    model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn build_chain(
@@ -518,93 +514,109 @@ impl LiquidGlassState {
     }
 
     fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+        cx.actions().local(&self.show_fake).set::<act::Reset>(true);
+        cx.actions().local(&self.show_warp).set::<act::Reset>(true);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.show_fake, true);
+            .local(&self.show_warp_v2)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.show_warp, true);
+            .local(&self.show_custom_v2)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.show_warp_v2, false);
+            .local(&self.show_custom_v3)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.show_custom_v2, false);
+            .local(&self.custom_v3_pair)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.show_custom_v3, false);
+            .local(&self.custom_v3_source_group)
+            .set::<act::Reset>(false);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.custom_v3_pair, false);
+            .local(&self.show_inspector)
+            .set::<act::Reset>(false);
+        cx.actions().local(&self.animate).set::<act::Reset>(true);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.custom_v3_source_group, false);
+            .local(&self.phase_speed)
+            .set::<act::Reset>(vec![0.65]);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.show_inspector, false);
+            .local(&self.warp_strength_px)
+            .set::<act::Reset>(vec![10.0]);
         cx.actions()
-            .local_set::<act::Reset, bool>(&self.animate, true);
+            .local(&self.warp_scale_px)
+            .set::<act::Reset>(vec![72.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.phase_speed, vec![0.65]);
+            .local(&self.warp_phase)
+            .set::<act::Reset>(vec![0.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.warp_strength_px, vec![10.0]);
+            .local(&self.warp_chroma_px)
+            .set::<act::Reset>(vec![2.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.warp_scale_px, vec![72.0]);
+            .local(&self.lens_radius_px)
+            .set::<act::Reset>(vec![20.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.warp_phase, vec![0.0]);
+            .local(&self.custom_edge_falloff_px)
+            .set::<act::Reset>(vec![18.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.warp_chroma_px, vec![2.0]);
+            .local(&self.custom_rim_strength)
+            .set::<act::Reset>(vec![0.65]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.lens_radius_px, vec![20.0]);
+            .local(&self.custom_shadow_strength)
+            .set::<act::Reset>(vec![0.55]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_edge_falloff_px, vec![18.0]);
+            .local(&self.custom_grain_strength)
+            .set::<act::Reset>(vec![0.06]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_rim_strength, vec![0.65]);
+            .local(&self.custom_grain_scale)
+            .set::<act::Reset>(vec![1.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_shadow_strength, vec![0.55]);
+            .local(&self.custom_v3_dispersion)
+            .set::<act::Reset>(vec![0.55]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_grain_strength, vec![0.06]);
+            .local(&self.custom_v3_bevel_strength)
+            .set::<act::Reset>(vec![1.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_grain_scale, vec![1.0]);
+            .local(&self.custom_v3_bevel_angle_deg)
+            .set::<act::Reset>(vec![45.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_v3_dispersion, vec![0.55]);
+            .local(&self.custom_v3_bevel_secondary)
+            .set::<act::Reset>(vec![1.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_v3_bevel_strength, vec![1.0]);
+            .local(&self.blur_radius_px)
+            .set::<act::Reset>(vec![16.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_v3_bevel_angle_deg, vec![45.0]);
+            .local(&self.blur_downsample)
+            .set::<act::Reset>(vec![2.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.custom_v3_bevel_secondary, vec![1.0]);
+            .local(&self.saturation)
+            .set::<act::Reset>(vec![1.10]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.blur_radius_px, vec![16.0]);
+            .local(&self.brightness)
+            .set::<act::Reset>(vec![1.02]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.blur_downsample, vec![2.0]);
+            .local(&self.contrast)
+            .set::<act::Reset>(vec![1.02]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.saturation, vec![1.10]);
-        cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.brightness, vec![1.02]);
-        cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&self.contrast, vec![1.02]);
-        cx.actions()
-            .local_set::<act::Reset, bool>(&self.use_backdrop, true);
-        cx.actions()
-            .local_set::<act::Reset, bool>(&self.use_dither, true);
+            .local(&self.use_backdrop)
+            .set::<act::Reset>(true);
+        cx.actions().local(&self.use_dither).set::<act::Reset>(true);
 
         cx.actions()
-            .local_set::<act::ApplyCustomV3BevelPreset, Vec<f32>>(
-                &self.custom_v3_bevel_strength,
-                vec![1.0],
-            );
+            .local(&self.custom_v3_bevel_strength)
+            .set::<act::ApplyCustomV3BevelPreset>(vec![1.0]);
         cx.actions()
-            .local_set::<act::ApplyCustomV3BevelPreset, Vec<f32>>(
-                &self.custom_v3_bevel_angle_deg,
-                vec![45.0],
-            );
+            .local(&self.custom_v3_bevel_angle_deg)
+            .set::<act::ApplyCustomV3BevelPreset>(vec![45.0]);
         cx.actions()
-            .local_set::<act::ApplyCustomV3BevelPreset, Vec<f32>>(
-                &self.custom_v3_bevel_secondary,
-                vec![1.0],
-            );
+            .local(&self.custom_v3_bevel_secondary)
+            .set::<act::ApplyCustomV3BevelPreset>(vec![1.0]);
 
         cx.actions()
-            .local_set::<act::DisableCustomV3Bevel, Vec<f32>>(
-                &self.custom_v3_bevel_strength,
-                vec![0.0],
-            );
+            .local(&self.custom_v3_bevel_strength)
+            .set::<act::DisableCustomV3Bevel>(vec![0.0]);
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleInspector>(&self.show_inspector);
+            .local(&self.show_inspector)
+            .toggle_bool::<act::ToggleInspector>();
     }
 }
 

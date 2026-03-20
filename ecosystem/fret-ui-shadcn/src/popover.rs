@@ -1452,6 +1452,22 @@ impl PopoverContent {
         }
     }
 
+    /// Builder-first variant that late-lands popover content children at `into_element(cx)` time.
+    #[track_caller]
+    pub fn build<H: UiHost, I, F, T>(cx: &mut ElementContext<'_, H>, f: F) -> Self
+    where
+        F: FnOnce(&mut ElementContext<'_, H>) -> I,
+        I: IntoIterator<Item = T>,
+        T: IntoUiElement<H>,
+    {
+        let children = f(cx)
+            .into_iter()
+            .map(|child| child.into_element(cx))
+            .collect::<Vec<_>>();
+
+        Self::new(children)
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -1484,9 +1500,13 @@ impl PopoverContent {
         let container = shadcn_layout::container_vstack_fill_width(
             cx,
             props,
+            // Upstream shadcn/ui `PopoverContent` is a plain content `div` rather than a flex
+            // column with implicit cross-axis stretch. Keep a fill-width flow root so wrapped
+            // text resolves against the panel width, but avoid stretching inline-sized children
+            // (for example buttons) to the full popover width unless the caller asks for it.
             shadcn_layout::VStackProps::default()
                 .gap(Space::N4)
-                .items_stretch(),
+                .items_start(),
             children,
         )
         .attach_semantics(SemanticsDecoration {
@@ -1605,13 +1625,17 @@ mod tests {
         AppWindowId, Corners, MouseButton, PathCommand, Point, Rect, Size as CoreSize, SvgId,
         SvgService,
     };
+    use fret_core::{
+        Axis, Px, SemanticsRole, TextBlobId, TextConstraints, TextMetrics, TextService,
+    };
     use fret_core::{KeyCode, Modifiers};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{Px, SemanticsRole, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
-    use fret_ui::element::{ElementKind, LayoutStyle, Length, PressableProps};
+    use fret_ui::element::{
+        ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, PressableProps,
+    };
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -1836,11 +1860,101 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let content = PopoverContent::new(vec![ui::raw_text("tip").into_element(cx)]);
+            let content = PopoverContent::build(cx, |_cx| [ui::raw_text("tip")]);
             let popover = Popover::new(cx, PopoverTrigger::build(Button::new("trigger")), content)
                 .into_element(cx);
 
             assert_eq!(popover.id, popover.id);
+        });
+    }
+
+    #[test]
+    fn popover_content_build_accepts_late_landed_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content =
+                PopoverContent::build(cx, |_cx| [crate::card::Card::build(|_cx, _out| {})])
+                    .into_element(cx);
+
+            assert!(matches!(content.kind, ElementKind::Container(_)));
+            assert_eq!(content.children.len(), 1);
+            assert!(matches!(
+                content.children[0].kind,
+                ElementKind::Container(_)
+            ));
+        });
+    }
+
+    #[test]
+    fn popover_content_does_not_stretch_children_by_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(200.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let button = Button::new("Inline").into_element(cx);
+            let content = PopoverContent::new([button]).into_element(cx);
+
+            let child = content.children.first().unwrap_or_else(|| {
+                panic!("expected PopoverContent to have a single fill-width wrapper child")
+            });
+
+            let ElementKind::Container(ContainerProps {
+                layout: wrapper_layout,
+                ..
+            }) = &child.kind
+            else {
+                panic!("expected PopoverContent child to be a fill-width wrapper container");
+            };
+
+            let inner = child.children.first().unwrap_or_else(|| {
+                panic!("expected PopoverContent fill-width wrapper to contain an inner flex root")
+            });
+
+            let ElementKind::Flex(FlexProps {
+                align,
+                direction,
+                layout,
+                ..
+            }) = &inner.kind
+            else {
+                panic!("expected PopoverContent wrapper child to be a flex element");
+            };
+
+            assert_eq!(
+                wrapper_layout.size.width,
+                Length::Fill,
+                "expected PopoverContent inner wrapper to request fill width so wrapped text resolves against the popover panel width"
+            );
+            assert_eq!(
+                wrapper_layout.size.min_width,
+                Some(Length::Px(Px(0.0))),
+                "expected PopoverContent inner wrapper to opt into min-w-0 so nested flex/text content can shrink and wrap"
+            );
+            assert_eq!(
+                *direction,
+                Axis::Vertical,
+                "expected PopoverContent inner flow root to stay vertical"
+            );
+            assert_eq!(
+                *align,
+                CrossAlign::Start,
+                "expected PopoverContent to avoid cross-axis stretch so inline-sized children keep their intrinsic width by default"
+            );
+            assert_eq!(
+                layout.size.width,
+                Length::Fill,
+                "expected PopoverContent inner flow root to request fill width so wrapped text resolves against the popover panel width"
+            );
         });
     }
 

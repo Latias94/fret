@@ -277,6 +277,7 @@ mod authoring_surface_policy_tests {
     const DROP_SHADOW_DEMO: &str = include_str!("drop_shadow_demo.rs");
     const ECHARTS_DEMO: &str = include_str!("echarts_demo.rs");
     const EMBEDDED_VIEWPORT_DEMO: &str = include_str!("embedded_viewport_demo.rs");
+    const EDITOR_NOTES_DEMO: &str = include_str!("editor_notes_demo.rs");
     const EMPTY_IDLE_DEMO: &str = include_str!("empty_idle_demo.rs");
     const EMOJI_CONFORMANCE_DEMO: &str = include_str!("emoji_conformance_demo.rs");
     const EXTERNAL_TEXTURE_IMPORTS_DEMO: &str = include_str!("external_texture_imports_demo.rs");
@@ -313,6 +314,7 @@ mod authoring_surface_policy_tests {
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
+    const WORKSPACE_SHELL_DEMO: &str = include_str!("workspace_shell_demo.rs");
 
     fn collect_rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
         for entry in std::fs::read_dir(dir).unwrap() {
@@ -628,11 +630,10 @@ mod authoring_surface_policy_tests {
     fn todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(TODO_DEMO);
         assert_avoids_legacy_conversion_names(TODO_DEMO);
-        assert!(
-            TODO_DEMO
-                .contains("bind_todo_actions(cx, &draft_state, &next_id_state, &todos_state);")
-        );
-        assert!(TODO_DEMO.contains("fn bind_todo_actions("));
+        assert!(TODO_DEMO.contains("struct TodoLocals {"));
+        assert!(TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
+        assert!(TODO_DEMO.contains("locals.bind_actions(cx);"));
+        assert!(TODO_DEMO.contains("fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {"));
         assert!(TODO_DEMO.contains("ui::v_flex(move |cx| ui::single(cx, content))"));
         assert!(!TODO_DEMO.contains("ui::v_flex(move |cx| ui::children![cx; content])"));
     }
@@ -641,13 +642,12 @@ mod authoring_surface_policy_tests {
     fn simple_todo_demo_prefers_default_app_surface() {
         assert_uses_default_app_surface(SIMPLE_TODO_DEMO);
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_DEMO);
-        assert!(SIMPLE_TODO_DEMO.contains("fn bind_todo_actions("));
-        assert!(SIMPLE_TODO_DEMO.contains(
-            "payload_local_update_if::<act::Toggle, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
-        assert!(SIMPLE_TODO_DEMO.contains(
-            "payload_local_update_if::<act::Remove, Vec<TodoRow>>(todos_state, |rows, id| {"
-        ));
+        assert!(SIMPLE_TODO_DEMO.contains("struct TodoLocals {"));
+        assert!(SIMPLE_TODO_DEMO.contains("let locals = TodoLocals::new(cx);"));
+        assert!(SIMPLE_TODO_DEMO.contains("locals.bind_actions(cx);"));
+        assert!(SIMPLE_TODO_DEMO.contains(".local(&self.todos)"));
+        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
+        assert!(SIMPLE_TODO_DEMO.contains(".payload_update_if::<act::Remove>(|rows, id| {"));
         assert!(SIMPLE_TODO_DEMO.contains("ui_app_driver::UiAppDriver::new("));
         assert!(
             SIMPLE_TODO_DEMO.contains("fret::advanced::view::view_init_window::<SimpleTodoView>,")
@@ -1709,7 +1709,7 @@ mod authoring_surface_policy_tests {
                 ".locals_with((&count_state, &step_state))",
                 ".on::<act::Inc>(|tx, (count_state, step_state)| {",
                 ".on::<act::Dec>(|tx, (count_state, step_state)| {",
-                "cx.actions().local_set::<act::Reset, i64>(&count_state, 0);",
+                "cx.actions().local(&count_state).set::<act::Reset>(0);",
             ],
             &[
                 "cx.use_local_with(|| 0i64)",
@@ -1727,16 +1727,22 @@ mod authoring_surface_policy_tests {
                 "let fail_mode_state = cx.state().local_init(|| false);",
                 "let fail_mode = fail_mode_state.layout_value(cx);",
                 "let query_state = query_handle.read_layout(cx);",
+                "let status_label = query_state.status.as_str();",
+                "let info_line = if query_state.is_refreshing() {",
+                "let error_color = if query_state.has_error() {",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
                 "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().local(&fail_mode_state)",
+                ".toggle_bool::<act::ToggleFailMode>();",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
                 "with_query_client(",
                 "cx.use_local_with(|| false)",
                 "query_handle.layout(cx).value_or_default()",
+                "let status_label = match query_state.status {",
+                "QueryStatus::Loading if query_state.data.is_some() =>",
                 "fail_mode_state.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
@@ -1749,16 +1755,22 @@ mod authoring_surface_policy_tests {
                 "let fail_mode_state = cx.state().local_init(|| false);",
                 "let fail_mode = fail_mode_state.layout_value(cx);",
                 "let query_state = query_handle.read_layout(cx);",
+                "let status_label = query_state.status.as_str();",
+                "let info_line = if query_state.is_refreshing() {",
+                "let error_color = if query_state.has_error() {",
                 "if cx.effects().take_transient(TRANSIENT_INVALIDATE_KEY)",
                 "cx.data().invalidate_query(demo_key());",
                 "cx.data().invalidate_query_namespace(key.namespace());",
-                "cx.actions().toggle_local_bool::<act::ToggleFailMode>(&fail_mode_state);",
+                "cx.actions().local(&fail_mode_state)",
+                ".toggle_bool::<act::ToggleFailMode>();",
                 "cx.actions().transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);",
             ],
             &[
                 "with_query_client(",
                 "cx.use_local_with(|| false)",
                 "query_handle.layout(cx).value_or_default()",
+                "let status_label = match query_state.status {",
+                "QueryStatus::Loading if query_state.data.is_some() =>",
                 "fail_mode_state.layout(cx).value_or_default()",
                 "cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY)",
                 "cx.on_action_notify_toggle_local_bool::<act::ToggleFailMode>",
@@ -1768,20 +1780,23 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             TODO_DEMO,
             &[
-                "let draft_state = cx.state().local::<String>();",
-                "let next_id_state = cx.state().local_init(|| 4u64);",
-                "let todos = todos_state.layout_value(cx);",
-                "let draft_value = draft_state.layout_value(cx);",
-                ".locals_with((draft_state, next_id_state, todos_state))",
-                ".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {",
-                "let text = tx.value(&draft_state).trim().to_string();",
-                "let id = tx.value(&next_id_state);",
-                ".locals_with(todos_state)",
-                ".on::<act::ClearDone>(|tx, todos_state| {",
-                "cx.actions().payload_local_update_if::<act::Toggle, Vec<TodoRow>>(",
-                "cx.actions().payload_local_update_if::<act::Remove, Vec<TodoRow>>(",
+                "struct TodoLocals {",
+                "let locals = TodoLocals::new(cx);",
+                "locals.bind_actions(cx);",
+                "let todos = locals.todos.layout_value(cx);",
+                "let draft_value = locals.draft.layout_value(cx);",
+                ".locals_with((&self.draft, &self.next_id, &self.todos))",
+                ".on::<act::Add>(|tx, (draft, next_id, todos)| {",
+                "let text = tx.value(&draft).trim().to_string();",
+                "let id = tx.value(&next_id);",
+                ".locals_with(&self.todos)",
+                ".on::<act::ClearDone>(|tx, todos| {",
+                "cx.actions().local(&self.todos)",
+                ".payload_update_if::<act::Toggle>(|rows, id| {",
+                ".payload_update_if::<act::Remove>(|rows, id| {",
             ],
             &[
+                "bind_todo_actions(",
                 "cx.use_local::<String>()",
                 "cx.on_action_notify_models::<act::Add>",
                 "cx.on_payload_action_notify_local_update_if::<act::Toggle, Vec<TodoRow>>",
@@ -1797,7 +1812,7 @@ mod authoring_surface_policy_tests {
             &[
                 "let size_preset_state = cx.state().local_init(|| 1usize);",
                 "let preset = size_preset_state.layout_value(cx);",
-                "cx.actions().local_set::<act::PickSize640, usize>(&size_preset_state, 0);",
+                "cx.actions().local(&size_preset_state).set::<act::PickSize640>(0);",
             ],
             &[
                 "cx.use_local_with(|| 1usize)",
@@ -1851,7 +1866,7 @@ mod authoring_surface_policy_tests {
                 "let a_overlap_clicked_state = cx.state().local_init(|| false);",
                 "\"Window A\",",
                 "open_a_state.model(),",
-                "let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);",
+                "let clicked = a_overlap_clicked_state.paint_value_in(cx);",
                 "\"Mode\",",
                 "select_mode_state.model(),",
             ],
@@ -1859,6 +1874,7 @@ mod authoring_surface_policy_tests {
                 "open_a: app.models_mut().insert(true)",
                 "select_mode: app.models_mut().insert(None::<Arc<str>>)",
                 "a_overlap_clicked: app.models_mut().insert(false)",
+                "let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);",
                 "&self.open_a",
                 "read_model(",
                 "&self.a_overlap_clicked",
@@ -1924,7 +1940,8 @@ mod authoring_surface_policy_tests {
                 "let global_slow = locals.global_slow.layout_value(cx);",
                 "let namespace_input = locals.namespace_input.layout_value(cx);",
                 ".locals_with((&locals.selected, &locals.namespace_input))",
-                "cx.actions().toggle_local_bool::<act::ToggleTheme>(&locals.dark);",
+                "cx.actions().local(&locals.dark)",
+                ".toggle_bool::<act::ToggleTheme>();",
                 "shadcn::Switch::new(&locals.global_slow)",
                 "shadcn::Tabs::new(&locals.tabs)",
                 "shadcn::Switch::new(&config.keep_prev)",
@@ -1958,6 +1975,18 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            EDITOR_NOTES_DEMO,
+            &[
+                "let (committed_notes, notes_outcome) = cx.data().selector_model_paint(",
+                "(&asset.notes_model, &asset.notes_outcome_model),",
+            ],
+            &[
+                ".watch_model(&asset.notes_model)",
+                ".watch_model(&asset.notes_outcome_model)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V1_DEMO,
             &[
                 "enabled: cx.state().local_init(|| true),",
@@ -1970,9 +1999,11 @@ mod authoring_surface_policy_tests {
                 "corner_radius_px: cx.state().local_init(|| vec![20.0]),",
                 "grain_strength: cx.state().local_init(|| vec![0.06]),",
                 "grain_scale: cx.state().local_init(|| vec![1.0]),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![14.0]);",
-                ".local_set::<act::Reset, Vec<f32>>(&st.grain_scale, vec![1.0]);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.blur_radius_px)",
+                ".set::<act::Reset>(vec![14.0]);",
+                ".local(&st.grain_scale)",
+                ".set::<act::Reset>(vec![1.0]);",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2002,11 +2033,14 @@ mod authoring_surface_policy_tests {
                 "rim_strength: cx.state().local_init(|| vec![0.65]),",
                 "blur_radius_px: cx.state().local_init(|| vec![10.0]),",
                 "debug_input: cx.state().local_init(|| false),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, bool>(&st.use_non_filterable_input, false);",
-                ".local_set::<act::Reset, Option<Arc<str>>>(",
-                ".local_set::<act::Reset, Vec<f32>>(&st.blur_radius_px, vec![10.0]);",
-                ".local_set::<act::Reset, bool>(&st.debug_input, false);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.use_non_filterable_input)",
+                ".set::<act::Reset>(false);",
+                ".local(&st.sampling)",
+                ".set::<act::Reset>(Some(Arc::<str>::from(\"linear\")));",
+                ".local(&st.blur_radius_px)",
+                ".set::<act::Reset>(vec![10.0]);",
+                "cx.actions().local(&st.debug_input).set::<act::Reset>(false);",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2031,11 +2065,12 @@ mod authoring_surface_policy_tests {
                 "show_user1_probe: cx.state().local_init(|| false),",
                 "use_non_filterable_user0: cx.state().local_init(|| false),",
                 "use_non_filterable_user1: cx.state().local_init(|| false),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, bool>(&st.show_user0_probe, false);",
-                ".local_set::<act::Reset, bool>(&st.show_user1_probe, false);",
-                ".local_set::<act::Reset, bool>(&st.use_non_filterable_user0, false);",
-                ".local_set::<act::Reset, bool>(&st.use_non_filterable_user1, false);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.show_user0_probe)",
+                ".set::<act::Reset>(false);",
+                ".local(&st.show_user1_probe)",
+                ".local(&st.use_non_filterable_user0)",
+                ".local(&st.use_non_filterable_user1)",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2064,10 +2099,12 @@ mod authoring_surface_policy_tests {
                 "grain_scale: cx.state().local_init(|| vec![1.5]),",
                 "retro_pixel_scale: cx.state().local_init(|| vec![10.0]),",
                 "retro_dither: cx.state().local_init(|| true),",
-                "cx.actions().local_set::<act::Reset, bool>(&st.enabled, true);",
-                ".local_set::<act::Reset, Option<Arc<str>>>(",
-                ".local_set::<act::Reset, Vec<f32>>(&st.chromatic_offset_px, vec![4.0]);",
-                ".local_set::<act::Reset, bool>(&st.retro_dither, true);",
+                "cx.actions().local(&st.enabled).set::<act::Reset>(true);",
+                ".local(&st.theme)",
+                ".set::<act::Reset>(Some(Arc::<str>::from(\"cyberpunk\")));",
+                ".local(&st.chromatic_offset_px)",
+                ".set::<act::Reset>(vec![4.0]);",
+                "cx.actions().local(&st.retro_dither).set::<act::Reset>(true);",
             ],
             &[
                 "enabled: app.models_mut().insert(true)",
@@ -2093,9 +2130,11 @@ mod authoring_surface_policy_tests {
                 "show_fake: cx.state().local_init(|| true),",
                 "custom_v3_pair: cx.state().local_init(|| false),",
                 "warp_strength_px: cx.state().local_init(|| vec![10.0]),",
-                "cx.actions().local_set::<act::Reset, bool>(&self.show_fake, true);",
-                ".local_set::<act::Reset, Vec<f32>>(&self.custom_v3_bevel_secondary, vec![1.0]);",
-                ".toggle_local_bool::<act::ToggleInspector>(&self.show_inspector);",
+                "cx.actions().local(&self.show_fake).set::<act::Reset>(true);",
+                ".local(&self.custom_v3_bevel_secondary)",
+                ".set::<act::Reset>(vec![1.0]);",
+                ".local(&self.show_inspector)",
+                ".toggle_bool::<act::ToggleInspector>();",
             ],
             &[
                 "show_fake: app.models_mut().insert(true)",
@@ -2125,7 +2164,9 @@ mod authoring_surface_policy_tests {
             &[
                 "if cx.effects().take_transient(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.actions().transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);",
-                "cx.actions().payload_local_update_if::<act::ToggleCodeBlockExpand, HashSet<markdown::BlockId>>(",
+                ".local(&expanded_code_blocks_state)",
+                ".payload_update_if::<act::ToggleCodeBlockExpand>(|set, id| {",
+                "let expanded_count = expanded_code_blocks_state.layout_read_ref(cx, |set| set.len());",
                 "let pending = pending_anchor.layout_value(cx);",
                 "let wrap_enabled = wrap_code_state.layout_value(cx);",
                 "let cap_enabled = cap_code_height_state.layout_value(cx);",
@@ -2137,6 +2178,7 @@ mod authoring_surface_policy_tests {
                 "cx.take_transient_on_action_root(TRANSIENT_REFRESH_REMOTE_IMAGES)",
                 "cx.on_action_notify_transient::<act::RefreshRemoteImages>",
                 "cx.on_payload_action_notify::<act::ToggleCodeBlockExpand>({",
+                "let expanded_count = cx.data().selector(",
                 "self.st.pending_anchor.layout(cx).value_or_default()",
                 "self.st.wrap_code.layout(cx).value_or_default()",
                 "self.st.cap_code_height.layout(cx).value_or_default()",
@@ -2153,8 +2195,8 @@ mod authoring_surface_policy_tests {
                 "view_options_open: LocalState<bool>,",
                 "enable_grouping: LocalState<bool>,",
                 "grouped_column_mode: LocalState<Option<Arc<str>>>,",
-                "let enable_grouping = enable_grouping.layout_in(cx).value_or(true);",
-                "let grouped_column_mode = grouped_column_mode.layout_in(cx).value_or_default();",
+                "let enable_grouping = enable_grouping.layout_value_in(cx);",
+                "let grouped_column_mode = grouped_column_mode.layout_value_in(cx);",
                 "let view_options_open = view_options_open.clone_model();",
             ],
             &[
@@ -2174,9 +2216,9 @@ mod authoring_surface_policy_tests {
                 "let dark = locals.dark.layout_value(cx);",
                 "fn tracked_query_inputs(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> QueryKeyInputs {",
                 "let query_inputs = tracked_query_inputs(cx, &locals);",
-                "cx.data().selector_layout(&locals.tabs, |tab| match tab.as_deref() {",
+                "locals.tabs.layout_read_ref_in(cx, |tab| match tab.as_deref() {",
                 "let policy_settings: QueryPolicySettings = cx.data().selector_layout(",
-                "cx.data().selector_layout(&config.fail_mode, |fail_mode| fail_mode)",
+                "config.fail_mode.layout_value_in(cx)",
             ],
             &[
                 "let selected = cx.watch_model(&self.st.selected).layout().value_or_default();",
@@ -2191,7 +2233,9 @@ mod authoring_surface_policy_tests {
                 "let stale_s = config.stale_time_s.layout_in(cx).value_or_default();",
                 "let cache_s = config.cache_time_s.layout_in(cx).value_or_default();",
                 "let keep_prev = config.keep_prev.layout_in(cx).value_or_default();",
+                "cx.data().selector_layout(&locals.tabs, |tab| match tab.as_deref() {",
                 "let policy_settings: QueryPolicySettings = cx.data().selector(",
+                "cx.data().selector_layout(&config.fail_mode, |fail_mode| fail_mode)",
                 "config.fail_mode.layout_in(cx).value_or_default()",
             ],
         );
@@ -2204,8 +2248,8 @@ mod authoring_surface_policy_tests {
                 "editor_text: LocalState<String>,",
                 "stream_text: LocalState<String>,",
                 "stream_patch_only: LocalState<bool>,",
-                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_in(cx).value_or(true);",
-                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_in(cx).value_or(true);",
+                "let auto_apply_enabled = st.auto_apply_standard_actions.layout_value_in(cx);",
+                "let _auto_fix_enabled = st.auto_fix_on_apply.layout_value_in(cx);",
                 "let auto_apply_model = st.auto_apply_standard_actions.clone_model();",
                 "let auto_fix_model = st.auto_fix_on_apply.clone_model();",
                 "st.genui_state",
@@ -2213,7 +2257,7 @@ mod authoring_surface_policy_tests {
                 ".read_ref(|v| {",
                 "st.action_queue",
                 "st.validation_state",
-                "let stream_patch_only = st.stream_patch_only.layout_in(cx).value_or(false);",
+                "let stream_patch_only = st.stream_patch_only.layout_value_in(cx);",
                 "let stream_patch_only_model = st.stream_patch_only.clone_model();",
                 "shadcn::Textarea::new(&editor_model)",
                 "shadcn::Textarea::new(&stream_model)",
@@ -2241,7 +2285,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V2_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
                 "let view_settings: CustomEffectV2ViewSettings = cx.data().selector_layout(",
                 "&st.enabled,",
                 "&st.use_non_filterable_input,",
@@ -2388,6 +2432,54 @@ mod authoring_surface_policy_tests {
         );
 
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            IMUI_EDITOR_PROOF_DEMO,
+            &[
+                "struct EditorTextAssistReadout {",
+                "struct EditorTextFieldReadout {",
+                "struct AuthoringParitySharedStateReadout {",
+                "fn editor_text_assist_readout(",
+                "fn editor_text_field_readout(",
+                "fn editor_string_model_readout(",
+                "cx.data().selector_model_paint(",
+                "(query_model, dismissed_query_model, active_item_id_model),",
+                "(committed_model, outcome_model),",
+                "editor_string_model_readout(",
+                "let name_assist_items = editor_demo_name_assist_items(cx);",
+                "let name_assist_readout = editor_text_assist_readout(",
+                "let inline_rename_readout = editor_text_field_readout(",
+                "let password_readout = editor_text_field_readout(",
+                "let notes_readout = editor_text_field_readout(",
+                ".selector_model_paint(&editor_gradient_stops_model,",
+                ".selector_model_paint(&m.target, |target| target)",
+                "let shared = cx.data().selector_model_paint(",
+                "(&name_model, &drag_value_model, &slider_model, &enabled_model, &shading_model,)",
+            ],
+            &[
+                "let query = cx.watch_model(&editor_name_assist_model)",
+                "let dismissed_query = cx.watch_model(&editor_name_assist_dismissed_query_model)",
+                "let active_item_id = cx.watch_model(&editor_name_assist_active_item_model)",
+                "cx.watch_model(&editor_buffered_name_model)",
+                "cx.watch_model(&editor_name_assist_accepted_model)",
+                "cx.watch_model(&editor_inline_rename_model)",
+                "cx.watch_model(&editor_inline_rename_outcome_model)",
+                "cx.watch_model(&editor_password_model)",
+                "cx.watch_model(&editor_password_outcome_model)",
+                "cx.watch_model(&editor_notes_model)",
+                "cx.watch_model(&editor_notes_outcome_model)",
+                "watch_model(&editor_gradient_stops_model)",
+                "watch_model(&m.target)",
+                ".get_model_cloned(&editor_drag_value_outcome_model,",
+                ".get_model_cloned(&editor_position_outcome_model,",
+                ".get_model_cloned(&editor_transform_outcome_model,",
+                ".get_model_cloned(&name_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&drag_value_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&slider_model, fret_ui::Invalidation::Paint)",
+                ".get_model_copied(&enabled_model, fret_ui::Invalidation::Paint)",
+                ".get_model_cloned(&shading_model, fret_ui::Invalidation::Paint)",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V3_DEMO,
             &[
                 "let view_settings: CustomEffectV3ViewSettings = cx.data().selector_layout(",
@@ -2413,8 +2505,8 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             CUSTOM_EFFECT_V1_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
-                "let enabled = st.enabled.layout_in(cx).value_or(true);",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
+                "let enabled = st.enabled.layout_value_in(cx);",
                 "let enabled_model = st.enabled.clone_model();",
                 "let blur_radius_state = st.blur_radius_px.clone();",
             ],
@@ -2459,7 +2551,7 @@ mod authoring_surface_policy_tests {
         assert_selected_view_runtime_examples_prefer_grouped_helpers(
             LIQUID_GLASS_DEMO,
             &[
-                "model.layout_in(cx).read_ref(|v| v.first().copied().unwrap_or(default))",
+                "model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))",
                 "let visibility_settings: LiquidGlassVisibilitySettings = cx.data().selector_layout(",
                 "&st.show_fake,",
                 "&st.custom_v3_pair,",
@@ -2517,12 +2609,28 @@ mod authoring_surface_policy_tests {
             LAUNCHER_UTILITY_WINDOW_MATERIALS_DEMO,
             &[
                 "status: LocalState<Arc<str>>,",
-                "let status = cx.data().selector_layout(&st.status, |status| status);",
+                "let status = st.status.layout_value_in(cx);",
             ],
             &[
                 "cx.watch_model(&st.status)",
                 "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
+                "let status = cx.data().selector_layout(&st.status, |status| status);",
                 "status: fret_runtime::Model<Arc<str>>,",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            WORKSPACE_SHELL_DEMO,
+            &[
+                "let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =",
+                "cx.data().selector_model_layout(",
+                "(&dirty_close_prompt_open, &dirty_close_prompt),",
+                ".selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| {",
+            ],
+            &[
+                ".get_model_cloned(&dirty_close_prompt_open, Invalidation::Layout)",
+                ".get_model_cloned(&dirty_close_prompt, Invalidation::Layout)",
+                ".get_model_cloned(&tabstrip_two_row_pinned, Invalidation::Layout)",
             ],
         );
     }

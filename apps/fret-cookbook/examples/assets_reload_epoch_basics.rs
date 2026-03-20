@@ -65,7 +65,8 @@ impl View for AssetsReloadEpochBasicsView {
         let bumps_state = cx.state().local::<u64>();
 
         cx.actions()
-            .local_update::<act::BumpReload, u64>(&bumps_state, |value| {
+            .local(&bumps_state)
+            .update::<act::BumpReload>(|value| {
                 *value = value.wrapping_add(1);
             });
 

@@ -347,17 +347,15 @@ $$
         cx.actions()
             .transient::<act::RefreshRemoteImages>(TRANSIENT_REFRESH_REMOTE_IMAGES);
         cx.actions()
-            .payload_local_update_if::<act::ToggleCodeBlockExpand, HashSet<markdown::BlockId>>(
-                &expanded_code_blocks_state,
-                |set, id| {
-                    if set.contains(&id) {
-                        set.remove(&id);
-                    } else {
-                        set.insert(id);
-                    }
-                    true
-                },
-            );
+            .local(&expanded_code_blocks_state)
+            .payload_update_if::<act::ToggleCodeBlockExpand>(|set, id| {
+                if set.contains(&id) {
+                    set.remove(&id);
+                } else {
+                    set.insert(id);
+                }
+                true
+            });
 
         self.st.anchor_regions.borrow_mut().clear();
 
@@ -581,26 +579,7 @@ $$
                 .into_element(cx)
         }));
 
-        let expanded_count = cx.data().selector(
-            {
-                let expanded_code_blocks_state = expanded_code_blocks_state.clone();
-                move |cx| {
-                    expanded_code_blocks_state
-                        .layout_in(cx)
-                        .revision()
-                        .unwrap_or(0)
-                }
-            },
-            {
-                let expanded_code_blocks_state = expanded_code_blocks_state.clone();
-                move |cx| {
-                    expanded_code_blocks_state
-                        .read_in(cx.app.models(), |set| set.len())
-                        .ok()
-                        .unwrap_or(0)
-                }
-            },
-        );
+        let expanded_count = expanded_code_blocks_state.layout_read_ref(cx, |set| set.len());
 
         let toggles = ui::h_flex(|cx| {
             [

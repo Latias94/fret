@@ -6,54 +6,50 @@ use crate::ui::snippets::kbd as snippets;
 
 pub(super) fn preview_kbd(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let group = snippets::group::render(cx);
     let button = snippets::button::render(cx);
     let tooltip = snippets::tooltip::render(cx);
     let input_group = snippets::input_group::render(cx);
     let rtl = snippets::rtl::render(cx);
 
-    let usage = doc_layout::muted_full_width(
-        cx,
-        "Use `Kbd` for a single key token and `KbdGroup` for shortcut chords or grouped hints.",
-    );
-
     let api_reference = doc_layout::notes_block([
-        "`Kbd::new(\"Ctrl\")` covers the default textual key token, while `Kbd::from_children([...])` covers icon-based keys such as Command or Arrow icons.",
-        "`KbdGroup::new([...])` is the public surface for grouped shortcuts and keeps spacing/chrome consistent across adjacent tokens.",
-        "Kbd chrome, fixed height, and text centering remain recipe-owned; composition into buttons, tooltips, and input-group addons stays caller-owned.",
-        "No extra generic `asChild` / `compose()` surface is needed here: upstream composition already happens around `Kbd`, and Fret matches that layering directly.",
-        "Keep `ui-gallery-kbd-*` test ids stable for diag scripts and future web-vs-fret gates.",
+        "`Kbd::new(text)` is the default docs-aligned lane for a single key token such as `Ctrl`, `Esc`, or `⌘`.",
+        "`KbdGroup::new([...])` groups adjacent keycaps or separators for shortcut chords while keeping spacing consistent.",
+        "`Kbd::from_children([...])` / `.children([...])` remain explicit escape hatches for icon-only or mixed-content caps, so no broader generic `asChild` / `compose()` surface is warranted here.",
+        "Fixed height, padding, radius, muted chrome, and tooltip-slot color inversion remain recipe-owned.",
+        "Composition into buttons, tooltips, and input-group addons stays caller-owned, matching the upstream docs layering.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .test_id_prefix("ui-gallery-kbd-api-reference")
         .no_shell()
         .description("Public surface summary and ownership notes.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Two shortcut display patterns: icon-based chord and textual chord.")
+        .test_id_prefix("ui-gallery-kbd-demo")
+        .description("Two shortcut display patterns: modifier-key glyphs and a textual chord.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for `Kbd` and `KbdGroup`.")
-        .code_rust(
-            r#"use fret_ui_shadcn::{facade as shadcn, prelude::*};
-
-shadcn::KbdGroup::new([
-    shadcn::Kbd::new("Ctrl").into_element(cx),
-    shadcn::Kbd::new("B").into_element(cx),
-])
-.into_element(cx);"#,
-        );
+        .test_id_prefix("ui-gallery-kbd-usage")
+        .description("Copyable minimal usage for a single `Kbd` token.")
+        .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let group = DocSection::build(cx, "Group", group)
+        .test_id_prefix("ui-gallery-kbd-group")
         .description("Use `KbdGroup` to keep spacing consistent across tokens.")
         .code_rust_from_file_region(snippets::group::SOURCE, "example");
     let button = DocSection::build(cx, "Button", button)
+        .test_id_prefix("ui-gallery-kbd-button")
         .description("kbd tokens can be composed into button labels for discoverability.")
         .code_rust_from_file_region(snippets::button::SOURCE, "example");
     let tooltip = DocSection::build(cx, "Tooltip", tooltip)
+        .test_id_prefix("ui-gallery-kbd-tooltip")
         .description("Tooltips often include shortcut hints for expert users.")
         .code_rust_from_file_region(snippets::tooltip::SOURCE, "example");
     let input_group = DocSection::build(cx, "Input Group", input_group)
+        .test_id_prefix("ui-gallery-kbd-input-group")
         .description("Trailing kbd hints can be rendered inside an input group.")
         .code_rust_from_file_region(snippets::input_group::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
+        .test_id_prefix("ui-gallery-kbd-rtl")
         .description("kbd token order should respect right-to-left direction context.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 

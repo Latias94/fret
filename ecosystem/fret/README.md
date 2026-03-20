@@ -55,9 +55,15 @@ cargo run --manifest-path local/my-todo/Cargo.toml
 Keep the default authoring model intentionally small:
 
 - use `LocalState<T>` / `LocalState<Vec<_>>` for view-owned state,
-- use `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
+- use `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary LocalState reads, and
+  `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` when a
+  derived projection should avoid cloning the full slot,
+- keep one or two trivial locals inline; when a view owns several related `LocalState<T>` slots,
+  prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`, then use
+  `cx.actions().locals_with((...)).on::<A>(...)` for coordinated LocalState-first typed UI actions,
+- use `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` for single-local writes,
 - for view-owned keyed rows, bind payloads with `.action_payload(...)`, prefer
-  `payload_local_update_if::<A>(...)` as the default row-write path,
+  `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the default row-write path,
 - use `cx.actions().transient::<A>(...)` when the real effect must happen with `&mut App` in
   `render()`,
 - drop to `cx.actions().models::<A>(...)` only when coordinating shared `Model<T>` graphs,

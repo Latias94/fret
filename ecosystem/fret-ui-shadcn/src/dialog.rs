@@ -1844,6 +1844,16 @@ mod tests {
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
+    fn contains_plain_text(el: &AnyElement, needle: &str) -> bool {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => true,
+            _ => el
+                .children
+                .iter()
+                .any(|child| contains_plain_text(child, needle)),
+        }
+    }
+
     #[test]
     fn dialog_trigger_build_push_ui_accepts_late_landed_child() {
         let window = AppWindowId::default();
@@ -1884,9 +1894,28 @@ mod tests {
                 }),
             );
         })
+        .show_close_button(false)
         .ui()
         .test_id("content")
         .into_element(cx)
+    }
+
+    #[test]
+    fn dialog_content_build_accepts_builder_first_sections_surface() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            dialog_content_build_accepts_builder_first_sections(cx)
+        });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert!(contains_plain_text(&element, "Title"));
+        assert!(contains_plain_text(&element, "Close"));
     }
 
     #[test]

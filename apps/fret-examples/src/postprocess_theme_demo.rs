@@ -257,30 +257,33 @@ impl View for ThemePostprocessView {
             view_settings.retro_dither,
         );
 
+        cx.actions().local(&st.enabled).set::<act::Reset>(true);
+        cx.actions().local(&st.compare).set::<act::Reset>(true);
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.enabled, true);
+            .local(&st.theme)
+            .set::<act::Reset>(Some(Arc::<str>::from("cyberpunk")));
         cx.actions()
-            .local_set::<act::Reset, bool>(&st.compare, true);
-        cx.actions().local_set::<act::Reset, Option<Arc<str>>>(
-            &st.theme,
-            Some(Arc::<str>::from("cyberpunk")),
-        );
+            .local(&st.chromatic_offset_px)
+            .set::<act::Reset>(vec![4.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.chromatic_offset_px, vec![4.0]);
+            .local(&st.scanline_strength)
+            .set::<act::Reset>(vec![0.32]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.scanline_strength, vec![0.32]);
+            .local(&st.scanline_spacing_px)
+            .set::<act::Reset>(vec![3.0]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.scanline_spacing_px, vec![3.0]);
+            .local(&st.vignette_strength)
+            .set::<act::Reset>(vec![0.6]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.vignette_strength, vec![0.6]);
+            .local(&st.grain_strength)
+            .set::<act::Reset>(vec![0.12]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.grain_strength, vec![0.12]);
+            .local(&st.grain_scale)
+            .set::<act::Reset>(vec![1.5]);
         cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.grain_scale, vec![1.5]);
-        cx.actions()
-            .local_set::<act::Reset, Vec<f32>>(&st.retro_pixel_scale, vec![10.0]);
-        cx.actions()
-            .local_set::<act::Reset, bool>(&st.retro_dither, true);
+            .local(&st.retro_pixel_scale)
+            .set::<act::Reset>(vec![10.0]);
+        cx.actions().local(&st.retro_dither).set::<act::Reset>(true);
 
         let root = ui::h_flex(move |cx| {
             let inspector = inspector.into_element(cx);
@@ -305,11 +308,7 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
 }
 
 fn watch_first_f32(cx: &mut UiCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
-    model
-        .layout_in(cx)
-        .read_ref(|v| v.first().copied().unwrap_or(default))
-        .ok()
-        .unwrap_or(default)
+    model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
 
 fn inspector(

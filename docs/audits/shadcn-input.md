@@ -45,11 +45,13 @@ base examples, and the in-repo web goldens that currently gate input chrome.
 - Pass: `Usage` now has a dedicated snippet source so the copyable code tab stays tied to compiled sample code instead of an inline page string.
 - Pass: `Label Association`, `API Reference`, and `Notes` remain explicit Fret follow-ups after the upstream path because they document the `control_id(...)` bridge, ownership notes, and diagnostics guidance rather than upstream section headings.
 - Pass: each Input docs section now exposes a page-scoped stable `test_id` prefix (`ui-gallery-input-*`), which lets geometry and screenshot gates target the real docs structure instead of only snippet-local nodes.
-- Pass: this work is docs/public-surface parity and diagnostics-surface alignment, not a mechanism-layer fix.
+- Pass: docs/public-surface parity remains aligned, and this pass also fixed a mechanism bug in `FieldLabel::for_control(...)`: plain text labels inside ancestor `pressable` shells now continue to forward focus to the registered Input, while `wrap(...)` labels still suppress forwarding when the click lands on nested pressables.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-fieldlabel-lib cargo test -p fret-ui-shadcn --lib field_label_click -- --nocapture`
+- `CARGO_TARGET_DIR=target-codex-fretboard cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-label-click-focus.json --dir target/fret-diag-input-label-focus-20260320-2 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-input cargo run -p fret-ui-gallery`
+- `CARGO_TARGET_DIR=target-codex-ui-gallery-input cargo check -p fret-ui-gallery --message-format short`
 - `cargo test -p fret-ui-gallery --lib gallery_input_core_examples_keep_upstream_aligned_targets_present`
 - `cargo test -p fret-ui-gallery --lib notes_sections_keep_stable_height_while_scrolling_into_view`
 - Existing chrome gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`input-demo`, `input-demo.invalid`, `input-demo.focus`, `input-demo.invalid-focus`)

@@ -19,34 +19,36 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let width = cx.local_model_keyed("width", || String::from("100%"));
     let height = cx.local_model_keyed("height", || String::from("25px"));
 
-    let content = shadcn::PopoverContent::new(ui::children![
-        cx;
-        shadcn::PopoverHeader::new(ui::children![
+    let content = shadcn::PopoverContent::build(cx, |cx| {
+        ui::children![
             cx;
-            shadcn::PopoverTitle::new("Dimensions"),
-            shadcn::PopoverDescription::new("Set the dimensions for the layer.")
-        ]),
-        shadcn::FieldGroup::new(ui::children![
-            cx;
-            shadcn::Field::new(ui::children![
+            shadcn::PopoverHeader::new(ui::children![
                 cx;
-                shadcn::FieldLabel::new("Width")
-                    .refine_layout(LayoutRefinement::default().w_px(Px(128.0))),
-                shadcn::Input::new(width.clone())
-                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-            ])
-            .orientation(shadcn::FieldOrientation::Horizontal),
-            shadcn::Field::new(ui::children![
+                shadcn::PopoverTitle::new("Dimensions"),
+                shadcn::PopoverDescription::new("Set the dimensions for the layer.")
+            ]),
+            shadcn::FieldGroup::new(ui::children![
                 cx;
-                shadcn::FieldLabel::new("Height")
-                    .refine_layout(LayoutRefinement::default().w_px(Px(128.0))),
-                shadcn::Input::new(height.clone())
-                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                shadcn::Field::new(ui::children![
+                    cx;
+                    shadcn::FieldLabel::new("Width")
+                        .refine_layout(LayoutRefinement::default().w_px(Px(128.0))),
+                    shadcn::Input::new(width.clone())
+                        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                ])
+                .orientation(shadcn::FieldOrientation::Horizontal),
+                shadcn::Field::new(ui::children![
+                    cx;
+                    shadcn::FieldLabel::new("Height")
+                        .refine_layout(LayoutRefinement::default().w_px(Px(128.0))),
+                    shadcn::Input::new(height.clone())
+                        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                ])
+                .orientation(shadcn::FieldOrientation::Horizontal)
             ])
-            .orientation(shadcn::FieldOrientation::Horizontal)
-        ])
-        .gap(Space::N4)
-    ])
+            .gap(Space::N4)
+        ]
+    })
     .refine_layout(LayoutRefinement::default().w_px(Px(256.0)))
     .test_id("ui-gallery-popover-with-form-panel");
 

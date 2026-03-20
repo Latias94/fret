@@ -1,7 +1,15 @@
 # Into-Element Surface — Target Interface State
 
 Status: closeout target state for the pre-release conversion-surface reset
-Last updated: 2026-03-16
+Last updated: 2026-03-20
+
+Companion docs:
+
+- `DESIGN.md`
+- `MILESTONES.md`
+- `TODO.md`
+- `MIGRATION_MATRIX.md`
+- `CLOSEOUT_AUDIT_2026-03-20.md`
 
 This document records the intended end state for the authoring conversion surface.
 

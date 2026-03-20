@@ -21,16 +21,16 @@ missing default guideline).
 | Need | Default entrypoint | Notes |
 | --- | --- | --- |
 | View-owned state | `cx.state().local::<T>()` / `cx.state().local_init(|| ...)` | Prefer `LocalState<Vec<_>>` for view-owned keyed lists. |
-| LocalState tracked reads | `local.layout_value(cx)` / `local.paint_value(cx)` | Default LocalState-only read path; keeps invalidation phase explicit without fallback noise. Raw `local.layout(cx).value_*` / `local.paint(cx).value_*` remain available when you want the explicit builder. |
-| 1-slot action write | `cx.actions().local_set/update` | Keeps the notify/dirty closure correct. |
-| Multi-slot LocalState transaction | `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` | Hides `ModelStore` for LocalState-only coordination while letting the call site pass existing local handles directly; in ordinary render bodies prefer borrowed captures like `(&draft_state, &todos_state)` when those handles are still needed later in the same scope. Inside the closure prefer `tx.value(&local)` for ordinary initialized locals. |
+| LocalState tracked reads | `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary reads; `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` for borrowed projections | Default LocalState-only read path; keeps invalidation phase explicit without fallback noise. Use `*_read_ref(...)` when app code only needs a derived value and should avoid cloning the whole `T`. Raw `local.layout(cx).value_*` / `local.paint(cx).value_*` remain available when you want the explicit builder. |
+| 1-slot action write | `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()` | Keeps the notify/dirty closure correct while letting the local handle own type inference. |
+| Multi-slot LocalState transaction | `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` | Hides `ModelStore` for LocalState-only coordination while keeping the real local handles explicit. Keep one or two trivial locals inline; once a view owns several related slots or keeps threading them through helpers, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`. Inside the closure prefer `tx.value(&local)` for ordinary initialized locals. |
 | Widget action binding | `.action(...)` / `.action_payload(...)` | Prefer this whenever the widget already exposes a stable action slot. |
 | Widget-local action dispatch | `.action(act::Save)` / `.action_payload(act::Remove, payload)` | Activation-only bridge; add `use fret::app::AppActivateExt as _;` explicitly when a widget only exposes `on_activate(...)`. |
 | Widget-local imperative glue | `.listen(|host, acx| { ... })` | Prefer this over hand-written `Arc<dyn Fn...>` for simple local callbacks on activation-only surfaces; import `use fret::app::AppActivateExt as _;` explicitly. |
 | Single typed child landing | `ui::single(cx, child)` | Prefer this when `render()` or a wrapper closure only needs to return one already-typed child. |
-| Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper, then prefer `payload_local_update_if::<A>(...)` for the common row-write path. |
+| Keyed row interactions | `payload_actions!` + `ui::for_each_keyed(...)` | Bind payload via `.action_payload(id)` inside the row helper, then prefer `cx.actions().local(&rows_state).payload_update_if::<A>(...)` for the common row-write path. |
 | Derived values | `cx.data().selector_layout(inputs, compute)` | Default LocalState-first selector path. Keep raw `cx.data().selector(deps, compute)` plus `fret::selector::ui::DepsBuilder` for explicit shared `Model<T>` / global signatures. |
-| Async resources | `cx.data().query(key, policy, fetch)` + `handle.read_layout(cx)` | Keep create-side semantics explicit, then use `read_layout(cx)` for the default app-path read when `QueryState::<T>::default()` is the fallback. |
+| Async resources | `cx.data().query(key, policy, fetch)` + `handle.read_layout(cx)` | Keep create-side semantics explicit, then use `read_layout(cx)` for the default app-path read when `QueryState::<T>::default()` is the fallback. For common semantic projections, prefer `state.status.as_str()`, `state.is_refreshing()`, and `state.has_error()` over rebuilding the same checks manually. |
 | Query invalidation on app lane | `cx.data().invalidate_query(...)` / `cx.data().invalidate_query_namespace(...)` | Prefer this when invalidation happens inside `AppUi` / extracted `UiCx`; keep raw `with_query_client(...)` for pure app/driver code. |
 | App-only effects | `cx.actions().transient::<A>(...)` + `cx.effects().take_transient(...)` | Consume transients in `render()` when `&mut App` is required. |
 | Explicit raw `Model<T>` hook (advanced) | `use fret::advanced::AppUiRawStateExt;` + `cx.use_state::<T>()` | Only when you intentionally want the raw model handle instead of `LocalState<T>`. |
@@ -61,7 +61,8 @@ mod act {
 }
 
 cx.actions()
-    .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
+    .local(&todos_state)
+    .payload_update_if::<act::Toggle>(|rows, id| {
         rows
             .iter_mut()
             .find(|r| r.id == id)

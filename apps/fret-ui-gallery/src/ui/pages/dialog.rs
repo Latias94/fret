@@ -16,6 +16,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`Dialog::children([...])` is the default copyable root path for part-based composition, and `DialogPart` is available on the curated `shadcn` facade so the default import lane stays copyable.",
+        "`DialogContent::build(...)` is the typed content-side companion on that same lane, so copyable snippets do not need to hand-land already-built content arrays.",
         "`DialogContent` owns the upstream-style default close affordance; opt out with `show_close_button(false)`.",
         "`DialogClose::from_scope().build(cx, button)` is the closest Fret equivalent to upstream `<DialogClose asChild>` for footer or custom close actions.",
         "`Dialog::compose()` remains available as a focused bridge when a page wants explicit builder-style `trigger(...).content_with(...)` assembly.",
@@ -52,7 +53,7 @@ pub(super) fn preview_dialog(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable shadcn-style composition reference for Dialog.")
+        .description("Copyable shadcn-style composition reference using typed content builders.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let custom_close = DocSection::build(cx, "Custom Close Button", custom_close)
         .description("Replace the close affordance with a custom footer action.")

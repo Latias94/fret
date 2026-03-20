@@ -1,6 +1,6 @@
 # Dataflow Authoring Surface (Fearless Refactor v1) — Target Interface State
 
-Last updated: 2026-03-17
+Last updated: 2026-03-20
 
 This file records the intended target posture for the post-closeout dataflow authoring lane.
 
@@ -51,6 +51,16 @@ Current closeout audit outcome (2026-03-17):
 - editor-grade proof surfaces remain explicit and are not being rewritten into the default app lane
 - router compatibility is confirmed, but routing stays adjacent and explicit under `fret::router::*`
 
+Current closeout audit outcome (2026-03-20):
+
+- first-party editor-grade/proof surfaces now standardize on shipped grouped bridges
+  (`cx.data().selector_model_layout(...)`, `cx.data().selector_model_paint(...)`) or thin local
+  wrappers over those bridges instead of ad hoc `watch_model(...)` / `get_model_*` readouts
+- this does **not** change the ownership boundary: editor-grade surfaces remain explicit
+  shared-model/component surfaces rather than being rewritten into the default app lane
+- the remaining adjacent pressure is selector/query ceremony and default-path density, not proof
+  surface tracked-read adoption debt
+
 ## Target matrix
 
 | Need | Default app lane | Advanced / editor-grade lane | Reusable ecosystem lane | Owner |
@@ -100,6 +110,9 @@ The advanced lane must remain strong enough for:
 The goal is not to hide this lane.
 The goal is to keep it intentionally explicit instead of letting it leak into first-contact docs.
 
+Within first-party proof surfaces, "explicit" should now mean explicit shared-model ownership and
+derive logic, not legacy tracked-read spellings when an existing grouped bridge already fits.
+
 ### Reusable ecosystem lane
 
 Reusable ecosystem libraries should be able to:
@@ -115,4 +128,7 @@ Once the new default surface lands:
 - old co-equal default spellings should be removed from first-contact docs/templates/examples,
 - `selector_layout(...)` should be the directly gated LocalState-first selector path,
 - advanced/raw spellings should remain only where they are genuinely advanced,
+- first-party proof/example surfaces should not regress to raw `watch_model(...)` /
+  `get_model_*` readouts when the shipped selector-model bridge already matches the ownership
+  shape,
 - source-policy tests should lock the chosen default path directly.

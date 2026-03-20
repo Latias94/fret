@@ -36,11 +36,10 @@ impl View for HelloView {
         let count_state = cx.state().local_init(|| 0u32);
         let count_value = count_state.layout_value(cx);
 
-        cx.actions()
-            .local_update::<act::Click, u32>(&count_state, |v| {
-                *v = v.saturating_add(1);
-                println!("hello: clicked");
-            });
+        cx.actions().local(&count_state).update::<act::Click>(|v| {
+            *v = v.saturating_add(1);
+            println!("hello: clicked");
+        });
 
         ui::single(cx, hello_page(render_marker, count_value))
     }

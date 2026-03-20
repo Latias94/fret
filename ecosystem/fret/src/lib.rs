@@ -2523,6 +2523,10 @@ mod authoring_surface_policy_tests {
             "App authors (default recommendation): `fret::FretApp::new(...).window(...).view::<V>()?`"
         ));
         assert!(CRATE_README.contains("`state`: enable selector/query helpers on `AppUi`"));
+        assert!(CRATE_README.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
+        assert!(CRATE_README.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(CRATE_README.contains("`fret::style::{...}`"));
         assert!(CRATE_README.contains("`fret::icons::{icon, IconId}`"));
         assert!(CRATE_README.contains("`fret::semantics::SemanticsRole`"));
@@ -2852,6 +2856,9 @@ mod authoring_surface_policy_tests {
         assert!(FIRST_HOUR.contains("`fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`"));
         assert!(FIRST_HOUR.contains("`cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`"));
         assert!(FIRST_HOUR.contains("`local.layout_value(cx)` / `local.paint_value(cx)`"));
+        assert!(FIRST_HOUR.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(FIRST_HOUR.contains("`.action(...)` / `.action_payload(...)` / `.listen(...)`"));
         assert!(!FIRST_HOUR.contains("`.dispatch::<A>()`"));
         assert!(!FIRST_HOUR.contains("`.dispatch_payload::<A>(...)`"));
@@ -2971,6 +2978,9 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`handle.read_layout(cx)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query(...)`"));
         assert!(CRATE_USAGE_GUIDE.contains("`cx.data().invalidate_query_namespace(...)`"));
+        assert!(CRATE_USAGE_GUIDE.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_selector"));
         assert!(!CRATE_USAGE_GUIDE.contains("ViewCx::use_query"));
     }
@@ -3046,6 +3056,9 @@ mod authoring_surface_policy_tests {
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().query(...)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`handle.read_layout(cx)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`cx.data().invalidate_query(...)`"));
+        assert!(AUTHORING_GOLDEN_PATH_V2.contains(
+            "`local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)`"
+        ));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`ui::single(cx, child)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains("`.action(act::Save)`"));
         assert!(AUTHORING_GOLDEN_PATH_V2.contains(".action_payload(act::RemoveTodo, todo.id);"));

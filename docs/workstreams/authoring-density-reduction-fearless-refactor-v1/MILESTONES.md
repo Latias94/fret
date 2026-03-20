@@ -1,7 +1,7 @@
 # Authoring Density Reduction (Fearless Refactor v1) — Milestones
 
 Status: Historical closeout record
-Last updated: 2026-03-16
+Last updated: 2026-03-20
 
 Related:
 
@@ -11,6 +11,7 @@ Related:
 - Tracked-read audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TRACKED_READ_AUDIT_2026-03-16.md`
 - Selector/query audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_AUDIT_2026-03-16.md`
 - Selector/query direction: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/SELECTOR_QUERY_DIRECTION_2026-03-16.md`
+- Todo ladder audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/TODO_LADDER_AUDIT_2026-03-20.md`
 - Child-collection audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CHILD_COLLECTION_AUDIT_2026-03-16.md`
 - Closeout audit: `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-03-16.md`
 - Authoring-surface closeout: `docs/workstreams/authoring-surface-and-ecosystem-fearless-refactor-v1/TARGET_INTERFACE_STATE.md`
@@ -40,6 +41,13 @@ Overall reading:
 - it did not turn into a stealth runtime/state-architecture redesign,
 - and remaining follow-up is maintenance only: keep docs/templates/examples/gates aligned with the
   shipped shorter path.
+
+Post-closeout addendum on 2026-03-20:
+
+- `simple-todo` is now the stable first-contact proof that the shipped shorter path holds,
+- the richer `todo` scaffold is intentionally a third-rung selector/query/app-grade exemplar,
+- the remaining density there should not be read as a tracked-read regression,
+- and router remains out of scope for this lane absent new cross-surface evidence.
 
 ## Historical execution order
 

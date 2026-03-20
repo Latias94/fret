@@ -48,7 +48,7 @@ pub(super) fn preview_radio_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-radio-group-fieldset")
         .code_rust_from_file_region(snippets::fieldset::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
-        .description("Use `disabled(true)` on `RadioGroup` to disable all items.")
+        .description("Use `disabled(true)` on `RadioGroupItem` to disable individual items.")
         .test_id_prefix("ui-gallery-radio-group-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)

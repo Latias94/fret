@@ -119,7 +119,7 @@ impl View for ImUiFloatingWindowsView {
                                     },
                                 );
 
-                                let clicked = a_overlap_clicked_state.paint_in(cx).value_or(false);
+                                let clicked = a_overlap_clicked_state.paint_value_in(cx);
 
                                 let clicked_label = clicked.then(|| {
                                     cx.text("A overlap clicked").attach_semantics(

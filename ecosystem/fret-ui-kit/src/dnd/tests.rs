@@ -142,6 +142,7 @@ fn pointer_down(
         hit_is_text_input: false,
         hit_is_pressable: false,
         hit_pressable_target: None,
+        hit_pressable_target_in_descendant_subtree: false,
     }
 }
 

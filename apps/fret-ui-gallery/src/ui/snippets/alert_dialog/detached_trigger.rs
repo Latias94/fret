@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("detached_trigger.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -47,29 +48,41 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let dialog = shadcn::AlertDialog::from_handle(handle)
         .compose()
         .content_with(move |cx| {
-            let header = shadcn::AlertDialogHeader::new(vec![
-                shadcn::AlertDialogTitle::new("Delete the production project?").into_element(cx),
-                shadcn::AlertDialogDescription::new(
-                    "This dialog is mounted separately from its triggers. Closing restores focus to whichever detached trigger opened it most recently.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx);
-
-            let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::from_scope("Cancel")
-                    .test_id("ui-gallery-alert-dialog-detached-trigger-cancel")
-                    .into_element(cx),
-                shadcn::AlertDialogAction::from_scope("Delete")
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .test_id("ui-gallery-alert-dialog-detached-trigger-action")
-                    .into_element(cx),
-            ])
-            .into_element(cx);
-
-            shadcn::AlertDialogContent::new(vec![header, footer])
-                .into_element(cx)
-                .test_id("ui-gallery-alert-dialog-detached-trigger-content")
+            shadcn::AlertDialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::AlertDialogHeader::build(|cx, out| {
+                        out.push_ui(
+                            cx,
+                            shadcn::AlertDialogTitle::new("Delete the production project?"),
+                        );
+                        out.push_ui(
+                            cx,
+                            shadcn::AlertDialogDescription::new(
+                                "This dialog is mounted separately from its triggers. Closing restores focus to whichever detached trigger opened it most recently.",
+                            ),
+                        );
+                    }),
+                );
+                out.push_ui(
+                    cx,
+                    shadcn::AlertDialogFooter::build(|cx, out| {
+                        out.push_ui(
+                            cx,
+                            shadcn::AlertDialogCancel::from_scope("Cancel")
+                                .test_id("ui-gallery-alert-dialog-detached-trigger-cancel"),
+                        );
+                        out.push_ui(
+                            cx,
+                            shadcn::AlertDialogAction::from_scope("Delete")
+                                .variant(shadcn::ButtonVariant::Destructive)
+                                .test_id("ui-gallery-alert-dialog-detached-trigger-action"),
+                        );
+                    }),
+                );
+            })
+            .test_id("ui-gallery-alert-dialog-detached-trigger-content")
+            .into_element(cx)
         })
         .into_element(cx);
 

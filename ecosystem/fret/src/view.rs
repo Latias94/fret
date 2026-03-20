@@ -149,8 +149,8 @@ impl<T> LocalState<T> {
     /// This is a store-only write helper: it does **not** request redraw or mark the current
     /// view-cache root dirty by itself. Use it inside `cx.actions().models::<A>(...)` when the
     /// write participates in a broader model-store transaction, or prefer the grouped
-    /// `cx.actions().local_*` / `payload_local_update_if::<A>(...)` helpers when the local write
-    /// itself should drive rerender.
+    /// `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` /
+    /// `.payload_update_if::<A>(...)` helpers when the local write itself should drive rerender.
     pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
     where
         T: Any,
@@ -248,6 +248,26 @@ impl<T> LocalState<T> {
             .expect("LocalState-first app code should always read initialized locals")
     }
 
+    /// Read a derived value from this local through a layout invalidation tracked borrow on the
+    /// default app surface.
+    ///
+    /// Use this when app code only needs a projection (for example: `len()`, membership checks, or
+    /// lightweight formatting) and should not clone the entire `T` just to compute that result.
+    /// Keep raw `layout(cx).read_ref(...)` when you intentionally want the explicit tracked-read
+    /// builder.
+    pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.layout(cx)
+            .read_ref(f)
+            .expect("LocalState-first app code should always read initialized locals")
+    }
+
     /// Read the current local value through a paint invalidation tracked read on the default app
     /// surface.
     ///
@@ -259,6 +279,25 @@ impl<T> LocalState<T> {
     {
         self.paint(cx)
             .value()
+            .expect("LocalState-first app code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a paint invalidation tracked borrow on the
+    /// default app surface.
+    ///
+    /// Use this when paint-time app code only needs a projection and should not clone the whole
+    /// slot. Keep raw `paint(cx).read_ref(...)` when you intentionally want the explicit
+    /// tracked-read builder.
+    pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>(
+        &self,
+        cx: &mut AppUi<'view_cx, 'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.paint(cx)
+            .read_ref(f)
             .expect("LocalState-first app code should always read initialized locals")
     }
 
@@ -298,6 +337,32 @@ impl<T> LocalState<T> {
         self.watch_in(cx).paint()
     }
 
+    /// Read the current local value through a paint invalidation tracked read on helper-heavy
+    /// `ElementContext` bridge surfaces.
+    pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>(&'m self, cx: &'cx mut ElementContext<'a, H>) -> T
+    where
+        T: Any + Clone,
+    {
+        self.paint_in(cx)
+            .value()
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a paint invalidation tracked borrow on
+    /// helper-heavy `ElementContext` bridge surfaces.
+    pub fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.paint_in(cx)
+            .read_ref(f)
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
     /// Convenience bridge over [`LocalState::watch_in`] for layout invalidation reads.
     pub fn layout_in<'cx, 'm, 'a, H: UiHost>(
         &'m self,
@@ -307,6 +372,35 @@ impl<T> LocalState<T> {
         T: Any,
     {
         self.watch_in(cx).layout()
+    }
+
+    /// Read the current local value through a layout invalidation tracked read on helper-heavy
+    /// `ElementContext` bridge surfaces.
+    pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+    ) -> T
+    where
+        T: Any + Clone,
+    {
+        self.layout_in(cx)
+            .value()
+            .expect("LocalState bridge code should always read initialized locals")
+    }
+
+    /// Read a derived value from this local through a layout invalidation tracked borrow on
+    /// helper-heavy `ElementContext` bridge surfaces.
+    pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>(
+        &'m self,
+        cx: &'cx mut ElementContext<'a, H>,
+        f: impl FnOnce(&T) -> R,
+    ) -> R
+    where
+        T: Any,
+    {
+        self.layout_in(cx)
+            .read_ref(f)
+            .expect("LocalState bridge code should always read initialized locals")
     }
 
     /// Convenience bridge over [`LocalState::watch_in`] for hit-test invalidation reads.
@@ -1243,11 +1337,23 @@ pub struct AppUiActions<'view, 'cx, 'a, H: UiHost> {
     cx: &'view mut AppUi<'cx, 'a, H>,
 }
 
+#[doc(hidden)]
+pub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T> {
+    cx: &'view mut AppUi<'cx, 'a, H>,
+    local: LocalState<T>,
+}
+
 /// Grouped action/effect registration helpers for extracted `UiCx` child builders on the default
 /// app surface.
 #[doc(hidden)]
 pub struct UiCxActions<'cx, 'a> {
     cx: &'cx mut ElementContext<'a, crate::app::App>,
+}
+
+#[doc(hidden)]
+pub struct UiCxActionLocal<'cx, 'a, T> {
+    cx: &'cx mut ElementContext<'a, crate::app::App>,
+    local: LocalState<T>,
 }
 
 #[doc(hidden)]
@@ -1280,6 +1386,58 @@ where
     }
 }
 
+impl<'view, 'cx, 'a, H: UiHost, T> AppUiActionLocal<'view, 'cx, 'a, H, T>
+where
+    T: Any,
+{
+    pub fn update<A>(self, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| update(value))
+            });
+    }
+
+    pub fn set<A>(self, value: T)
+    where
+        A: crate::TypedAction,
+        T: Clone,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.set_action(host, action_cx, value.clone())
+            });
+    }
+
+    pub fn payload_update_if<A>(self, update: impl Fn(&mut T, A::Payload) -> bool + 'static)
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_payload_action_handler::<A>(move |host, action_cx, payload| {
+                local.update_action_if(host, action_cx, |value| update(value, payload))
+            });
+    }
+}
+
+impl<'view, 'cx, 'a, H: UiHost> AppUiActionLocal<'view, 'cx, 'a, H, bool> {
+    pub fn toggle_bool<A>(self)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        self.cx
+            .register_action_handler::<A>(move |host, action_cx| {
+                local.update_action(host, action_cx, |value| *value = !*value)
+            });
+    }
+}
+
 impl<'cx, 'a, C> UiCxLocalsWith<'cx, 'a, C>
 where
     C: Clone + 'static,
@@ -1294,6 +1452,54 @@ where
                 models: host.models_mut(),
             };
             f(&mut tx, captures.clone())
+        });
+    }
+}
+
+impl<'cx, 'a, T> UiCxActionLocal<'cx, 'a, T>
+where
+    T: Any,
+{
+    pub fn update<A>(self, update: impl Fn(&mut T) + 'static)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| update(value))
+        });
+    }
+
+    pub fn set<A>(self, value: T)
+    where
+        A: crate::TypedAction,
+        T: Clone,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.set_action(host, action_cx, value.clone())
+        });
+    }
+
+    pub fn payload_update_if<A>(self, update: impl Fn(&mut T, A::Payload) -> bool + 'static)
+    where
+        A: crate::actions::TypedPayloadAction,
+    {
+        let local = self.local;
+        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
+            local.update_action_if(host, action_cx, |value| update(value, payload))
+        });
+    }
+}
+
+impl<'cx, 'a> UiCxActionLocal<'cx, 'a, bool> {
+    pub fn toggle_bool<A>(self)
+    where
+        A: crate::TypedAction,
+    {
+        let local = self.local;
+        uicx_on_action::<A>(self.cx, move |host, action_cx| {
+            local.update_action(host, action_cx, |value| *value = !*value)
         });
     }
 }
@@ -1486,39 +1692,16 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         action_listener(f)
     }
 
-    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    /// Bind a typed action handler against one `LocalState<T>` slot without repeating that handle
+    /// on every helper family.
+    pub fn local<T>(self, local: &LocalState<T>) -> AppUiActionLocal<'view, 'cx, 'a, H, T>
     where
-        A: crate::TypedAction,
         T: Any,
     {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.update_action(host, action_cx, |value| update(value))
-            });
-    }
-
-    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.set_action(host, action_cx, value.clone())
-            });
-    }
-
-    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
-    where
-        A: crate::TypedAction,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_action_handler::<A>(move |host, action_cx| {
-                local.update_action(host, action_cx, |value| *value = !*value)
-            });
+        AppUiActionLocal {
+            cx: self.cx,
+            local: LocalState::clone(local),
+        }
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
@@ -1532,9 +1715,9 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
     /// raw payload-carrier namespace.
     ///
-    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
-    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
-    /// lives in `ModelStore`.
+    /// Prefer `cx.actions().local(&local).payload_update_if::<A>(...)` when the write stays on
+    /// `LocalState<T>`. Use this when the payload targets shared `Model<T>` graphs or
+    /// view-external state that already lives in `ModelStore`.
     pub fn payload_models<A>(
         self,
         f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
@@ -1577,21 +1760,6 @@ impl<'view, 'cx, 'a, H: UiHost> AppUiActions<'view, 'cx, 'a, H> {
         });
     }
 
-    pub fn payload_local_update_if<A, T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        self.cx
-            .register_payload_action_handler::<A>(move |host, action_cx, payload| {
-                local.update_action_if(host, action_cx, |value| update(value, payload))
-            });
-    }
-
     pub fn availability<A>(
         self,
         f: impl Fn(
@@ -1612,36 +1780,16 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         action_listener(f)
     }
 
-    pub fn local_update<A, T>(self, local: &LocalState<T>, update: impl Fn(&mut T) + 'static)
+    /// Bind a typed action handler against one `LocalState<T>` slot without repeating that handle
+    /// on every helper family.
+    pub fn local<T>(self, local: &LocalState<T>) -> UiCxActionLocal<'cx, 'a, T>
     where
-        A: crate::TypedAction,
         T: Any,
     {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.update_action(host, action_cx, |value| update(value))
-        });
-    }
-
-    pub fn local_set<A, T>(self, local: &LocalState<T>, value: T)
-    where
-        A: crate::TypedAction,
-        T: Any + Clone,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.set_action(host, action_cx, value.clone())
-        });
-    }
-
-    pub fn toggle_local_bool<A>(self, local: &LocalState<bool>)
-    where
-        A: crate::TypedAction,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_action::<A>(self.cx, move |host, action_cx| {
-            local.update_action(host, action_cx, |value| *value = !*value)
-        });
+        UiCxActionLocal {
+            cx: self.cx,
+            local: LocalState::clone(local),
+        }
     }
 
     pub fn models<A>(self, f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static)
@@ -1654,9 +1802,9 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
     /// Coordinate shared `Model<T>` graphs through a typed payload action without reopening the
     /// raw payload-carrier namespace.
     ///
-    /// Prefer `payload_local_update_if::<A>(...)` when the write stays on `LocalState<T>`. Use
-    /// this when the payload targets shared `Model<T>` graphs or view-external state that already
-    /// lives in `ModelStore`.
+    /// Prefer `cx.actions().local(&local).payload_update_if::<A>(...)` when the write stays on
+    /// `LocalState<T>`. Use this when the payload targets shared `Model<T>` graphs or
+    /// view-external state that already lives in `ModelStore`.
     pub fn payload_models<A>(
         self,
         f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,
@@ -1693,20 +1841,6 @@ impl<'cx, 'a> UiCxActions<'cx, 'a> {
         uicx_on_action_notify::<A>(self.cx, move |host, action_cx| {
             host.record_transient_event(action_cx, transient_key);
             true
-        });
-    }
-
-    pub fn payload_local_update_if<A, T>(
-        self,
-        local: &LocalState<T>,
-        update: impl Fn(&mut T, A::Payload) -> bool + 'static,
-    ) where
-        A: crate::actions::TypedPayloadAction,
-        T: Any,
-    {
-        let local = LocalState::clone(local);
-        uicx_on_payload_action::<A>(self.cx, move |host, action_cx, payload| {
-            local.update_action_if(host, action_cx, |value| update(value, payload))
         });
     }
 
@@ -2824,6 +2958,87 @@ mod tests {
     }
 
     #[test]
+    fn local_state_borrowed_read_helpers_project_without_clone_noise() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        let mut services = FakeUiServices;
+        let local = LocalState::from_model(app.models_mut().insert(vec![1u32, 2, 3]));
+
+        let root = render_root_with_app_ui(
+            fret_ui::declarative::RenderRootContext::new(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+            ),
+            "local-state-borrowed-read",
+            &mut AppUiRenderRootState::default(),
+            |cx| {
+                let layout_len = local.layout_read_ref(cx, |values| values.len());
+                let paint_len = local.paint_read_ref(cx, |values| values.len());
+                assert_eq!(layout_len, 3);
+                assert_eq!(paint_len, 3);
+                cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                    Vec::new()
+                })
+                .into()
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    }
+
+    #[test]
+    fn local_state_bridge_read_helpers_project_without_clone_noise() {
+        let mut app = crate::app::App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut ui = UiTree::<crate::app::App>::new();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        let mut services = FakeUiServices;
+        let local = LocalState::from_model(app.models_mut().insert(vec![1u32, 2, 3]));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "local-state-bridge-read",
+            |cx| {
+                let layout_values = local.layout_value_in(cx);
+                let layout_len = local.layout_read_ref_in(cx, |values| values.len());
+                let paint_values = local.paint_value_in(cx);
+                let paint_len = local.paint_read_ref_in(cx, |values| values.len());
+                assert_eq!(layout_values, vec![1u32, 2, 3]);
+                assert_eq!(layout_len, 3);
+                assert_eq!(paint_values, vec![1u32, 2, 3]);
+                assert_eq!(paint_len, 3);
+                vec![
+                    cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
+                        Vec::new()
+                    })
+                    .into(),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    }
+
+    #[test]
     fn local_state_txn_value_reads_initialized_locals_without_fallback_noise() {
         let mut host = FakeHost::default();
         let draft = LocalState {
@@ -3312,6 +3527,12 @@ mod tests {
         assert!(api_source.contains(
             "pub fn paint_value<'view_cx, 'a, H: UiHost>(&self, cx: &mut AppUi<'view_cx, 'a, H>) -> T"
         ));
+        assert!(api_source.contains("pub fn layout_read_ref<'view_cx, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn paint_read_ref<'view_cx, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn layout_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("pub fn layout_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
+        assert!(api_source.contains("pub fn paint_value_in<'cx, 'm, 'a, H: UiHost>("));
+        assert!(api_source.contains("pub fn paint_read_ref_in<'cx, 'm, 'a, H: UiHost, R>("));
         assert!(!api_source.contains("pub fn use_selector<"));
         assert!(!api_source.contains("pub fn use_selector_keyed<"));
         assert!(!api_source.contains("pub fn use_query<"));
@@ -3338,6 +3559,13 @@ mod tests {
         assert!(!api_source.contains("pub fn new(cx: &'cx mut ElementContext<'a, H>, action_root: fret_ui::GlobalElementId) -> Self"));
         assert!(api_source.contains("pub(crate) fn new("));
         assert!(api_source.contains("pub fn actions(&mut self) -> AppUiActions"));
+        assert!(api_source.contains(
+            "pub fn local<T>(self, local: &LocalState<T>) -> AppUiActionLocal<'view, 'cx, 'a, H, T>"
+        ));
+        assert!(!api_source.contains("pub fn local_update<A, T>("));
+        assert!(!api_source.contains("pub fn local_set<A, T>("));
+        assert!(!api_source.contains("pub fn toggle_local_bool<A>("));
+        assert!(!api_source.contains("pub fn payload_local_update_if<A, T>("));
         assert!(api_source.contains("fn read_layout<'view_cx, 'a, H: UiHost>("));
         assert!(api_source.contains("pub fn selector_layout<Inputs, TValue>("));
         assert!(api_source.contains("pub fn selector_model_layout<Inputs, TValue>("));
@@ -3376,6 +3604,16 @@ mod tests {
         assert!(api_source.contains(
             "pub fn payload_models<A>(\n        self,\n        f: impl Fn(&mut fret_runtime::ModelStore, A::Payload) -> bool + 'static,"
         ));
+        assert!(
+            api_source.contains(
+                "#[doc(hidden)]\npub struct AppUiActionLocal<'view, 'cx, 'a, H: UiHost, T>"
+            )
+        );
+        assert!(api_source.contains("#[doc(hidden)]\npub struct UiCxActionLocal<'cx, 'a, T>"));
+        assert!(api_source.contains("pub fn update<A>(self, update: impl Fn(&mut T) + 'static)"));
+        assert!(api_source.contains("pub fn set<A>(self, value: T)"));
+        assert!(api_source.contains("pub fn toggle_bool<A>(self)"));
+        assert!(api_source.contains("pub fn payload_update_if<A>("));
         assert!(api_source.contains("pub fn locals_with<C>("));
         assert!(api_source.contains(
             "pub fn on<A>(self, f: impl for<'m> Fn(&mut LocalStateTxn<'m>, C) -> bool + 'static)"
@@ -3508,12 +3746,30 @@ mod tests {
             "Read the current local value through a layout invalidation tracked read on the default app"
         ));
         assert!(api_source.contains(
+            "Read a derived value from this local through a layout invalidation tracked borrow on the"
+        ));
+        assert!(api_source.contains(
             "Read the current local value through a paint invalidation tracked read on the default app"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a paint invalidation tracked borrow on the"
         ));
         assert!(
             api_source
                 .contains("Observe/read this local from helper-heavy `ElementContext` surfaces.")
         );
+        assert!(api_source.contains(
+            "Read the current local value through a paint invalidation tracked read on helper-heavy"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a paint invalidation tracked borrow on"
+        ));
+        assert!(api_source.contains(
+            "Read the current local value through a layout invalidation tracked read on helper-heavy"
+        ));
+        assert!(api_source.contains(
+            "Read a derived value from this local through a layout invalidation tracked borrow on"
+        ));
         assert!(api_source.contains(
             "This trait is intentionally omitted from `fret::app::prelude::*` and reexported from"
         ));

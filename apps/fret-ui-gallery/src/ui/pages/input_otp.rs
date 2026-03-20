@@ -6,6 +6,7 @@ use crate::ui::snippets::input_otp as snippets;
 
 pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let compact_builder = snippets::compact_builder::render(cx);
     let usage = snippets::usage::render(cx);
     let pattern = snippets::pattern::render(cx);
     let separator = snippets::separator::render(cx);
@@ -17,14 +18,34 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let form = snippets::form::render(cx);
     let rtl = snippets::rtl::render(cx);
 
+    let about = doc_layout::notes_block([
+        "shadcn Input OTP is an accessible one-time-password surface with copy-paste support; Fret matches that outcome with one hidden text input and projected slot chrome.",
+        "The docs-shaped composition lane is `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator`; the compact builder remains shorter when groups are regular and caller-owned layout is simple.",
+        "Slot chrome, fake caret, and focus choreography stay recipe/runtime-owned, while page width caps such as `max-w-xs` remain caller-owned.",
+    ]);
+    let api_reference = doc_layout::notes_block([
+        "`InputOTP::new(model)` owns the shared OTP value model; `length(...)` mirrors upstream `maxLength`.",
+        "`pattern(...)` and `InputOtpPattern::{Digits, DigitsAndChars}` cover the documented filtering lane.",
+        "`aria_invalid(true)` maps to the upstream `aria-invalid` chrome outcome, while `control_id(...)`, `labelled_by_element(...)`, `a11y_label(...)`, and `aria_required(...)` cover form association and accessibility.",
+        "`InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` already cover the docs-shaped composition bridge, so a separate generic children API is not needed here.",
+    ]);
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/input_otp.rs`.",
-        "Default root gap and slot chrome ownership already match upstream source; the meaningful parity work here was form association (`control_id`) and separator semantics.",
-        "First-party examples now prefer the compact `InputOTP::new(model)` root builder with `length(...)` and `group_size(...)`; `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` remain the upstream-shaped bridge when callers explicitly want that shape.",
+        "Default root gap and slot chrome ownership already match upstream source; the meaningful parity work here was form association (`control_id`), separator semantics, and the docs-facing teaching surface.",
+        "`Usage` now mirrors the upstream parts-shaped docs lane, while `Compact Builder` keeps `InputOTP::new(model)` plus `group_size(...)` visible as the Fret shorthand after the docs path.",
+        "`InputOtpPart` now accepts `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` via `From`, so the existing bridge stays copyable without introducing another root composition surface.",
         "Invalid state is modeled via `InputOtp::aria_invalid(true)` (shadcn docs: `aria-invalid`).",
         "Pattern parity: `InputOtpPattern::DigitsAndChars` mirrors shadcn `REGEXP_ONLY_DIGITS_AND_CHARS` outcomes.",
         "`InputOTPSeparator` now maps to separator semantics, and `FieldLabel::for_control(...)` can focus the hidden text input via `InputOtp::control_id(...)`.",
     ]);
+    let about = DocSection::build(cx, "About", about)
+        .no_shell()
+        .test_id_prefix("ui-gallery-input-otp-about")
+        .description("Background, ownership notes, and why the page teaches two authoring lanes.");
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-input-otp-api-reference")
+        .description("Public surface summary and ownership notes.");
     let notes = DocSection::build(cx, "Notes", notes).description("API surface and parity notes.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("shadcn demo: grouped OTP slots backed by a single input model.")
@@ -32,7 +53,8 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-input-otp-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Copyable minimal usage for the compact root builder; parts remain available as the upstream-shaped bridge.")
+        .title_test_id("ui-gallery-section-usage-title")
+        .description("Upstream shadcn docs shape using `InputOTPGroup`, `InputOTPSlot`, and `InputOTPSeparator` on the existing parts bridge.")
         .test_id_prefix("ui-gallery-input-otp-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let pattern = DocSection::build(cx, "Pattern", pattern)
@@ -64,14 +86,19 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = DocSection::build(cx, "RTL", rtl)
         .description("Same OTP surface under an RTL direction provider.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let compact_builder = DocSection::build(cx, "Compact Builder", compact_builder)
+        .test_id_prefix("ui-gallery-input-otp-compact-builder")
+        .description("Compact Fret shorthand for common app call sites with regular OTP groups.")
+        .code_rust_from_file_region(snippets::compact_builder::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Input OTP docs order: Demo, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL.",
+            "Preview mirrors the shadcn Input OTP docs path first: Demo, About, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL, API Reference. `Compact Builder` stays as the explicit Fret shorthand follow-up.",
         ),
         vec![
             demo,
+            about,
             usage,
             pattern,
             separator,
@@ -82,6 +109,8 @@ pub(super) fn preview_input_otp(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             alphanumeric,
             form,
             rtl,
+            api_reference,
+            compact_builder,
             notes,
         ],
     );

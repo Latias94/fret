@@ -53,7 +53,7 @@ The template is intentionally small:
 
 - `TodoView` keeps view-owned draft text and keyed list state in `LocalState<T>` / `LocalState<Vec<_>>`.
 - `act::*` are typed actions: unit actions for top-level intents and payload actions for per-row list interactions.
-- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, keyed-row payload binding via `.action_payload(...)`, `payload_local_update_if::<A>(...)` as the default row-write path, `cx.actions().transient(...)` for App-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`, single-local writes via `cx.actions().local(&local).set::<A>(...)` / `.update::<A>(...)` / `.toggle_bool::<A>()`, keyed-row payload binding via `.action_payload(...)` plus `cx.actions().local(&rows_state).payload_update_if::<A>(...)`, `cx.actions().transient(...)` for App-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
 Memorize the default app surface before you start editing:
@@ -62,7 +62,9 @@ Memorize the default app surface before you start editing:
 - startup path: `FretApp::new("my-simple-todo").window("my-simple-todo", (...)).view::<TodoView>()?.run()`
 - render signature: `fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui`
 - grouped namespaces first: `cx.state()`, `cx.actions()`, `cx.data()`, `cx.effects()`
-- default LocalState reads: `local.layout_value(cx)` / `local.paint_value(cx)`
+- default LocalState reads: `local.layout_value(cx)` / `local.paint_value(cx)` for ordinary reads;
+  `local.layout_read_ref(cx, |value| ...)` / `local.paint_read_ref(cx, |value| ...)` for borrowed
+  projections
 - if you intentionally need the raw model-backed hook, make that an advanced choice via
   `use fret::advanced::AppUiRawStateExt;`
 - if you later graduate to the richer `todo` rung and need explicit selector/query nouns, add
@@ -118,7 +120,7 @@ In the onboarding path, stay on one small surface:
 - `LocalState` for view-owned state
 - typed actions for intent
 - `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for coordinated LocalState writes
-- `.action_payload(...)` plus `payload_local_update_if::<A>(...)` for view-owned keyed-row interactions
+- `.action_payload(...)` plus `cx.actions().local(&rows_state).payload_update_if::<A>(...)` for view-owned keyed-row interactions
 - `cx.actions().transient(...)` only for App-bound effects
 - widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` only when a control truly needs activation glue, with an explicit `use fret::app::AppActivateExt as _;`
 
@@ -216,6 +218,8 @@ Keep the default path handle-first:
 
 - for view-owned state, prefer `local.paint_value(cx)` / `local.layout_value(cx)` for ordinary
   initialized-local reads
+- use `local.paint_read_ref(cx, |value| ...)` / `local.layout_read_ref(cx, |value| ...)` when you
+  only need a derived value from a larger local slot and want to avoid cloning the whole `T`
 - keep `local.paint(cx)` / `local.layout(cx)` / `local.hit_test(cx)` when you intentionally need
   the explicit tracked-read builder (`observe()`, `revision()`, custom fallback behavior, or
   hit-test-phase access)
@@ -227,6 +231,7 @@ Examples:
 ```rust
 let clicks = clicks_state.paint_value(cx);
 let label = label_state.layout_value(cx);
+let todo_count = todos_state.layout_read_ref(cx, |todos| todos.len());
 ```
 
 If you are unsure, start with `Layout` and tighten later.

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::app::prelude::*;
-use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
+use fret::query::{QueryError, QueryKey, QueryPolicy};
 use fret::style::Space;
 
 mod act {
@@ -54,7 +54,8 @@ impl View for QueryBasicsView {
         }
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleErrorMode>(&fail_mode);
+            .local(&fail_mode)
+            .toggle_bool::<act::ToggleErrorMode>();
         cx.actions()
             .transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.actions()
@@ -80,13 +81,6 @@ impl View for QueryBasicsView {
 
         let state = handle.read_layout(cx);
 
-        let status_label = match state.status {
-            QueryStatus::Idle => "Idle",
-            QueryStatus::Loading => "Loading",
-            QueryStatus::Success => "Success",
-            QueryStatus::Error => "Error",
-        };
-
         let mode_badge = shadcn::Badge::new(if fail_mode_enabled {
             "Mode: Error"
         } else {
@@ -95,11 +89,13 @@ impl View for QueryBasicsView {
         .variant(shadcn::BadgeVariant::Secondary)
         .test_id(TEST_ID_MODE_BADGE);
 
-        let status_badge = shadcn::Badge::new(status_label)
-            .variant(match state.status {
-                QueryStatus::Success => shadcn::BadgeVariant::Default,
-                QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-                QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
+        let status_badge = shadcn::Badge::new(state.status.as_str())
+            .variant(if state.is_success() {
+                shadcn::BadgeVariant::Default
+            } else if state.is_error() {
+                shadcn::BadgeVariant::Destructive
+            } else {
+                shadcn::BadgeVariant::Secondary
             })
             .test_id(TEST_ID_STATUS_BADGE);
 

@@ -15,8 +15,6 @@ where
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let value = cx.local_model(|| 66.0);
-
     cx.keyed("ui_gallery.progress.label", |cx| {
         let label_row = ui::h_flex(|cx| {
             vec![
@@ -32,7 +30,9 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
         let field = shadcn::Field::new(vec![
             label_row,
-            shadcn::Progress::new(value.clone()).into_element(cx),
+            shadcn::Progress::from_value(66.0)
+                .a11y_label("Upload progress")
+                .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
         .into_element(cx);

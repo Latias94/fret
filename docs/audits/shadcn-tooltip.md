@@ -34,6 +34,9 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 - Pass: Supports Base UI cursor tracking via `Tooltip::track_cursor_axis(...)`.
 - Pass: `Tooltip::new(cx, trigger, content)` already acts as the recipe-level composition entry point,
   with `TooltipTrigger` / `TooltipContent` preserving shadcn-style part naming at call sites.
+- Pass: The typed compound-parts lane is explicit on both sides via
+  `TooltipTrigger::build(...)` and `TooltipContent::build(cx, ...)`, so first-party examples do
+  not need to hand-land tooltip parts through `AnyElement`.
 - Note: Fret intentionally does not add a separate generic `compose()` builder for `Tooltip`
   today. Unlike modal overlays that need explicit portal/overlay/content slot assembly, tooltip
   authoring is already expressed by the root's required trigger/content slots plus root/provider-

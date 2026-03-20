@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("nested.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui_kit::ui;
@@ -24,41 +25,50 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                                 .test_id("ui-gallery-drawer-nested-child-trigger"),
                         )),
                         shadcn::DrawerPart::content_with(move |cx| {
-                            shadcn::DrawerContent::new([
-                                shadcn::DrawerHeader::new([
-                                    shadcn::DrawerTitle::new("Nested drawer").into_element(cx),
-                                    shadcn::DrawerDescription::new(
-                                        "This follow-up keeps the child draggable without letting the parent steal the handle.",
-                                    )
-                                    .into_element(cx),
-                                ])
-                                .into_element(cx),
-                                shadcn::DrawerFooter::new([
-                                    shadcn::DrawerClose::from_scope().build(
-                                        cx,
-                                        shadcn::Button::new("Close nested drawer")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("ui-gallery-drawer-nested-child-close"),
-                                    ),
-                                ])
-                                .into_element(cx),
-                            ])
+                            shadcn::DrawerContent::build(|cx, out| {
+                                out.push_ui(
+                                    cx,
+                                    shadcn::DrawerHeader::build(|cx, out| {
+                                        out.push_ui(cx, shadcn::DrawerTitle::new("Nested drawer"));
+                                        out.push_ui(
+                                            cx,
+                                            shadcn::DrawerDescription::new(
+                                                "This follow-up keeps the child draggable without letting the parent steal the handle.",
+                                            ),
+                                        );
+                                    }),
+                                );
+                                out.push_ui(
+                                    cx,
+                                    shadcn::DrawerFooter::build(|cx, out| {
+                                        let close = shadcn::DrawerClose::from_scope().build(
+                                            cx,
+                                            shadcn::Button::new("Close nested drawer")
+                                                .variant(shadcn::ButtonVariant::Outline)
+                                                .test_id("ui-gallery-drawer-nested-child-close"),
+                                        );
+                                        out.push(close);
+                                    }),
+                                );
+                            })
                             .drag_handle_test_id("ui-gallery-drawer-nested-child-handle")
-                            .into_element(cx)
                             .test_id("ui-gallery-drawer-nested-child-content")
+                            .into_element(cx)
                         }),
                     ])
                     .into_element(cx);
 
                 let body = ui::v_stack(|cx| {
                     vec![
-                        shadcn::DrawerHeader::new([
-                            shadcn::DrawerTitle::new("Parent drawer").into_element(cx),
-                            shadcn::DrawerDescription::new(
-                                "Nested drawers stay outside the shadcn docs path, but Fret now keeps a non-modal child above the parent barrier for input routing.",
-                            )
-                            .into_element(cx),
-                        ])
+                        shadcn::DrawerHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::DrawerTitle::new("Parent drawer"));
+                            out.push_ui(
+                                cx,
+                                shadcn::DrawerDescription::new(
+                                    "Nested drawers stay outside the shadcn docs path, but Fret now keeps a non-modal child above the parent barrier for input routing.",
+                                ),
+                            );
+                        })
                         .into_element(cx),
                         ui::v_stack(move |cx| {
                             vec![
@@ -75,14 +85,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .pb(Space::N0)
                         .layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element(cx),
-                        shadcn::DrawerFooter::new([
-                            shadcn::DrawerClose::from_scope().build(
+                        shadcn::DrawerFooter::build(|cx, out| {
+                            let close = shadcn::DrawerClose::from_scope().build(
                                 cx,
                                 shadcn::Button::new("Close parent drawer")
                                     .variant(shadcn::ButtonVariant::Outline)
                                     .test_id("ui-gallery-drawer-nested-parent-close"),
-                            ),
-                        ])
+                            );
+                            out.push(close);
+                        })
                         .into_element(cx),
                     ]
                 })
@@ -94,12 +105,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .max_w(Px(384.0))
                         .min_w_0()
                         .mx_auto(),
-                )
-                .into_element(cx);
+                    )
+                    .into_element(cx);
 
-                shadcn::DrawerContent::new([body])
-                    .into_element(cx)
-                    .test_id("ui-gallery-drawer-nested-parent-content")
+                shadcn::DrawerContent::build(move |_cx, out| {
+                    out.push(body);
+                })
+                .test_id("ui-gallery-drawer-nested-parent-content")
+                .into_element(cx)
             }),
         ])
         .into_element(cx)

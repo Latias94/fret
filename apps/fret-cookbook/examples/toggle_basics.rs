@@ -22,7 +22,8 @@ impl View for ToggleBasicsView {
         let status = if pressed { "Pressed" } else { "Not pressed" };
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleBookmark>(&pressed_state);
+            .local(&pressed_state)
+            .toggle_bool::<act::ToggleBookmark>();
 
         let toggle = shadcn::Toggle::from_pressed(pressed)
             .action(act::ToggleBookmark)

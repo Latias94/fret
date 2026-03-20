@@ -813,6 +813,7 @@ mod tests {
             hit_is_text_input: false,
             hit_is_pressable: false,
             hit_pressable_target: None,
+            hit_pressable_target_in_descendant_subtree: false,
         }
     }
 
@@ -842,6 +843,7 @@ mod tests {
             click_count: 1,
             pointer_type: PointerType::Mouse,
             down_hit_pressable_target: None,
+            down_hit_pressable_target_in_descendant_subtree: false,
         }
     }
 

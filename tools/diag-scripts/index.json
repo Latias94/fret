@@ -5822,7 +5822,7 @@
       ],
       "target_hints": [
         "Navigates to the Input page via the left nav search.",
-        "Captures representative screenshots for docs-aligned sections and the Fret-only label association follow-up."
+        "Captures representative screenshots for the docs-aligned demo + example sections and the Fret-only label association follow-up."
       ]
     },
     {
@@ -6006,8 +6006,8 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-label-click-focus-input",
-      "path": "tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-focus-input.json",
+      "id": "ui-gallery-label-click-label-toggles-checkbox",
+      "path": "tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
@@ -6016,7 +6016,7 @@
       ],
       "tags": [
         "a11y",
-        "focus",
+        "checkbox",
         "label",
         "shadcn",
         "ui_gallery"

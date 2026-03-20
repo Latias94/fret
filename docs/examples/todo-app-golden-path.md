@@ -163,7 +163,7 @@ fn install_todo_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- Start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot `LocalState<T>` transactions, `cx.actions().transient(...)` for app-only effects, and widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
+- Keep one or two trivial local slots inline; once a view owns several related `LocalState<T>` slots, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`. Inside that bundle, start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for multi-slot transactions, use `cx.actions().transient(...)` for app-only effects, and keep widget-local `.action(...)` / `.action_payload(...)` / `.listen(...)` when a control only exposes activation glue. Add `use fret::app::AppActivateExt as _;` explicitly for that bridge. Drop down to `cx.actions().models(...)` when coordinating shared `Model<T>` graphs.
 - In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
@@ -230,8 +230,8 @@ Boundary rule:
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 - prefer `LocalState<Vec<_>>` + payload actions for view-owned keyed lists; keep explicit `Model<T>` graphs for shared ownership or cross-view coordination.
-- for non-payload multi-slot `LocalState<T>` coordination, prefer `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)`.
-- for keyed-row payload writes, start with `payload_local_update_if::<A>(...)`.
+- for non-payload multi-slot `LocalState<T>` coordination, prefer a small `*Locals` bundle with `new(cx)` and optional `bind_actions(&self, cx)`, then use `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` inside that bundle.
+- for keyed-row payload writes, start with `cx.actions().local(&rows_state).payload_update_if::<A>(...)`.
 
 ## Actions (UI -> app logic)
 
@@ -252,7 +252,7 @@ mod act {
 impl View for TodoView {
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
         let draft = cx.state().local::<String>();
-        cx.actions().local_set::<act::Add, String>(&draft, String::new());
+        cx.actions().local(&draft).set::<act::Add>(String::new());
 
         ui::single(
             cx,
@@ -322,20 +322,24 @@ use fret::query::{QueryKey, QueryPolicy};
 
 let handle = cx.data().query(key, policy, move |token| fetch(token));
 let state = handle.read_layout(cx);
+
+let status_label = state.status.as_str();
+let is_refreshing = state.is_refreshing();
 ```
 
 To invalidate/refetch from app logic:
 
 ```rust,ignore
 // If refetch is just a pure state projection, keep it on the LocalState-first lane
-// (for example, bump a local nonce like `tip_nonce_state`).
+// (for example, bump a local nonce like `locals.tip_nonce`).
 cx.actions()
-    .local_update::<act::RefreshTip, u64>(&tip_nonce_state, |value| {
+    .local(&locals.tip_nonce)
+    .update::<act::RefreshTip>(|value| {
         *value = value.saturating_add(1);
     });
 
 // then include the nonce in the query key:
-let tip_nonce_value = tip_nonce_state.paint_value(cx);
+let tip_nonce_value = locals.tip_nonce.paint_value(cx);
 let handle = cx.data().query(tip_key(tip_nonce_value), policy, move |token| fetch(token));
 ```
 
@@ -349,50 +353,60 @@ In a typical window driver:
 ## Action handlers (logic)
 
 In the view runtime shape, typed action handlers are the boundary where you mutate tracked state and
-request UI updates. Start with `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for
-LocalState-first flows, use
-`payload_local_update_if::<A>(...)` as the default keyed-row payload write path, drop to
-`cx.actions().models(...)` when you intentionally coordinate explicit shared model graphs, use
-`cx.actions().transient(...)` when the real work must happen with `&mut App` in `render()`, and
-keep raw `on_action_notify` plus lower-level payload/model seams for cookbook/reference host-side
-cases only. In ordinary render bodies, borrowed captures like `(&draft_state, &next_id_state,
-&todos_state)` are often intentional rather than accidental noise, because those same local handles
-usually remain in use later for reads, widget binding, or sibling action registration:
+request UI updates. Keep one or two trivial locals inline, but once a view owns several related
+slots, prefer bundling them into a small `*Locals` helper and install grouped handlers from there.
+Within that bundle, use `cx.actions().locals_with((...)).on::<A>(|tx, (...)| ...)` for
+LocalState-first flows, keep `cx.actions().local(&rows_state).payload_update_if::<A>(...)` as the
+default keyed-row payload write path, drop to `cx.actions().models(...)` when you intentionally
+coordinate explicit shared model graphs, use `cx.actions().transient(...)` when the real work must
+happen with `&mut App` in `render()`, and keep raw `on_action_notify` plus lower-level
+payload/model seams for cookbook/reference host-side cases only:
 
 ```rust,ignore
-cx.actions()
-    .locals_with((&draft_state, &next_id_state, &todos_state))
-    .on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {
-        let text = tx.value(&draft_state).trim().to_string();
-        if text.is_empty() {
-            return false;
-        }
+struct TodoLocals {
+    draft: LocalState<String>,
+    next_id: LocalState<u64>,
+    todos: LocalState<Vec<TodoRow>>,
+}
 
-        let id = tx.value(&next_id_state);
-        let _ = tx.update(&next_id_state, |value| *value = value.saturating_add(1));
+impl TodoLocals {
+    fn bind_actions(&self, cx: &mut AppUi<'_, '_>) {
+        cx.actions()
+            .locals_with((&self.draft, &self.next_id, &self.todos))
+            .on::<act::Add>(|tx, (draft, next_id, todos)| {
+                let text = tx.value(&draft).trim().to_string();
+                if text.is_empty() {
+                    return false;
+                }
 
-        if !tx.update(&todos_state, |rows| {
-            rows.insert(0, TodoRow {
-                id,
-                done: false,
-                text: Arc::from(text),
+                let id = tx.value(&next_id);
+                let _ = tx.update(&next_id, |value| *value = value.saturating_add(1));
+
+                if !tx.update(&todos, |rows| {
+                    rows.insert(0, TodoRow {
+                        id,
+                        done: false,
+                        text: Arc::from(text),
+                    });
+                }) {
+                    return false;
+                }
+
+                tx.set(&draft, String::new())
             });
-        }) {
-            return false;
-        }
 
-        tx.set(&draft_state, String::new())
-    });
-
-cx.actions()
-    .payload_local_update_if::<act::Toggle, Vec<TodoRow>>(&todos_state, |rows, id| {
-        if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
-            row.done = !row.done;
-            true
-        } else {
-            false
-        }
-    });
+        cx.actions()
+            .local(&self.todos)
+            .payload_update_if::<act::Toggle>(|rows, id| {
+                if let Some(row) = rows.iter_mut().find(|row| row.id == id) {
+                    row.done = !row.done;
+                    true
+                } else {
+                    false
+                }
+            });
+    }
+}
 ```
 
 ## Async / background work (two patterns)

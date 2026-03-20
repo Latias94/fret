@@ -16,6 +16,7 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(cx, trigger, content)` is the recipe-level composition entry point.",
+        "`TooltipTrigger::build(...)` and `TooltipContent::build(cx, ...)` cover the typed compound-parts lane for copyable usage snippets.",
         "Gallery sections mirror shadcn docs first; `Long Content` and `Keyboard Focus` are Fret-specific parity sections appended afterward.",
         "Wrap related tooltips in one `TooltipProvider` to get consistent delay-group behavior.",
         "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
@@ -29,7 +30,9 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Copyable shadcn-style composition reference for Tooltip.")
+        .description(
+            "Copyable shadcn-style composition reference using typed trigger/content parts.",
+        )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let side_row = DocSection::build(cx, "Side", side_row)
         .description("Use the `side` prop to change the position of the tooltip.")

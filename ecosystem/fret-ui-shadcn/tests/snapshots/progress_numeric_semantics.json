@@ -50,7 +50,7 @@
     {
       "role": "ProgressBar",
       "label": "Loading",
-      "value": null,
+      "value": "66%",
       "bounds": {
         "origin": {
           "x": 0.0,

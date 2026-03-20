@@ -1320,15 +1320,15 @@ fn navigation_menu_and_pagination_pages_keep_their_dual_lane_story() {
     let pagination_page = read("src/ui/pages/pagination.rs");
     assert!(
         pagination_page.contains(
-            "Prefer the typed wrapper family for first-party authoring: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` keep the upstream parts model while avoiding pre-landed child assembly at the call site."
+            "`Usage` now teaches the upstream-shaped parts lane directly: `Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` already support explicit composable children without needing an extra generic `compose()` API."
         ),
-        "src/ui/pages/pagination.rs should keep the compact wrapper lane explicit"
+        "src/ui/pages/pagination.rs should keep the upstream-shaped parts lane explicit"
     );
     assert!(
         pagination_page.contains(
-            "`Pagination`, `PaginationContent`, `PaginationItem`, and `PaginationLink` remain the upstream-shaped lane on the same family rather than an advanced-only escape hatch."
+            "`Compact Builder` keeps the Fret shorthand lane explicit for common app call sites: `pagination(...)`, `pagination_content(...)`, `pagination_item(...)`, and `pagination_link(...)` reduce child landing noise without replacing the upstream-shaped parts surface."
         ),
-        "src/ui/pages/pagination.rs should keep the upstream-shaped parts lane explicit"
+        "src/ui/pages/pagination.rs should keep the compact wrapper lane explicit"
     );
 }
 
@@ -1668,6 +1668,7 @@ fn input_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input_group/text.rs",
             "src/ui/snippets/input_group/textarea.rs",
             "src/ui/snippets/input_group/tooltip.rs",
+            "src/ui/snippets/input_group/usage.rs",
         ],
         &[
             "use fret::{UiChild, UiCx};",
@@ -1758,6 +1759,14 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
         "src/ui/pages/input_group.rs should keep the compact shorthand as the first-party usage lane"
     );
     assert!(
+        page.contains(".code_rust_from_file_region(snippets::usage::SOURCE, \"example\")"),
+        "src/ui/pages/input_group.rs should show the compact shorthand Usage section from a real snippet file"
+    );
+    assert!(
+        !page.contains(".code_rust("),
+        "src/ui/pages/input_group.rs should avoid page-local hand-written Rust strings for Usage"
+    );
+    assert!(
         page.contains(
             "Both public surfaces stay intentional: the compact `InputGroup::new(model)` slot shorthand is the first-party ergonomic lane, while the part-based primitives remain the direct docs-parity lane."
         ),
@@ -1769,6 +1778,12 @@ fn selected_input_group_snippets_prefer_compact_slot_shorthand() {
         ),
         "src/ui/pages/input_group.rs should keep nested dropdown triggers on the default DropdownMenu compose lane when no lower-level adapter seam is needed"
     );
+    assert!(
+        page.contains(
+            "`Custom Input` now uses the narrow `custom_input(...)` / `custom_textarea(...)` seam for caller-owned controls; a generic root `children(...)` API is still intentionally absent."
+        ),
+        "src/ui/pages/input_group.rs should document the narrow custom-control seam instead of widening InputGroup to generic root children"
+    );
 }
 
 #[test]
@@ -1778,6 +1793,7 @@ fn input_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/input/badge.rs",
             "src/ui/snippets/input/basic.rs",
             "src/ui/snippets/input/button_group.rs",
+            "src/ui/snippets/input/demo.rs",
             "src/ui/snippets/input/disabled.rs",
             "src/ui/snippets/input/field.rs",
             "src/ui/snippets/input/field_group.rs",
@@ -1809,6 +1825,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/input.rs",
         &[
+            "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Basic\", basic)",
             "DocSection::build(cx, \"Field\", field)",
@@ -1827,6 +1844,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Label Association\", label)",
         ],
         &[
+            "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Basic\", basic)",
             "DocSection::new(\"Field\", field)",
@@ -1851,6 +1869,7 @@ fn input_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/field/anatomy.rs",
             "src/ui/snippets/field/checkbox.rs",
             "src/ui/snippets/field/choice_card.rs",
             "src/ui/snippets/field/field_group.rs",
@@ -1863,6 +1882,7 @@ fn field_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/field/slider.rs",
             "src/ui/snippets/field/switch.rs",
             "src/ui/snippets/field/textarea.rs",
+            "src/ui/snippets/field/usage.rs",
             "src/ui/snippets/field/validation_and_errors.rs",
         ],
         &[
@@ -1980,6 +2000,7 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
             "src/ui/snippets/input_otp/alphanumeric.rs",
+            "src/ui/snippets/input_otp/compact_builder.rs",
             "src/ui/snippets/input_otp/controlled.rs",
             "src/ui/snippets/input_otp/demo.rs",
             "src/ui/snippets/input_otp/disabled.rs",
@@ -2000,10 +2021,7 @@ fn input_otp_snippets_prefer_ui_cx_on_the_default_app_surface() {
 
     assert_sources_absent(
         "src/ui/snippets/input_otp",
-        &[
-            "pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement",
-            ".into_element_parts(",
-        ],
+        &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
     );
 }
 
@@ -2013,6 +2031,7 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/input_otp.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"About\", about)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Pattern\", pattern)",
             "DocSection::build(cx, \"Separator\", separator)",
@@ -2023,9 +2042,12 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Alphanumeric\", alphanumeric)",
             "DocSection::build(cx, \"Form\", form)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Compact Builder\", compact_builder)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"About\", about)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Pattern\", pattern)",
             "DocSection::new(\"Separator\", separator)",
@@ -2036,14 +2058,37 @@ fn input_otp_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Alphanumeric\", alphanumeric)",
             "DocSection::new(\"Form\", form)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Compact Builder\", compact_builder)",
         ],
     );
 }
 
 #[test]
-fn selected_input_otp_snippets_prefer_compact_root_builder() {
+fn input_otp_gallery_keeps_docs_bridge_and_compact_builder_lanes_distinct() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/input_otp/usage.rs",
+        &[
+            "shadcn::InputOTP::new(",
+            ".into_element_parts(",
+            "shadcn::InputOTPGroup::new([",
+            "shadcn::InputOTPSeparator::default().into()",
+        ],
+        &[],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/input_otp/compact_builder.rs",
+        &[
+            "shadcn::InputOTP::new(",
+            ".group_size(Some(3))",
+            ".into_element(cx)",
+        ],
+        &[".into_element_parts("],
+    );
+
     for relative_path in [
         "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/compact_builder.rs",
         "src/ui/snippets/input_otp/controlled.rs",
         "src/ui/snippets/input_otp/demo.rs",
         "src/ui/snippets/input_otp/disabled.rs",
@@ -2053,7 +2098,6 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
         "src/ui/snippets/input_otp/pattern.rs",
         "src/ui/snippets/input_otp/rtl.rs",
         "src/ui/snippets/input_otp/separator.rs",
-        "src/ui/snippets/input_otp/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -2064,10 +2108,10 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
 
     for relative_path in [
         "src/ui/snippets/input_otp/alphanumeric.rs",
+        "src/ui/snippets/input_otp/compact_builder.rs",
         "src/ui/snippets/input_otp/demo.rs",
         "src/ui/snippets/input_otp/disabled.rs",
         "src/ui/snippets/input_otp/form.rs",
-        "src/ui/snippets/input_otp/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -2090,9 +2134,21 @@ fn selected_input_otp_snippets_prefer_compact_root_builder() {
     let page = read("src/ui/pages/input_otp.rs");
     assert!(
         page.contains(
-            "First-party examples now prefer the compact `InputOTP::new(model)` root builder with `length(...)` and `group_size(...)`; `InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` remain the upstream-shaped bridge when callers explicitly want that shape."
+            "`Usage` now mirrors the upstream parts-shaped docs lane, while `Compact Builder` keeps `InputOTP::new(model)` plus `group_size(...)` visible as the Fret shorthand after the docs path."
         ),
-        "src/ui/pages/input_otp.rs should keep the compact root story explicit"
+        "src/ui/pages/input_otp.rs should explain the split between the docs bridge and the compact shorthand"
+    );
+    assert!(
+        page.contains(
+            "`InputOTPGroup` / `InputOTPSlot` / `InputOTPSeparator` plus `into_element_parts(...)` already cover the docs-shaped composition bridge, so a separate generic children API is not needed here."
+        ),
+        "src/ui/pages/input_otp.rs should explain why the existing bridge is sufficient"
+    );
+    assert!(
+        page.contains(
+            "Preview mirrors the shadcn Input OTP docs path first: Demo, About, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, Form, RTL, API Reference. `Compact Builder` stays as the explicit Fret shorthand follow-up."
+        ),
+        "src/ui/pages/input_otp.rs should mirror the shadcn docs path before the compact follow-up"
     );
 }
 
@@ -2109,6 +2165,7 @@ fn select_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/select/label.rs",
             "src/ui/snippets/select/rtl.rs",
             "src/ui/snippets/select/scrollable.rs",
+            "src/ui/snippets/select/usage.rs",
         ],
         &[
             "use fret::{UiChild, UiCx};",
@@ -2129,6 +2186,8 @@ fn select_page_uses_typed_doc_sections_for_app_facing_snippets() {
         "src/ui/pages/select.rs",
         &[
             "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Label Association\", label)",
             "DocSection::build(cx, \"Diag Surface\", diag_surface)",
             "DocSection::build(cx, \"Align Item With Trigger\", align_item)",
@@ -2140,6 +2199,8 @@ fn select_page_uses_typed_doc_sections_for_app_facing_snippets() {
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Label Association\", label)",
             "DocSection::new(\"Diag Surface\", diag_surface)",
             "DocSection::new(\"Align Item With Trigger\", align_item)",
@@ -2857,9 +2918,12 @@ fn skeleton_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn pagination_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/pagination/compact_builder.rs",
+            "src/ui/snippets/pagination/custom_text.rs",
             "src/ui/snippets/pagination/demo.rs",
             "src/ui/snippets/pagination/extras.rs",
             "src/ui/snippets/pagination/icons_only.rs",
+            "src/ui/snippets/pagination/routing.rs",
             "src/ui/snippets/pagination/rtl.rs",
             "src/ui/snippets/pagination/simple.rs",
             "src/ui/snippets/pagination/usage.rs",
@@ -2886,7 +2950,10 @@ fn pagination_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Simple\", simple)",
             "DocSection::build(cx, \"Icons Only\", icons_only)",
+            "DocSection::build(cx, \"Routing\", routing)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Custom Text\", custom_text)",
+            "DocSection::build(cx, \"Compact Builder\", compact_builder)",
             "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
@@ -2894,7 +2961,10 @@ fn pagination_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Simple\", simple)",
             "DocSection::new(\"Icons Only\", icons_only)",
+            "DocSection::new(\"Routing\", routing)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Custom Text\", custom_text)",
+            "DocSection::new(\"Compact Builder\", compact_builder)",
         ],
     );
 }
@@ -6192,6 +6262,9 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
 #[test]
 fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
+        "src/ui/snippets/pagination/routing.rs",
         "src/ui/snippets/pagination/simple.rs",
         "src/ui/snippets/pagination/usage.rs",
     ] {
@@ -6206,14 +6279,15 @@ fn selected_pagination_snippet_helpers_prefer_into_ui_element_over_anyelement() 
 }
 
 #[test]
-fn selected_pagination_snippets_prefer_pagination_wrapper_family() {
+fn selected_pagination_snippets_keep_wrapper_and_parts_lanes_explicit() {
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
         "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/icons_only.rs",
         "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
-        "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
@@ -6231,16 +6305,38 @@ fn selected_pagination_snippets_prefer_pagination_wrapper_family() {
     }
 
     for relative_path in [
+        "src/ui/snippets/pagination/compact_builder.rs",
+        "src/ui/snippets/pagination/custom_text.rs",
         "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
-        "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &["shadcn::pagination_link(|cx|"],
             &["shadcn::PaginationLink::new("],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/pagination/routing.rs",
+        "src/ui/snippets/pagination/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "shadcn::Pagination::new(",
+                "shadcn::PaginationContent::new(",
+                "shadcn::PaginationItem::new(",
+                "shadcn::PaginationLink::new(",
+            ],
+            &[
+                "shadcn::pagination(|cx|",
+                "shadcn::pagination_content(|cx|",
+                "shadcn::pagination_item(",
+                "shadcn::pagination_link(|cx|",
+            ],
         );
     }
 }
@@ -6924,7 +7020,6 @@ fn selected_control_snippets_prefer_field_group_wrapper_family() {
 fn selected_radio_group_snippets_prefer_field_set_wrapper_family() {
     for relative_path in [
         "src/ui/snippets/radio_group/fieldset.rs",
-        "src/ui/snippets/radio_group/extras.rs",
         "src/ui/snippets/radio_group/invalid.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
@@ -6965,10 +7060,27 @@ fn selected_radio_group_snippets_prefer_builder_preserving_helpers() {
 
 #[test]
 fn field_page_usage_prefers_field_wrapper_family() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/pages/field.rs",
-        &["shadcn::field_set(|cx| {", "shadcn::field_group(|cx| {"],
-        &["shadcn::FieldSet::new(", "shadcn::FieldGroup::new("],
+    let page = read("src/ui/pages/field.rs");
+    let usage = read("src/ui/snippets/field/usage.rs");
+    assert!(
+        usage.contains("shadcn::field_set(|cx| {"),
+        "src/ui/snippets/field/usage.rs should keep the docs-aligned wrapper-family usage lane"
+    );
+    assert!(
+        usage.contains("shadcn::field_group(|cx| {"),
+        "src/ui/snippets/field/usage.rs should keep the grouped docs-aligned wrapper-family usage lane"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::usage::SOURCE, \"example\")"),
+        "src/ui/pages/field.rs should show the Usage section from a real snippet file"
+    );
+    assert!(
+        page.contains(".code_rust_from_file_region(snippets::anatomy::SOURCE, \"example\")"),
+        "src/ui/pages/field.rs should show the Anatomy section from a real snippet file"
+    );
+    assert!(
+        !page.contains(".code_rust("),
+        "src/ui/pages/field.rs should avoid page-local hand-written Rust strings for docs-facing sections"
     );
 }
 
@@ -7505,11 +7617,9 @@ fn radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/radio_group/demo.rs",
             "src/ui/snippets/radio_group/description.rs",
             "src/ui/snippets/radio_group/disabled.rs",
-            "src/ui/snippets/radio_group/extras.rs",
             "src/ui/snippets/radio_group/fieldset.rs",
             "src/ui/snippets/radio_group/invalid.rs",
             "src/ui/snippets/radio_group/label.rs",
-            "src/ui/snippets/radio_group/plans.rs",
             "src/ui/snippets/radio_group/rtl.rs",
             "src/ui/snippets/radio_group/usage.rs",
         ],

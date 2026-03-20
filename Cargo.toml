@@ -152,6 +152,12 @@ debug = 2
 opt-level = 3
 codegen-units = 1
 
+# `fret-ui-gallery` is large enough to trigger unstable incremental link artifacts on macOS
+# under the workspace dev profile. Keep package-level incremental off so `cargo build/test -p
+# fret-ui-gallery` remains deterministic.
+[profile.dev.package.fret-ui-gallery]
+incremental = false
+
 # Opt-in profile for faster edit/compile iterations (especially on Windows where linking + PDBs
 # can dominate debug builds). Keep it off by default; use via `--profile dev-fast`.
 [profile.dev-fast]

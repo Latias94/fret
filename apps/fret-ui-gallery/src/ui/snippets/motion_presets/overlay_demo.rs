@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("overlay_demo.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -23,28 +24,38 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .toggle_model(open_for_trigger.clone())
                     .test_id("ui-gallery-motion-presets-dialog-trigger")
                     .into_element(cx)
-            },
-            move |cx| {
-                shadcn::DialogContent::new([
-                    shadcn::DialogHeader::new([
-                        shadcn::DialogTitle::new("Motion preset demo").into_element(cx),
-                        shadcn::DialogDescription::new(
-                            "Switch motion presets to compare presence timing + easing under fixed frame delta gates.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::DialogFooter::new([shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(open_for_close.clone())
-                        .test_id("ui-gallery-motion-presets-dialog-close")
-                        .into_element(cx)])
-                    .into_element(cx),
-                ])
-                .show_close_button(false)
-                .into_element(cx)
-                .test_id("ui-gallery-motion-presets-dialog-content")
-            },
+        },
+        move |cx| {
+            shadcn::DialogContent::build(|cx, out| {
+                out.push_ui(
+                    cx,
+                    shadcn::DialogHeader::build(|cx, out| {
+                        out.push_ui(cx, shadcn::DialogTitle::new("Motion preset demo"));
+                        out.push_ui(
+                            cx,
+                            shadcn::DialogDescription::new(
+                                "Switch motion presets to compare presence timing + easing under fixed frame delta gates.",
+                            ),
+                        );
+                    }),
+                );
+                out.push_ui(
+                    cx,
+                    shadcn::DialogFooter::build(|cx, out| {
+                        out.push_ui(
+                            cx,
+                            shadcn::Button::new("Close")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .toggle_model(open_for_close.clone())
+                                .test_id("ui-gallery-motion-presets-dialog-close"),
+                        );
+                    }),
+                );
+            })
+            .show_close_button(false)
+            .into_element(cx)
+            .test_id("ui-gallery-motion-presets-dialog-content")
+        },
         )
         .test_id("ui-gallery-motion-presets-dialog");
 

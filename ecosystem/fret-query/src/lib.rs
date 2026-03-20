@@ -50,6 +50,33 @@ pub enum QueryStatus {
     Error,
 }
 
+impl QueryStatus {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Idle => "Idle",
+            Self::Loading => "Loading",
+            Self::Success => "Success",
+            Self::Error => "Error",
+        }
+    }
+
+    pub const fn is_idle(self) -> bool {
+        matches!(self, Self::Idle)
+    }
+
+    pub const fn is_loading(self) -> bool {
+        matches!(self, Self::Loading)
+    }
+
+    pub const fn is_success(self) -> bool {
+        matches!(self, Self::Success)
+    }
+
+    pub const fn is_error(self) -> bool {
+        matches!(self, Self::Error)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum QueryErrorKind {
@@ -277,6 +304,36 @@ impl<T> Default for QueryState<T> {
             last_duration: None,
             retry: QueryRetryState::default(),
         }
+    }
+}
+
+impl<T> QueryState<T> {
+    pub fn is_idle(&self) -> bool {
+        self.status.is_idle()
+    }
+
+    pub fn is_loading(&self) -> bool {
+        self.status.is_loading()
+    }
+
+    pub fn is_success(&self) -> bool {
+        self.status.is_success()
+    }
+
+    pub fn is_error(&self) -> bool {
+        self.status.is_error()
+    }
+
+    pub fn has_data(&self) -> bool {
+        self.data.is_some()
+    }
+
+    pub fn has_error(&self) -> bool {
+        self.error.is_some()
+    }
+
+    pub fn is_refreshing(&self) -> bool {
+        self.is_loading() && self.has_data()
     }
 }
 
@@ -2896,5 +2953,53 @@ mod tests {
             Some(2),
             "expected the cancelled completion to be ignored"
         );
+    }
+
+    #[test]
+    fn query_status_projection_helpers_report_expected_values() {
+        assert_eq!(QueryStatus::Idle.as_str(), "Idle");
+        assert_eq!(QueryStatus::Loading.as_str(), "Loading");
+        assert_eq!(QueryStatus::Success.as_str(), "Success");
+        assert_eq!(QueryStatus::Error.as_str(), "Error");
+
+        assert!(QueryStatus::Idle.is_idle());
+        assert!(QueryStatus::Loading.is_loading());
+        assert!(QueryStatus::Success.is_success());
+        assert!(QueryStatus::Error.is_error());
+    }
+
+    #[test]
+    fn query_state_projection_helpers_detect_refreshing_and_error_presence() {
+        let idle: QueryState<u32> = QueryState::default();
+        assert!(idle.is_idle());
+        assert!(!idle.has_data());
+        assert!(!idle.has_error());
+        assert!(!idle.is_refreshing());
+
+        let refreshing = QueryState {
+            status: QueryStatus::Loading,
+            data: Some(Arc::new(7)),
+            error: None,
+            inflight: Some(1),
+            updated_at: None,
+            last_duration: None,
+            retry: QueryRetryState::default(),
+        };
+        assert!(refreshing.is_loading());
+        assert!(refreshing.has_data());
+        assert!(refreshing.is_refreshing());
+
+        let errored = QueryState::<u32> {
+            status: QueryStatus::Error,
+            data: None,
+            error: Some(QueryError::transient("boom")),
+            inflight: None,
+            updated_at: None,
+            last_duration: None,
+            retry: QueryRetryState::default(),
+        };
+        assert!(errored.is_error());
+        assert!(errored.has_error());
+        assert!(!errored.is_refreshing());
     }
 }

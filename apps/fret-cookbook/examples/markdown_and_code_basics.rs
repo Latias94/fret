@@ -195,7 +195,8 @@ impl View for MarkdownAndCodeBasicsView {
         .max_w(Px(980.0));
 
         cx.actions()
-            .local_set::<act::Reset, String>(&source_state, SAMPLE_MARKDOWN.to_string());
+            .local(&source_state)
+            .set::<act::Reset>(SAMPLE_MARKDOWN.to_string());
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }

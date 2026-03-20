@@ -5,11 +5,12 @@ use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let content = shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
-        shadcn::PopoverTitle::new("Title").into_element(cx),
-        shadcn::PopoverDescription::new("Description text here.").into_element(cx),
-    ])
-    .into_element(cx)]);
+    let content = shadcn::PopoverContent::build(cx, |cx| {
+        [shadcn::PopoverHeader::new([
+            shadcn::PopoverTitle::new("Title").into_element(cx),
+            shadcn::PopoverDescription::new("Description text here.").into_element(cx),
+        ])]
+    });
 
     shadcn::Popover::new(
         cx,

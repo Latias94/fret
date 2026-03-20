@@ -1,6 +1,7 @@
 pub const SOURCE: &str = include_str!("scrollable_content.rs");
 
 // region: example
+use fret::children::UiElementSinkExt;
 use fret::{UiChild, UiCx};
 use fret_core::Px;
 use fret_ui::Theme;
@@ -67,26 +68,33 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     cx.container(props, move |_cx| [scroller])
                 };
 
-                shadcn::DrawerContent::new(ui::children![
-                    cx;
-                    shadcn::DrawerHeader::new(ui::children![
-                        cx;
-                        shadcn::DrawerTitle::new("Scrollable Content"),
-                        shadcn::DrawerDescription::new(
-                            "Keep actions visible while the content scrolls.",
-                        )
-                    ]),
-                    padded,
-                    shadcn::DrawerFooter::new(ui::children![
-                        cx;
-                        shadcn::Button::new("Submit"),
-                        shadcn::DrawerClose::from_scope().build(
-                            cx,
-                            shadcn::Button::new("Cancel")
-                                .variant(shadcn::ButtonVariant::Outline),
-                        ),
-                    ]),
-                ])
+                shadcn::DrawerContent::build(|cx, out| {
+                    out.push_ui(
+                        cx,
+                        shadcn::DrawerHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::DrawerTitle::new("Scrollable Content"));
+                            out.push_ui(
+                                cx,
+                                shadcn::DrawerDescription::new(
+                                    "Keep actions visible while the content scrolls.",
+                                ),
+                            );
+                        }),
+                    );
+                    out.push(padded);
+                    out.push_ui(
+                        cx,
+                        shadcn::DrawerFooter::build(|cx, out| {
+                            out.push_ui(cx, shadcn::Button::new("Submit"));
+                            let cancel = shadcn::DrawerClose::from_scope().build(
+                                cx,
+                                shadcn::Button::new("Cancel")
+                                    .variant(shadcn::ButtonVariant::Outline),
+                            );
+                            out.push(cancel);
+                        }),
+                    );
+                })
                 .into_element(cx)
                 .test_id("ui-gallery-drawer-scrollable-content")
             }),

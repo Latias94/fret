@@ -13,7 +13,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let save_content = shadcn::TooltipContent::build(cx, |_cx| {
                 [ui::h_row(|cx| {
                     vec![
-                        ui::text("Shortcut:").text_sm().into_element(cx),
+                        ui::text("Save Changes").text_sm().into_element(cx),
                         shadcn::Kbd::new("S").into_element(cx),
                     ]
                 })
@@ -32,7 +32,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             let print_content = shadcn::TooltipContent::build(cx, |_cx| {
                 [ui::h_row(|cx| {
                     vec![
-                        ui::text("Shortcut:").text_sm().into_element(cx),
+                        ui::text("Print Document").text_sm().into_element(cx),
                         shadcn::KbdGroup::new([
                             shadcn::Kbd::new("Ctrl").into_element(cx),
                             shadcn::Kbd::new("P").into_element(cx),

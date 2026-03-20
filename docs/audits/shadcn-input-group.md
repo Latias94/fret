@@ -29,9 +29,13 @@ and example implementations in `repo-ref/ui`.
 - Pass: the part-based API matches the upstream docs: `InputGroup`, `InputGroupAddon`, `InputGroupButton`, `InputGroupInput`, `InputGroupTextarea`, and `InputGroupText`.
 - Pass: Fret also keeps the compact `InputGroup::new(model)` shorthand with `leading`, `trailing`, `block_start`, and `block_end` slots for ergonomic app-side authoring.
 - Pass: `InputGroupAddon::align(...)` covers the documented addon placement surface without widening the mechanism layer.
+- Pass: prebuilt/third-party controls now have a narrow recipe-layer seam via `custom_input(...)` / `custom_textarea(...)`, so the upstream `Custom Input` docs path is no longer a docs-only approximation.
 - Pass: first-party gallery snippets now keep the compact shorthand as the default ergonomic lane
   (including the dropdown example), while the explicit addon/control parts remain the docs-parity
   lane rather than an advanced-only escape hatch.
+- Pass: no generic root `children(...)` API is warranted; the component still benefits from typed
+  structure (`InputGroupInput` / `InputGroupTextarea` / `InputGroupAddon`) plus the narrow
+  caller-owned custom-control seam.
 
 ### Layout & default-style ownership
 
@@ -42,10 +46,13 @@ and example implementations in `repo-ref/ui`.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Align`, the example set through `Custom Input`, `RTL`, and `API Reference`.
+- Pass: the `Usage` section is now a real snippet-backed compact-shorthand example instead of a page-local hand-written Rust string, so the default first-party lane is copyable and compiled.
 - Pass: `Tooltip`, `Label Association`, and `Button Group` remain explicit Fret follow-ups after the upstream path.
-- Pass: the current work is docs/public-surface parity, not a mechanism bug.
+- Pass: the remaining gap was public-surface parity in `fret-ui-shadcn`, not a mechanism bug in `crates/fret-ui`; the custom-control seam now lands in the recipe layer.
 
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- Existing shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`input-group-dropdown` and related `input-group-*` cases)
+- Existing shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`input-group-dropdown`, `input-group-custom`, and related `input-group-*` cases)
+- Source-policy gate: `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs` (`input_group_snippets_prefer_ui_cx_on_the_default_app_surface`, `selected_input_group_snippets_prefer_compact_slot_shorthand`)
+- Docs smoke gate: `tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json`

@@ -340,7 +340,8 @@ impl View for AsyncPlaygroundView {
             });
 
         cx.actions()
-            .toggle_local_bool::<act::ToggleTheme>(&locals.dark);
+            .local(&locals.dark)
+            .toggle_bool::<act::ToggleTheme>();
 
         cx.actions()
             .transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
@@ -969,7 +970,7 @@ fn query_result_view(
             .text_sm()
             .into_element(cx),
         QueryStatus::Loading => {
-            let kept = policy.keep_previous_data_while_loading && state.data.is_some();
+            let kept = policy.keep_previous_data_while_loading && state.is_refreshing();
             ui::text(if kept {
                 "Loading… (keepPreviousDataWhileLoading=true)"
             } else {
@@ -1025,8 +1026,9 @@ fn query_result_view(
 }
 
 fn active_mode(cx: &mut UiCx<'_>, locals: &AsyncPlaygroundLocals) -> FetchMode {
-    cx.data()
-        .selector_layout(&locals.tabs, |tab| match tab.as_deref() {
+    locals
+        .tabs
+        .layout_read_ref_in(cx, |tab| match tab.as_deref() {
             Some("sync") => FetchMode::Sync,
             _ => FetchMode::Async,
         })
@@ -1065,8 +1067,7 @@ fn query_policy(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> Qu
 
 fn query_fail_mode(cx: &mut UiCx<'_>, st: &AsyncPlaygroundState, id: QueryId) -> bool {
     let config = st.configs.get(&id).expect("missing config");
-    cx.data()
-        .selector_layout(&config.fail_mode, |fail_mode| fail_mode)
+    config.fail_mode.layout_value_in(cx)
 }
 
 fn parse_u64_or(s: &str, fallback: u64) -> u64 {
@@ -1137,15 +1138,17 @@ fn status_badge(
             .into_element(cx);
     };
 
-    let mut label = format!("{:?}", diag.status);
+    let mut label = diag.status.as_str().to_string();
     if diag.stale == Some(true) {
         label.push_str(" (stale)");
     }
 
-    let variant = match diag.status {
-        QueryStatus::Success => shadcn::BadgeVariant::Default,
-        QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-        QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
+    let variant = if diag.status.is_success() {
+        shadcn::BadgeVariant::Default
+    } else if diag.status.is_error() {
+        shadcn::BadgeVariant::Destructive
+    } else {
+        shadcn::BadgeVariant::Secondary
     };
 
     shadcn::Badge::new(label).variant(variant).into_element(cx)

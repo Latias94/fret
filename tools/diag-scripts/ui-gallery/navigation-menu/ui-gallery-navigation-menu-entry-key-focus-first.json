@@ -31,32 +31,29 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "navigation menu" },
+    { "type": "type_text", "text": "navigation_menu" },
     { "type": "wait_frames", "n": 2 },
 
     {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "type": "ensure_visible",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-navigation-menu" },
-      "delta_y": -240.0,
+      "within_window": true,
+      "padding_px": 8.0,
       "timeout_frames": 600
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-navigation-menu" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-navigation-menu" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-navigation-menu" } },
       "timeout_frames": 600
     },
 
-    { "type": "wait_until", "predicate": { "kind": "font_catalog_populated" }, "timeout_frames": 1800 },
-    { "type": "wait_until", "predicate": { "kind": "system_font_rescan_idle" }, "timeout_frames": 1800 },
-    { "type": "wait_until", "predicate": { "kind": "text_font_stack_key_stable", "stable_frames": 120 }, "timeout_frames": 900 },
-
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" } },
       "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 6 },
 
     {
       "type": "scroll_into_view",
@@ -95,4 +92,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-navigation-menu-entry-key-focus-first" }
   ]
 }
-

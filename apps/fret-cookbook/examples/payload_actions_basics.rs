@@ -80,7 +80,8 @@ impl View for PayloadActionsView {
         .test_id(TEST_ID_ROWS);
 
         cx.actions()
-            .payload_local_update_if::<act::Remove, Vec<Row>>(&rows_state, |rows, id| {
+            .local(&rows_state)
+            .payload_update_if::<act::Remove>(|rows, id| {
                 let before = rows.len();
                 rows.retain(|row| row.id != id);
                 rows.len() != before

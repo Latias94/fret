@@ -243,52 +243,49 @@ mod authoring_surface_policy_tests {
         assert!(HELLO_EXAMPLE.contains("cx.state().local_init(|| 0u32)"));
         assert!(HELLO_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
         assert!(!HELLO_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
-        assert!(HELLO_EXAMPLE.contains(".local_update::<act::Click, u32>("));
+        assert!(HELLO_EXAMPLE.contains(".local(&count_state).update::<act::Click>(|v| {"));
         assert!(!HELLO_EXAMPLE.contains("availability::<act::Click>"));
         assert!(!HELLO_EXAMPLE.contains("root.into_element(cx).into()"));
-        assert!(SIMPLE_TODO_EXAMPLE.contains("cx.state().local::<String>()"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("struct TodoLocals {"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let locals = TodoLocals::new(cx);"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("locals.bind_actions(cx);"));
         assert!(
-            SIMPLE_TODO_EXAMPLE.contains(".locals_with((draft_state, next_id_state, todos_state))")
+            SIMPLE_TODO_EXAMPLE.contains(".locals_with((&self.draft, &self.next_id, &self.todos))")
         );
-        assert!(
-            SIMPLE_TODO_EXAMPLE
-                .contains(".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {")
-        );
-        assert!(SIMPLE_TODO_EXAMPLE.contains("let todos = todos_state.layout_value(cx);"));
-        assert!(SIMPLE_TODO_EXAMPLE.contains("let draft_value = draft_state.layout_value(cx);"));
-        assert!(
-            SIMPLE_TODO_EXAMPLE.contains("let text = tx.value(&draft_state).trim().to_string();")
-        );
-        assert!(SIMPLE_TODO_EXAMPLE.contains("let id = tx.value(&next_id_state);"));
-        assert!(!SIMPLE_TODO_EXAMPLE.contains("tx.value_or_else(&draft_state, String::new)"));
-        assert!(
-            SIMPLE_TODO_EXAMPLE.contains(".payload_local_update_if::<act::Toggle, Vec<TodoRow>>(")
-        );
+        assert!(SIMPLE_TODO_EXAMPLE.contains(".on::<act::Add>(|tx, (draft, next_id, todos)| {"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let todos = locals.todos.layout_value(cx);"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let draft_value = locals.draft.layout_value(cx);"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let text = tx.value(&draft).trim().to_string();"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains("let id = tx.value(&next_id);"));
+        assert!(!SIMPLE_TODO_EXAMPLE.contains("tx.value_or_else(&draft, String::new)"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains(".local(&self.todos)"));
+        assert!(SIMPLE_TODO_EXAMPLE.contains(".payload_update_if::<act::Toggle>(|rows, id| {"));
         assert!(SIMPLE_TODO_EXAMPLE.contains("impl UiChild"));
         assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("impl UiChild"));
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("struct TodoLocals {"));
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let locals = TodoLocals::new(cx);"));
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("locals.bind_actions(cx);"));
         assert!(
             SIMPLE_TODO_V2_TARGET_EXAMPLE
-                .contains(".locals_with((draft_state, next_id_state, todos_state))")
-        );
-        assert!(
-            SIMPLE_TODO_V2_TARGET_EXAMPLE
-                .contains(".on::<act::Add>(|tx, (draft_state, next_id_state, todos_state)| {")
-        );
-        assert!(
-            SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let todos = todos_state.layout_value(cx);")
+                .contains(".locals_with((&self.draft, &self.next_id, &self.todos))")
         );
         assert!(
             SIMPLE_TODO_V2_TARGET_EXAMPLE
-                .contains("let draft_value = draft_state.layout_value(cx);")
+                .contains(".on::<act::Add>(|tx, (draft, next_id, todos)| {")
+        );
+        assert!(
+            SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let todos = locals.todos.layout_value(cx);")
         );
         assert!(
             SIMPLE_TODO_V2_TARGET_EXAMPLE
-                .contains("let text = tx.value(&draft_state).trim().to_string();")
+                .contains("let draft_value = locals.draft.layout_value(cx);")
         );
-        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let id = tx.value(&next_id_state);"));
         assert!(
-            !SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("tx.value_or_else(&draft_state, String::new)")
+            SIMPLE_TODO_V2_TARGET_EXAMPLE
+                .contains("let text = tx.value(&draft).trim().to_string();")
         );
+        assert!(SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("let id = tx.value(&next_id);"));
+        assert!(!SIMPLE_TODO_V2_TARGET_EXAMPLE.contains("tx.value_or_else(&draft, String::new)"));
         assert_avoids_legacy_conversion_names(SIMPLE_TODO_V2_TARGET_EXAMPLE);
     }
 
@@ -318,7 +315,10 @@ mod authoring_surface_policy_tests {
         assert!(
             HELLO_COUNTER_EXAMPLE.contains(".on::<act::Inc>(|tx, (count_state, step_state)| {")
         );
-        assert!(HELLO_COUNTER_EXAMPLE.contains("cx.actions().local_set::<act::Reset, i64>"));
+        assert!(
+            HELLO_COUNTER_EXAMPLE
+                .contains("cx.actions().local(&count_state).set::<act::Reset>(0);")
+        );
         assert!(HELLO_COUNTER_EXAMPLE.contains("let count = count_state.layout_value(cx);"));
         assert!(HELLO_COUNTER_EXAMPLE.contains("let step_text = step_state.layout_value(cx);"));
 
@@ -333,7 +333,8 @@ mod authoring_surface_policy_tests {
         assert!(!TEXT_INPUT_EXAMPLE.contains("watch(&text_state)"));
         assert!(!TEXT_INPUT_EXAMPLE.contains("watch(&submitted_count_state)"));
 
-        assert!(TOGGLE_EXAMPLE.contains("toggle_local_bool::<act::ToggleBookmark>"));
+        assert!(TOGGLE_EXAMPLE.contains(".local(&pressed_state)"));
+        assert!(TOGGLE_EXAMPLE.contains(".toggle_bool::<act::ToggleBookmark>()"));
         assert!(TOGGLE_EXAMPLE.contains("let pressed = pressed_state.layout_value(cx);"));
         assert!(!TOGGLE_EXAMPLE.contains("pressed_state.layout(cx).value_or(false)"));
 
@@ -341,25 +342,24 @@ mod authoring_surface_policy_tests {
         assert!(
             PAYLOAD_ACTIONS_EXAMPLE.contains("let rows_snapshot = rows_state.layout_value(cx);")
         );
-        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains(
-            ".payload_local_update_if::<act::Remove, Vec<Row>>(&rows_state, |rows, id| {"
-        ));
+        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains(".local(&rows_state)"));
+        assert!(PAYLOAD_ACTIONS_EXAMPLE.contains(".payload_update_if::<act::Remove>(|rows, id| {"));
         assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("payload::<act::Remove>()"));
         assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("local_update_if::<Vec<Row>>(&rows_state"));
         assert!(!PAYLOAD_ACTIONS_EXAMPLE.contains("rows_state.layout(cx).value_or_default()"));
 
-        assert!(FORM_EXAMPLE.contains(".locals_with((&name_state, &email_state, &error_state))"));
-        assert!(
-            FORM_EXAMPLE
-                .contains(".on::<act::Submit>(|tx, (name_state, email_state, error_state)| {")
-        );
+        assert!(FORM_EXAMPLE.contains("struct FormBasicsLocals {"));
+        assert!(FORM_EXAMPLE.contains("let locals = FormBasicsLocals::new(cx);"));
+        assert!(FORM_EXAMPLE.contains("locals.bind_actions(cx);"));
+        assert!(FORM_EXAMPLE.contains(".locals_with((&self.name, &self.email, &self.error))"));
+        assert!(FORM_EXAMPLE.contains(".on::<act::Submit>(|tx, (name, email, error)| {"));
         assert!(FORM_EXAMPLE.contains("availability::<act::Submit>"));
-        assert!(FORM_EXAMPLE.contains("let name = name_state.layout_value(cx);"));
-        assert!(FORM_EXAMPLE.contains("let email = email_state.layout_value(cx);"));
-        assert!(FORM_EXAMPLE.contains("let error = error_state.layout_value(cx);"));
-        assert!(FORM_EXAMPLE.contains("let name = tx.value(&name_state);"));
-        assert!(FORM_EXAMPLE.contains("let email = tx.value(&email_state);"));
-        assert!(!FORM_EXAMPLE.contains("tx.value_or_else(&name_state, String::new)"));
+        assert!(FORM_EXAMPLE.contains("let name = locals.name.layout_value(cx);"));
+        assert!(FORM_EXAMPLE.contains("let email = locals.email.layout_value(cx);"));
+        assert!(FORM_EXAMPLE.contains("let error = locals.error.layout_value(cx);"));
+        assert!(FORM_EXAMPLE.contains("let name = tx.value(&name);"));
+        assert!(FORM_EXAMPLE.contains("let email = tx.value(&email);"));
+        assert!(!FORM_EXAMPLE.contains("tx.value_or_else(&name, String::new)"));
 
         assert!(DATE_PICKER_EXAMPLE.contains("cx.state().local_init(|| false)"));
         assert!(DATE_PICKER_EXAMPLE.contains("watch(&selected_state)"));
@@ -380,10 +380,13 @@ mod authoring_surface_policy_tests {
             COMMANDS_KEYMAP_EXAMPLE
                 .contains("let allow_command = allow_command_state.layout_value(cx);")
         );
-        assert!(COMMANDS_KEYMAP_EXAMPLE.contains("toggle_local_bool::<act::ToggleAllowCommand>"));
+        assert!(COMMANDS_KEYMAP_EXAMPLE.contains(".local(&allow_command_state)"));
+        assert!(COMMANDS_KEYMAP_EXAMPLE.contains(".toggle_bool::<act::ToggleAllowCommand>()"));
 
-        assert!(OVERLAY_EXAMPLE.contains("local_set::<act::OpenDialog, bool>"));
-        assert!(OVERLAY_EXAMPLE.contains("local_update::<act::BumpUnderlay, u32>"));
+        assert!(OVERLAY_EXAMPLE.contains(".local(&dialog_open_state)"));
+        assert!(OVERLAY_EXAMPLE.contains(".set::<act::OpenDialog>(true);"));
+        assert!(OVERLAY_EXAMPLE.contains(".local(&underlay_bumps_state)"));
+        assert!(OVERLAY_EXAMPLE.contains(".update::<act::BumpUnderlay>(|v| {"));
         assert!(OVERLAY_EXAMPLE.contains("let bumps = underlay_bumps_state.layout_value(cx);"));
         assert!(!OVERLAY_EXAMPLE.contains("underlay_bumps_state.layout(cx).value_or(0)"));
 
@@ -426,10 +429,7 @@ mod authoring_surface_policy_tests {
 
         assert!(QUERY_EXAMPLE.contains("cx.data().query("));
         assert!(QUERY_EXAMPLE.contains("cx.state().local_init(|| false)"));
-        assert!(
-            QUERY_EXAMPLE
-                .contains("use fret::query::{QueryError, QueryKey, QueryPolicy, QueryStatus};")
-        );
+        assert!(QUERY_EXAMPLE.contains("use fret::query::{QueryError, QueryKey, QueryPolicy};"));
         assert!(!QUERY_EXAMPLE.contains("use fret_query::{"));
         assert!(QUERY_EXAMPLE.contains("let fail_mode_enabled = fail_mode.layout_value(cx);"));
         assert!(QUERY_EXAMPLE.contains("let state = handle.read_layout(cx);"));
@@ -448,7 +448,8 @@ mod authoring_surface_policy_tests {
         assert!(!QUERY_EXAMPLE.contains("cx.use_query("));
         assert!(!QUERY_EXAMPLE.contains("with_query_client("));
         assert!(!QUERY_EXAMPLE.contains("fret_query::ui::QueryElementContextExt"));
-        assert!(QUERY_EXAMPLE.contains("toggle_local_bool::<act::ToggleErrorMode>"));
+        assert!(QUERY_EXAMPLE.contains(".local(&fail_mode)"));
+        assert!(QUERY_EXAMPLE.contains(".toggle_bool::<act::ToggleErrorMode>();"));
         assert!(!QUERY_EXAMPLE.contains("availability::<act::ToggleErrorMode>"));
         assert!(!QUERY_EXAMPLE.contains("availability::<act::Invalidate>"));
         assert!(!QUERY_EXAMPLE.contains("availability::<act::InvalidateNamespace>"));
@@ -465,11 +466,10 @@ mod authoring_surface_policy_tests {
         assert!(
             ROUTER_EXAMPLE.contains("let intents = intents_model.layout(cx).value_or_default();")
         );
-        assert!(
-            ROUTER_EXAMPLE.contains(
-                "let snapshot = snapshot_model.layout(cx).value().expect(\"router snapshot should be readable\");"
-            )
-        );
+        assert!(ROUTER_EXAMPLE.contains("let snapshot = snapshot_model"));
+        assert!(ROUTER_EXAMPLE.contains(".layout(cx)"));
+        assert!(ROUTER_EXAMPLE.contains(".value()"));
+        assert!(ROUTER_EXAMPLE.contains(".expect(\"router snapshot should be readable\")"));
         assert!(!ROUTER_EXAMPLE.contains("intents_model.watch(cx).layout().value_or_default()"));
         assert!(!ROUTER_EXAMPLE.contains("snapshot_model.watch(cx)"));
         assert!(!ROUTER_EXAMPLE.contains("set_router_command_availability(window"));
@@ -501,7 +501,10 @@ mod authoring_surface_policy_tests {
             )
         );
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("let source = source_state.layout_value(cx);"));
-        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("local_set::<act::Reset, String>"));
+        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains(".local(&source_state)"));
+        assert!(
+            MARKDOWN_AND_CODE_EXAMPLE.contains(".set::<act::Reset>(SAMPLE_MARKDOWN.to_string())")
+        );
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::ToggleGroup::single(&wrap_state)"));
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::Switch::new(&cap_height_state)"));
         assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("wrap_state.clone_model()"));
@@ -513,7 +516,8 @@ mod authoring_surface_policy_tests {
             IMUI_ACTION_EXAMPLE
                 .contains("use fret_runtime::{CommandId, CommandMeta, CommandScope, Model};")
         );
-        assert!(IMUI_ACTION_EXAMPLE.contains("local_update::<act::Inc, u32>"));
+        assert!(IMUI_ACTION_EXAMPLE.contains(".local(&count_state)"));
+        assert!(IMUI_ACTION_EXAMPLE.contains(".update::<act::Inc>(|v| {"));
         assert!(IMUI_ACTION_EXAMPLE.contains("cx.state().local_init(|| 0u32)"));
         assert!(IMUI_ACTION_EXAMPLE.contains("let count_value = count_state.layout_value(cx);"));
         assert!(!IMUI_ACTION_EXAMPLE.contains("count_state.layout(cx).value_or(0)"));
@@ -755,10 +759,8 @@ mod authoring_surface_policy_tests {
         assert!(!ASSETS_RELOAD_EPOCH_EXAMPLE.contains("UiAssetsReloadEpoch"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("Effect::RequestAnimationFrame"));
         assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains("cx.state().local::<u64>()"));
-        assert!(
-            ASSETS_RELOAD_EPOCH_EXAMPLE
-                .contains("cx.actions()\n            .local_update::<act::BumpReload, u64>")
-        );
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".local(&bumps_state)"));
+        assert!(ASSETS_RELOAD_EPOCH_EXAMPLE.contains(".update::<act::BumpReload>(|value| {"));
 
         assert!(
             CANVAS_PAN_ZOOM_EXAMPLE.contains("use fret::{FretApp, advanced::prelude::*, shadcn};")
@@ -781,10 +783,8 @@ mod authoring_surface_policy_tests {
         assert!(CUSTOM_V1_EXAMPLE.contains("EffectStep::CustomV1"));
         assert!(CUSTOM_V1_EXAMPLE.contains(".install_custom_effects(install_custom_effect)"));
         assert!(CUSTOM_V1_EXAMPLE.contains("cx.state().local_init(|| true)"));
-        assert!(
-            CUSTOM_V1_EXAMPLE
-                .contains("cx.actions()\n            .toggle_local_bool::<act::ToggleEnabled>")
-        );
+        assert!(CUSTOM_V1_EXAMPLE.contains(".local(&enabled_state)"));
+        assert!(CUSTOM_V1_EXAMPLE.contains(".toggle_bool::<act::ToggleEnabled>()"));
 
         assert!(DOCKING_EXAMPLE.contains("use fret::{"));
         assert!(DOCKING_EXAMPLE.contains("advanced::prelude::*"));
@@ -1245,8 +1245,10 @@ mod authoring_surface_policy_tests {
         assert_uses_app_surface(ROOT_README);
         assert_uses_app_surface_doc(GOLDEN_PATH_DOC);
         assert!(ROOT_README.contains("cx.state().local::<String>()"));
-        assert!(ROOT_README.contains("cx.actions().local_set::<act::Add, String>"));
+        assert!(ROOT_README.contains("cx.actions().local(&draft).set::<act::Add>(String::new())"));
         assert!(GOLDEN_PATH_DOC.contains("cx.state().local::<String>()"));
-        assert!(GOLDEN_PATH_DOC.contains("cx.actions().local_set::<act::Add, String>"));
+        assert!(
+            GOLDEN_PATH_DOC.contains("cx.actions().local(&draft).set::<act::Add>(String::new())")
+        );
     }
 }

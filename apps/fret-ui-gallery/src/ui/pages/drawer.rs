@@ -18,6 +18,7 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Drawer::direction(...)` is the upstream-aligned placement setter and accepts the documented `top`, `right`, `bottom`, and `left` directions.",
         "`Drawer::new_controllable(cx, None, false).children([...])` is the closest Fret equivalent of upstream nested children composition, with `DrawerPart::trigger(...)` and `DrawerPart::content_with(...)` keeping the default path copyable on the curated facade.",
+        "`DrawerContent::build(...)` is the typed content-side companion on that same lane, so copyable snippets do not need to hand-land already-built content arrays.",
         "`DrawerClose::from_scope().build(cx, child)` is the closest Fret equivalent to upstream `DrawerClose asChild` for caller-owned close buttons.",
         "`Drawer::disable_pointer_dismissal(...)` is the Base UI-style alias for turning off outside-press dismissal while keeping the same modal drawer mechanism.",
         "`Drawer::modal(false)` and `Drawer::modal_mode(DrawerModalMode::TrapFocus)` are Base UI-oriented follow-ups for non-modal and trap-focus drawer policy without widening the mechanism layer.",
@@ -58,7 +59,9 @@ pub(super) fn preview_drawer(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
-        .description("Default copyable `children([...])` path for common Drawer call sites.")
+        .description(
+            "Default copyable `children([...])` path using typed trigger/content builders.",
+        )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let scrollable_content = DocSection::build(cx, "Scrollable Content", scrollable_content)
         .description("Keep actions visible while the content area scrolls.")
