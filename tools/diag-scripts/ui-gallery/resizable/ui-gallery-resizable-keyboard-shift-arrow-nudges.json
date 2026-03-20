@@ -58,14 +58,11 @@
     },
     { "type": "wait_frames", "n": 10 },
     {
-      "type": "click_stable",
+      "type": "click",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-resizable-handle.splitter.0"
-      },
-      "stable_frames": 2,
-      "max_move_px": 2.0,
-      "timeout_frames": 900
+      }
     },
     {
       "type": "wait_until",
