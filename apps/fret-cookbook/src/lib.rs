@@ -507,7 +507,9 @@ mod authoring_surface_policy_tests {
         );
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("let source = source_state.layout_value(cx);"));
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains(".local(&source_state)"));
-        assert!(MARKDOWN_AND_CODE_EXAMPLE.contains(".set::<act::Reset>(SAMPLE_MARKDOWN.to_string())"));
+        assert!(
+            MARKDOWN_AND_CODE_EXAMPLE.contains(".set::<act::Reset>(SAMPLE_MARKDOWN.to_string())")
+        );
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::ToggleGroup::single(&wrap_state)"));
         assert!(MARKDOWN_AND_CODE_EXAMPLE.contains("shadcn::Switch::new(&cap_height_state)"));
         assert!(!MARKDOWN_AND_CODE_EXAMPLE.contains("wrap_state.clone_model()"));
