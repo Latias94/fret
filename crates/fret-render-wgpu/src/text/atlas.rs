@@ -1,3 +1,4 @@
+use super::DebugGlyphAtlasLookup;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
 use fret_render_text::FontFaceKey;
 use std::collections::{HashMap, HashSet};
@@ -523,14 +524,30 @@ impl GlyphAtlas {
         Some((entry.page, [u0, v0, u1, v1]))
     }
 
-    pub(super) fn find_key_for_bounds(
+    pub(super) fn debug_lookup_entry(
         &self,
         page: u16,
         x: u32,
         y: u32,
         w: u32,
         h: u32,
-    ) -> Option<GlyphKey> {
+    ) -> Option<DebugGlyphAtlasLookup> {
+        let key = self.find_key_for_bounds(page, x, y, w, h)?;
+        Some(DebugGlyphAtlasLookup::new(
+            key.font.font_data_id(),
+            key.font.face_index(),
+            key.font.variation_key(),
+            key.font.synthesis_embolden(),
+            key.font.synthesis_skew_degrees(),
+            key.glyph_id,
+            key.size_bits,
+            key.x_bin,
+            key.y_bin,
+            key.kind_label(),
+        ))
+    }
+
+    fn find_key_for_bounds(&self, page: u16, x: u32, y: u32, w: u32, h: u32) -> Option<GlyphKey> {
         self.glyphs.iter().find_map(|(key, entry)| {
             (entry.page == page && entry.x == x && entry.y == y && entry.w == w && entry.h == h)
                 .then_some(*key)

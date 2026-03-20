@@ -249,7 +249,7 @@ impl TextAtlasRuntimeState {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_entry_in_atlas(&self.mask_atlas, page, x, y, w, h)
+        self.mask_atlas.debug_lookup_entry(page, x, y, w, h)
     }
 
     pub(super) fn debug_lookup_color_entry(
@@ -260,7 +260,7 @@ impl TextAtlasRuntimeState {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_entry_in_atlas(&self.color_atlas, page, x, y, w, h)
+        self.color_atlas.debug_lookup_entry(page, x, y, w, h)
     }
 
     pub(super) fn debug_lookup_subpixel_entry(
@@ -271,32 +271,7 @@ impl TextAtlasRuntimeState {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_entry_in_atlas(&self.subpixel_atlas, page, x, y, w, h)
-    }
-
-    fn debug_lookup_entry_in_atlas(
-        &self,
-        atlas: &GlyphAtlas,
-        page: u16,
-        x: u32,
-        y: u32,
-        w: u32,
-        h: u32,
-    ) -> Option<DebugGlyphAtlasLookup> {
-        let k = atlas.find_key_for_bounds(page, x, y, w, h)?;
-
-        Some(DebugGlyphAtlasLookup::new(
-            k.font.font_data_id(),
-            k.font.face_index(),
-            k.font.variation_key(),
-            k.font.synthesis_embolden(),
-            k.font.synthesis_skew_degrees(),
-            k.glyph_id,
-            k.size_bits,
-            k.x_bin,
-            k.y_bin,
-            k.kind_label(),
-        ))
+        self.subpixel_atlas.debug_lookup_entry(page, x, y, w, h)
     }
 }
 
