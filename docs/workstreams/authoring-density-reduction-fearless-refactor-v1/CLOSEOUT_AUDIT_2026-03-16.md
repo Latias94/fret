@@ -103,3 +103,24 @@ Follow-on work should now be maintenance only:
 2. classify future exceptions explicitly as advanced/history-only before accepting them, and
 3. reject new helper growth unless new cross-surface evidence reappears outside the already-closed
    default path.
+
+## Addendum — 2026-03-20
+
+The shipped closeout result should not be misread as:
+
+- "`todo` is now as short as `simple-todo`", or
+- "all remaining ceremony on the Todo ladder is still stale helper debt".
+
+The post-closeout Todo ladder audit shows a cleaner split:
+
+- `simple-todo` is now the stable first-contact baseline,
+- the richer `todo` scaffold is intentionally a third-rung selector/query/app-grade exemplar,
+- and the remaining density there is mostly real selector/query lifecycle explicitness plus a small
+  filter-action write-side cost.
+
+That means the closeout still stands:
+
+- the default path itself is closed and aligned,
+- tracked-read cleanup is not the live pressure anymore,
+- and any future reopening should start from cross-surface selector/query or write-surface evidence
+  rather than from Todo-only intuition.

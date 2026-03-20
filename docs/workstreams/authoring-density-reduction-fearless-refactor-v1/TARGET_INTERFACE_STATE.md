@@ -1,12 +1,23 @@
 # Authoring Density Reduction — Target Interface State
 
 Status: target state for the post-v1 default-path density reduction
-Last updated: 2026-03-16
+Last updated: 2026-03-20
 
 This document records the intended end state for the next happy-path authoring pass.
 
 It intentionally freezes the **target properties** first.
 Exact method spellings may still change during the workstream, but the constraints below should not.
+
+## Status note (2026-03-20)
+
+This lane is closed.
+Read the current shipped result this way:
+
+- the target is now effectively met for the first-contact `simple-todo` baseline,
+- the richer `todo` scaffold remains intentionally denser because it is the third-rung
+  selector/query/app-grade exemplar,
+- and any future reopening should start from repeated cross-surface selector/query or write-surface
+  evidence rather than from tracked-read cleanup.
 
 ## Target reading rule
 
@@ -85,3 +96,9 @@ It is:
 - the remaining ceremony is mostly intentional ownership/runtime complexity rather than accidental
   authoring noise,
 - and the same shorter story is visible in docs, templates, examples, and source gates.
+
+Post-closeout interpretation:
+
+- `simple-todo` is the productized first-contact proof of that statement,
+- the richer `todo` rung still carries legitimate selector/query lifecycle cost,
+- and the gap between those two examples should not be read as evidence that this lane failed.
