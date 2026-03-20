@@ -4,6 +4,13 @@ use super::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot};
 const TEXT_ATLAS_WIDTH: u32 = 2048;
 const TEXT_ATLAS_HEIGHT: u32 = 2048;
 
+#[derive(Clone, Copy)]
+enum AtlasSelector {
+    Mask,
+    Color,
+    Subpixel,
+}
+
 pub(crate) struct TextAtlasRuntimeState {
     mask_atlas: GlyphAtlas,
     color_atlas: GlyphAtlas,
@@ -77,15 +84,15 @@ impl TextAtlasRuntimeState {
     }
 
     pub(super) fn mask_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.mask_atlas.bind_group(page)
+        self.bind_group(AtlasSelector::Mask, page)
     }
 
     pub(super) fn color_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.color_atlas.bind_group(page)
+        self.bind_group(AtlasSelector::Color, page)
     }
 
     pub(super) fn subpixel_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.subpixel_atlas.bind_group(page)
+        self.bind_group(AtlasSelector::Subpixel, page)
     }
 
     pub(super) fn flush_uploads(&mut self, queue: &wgpu::Queue) {
@@ -134,35 +141,24 @@ impl TextAtlasRuntimeState {
     }
 
     pub(super) fn mask_dimensions(&self) -> (u32, u32) {
-        self.mask_atlas.dimensions()
+        self.dimensions(AtlasSelector::Mask)
     }
 
     pub(super) fn color_dimensions(&self) -> (u32, u32) {
-        self.color_atlas.dimensions()
+        self.dimensions(AtlasSelector::Color)
     }
 
     pub(super) fn subpixel_dimensions(&self) -> (u32, u32) {
-        self.subpixel_atlas.dimensions()
+        self.dimensions(AtlasSelector::Subpixel)
     }
 
     fn atlas_for_key(&self, key: GlyphKey) -> &GlyphAtlas {
-        if key.is_color() {
-            &self.color_atlas
-        } else if key.is_subpixel() {
-            &self.subpixel_atlas
-        } else {
-            &self.mask_atlas
-        }
+        self.atlas(Self::selector_for_key(key))
     }
 
     fn atlas_mut_for_key(&mut self, key: GlyphKey) -> &mut GlyphAtlas {
-        if key.is_color() {
-            &mut self.color_atlas
-        } else if key.is_subpixel() {
-            &mut self.subpixel_atlas
-        } else {
-            &mut self.mask_atlas
-        }
+        let selector = Self::selector_for_key(key);
+        self.atlas_mut(selector)
     }
 
     pub(super) fn prepared_bounds_for_key(
@@ -249,7 +245,7 @@ impl TextAtlasRuntimeState {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.mask_atlas.debug_lookup_entry(page, x, y, w, h)
+        self.debug_lookup_entry(AtlasSelector::Mask, page, x, y, w, h)
     }
 
     pub(super) fn debug_lookup_color_entry(
@@ -260,7 +256,7 @@ impl TextAtlasRuntimeState {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.color_atlas.debug_lookup_entry(page, x, y, w, h)
+        self.debug_lookup_entry(AtlasSelector::Color, page, x, y, w, h)
     }
 
     pub(super) fn debug_lookup_subpixel_entry(
@@ -271,7 +267,53 @@ impl TextAtlasRuntimeState {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.subpixel_atlas.debug_lookup_entry(page, x, y, w, h)
+        self.debug_lookup_entry(AtlasSelector::Subpixel, page, x, y, w, h)
+    }
+
+    fn selector_for_key(key: GlyphKey) -> AtlasSelector {
+        if key.is_color() {
+            AtlasSelector::Color
+        } else if key.is_subpixel() {
+            AtlasSelector::Subpixel
+        } else {
+            AtlasSelector::Mask
+        }
+    }
+
+    fn atlas(&self, selector: AtlasSelector) -> &GlyphAtlas {
+        match selector {
+            AtlasSelector::Mask => &self.mask_atlas,
+            AtlasSelector::Color => &self.color_atlas,
+            AtlasSelector::Subpixel => &self.subpixel_atlas,
+        }
+    }
+
+    fn atlas_mut(&mut self, selector: AtlasSelector) -> &mut GlyphAtlas {
+        match selector {
+            AtlasSelector::Mask => &mut self.mask_atlas,
+            AtlasSelector::Color => &mut self.color_atlas,
+            AtlasSelector::Subpixel => &mut self.subpixel_atlas,
+        }
+    }
+
+    fn bind_group(&self, selector: AtlasSelector, page: u16) -> &wgpu::BindGroup {
+        self.atlas(selector).bind_group(page)
+    }
+
+    fn dimensions(&self, selector: AtlasSelector) -> (u32, u32) {
+        self.atlas(selector).dimensions()
+    }
+
+    fn debug_lookup_entry(
+        &self,
+        selector: AtlasSelector,
+        page: u16,
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    ) -> Option<DebugGlyphAtlasLookup> {
+        self.atlas(selector).debug_lookup_entry(page, x, y, w, h)
     }
 }
 
