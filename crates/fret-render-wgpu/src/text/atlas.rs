@@ -204,6 +204,10 @@ pub(super) fn subpixel_bin_y(pos: f32) -> (i32, u8) {
 pub(super) const TEXT_ATLAS_MAX_PAGES: usize = 2;
 const GLYPH_ATLAS_INSERT_GUARD_LIMIT: u32 = 128;
 
+fn atlas_allocator_size(width: u32, height: u32) -> etagere::Size {
+    etagere::Size::new(width as i32, height as i32)
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct GlyphAtlasFramePerf {
     hits: u64,
@@ -475,10 +479,7 @@ impl GlyphAtlas {
         });
 
         GlyphAtlasPage {
-            allocator: etagere::BucketedAtlasAllocator::new(etagere::Size::new(
-                width as i32,
-                height as i32,
-            )),
+            allocator: etagere::BucketedAtlasAllocator::new(atlas_allocator_size(width, height)),
             pending: Vec::new(),
             live_glyph_refs: 0,
             last_used_epoch: 0,
@@ -552,14 +553,8 @@ impl GlyphAtlas {
         self.revision = self.revision.saturating_add(1);
         self.glyphs.clear();
         self.used_px = 0;
-        for page in &mut self.pages {
-            page.allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
-                self.width as i32,
-                self.height as i32,
-            ));
-            page.pending.clear();
-            page.live_glyph_refs = 0;
-            page.last_used_epoch = 0;
+        for page_index in 0..self.pages.len() {
+            self.reset_page_storage(page_index);
         }
     }
 
@@ -726,21 +721,7 @@ impl GlyphAtlas {
     }
 
     fn evict_lru_unreferenced_glyph(&mut self) -> bool {
-        let mut victim: Option<(GlyphKey, GlyphAtlasEntry)> = None;
-        for (&k, &e) in &self.glyphs {
-            if e.live_refs > 0 {
-                continue;
-            }
-            let pick = match victim {
-                None => true,
-                Some((_, prev)) => e.last_used_epoch < prev.last_used_epoch,
-            };
-            if pick {
-                victim = Some((k, e));
-            }
-        }
-
-        let Some((victim_key, victim_entry)) = victim else {
+        let Some((victim_key, victim_entry)) = self.find_lru_unreferenced_glyph() else {
             return false;
         };
 
@@ -756,31 +737,11 @@ impl GlyphAtlas {
     }
 
     fn evict_lru_unreferenced_page(&mut self) -> bool {
-        let mut victim: Option<usize> = None;
-        for (idx, page) in self.pages.iter().enumerate() {
-            if page.live_glyph_refs > 0 {
-                continue;
-            }
-            let pick = match victim {
-                None => true,
-                Some(prev) => page.last_used_epoch < self.pages[prev].last_used_epoch,
-            };
-            if pick {
-                victim = Some(idx);
-            }
-        }
-
-        let Some(victim) = victim else {
+        let Some(victim) = self.find_lru_unreferenced_page() else {
             return false;
         };
 
-        self.pages[victim].allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
-            self.width as i32,
-            self.height as i32,
-        ));
-        self.pages[victim].pending.clear();
-        self.pages[victim].last_used_epoch = 0;
-        self.pages[victim].live_glyph_refs = 0;
+        self.reset_page_storage(victim);
 
         let victim_page = victim as u16;
         let keys_to_remove: Vec<GlyphKey> = self
@@ -953,6 +914,49 @@ impl GlyphAtlas {
         self.try_grow_pages()
             || self.evict_lru_unreferenced_glyph()
             || self.evict_lru_unreferenced_page()
+    }
+
+    fn reset_page_storage(&mut self, page_index: usize) {
+        let allocator_size = atlas_allocator_size(self.width, self.height);
+        let page = &mut self.pages[page_index];
+        page.allocator = etagere::BucketedAtlasAllocator::new(allocator_size);
+        page.pending.clear();
+        page.live_glyph_refs = 0;
+        page.last_used_epoch = 0;
+    }
+
+    fn find_lru_unreferenced_glyph(&self) -> Option<(GlyphKey, GlyphAtlasEntry)> {
+        let mut victim: Option<(GlyphKey, GlyphAtlasEntry)> = None;
+        for (&key, &entry) in &self.glyphs {
+            if entry.live_refs > 0 {
+                continue;
+            }
+            let pick = match victim {
+                None => true,
+                Some((_, prev)) => entry.last_used_epoch < prev.last_used_epoch,
+            };
+            if pick {
+                victim = Some((key, entry));
+            }
+        }
+        victim
+    }
+
+    fn find_lru_unreferenced_page(&self) -> Option<usize> {
+        let mut victim: Option<usize> = None;
+        for (page_index, page) in self.pages.iter().enumerate() {
+            if page.live_glyph_refs > 0 {
+                continue;
+            }
+            let pick = match victim {
+                None => true,
+                Some(prev) => page.last_used_epoch < self.pages[prev].last_used_epoch,
+            };
+            if pick {
+                victim = Some(page_index);
+            }
+        }
+        victim
     }
 
     fn remove_glyph_entry(&mut self, key: GlyphKey) -> Option<GlyphAtlasEntry> {
