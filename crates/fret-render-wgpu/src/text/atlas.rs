@@ -202,6 +202,7 @@ pub(super) fn subpixel_bin_y(pos: f32) -> (i32, u8) {
 }
 
 pub(super) const TEXT_ATLAS_MAX_PAGES: usize = 2;
+const GLYPH_ATLAS_INSERT_GUARD_LIMIT: u32 = 128;
 
 #[derive(Debug, Default, Clone, Copy)]
 struct GlyphAtlasFramePerf {
@@ -869,40 +870,19 @@ impl GlyphAtlas {
 
         let padded = self.padded_size_for_insert(w, h)?;
         self.ensure_page_available()?;
-
-        let mut guard = 0_u32;
-        loop {
-            guard = guard.saturating_add(1);
-            if guard >= 128 {
-                return Err(self.out_of_space_error());
-            }
-
-            if let Some(slot) = self.try_allocate_slot(padded.size) {
-                return Ok(self.insert_allocated_glyph(
-                    key,
-                    slot,
-                    padded,
-                    w,
-                    h,
-                    placement_left,
-                    placement_top,
-                    bytes_per_pixel,
-                    data,
-                    epoch,
-                ));
-            }
-
-            if self.try_grow_pages() {
-                continue;
-            }
-            if self.evict_lru_unreferenced_glyph() {
-                continue;
-            }
-            if self.evict_lru_unreferenced_page() {
-                continue;
-            }
-            return Err(self.out_of_space_error());
-        }
+        let slot = self.allocate_slot_with_recovery(padded.size)?;
+        Ok(self.insert_allocated_glyph(
+            key,
+            slot,
+            padded,
+            w,
+            h,
+            placement_left,
+            placement_top,
+            bytes_per_pixel,
+            data,
+            epoch,
+        ))
     }
 
     fn page_index(&self, page: u16) -> usize {
@@ -960,6 +940,33 @@ impl GlyphAtlas {
             return Err(self.out_of_space_error());
         }
         Ok(())
+    }
+
+    fn allocate_slot_with_recovery(
+        &mut self,
+        size: etagere::Size,
+    ) -> Result<AllocatedAtlasSlot, GlyphAtlasInsertError> {
+        let mut guard = 0_u32;
+        loop {
+            guard = guard.saturating_add(1);
+            if guard >= GLYPH_ATLAS_INSERT_GUARD_LIMIT {
+                return Err(self.out_of_space_error());
+            }
+
+            if let Some(slot) = self.try_allocate_slot(size) {
+                return Ok(slot);
+            }
+
+            if !self.recover_space_for_insert() {
+                return Err(self.out_of_space_error());
+            }
+        }
+    }
+
+    fn recover_space_for_insert(&mut self) -> bool {
+        self.try_grow_pages()
+            || self.evict_lru_unreferenced_glyph()
+            || self.evict_lru_unreferenced_page()
     }
 
     fn try_allocate_slot(&mut self, size: etagere::Size) -> Option<AllocatedAtlasSlot> {
