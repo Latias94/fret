@@ -72,15 +72,15 @@ fn prepared_shape_face_usages(
     for (face, (glyphs, missing)) in face_usage {
         let (font_data_id, face_index, variation_key, synthesis_embolden, synthesis_skew_degrees) =
             face.into_parts();
-        face_usages.push(TextFontFaceUsage {
+        face_usages.push(TextFontFaceUsage::new(
             font_data_id,
             face_index,
             variation_key,
             synthesis_embolden,
             synthesis_skew_degrees,
             glyphs,
-            missing_glyphs: missing,
-        });
+            missing,
+        ));
     }
     sort_prepared_shape_face_usages(&mut face_usages);
     face_usages
@@ -88,12 +88,12 @@ fn prepared_shape_face_usages(
 
 fn sort_prepared_shape_face_usages(face_usages: &mut [TextFontFaceUsage]) {
     face_usages.sort_by(|a, b| {
-        b.glyphs
-            .cmp(&a.glyphs)
-            .then_with(|| a.font_data_id.cmp(&b.font_data_id))
-            .then_with(|| a.face_index.cmp(&b.face_index))
-            .then_with(|| a.variation_key.cmp(&b.variation_key))
-            .then_with(|| a.synthesis_embolden.cmp(&b.synthesis_embolden))
-            .then_with(|| a.synthesis_skew_degrees.cmp(&b.synthesis_skew_degrees))
+        b.glyphs()
+            .cmp(&a.glyphs())
+            .then_with(|| a.font_data_id().cmp(&b.font_data_id()))
+            .then_with(|| a.face_index().cmp(&b.face_index()))
+            .then_with(|| a.variation_key().cmp(&b.variation_key()))
+            .then_with(|| a.synthesis_embolden().cmp(&b.synthesis_embolden()))
+            .then_with(|| a.synthesis_skew_degrees().cmp(&b.synthesis_skew_degrees()))
     });
 }

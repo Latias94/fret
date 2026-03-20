@@ -214,21 +214,21 @@ impl TextSystem {
 
         let k = atlas.find_key_for_bounds(page, x, y, w, h)?;
 
-        Some(DebugGlyphAtlasLookup {
-            font_data_id: k.font.font_data_id(),
-            face_index: k.font.face_index(),
-            variation_key: k.font.variation_key(),
-            synthesis_embolden: k.font.synthesis_embolden(),
-            synthesis_skew_degrees: k.font.synthesis_skew_degrees(),
-            glyph_id: k.glyph_id,
-            size_bits: k.size_bits,
-            x_bin: k.x_bin,
-            y_bin: k.y_bin,
-            kind: match k.kind {
+        Some(DebugGlyphAtlasLookup::new(
+            k.font.font_data_id(),
+            k.font.face_index(),
+            k.font.variation_key(),
+            k.font.synthesis_embolden(),
+            k.font.synthesis_skew_degrees(),
+            k.glyph_id,
+            k.size_bits,
+            k.x_bin,
+            k.y_bin,
+            match k.kind {
                 GlyphQuadKind::Mask => "mask",
                 GlyphQuadKind::Color => "color",
                 GlyphQuadKind::Subpixel => "subpixel",
             },
-        })
+        ))
     }
 }

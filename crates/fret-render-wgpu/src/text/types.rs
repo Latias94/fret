@@ -1,6 +1,6 @@
 use super::atlas::GlyphKey;
 use fret_core::{TextMetrics, geometry::Px};
-use fret_render_text::TextDecoration;
+use fret_render_text::{FontFaceKey, TextDecoration};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -42,16 +42,44 @@ pub enum GlyphQuadKind {
 
 #[derive(Debug, Clone, Copy, serde::Serialize)]
 pub(crate) struct DebugGlyphAtlasLookup {
-    pub(crate) font_data_id: u64,
-    pub(crate) face_index: u32,
-    pub(crate) variation_key: u64,
-    pub(crate) synthesis_embolden: bool,
-    pub(crate) synthesis_skew_degrees: i8,
-    pub(crate) glyph_id: u32,
-    pub(crate) size_bits: u32,
-    pub(crate) x_bin: u8,
-    pub(crate) y_bin: u8,
-    pub(crate) kind: &'static str,
+    font_data_id: u64,
+    face_index: u32,
+    variation_key: u64,
+    synthesis_embolden: bool,
+    synthesis_skew_degrees: i8,
+    glyph_id: u32,
+    size_bits: u32,
+    x_bin: u8,
+    y_bin: u8,
+    kind: &'static str,
+}
+
+impl DebugGlyphAtlasLookup {
+    pub(crate) fn new(
+        font_data_id: u64,
+        face_index: u32,
+        variation_key: u64,
+        synthesis_embolden: bool,
+        synthesis_skew_degrees: i8,
+        glyph_id: u32,
+        size_bits: u32,
+        x_bin: u8,
+        y_bin: u8,
+        kind: &'static str,
+    ) -> Self {
+        Self {
+            font_data_id,
+            face_index,
+            variation_key,
+            synthesis_embolden,
+            synthesis_skew_degrees,
+            glyph_id,
+            size_bits,
+            x_bin,
+            y_bin,
+            kind,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -169,14 +197,74 @@ impl TextShape {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct TextFontFaceUsage {
-    pub(crate) font_data_id: u64,
-    pub(crate) face_index: u32,
-    pub(crate) variation_key: u64,
-    pub(crate) synthesis_embolden: bool,
+    font_data_id: u64,
+    face_index: u32,
+    variation_key: u64,
+    synthesis_embolden: bool,
     /// Faux italic/oblique skew in degrees (fontique synthesis), applied at rasterization time.
-    pub(crate) synthesis_skew_degrees: i8,
-    pub(crate) glyphs: u32,
-    pub(crate) missing_glyphs: u32,
+    synthesis_skew_degrees: i8,
+    glyphs: u32,
+    missing_glyphs: u32,
+}
+
+impl TextFontFaceUsage {
+    pub(super) fn new(
+        font_data_id: u64,
+        face_index: u32,
+        variation_key: u64,
+        synthesis_embolden: bool,
+        synthesis_skew_degrees: i8,
+        glyphs: u32,
+        missing_glyphs: u32,
+    ) -> Self {
+        Self {
+            font_data_id,
+            face_index,
+            variation_key,
+            synthesis_embolden,
+            synthesis_skew_degrees,
+            glyphs,
+            missing_glyphs,
+        }
+    }
+
+    pub(crate) fn font_data_id(&self) -> u64 {
+        self.font_data_id
+    }
+
+    pub(crate) fn face_index(&self) -> u32 {
+        self.face_index
+    }
+
+    pub(crate) fn variation_key(&self) -> u64 {
+        self.variation_key
+    }
+
+    pub(crate) fn synthesis_embolden(&self) -> bool {
+        self.synthesis_embolden
+    }
+
+    pub(crate) fn synthesis_skew_degrees(&self) -> i8 {
+        self.synthesis_skew_degrees
+    }
+
+    pub(crate) fn glyphs(&self) -> u32 {
+        self.glyphs
+    }
+
+    pub(crate) fn missing_glyphs(&self) -> u32 {
+        self.missing_glyphs
+    }
+
+    pub(crate) fn face_key(&self) -> FontFaceKey {
+        FontFaceKey::new(
+            self.font_data_id,
+            self.face_index,
+            self.variation_key,
+            self.synthesis_embolden,
+            self.synthesis_skew_degrees,
+        )
+    }
 }
 
 pub use fret_render_text::TextLineLayout as TextLine;
