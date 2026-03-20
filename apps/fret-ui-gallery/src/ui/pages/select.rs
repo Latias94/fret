@@ -20,6 +20,8 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let label = snippets::label::render(cx);
     let field_association = snippets::field_association::render(cx);
     let diag_surface = snippets::diag_surface::render(cx);
+    let parts = snippets::parts::render(cx);
+    let rich_items = snippets::rich_items::render(cx);
     let align_item = snippets::align_item_with_trigger::render(cx);
     let groups = snippets::groups::render(cx);
     let scrollable = snippets::scrollable::render(cx);
@@ -29,17 +31,19 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let api_reference = doc_layout::notes_block([
         "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) stay the default copyable root story.",
-        "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` already covers the upstream-shaped nested `SelectTrigger` / `SelectValue` / `SelectContent` lane when you need composable parts ownership.",
+        "`Select::into_element_parts(...)` plus `SelectContent::with_entries(...)` is the current typed equivalent of the upstream nested `SelectTrigger` / `SelectValue` / `SelectContent` children lane.",
         "That composable seam should stay typed and narrow around `SelectEntry` (`SelectGroup` / `SelectItem` / `SelectLabel` / `SelectSeparator`) instead of widening `Select` to arbitrary generic children.",
         "Width negotiation remains caller-owned at the trigger/root call site; overlay placement, dismissal, scroll buttons, and listbox semantics stay recipe/mechanism-owned in `fret-ui-kit` + `fret-ui-shadcn`.",
-        "No new mechanism bug was identified in this pass; the remaining drift was the first-party docs/teaching surface.",
+        "No new mechanism bug was identified in this pass; the remaining drift was first-party docs discoverability around the already-landed parts surface.",
     ]);
     let notes = doc_layout::notes_block([
         "Select is a Popover + Listbox recipe. Use it for rich overlays and custom interactions.",
         "Gallery order now mirrors the upstream shadcn/Base UI Select docs path first: `Demo`, `Usage`, `Align Item With Trigger`, `Groups`, `Scrollable`, `Disabled`, `Invalid`, `RTL`, and `API Reference`.",
-        "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) are now the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story.",
+        "`Select::new(...)` / `new_controllable(...)` plus the direct builder chain (`.trigger(...).value(...).content(...).entries(...)`) stay the default copyable root story; `into_element_parts(...)` remains the focused upstream-shaped adapter on the same lane rather than a separate `compose()` story.",
+        "`Composable Parts (Fret)` now makes that nested lane explicit with a full copyable example, so app authors do not need a broader generic children API just to match upstream docs ergonomics.",
+        "`Rich Items (Fret)` documents the current typed answer to richer `SelectItemText` content: use styled text runs for value + secondary label style instead of widening items to arbitrary child trees.",
         "Standalone label wiring still uses `FieldLabel::for_control(...)` + `Select::control_id(...)`; inside `Field::build(...)`, Select can inherit the field-local label/description association automatically.",
-        "`Label Association`, `Field Builder Association`, and `Diag Surface` stay after `API Reference` as explicit Fret follow-ups so the docs path stays clean without sacrificing existing scripted coverage.",
+        "`Composable Parts (Fret)`, `Rich Items (Fret)`, `Label Association`, `Field Builder Association`, and `Diag Surface` stay after `API Reference` as explicit Fret follow-ups so the docs path stays clean without sacrificing existing scripted coverage.",
         "This page keeps stable `test_id`s for `tools/diag-scripts/ui-gallery/select/*`.",
         "Use `SelectTriggerSize::Sm` to match compact shadcn control heights.",
     ]);
@@ -49,6 +53,18 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description(
             "Public surface summary, ownership notes, and the current parts/children guidance.",
         );
+    let parts = DocSection::build(cx, "Composable Parts (Fret)", parts)
+        .test_id_prefix("ui-gallery-select-composable-parts")
+        .description(
+            "Typed equivalent of the upstream nested `SelectTrigger` / `SelectValue` / `SelectContent` lane.",
+        )
+        .code_rust_from_file_region(snippets::parts::SOURCE, "example");
+    let rich_items = DocSection::build(cx, "Rich Items (Fret)", rich_items)
+        .test_id_prefix("ui-gallery-select-rich-items")
+        .description(
+            "Use `SelectItemText` + `SelectTextRun` for richer item rows without widening Select to arbitrary generic children.",
+        )
+        .code_rust_from_file_region(snippets::rich_items::SOURCE, "example");
     let notes =
         DocSection::build(cx, "Notes", notes).description("Parity notes and usage guidance.");
     let demo = DocSection::build(cx, "Demo", demo)
@@ -99,7 +115,7 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the upstream shadcn/Base UI Select docs path first, then keeps label wiring and diagnostics-specific surfaces as explicit Fret follow-ups.",
+            "Preview mirrors the upstream shadcn/Base UI Select docs path first, then keeps typed parts composition, label wiring, and diagnostics-specific surfaces as explicit Fret follow-ups.",
         ),
         vec![
             demo,
@@ -111,6 +127,8 @@ pub(super) fn preview_select(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             invalid,
             rtl,
             api_reference,
+            parts,
+            rich_items,
             label,
             field_association,
             diag_surface,

@@ -6,6 +6,8 @@ pub mod field_association;
 pub mod groups;
 pub mod invalid;
 pub mod label;
+pub mod parts;
+pub mod rich_items;
 pub mod rtl;
 pub mod scrollable;
 pub mod usage;
