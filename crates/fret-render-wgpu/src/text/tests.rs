@@ -23,8 +23,8 @@ fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -1156,8 +1156,8 @@ fn font_trace_records_missing_glyphs_for_named_family_when_system_fonts_are_abse
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -1220,8 +1220,8 @@ fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_abse
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -1321,8 +1321,8 @@ fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fo
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -1758,8 +1758,8 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -1869,8 +1869,8 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -1977,8 +1977,8 @@ fn open_type_feature_overrides_can_change_shaped_glyph_output_for_known_font_fix
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -2106,8 +2106,8 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -2481,8 +2481,8 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -2611,8 +2611,8 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
 
     let config0 = fret_core::TextFontFamilyConfig {
@@ -2625,7 +2625,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
         ..Default::default()
     };
     let _ = text.set_font_families(&config0);
-    let key0 = text.font_runtime.fallback_policy.fallback_policy_key;
+    let key0 = text.font_runtime.fallback_policy.fallback_policy_key();
 
     let config1 = fret_core::TextFontFamilyConfig {
         common_fallback_injection: fret_core::TextCommonFallbackInjection::CommonFallback,
@@ -2637,7 +2637,7 @@ fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case
         ..Default::default()
     };
     let _ = text.set_font_families(&config1);
-    let key1 = text.font_runtime.fallback_policy.fallback_policy_key;
+    let key1 = text.font_runtime.fallback_policy.fallback_policy_key();
 
     assert_eq!(
         key0, key1,
@@ -2719,28 +2719,28 @@ fn fallback_policy_key_changes_when_generic_candidate_order_changes() {
         ..Default::default()
     };
     let _ = text.set_font_families(&base);
-    let key_base = text.font_runtime.fallback_policy.fallback_policy_key;
+    let key_base = text.font_runtime.fallback_policy.fallback_policy_key();
 
     let sans_reordered = fret_core::TextFontFamilyConfig {
         ui_sans: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
         ..base.clone()
     };
     let _ = text.set_font_families(&sans_reordered);
-    let key_sans = text.font_runtime.fallback_policy.fallback_policy_key;
+    let key_sans = text.font_runtime.fallback_policy.fallback_policy_key();
 
     let serif_reordered = fret_core::TextFontFamilyConfig {
         ui_serif: vec!["JetBrains Mono".to_string(), "Inter".to_string()],
         ..base.clone()
     };
     let _ = text.set_font_families(&serif_reordered);
-    let key_serif = text.font_runtime.fallback_policy.fallback_policy_key;
+    let key_serif = text.font_runtime.fallback_policy.fallback_policy_key();
 
     let mono_reordered = fret_core::TextFontFamilyConfig {
         ui_mono: vec!["Inter".to_string(), "JetBrains Mono".to_string()],
         ..base
     };
     let _ = text.set_font_families(&mono_reordered);
-    let key_mono = text.font_runtime.fallback_policy.fallback_policy_key;
+    let key_mono = text.font_runtime.fallback_policy.fallback_policy_key();
 
     assert_ne!(
         key_base, key_sans,
@@ -3028,8 +3028,8 @@ fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;
@@ -3184,8 +3184,8 @@ fn mixed_script_fallback_uses_bundled_faces_for_named_family_when_system_fonts_a
     let _ = text.parley_shaper.set_common_fallback_stack_suffix(
         text.font_runtime
             .fallback_policy
-            .common_fallback_stack_suffix
-            .clone(),
+            .common_fallback_stack_suffix()
+            .to_string(),
     );
     text.font_runtime.generic_injections.clear();
     text.font_runtime.font_db_revision = 0;

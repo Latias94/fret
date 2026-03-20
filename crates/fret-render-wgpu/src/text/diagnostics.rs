@@ -110,7 +110,7 @@ impl TextSystem {
             frame_id,
             font_stack_key: self.font_runtime.font_stack_key,
             font_db_revision: self.font_runtime.font_db_revision,
-            fallback_policy_key: self.font_runtime.fallback_policy.fallback_policy_key,
+            fallback_policy_key: self.font_runtime.fallback_policy.fallback_policy_key(),
             frame_missing_glyphs: self.frame_perf.missing_glyphs,
             frame_texts_with_missing_glyphs: self.frame_perf.texts_with_missing_glyphs,
             blobs_live: self.blob_state.blobs.len() as u64,

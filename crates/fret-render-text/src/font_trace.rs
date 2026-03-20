@@ -88,7 +88,7 @@ impl FontTraceState {
 
         let mut common_fallback_lower: HashSet<String> = HashSet::new();
         if fallback_policy.prefer_common_fallback() {
-            for f in &fallback_policy.common_fallback_candidates {
+            for f in fallback_policy.common_fallback_candidates() {
                 common_fallback_lower.insert(f.trim().to_ascii_lowercase());
             }
         }
@@ -122,7 +122,7 @@ impl FontTraceState {
             wrap: constraints.wrap,
             overflow: constraints.overflow,
             max_width: constraints.max_width,
-            locale_bcp47: fallback_policy.locale_bcp47.clone(),
+            locale_bcp47: fallback_policy.locale_bcp47().map(str::to_string),
             missing_glyphs,
             families: usages,
         };
@@ -221,15 +221,15 @@ fn requested_generic_lower_families(
 ) -> HashSet<String> {
     let (configured, defaults): (&[String], &[&str]) = match requested {
         fret_core::FontId::Ui => (
-            &fallback_policy.font_family_config.ui_sans,
+            &fallback_policy.font_family_config().ui_sans,
             fallback_policy::default_sans_candidates(shaper),
         ),
         fret_core::FontId::Serif => (
-            &fallback_policy.font_family_config.ui_serif,
+            &fallback_policy.font_family_config().ui_serif,
             fallback_policy::default_serif_candidates(shaper),
         ),
         fret_core::FontId::Monospace => (
-            &fallback_policy.font_family_config.ui_mono,
+            &fallback_policy.font_family_config().ui_mono,
             fallback_policy::default_monospace_candidates(shaper),
         ),
         fret_core::FontId::Family(_) => return HashSet::new(),
@@ -259,7 +259,9 @@ mod tests {
     fn generic_requested_lane_includes_configured_and_default_candidates() {
         let shaper = ParleyShaper::new_without_system_fonts();
         let mut policy = TextFallbackPolicyV1::new(&shaper);
-        policy.font_family_config.ui_sans = vec!["Custom UI".to_string()];
+        let mut config = policy.font_family_config().clone();
+        config.ui_sans = vec!["Custom UI".to_string()];
+        policy.set_font_family_config(config);
 
         let families = requested_generic_lower_families(&fret_core::FontId::Ui, &policy, &shaper);
         assert!(families.contains("custom ui"));
