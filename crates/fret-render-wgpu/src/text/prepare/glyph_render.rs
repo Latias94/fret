@@ -76,7 +76,7 @@ fn prepared_glyph_scaler_size(glyph: &ParleyGlyph) -> f32 {
 }
 
 pub(super) fn prepared_glyph_has_normalized_coords(glyph: &ParleyGlyph) -> bool {
-    !glyph.normalized_coords.is_empty()
+    !glyph.normalized_coords().is_empty()
 }
 
 fn prepared_glyph_scaler_builder<'a>(
@@ -132,7 +132,7 @@ fn apply_prepared_glyph_normalized_coords_values<'a>(
     scaler_builder: parley::swash::scale::ScalerBuilder<'a>,
     glyph: &'a ParleyGlyph,
 ) -> parley::swash::scale::ScalerBuilder<'a> {
-    scaler_builder.normalized_coords(glyph.normalized_coords.iter())
+    scaler_builder.normalized_coords(glyph.normalized_coords().iter())
 }
 
 fn render_prepared_glyph_image_with_scaler(

@@ -60,7 +60,7 @@ impl TextSystem {
             self.face_cache
                 .font_instance_coords_by_face
                 .entry(face_key)
-                .or_insert_with(|| glyph.normalized_coords.clone());
+                .or_insert_with(|| glyph.normalized_coords().clone());
         }
     }
 }
@@ -100,7 +100,7 @@ fn prepared_glyph_font_identity(glyph: &ParleyGlyph) -> (u64, u32) {
 }
 
 fn prepared_glyph_variation_key(glyph: &ParleyGlyph) -> u64 {
-    variation_key_from_normalized_coords(&glyph.normalized_coords)
+    variation_key_from_normalized_coords(glyph.normalized_coords())
 }
 
 fn prepared_glyph_synthesis_embolden(glyph: &ParleyGlyph) -> bool {

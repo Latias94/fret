@@ -150,7 +150,7 @@ pub struct ParleyGlyph {
     pub advance: f32,
     font: GlyphFontData,
     font_size: f32,
-    pub normalized_coords: Arc<[i16]>,
+    normalized_coords: Arc<[i16]>,
     pub synthesis: FontSynthesis,
     pub text_range: Range<usize>,
     pub is_rtl: bool,
@@ -163,6 +163,10 @@ impl ParleyGlyph {
 
     pub fn font_size(&self) -> f32 {
         self.font_size
+    }
+
+    pub fn normalized_coords(&self) -> &Arc<[i16]> {
+        &self.normalized_coords
     }
 }
 
