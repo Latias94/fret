@@ -1830,17 +1830,13 @@ fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
         key_heavy.font.variation_key()
     );
 
-    text.atlas_runtime.mask_atlas.reset();
-    text.atlas_runtime.color_atlas.reset();
-    text.atlas_runtime.subpixel_atlas.reset();
+    text.atlas_runtime.reset();
     let epoch = 1;
 
     text.ensure_glyph_in_atlas(key_light, epoch);
     let bytes_light = pending_upload_bytes_for_key(&text, key_light);
 
-    text.atlas_runtime.mask_atlas.reset();
-    text.atlas_runtime.color_atlas.reset();
-    text.atlas_runtime.subpixel_atlas.reset();
+    text.atlas_runtime.reset();
 
     text.ensure_glyph_in_atlas(key_heavy, epoch);
     let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
@@ -1936,17 +1932,13 @@ fn variable_font_weight_changes_face_key_and_raster_output() {
     );
 
     // Ensure path must also apply instance coordinates when rasterizing on-demand.
-    text.atlas_runtime.mask_atlas.reset();
-    text.atlas_runtime.color_atlas.reset();
-    text.atlas_runtime.subpixel_atlas.reset();
+    text.atlas_runtime.reset();
     let epoch = 1;
 
     text.ensure_glyph_in_atlas(key_light, epoch);
     let bytes_light = pending_upload_bytes_for_key(&text, key_light);
 
-    text.atlas_runtime.mask_atlas.reset();
-    text.atlas_runtime.color_atlas.reset();
-    text.atlas_runtime.subpixel_atlas.reset();
+    text.atlas_runtime.reset();
 
     text.ensure_glyph_in_atlas(key_heavy, epoch);
     let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
@@ -2571,17 +2563,13 @@ fn synthesis_skew_participates_in_face_key_and_raster_output() {
         "expected italic request to trigger a faux skew when no italic face is available"
     );
 
-    text.atlas_runtime.mask_atlas.reset();
-    text.atlas_runtime.color_atlas.reset();
-    text.atlas_runtime.subpixel_atlas.reset();
+    text.atlas_runtime.reset();
     let epoch = 1;
 
     text.ensure_glyph_in_atlas(key_normal, epoch);
     let bytes_normal = pending_upload_bytes_for_key(&text, key_normal);
 
-    text.atlas_runtime.mask_atlas.reset();
-    text.atlas_runtime.color_atlas.reset();
-    text.atlas_runtime.subpixel_atlas.reset();
+    text.atlas_runtime.reset();
 
     text.ensure_glyph_in_atlas(key_italic, epoch);
     let bytes_italic = pending_upload_bytes_for_key(&text, key_italic);

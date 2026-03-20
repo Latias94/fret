@@ -4,25 +4,23 @@ use fret_core::scene::{Scene, SceneOp};
 
 impl TextSystem {
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.atlas_runtime.atlas_bind_group_layout
+        self.atlas_runtime.atlas_bind_group_layout()
     }
 
     pub fn mask_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.atlas_runtime.mask_atlas.bind_group(page)
+        self.atlas_runtime.mask_bind_group(page)
     }
 
     pub fn color_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.atlas_runtime.color_atlas.bind_group(page)
+        self.atlas_runtime.color_bind_group(page)
     }
 
     pub fn subpixel_atlas_bind_group(&self, page: u16) -> &wgpu::BindGroup {
-        self.atlas_runtime.subpixel_atlas.bind_group(page)
+        self.atlas_runtime.subpixel_bind_group(page)
     }
 
     pub fn flush_uploads(&mut self, queue: &wgpu::Queue) {
-        self.atlas_runtime.mask_atlas.flush_uploads(queue);
-        self.atlas_runtime.color_atlas.flush_uploads(queue);
-        self.atlas_runtime.subpixel_atlas.flush_uploads(queue);
+        self.atlas_runtime.flush_uploads(queue);
     }
 
     pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {
@@ -33,11 +31,8 @@ impl TextSystem {
         let bucket = (frame_index as usize) % ring_len;
 
         let (old_mask, old_color, old_subpixel) = self.pin_state.take_bucket(bucket);
-        self.atlas_runtime.mask_atlas.dec_live_refs(&old_mask);
-        self.atlas_runtime.color_atlas.dec_live_refs(&old_color);
         self.atlas_runtime
-            .subpixel_atlas
-            .dec_live_refs(&old_subpixel);
+            .dec_pin_bucket(&old_mask, &old_color, &old_subpixel);
 
         let mut pinned_keys = GlyphKeyBuckets::default();
 
@@ -66,11 +61,8 @@ impl TextSystem {
             self.ensure_glyph_in_atlas(key, epoch);
         }
 
-        self.atlas_runtime.mask_atlas.inc_live_refs(&new_mask);
-        self.atlas_runtime.color_atlas.inc_live_refs(&new_color);
         self.atlas_runtime
-            .subpixel_atlas
-            .inc_live_refs(&new_subpixel);
+            .inc_pin_bucket(&new_mask, &new_color, &new_subpixel);
 
         self.pin_state
             .append_bucket(bucket, new_mask, new_color, new_subpixel);

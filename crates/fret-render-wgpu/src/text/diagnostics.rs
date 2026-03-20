@@ -1,4 +1,3 @@
-use super::atlas::GlyphAtlas;
 use super::{
     DebugGlyphAtlasLookup, GlyphInstance, TextDecoration, TextFontFaceUsage, TextLine, TextShape,
     TextSystem,
@@ -108,6 +107,8 @@ impl TextSystem {
             }
         }
 
+        let (mask_atlas, color_atlas, subpixel_atlas) = self.atlas_runtime.diagnostics_snapshots();
+
         fret_core::RendererTextPerfSnapshot {
             frame_id,
             font_stack_key: self.font_runtime.font_stack_key,
@@ -133,9 +134,9 @@ impl TextSystem {
             frame_shape_cache_hits: self.frame_perf.shape_cache_hits,
             frame_shape_cache_misses: self.frame_perf.shape_cache_misses,
             frame_shapes_created: self.frame_perf.shapes_created,
-            mask_atlas: self.atlas_runtime.mask_atlas.diagnostics_snapshot(),
-            color_atlas: self.atlas_runtime.color_atlas.diagnostics_snapshot(),
-            subpixel_atlas: self.atlas_runtime.subpixel_atlas.diagnostics_snapshot(),
+            mask_atlas,
+            color_atlas,
+            subpixel_atlas,
             registered_font_blobs_count: font_db.registered_font_blobs_count(),
             registered_font_blobs_total_bytes: font_db.registered_font_blobs_total_bytes(),
             family_id_cache_entries: font_db.family_id_cache_entries(),
@@ -156,29 +157,11 @@ impl TextSystem {
     }
 
     pub(crate) fn take_atlas_perf_snapshot(&mut self) -> super::TextAtlasPerfSnapshot {
-        let mask = self.atlas_runtime.mask_atlas.take_perf_snapshot();
-        let color = self.atlas_runtime.color_atlas.take_perf_snapshot();
-        let subpixel = self.atlas_runtime.subpixel_atlas.take_perf_snapshot();
-
-        super::TextAtlasPerfSnapshot {
-            uploads: mask.uploads + color.uploads + subpixel.uploads,
-            upload_bytes: mask.upload_bytes + color.upload_bytes + subpixel.upload_bytes,
-            evicted_glyphs: mask.evicted_glyphs + color.evicted_glyphs + subpixel.evicted_glyphs,
-            evicted_pages: mask.evicted_pages + color.evicted_pages + subpixel.evicted_pages,
-            evicted_page_glyphs: mask.evicted_page_glyphs
-                + color.evicted_page_glyphs
-                + subpixel.evicted_page_glyphs,
-            resets: mask.resets + color.resets + subpixel.resets,
-        }
+        self.atlas_runtime.take_perf_snapshot()
     }
 
     pub(crate) fn atlas_revision(&self) -> u64 {
-        self.atlas_runtime
-            .mask_atlas
-            .revision()
-            .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-            ^ self.atlas_runtime.color_atlas.revision().rotate_left(1)
-            ^ self.atlas_runtime.subpixel_atlas.revision().rotate_left(2)
+        self.atlas_runtime.combined_revision()
     }
 
     pub(super) fn glyph_uv_for_instance(&self, glyph: &GlyphInstance) -> Option<(u16, [f32; 4])> {
@@ -197,40 +180,15 @@ impl TextSystem {
     }
 
     pub(crate) fn debug_mask_atlas_dims(&self) -> (u32, u32) {
-        self.atlas_runtime.mask_atlas.dimensions()
+        self.atlas_runtime.mask_dimensions()
     }
 
     pub(crate) fn debug_color_atlas_dims(&self) -> (u32, u32) {
-        self.atlas_runtime.color_atlas.dimensions()
+        self.atlas_runtime.color_dimensions()
     }
 
     pub(crate) fn debug_subpixel_atlas_dims(&self) -> (u32, u32) {
-        self.atlas_runtime.subpixel_atlas.dimensions()
-    }
-
-    fn debug_lookup_glyph_atlas_entry_in_atlas(
-        &self,
-        atlas: &GlyphAtlas,
-        page: u16,
-        x: u32,
-        y: u32,
-        w: u32,
-        h: u32,
-    ) -> Option<DebugGlyphAtlasLookup> {
-        let k = atlas.find_key_for_bounds(page, x, y, w, h)?;
-
-        Some(DebugGlyphAtlasLookup::new(
-            k.font.font_data_id(),
-            k.font.face_index(),
-            k.font.variation_key(),
-            k.font.synthesis_embolden(),
-            k.font.synthesis_skew_degrees(),
-            k.glyph_id,
-            k.size_bits,
-            k.x_bin,
-            k.y_bin,
-            k.kind_label(),
-        ))
+        self.atlas_runtime.subpixel_dimensions()
     }
 
     pub(crate) fn debug_lookup_mask_glyph_atlas_entry(
@@ -241,14 +199,7 @@ impl TextSystem {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_glyph_atlas_entry_in_atlas(
-            &self.atlas_runtime.mask_atlas,
-            page,
-            x,
-            y,
-            w,
-            h,
-        )
+        self.atlas_runtime.debug_lookup_mask_entry(page, x, y, w, h)
     }
 
     pub(crate) fn debug_lookup_color_glyph_atlas_entry(
@@ -259,14 +210,8 @@ impl TextSystem {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_glyph_atlas_entry_in_atlas(
-            &self.atlas_runtime.color_atlas,
-            page,
-            x,
-            y,
-            w,
-            h,
-        )
+        self.atlas_runtime
+            .debug_lookup_color_entry(page, x, y, w, h)
     }
 
     pub(crate) fn debug_lookup_subpixel_glyph_atlas_entry(
@@ -277,13 +222,7 @@ impl TextSystem {
         w: u32,
         h: u32,
     ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_glyph_atlas_entry_in_atlas(
-            &self.atlas_runtime.subpixel_atlas,
-            page,
-            x,
-            y,
-            w,
-            h,
-        )
+        self.atlas_runtime
+            .debug_lookup_subpixel_entry(page, x, y, w, h)
     }
 }
