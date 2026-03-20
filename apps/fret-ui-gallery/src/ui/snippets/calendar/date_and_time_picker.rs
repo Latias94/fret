@@ -80,7 +80,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 shadcn::PopoverTrigger::build(trigger).into_element(cx)
             },
             move |cx| {
-                shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::build(cx, |_cx| [calendar])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .refine_layout(
                         LayoutRefinement::default()

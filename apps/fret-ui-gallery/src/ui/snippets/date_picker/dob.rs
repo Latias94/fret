@@ -50,7 +50,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .into_element(cx)
                         .test_id("ui-gallery-date-picker-dob-calendar");
 
-                    shadcn::PopoverContent::new([calendar])
+                    shadcn::PopoverContent::build(cx, |_cx| [calendar])
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
                             LayoutRefinement::default()

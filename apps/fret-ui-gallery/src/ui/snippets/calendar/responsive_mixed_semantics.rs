@@ -76,7 +76,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         .test_id_prefix("ui-gallery.calendar.responsive.popover")
                         .into_element(cx);
 
-                shadcn::PopoverContent::new([calendar])
+                shadcn::PopoverContent::build(cx, |_cx| [calendar])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
                     .refine_layout(
                         LayoutRefinement::default()

@@ -36,30 +36,31 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx)
             },
             |cx| {
-                shadcn::PopoverContent::new(vec![
-                    shadcn::PopoverHeader::new([
-                        shadcn::PopoverTitle::new("Start a new task with Copilot").into_element(cx),
-                        shadcn::PopoverDescription::new("Describe your task in natural language.")
+                shadcn::PopoverContent::build(cx, |cx| {
+                    ui::children![
+                        cx;
+                        shadcn::PopoverHeader::new([
+                            shadcn::PopoverTitle::new("Start a new task with Copilot").into_element(cx),
+                            shadcn::PopoverDescription::new("Describe your task in natural language.")
+                                .into_element(cx),
+                        ]),
+                        shadcn::Field::new([
+                            fret_ui_kit::primitives::visually_hidden::visually_hidden_label(
+                                cx,
+                                "Task Description",
+                            ),
+                            shadcn::Textarea::new(text)
+                                .a11y_label("Task Description")
+                                .placeholder("I need to...")
+                                .resizable(false)
+                                .into_element(cx),
+                            shadcn::FieldDescription::new(
+                                "Copilot will open a pull request for review.",
+                            )
                             .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::Field::new([
-                        fret_ui_kit::primitives::visually_hidden::visually_hidden_label(
-                            cx,
-                            "Task Description",
-                        ),
-                        shadcn::Textarea::new(text)
-                            .a11y_label("Task Description")
-                            .placeholder("I need to...")
-                            .resizable(false)
-                            .into_element(cx),
-                        shadcn::FieldDescription::new(
-                            "Copilot will open a pull request for review.",
-                        )
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
+                        ])
+                    ]
+                })
                 .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
                 .into_element(cx)
             },
