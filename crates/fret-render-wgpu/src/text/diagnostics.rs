@@ -12,20 +12,20 @@ fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
     let mut bytes: u64 = (std::mem::size_of::<TextShape>() as u128).min(u64::MAX as u128) as u64;
 
     bytes = bytes.saturating_add(mul(
-        shape.glyphs.len(),
+        shape.glyphs().len(),
         std::mem::size_of::<GlyphInstance>(),
     ));
-    bytes = bytes.saturating_add(mul(shape.lines.len(), std::mem::size_of::<TextLine>()));
+    bytes = bytes.saturating_add(mul(shape.lines().len(), std::mem::size_of::<TextLine>()));
     bytes = bytes.saturating_add(mul(
-        shape.caret_stops.len(),
+        shape.caret_stops().len(),
         std::mem::size_of::<(usize, fret_core::geometry::Px)>(),
     ));
     bytes = bytes.saturating_add(mul(
-        shape.font_faces.len(),
+        shape.font_faces().len(),
         std::mem::size_of::<TextFontFaceUsage>(),
     ));
 
-    for line in shape.lines.iter() {
+    for line in shape.lines() {
         bytes = bytes.saturating_add(mul(
             line.caret_stops_capacity(),
             std::mem::size_of::<(usize, fret_core::geometry::Px)>(),

@@ -51,7 +51,7 @@ impl TextSystem {
             let Some(blob) = self.blob_state.blobs.get(text) else {
                 continue;
             };
-            for glyph in blob.shape.glyphs.as_ref() {
+            for glyph in blob.shape.glyphs() {
                 match glyph.kind() {
                     GlyphQuadKind::Mask => {
                         mask_keys.insert(glyph.key);

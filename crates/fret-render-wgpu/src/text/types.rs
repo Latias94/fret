@@ -64,12 +64,56 @@ pub struct TextBlob {
 
 #[derive(Debug, Clone)]
 pub struct TextShape {
-    pub glyphs: Arc<[GlyphInstance]>,
-    pub metrics: TextMetrics,
-    pub lines: Arc<[TextLine]>,
-    pub caret_stops: Arc<[(usize, Px)]>,
-    pub missing_glyphs: u32,
-    pub(crate) font_faces: Arc<[TextFontFaceUsage]>,
+    glyphs: Arc<[GlyphInstance]>,
+    metrics: TextMetrics,
+    lines: Arc<[TextLine]>,
+    caret_stops: Arc<[(usize, Px)]>,
+    missing_glyphs: u32,
+    font_faces: Arc<[TextFontFaceUsage]>,
+}
+
+impl TextShape {
+    pub(super) fn new(
+        glyphs: Arc<[GlyphInstance]>,
+        metrics: TextMetrics,
+        lines: Arc<[TextLine]>,
+        caret_stops: Arc<[(usize, Px)]>,
+        missing_glyphs: u32,
+        font_faces: Arc<[TextFontFaceUsage]>,
+    ) -> Self {
+        Self {
+            glyphs,
+            metrics,
+            lines,
+            caret_stops,
+            missing_glyphs,
+            font_faces,
+        }
+    }
+
+    pub fn glyphs(&self) -> &[GlyphInstance] {
+        self.glyphs.as_ref()
+    }
+
+    pub fn metrics(&self) -> TextMetrics {
+        self.metrics
+    }
+
+    pub fn lines(&self) -> &[TextLine] {
+        self.lines.as_ref()
+    }
+
+    pub fn caret_stops(&self) -> &[(usize, Px)] {
+        self.caret_stops.as_ref()
+    }
+
+    pub fn missing_glyphs(&self) -> u32 {
+        self.missing_glyphs
+    }
+
+    pub(crate) fn font_faces(&self) -> &[TextFontFaceUsage] {
+        self.font_faces.as_ref()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -35,14 +35,14 @@ impl TextSystem {
         first_line_caret_stops: Vec<(usize, Px)>,
     ) -> Arc<TextShape> {
         let face_usages = prepared_shape_face_usages(face_usage);
-        Arc::new(TextShape {
-            glyphs: Arc::from(glyphs),
+        Arc::new(TextShape::new(
+            Arc::from(glyphs),
             metrics,
-            lines: Arc::from(lines),
-            caret_stops: Arc::from(first_line_caret_stops),
+            Arc::from(lines),
+            Arc::from(first_line_caret_stops),
             missing_glyphs,
-            font_faces: Arc::from(face_usages),
-        })
+            Arc::from(face_usages),
+        ))
     }
 }
 

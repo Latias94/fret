@@ -19,8 +19,8 @@ impl TextSystem {
             let was_released = blob.ref_count == 0;
             blob.ref_count = blob.ref_count.saturating_add(1);
             hit = Some((
-                blob.shape.metrics,
-                blob.shape.missing_glyphs,
+                blob.shape.metrics(),
+                blob.shape.missing_glyphs(),
                 blob.shape.clone(),
                 was_released,
             ));
@@ -53,10 +53,10 @@ impl TextSystem {
         scale: f32,
         snap_vertical: bool,
     ) -> (TextBlobId, TextMetrics) {
-        let metrics = shape.metrics;
+        let metrics = shape.metrics();
         let decorations =
             self.prepare_blob_decorations(style, scale, &shape, resolved_spans, snap_vertical);
-        self.record_shape_prepare_metrics(shape.missing_glyphs);
+        self.record_shape_prepare_metrics(shape.missing_glyphs());
         self.maybe_record_font_trace_entry(text, style, constraints, &shape);
         let id = self.insert_prepared_blob(shape, paint_palette, decorations);
         self.blob_state.blob_cache.insert(key.clone(), id);
@@ -97,7 +97,7 @@ impl TextSystem {
         resolved_spans
             .map(|spans| {
                 fret_render_text::decorations_for_lines(
-                    shape.lines.as_ref(),
+                    shape.lines(),
                     spans,
                     decoration_metrics,
                     scale,

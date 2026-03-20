@@ -59,7 +59,7 @@ fn encode_text_blob(
 
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
-    let baseline = blob.shape.metrics.baseline;
+    let baseline = blob.shape.metrics().baseline;
 
     fn paint_representative_color(p: fret_core::scene::Paint) -> Color {
         use fret_core::scene::{MAX_STOPS, Paint};
@@ -281,7 +281,7 @@ fn encode_text_blob(
         *group_first_vertex = state.text_vertices.len() as u32;
     };
 
-    for g in blob.shape.glyphs.as_ref() {
+    for g in blob.shape.glyphs() {
         let kind = match g.kind() {
             GlyphQuadKind::Mask => {
                 if outline_params_mask != 0 {

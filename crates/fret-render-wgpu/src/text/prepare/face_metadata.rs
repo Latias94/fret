@@ -12,8 +12,8 @@ impl TextSystem {
         shape: &Arc<TextShape>,
     ) {
         let mut families: Vec<FontTraceFamilyResolved> =
-            Vec::with_capacity(shape.font_faces.len().max(1));
-        for usage in shape.font_faces.iter() {
+            Vec::with_capacity(shape.font_faces().len().max(1));
+        for usage in shape.font_faces() {
             let family = self
                 .family_name_for_face(usage.font_data_id, usage.face_index)
                 .unwrap_or_else(|| {
@@ -34,7 +34,7 @@ impl TextSystem {
             constraints,
             &self.font_runtime.fallback_policy,
             &self.parley_shaper,
-            shape.missing_glyphs,
+            shape.missing_glyphs(),
             families,
         );
     }
@@ -45,7 +45,7 @@ impl TextSystem {
         scale: f32,
         shape: &Arc<TextShape>,
     ) -> Option<TextDecorationMetricsPx> {
-        let usage = shape.font_faces.first()?;
+        let usage = shape.font_faces().first()?;
 
         let face_key = FontFaceKey::new(
             usage.font_data_id,
