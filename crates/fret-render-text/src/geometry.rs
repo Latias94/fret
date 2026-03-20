@@ -773,7 +773,7 @@ mod tests {
         index: usize,
     ) -> Px {
         assert_eq!(lines.len(), 1, "expected a single-line layout");
-        caret_x_from_stops(lines[0].caret_stops.as_slice(), index)
+        caret_x_from_stops(lines[0].caret_stops(), index)
     }
 
     fn assert_caret_rects_are_non_degenerate_at_grapheme_boundaries(text: &str, style: &TextStyle) {
@@ -808,7 +808,7 @@ mod tests {
                 "expected grapheme boundary to be a char boundary: idx={idx}"
             );
 
-            let x = caret_x_from_stops(lines[0].caret_stops.as_slice(), idx);
+            let x = caret_x_from_stops(lines[0].caret_stops(), idx);
             assert!(
                 x.0.is_finite(),
                 "expected caret_x to be finite for idx={idx}, got {x:?}"
@@ -866,13 +866,13 @@ mod tests {
                 "expected at least one line for text={text:?}"
             );
             assert_eq!(
-                prepared.lines()[0].layout().height,
+                prepared.lines()[0].layout().height(),
                 Px(18.0),
                 "expected first line height to match fixed line box for text={text:?}"
             );
             (
                 prepared.metrics().baseline,
-                prepared.lines()[0].layout().y_baseline,
+                prepared.lines()[0].layout().y_baseline(),
             )
         };
 
@@ -1149,7 +1149,7 @@ mod tests {
             .collect();
         assert!(!lines.is_empty(), "expected at least one line layout");
         assert!(
-            lines[0].height.0 > 0.1,
+            lines[0].height().0 > 0.1,
             "expected a non-zero line height for empty string, got {:?}",
             lines[0]
         );
@@ -1263,8 +1263,8 @@ mod tests {
         let line1 = &lines[1];
 
         // Clip both X and Y so we exercise trimming of partially visible runs/lines.
-        let clip_y0 = line0.y_top.0 + (line0.height.0 * 0.5);
-        let clip_y1 = line1.y_top.0 + (line1.height.0 * 0.5);
+        let clip_y0 = line0.y_top().0 + (line0.height().0 * 0.5);
+        let clip_y1 = line1.y_top().0 + (line1.height().0 * 0.5);
         let clip_width = Px((max_width.0 * 0.5).max(1.0));
         let clip_height = Px((clip_y1 - clip_y0).max(1.0));
         let clip = Rect::new(
@@ -1410,10 +1410,11 @@ mod tests {
         let line0 = &lines[0];
         let line1 = &lines[1];
         assert_eq!(
-            line0.end, line1.start,
+            line0.end(),
+            line1.start(),
             "expected a shared soft-wrap boundary index"
         );
-        let break_index = line1.start;
+        let break_index = line1.start();
 
         let upstream = caret_rect_from_lines(&lines, break_index, CaretAffinity::Upstream)
             .expect("caret rect upstream");
@@ -1421,11 +1422,11 @@ mod tests {
             .expect("caret rect downstream");
 
         assert!(
-            (upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            (upstream.origin.y.0 - line0.y_top().0).abs() < 0.01,
             "expected upstream caret to be on the previous line at wrap boundary"
         );
         assert!(
-            (downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            (downstream.origin.y.0 - line1.y_top().0).abs() < 0.01,
             "expected downstream caret to be on the next line at wrap boundary"
         );
     }
@@ -1451,14 +1452,14 @@ mod tests {
         assert!(lines.len() >= 2, "expected wrapped lines");
         let line0 = &lines[0];
         let line1 = &lines[1];
-        assert_eq!(line0.end, line1.start, "expected shared boundary");
-        let break_index = line1.start;
+        assert_eq!(line0.end(), line1.start(), "expected shared boundary");
+        let break_index = line1.start();
 
-        let x0 = caret_x_from_stops(line0.caret_stops.as_slice(), break_index);
-        let x1 = caret_x_from_stops(line1.caret_stops.as_slice(), break_index);
+        let x0 = caret_x_from_stops(line0.caret_stops(), break_index);
+        let x1 = caret_x_from_stops(line1.caret_stops(), break_index);
 
-        let y0 = Px(line0.y_top.0 + line0.height.0 * 0.5);
-        let y1 = Px(line1.y_top.0 + line1.height.0 * 0.5);
+        let y0 = Px(line0.y_top().0 + line0.height().0 * 0.5);
+        let y1 = Px(line1.y_top().0 + line1.height().0 * 0.5);
 
         let ht0 = hit_test_point_from_lines(&lines, Point::new(x0, y0)).expect("hit test (line0)");
         assert_eq!(ht0.index, break_index);
@@ -1615,9 +1616,10 @@ mod tests {
         let line0 = &lines[0];
         let line1 = &lines[1];
 
-        let wrap_index = line1.start;
+        let wrap_index = line1.start();
         assert_eq!(
-            line0.end, wrap_index,
+            line0.end(),
+            wrap_index,
             "expected wrapped lines to share the boundary index"
         );
 
@@ -1627,11 +1629,11 @@ mod tests {
             .expect("caret rect");
 
         assert!(
-            (upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            (upstream.origin.y.0 - line0.y_top().0).abs() < 0.01,
             "expected upstream caret to be on the previous line; upstream={upstream:?} line0={line0:?}"
         );
         assert!(
-            (downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            (downstream.origin.y.0 - line1.y_top().0).abs() < 0.01,
             "expected downstream caret to be on the next line; downstream={downstream:?} line1={line1:?}"
         );
     }
@@ -1659,16 +1661,17 @@ mod tests {
         assert!(lines.len() >= 2, "expected wrapped lines");
         let line0 = &lines[0];
         let line1 = &lines[1];
-        assert_eq!(line0.end, line1.start, "expected a shared break index");
+        assert_eq!(line0.end(), line1.start(), "expected a shared break index");
 
-        let p0 = fret_core::Point::new(Px(10_000.0), Px(line0.y_top.0 + (line0.height.0 * 0.5)));
+        let p0 =
+            fret_core::Point::new(Px(10_000.0), Px(line0.y_top().0 + (line0.height().0 * 0.5)));
         let ht0 = hit_test_point_from_lines(&lines, p0).expect("hit test point");
-        assert_eq!(ht0.index, line0.end);
+        assert_eq!(ht0.index, line0.end());
         assert_eq!(ht0.affinity, CaretAffinity::Upstream);
 
-        let p1 = fret_core::Point::new(Px(0.0), Px(line1.y_top.0 + (line1.height.0 * 0.5)));
+        let p1 = fret_core::Point::new(Px(0.0), Px(line1.y_top().0 + (line1.height().0 * 0.5)));
         let ht1 = hit_test_point_from_lines(&lines, p1).expect("hit test point");
-        assert_eq!(ht1.index, line1.start);
+        assert_eq!(ht1.index, line1.start());
         assert_eq!(ht1.affinity, CaretAffinity::Downstream);
     }
 
@@ -1700,11 +1703,13 @@ mod tests {
         let after_newline = newline_index + "\n".len();
 
         assert_eq!(
-            line0.end, newline_index,
+            line0.end(),
+            newline_index,
             "expected line0 to end at newline index"
         );
         assert_eq!(
-            line1.start, after_newline,
+            line1.start(),
+            after_newline,
             "expected line1 to start after newline index"
         );
 
@@ -1713,11 +1718,11 @@ mod tests {
         let end_line0_downstream =
             caret_rect_from_lines(&lines, newline_index, CaretAffinity::Downstream).expect("caret");
         assert!(
-            (end_line0_upstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            (end_line0_upstream.origin.y.0 - line0.y_top().0).abs() < 0.01,
             "expected newline_index caret to be on line0 regardless of affinity"
         );
         assert!(
-            (end_line0_downstream.origin.y.0 - line0.y_top.0).abs() < 0.01,
+            (end_line0_downstream.origin.y.0 - line0.y_top().0).abs() < 0.01,
             "expected newline_index caret to be on line0 regardless of affinity"
         );
 
@@ -1726,11 +1731,11 @@ mod tests {
         let start_line1_downstream =
             caret_rect_from_lines(&lines, after_newline, CaretAffinity::Downstream).expect("caret");
         assert!(
-            (start_line1_upstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            (start_line1_upstream.origin.y.0 - line1.y_top().0).abs() < 0.01,
             "expected after_newline caret to be on line1 regardless of affinity"
         );
         assert!(
-            (start_line1_downstream.origin.y.0 - line1.y_top.0).abs() < 0.01,
+            (start_line1_downstream.origin.y.0 - line1.y_top().0).abs() < 0.01,
             "expected after_newline caret to be on line1 regardless of affinity"
         );
     }
@@ -1835,9 +1840,9 @@ mod tests {
 
         let first = &lines[0];
         assert!(
-            first.end >= 6,
+            first.end() >= 6,
             "expected the first visual line to include the trailing space (end={})",
-            first.end
+            first.end()
         );
 
         let caret_after_o =
@@ -1901,9 +1906,9 @@ mod tests {
 
         let first = &lines[0];
         assert!(
-            first.end >= space_run_end,
+            first.end() >= space_run_end,
             "expected the first visual line to include the trailing whitespace run (end={})",
-            first.end
+            first.end()
         );
 
         let caret_after_second_space =
@@ -1988,9 +1993,9 @@ mod tests {
 
         let first = &lines[0];
         assert!(
-            first.end >= space_run_end,
+            first.end() >= space_run_end,
             "expected the first visual line to include the trailing whitespace run (end={})",
-            first.end
+            first.end()
         );
 
         let caret_after_second_space =

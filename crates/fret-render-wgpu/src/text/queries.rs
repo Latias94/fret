@@ -80,9 +80,9 @@ impl TextSystem {
         let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.first()?;
         Some(TextLineMetrics {
-            ascent: line.ascent,
-            descent: line.descent,
-            line_height: line.height,
+            ascent: line.ascent(),
+            descent: line.descent(),
+            line_height: line.height(),
         })
     }
 
@@ -90,8 +90,8 @@ impl TextSystem {
         let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.first()?;
         Some(TextInkMetrics {
-            ascent: line.ink_ascent,
-            descent: line.ink_descent,
+            ascent: line.ink_ascent(),
+            descent: line.ink_descent(),
         })
     }
 
@@ -99,9 +99,9 @@ impl TextSystem {
         let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.last()?;
         Some(TextLineMetrics {
-            ascent: line.ascent,
-            descent: line.descent,
-            line_height: line.height,
+            ascent: line.ascent(),
+            descent: line.descent(),
+            line_height: line.height(),
         })
     }
 
@@ -109,8 +109,8 @@ impl TextSystem {
         let blob = self.blob_state.blobs.get(blob)?;
         let line = blob.shape.lines.last()?;
         Some(TextInkMetrics {
-            ascent: line.ink_ascent,
-            descent: line.ink_descent,
+            ascent: line.ink_ascent(),
+            descent: line.ink_descent(),
         })
     }
 }

@@ -554,9 +554,9 @@ fn multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor() {
 
     let mut prev_y_px = -1.0_f32;
     for line in lines {
-        let y_px = line.y_top.0 * scale_factor;
-        let h_px = line.height.0 * scale_factor;
-        let baseline_px = line.y_baseline.0 * scale_factor;
+        let y_px = line.y_top().0 * scale_factor;
+        let h_px = line.height().0 * scale_factor;
+        let baseline_px = line.y_baseline().0 * scale_factor;
         assert!(
             (y_px - y_px.round()).abs() < 1e-3,
             "expected y_top to be pixel-aligned, got {y_px}"
@@ -2231,8 +2231,8 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
                 let shape_off = text.blob(wrap_off).expect("wrapped blob off").shape.clone();
                 let shape_on = text.blob(wrap_on).expect("wrapped blob on").shape.clone();
 
-                let first_end_off = shape_off.lines.first().map(|l| l.end).unwrap_or(0);
-                let first_end_on = shape_on.lines.first().map(|l| l.end).unwrap_or(0);
+                let first_end_off = shape_off.lines.first().map(|l| l.end()).unwrap_or(0);
+                let first_end_on = shape_on.lines.first().map(|l| l.end()).unwrap_or(0);
                 let lines_off = shape_off.lines.len();
                 let lines_on = shape_on.lines.len();
 
@@ -2304,8 +2304,8 @@ fn open_type_feature_overrides_can_change_word_wrap_breakpoints_for_known_font_f
     let shape_off = text.blob(blob_off).expect("blob off").shape.clone();
     let shape_on = text.blob(blob_on).expect("blob on").shape.clone();
 
-    let first_end_off = shape_off.lines.first().map(|l| l.end).unwrap_or(0);
-    let first_end_on = shape_on.lines.first().map(|l| l.end).unwrap_or(0);
+    let first_end_off = shape_off.lines.first().map(|l| l.end()).unwrap_or(0);
+    let first_end_on = shape_on.lines.first().map(|l| l.end()).unwrap_or(0);
     let lines_off = shape_off.lines.len();
     let lines_on = shape_on.lines.len();
 

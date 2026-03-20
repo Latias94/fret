@@ -27,7 +27,7 @@ fn estimate_text_shape_heap_bytes(shape: &TextShape) -> u64 {
 
     for line in shape.lines.iter() {
         bytes = bytes.saturating_add(mul(
-            line.caret_stops.capacity(),
+            line.caret_stops_capacity(),
             std::mem::size_of::<(usize, fret_core::geometry::Px)>(),
         ));
         bytes = bytes.saturating_add(mul(
