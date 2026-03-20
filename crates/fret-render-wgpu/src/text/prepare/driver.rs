@@ -11,8 +11,8 @@ impl TextSystem {
         spans: Option<&[TextSpan]>,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let text = key.text.clone();
-        key.backend = 1;
+        let text = key.text_arc().clone();
+        key.set_backend(1);
 
         let scale = super::super::effective_text_scale_factor(constraints.scale_factor);
         let snap_vertical = scale.fract().abs() > 1e-4;

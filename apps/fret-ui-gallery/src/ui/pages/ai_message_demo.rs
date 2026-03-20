@@ -49,6 +49,5 @@ pub(super) fn preview_ai_message_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         sections,
     );
 
-    let body = body.test_id("ui-gallery-page-ai-message-demo");
     vec![body.into_element(cx)]
 }

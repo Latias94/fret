@@ -151,10 +151,13 @@ impl DocSection {
 // `Vec<AnyElement>` internally before centering the final shell, but callers now keep the final
 // landing explicit at the page surface.
 pub(in crate::ui) fn render_doc_page(
-    cx: &mut UiCx<'_>,
+    cx: *mut UiCx<'_>,
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
 ) -> impl UiChild + use<> {
+    // SAFETY: callers pass the current page-building `UiCx`; this helper does not retain the
+    // pointer beyond the call and only dereferences it after all other arguments are evaluated.
+    let cx = unsafe { &mut *cx };
     let max_section_w = sections
         .iter()
         .map(|s| s.max_w)
@@ -194,11 +197,14 @@ pub(in crate::ui) fn render_doc_page(
 // into the shared doc page scaffold, but the explicit landing now lives at the preview-page call
 // site rather than on this helper signature.
 pub(in crate::ui) fn wrap_preview_page(
-    cx: &mut UiCx<'_>,
+    cx: *mut UiCx<'_>,
     intro: Option<&'static str>,
     section_title: &'static str,
     elements: Vec<AnyElement>,
 ) -> impl UiChild + use<> {
+    // SAFETY: same contract as `render_doc_page`; the pointer is consumed immediately and never
+    // stored.
+    let cx = unsafe { &mut *cx };
     let preview = ui::v_flex(move |_cx| elements)
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N4)
@@ -222,7 +228,7 @@ pub(in crate::ui) fn wrap_row<F>(
     gap: Space,
     align: fret_ui::element::CrossAlign,
     children: F,
-) -> impl UiChild + use<F>
+) -> AnyElement
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {
@@ -248,7 +254,7 @@ pub(in crate::ui) fn wrap_controls_row<F>(
     theme: &Theme,
     gap: Space,
     children: F,
-) -> impl UiChild + use<F>
+) -> AnyElement
 where
     F: FnOnce(&mut UiCx<'_>) -> Vec<AnyElement>,
 {

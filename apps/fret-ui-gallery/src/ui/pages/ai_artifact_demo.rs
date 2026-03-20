@@ -29,8 +29,9 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
 
     #[cfg(feature = "gallery-dev")]
     {
+        let artifact_code_display = snippets::artifact_code_display::render(cx);
         sections.push(
-            DocSection::build(cx, "With Code Display", snippets::artifact_code_display::render(cx))
+            DocSection::build(cx, "With Code Display", artifact_code_display)
                 .description(
                     "Matches the official AI Elements preview structure: title + description on the left, action group on the right, and a code artifact body.",
                 )
@@ -39,8 +40,9 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
         );
     }
 
+    let artifact_demo = snippets::artifact_demo::render(cx);
     sections.push(
-        DocSection::build(cx, "Close Toggle", snippets::artifact_demo::render(cx))
+        DocSection::build(cx, "Close Toggle", artifact_demo)
             .description(
                 "Keeps the existing close/reset interaction demo and diag gate for lifecycle behavior.",
             )
@@ -48,8 +50,9 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
             .code_rust_from_file_region(snippets::artifact_demo::SOURCE, "example"),
     );
 
+    let notes = render_notes(cx);
     sections.push(
-        DocSection::build(cx, "Notes", render_notes(cx))
+        DocSection::build(cx, "Notes", notes)
             .description("Parity findings and current API notes for Artifact."),
     );
 
@@ -61,6 +64,5 @@ pub(super) fn preview_ai_artifact_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec
         sections,
     );
 
-    let body = body.test_id("ui-gallery-page-ai-artifact-demo");
     vec![body.into_element(cx)]
 }

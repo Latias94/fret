@@ -25,7 +25,7 @@ impl TextFontRuntimeState {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         "fret.text.font_stack_key.v1".hash(&mut hasher);
         self.font_db_revision.hash(&mut hasher);
-        self.fallback_policy.fallback_policy_key.hash(&mut hasher);
+        self.fallback_policy.fallback_policy_key().hash(&mut hasher);
         let key = hasher.finish();
         self.font_stack_key = if key == 0 { 1 } else { key };
     }

@@ -16,8 +16,8 @@ use fret_launch::{
     WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
-    MenuItemToggle, MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailabilityService,
-    WindowCommandEnabledService,
+    FrameId, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
+    WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
 use fret_ui::UiTree;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
@@ -195,6 +195,15 @@ impl DebugHudState {
         }
         Some(1_000_000.0 / us)
     }
+}
+
+fn sync_in_flight_frame_id(app: &mut App) {
+    // `fret-launch` commits the presented frame id after `render()` returns. Custom Winit drivers
+    // still need the in-flight frame id during view/layout so frame-based policies (tooltip hover
+    // intent, presence/motion, other delayed interactions) observe a monotonic clock while the
+    // frame is being built.
+    let next = FrameId(app.frame_id().0.saturating_add(1));
+    app.set_frame_id(next);
 }
 
 struct UiGalleryWindowState {
@@ -1919,6 +1928,7 @@ impl WinitAppDriver for UiGalleryDriver {
             scene,
         } = context;
 
+        sync_in_flight_frame_id(app);
         Self::render_ui(app, services, window, state, bounds);
 
         let diag_wants_semantics_snapshot = app.with_global_mut_untracked(
@@ -2034,10 +2044,12 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
+        UiDiagnosticsService::with_script_injection_scope(|| {
+            for event in drive.events {
+                injected_any = true;
+                state.ui.dispatch_event(app, services, &event);
+            }
+        });
         if injected_any && Self::sync_workspace_models_from_window_layout(app, state, window) {
             app.request_redraw(window);
         }
@@ -2047,43 +2059,45 @@ impl WinitAppDriver for UiGalleryDriver {
             // command effects (e.g. Tab => focus traversal) before we record snapshots.
             //
             // Keep non-command effects queued for the runner to handle after `render` returns.
-            let mut deferred_effects: Vec<Effect> = Vec::new();
-            loop {
-                let effects = app.flush_effects();
-                if effects.is_empty() {
-                    break;
-                }
+            UiDiagnosticsService::with_script_injection_scope(|| {
+                let mut deferred_effects: Vec<Effect> = Vec::new();
+                loop {
+                    let effects = app.flush_effects();
+                    if effects.is_empty() {
+                        break;
+                    }
 
-                let mut applied_any_command = false;
-                for effect in effects {
-                    match effect {
-                        Effect::Command { window: w, command } => {
-                            if w.is_none() || w == Some(window) {
-                                self.handle_command(
-                                    WinitCommandContext {
-                                        app,
-                                        services,
-                                        window,
-                                        state,
-                                    },
-                                    command,
-                                );
-                                applied_any_command = true;
-                            } else {
-                                deferred_effects.push(Effect::Command { window: w, command });
+                    let mut applied_any_command = false;
+                    for effect in effects {
+                        match effect {
+                            Effect::Command { window: w, command } => {
+                                if w.is_none() || w == Some(window) {
+                                    self.handle_command(
+                                        WinitCommandContext {
+                                            app,
+                                            services,
+                                            window,
+                                            state,
+                                        },
+                                        command,
+                                    );
+                                    applied_any_command = true;
+                                } else {
+                                    deferred_effects.push(Effect::Command { window: w, command });
+                                }
                             }
+                            other => deferred_effects.push(other),
                         }
-                        other => deferred_effects.push(other),
+                    }
+
+                    if !applied_any_command {
+                        break;
                     }
                 }
-
-                if !applied_any_command {
-                    break;
+                for effect in deferred_effects {
+                    app.push_effect(effect);
                 }
-            }
-            for effect in deferred_effects {
-                app.push_effect(effect);
-            }
+            });
         }
 
         app.with_global_mut_untracked(
@@ -2140,6 +2154,23 @@ impl WinitAppDriver for UiGalleryDriver {
         // forcing semantics on every frame.
         state.ui.request_semantics_snapshot();
         state.ui.semantics_snapshot_arc()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sync_in_flight_frame_id_advances_monotonically() {
+        let mut app = App::new();
+
+        assert_eq!(app.frame_id(), FrameId(0));
+        sync_in_flight_frame_id(&mut app);
+        assert_eq!(app.frame_id(), FrameId(1));
+
+        sync_in_flight_frame_id(&mut app);
+        assert_eq!(app.frame_id(), FrameId(2));
     }
 }
 

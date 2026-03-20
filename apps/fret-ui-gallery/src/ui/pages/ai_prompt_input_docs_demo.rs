@@ -20,6 +20,5 @@ pub(super) fn preview_ai_prompt_input_docs_demo(
         ],
     );
 
-    let body = body.test_id("ui-gallery-page-ai-prompt-input-docs-demo");
     vec![body.into_element(cx)]
 }

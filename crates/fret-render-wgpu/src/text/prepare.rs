@@ -101,6 +101,14 @@ impl TextSystem {
     }
 }
 
-fn prepared_glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
+pub(super) fn glyph_offset_px(x_bin: u8, y_bin: u8) -> parley::swash::zeno::Vector {
     parley::swash::zeno::Vector::new(subpixel_bin_as_float(x_bin), subpixel_bin_as_float(y_bin))
+}
+
+pub(super) fn glyph_render_sources() -> [parley::swash::scale::Source; 3] {
+    [
+        parley::swash::scale::Source::ColorOutline(0),
+        parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
+        parley::swash::scale::Source::Outline,
+    ]
 }

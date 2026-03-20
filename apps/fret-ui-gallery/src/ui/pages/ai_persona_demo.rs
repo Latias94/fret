@@ -119,6 +119,5 @@ pub(super) fn preview_ai_persona_demo(cx: &mut UiCx<'_>, _theme: &Theme) -> Vec<
         ],
     );
 
-    let body = body.test_id("ui-gallery-page-ai-persona-demo");
     vec![body.into_element(cx)]
 }

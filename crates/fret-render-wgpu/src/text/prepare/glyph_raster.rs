@@ -1,5 +1,4 @@
-use super::super::GlyphQuadKind;
-use super::super::atlas::{GlyphAtlas, GlyphKey};
+use super::super::atlas::GlyphKey;
 use fret_render_text::FontFaceKey;
 
 pub(super) struct PreparedGlyphRaster {
@@ -29,7 +28,7 @@ struct PreparedGlyphRasterPlacement {
 }
 
 struct PreparedGlyphRasterMetadata {
-    kind: GlyphQuadKind,
+    glyph_key: GlyphKey,
     bytes_per_pixel: u32,
 }
 
@@ -44,35 +43,17 @@ impl PreparedGlyphRaster {
         )
     }
 
-    pub(super) fn kind(&self) -> GlyphQuadKind {
-        self.glyph_key.kind
+    pub(super) fn into_atlas_insert(self) -> (GlyphKey, u32, u32, i32, i32, u32, Vec<u8>) {
+        (
+            self.glyph_key,
+            self.width,
+            self.height,
+            self.left,
+            self.top,
+            self.bytes_per_pixel,
+            self.data,
+        )
     }
-}
-
-pub(super) fn insert_prepared_glyph_raster_into_atlas(
-    atlas: &mut GlyphAtlas,
-    raster: PreparedGlyphRaster,
-    epoch: u64,
-) {
-    let PreparedGlyphRaster {
-        glyph_key,
-        width,
-        height,
-        left,
-        top,
-        bytes_per_pixel,
-        data,
-    } = raster;
-    let _ = atlas.get_or_insert(
-        glyph_key,
-        width,
-        height,
-        left,
-        top,
-        bytes_per_pixel,
-        data,
-        epoch,
-    );
 }
 
 pub(super) fn prepared_glyph_raster_from_image(
@@ -89,15 +70,14 @@ pub(super) fn prepared_glyph_raster_from_image(
     ))
 }
 
-pub(super) fn prepared_glyph_lookup_key(
+pub(super) fn prepared_glyph_lookup_keys(
     face_key: FontFaceKey,
     glyph_id: u32,
     size_bits: u32,
     x_bin: u8,
     y_bin: u8,
-    kind: GlyphQuadKind,
-) -> GlyphKey {
-    prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind)
+) -> [GlyphKey; 3] {
+    GlyphKey::lookup_keys(face_key, glyph_id, size_bits, x_bin, y_bin)
 }
 
 fn prepared_glyph_raster_from_image_with_placement(
@@ -130,21 +110,18 @@ fn prepared_glyph_raster_placement(
 }
 
 fn prepared_glyph_raster_metadata(
+    face_key: FontFaceKey,
+    glyph_id: u32,
+    size_bits: u32,
+    x_bin: u8,
+    y_bin: u8,
     content: parley::swash::scale::image::Content,
 ) -> PreparedGlyphRasterMetadata {
-    match content {
-        parley::swash::scale::image::Content::Mask => PreparedGlyphRasterMetadata {
-            kind: GlyphQuadKind::Mask,
-            bytes_per_pixel: 1,
-        },
-        parley::swash::scale::image::Content::Color => PreparedGlyphRasterMetadata {
-            kind: GlyphQuadKind::Color,
-            bytes_per_pixel: 4,
-        },
-        parley::swash::scale::image::Content::SubpixelMask => PreparedGlyphRasterMetadata {
-            kind: GlyphQuadKind::Subpixel,
-            bytes_per_pixel: 4,
-        },
+    let (glyph_key, bytes_per_pixel) =
+        GlyphKey::from_image_content(face_key, glyph_id, size_bits, x_bin, y_bin, content);
+    PreparedGlyphRasterMetadata {
+        glyph_key,
+        bytes_per_pixel,
     }
 }
 
@@ -157,18 +134,12 @@ fn prepared_glyph_raster_from_image_parts(
     image: parley::swash::scale::image::Image,
     placement: PreparedGlyphRasterPlacement,
 ) -> PreparedGlyphRaster {
-    let metadata = prepared_glyph_raster_metadata(image.content);
-    prepared_glyph_raster_from_image_parts_with_metadata(
-        face_key, glyph_id, size_bits, x_bin, y_bin, image, placement, metadata,
-    )
+    let metadata =
+        prepared_glyph_raster_metadata(face_key, glyph_id, size_bits, x_bin, y_bin, image.content);
+    prepared_glyph_raster_from_image_parts_with_metadata(image, placement, metadata)
 }
 
 fn prepared_glyph_raster_from_image_parts_with_metadata(
-    face_key: FontFaceKey,
-    glyph_id: u32,
-    size_bits: u32,
-    x_bin: u8,
-    y_bin: u8,
     image: parley::swash::scale::image::Image,
     placement: PreparedGlyphRasterPlacement,
     metadata: PreparedGlyphRasterMetadata,
@@ -180,62 +151,34 @@ fn prepared_glyph_raster_from_image_parts_with_metadata(
         top,
     } = placement;
     let PreparedGlyphRasterMetadata {
-        kind,
+        glyph_key,
         bytes_per_pixel,
     } = metadata;
     prepared_glyph_raster_from_image_parts_with_payload(
-        face_key,
-        glyph_id,
-        size_bits,
-        x_bin,
-        y_bin,
+        glyph_key,
         width,
         height,
         left,
         top,
-        kind,
         bytes_per_pixel,
         image.data,
     )
 }
 
 fn prepared_glyph_raster_from_image_parts_with_payload(
-    face_key: FontFaceKey,
-    glyph_id: u32,
-    size_bits: u32,
-    x_bin: u8,
-    y_bin: u8,
+    glyph_key: GlyphKey,
     width: u32,
     height: u32,
     left: i32,
     top: i32,
-    kind: GlyphQuadKind,
     bytes_per_pixel: u32,
     data: Vec<u8>,
 ) -> PreparedGlyphRaster {
-    prepared_glyph_raster(
-        face_key,
-        glyph_id,
-        size_bits,
-        x_bin,
-        y_bin,
-        kind,
-        width,
-        height,
-        left,
-        top,
-        bytes_per_pixel,
-        data,
-    )
+    prepared_glyph_raster(glyph_key, width, height, left, top, bytes_per_pixel, data)
 }
 
 fn prepared_glyph_raster(
-    face_key: FontFaceKey,
-    glyph_id: u32,
-    size_bits: u32,
-    x_bin: u8,
-    y_bin: u8,
-    kind: GlyphQuadKind,
+    glyph_key: GlyphKey,
     width: u32,
     height: u32,
     left: i32,
@@ -243,7 +186,6 @@ fn prepared_glyph_raster(
     bytes_per_pixel: u32,
     data: Vec<u8>,
 ) -> PreparedGlyphRaster {
-    let glyph_key = prepared_glyph_raster_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind);
     let payload = prepared_glyph_raster_payload(width, height, left, top, bytes_per_pixel, data);
     prepared_glyph_raster_with_key(glyph_key, payload)
 }
@@ -286,34 +228,5 @@ fn prepared_glyph_raster_payload(
         top,
         bytes_per_pixel,
         data,
-    }
-}
-
-fn prepared_glyph_raster_key(
-    face_key: FontFaceKey,
-    glyph_id: u32,
-    size_bits: u32,
-    x_bin: u8,
-    y_bin: u8,
-    kind: GlyphQuadKind,
-) -> GlyphKey {
-    prepared_glyph_key(face_key, glyph_id, size_bits, x_bin, y_bin, kind)
-}
-
-fn prepared_glyph_key(
-    face_key: FontFaceKey,
-    glyph_id: u32,
-    size_bits: u32,
-    x_bin: u8,
-    y_bin: u8,
-    kind: GlyphQuadKind,
-) -> GlyphKey {
-    GlyphKey {
-        font: face_key,
-        glyph_id,
-        size_bits,
-        x_bin,
-        y_bin,
-        kind,
     }
 }

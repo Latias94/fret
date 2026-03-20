@@ -11,7 +11,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     use std::sync::Arc;
 
     use fret_ui::Invalidation;
-    use fret_ui::action::OnActivate;
+    use fret_ui::action::{ActionCx, OnActivate, UiActionHost};
     use fret_ui_kit::ui;
     use fret_ui_kit::{LayoutRefinement, Space};
 
@@ -411,7 +411,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         let pending = pending.clone();
         let loading = loading.clone();
         let content_revision = content_revision.clone();
-        move |host, _action_cx| {
+        move |host: &mut dyn UiActionHost, _action_cx: ActionCx| {
             fn chunk_for_demo(text: &str, chars_per_chunk: usize) -> Arc<[Arc<str>]> {
                 let mut out = Vec::new();
                 let mut buf = String::new();
@@ -472,20 +472,22 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
             let assistant_id = 4u64;
 
-            let _ = host.models_mut().update(&messages, |list| {
-                let mut vec = list.as_ref().to_vec();
-                if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
-                    msg.parts = Arc::from(vec![
-                        ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
-                            Arc::<str>::from(""),
-                        )),
-                        ui_ai::MessagePart::ToolCall(tool_call_running.clone()),
-                        ui_ai::MessagePart::Sources(sources.clone()),
-                        ui_ai::MessagePart::Citations(citations.clone()),
-                    ]);
-                }
-                *list = vec.into();
-            });
+            let _ = host
+                .models_mut()
+                .update(&messages, |list: &mut Arc<[ui_ai::AiMessage]>| {
+                    let mut vec = list.as_ref().to_vec();
+                    if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
+                        msg.parts = Arc::from(vec![
+                            ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                                Arc::<str>::from(""),
+                            )),
+                            ui_ai::MessagePart::ToolCall(tool_call_running.clone()),
+                            ui_ai::MessagePart::Sources(sources.clone()),
+                            ui_ai::MessagePart::Citations(citations.clone()),
+                        ]);
+                    }
+                    *list = vec.into();
+                });
 
             let _ = host.models_mut().update(&pending, |v| {
                 *v = Some(PendingReply {

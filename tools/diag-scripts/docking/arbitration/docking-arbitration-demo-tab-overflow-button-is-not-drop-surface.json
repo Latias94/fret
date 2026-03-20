@@ -1,0 +1,121 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: overflow button is not a drop surface during tab drag",
+    "tags": ["docking", "tabbar", "overflow", "drag", "surface", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "overflow_tabs"
+    },
+    "target_hints": [
+      "Starts a tab drag in the overflowed left tab strip.",
+      "First proves the explicit drop-end anchor resolves a valid center drop with insert_index == tab_count.",
+      "Then moves onto the overflow button and asserts docking keeps the drag active but clears the resolved drop target."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-button-anchor-left" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 16 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_overflow_is", "overflow": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "tab_bar" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_is_some", "some": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "center" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_insert_index_is", "index": 10 },
+      "timeout_frames": 120
+    },
+
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-button-anchor-left" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_is_some", "some": false },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drag_active_is", "active": true }
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-overflow-button-is-not-drop-surface" }
+  ]
+}

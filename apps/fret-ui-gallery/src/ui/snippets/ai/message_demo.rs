@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("message_demo.rs");
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::Invalidation;
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
@@ -24,7 +25,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
 
     let set_action = |label: &'static str| {
         let last_action_model = last_action_model.clone();
-        move |host, acx| {
+        move |host: &mut dyn UiActionHost, acx: ActionCx| {
             let _ = host.models_mut().update(&last_action_model, |v| {
                 *v = Some(Arc::<str>::from(label));
             });
