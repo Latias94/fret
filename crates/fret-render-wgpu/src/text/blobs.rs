@@ -3,7 +3,7 @@ use fret_core::TextBlobId;
 use std::sync::Arc;
 
 impl TextSystem {
-    pub fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
+    pub(crate) fn blob(&self, id: TextBlobId) -> Option<&TextBlob> {
         self.blob_state.blobs.get(id)
     }
 

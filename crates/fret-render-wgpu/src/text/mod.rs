@@ -48,12 +48,11 @@ use self::layout_cache_state::TextLayoutCacheState;
 use self::pin_state::TextPinState;
 pub use self::quality::TextQualitySettings;
 use self::quality::TextQualityState;
+pub use self::types::TextFontFamilyConfig;
 #[cfg(test)]
 pub(crate) use self::types::subpixel_mask_to_alpha;
 pub(crate) use self::types::{DebugGlyphAtlasLookup, TextAtlasPerfSnapshot, TextFontFaceUsage};
-pub use self::types::{
-    GlyphInstance, GlyphQuadKind, TextBlob, TextFontFamilyConfig, TextLine, TextShape,
-};
+pub(crate) use self::types::{GlyphInstance, GlyphQuadKind, TextBlob, TextLine, TextShape};
 
 pub struct TextSystem {
     parley_shaper: ParleyShaper,

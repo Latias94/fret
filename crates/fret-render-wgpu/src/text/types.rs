@@ -4,7 +4,7 @@ use fret_render_text::{FontFaceKey, TextDecoration};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct GlyphInstance {
+pub(crate) struct GlyphInstance {
     /// Logical-space rect relative to the text baseline origin.
     rect: [f32; 4],
     paint_span: Option<u16>,
@@ -20,21 +20,21 @@ impl GlyphInstance {
         }
     }
 
-    pub fn kind(&self) -> GlyphQuadKind {
+    pub(crate) fn kind(&self) -> GlyphQuadKind {
         self.key.kind
     }
 
-    pub fn rect(&self) -> [f32; 4] {
+    pub(crate) fn rect(&self) -> [f32; 4] {
         self.rect
     }
 
-    pub fn paint_span(&self) -> Option<u16> {
+    pub(crate) fn paint_span(&self) -> Option<u16> {
         self.paint_span
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum GlyphQuadKind {
+pub(crate) enum GlyphQuadKind {
     Mask,
     Color,
     Subpixel,
@@ -83,7 +83,7 @@ impl DebugGlyphAtlasLookup {
 }
 
 #[derive(Debug, Clone)]
-pub struct TextBlob {
+pub(crate) struct TextBlob {
     shape: Arc<TextShape>,
     paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
     decorations: Arc<[TextDecoration]>,
@@ -104,7 +104,7 @@ impl TextBlob {
         }
     }
 
-    pub fn shape(&self) -> &TextShape {
+    pub(crate) fn shape(&self) -> &TextShape {
         self.shape.as_ref()
     }
 
@@ -112,11 +112,11 @@ impl TextBlob {
         &self.shape
     }
 
-    pub fn paint_palette(&self) -> Option<&[Option<fret_core::Color>]> {
+    pub(crate) fn paint_palette(&self) -> Option<&[Option<fret_core::Color>]> {
         self.paint_palette.as_deref()
     }
 
-    pub fn decorations(&self) -> &[TextDecoration] {
+    pub(crate) fn decorations(&self) -> &[TextDecoration] {
         self.decorations.as_ref()
     }
 
@@ -142,7 +142,7 @@ impl TextBlob {
 }
 
 #[derive(Debug, Clone)]
-pub struct TextShape {
+pub(crate) struct TextShape {
     glyphs: Arc<[GlyphInstance]>,
     metrics: TextMetrics,
     lines: Arc<[TextLine]>,
@@ -170,23 +170,23 @@ impl TextShape {
         }
     }
 
-    pub fn glyphs(&self) -> &[GlyphInstance] {
+    pub(crate) fn glyphs(&self) -> &[GlyphInstance] {
         self.glyphs.as_ref()
     }
 
-    pub fn metrics(&self) -> TextMetrics {
+    pub(crate) fn metrics(&self) -> TextMetrics {
         self.metrics
     }
 
-    pub fn lines(&self) -> &[TextLine] {
+    pub(crate) fn lines(&self) -> &[TextLine] {
         self.lines.as_ref()
     }
 
-    pub fn caret_stops(&self) -> &[(usize, Px)] {
+    pub(crate) fn caret_stops(&self) -> &[(usize, Px)] {
         self.caret_stops.as_ref()
     }
 
-    pub fn missing_glyphs(&self) -> u32 {
+    pub(crate) fn missing_glyphs(&self) -> u32 {
         self.missing_glyphs
     }
 
