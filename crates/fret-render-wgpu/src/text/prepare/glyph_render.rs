@@ -42,38 +42,22 @@ impl TextSystem {
         x_bin: u8,
         y_bin: u8,
     ) -> Option<parley::swash::scale::image::Image> {
-        let font_ref = prepared_glyph_font_ref(glyph)?;
-        self.render_prepared_glyph_image_with_font_ref(glyph, font_ref, glyph_id, x_bin, y_bin)
-    }
-
-    fn render_prepared_glyph_image_with_font_ref(
-        &mut self,
-        glyph: &ParleyGlyph,
-        font_ref: parley::swash::FontRef<'_>,
-        glyph_id: u16,
-        x_bin: u8,
-        y_bin: u8,
-    ) -> Option<parley::swash::scale::image::Image> {
-        let mut scaler = self.build_prepared_glyph_scaler(glyph, font_ref);
+        let mut scaler = self.build_prepared_glyph_scaler(glyph)?;
         render_prepared_glyph_image_from_scaler(&mut scaler, glyph_id, x_bin, y_bin)
     }
 
     fn build_prepared_glyph_scaler<'a>(
         &'a mut self,
         glyph: &'a ParleyGlyph,
-        font_ref: parley::swash::FontRef<'a>,
-    ) -> parley::swash::scale::Scaler<'a> {
-        super::build_glyph_scaler(
+    ) -> Option<parley::swash::scale::Scaler<'a>> {
+        super::build_glyph_scaler_from_face_bytes(
             &mut self.parley_scale,
-            font_ref,
+            glyph.font().bytes(),
+            glyph.font().face_index(),
             glyph.font_size(),
             prepared_glyph_normalized_coords(glyph),
         )
     }
-}
-
-fn prepared_glyph_font_ref<'a>(glyph: &'a ParleyGlyph) -> Option<parley::swash::FontRef<'a>> {
-    parley::swash::FontRef::from_index(glyph.font().bytes(), glyph.font().face_index() as usize)
 }
 
 pub(super) fn prepared_glyph_has_normalized_coords(glyph: &ParleyGlyph) -> bool {

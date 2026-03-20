@@ -121,6 +121,13 @@ pub(super) fn glyph_render_at_bins(x_bin: u8, y_bin: u8) -> parley::swash::scale
     render
 }
 
+pub(super) fn font_ref_from_face_bytes<'a>(
+    font_bytes: &'a [u8],
+    face_index: u32,
+) -> Option<parley::swash::FontRef<'a>> {
+    parley::swash::FontRef::from_index(font_bytes, face_index as usize)
+}
+
 pub(super) fn build_glyph_scaler<'a>(
     parley_scale: &'a mut parley::swash::scale::ScaleContext,
     font_ref: parley::swash::FontRef<'a>,
@@ -135,4 +142,20 @@ pub(super) fn build_glyph_scaler<'a>(
         scaler_builder = scaler_builder.normalized_coords(coords.iter());
     }
     scaler_builder.build()
+}
+
+pub(super) fn build_glyph_scaler_from_face_bytes<'a>(
+    parley_scale: &'a mut parley::swash::scale::ScaleContext,
+    font_bytes: &'a [u8],
+    face_index: u32,
+    font_size: f32,
+    normalized_coords: Option<&'a [i16]>,
+) -> Option<parley::swash::scale::Scaler<'a>> {
+    let font_ref = font_ref_from_face_bytes(font_bytes, face_index)?;
+    Some(build_glyph_scaler(
+        parley_scale,
+        font_ref,
+        font_size,
+        normalized_coords,
+    ))
 }
