@@ -77,7 +77,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx)
                     .test_id("ui-gallery.calendar.time.date-trigger");
 
-                shadcn::PopoverTrigger::new(trigger).into_element(cx)
+                shadcn::PopoverTrigger::build(trigger).into_element(cx)
             },
             move |cx| {
                 shadcn::PopoverContent::new([calendar])

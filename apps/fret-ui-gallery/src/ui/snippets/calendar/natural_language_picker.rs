@@ -203,7 +203,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     .into_element(cx)
                     .test_id("ui-gallery.calendar.natural-language.trigger");
 
-                shadcn::PopoverTrigger::new(trigger).into_element(cx)
+                shadcn::PopoverTrigger::build(trigger).into_element(cx)
             },
             move |cx| {
                 shadcn::PopoverContent::new([calendar(cx)])
