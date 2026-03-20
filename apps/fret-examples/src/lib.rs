@@ -313,6 +313,7 @@ mod authoring_surface_policy_tests {
     const TEXT_HEAVY_MEMORY_DEMO: &str = include_str!("text_heavy_memory_demo.rs");
     const TODO_DEMO: &str = include_str!("todo_demo.rs");
     const WINDOW_HIT_TEST_PROBE_DEMO: &str = include_str!("window_hit_test_probe_demo.rs");
+    const WORKSPACE_SHELL_DEMO: &str = include_str!("workspace_shell_demo.rs");
 
     fn collect_rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
         for entry in std::fs::read_dir(dir).unwrap() {
@@ -2566,6 +2567,21 @@ mod authoring_surface_policy_tests {
                 "let status = st.status.layout_in(cx).value_or_else(|| Arc::from(\"Idle\"));",
                 "let status = cx.data().selector_layout(&st.status, |status| status);",
                 "status: fret_runtime::Model<Arc<str>>,",
+            ],
+        );
+
+        assert_selected_view_runtime_examples_prefer_grouped_helpers(
+            WORKSPACE_SHELL_DEMO,
+            &[
+                "let (prompt_open, prompt): (bool, Option<WorkspaceShellDirtyClosePrompt>) =",
+                "cx.data().selector_model_layout(",
+                "(&dirty_close_prompt_open, &dirty_close_prompt),",
+                ".selector_model_layout(&tabstrip_two_row_pinned, |two_row_pinned| {",
+            ],
+            &[
+                ".get_model_cloned(&dirty_close_prompt_open, Invalidation::Layout)",
+                ".get_model_cloned(&dirty_close_prompt, Invalidation::Layout)",
+                ".get_model_cloned(&tabstrip_two_row_pinned, Invalidation::Layout)",
             ],
         );
     }
