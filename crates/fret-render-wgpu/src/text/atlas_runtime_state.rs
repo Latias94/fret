@@ -14,7 +14,7 @@ pub(crate) struct TextAtlasRuntimeState {
 }
 
 impl TextAtlasRuntimeState {
-    pub(crate) fn bootstrap(device: &wgpu::Device) -> Self {
+    pub(super) fn bootstrap(device: &wgpu::Device) -> Self {
         let atlas_sampler = create_atlas_sampler(device);
         let atlas_bind_group_layout = create_atlas_bind_group_layout(device);
 
@@ -48,7 +48,7 @@ impl TextAtlasRuntimeState {
         )
     }
 
-    pub(crate) fn new(
+    fn new(
         mask_atlas: GlyphAtlas,
         color_atlas: GlyphAtlas,
         subpixel_atlas: GlyphAtlas,
@@ -62,35 +62,35 @@ impl TextAtlasRuntimeState {
         }
     }
 
-    pub(crate) fn reset(&mut self) {
+    pub(super) fn reset(&mut self) {
         self.mask_atlas.reset();
         self.color_atlas.reset();
         self.subpixel_atlas.reset();
     }
 
-    pub(crate) fn begin_frame_diagnostics(&mut self) {
+    pub(super) fn begin_frame_diagnostics(&mut self) {
         self.mask_atlas.begin_frame_diagnostics();
         self.color_atlas.begin_frame_diagnostics();
         self.subpixel_atlas.begin_frame_diagnostics();
     }
 
-    pub(crate) fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+    pub(super) fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
         &self.atlas_bind_group_layout
     }
 
-    pub(crate) fn mask_bind_group(&self, page: u16) -> &wgpu::BindGroup {
+    pub(super) fn mask_bind_group(&self, page: u16) -> &wgpu::BindGroup {
         self.mask_atlas.bind_group(page)
     }
 
-    pub(crate) fn color_bind_group(&self, page: u16) -> &wgpu::BindGroup {
+    pub(super) fn color_bind_group(&self, page: u16) -> &wgpu::BindGroup {
         self.color_atlas.bind_group(page)
     }
 
-    pub(crate) fn subpixel_bind_group(&self, page: u16) -> &wgpu::BindGroup {
+    pub(super) fn subpixel_bind_group(&self, page: u16) -> &wgpu::BindGroup {
         self.subpixel_atlas.bind_group(page)
     }
 
-    pub(crate) fn flush_uploads(&mut self, queue: &wgpu::Queue) {
+    pub(super) fn flush_uploads(&mut self, queue: &wgpu::Queue) {
         self.mask_atlas.flush_uploads(queue);
         self.color_atlas.flush_uploads(queue);
         self.subpixel_atlas.flush_uploads(queue);
@@ -135,15 +135,15 @@ impl TextAtlasRuntimeState {
             ^ self.subpixel_atlas.revision().rotate_left(2)
     }
 
-    pub(crate) fn mask_dimensions(&self) -> (u32, u32) {
+    pub(super) fn mask_dimensions(&self) -> (u32, u32) {
         self.mask_atlas.dimensions()
     }
 
-    pub(crate) fn color_dimensions(&self) -> (u32, u32) {
+    pub(super) fn color_dimensions(&self) -> (u32, u32) {
         self.color_atlas.dimensions()
     }
 
-    pub(crate) fn subpixel_dimensions(&self) -> (u32, u32) {
+    pub(super) fn subpixel_dimensions(&self) -> (u32, u32) {
         self.subpixel_atlas.dimensions()
     }
 
@@ -231,7 +231,7 @@ impl TextAtlasRuntimeState {
             .pending_upload_bytes_for_entry(entry)
     }
 
-    pub(crate) fn debug_lookup_mask_entry(
+    pub(super) fn debug_lookup_mask_entry(
         &self,
         page: u16,
         x: u32,
@@ -242,7 +242,7 @@ impl TextAtlasRuntimeState {
         self.debug_lookup_entry_in_atlas(&self.mask_atlas, page, x, y, w, h)
     }
 
-    pub(crate) fn debug_lookup_color_entry(
+    pub(super) fn debug_lookup_color_entry(
         &self,
         page: u16,
         x: u32,
@@ -253,7 +253,7 @@ impl TextAtlasRuntimeState {
         self.debug_lookup_entry_in_atlas(&self.color_atlas, page, x, y, w, h)
     }
 
-    pub(crate) fn debug_lookup_subpixel_entry(
+    pub(super) fn debug_lookup_subpixel_entry(
         &self,
         page: u16,
         x: u32,
