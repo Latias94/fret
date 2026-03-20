@@ -22,66 +22,77 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     });
     let state_now = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
-    let profiles = shadcn::MenubarMenu::new("Profiles").entries([
-        shadcn::MenubarEntry::RadioGroup(
-            shadcn::MenubarRadioGroup::from_value(state_now.profile.clone())
-                .on_value_change({
-                    let state = state.clone();
-                    move |host, _action_cx, value| {
-                        let _ = host
-                            .models_mut()
-                            .update(&state, |st| st.profile = Some(value));
-                    }
-                })
-                .item(
-                    shadcn::MenubarRadioItemSpec::new("andy", "Andy")
-                        .action(CommandId::new("ui_gallery.menubar.radio.profile.andy")),
-                )
-                .item(
-                    shadcn::MenubarRadioItemSpec::new("benoit", "Benoit")
-                        .action(CommandId::new("ui_gallery.menubar.radio.profile.benoit")),
-                )
-                .item(
-                    shadcn::MenubarRadioItemSpec::new("luis", "Luis")
-                        .action(CommandId::new("ui_gallery.menubar.radio.profile.luis")),
-                ),
-        ),
-        shadcn::MenubarEntry::Separator,
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("Edit...")
-                .inset(true)
-                .action(CommandId::new("ui_gallery.menubar.radio.profile.edit")),
-        ),
-        shadcn::MenubarEntry::Item(
-            shadcn::MenubarItem::new("Add Profile...")
-                .inset(true)
-                .action(CommandId::new("ui_gallery.menubar.radio.profile.add")),
-        ),
-    ]);
+    let profiles = shadcn::MenubarTrigger::new("Profiles")
+        .into_menu()
+        .entries_parts(
+            shadcn::MenubarContent::new(),
+            [
+                shadcn::MenubarRadioGroup::from_value(state_now.profile.clone())
+                    .on_value_change({
+                        let state = state.clone();
+                        move |host, _action_cx, value| {
+                            let _ = host
+                                .models_mut()
+                                .update(&state, |st| st.profile = Some(value));
+                        }
+                    })
+                    .item(
+                        shadcn::MenubarRadioItemSpec::new("andy", "Andy")
+                            .action(CommandId::new("ui_gallery.menubar.radio.profile.andy")),
+                    )
+                    .item(
+                        shadcn::MenubarRadioItemSpec::new("benoit", "Benoit")
+                            .action(CommandId::new("ui_gallery.menubar.radio.profile.benoit")),
+                    )
+                    .item(
+                        shadcn::MenubarRadioItemSpec::new("luis", "Luis")
+                            .action(CommandId::new("ui_gallery.menubar.radio.profile.luis")),
+                    )
+                    .into(),
+                shadcn::MenubarSeparator::new().into(),
+                shadcn::MenubarGroup::new([
+                    shadcn::MenubarItem::new("Edit...")
+                        .inset(true)
+                        .action(CommandId::new("ui_gallery.menubar.radio.profile.edit"))
+                        .into(),
+                    shadcn::MenubarItem::new("Add Profile...")
+                        .inset(true)
+                        .action(CommandId::new("ui_gallery.menubar.radio.profile.add"))
+                        .into(),
+                ])
+                .into(),
+            ],
+        );
 
-    let themes = shadcn::MenubarMenu::new("Theme").entries([shadcn::MenubarEntry::RadioGroup(
-        shadcn::MenubarRadioGroup::from_value(state_now.theme.clone())
-            .on_value_change({
-                let state = state.clone();
-                move |host, _action_cx, value| {
-                    let _ = host
-                        .models_mut()
-                        .update(&state, |st| st.theme = Some(value));
-                }
-            })
-            .item(
-                shadcn::MenubarRadioItemSpec::new("light", "Light")
-                    .action(CommandId::new("ui_gallery.menubar.radio.theme.light")),
-            )
-            .item(
-                shadcn::MenubarRadioItemSpec::new("dark", "Dark")
-                    .action(CommandId::new("ui_gallery.menubar.radio.theme.dark")),
-            )
-            .item(
-                shadcn::MenubarRadioItemSpec::new("system", "System")
-                    .action(CommandId::new("ui_gallery.menubar.radio.theme.system")),
-            ),
-    )]);
+    let themes = shadcn::MenubarTrigger::new("Theme")
+        .into_menu()
+        .entries_parts(
+            shadcn::MenubarContent::new(),
+            [
+                shadcn::MenubarRadioGroup::from_value(state_now.theme.clone())
+                    .on_value_change({
+                        let state = state.clone();
+                        move |host, _action_cx, value| {
+                            let _ = host
+                                .models_mut()
+                                .update(&state, |st| st.theme = Some(value));
+                        }
+                    })
+                    .item(
+                        shadcn::MenubarRadioItemSpec::new("light", "Light")
+                            .action(CommandId::new("ui_gallery.menubar.radio.theme.light")),
+                    )
+                    .item(
+                        shadcn::MenubarRadioItemSpec::new("dark", "Dark")
+                            .action(CommandId::new("ui_gallery.menubar.radio.theme.dark")),
+                    )
+                    .item(
+                        shadcn::MenubarRadioItemSpec::new("system", "System")
+                            .action(CommandId::new("ui_gallery.menubar.radio.theme.system")),
+                    )
+                    .into(),
+            ],
+        );
 
     shadcn::Menubar::new([profiles, themes])
         .refine_layout(width)
