@@ -57,7 +57,7 @@
       "timeout_frames": 1200
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "with-label", "timeout_frames": 60 },
+    { "type": "capture_screenshot", "label": "field", "timeout_frames": 60 },
 
     {
       "type": "scroll_into_view",
@@ -74,14 +74,14 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-textarea-with-text" },
+      "target": { "kind": "test_id", "id": "ui-gallery-textarea-invalid" },
       "delta_y": -180.0,
       "require_fully_within_window": true,
       "padding_px": 16.0,
       "timeout_frames": 1200
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "with-text", "timeout_frames": 60 },
+    { "type": "capture_screenshot", "label": "invalid", "timeout_frames": 60 },
 
     {
       "type": "scroll_into_view",
@@ -93,9 +93,32 @@
       "timeout_frames": 1200
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "with-button", "timeout_frames": 60 },
+    { "type": "capture_screenshot", "label": "button", "timeout_frames": 60 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-textarea-rtl" },
+      "delta_y": -180.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "rtl", "timeout_frames": 60 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-textarea-with-text" },
+      "delta_y": -180.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "with-text", "timeout_frames": 60 },
 
     { "type": "capture_bundle", "label": "ui-gallery-textarea-docs-screenshot" }
   ]
 }
-

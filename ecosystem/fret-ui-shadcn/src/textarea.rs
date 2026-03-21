@@ -34,6 +34,26 @@ fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     fret_ui_headless::easing::SHADCN_EASE.sample(t)
 }
 
+fn resolve_textarea_min_height(
+    min_height: Px,
+    rows: Option<u16>,
+    text_style: &fret_core::TextStyle,
+    padding_y: Px,
+    border_width: Px,
+) -> Px {
+    let Some(rows) = rows else {
+        return min_height;
+    };
+
+    let rows = rows.max(1) as f32;
+    let line_height = text_style.line_height.unwrap_or(text_style.size).0.max(0.0);
+    let padding = padding_y.0.max(0.0) * 2.0;
+    let border = border_width.0.max(0.0) * 2.0;
+    let rows_height = Px((line_height * rows + padding + border).max(0.0));
+
+    Px(min_height.0.max(rows_height.0))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct TextareaResizeDrag {
     start: fret_core::Point,
@@ -61,6 +81,7 @@ pub struct Textarea {
     aria_required: bool,
     disabled: bool,
     min_height: Px,
+    rows: Option<u16>,
     resizable: bool,
     stable_line_boxes: bool,
     size: ComponentSize,
@@ -79,6 +100,7 @@ impl std::fmt::Debug for Textarea {
             )
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("min_height", &self.min_height)
+            .field("rows", &self.rows)
             .field("resizable", &self.resizable)
             .field("size", &self.size)
             .field("chrome", &self.chrome)
@@ -100,6 +122,7 @@ impl Textarea {
             aria_required: false,
             disabled: false,
             min_height: Px(64.0),
+            rows: None,
             resizable: true,
             stable_line_boxes: true,
             size: ComponentSize::default(),
@@ -160,6 +183,12 @@ impl Textarea {
         self
     }
 
+    /// Sets the preferred initial row count while preserving the recipe-owned minimum height.
+    pub fn rows(mut self, rows: u16) -> Self {
+        self.rows = Some(rows);
+        self
+    }
+
     pub fn resizable(mut self, resizable: bool) -> Self {
         self.resizable = resizable;
         self
@@ -201,6 +230,7 @@ impl Textarea {
             self.aria_required,
             self.disabled,
             self.min_height,
+            self.rows,
             self.resizable,
             self.stable_line_boxes,
             self.size,
@@ -227,6 +257,7 @@ fn textarea_element<H: UiHost>(
     aria_required: bool,
     disabled: bool,
     min_height: Px,
+    rows: Option<u16>,
     resizable: bool,
     stable_line_boxes: bool,
     size: ComponentSize,
@@ -277,6 +308,14 @@ fn textarea_element<H: UiHost>(
     chrome.preedit_bg_color = alpha_mul(resolved.selection_color, 0.22);
     chrome.preedit_underline_color = resolved.selection_color;
     chrome.focus_ring = Some(decl_style::focus_ring(&theme, resolved.radius));
+
+    let min_height = resolve_textarea_min_height(
+        min_height,
+        rows,
+        &text_style,
+        chrome.padding_y,
+        resolved.border_width,
+    );
 
     if aria_invalid {
         let border_color = theme.color_token("destructive");
@@ -1054,5 +1093,27 @@ mod tests {
             .as_ref()
             .expect("expected labelled_by decoration on TextArea");
         assert_eq!(decoration.labelled_by_element, Some(root.children[0].id.0));
+    }
+
+    #[test]
+    fn textarea_rows_raise_initial_min_height_without_lowering_defaults() {
+        let text_style = fret_core::TextStyle {
+            size: Px(14.0),
+            line_height: Some(Px(20.0)),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            resolve_textarea_min_height(Px(64.0), None, &text_style, Px(8.0), Px(1.0)),
+            Px(64.0)
+        );
+        assert_eq!(
+            resolve_textarea_min_height(Px(64.0), Some(1), &text_style, Px(8.0), Px(1.0)),
+            Px(64.0)
+        );
+        assert_eq!(
+            resolve_textarea_min_height(Px(64.0), Some(4), &text_style, Px(8.0), Px(1.0)),
+            Px(98.0)
+        );
     }
 }

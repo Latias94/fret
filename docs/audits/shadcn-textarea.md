@@ -28,8 +28,8 @@ base examples, and the in-repo textarea web gates.
 ### Authoring surface
 
 - Pass: `Textarea::new(model)` covers the documented core authoring path.
-- Pass: `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `aria_required(...)`, and `min_height(...)` cover the practical control-level surface exposed by the upstream examples.
-- Pass: `control_id(...)` is the correct Fret bridge for label/description association; `FieldLabel::for_control(...)` documents the focused click-to-focus path without widening `Textarea` itself.
+- Pass: `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `aria_required(...)`, `min_height(...)`, and `rows(...)` cover the practical control-level surface exposed by the upstream examples.
+- Pass: `Field::build(...)` is the focused field-local association lane for docs-path `Field`/`RTL` examples; explicit `control_id(...)` plus `FieldLabel::for_control(...)` remains the follow-up click-to-focus path without widening `Textarea` itself.
 - Pass: `Textarea` is a leaf text control, so Fret intentionally does not add a generic `compose()` builder here.
 
 ### Layout & default-style ownership
@@ -37,6 +37,7 @@ base examples, and the in-repo textarea web gates.
 - Pass: root `w-full min-w-0`, control chrome, minimum height, and resize behavior remain recipe-owned.
 - Pass: surrounding width caps such as `max-w-xs`, stacked button layout, and helper-text composition remain caller-owned.
 - Pass: default minimum height matches the upstream `min-h-16` outcome (64px).
+- Pass: `rows(...)` raises the initial minimum height when the caller wants a taller starting textarea, while preserving the recipe-owned 64px floor for default and one-row cases.
 - Pass: `aria-invalid=true` border/ring outcomes already match the textarea web chrome gates.
 
 ### Semantics
@@ -47,11 +48,15 @@ base examples, and the in-repo textarea web gates.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream base Textarea docs path first: `Demo`, `Usage`, `Field`, `Disabled`, `Invalid`, `Button`, `RTL`, and `API Reference`.
+- Pass: the docs-path `Field` and `RTL` snippets now use the upstream feedback copy and a four-row initial composition rather than a hand-tuned fixed-height override.
 - Pass: `With Text` and `Label Association` stay as focused Fret follow-ups after the upstream path.
 - Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-textarea cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-textarea-check cargo check -p fret-ui-shadcn --lib --tests --message-format short`
+- Focused unit gate: `cargo test -p fret-ui-shadcn --lib textarea::tests::textarea_rows_raise_initial_min_height_without_lowering_defaults -- --exact`
+- Docs-path diag gate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json --dir <out-dir> --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-textarea cargo run -p fret-ui-gallery`
 - Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`textarea-demo`, `textarea-demo.invalid`, `textarea-demo.focus`, `textarea-demo.invalid-focus`)
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`textarea-demo`)

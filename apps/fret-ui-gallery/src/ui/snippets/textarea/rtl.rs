@@ -3,22 +3,26 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
+use fret_ui_kit::ui::UiElementSinkExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let value = cx.local_model(String::new);
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("التعليقات").into_element(cx),
-            shadcn::Textarea::new(value)
-                .a11y_label("Feedback")
-                .placeholder("تعليقاتك تساعدنا على التحسين...")
-                .min_height(Px(96.0))
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx),
-            shadcn::FieldDescription::new("شاركنا أفكارك حول خدمتنا.").into_element(cx),
-        ])
+        shadcn::Field::build(|cx, out| {
+            out.push_ui(cx, shadcn::FieldLabel::new("التعليقات"));
+            out.push_ui(
+                cx,
+                shadcn::Textarea::new(value)
+                    .placeholder("تعليقاتك تساعدنا على التحسين...")
+                    .rows(4),
+            );
+            out.push_ui(
+                cx,
+                shadcn::FieldDescription::new("شاركنا أفكارك حول خدمتنا."),
+            );
+        })
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
         .into_element(cx)
     })
