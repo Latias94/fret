@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use fret_runtime::ActionId;
-use fret_ui::Theme;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
+use fret_ui::Theme;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::typography::{description_text_refinement, muted_foreground_color};
 use fret_ui_kit::ui;
@@ -640,9 +640,9 @@ impl ConfirmationActions {
 }
 
 /// Action button aligned with AI Elements `ConfirmationAction`.
-#[derive(Clone)]
 pub struct ConfirmationAction {
     label: Arc<str>,
+    children: Vec<AnyElement>,
     variant: ButtonVariant,
     action: Option<ActionId>,
     action_payload: Option<ActionPayloadFactory>,
@@ -655,6 +655,7 @@ impl std::fmt::Debug for ConfirmationAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ConfirmationAction")
             .field("label", &self.label)
+            .field("children_len", &self.children.len())
             .field("variant", &self.variant)
             .field("action", &self.action)
             .field("action_payload", &self.action_payload.is_some())
@@ -669,6 +670,7 @@ impl ConfirmationAction {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
+            children: Vec::new(),
             variant: ButtonVariant::Default,
             action: None,
             action_payload: None,
@@ -680,6 +682,18 @@ impl ConfirmationAction {
 
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    /// Overrides the visible button content while keeping the base label for semantics.
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Appends one custom child to the visible button content override.
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
         self
     }
 
@@ -721,9 +735,13 @@ impl ConfirmationAction {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = self.children;
         let mut button = Button::new(self.label)
             .variant(self.variant)
             .size(ButtonSize::Sm);
+        if !children.is_empty() {
+            button = button.children(children);
+        }
         if let Some(action) = self.action {
             button = button.action(action);
         }
@@ -1037,6 +1055,28 @@ mod tests {
         assert_eq!(
             style.line_height_policy,
             Some(TextLineHeightPolicy::FixedFromStyle)
+        );
+    }
+
+    #[test]
+    fn confirmation_action_accepts_custom_children_without_reintroducing_label_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                ConfirmationAction::new("Approve")
+                    .children([cx.text("Run tool")])
+                    .into_element(cx)
+            });
+
+        assert!(
+            find_text(&element, "Run tool").is_some(),
+            "expected custom confirmation action child text to render"
+        );
+        assert!(
+            find_text(&element, "Approve").is_none(),
+            "expected custom children to replace the default visible label text"
         );
     }
 }

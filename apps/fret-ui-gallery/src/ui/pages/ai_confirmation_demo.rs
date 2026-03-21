@@ -12,31 +12,42 @@ pub(super) fn preview_ai_confirmation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
 
     let notes = doc_layout::notes_block([
         "Confirmation still lives in the AI Elements/component layer: it composes Alert + Button outcomes rather than changing fret-ui runtime contracts.",
-        "Compound slot composition now matches the upstream AI Elements preview scripts, including `ConfirmationTitle` wrapping the request/accepted/rejected slots.",
-        "Keep the request state actionable and keep the accepted/rejected states read-only so the page mirrors the official preview scripts and docs examples.",
+        "The workflow section now mirrors the official docs teaching surface more closely: direct `Confirmation` children for the end-to-end flow, then focused state sections for the preview-script variants.",
+        "The focused request/accepted/rejected examples keep the upstream preview-script shape where `ConfirmationTitle` wraps the state-specific slots.",
+        "`ConfirmationAction` now supports custom visible children while preserving action-first authoring and the base label for semantics.",
     ]);
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview keeps the live approval workflow while mirroring the official AI Elements preview scripts, including title-wrapped confirmation slots and state-specific actions.",
+            "Docs-aligned Confirmation coverage for AI Elements: a complete approval workflow first, then focused state examples that track the official preview scripts.",
         ),
         vec![
-            DocSection::build(cx, "Workflow Demo", workflow)
+            DocSection::build(cx, "Usage with Tool Approval Workflow", workflow)
+                .description(
+                    "Rust/Fret analogue of the official AI Elements Confirmation usage example, including the final output state after approval or rejection.",
+                )
+                .description(
+                    "Uses direct `Confirmation` children like the docs surface while keeping stable `test_id` hooks for diagnostics.",
+                )
                 .test_id_prefix("ui-gallery-ai-confirmation-demo")
                 .code_rust_from_file_region(snippets::confirmation_demo::SOURCE, "example"),
             DocSection::build(cx, "Approval Request State", request)
-                .description("Preview-script-aligned approval-requested state with action buttons.")
+                .description(
+                    "Preview-script-aligned `approval-requested` state using the optional `ConfirmationTitle` wrapper around slot content.",
+                )
                 .test_id_prefix("ui-gallery-ai-confirmation-request")
                 .code_rust_from_file_region(snippets::confirmation_request::SOURCE, "example"),
             DocSection::build(cx, "Approved State", accepted)
                 .description(
-                    "Preview-script-aligned approval-responded state with accepted feedback.",
+                    "Preview-script-aligned accepted state. The same accepted slot composition also applies when the tool reaches `output-available`.",
                 )
                 .test_id_prefix("ui-gallery-ai-confirmation-accepted")
                 .code_rust_from_file_region(snippets::confirmation_accepted::SOURCE, "example"),
             DocSection::build(cx, "Rejected State", rejected)
-                .description("Preview-script-aligned output-denied state with rejected feedback.")
+                .description(
+                    "Preview-script-aligned `output-denied` state with rejected feedback and no remaining action row.",
+                )
                 .test_id_prefix("ui-gallery-ai-confirmation-rejected")
                 .code_rust_from_file_region(snippets::confirmation_rejected::SOURCE, "example"),
             DocSection::build(cx, "Notes", notes)
