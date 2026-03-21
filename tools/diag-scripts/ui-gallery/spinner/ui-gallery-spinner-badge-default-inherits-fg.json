@@ -1,6 +1,17 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Spinner badge default foreground inheritance",
+    "tags": ["ui-gallery", "shadcn", "spinner", "badge", "bundle"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Navigates to the Spinner page via the UI gallery search field.",
+      "Waits for the badge example to mount.",
+      "Captures a bundle for foreground-inheritance triage."
+    ]
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
     {
       "type": "wait_until",
       "predicate": {
@@ -43,4 +54,3 @@
     }
   ]
 }
-

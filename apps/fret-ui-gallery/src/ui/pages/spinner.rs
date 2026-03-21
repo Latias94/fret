@@ -19,10 +19,12 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Spinner::new()` mirrors the upstream leaf spinner with the default loader icon, intrinsic 16px box, and continuous spin.",
         "The default icon, current-color inheritance, size-4 box, and spin animation remain recipe-owned because the upstream component source defines those defaults on the spinner itself.",
+        "Spinner now exposes status-style loading semantics (`role=status` equivalent with polite live-region behavior) instead of pretending to be a numeric progress bar.",
         "`Button::leading_children(...)` / `trailing_children(...)` are the preferred Fret equivalent of the upstream `Spinner data-icon=\"inline-start|inline-end\"` composition story.",
-        "Custom icon choice (`icon(...)`), explicit size (`refine_layout(...)`), and optional color (`color(...)`) remain caller-owned refinements; `speed(...)` stays a focused Fret follow-up and is documented under `Extras`, not the upstream docs path.",
+        "Custom icon choice (`icon(...)`), explicit size (`refine_layout(...)`), and optional color (`color(...)`) remain caller-owned refinements; if your app wants a different default glyph, wrap `Spinner::new().icon(...)` in a local helper instead of widening the leaf API.",
+        "`speed(...)` stays a focused Fret follow-up and is documented under `Extras`, not the upstream docs path.",
         "Button, badge, and input-group spacing stay owned by those host recipes rather than the spinner itself.",
-        "Spinner is a visual leaf primitive, so no generic `compose()` / children API is needed here.",
+        "Spinner is a visual leaf primitive; Button/Badge/InputGroup already cover composition through host-owned slots, so no generic `compose()` / children API is needed on Spinner itself.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
@@ -37,7 +39,9 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-spinner-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let customization = DocSection::build(cx, "Customization", customization)
-        .description("Swap the default loader icon while keeping the same leaf component contract.")
+        .description(
+            "Build a small project-local wrapper when you want a different default spinner glyph.",
+        )
         .test_id_prefix("ui-gallery-spinner-customization")
         .code_rust_from_file_region(snippets::customization::SOURCE, "example");
     let sizes = DocSection::build(cx, "Size", sizes)
@@ -49,7 +53,7 @@ pub(super) fn preview_spinner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-spinner-button")
         .code_rust_from_file_region(snippets::buttons::SOURCE, "example");
     let badges = DocSection::build(cx, "Badge", badges)
-        .description("Badge compositions where the surrounding recipe owns inline icon spacing.")
+        .description("Badge compositions where the surrounding recipe owns inline icon spacing through leading/trailing slots.")
         .test_id_prefix("ui-gallery-spinner-badge")
         .code_rust_from_file_region(snippets::badges::SOURCE, "example");
     let input_group = DocSection::build(cx, "Input Group", input_group)

@@ -19,6 +19,8 @@ pub enum SemanticsRole {
     Dialog,
     AlertDialog,
     Alert,
+    /// A non-interactive advisory live region (ARIA `role="status"`).
+    Status,
     Button,
     Link,
     Image,

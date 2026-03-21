@@ -10,16 +10,16 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     ui::h_flex(|cx| {
         vec![
             shadcn::Badge::new("Syncing")
-                .children([spinner(cx)])
+                .leading_children([spinner(cx)])
                 .into_element(cx)
                 .test_id("ui-gallery-spinner-badge"),
             shadcn::Badge::new("Updating")
                 .variant(shadcn::BadgeVariant::Secondary)
-                .children([spinner(cx)])
+                .leading_children([spinner(cx)])
                 .into_element(cx),
             shadcn::Badge::new("Processing")
                 .variant(shadcn::BadgeVariant::Outline)
-                .children([spinner(cx)])
+                .leading_children([spinner(cx)])
                 .into_element(cx),
         ]
     })

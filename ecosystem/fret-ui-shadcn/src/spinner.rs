@@ -16,7 +16,8 @@ use fret_ui_kit::{ColorRef, LayoutRefinement};
 ///
 /// Upstream uses a spinning lucide icon (`Loader2Icon` + `animate-spin`). In Fret, we implement
 /// this via a paint-only `VisualTransform` wrapper around an `SvgIcon`, and request animation
-/// frames while the spinner is rendered.
+/// frames while the spinner is rendered. Accessibility semantics align to upstream
+/// `role="status"` rather than numeric progress semantics.
 #[derive(Debug, Clone)]
 pub struct Spinner {
     layout: LayoutRefinement,
@@ -131,10 +132,10 @@ impl Spinner {
         })
         .attach_semantics(
             SemanticsDecoration::default()
-                .role(SemanticsRole::ProgressBar)
+                .role(SemanticsRole::Status)
                 .label("Loading")
-                .busy(true)
-                .live(Some(SemanticsLive::Polite)),
+                .live(Some(SemanticsLive::Polite))
+                .live_atomic(true),
         )
     }
 }
@@ -186,10 +187,11 @@ mod tests {
             .semantics_decoration
             .as_ref()
             .expect("semantics decoration");
-        assert_eq!(sem.role, Some(SemanticsRole::ProgressBar));
+        assert_eq!(sem.role, Some(SemanticsRole::Status));
         assert_eq!(sem.label.as_deref(), Some("Loading"));
-        assert_eq!(sem.busy, Some(true));
         assert_eq!(sem.live, Some(Some(SemanticsLive::Polite)));
+        assert_eq!(sem.live_atomic, Some(true));
+        assert_eq!(sem.busy, None);
 
         let child = el.children.first().expect("visual transform child");
         let ElementKind::SvgIcon(_) = &child.kind else {

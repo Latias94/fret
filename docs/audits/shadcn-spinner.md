@@ -29,14 +29,21 @@ new-york spinner source, example compositions, and the existing spinner unit/lay
 
 - Pass: `Spinner::new()` covers the upstream leaf spinner path.
 - Pass: `refine_layout(...)`, `icon(...)`, and `color(...)` cover the documented customization story without widening the component into a container API.
+- Pass: a small project-local wrapper around `Spinner::new().icon(...)` is the closest Fret equivalent of the upstream "edit the Spinner component source" customization story.
 - Pass: `speed(...)` remains a focused Fret-specific follow-up for diagnostics and recipes rather than part of the upstream docs path.
-- Pass: Spinner is a visual leaf primitive, so no extra generic `compose()` / children API is needed here.
+- Pass: Button/Badge/InputGroup already expose the required inline slot surfaces for spinner compositions, so Spinner itself does not need a generic `compose()` / children API.
+
+### Semantics & accessibility
+
+- Pass: Spinner now maps to status semantics (`role="status"` equivalent) rather than a numeric progress role, matching the upstream shadcn source more closely.
+- Pass: the spinner keeps polite live-region behavior and atomic announcements without inventing numeric progress values.
+- Pass: this audit revealed a small mechanism-layer gap in the shared semantics enum; adding `SemanticsRole::Status` was the right fix, rather than keeping a recipe-level `ProgressBar` approximation.
 
 ### Layout & default-style ownership
 
 - Pass: the default loader icon, intrinsic 16px box, current-color behavior, and spin animation remain recipe-owned because the upstream component source defines those defaults on the spinner itself.
 - Pass: explicit size overrides, page width caps, and embedding inside button / badge / input-group layouts remain caller-owned or host-recipe-owned composition choices.
-- Pass: existing unit and web-vs-Fret layout gates already cover the default spin timing and key geometry outcomes; this pass does not reveal a mechanism-layer gap.
+- Pass: existing unit and web-vs-Fret layout gates already cover the default spin timing and key geometry outcomes; the remaining parity work here was semantic, not layout-related.
 
 ### Gallery / docs parity
 
@@ -46,6 +53,7 @@ new-york spinner source, example compositions, and the existing spinner unit/lay
 
 ## Validation
 
+- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-a11y-accesskit maps_extended_semantics_roles_to_accesskit_roles`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib spinner`
 - Existing geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/spinner.rs`
