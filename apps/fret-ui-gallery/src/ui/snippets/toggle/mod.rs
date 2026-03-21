@@ -6,6 +6,7 @@
 //!
 //! Keep `ui-gallery-toggle-*` `test_id`s stable: diag scripts depend on them.
 
+pub mod children;
 pub mod demo;
 pub mod disabled;
 pub mod label;

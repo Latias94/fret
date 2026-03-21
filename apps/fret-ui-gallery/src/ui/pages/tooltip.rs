@@ -14,24 +14,38 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let disabled_tooltip = snippets::disabled_button::render(cx);
     let rtl_row = snippets::rtl::render(cx);
 
+    let api_reference = doc_layout::notes_block([
+        "`Tooltip::new(cx, trigger, content)` is the closest Fret equivalent of upstream nested `<Tooltip><TooltipTrigger /><TooltipContent /></Tooltip>` composition.",
+        "`TooltipProvider` owns shared delay-group policy, while `Tooltip::open_delay(...)`, `close_delay(...)`, `track_cursor_axis(...)`, and `anchor_element(...)` stay available as explicit root-level tuning seams.",
+        "`TooltipTrigger::build(...)` and `TooltipContent::build(cx, ...)` cover the typed compound-parts lane for copyable first-party snippets.",
+        "No extra generic `children([...])` / `compose()` root API is currently warranted: tooltip root only needs trigger/content, and `Tooltip::new(...)` already models that contract without hidden collection or scope state.",
+    ]);
     let notes = doc_layout::notes_block([
-        "Tooltip already exposes shadcn-style part names (`TooltipTrigger`, `TooltipContent`, `TooltipProvider`), and `Tooltip::new(cx, trigger, content)` is the recipe-level composition entry point.",
-        "`TooltipTrigger::build(...)` and `TooltipContent::build(cx, ...)` cover the typed compound-parts lane for copyable usage snippets.",
-        "Gallery sections mirror shadcn docs first; `Long Content` and `Keyboard Focus` are Fret-specific parity sections appended afterward.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/tooltip.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/base/tooltip.mdx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx`, `repo-ref/primitives/packages/react/tooltip/src/tooltip.tsx`, and `repo-ref/base-ui/packages/react/src/tooltip/root/TooltipRoot.tsx`.",
+        "Preview mirrors the shadcn/base Tooltip docs path after `Installation`: `Demo`, `Usage`, `Side`, `With Keyboard Shortcut`, `Disabled Button`, `RTL`, and `API Reference`. `Long Content` and `Keyboard Focus` remain explicit Fret parity follow-ups.",
+        "`Usage` keeps a local `TooltipProvider` wrapper so the code tab is standalone and copyable, while the page still teaches the default `Tooltip::new(...)` root lane plus typed trigger/content builders.",
         "Wrap related tooltips in one `TooltipProvider` to get consistent delay-group behavior.",
         "Use concise content in tooltip panels; longer explanations should move to Popover or Dialog.",
         "For disabled actions, use a non-disabled wrapper as trigger so hover/focus feedback still works.",
         "Keep tooltip content keyboard-accessible: focus the trigger and verify `aria-describedby`.",
     ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .no_shell()
+        .test_id_prefix("ui-gallery-tooltip-api-reference")
+        .description("Public surface summary, timing ownership, and children API guidance.");
     let notes = DocSection::build(cx, "Notes", notes)
+        .no_shell()
+        .test_id_prefix("ui-gallery-tooltip-notes")
         .description("Implementation notes and regression guidelines.");
     let demo_tooltip = DocSection::build(cx, "Demo", demo_tooltip)
+        .test_id_prefix("ui-gallery-tooltip-demo")
         .description("Basic tooltip with an arrow and a short content label.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .title_test_id("ui-gallery-section-usage-title")
+        .test_id_prefix("ui-gallery-tooltip-usage")
         .description(
-            "Copyable shadcn-style composition reference using typed trigger/content parts.",
+            "Copyable shadcn-style composition reference using the default `Tooltip::new(...)` root plus typed trigger/content parts.",
         )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let side_row = DocSection::build(cx, "Side", side_row)
@@ -60,7 +74,7 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let page = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Tooltip docs order first, then appends Fret-specific `Long Content` and `Keyboard Focus` parity sections.",
+            "Preview follows the shadcn/base Tooltip docs path through `API Reference`, then appends Fret-specific `Long Content` and `Keyboard Focus` parity sections.",
         ),
         vec![
             demo_tooltip,
@@ -69,6 +83,7 @@ pub(super) fn preview_tooltip(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             keyboard_tooltip,
             disabled_tooltip,
             rtl_row,
+            api_reference,
             long_content_tooltip,
             focus_row,
             notes,

@@ -1185,6 +1185,62 @@ mod tests {
     }
 
     #[test]
+    fn toggle_children_accept_prebuilt_landed_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(120.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "toggle-children-accept-prebuilt-landed-content",
+            |cx| {
+                vec![
+                    Toggle::uncontrolled(false)
+                        .a11y_label("Toggle bookmark")
+                        .children([
+                            ui::text("Bookmark").into_element(cx),
+                            ui::text("Pinned").into_element(cx),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let labels: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|node| node.label.as_deref())
+            .collect();
+        assert!(
+            labels.contains(&"Toggle bookmark"),
+            "expected toggle semantics label in {labels:?}"
+        );
+        assert!(
+            labels.contains(&"Bookmark"),
+            "expected first landed child text in {labels:?}"
+        );
+        assert!(
+            labels.contains(&"Pinned"),
+            "expected second landed child text in {labels:?}"
+        );
+    }
+
+    #[test]
     fn toggle_uncontrolled_applies_default_pressed_once_and_does_not_reset() {
         fn is_pressed(ui: &UiTree<App>, label: &str) -> bool {
             ui.semantics_snapshot()

@@ -12,11 +12,13 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let size = snippets::size::render(cx);
     let disabled = snippets::disabled::render(cx);
     let rtl = snippets::rtl::render(cx);
+    let children = snippets::children::render(cx);
     let label = snippets::label::render(cx);
 
     let api_reference = doc_layout::notes_block([
         "`toggle_uncontrolled(cx, false, |cx| ..)` and `toggle(cx, model, |cx| ..)` are the default first-party entry points; `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` cover the documented control surface.",
-        "`children([...])` is the source-aligned Fret equivalent of upstream child content, while `leading_icon(...)` and `label(...)` remain compact shortcuts when you do not want to spell the child row manually.",
+        "`Toggle::uncontrolled(...).children([...])` is the landed-element equivalent of upstream JSX child content when callers already own or want to reuse the inner content.",
+        "`children([...])`, `leading_icon(...)`, and `label(...)` remain recipe-level content choices; the helper family simply keeps the common path builder-preserving.",
         "Toggle chrome, size presets, horizontal padding, and pressed-state colors remain recipe-owned because the upstream component source defines those defaults on the component itself.",
         "Surrounding toolbar layout, wrapping behavior, and label-to-control wiring remain caller-owned composition choices.",
         "No extra generic `asChild` / `compose()` surface is needed here: `children([...])` already covers the composable content story without widening the primitive contract.",
@@ -55,6 +57,12 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Toggle content order and alignment under RTL.")
         .test_id_prefix("ui-gallery-toggle-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let children = DocSection::build(cx, "Children (Fret)", children)
+        .description(
+            "Use the direct landed-element `children([...])` lane when the inner content is already built or caller-owned.",
+        )
+        .test_id_prefix("ui-gallery-toggle-children")
+        .code_rust_from_file_region(snippets::children::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association", label)
         .description(
             "Use `FieldLabel::for_control` plus `Toggle::control_id` when you want an explicit Fret label-click example outside the upstream docs path.",
@@ -65,7 +73,7 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Toggle docs path first: Demo, Usage, Outline, With Text, Size, Disabled, RTL, then keeps `Label Association` and `API Reference` as focused Fret follow-ups.",
+            "Preview mirrors the shadcn Toggle docs path first: Demo, Usage, Outline, With Text, Size, Disabled, RTL, then keeps `Children (Fret)`, `Label Association`, and `API Reference` as focused Fret follow-ups.",
         ),
         vec![
             demo,
@@ -75,6 +83,7 @@ pub(super) fn preview_toggle(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             size,
             disabled,
             rtl,
+            children,
             label,
             api_reference,
         ],

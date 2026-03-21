@@ -60,6 +60,22 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-children-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-children-bookmark" }
+      },
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "ui-gallery-toggle-docs-smoke" }
   ]
 }

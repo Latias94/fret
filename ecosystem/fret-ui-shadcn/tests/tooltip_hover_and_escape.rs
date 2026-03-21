@@ -8,6 +8,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
+use std::time::Duration;
 
 #[path = "support/fake_services.rs"]
 mod fake_services;
@@ -96,6 +97,10 @@ fn build_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     vec![tooltip]
 }
 
+fn tooltip_presence_settle_frames() -> u64 {
+    shadcn_motion::ticks_for_duration(Duration::from_millis(150)) + 2
+}
+
 #[test]
 fn tooltip_hover_opens_and_leave_closes() {
     let window = AppWindowId::default();
@@ -144,7 +149,7 @@ fn tooltip_hover_opens_and_leave_closes() {
     );
 
     // Frames: settle open presence.
-    let open_settle_frames = shadcn_motion::ticks_100() + 2;
+    let open_settle_frames = tooltip_presence_settle_frames();
     for tick in 0..open_settle_frames {
         let request_semantics = tick + 1 == open_settle_frames;
         render_frame(
@@ -179,7 +184,7 @@ fn tooltip_hover_opens_and_leave_closes() {
     );
 
     // Frames: settle close presence.
-    let close_settle_frames = shadcn_motion::ticks_100() + 2;
+    let close_settle_frames = tooltip_presence_settle_frames();
     for tick in 0..close_settle_frames {
         let request_semantics = tick + 1 == close_settle_frames;
         render_frame(
@@ -250,7 +255,7 @@ fn tooltip_escape_closes() {
         ),
     );
 
-    let open_settle_frames = shadcn_motion::ticks_100() + 2;
+    let open_settle_frames = tooltip_presence_settle_frames();
     for tick in 0..open_settle_frames {
         let request_semantics = tick + 1 == open_settle_frames;
         render_frame(
@@ -275,7 +280,7 @@ fn tooltip_escape_closes() {
 
     dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
 
-    let close_settle_frames = shadcn_motion::ticks_100() + 2;
+    let close_settle_frames = tooltip_presence_settle_frames();
     for tick in 0..close_settle_frames {
         let request_semantics = tick + 1 == close_settle_frames;
         render_frame(

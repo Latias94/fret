@@ -1,5 +1,6 @@
 {
   "meta": {
+    "name": "ui-gallery-tooltip-docs-smoke",
     "required_capabilities": ["diag.script_v2"]
   },
   "schema_version": 2,
@@ -55,6 +56,36 @@
         "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo" }
       },
       "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-usage-content" }
+      }
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-tooltip-api-reference-content"
+      },
+      "delta_y": 220.0,
+      "padding_px": 24.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-api-reference-content"
+        }
+      }
     },
 
     { "type": "capture_bundle", "label": "ui-gallery-tooltip-docs-smoke" }

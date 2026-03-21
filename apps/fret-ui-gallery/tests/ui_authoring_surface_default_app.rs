@@ -1235,6 +1235,14 @@ fn direct_recipe_root_pages_mark_their_default_lane_without_inventing_compose() 
         ),
         "src/ui/pages/command.rs should keep Command on the direct recipe root lane"
     );
+
+    let tooltip_page = read("src/ui/pages/tooltip.rs");
+    assert!(
+        tooltip_page.contains(
+            "No extra generic `children([...])` / `compose()` root API is currently warranted: tooltip root only needs trigger/content, and `Tooltip::new(...)` already models that contract without hidden collection or scope state."
+        ),
+        "src/ui/pages/tooltip.rs should record why Tooltip stays on the direct recipe root lane"
+    );
 }
 
 #[test]
@@ -3665,6 +3673,7 @@ fn tooltip_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"With Keyboard Shortcut\", keyboard_tooltip)",
             "DocSection::build(cx, \"Disabled Button\", disabled_tooltip)",
             "DocSection::build(cx, \"RTL\", rtl_row)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Long Content\", long_content_tooltip)",
             "DocSection::build(cx, \"Keyboard Focus\", focus_row)",
         ],
@@ -3675,9 +3684,23 @@ fn tooltip_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"With Keyboard Shortcut\", keyboard_tooltip)",
             "DocSection::new(\"Disabled Button\", disabled_tooltip)",
             "DocSection::new(\"RTL\", rtl_row)",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Long Content\", long_content_tooltip)",
             "DocSection::new(\"Keyboard Focus\", focus_row)",
         ],
+    );
+}
+
+#[test]
+fn tooltip_usage_snippet_keeps_a_standalone_provider_wrapped_example() {
+    let usage = read("src/ui/snippets/tooltip/usage.rs");
+    assert!(
+        usage.contains("shadcn::TooltipProvider::new()"),
+        "src/ui/snippets/tooltip/usage.rs should keep TooltipProvider in the standalone copyable example"
+    );
+    assert!(
+        usage.contains("shadcn::Button::new(\"Hover\").variant(shadcn::ButtonVariant::Outline)"),
+        "src/ui/snippets/tooltip/usage.rs should keep the standalone example aligned with the docs-style trigger surface"
     );
 }
 
@@ -5664,11 +5687,7 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
         );
     }
 
-    for relative_path in [
-        "src/ui/pages/tooltip.rs",
-        "src/ui/pages/table.rs",
-        "src/ui/pages/image_object_fit.rs",
-    ] {
+    for relative_path in ["src/ui/pages/table.rs", "src/ui/pages/image_object_fit.rs"] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,
             &[
@@ -5681,6 +5700,22 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
             ],
         );
     }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/tooltip.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
 
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/breadcrumb.rs",
@@ -7531,6 +7566,7 @@ fn selected_toggle_group_snippet_helpers_prefer_into_ui_element_over_anyelement(
 fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/toggle_group/children.rs",
             "src/ui/snippets/toggle_group/custom.rs",
             "src/ui/snippets/toggle_group/demo.rs",
             "src/ui/snippets/toggle_group/disabled.rs",
@@ -7574,6 +7610,7 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Disabled\", disabled)",
             "DocSection::build(cx, \"Custom\", custom)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Children (Fret)\", children)",
             "DocSection::build(cx, \"Single (Fret)\", single)",
             "DocSection::build(cx, \"Small (Fret)\", small)",
             "DocSection::build(cx, \"Large (Fret)\", large)",
@@ -7591,6 +7628,7 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Disabled\", disabled)",
             "DocSection::new(\"Custom\", custom)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Single (Fret)\", single)",
             "DocSection::new(\"Small (Fret)\", small)",
             "DocSection::new(\"Large (Fret)\", large)",
@@ -7775,6 +7813,7 @@ fn checkbox_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/toggle/children.rs",
             "src/ui/snippets/toggle/demo.rs",
             "src/ui/snippets/toggle/disabled.rs",
             "src/ui/snippets/toggle/label.rs",
@@ -7823,6 +7862,23 @@ fn selected_toggle_snippets_prefer_builder_preserving_helpers() {
 }
 
 #[test]
+fn toggle_children_snippet_prefers_explicit_root_children_followup() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/toggle/children.rs",
+        &[
+            "shadcn::Toggle::uncontrolled(false)",
+            ".children(bookmark_children)",
+            ".children(underline_children)",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("shadcn::toggle_uncontrolled("),
+        "src/ui/snippets/toggle/children.rs should keep the focused root `children([...])` follow-up visible instead of collapsing back to the default helper lane",
+    );
+}
+
+#[test]
 fn toggle_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/toggle.rs",
@@ -7834,7 +7890,9 @@ fn toggle_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Size\", size)",
             "DocSection::build(cx, \"Disabled\", disabled)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Children (Fret)\", children)",
             "DocSection::build(cx, \"Label Association\", label)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -7844,7 +7902,9 @@ fn toggle_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Size\", size)",
             "DocSection::new(\"Disabled\", disabled)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Label Association\", label)",
+            "DocSection::new(\"API Reference\", api_reference)",
         ],
     );
 }

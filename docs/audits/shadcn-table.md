@@ -64,10 +64,12 @@ current registry implementation in `repo-ref/ui`.
   core table layout is not blocked on a runtime/mechanism change.
 - Pass: checkbox-column padding parity now stays where upstream owns it: `TableHead` /
   `TableCell` narrow recipe defaults drop right padding when a checkbox descendant is present.
-- Note: the upstream direct-child `translate-y-[2px]` rule is a DOM/table-baseline compensation.
-  Fret's flex-backed header geometry did not need a literal port, and mixed-height body-row
-  vertical centering in checkbox columns remains a narrower recipe/layout follow-up rather than a
-  `fret-ui` mechanism issue.
+- Pass: mixed-height body-row checkbox cells now also center vertically at the recipe layer via
+  auto vertical margins on the cell root, matching the `align-middle` outcome without widening any
+  `fret-ui` mechanism contract.
+- Note: the upstream direct-child `translate-y-[2px]` rule remains a DOM/table-baseline
+  compensation; Fret's flex-backed table did not need a literal transform port once checkbox cells
+  centered correctly inside taller rows.
 
 ### Gallery / docs parity
 

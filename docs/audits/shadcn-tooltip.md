@@ -37,11 +37,17 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 - Pass: The typed compound-parts lane is explicit on both sides via
   `TooltipTrigger::build(...)` and `TooltipContent::build(cx, ...)`, so first-party examples do
   not need to hand-land tooltip parts through `AnyElement`.
-- Note: Fret intentionally does not add a separate generic `compose()` builder for `Tooltip`
-  today. Unlike modal overlays that need explicit portal/overlay/content slot assembly, tooltip
-  authoring is already expressed by the root's required trigger/content slots plus root/provider-
-  owned hover policy (`TooltipProvider`, delay settings, `track_cursor_axis`, `anchor_element`).
-  An extra builder would mostly duplicate the current contract without improving semantics.
+- Pass: UI Gallery now mirrors the shadcn/base docs path through `API Reference`, then keeps
+  `Long Content` and `Keyboard Focus` as explicit Fret-only parity follow-ups.
+- Pass: The first-party `Usage` snippet now wraps its local example in `TooltipProvider` so the
+  code tab stays standalone and copyable while still teaching the default `Tooltip::new(...)`
+  root lane.
+- Note: Fret intentionally does not add a separate generic `children([...])` / `compose()` root
+  builder for `Tooltip` today. Unlike modal overlays that need explicit portal/overlay/content
+  slot assembly, tooltip authoring is already expressed by the root's required trigger/content
+  slots plus root/provider-owned hover policy (`TooltipProvider`, delay settings,
+  `track_cursor_axis`, `anchor_element`). An extra builder would mostly duplicate the current
+  contract without improving semantics.
 
 ### Open lifecycle semantics (Base UI parity)
 

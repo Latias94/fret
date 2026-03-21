@@ -33,7 +33,9 @@ base examples, and the current gallery/docs surface.
 - Pass: Supports `single` (`Model<Option<Arc<str>>>`) and `multiple` (`Model<Vec<Arc<str>>>`) modes.
 - Pass: Supports uncontrolled default selection for both modes.
 - Pass: Supports `orientation`, `loop_navigation`, `variant`, `size`, and `spacing(...)`.
-- Pass: `ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` are sufficient for source-aligned item content composition; no extra generic `compose()` API is needed here.
+- Pass: The default docs-path root surface remains `ToggleGroup::{single,multiple}*` plus `.items([...])`.
+- Pass: The builder-preserving helper family `toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`, `toggle_group_multiple(...)`, and `toggle_group_multiple_uncontrolled(...)` now serves as the explicit composable-children lane on the Fret surface.
+- Pass: `ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` are sufficient for source-aligned item content composition; no extra root `children([...])` or generic `compose()` API is needed here.
 - Pass: `ToggleGroupItem::refine_layout(...)` and `refine_style(...)` now cover upstream custom item-root sizing and rounding for card-like toggle items.
 - Pass: `control_id(...)` and `test_id_prefix(...)` remain focused Fret follow-up surfaces rather than upstream docs-path requirements.
 
@@ -47,12 +49,16 @@ base examples, and the current gallery/docs surface.
 
 - Pass: Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned.
 - Pass: Item-root custom layout/chrome (`w/h`, radius) and surrounding width/flex negotiation remain caller-owned.
-- Pass: The gallery now mirrors the upstream base Toggle Group docs path first: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.
-- Pass: `Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` remain explicit Fret follow-ups after the upstream path.
+- Pass: The gallery now mirrors the upstream base Toggle Group docs path first with source-aligned defaults and content: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.
+- Pass: The docs-path snippets no longer drift on the demo selection state, outline labels, size rows, spacing content, or disabled styling.
+- Pass: `Children (Fret)`, `Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` remain explicit Fret follow-ups after the upstream path.
+- Pass: `Children (Fret)` now teaches the helper-based composable-children lane without displacing the simpler docs-path `.items([...])` story.
 - Pass: This work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib toggle_group`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app`
+- `cargo test -p fret-ui-shadcn --lib toggle_group`
+- `env CARGO_TARGET_DIR=target-codex-fretboard-toggle-group cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json --dir target/fret-diag-toggle-group-audit --session-auto --timeout-ms 240000 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-toggle-group cargo run -p fret-ui-gallery`
+- `CARGO_TARGET_DIR=target-codex-toggle-group cargo check -p fret-ui-gallery --message-format short`
 - Existing chrome/layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_toggle_group_demo_chrome_matches`) and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs` (`toggle-group-*` height cases)

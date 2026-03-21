@@ -430,6 +430,12 @@ fn web_vs_fret_layout_data_table_demo_checkbox_column_padding_and_action_button_
         web_select_row.rect.x - web_body_row.rect.x,
         1.0,
     );
+    assert_close_px(
+        "data-table-demo select row checkbox relative y",
+        select_row.bounds.origin.y - body_row.bounds.origin.y,
+        web_select_row.rect.y - web_body_row.rect.y,
+        2.0,
+    );
 
     assert_close_px(
         "data-table-demo open menu button width",

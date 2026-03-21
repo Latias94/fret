@@ -27,7 +27,7 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let notes = doc_layout::notes_block([
         "This review did not indicate a missing `fret-ui` mechanism-layer fix: the drift was in shadcn public-surface coverage and the gallery teaching surface.",
         "Horizontal overflow handling, header/body/footer ownership, and the handoff to `DataTable` remain in the right layer.",
-        "Checkbox-column padding parity now also lives in `fret-ui-shadcn` recipe defaults (`TableHead` / `TableCell`) without widening any runtime contract; mixed-height body-row vertical centering remains a narrower recipe follow-up.",
+        "Checkbox-column padding parity and mixed-height body-row vertical centering now both live in `fret-ui-shadcn` recipe defaults (`TableHead` / `TableCell`) without widening any runtime contract.",
     ]);
 
     let demo = DocSection::build(cx, "Demo", demo)

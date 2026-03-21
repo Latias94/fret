@@ -14,6 +14,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let disabled = snippets::disabled::render(cx);
     let custom = snippets::custom::render(cx);
     let rtl = snippets::rtl::render(cx);
+    let children = snippets::children::render(cx);
     let single = snippets::single::render(cx);
     let small = snippets::small::render(cx);
     let large = snippets::large::render(cx);
@@ -22,15 +23,18 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let stretch = snippets::flex_1_items::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors cover the documented single/multiple selection paths.",
-        "`ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` remain the source-aligned content surface; no extra generic `compose()` API is needed here.",
+        "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors plus `.items([...])` cover the documented docs-path root surface.",
+        "`toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`, `toggle_group_multiple(...)`, and `toggle_group_multiple_uncontrolled(...)` are the builder-preserving composable-children lane when callers want to assemble items inside a closure without landing early.",
+        "`ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` remain the source-aligned item-content surface for text, icon, and mixed content.",
         "`ToggleGroupItem::refine_layout(...)` and `refine_style(...)` now cover upstream custom item-root sizing and rounding without moving caller-owned recipe tweaks into the default component chrome.",
         "Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned; item-root custom layout and surrounding width/flex negotiation remain caller-owned.",
-        "`Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
+        "No extra root `children([...])` or generic `compose()` API is warranted on the default lane because the helper family already covers composable item assembly without widening the recipe contract.",
+        "`Children (Fret)`, `Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
     ]);
     let notes = doc_layout::notes_block([
-        "This page mirrors the upstream Toggle Group docs path first, then keeps the single/size/label/fill examples as focused Fret regression slices.",
-        "Prefer the documented single or multiple constructors as the primary authoring surface; item-root refinements belong on the item call site instead of in the default group chrome.",
+        "This page now keeps the upstream base Toggle Group docs path source-aligned on content, default values, and section order before adding focused Fret follow-ups.",
+        "Prefer the documented root constructors plus `.items([...])` for copyable docs-path snippets; reach for the `toggle_group_*` helper family when you want builder-preserving item composition inside a closure.",
+        "Item-root refinements belong on the item call site instead of the default group chrome.",
         "The main parity risks here are roving focus, segmented borders, RTL order, and stretch/fill ownership, so stable `ui-gallery-toggle-group-*` ids remain part of the automation contract.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -43,23 +47,23 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Usage guidance and parity notes.");
 
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Compact icon-only preview for quick visual scanning.")
+        .description("Default demo matching the upstream top-of-page preview.")
         .test_id_prefix("ui-gallery-toggle-group-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Minimal typed usage matching the upstream docs example.")
+        .description("Minimal single-select usage matching the upstream docs example.")
         .test_id_prefix("ui-gallery-toggle-group-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let outline = DocSection::build(cx, "Outline", outline)
-        .description("Outline variant matching the shadcn example.")
+        .description("Outline variant matching the upstream two-item example.")
         .test_id_prefix("ui-gallery-toggle-group-outline")
         .code_rust_from_file_region(snippets::outline::SOURCE, "example");
     let size = DocSection::build(cx, "Size", size)
-        .description("Size presets for compact and roomier toggle groups.")
+        .description("Small and default outline groups matching the upstream size example.")
         .test_id_prefix("ui-gallery-toggle-group-size")
         .code_rust_from_file_region(snippets::size::SOURCE, "example");
     let spacing = DocSection::build(cx, "Spacing", spacing)
-        .description("Spacing between items with per-item selected accents.")
+        .description("Spacing between outline items matching the upstream docs example.")
         .test_id_prefix("ui-gallery-toggle-group-spacing")
         .code_rust_from_file_region(snippets::spacing::SOURCE, "example");
     let vertical = DocSection::build(cx, "Vertical", vertical)
@@ -67,7 +71,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-toggle-group-vertical")
         .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
-        .description("Disabled groups keep layout but block interaction.")
+        .description("Disabled group matching the upstream docs example.")
         .test_id_prefix("ui-gallery-toggle-group-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
     let custom = DocSection::build(cx, "Custom", custom)
@@ -78,6 +82,12 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("Item ordering and pressed visuals under RTL.")
         .test_id_prefix("ui-gallery-toggle-group-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let children = DocSection::build(cx, "Children (Fret)", children)
+        .description(
+            "Use the builder-preserving `toggle_group_*` helper family when you want a composable item-children lane without widening the default root surface.",
+        )
+        .test_id_prefix("ui-gallery-toggle-group-children")
+        .code_rust_from_file_region(snippets::children::SOURCE, "example");
     let single = DocSection::build(cx, "Single (Fret)", single)
         .description("Focused single-selection regression example.")
         .test_id_prefix("ui-gallery-toggle-group-single")
@@ -106,7 +116,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Toggle Group docs path first: Demo, Usage, Outline, Size, Spacing, Vertical, Disabled, Custom, RTL, and API Reference. Focused Fret follow-ups stay afterward.",
+            "Preview mirrors the upstream Toggle Group docs path first: Demo, Usage, Outline, Size, Spacing, Vertical, Disabled, Custom, RTL, and API Reference. Focused Fret follow-ups stay afterward.",
         ),
         vec![
             demo,
@@ -119,6 +129,7 @@ pub(super) fn preview_toggle_group(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             custom,
             rtl,
             api_reference,
+            children,
             single,
             small,
             large,

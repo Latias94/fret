@@ -29,6 +29,7 @@ base examples, and the existing toggle web gates.
 
 - Pass: `Toggle::uncontrolled(false)` plus `variant(...)`, `size(...)`, `disabled(...)`, and `a11y_label(...)` covers the documented toggle surface.
 - Pass: `children([...])` is the source-aligned Fret equivalent of upstream child content, while `label(...)` remains the ergonomic shortcut for common icon-plus-text cases.
+- Pass: the gallery now includes a focused `Children (Fret)` follow-up that teaches `Toggle::uncontrolled(...).children([...])` for caller-owned or reusable landed content without displacing the default helper-based usage lane.
 - Pass: `Toggle::new(model)` and `Toggle::from_pressed(...)` continue to cover controlled and action-first authoring without widening the public surface further.
 - Pass: no extra generic `asChild` / `compose()` API is needed here because `children([...])` already covers the composable content story.
 
@@ -41,11 +42,15 @@ base examples, and the existing toggle web gates.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream base Toggle docs path first: `Demo`, `Usage`, `Outline`, `With Text`, `Size`, `Disabled`, and `RTL`.
+- Pass: `Children (Fret)` now follows the upstream path as an explicit Fret-only authoring note, so callers can see the landed-element equivalent of JSX children without confusing it with the default copyable lane.
 - Pass: `Label Association` remains a focused Fret follow-up after the upstream path because it documents the Fret-specific `control_id(...)` bridge.
-- Pass: the old `Notes` section is replaced by a clearer `API Reference` section that records public-surface and ownership choices.
+- Pass: `API Reference` remains the concise ownership summary after the Fret-specific follow-ups.
 - Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_toggle --failure-output final`
+- `cargo test -p fret-ui-shadcn --lib toggle_children_accept_prebuilt_landed_content`
+- `env CARGO_TARGET_DIR=target-codex-fretboard-toggle cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json --dir target/fret-diag-toggle-audit --session-auto --timeout-ms 240000 --launch -- env CARGO_TARGET_DIR=target-codex-ui-gallery-toggle cargo run -p fret-ui-gallery`
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
 - Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`toggle-demo`, `toggle-demo.focus`)

@@ -2889,6 +2889,14 @@ mod tests {
     }
 
     #[test]
+    fn tooltip_notes_section_keeps_stable_height_while_scrolling_into_view() {
+        assert_notes_section_keeps_stable_height_while_scrolling_into_view(
+            PAGE_TOOLTIP,
+            "ui-gallery-tooltip-notes-content",
+        );
+    }
+
+    #[test]
     fn carousel_visible_section_contents_do_not_overlap_while_scrolling() {
         assert_visible_section_contents_do_not_overlap_while_scrolling(
             PAGE_CAROUSEL,
