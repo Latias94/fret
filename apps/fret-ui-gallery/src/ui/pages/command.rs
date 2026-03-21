@@ -21,10 +21,11 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Filtering and ranking use the visible label plus optional `value` and `keywords`, so cmdk-style fuzzy matching stays available without depending on DOM internals.",
     ]);
     let api_reference = doc_layout::notes_block([
-        "`command(...)` is the direct visual shell helper, while `CommandPalette::new(query, items)` and `.entries(...)` are the default embedded interactive lane for first-party Fret code.",
+        "`command(...)` is the direct visual shell helper. `CommandInput` / `CommandList` stay available for shell-level composition and legacy roving lists, but they do not share the cmdk query + active-descendant state machine.",
+        "`CommandPalette::new(query, items)` and `.entries(...)` therefore remain the default embedded interactive lane for first-party Fret code when the goal is cmdk-aligned behavior rather than a custom shell.",
         "`CommandDialog::new(open, query, items)` wraps that palette with dialog lifecycle, close-on-select behavior, and open-change reason hooks for global command menus.",
         "`CommandItem` owns row-level affordances such as `leading_icon(...)`, `shortcut(...)`, `keywords(...)`, `checkmark(...)`, `force_mount(...)`, and `children(...)`.",
-        "A fully composable split `Command` + `CommandInput` + `CommandList` children API is still deferred: promoting it would require an explicit shared context contract for query, active row, and selection rather than ad-hoc glue.",
+        "A fully composable split `Command` + `CommandInput` + `CommandList` children API is still deferred: upstream cmdk composes those parts through shared internal state, so promoting the same shape in Fret would first require an explicit shared context contract for query, active row, and selection rather than ad-hoc glue.",
     ]);
 
     let notes_stack = doc_layout::notes_block([
@@ -48,6 +49,7 @@ pub(super) fn preview_command_palette(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-command-docs-demo")
         .descriptions([
             "This aligns with the shadcn `command-demo` example (icons + disabled item + shortcuts).",
+            "The demo follows the public docs example surface (`max-w-sm`, rounded border, copyable example shape), while recipe-owned chrome is validated separately against the registry source.",
             "Use `leading_icon(...)` so icons inherit the row foreground (`currentColor`) for hover/active/disabled states.",
         ])
         .code_rust_from_file_region(snippets::docs_demo::SOURCE, "example");

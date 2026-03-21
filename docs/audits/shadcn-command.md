@@ -17,7 +17,11 @@ instead of API compatibility.
 ## Upstream references (source of truth)
 
 - shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/base/command.mdx`
+- shadcn public docs examples: `repo-ref/ui/apps/v4/examples/base/command-demo.tsx`,
+  `repo-ref/ui/apps/v4/examples/radix/command-demo.tsx`,
+  `repo-ref/ui/apps/v4/examples/{base,radix}/command-{basic,shortcuts,groups,scrollable,rtl}.tsx`
 - shadcn registry (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
+- shadcn registry demo chrome override: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-demo.tsx`
 - cmdk repo: `repo-ref/cmdk`
 
 Key upstream semantics:
@@ -54,14 +58,20 @@ Key upstream semantics:
 - Pass: Supports `CommandGroup` (optional heading) and `CommandSeparator`, and trims leading/trailing/consecutive separators after filtering.
 - Pass: Shows `empty_text` when no results; provides `CommandEmpty` as a convenience (`CommandPalette::empty(...)`).
 
-### Layout & geometry (new-york-v4)
+### Layout & geometry (docs surface + registry defaults)
 
-- Pass: `CommandDemo` matches the upstream split sizing: input wrapper uses `h-9` while the input uses `h-10`
-  (the input overflows the wrapper slightly in the web golden).
+- Pass: `CommandDemo` matches the public shadcn docs example surface for the copyable Gallery lane:
+  `max-w-sm`, rounded border, and the icon/disabled/shortcut content shape used by
+  `examples/{base,radix}/command-demo.tsx`.
+- Pass: `CommandDemo` still matches the upstream split sizing: input wrapper uses `h-9` while the
+  input uses `h-10` (the input overflows the wrapper slightly in the web golden).
 - Pass: `CommandDialog` matches the upstream overrides (`h-12` wrapper + `h-12` input, and `pt-0` for sibling groups).
 - Pass: `Command` root chrome (rounded border + popover background) stays recipe-owned because upstream defines it in the component source.
 - Pass: `CommandPalette` defaults to a `w-full` root layout to avoid cmdk listbox width collapse when embedded in recipes (e.g. `Combobox`).
 - Note: Width caps such as upstream `max-w-sm` remain caller-owned; gallery `Usage` applies that at the call site rather than baking it into the recipe root.
+- Note: the newer `registry/new-york-v4/examples/command-demo.tsx` currently adds sink/demo-local
+  chrome overrides (`shadow-md`, `md:min-w-[450px]`). Treat that as a separate example-surface
+  choice, not as the default docs-surface width contract for the copyable Gallery page.
 
 ### Visual/content conventions (shadcn)
 
@@ -118,6 +128,10 @@ Key upstream semantics:
   (`Demo`, `About`, `Usage`, `Basic`, `Shortcuts`, `Groups`, `Scrollable`, `RTL`, `API Reference`)
   before Fret-only `Loading` / `Action-first` follow-ups; the default copyable `Usage` lane stays
   explicit about the root-story divergence (`CommandPalette` instead of literal split children).
+- Source axes: the Gallery page now states explicitly that the lead `Demo` follows the public docs
+  example surface, while recipe-owned chrome/defaults stay aligned and tested against the registry
+  source separately. This avoids conflating docs-example width caps with sink/demo-local registry
+  example overrides.
 - Demo surface: the lead `Demo` snippet now keeps the upstream `max-w-sm` width cap and stops
   overriding root chrome with a gallery-local shadow; recipe-owned border/radius remain on the
   component default lane.
@@ -134,3 +148,5 @@ Key upstream semantics:
   docs-aligned dialog examples can remain automation-friendly without dropping back to embedded
   `CommandPalette` just for selectors.
 - Composability: if split authoring (`CommandInput`/`CommandList`/`CommandItem`) becomes a goal, introduce a shared context model (query + active + selection) with an explicit contract/ADR first.
+- Composability status: `CommandInput` / `CommandList` remain available as lower-level shell pieces
+  and for legacy roving-list use, but they are not a promoted cmdk-equivalent split children API.
