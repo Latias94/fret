@@ -14,12 +14,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let entries = vec![
         shadcn::CommandGroup::new([
             shadcn::CommandItem::new("التقويم")
+                .test_id("ui-gallery-command-rtl-item-calendar")
                 .leading_icon(icon_id("lucide.calendar"))
                 .on_select_action(noop.clone()),
             shadcn::CommandItem::new("البحث عن الرموز التعبيرية")
+                .test_id("ui-gallery-command-rtl-item-search-emoji")
                 .leading_icon(icon_id("lucide.smile"))
                 .on_select_action(noop.clone()),
             shadcn::CommandItem::new("الآلة الحاسبة")
+                .test_id("ui-gallery-command-rtl-item-calculator")
                 .leading_icon(icon_id("lucide.calculator"))
                 .disabled(true),
         ])
@@ -28,14 +31,17 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         shadcn::CommandSeparator::new().into(),
         shadcn::CommandGroup::new([
             shadcn::CommandItem::new("الملف الشخصي")
+                .test_id("ui-gallery-command-rtl-item-profile")
                 .leading_icon(icon_id("lucide.user"))
                 .shortcut("⌘P")
                 .on_select_action(noop.clone()),
             shadcn::CommandItem::new("الفوترة")
+                .test_id("ui-gallery-command-rtl-item-billing")
                 .leading_icon(icon_id("lucide.credit-card"))
                 .shortcut("⌘B")
                 .on_select_action(noop.clone()),
             shadcn::CommandItem::new("الإعدادات")
+                .test_id("ui-gallery-command-rtl-item-settings")
                 .leading_icon(icon_id("lucide.settings"))
                 .shortcut("⌘S")
                 .on_select_action(noop.clone()),

@@ -2223,6 +2223,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-a11y-command-dialog-shortcut-primary",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-a11y-command-dialog-shortcut-primary.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-basic-long-text-wraps",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-basic-long-text-wraps.json",
       "required_capabilities": [
@@ -4799,6 +4809,171 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-docs-demo-icons-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "command",
+        "icons",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light.",
+        "Navigates to Command page and scrolls to the Docs Demo section.",
+        "Captures screenshots to gate currentColor-driven icon visibility (enabled + disabled rows)."
+      ]
+    },
+    {
+      "id": "ui-gallery-command-docs-demo-icons-screenshots-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "command",
+        "icons",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to Command page and scrolls to the Docs Demo section.",
+        "Captures screenshots to gate currentColor-driven icon visibility (enabled + disabled rows)."
+      ]
+    },
+    {
+      "id": "ui-gallery-command-docs-demo-shortcuts-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "command",
+        "screenshots",
+        "shadcn",
+        "shortcuts",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light.",
+        "Navigates to Command page and scrolls to the Docs Demo section.",
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+      ]
+    },
+    {
+      "id": "ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "command",
+        "screenshots",
+        "shadcn",
+        "shortcuts",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to Command page and scrolls to the Docs Demo section.",
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+      ]
+    },
+    {
+      "id": "ui-gallery-command-palette-cmdk-keybindings",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-cmdk-keybindings.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-force-mount-item-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-group-force-mount-heading-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-group-force-mount-heading-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-loading-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-loading-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-separator-always-render-visible",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-palette-should-filter-false",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-should-filter-false.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-command-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
       "required_capabilities": [
@@ -4806,6 +4981,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-command",
         "ui-gallery-rtl-smoke"
       ],
       "tags": [
@@ -4820,6 +4996,24 @@
         "Scrolls to the RTL CommandPalette snippet.",
         "Captures a screenshot to validate inline-start/end mirroring for the search icon + padding."
       ]
+    },
+    {
+      "id": "ui-gallery-command-scrollable-filter-clamps-scroll",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "command",
+        "filter",
+        "scroll",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-context-menu-basic-keyboard-nav",
