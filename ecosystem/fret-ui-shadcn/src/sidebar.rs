@@ -7603,6 +7603,151 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_provider_ctrl_b_keydown_toggles_open_model_in_nested_focus_subtree() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(true);
+        let open_for_assert = open_model.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-toggle-keydown",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .with(cx, |cx| {
+                        let mut focus_target_props = PressableProps::default();
+                        focus_target_props.focusable = true;
+                        focus_target_props.a11y.test_id =
+                            Some(Arc::from("sidebar-toggle-keydown-focus"));
+                        let focus_target =
+                            cx.pressable(focus_target_props, |_cx, _st| Vec::<AnyElement>::new());
+                        let wrapped =
+                            cx.container(ContainerProps::default(), move |_cx| vec![focus_target]);
+                        vec![wrapped]
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let wrapped = *ui.children(root).first().expect("provider child");
+        let focus_target = *ui.children(wrapped).first().expect("focus target");
+        ui.set_focus(Some(focus_target));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::KeyB,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Modifiers::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let open_now = app
+            .models()
+            .get_copied(&open_for_assert)
+            .expect("open model value");
+        assert!(
+            !open_now,
+            "expected ctrl+b keydown in provider focus subtree to flip open model to false"
+        );
+    }
+
+    #[test]
+    fn sidebar_provider_ctrl_b_keydown_toggles_open_model_from_button_like_focus_target() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(true);
+        let open_for_assert = open_model.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-toggle-keydown-button",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .with(cx, |cx| {
+                        let focus_target = Button::new("Focus")
+                            .test_id("sidebar-toggle-keydown-button-focus")
+                            .into_element(cx);
+                        let sidebar = Sidebar::new([cx.spacer(SpacerProps {
+                            min: Px(0.0),
+                            ..Default::default()
+                        })])
+                        .into_element(cx);
+                        let frame = cx.container(ContainerProps::default(), move |_cx| {
+                            vec![sidebar, focus_target]
+                        });
+                        vec![frame]
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let frame = *ui.children(root).first().expect("provider child");
+        let focus_target = *ui.children(frame).get(1).expect("focus target");
+        ui.set_focus(Some(focus_target));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::KeyB,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Modifiers::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let open_now = app
+            .models()
+            .get_copied(&open_for_assert)
+            .expect("open model value");
+        assert!(
+            !open_now,
+            "expected ctrl+b keydown on a button-like provider child to flip open model to false"
+        );
+    }
+
+    #[test]
     fn sidebar_provider_registers_ctrl_or_meta_b_shortcut_binding() {
         let window = AppWindowId::default();
         let mut app = App::new();

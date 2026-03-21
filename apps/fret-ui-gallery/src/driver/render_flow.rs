@@ -2540,9 +2540,11 @@ mod tests {
             "ui-gallery-sidebar-usage-content",
             "ui-gallery-sidebar-controlled-content",
             "ui-gallery-sidebar-demo-content",
+            "ui-gallery-sidebar-structure-content",
             "ui-gallery-sidebar-use-sidebar-content",
             "ui-gallery-sidebar-mobile-content",
             "ui-gallery-sidebar-rtl-content",
+            "ui-gallery-sidebar-api-reference-content",
         ] {
             scroll_test_id_into_gallery_viewport(&mut rendered, target);
             let bounds = visual_bounds_by_test_id(&rendered, target);
@@ -2551,6 +2553,61 @@ mod tests {
                 "expected Sidebar page target to render with non-zero bounds: target={target} bounds={bounds:?}"
             );
         }
+    }
+
+    #[test]
+    fn gallery_sidebar_ctrl_b_shortcut_collapses_icon_sidebar_from_focused_button() {
+        let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_SIDEBAR);
+
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-sidebar-demo-focus");
+        scroll_test_id_into_gallery_viewport(&mut rendered, "ui-gallery-sidebar-demo-sidebar");
+
+        let before_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-sidebar-demo-sidebar");
+        click_test_id_center(&mut rendered, "ui-gallery-sidebar-demo-focus");
+
+        let focus_snapshot = rendered
+            .state
+            .ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after focusing sidebar demo button");
+        let focus_target = node_by_test_id(focus_snapshot, "ui-gallery-sidebar-demo-focus").id;
+
+        assert_eq!(
+            rendered.state.ui.focus(),
+            Some(focus_target),
+            "expected sidebar demo focus button to own focus before Ctrl+B dispatch"
+        );
+
+        rendered.state.ui.dispatch_event(
+            &mut rendered.app,
+            &mut rendered.services,
+            &Event::KeyDown {
+                key: fret_core::KeyCode::KeyB,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Modifiers::default()
+                },
+                repeat: false,
+            },
+        );
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            std::time::Duration::from_millis(200),
+        ) + 2;
+        for _ in 0..settle_frames {
+            render_gallery_frame(&mut rendered);
+        }
+
+        let after_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-sidebar-demo-sidebar");
+
+        assert!(
+            before_bounds.size.width.0 >= 180.0,
+            "expected sidebar demo to start expanded before shortcut dispatch: bounds={before_bounds:?}"
+        );
+        assert!(
+            after_bounds.size.width.0 <= 120.0,
+            "expected Ctrl+B to collapse the sidebar demo to icon width after focusing the button: before={before_bounds:?} after={after_bounds:?} focus={:?}",
+            rendered.state.ui.focus()
+        );
     }
 
     #[test]
