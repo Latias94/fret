@@ -2541,6 +2541,7 @@ mod tests {
             "ui-gallery-sidebar-controlled-content",
             "ui-gallery-sidebar-demo-content",
             "ui-gallery-sidebar-structure-content",
+            "ui-gallery-sidebar-app-sidebar-content",
             "ui-gallery-sidebar-use-sidebar-content",
             "ui-gallery-sidebar-mobile-content",
             "ui-gallery-sidebar-rtl-content",

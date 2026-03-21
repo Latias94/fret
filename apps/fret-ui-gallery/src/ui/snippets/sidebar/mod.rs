@@ -1,3 +1,4 @@
+pub mod app_sidebar;
 pub mod controlled;
 pub mod demo;
 pub mod mobile;

@@ -3102,6 +3102,7 @@ fn alert_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn sidebar_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/sidebar/app_sidebar.rs",
             "src/ui/snippets/sidebar/controlled.rs",
             "src/ui/snippets/sidebar/demo.rs",
             "src/ui/snippets/sidebar/mobile.rs",
@@ -3132,6 +3133,7 @@ fn sidebar_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"SidebarProvider\", controlled)",
             "DocSection::build(cx, \"Sidebar\", demo)",
             "DocSection::build(cx, \"Structure\", structure)",
+            "DocSection::build(cx, \"AppSidebar\", app_sidebar)",
             "DocSection::build(cx, \"useSidebar\", use_sidebar)",
             "DocSection::build(cx, \"Extras: Mobile\", mobile)",
             "DocSection::build(cx, \"Extras: RTL\", rtl)",
@@ -3143,6 +3145,7 @@ fn sidebar_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"SidebarProvider\", controlled)",
             "DocSection::new(\"Sidebar\", demo)",
             "DocSection::new(\"Structure\", structure)",
+            "DocSection::new(\"AppSidebar\", app_sidebar)",
             "DocSection::new(\"useSidebar\", use_sidebar)",
             "DocSection::new(\"Extras: Mobile\", mobile)",
         ],

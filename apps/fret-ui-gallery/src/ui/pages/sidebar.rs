@@ -9,6 +9,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let controlled = snippets::controlled::render(cx);
     let demo = snippets::demo::render(cx);
     let structure = snippets::structure::render(cx);
+    let app_sidebar = snippets::app_sidebar::render(cx);
     let use_sidebar = snippets::use_sidebar::render(cx);
     let mobile = snippets::mobile::render(cx);
     let rtl = snippets::rtl::render(cx);
@@ -27,6 +28,7 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Keep `test_id_prefix` stable: `tools/diag-scripts/ui-gallery/sidebar/*` depend on DocSection tab trigger IDs.",
         "Mobile example forces `is_mobile(true)` for deterministic overlay + focus-restore diagnostics.",
         "The official docs split many sidebar parts into separate headings; the gallery keeps one consolidated `Structure` section so the copyable Fret authoring surface stays compact.",
+        "The new `AppSidebar` section is intentionally closer to shadcn block `sidebar-07`: it favors a single inline file over upstream's multi-file split so app authors can copy and trim it directly.",
         "Children/composition support is already present on the sidebar family. The page now makes that explicit instead of implying the recipe is incomplete.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -64,6 +66,14 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-sidebar-structure")
         .code_rust_from_file_region(snippets::structure::SOURCE, "example")
         .no_shell();
+    let app_sidebar = DocSection::build(cx, "AppSidebar", app_sidebar)
+        .description(
+            "Single-file Fret template aligned to shadcn block `sidebar-07`, including team switcher, collapsible nav, project actions, user menu, and inset shell.",
+        )
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-sidebar-app-sidebar")
+        .code_rust_from_file_region(snippets::app_sidebar::SOURCE, "example")
+        .no_shell();
     let use_sidebar = DocSection::build(cx, "useSidebar", use_sidebar)
         .description("Read provider state and resolved widths from `use_sidebar(cx)` inside the provider subtree.")
         .max_w(Px(980.0))
@@ -86,13 +96,14 @@ pub(super) fn preview_sidebar(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Sidebar docs path first, then consolidates the many part-specific docs headings into one copyable Fret `Structure` section. Mobile remains a gallery-specific extra for deterministic diagnostics.",
+            "Preview follows the shadcn Sidebar docs path first, then adds a block-aligned `AppSidebar` template based on `sidebar-07` before the lower-level `Structure` surface. Mobile remains a gallery-specific extra for deterministic diagnostics.",
         ),
         vec![
             usage,
             controlled,
             demo,
             structure,
+            app_sidebar,
             use_sidebar,
             mobile,
             rtl,
