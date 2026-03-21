@@ -5,6 +5,6 @@ use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    shadcn::raw::typography::h2("People stopped telling jokes").into_element(cx)
+    shadcn::raw::typography::h2("The People of the Kingdom").into_element(cx)
 }
 // endregion: example

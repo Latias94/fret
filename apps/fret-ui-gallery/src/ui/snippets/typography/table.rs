@@ -15,7 +15,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ui::children![
                             cx;
                             shadcn::table_head("King's Treasury"),
-                            shadcn::table_head("People's Happiness"),
+                            shadcn::table_head("People's happiness"),
                         ]
                     })
                     .border_bottom(true),
@@ -36,6 +36,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             cx;
                             shadcn::table_cell(ui::text("Modest")),
                             shadcn::table_cell(ui::text("Satisfied")),
+                        ]
+                    })
+                    .into_element(cx),
+                    shadcn::table_row(2, |cx| {
+                        ui::children![
+                            cx;
+                            shadcn::table_cell(ui::text("Full")),
+                            shadcn::table_cell(ui::text("Ecstatic")),
                         ]
                     })
                     .into_element(cx),

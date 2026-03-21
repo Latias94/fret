@@ -5,16 +5,17 @@
 //! typographic primitives so demos can stay self-contained.
 //!
 //! Reference:
-//! - `repo-ref/ui/apps/v4/content/docs/components/typography.mdx`
+//! - `repo-ref/ui/apps/v4/content/docs/components/base/typography.mdx`
 
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, TextAlign, TextOverflow, TextSlant, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow,
+    TextSlant, TextStyle, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -95,6 +96,12 @@ fn container_props(
     decl_style::container_props(theme, chrome, layout)
 }
 
+fn heading_semantics(level: u32) -> SemanticsDecoration {
+    SemanticsDecoration::default()
+        .role(SemanticsRole::Heading)
+        .level(level)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TypographyTextKind {
     H1,
@@ -133,6 +140,7 @@ impl TypographyText {
                     heading_style(theme, 40.0, FontWeight::EXTRA_BOLD)
                 };
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
+                    .attach_semantics(heading_semantics(1))
             }
             TypographyTextKind::H2 => {
                 let style = {
@@ -140,6 +148,7 @@ impl TypographyText {
                     heading_style(theme, 32.0, FontWeight::BOLD)
                 };
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
+                    .attach_semantics(heading_semantics(2))
             }
             TypographyTextKind::H3 => {
                 let style = {
@@ -147,6 +156,7 @@ impl TypographyText {
                     heading_style(theme, 24.0, FontWeight::BOLD)
                 };
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
+                    .attach_semantics(heading_semantics(3))
             }
             TypographyTextKind::H4 => {
                 let style = {
@@ -154,6 +164,7 @@ impl TypographyText {
                     heading_style(theme, 20.0, FontWeight::SEMIBOLD)
                 };
                 cx.text_props(text_props(self.text, Some(style), None, TextWrap::Word))
+                    .attach_semantics(heading_semantics(4))
             }
             TypographyTextKind::Paragraph => {
                 let style = {
@@ -450,4 +461,46 @@ where
     T: Into<Arc<str>>,
 {
     TypographyList::new(items)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size as CoreSize};
+    use fret_ui::elements;
+
+    fn render(build: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement) -> AnyElement {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(200.0)),
+        );
+        elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "typography-heading-semantics",
+            build,
+        )
+    }
+
+    fn assert_heading_level(element: &AnyElement, expected_level: u32) {
+        let decoration = element
+            .semantics_decoration
+            .as_ref()
+            .expect("expected heading semantics decoration");
+        assert_eq!(decoration.role, Some(SemanticsRole::Heading));
+        assert_eq!(decoration.level, Some(expected_level));
+    }
+
+    #[test]
+    fn typography_headings_attach_heading_semantics_levels() {
+        assert_heading_level(&render(|cx| h1("Heading 1").into_element(cx)), 1);
+        assert_heading_level(&render(|cx| h2("Heading 2").into_element(cx)), 2);
+        assert_heading_level(&render(|cx| h3("Heading 3").into_element(cx)), 3);
+        assert_heading_level(&render(|cx| h4("Heading 4").into_element(cx)), 4);
+    }
 }

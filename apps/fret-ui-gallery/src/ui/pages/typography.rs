@@ -23,28 +23,28 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/typography.rs` and `ecosystem/fret-ui-shadcn/src/table.rs`.",
-        "Typography in shadcn is utility-driven; keep heading hierarchy semantic and consistent.",
-        "Use `lead` for intros, `muted` for hints, and avoid overusing large text in dense panels.",
-        "For long-form content, combine typography helpers with table/list blocks for readability.",
-        "Validate RTL and narrow viewport wrapping before shipping document-like surfaces.",
+        "Heading helpers attach `SemanticsRole::Heading` with levels 1-4; keep the document hierarchy intentional.",
+        "Typography remains a docs/helper surface. Do not widen it with a generic `children(...)` API until inline rich-text composition has a stable contract.",
+        "Use `lead` for intros, `muted` for hints, and keep width/alignment decisions owned by the surrounding page.",
+        "For long-form content, combine typography helpers with table/list blocks and validate RTL plus narrow-viewport wrapping before shipping.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes)
         .test_id_prefix("ui-gallery-typography-notes")
         .description("API reference pointers and authoring notes.");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("A long-form story sample combining headings, paragraphs, and lists.")
+        .description("Full story sample following the upstream docs flow; the inline-link sentence stays plain text on the raw helper lane.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let h1 = DocSection::build(cx, "h1", h1)
-        .description("Top-level heading.")
+        .description("Top-level heading example matching the upstream docs title.")
         .code_rust_from_file_region(snippets::h1::SOURCE, "example");
     let h2 = DocSection::build(cx, "h2", h2)
-        .description("Section heading.")
+        .description("Second-level section heading.")
         .code_rust_from_file_region(snippets::h2::SOURCE, "example");
     let h3 = DocSection::build(cx, "h3", h3)
-        .description("Sub-section heading.")
+        .description("Third-level subsection heading.")
         .code_rust_from_file_region(snippets::h3::SOURCE, "example");
     let h4 = DocSection::build(cx, "h4", h4)
-        .description("Low-level heading for grouped content.")
+        .description("Fourth-level heading for grouped content.")
         .code_rust_from_file_region(snippets::h4::SOURCE, "example");
     let p = DocSection::build(cx, "p", p)
         .description("Body paragraph text.")
@@ -58,7 +58,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let list = DocSection::build(cx, "list", list)
         .description("Bulleted/ordered list content.")
         .code_rust_from_file_region(snippets::list::SOURCE, "example");
-    let inline_code = DocSection::build(cx, "Inline Code", inline_code)
+    let inline_code = DocSection::build(cx, "InlineCode", inline_code)
         .description("Inline code styling for commands and identifiers.")
         .code_rust_from_file_region(snippets::inline_code::SOURCE, "example");
     let lead = DocSection::build(cx, "Lead", lead)
@@ -74,12 +74,14 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("De-emphasized hint/explanation text.")
         .code_rust_from_file_region(snippets::muted::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Direction provider sample to validate RTL wrapping/alignment.")
+        .description("Direction-provider version of the full upstream typography story.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Typography page follows shadcn docs order and shows one focused sample per section."),
+        Some(
+            "Typography page follows the shadcn docs order first; Notes remains the focused Fret follow-up after the upstream path.",
+        ),
         vec![
             demo,
             h1,

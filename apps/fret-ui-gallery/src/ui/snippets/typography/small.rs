@@ -5,6 +5,6 @@ use fret::{UiChild, UiCx};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    shadcn::raw::typography::small("Use small for helper text and metadata.").into_element(cx)
+    shadcn::raw::typography::small("Email address").into_element(cx)
 }
 // endregion: example
