@@ -25,7 +25,7 @@ pub(super) fn preview_ai_conversation_demo(cx: &mut UiCx<'_>, _theme: &Theme) ->
     ]);
     let parity_notes = doc_layout::notes_block([
         "Behavior parity is good on the main surface: existing gallery diagnostics cover the empty state screenshot and prompt-send flow.",
-        "One accessibility gap remains below the recipe layer: upstream uses `role=\"log\"`, while Fret's current semantics enum still lacks a dedicated `Log` role. That is a mechanism/a11y-surface gap, not a conversation recipe bug.",
+        "The conversation root now maps to `SemanticsRole::Log`, so the upstream `role=\"log\"` outcome is represented in both diagnostics and AccessKit.",
         "Because Fret is GPU-first and cross-platform, DOM-style `...props` passthrough is translated into explicit builder methods (`refine_layout`, `test_id`, action hooks) instead of raw HTML attribute forwarding.",
     ]);
     let props = conversation_props_table(cx).test_id("ui-gallery-ai-conversation-props");

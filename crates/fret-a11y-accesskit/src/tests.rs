@@ -21,6 +21,7 @@ fn node(id: u64) -> fret_core::NodeId {
 fn maps_extended_semantics_roles_to_accesskit_roles() {
     assert_eq!(map_role(SemanticsRole::AlertDialog), Role::AlertDialog);
     assert_eq!(map_role(SemanticsRole::Status), Role::Status);
+    assert_eq!(map_role(SemanticsRole::Log), Role::Log);
     assert_eq!(
         map_role(SemanticsRole::ProgressBar),
         Role::ProgressIndicator

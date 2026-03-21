@@ -214,7 +214,7 @@ fn render_conversation_root<H: UiHost>(
         if let Some(test_id) = test_id.clone() {
             managed_content = managed_content.attach_semantics(
                 SemanticsDecoration::default()
-                    .role(SemanticsRole::Group)
+                    .role(SemanticsRole::Log)
                     .test_id(test_id),
             );
         }
@@ -237,7 +237,7 @@ fn render_conversation_root<H: UiHost>(
         if let Some(test_id) = test_id.clone() {
             scroll_area = scroll_area.attach_semantics(
                 SemanticsDecoration::default()
-                    .role(SemanticsRole::Group)
+                    .role(SemanticsRole::Log)
                     .test_id(test_id),
             );
         }
@@ -974,6 +974,28 @@ mod tests {
         }
     }
 
+    fn role_for_test_id(element: &AnyElement, expected: &str) -> Option<SemanticsRole> {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(expected)
+        {
+            return element.semantics_decoration.as_ref().and_then(|d| d.role);
+        }
+
+        if let ElementKind::Semantics(props) = &element.kind {
+            if props.test_id.as_deref() == Some(expected) {
+                return Some(props.role);
+            }
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| role_for_test_id(child, expected))
+    }
+
     #[test]
     fn conversation_direct_children_resolve_content_and_overlay_slots() {
         let window = AppWindowId::default();
@@ -1007,6 +1029,10 @@ mod tests {
         assert!(has_test_id(&element, "conversation-content"));
         assert!(has_test_id(&element, "conversation-scroll.chrome"));
         assert!(has_text(&element, "Download"));
+        assert_eq!(
+            role_for_test_id(&element, "conversation-root"),
+            Some(SemanticsRole::Log)
+        );
     }
 
     #[test]

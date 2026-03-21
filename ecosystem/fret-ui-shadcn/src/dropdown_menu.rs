@@ -7831,6 +7831,7 @@ mod tests {
                     SemanticsRole::Dialog => "Dialog",
                     SemanticsRole::AlertDialog => "AlertDialog",
                     SemanticsRole::Alert => "Alert",
+                    SemanticsRole::Log => "Log",
                     SemanticsRole::Button => "Button",
                     SemanticsRole::Checkbox => "Checkbox",
                     SemanticsRole::Switch => "Switch",

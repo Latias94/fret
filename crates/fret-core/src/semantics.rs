@@ -21,6 +21,8 @@ pub enum SemanticsRole {
     Alert,
     /// A non-interactive advisory live region (ARIA `role="status"`).
     Status,
+    /// A chronological stream of advisory updates (ARIA `role="log"`).
+    Log,
     Button,
     Link,
     Image,
