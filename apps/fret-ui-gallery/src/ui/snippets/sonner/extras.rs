@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
-use crate::ui::snippets::sonner::{last_action_model, request};
+use crate::ui::snippets::sonner::{last_action_model, message_request, request};
 use fret::app::UiCxActionsExt as _;
 use fret::{UiChild, UiCx};
 use fret_ui::element::SemanticsDecoration;
@@ -23,6 +23,55 @@ fn wrap_controls_row<H: UiHost>(
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let last_action_model = last_action_model(cx);
+    const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
+
+    let action = {
+        let sonner = sonner.clone();
+        let last_action_model = last_action_model.clone();
+        shadcn::Button::new("Action")
+            .variant(shadcn::ButtonVariant::Outline)
+            .on_activate(cx.actions().listen(move |host, action_cx| {
+                sonner.toast(
+                    host,
+                    action_cx.window,
+                    message_request(
+                        "Event has been created",
+                        shadcn::ToastVariant::Default,
+                        shadcn::ToastMessageOptions::new().action_id("Undo", CMD_TOAST_ACTION),
+                    ),
+                );
+                let _ = host.models_mut().update(&last_action_model, |v| {
+                    *v = Arc::<str>::from("sonner.extras.action");
+                });
+                host.request_redraw(action_cx.window);
+            }))
+            .test_id("ui-gallery-sonner-extras-action")
+            .into_element(cx)
+    };
+
+    let cancel = {
+        let sonner = sonner.clone();
+        let last_action_model = last_action_model.clone();
+        shadcn::Button::new("Cancel")
+            .variant(shadcn::ButtonVariant::Outline)
+            .on_activate(cx.actions().listen(move |host, action_cx| {
+                sonner.toast(
+                    host,
+                    action_cx.window,
+                    message_request(
+                        "Event has been created",
+                        shadcn::ToastVariant::Default,
+                        shadcn::ToastMessageOptions::new().cancel_id("Cancel", CMD_TOAST_ACTION),
+                    ),
+                );
+                let _ = host.models_mut().update(&last_action_model, |v| {
+                    *v = Arc::<str>::from("sonner.extras.cancel");
+                });
+                host.request_redraw(action_cx.window);
+            }))
+            .test_id("ui-gallery-sonner-extras-cancel")
+            .into_element(cx)
+    };
 
     let swipe = shadcn::Button::new("Swipe Dismiss Toast")
         .variant(shadcn::ButtonVariant::Outline)
@@ -44,7 +93,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-sonner-demo-show-swipe")
         .into_element(cx);
 
-    wrap_controls_row::<fret_app::App>(Space::N2, vec![swipe])
+    wrap_controls_row::<fret_app::App>(Space::N2, vec![action, cancel, swipe])
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()

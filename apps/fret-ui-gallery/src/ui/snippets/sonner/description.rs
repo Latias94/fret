@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("demo.rs");
+pub const SOURCE: &str = include_str!("description.rs");
 
 // region: example
 use crate::ui::snippets::sonner::{last_action_model, message_request};
@@ -9,8 +9,6 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
-
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let last_action = last_action_model(cx);
 
@@ -23,17 +21,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 message_request(
                     "Event has been created",
                     shadcn::ToastVariant::Default,
-                    shadcn::ToastMessageOptions::new()
-                        .description("Sunday, December 03, 2023 at 9:00 AM")
-                        .action_id("Undo", CMD_TOAST_ACTION),
+                    shadcn::ToastMessageOptions::new().description("Monday, January 3rd at 6:00pm"),
                 ),
             );
             let _ = host.models_mut().update(&last_action, |value| {
-                *value = Arc::<str>::from("sonner.demo.show");
+                *value = Arc::<str>::from("sonner.description.show");
             });
             host.request_redraw(action_cx.window);
         }))
-        .test_id("ui-gallery-sonner-demo-show")
+        .test_id("ui-gallery-sonner-description-show")
         .into_element(cx);
 
     ui::h_flex(move |_cx| vec![show])
@@ -44,8 +40,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .attach_semantics(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-sonner-demo"),
+                .test_id("ui-gallery-sonner-description"),
         )
-        .test_id("ui-gallery-sonner-demo-root")
+        .test_id("ui-gallery-sonner-description-root")
 }
 // endregion: example

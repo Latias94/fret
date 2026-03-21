@@ -65,7 +65,7 @@
 
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-give-me" }
+      "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" }
     },
     {
       "type": "wait_until",
@@ -77,25 +77,7 @@
     },
     { "type": "wait_frames", "n": 10 },
 
-    { "type": "capture_bundle", "label": "ui-gallery-sonner-demo-after-give-me" },
-    { "type": "capture_screenshot", "label": "ui-gallery-sonner-demo-after-give-me" },
-
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "toast-entry-2" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 10 },
-
     { "type": "capture_bundle", "label": "ui-gallery-sonner-demo-after-show" },
     { "type": "capture_screenshot", "label": "ui-gallery-sonner-demo-after-show" }
   ]
 }
-

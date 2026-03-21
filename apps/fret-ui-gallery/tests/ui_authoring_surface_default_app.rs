@@ -283,10 +283,12 @@ fn selected_button_and_sidebar_snippets_prefer_grouped_uicx_listeners() {
         "src/ui/snippets/sidebar/controlled.rs",
         "src/ui/snippets/sidebar/mobile.rs",
         "src/ui/snippets/sidebar/rtl.rs",
+        "src/ui/snippets/sonner/description.rs",
         "src/ui/snippets/sonner/demo.rs",
-        "src/ui/snippets/sonner/usage.rs",
         "src/ui/snippets/sonner/extras.rs",
         "src/ui/snippets/sonner/position.rs",
+        "src/ui/snippets/sonner/types.rs",
+        "src/ui/snippets/sonner/usage.rs",
     ] {
         assert_selected_snippets_prefer_grouped_uicx_listeners(
             relative_path,
@@ -3284,11 +3286,13 @@ fn icons_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn sonner_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/sonner/description.rs",
             "src/ui/snippets/sonner/demo.rs",
             "src/ui/snippets/sonner/extras.rs",
             "src/ui/snippets/sonner/notes.rs",
             "src/ui/snippets/sonner/position.rs",
             "src/ui/snippets/sonner/setup.rs",
+            "src/ui/snippets/sonner/types.rs",
             "src/ui/snippets/sonner/usage.rs",
         ],
         &[
@@ -3309,6 +3313,8 @@ fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Setup\", setup)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Types\", types)",
+            "DocSection::build(cx, \"Description\", description)",
             "DocSection::build(cx, \"Position\", position)",
             "DocSection::build(cx, \"Extras\", extras)",
             "DocSection::build(cx, \"Notes\", notes)",
@@ -3318,6 +3324,8 @@ fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Setup\", setup)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Demo\", demo)",
+            "DocSection::new(\"Types\", types)",
+            "DocSection::new(\"Description\", description)",
             "DocSection::new(\"Position\", position)",
             "DocSection::new(\"Extras\", extras)",
             "preview_sonner(cx, last_action, sonner_position)",
@@ -8603,6 +8611,7 @@ fn selected_toast_snippet_helpers_prefer_into_ui_element_over_anyelement() {
         "src/ui/snippets/sonner/demo.rs",
         "src/ui/snippets/sonner/extras.rs",
         "src/ui/snippets/sonner/position.rs",
+        "src/ui/snippets/sonner/types.rs",
     ] {
         assert_selected_generic_helpers_prefer_into_ui_element(
             relative_path,

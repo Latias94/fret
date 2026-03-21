@@ -24,7 +24,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     // shadcn::Toaster::new()
     //     .id("notifications")
     //     .position(shadcn::ToastPosition::TopCenter)
-    //     .shadcn_lucide_icons()
     //     .into_element(cx);
     intro
 }

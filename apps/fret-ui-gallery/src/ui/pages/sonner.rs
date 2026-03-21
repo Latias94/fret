@@ -7,6 +7,8 @@ pub(super) fn preview_sonner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let setup = snippets::setup::render(cx);
     let usage = snippets::usage::render(cx);
     let demo = snippets::demo::render(cx);
+    let types = snippets::types::render(cx);
+    let description = snippets::description::render(cx);
     let position = snippets::position::render(cx);
     let extras = snippets::extras::render(cx);
     let notes = snippets::notes::render(cx);
@@ -22,24 +24,43 @@ pub(super) fn preview_sonner(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-sonner-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let demo = DocSection::build(cx, "Demo", demo)
-        .description("Buttons that fire different toast styles and actions.")
+        .description("Docs-aligned preview for the primary `Show Toast` example.")
         .test_id_prefix("ui-gallery-sonner-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let types = DocSection::build(cx, "Types", types)
+        .description("Default, status, and promise toast variants.")
+        .test_id_prefix("ui-gallery-sonner-types")
+        .code_rust_from_file_region(snippets::types::SOURCE, "example");
+    let description = DocSection::build(cx, "Description", description)
+        .description("Toast with supporting copy, matching the docs example.")
+        .test_id_prefix("ui-gallery-sonner-description")
+        .code_rust_from_file_region(snippets::description::SOURCE, "example");
     let position = DocSection::build(cx, "Position", position)
         .description("Fret-specific: mutate the local toaster position for overlay testing.")
         .test_id_prefix("ui-gallery-sonner-position")
         .code_rust_from_file_region(snippets::position::SOURCE, "example");
     let extras = DocSection::build(cx, "Extras", extras)
-        .description("Pinned + swipe-dismiss toasts.")
+        .description(
+            "Fret-specific extras after docs parity examples: action/cancel + swipe-dismiss.",
+        )
         .test_id_prefix("ui-gallery-sonner-extras")
         .code_rust_from_file_region(snippets::extras::SOURCE, "example");
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Sonner docs flow: Setup -> Usage -> Demo, with Fret-specific position and extras sections for overlay coverage.",
+            "Docs-aligned Sonner examples (`Demo`, `Types`, `Description`, `Position`) stay intact, with Fret-specific setup and extras sections around them.",
         ),
-        vec![setup, usage, demo, position, extras, notes],
+        vec![
+            setup,
+            usage,
+            demo,
+            types,
+            description,
+            position,
+            extras,
+            notes,
+        ],
     );
     let toaster = snippets::local_toaster(cx).into_element(cx);
 

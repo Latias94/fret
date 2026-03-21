@@ -60,12 +60,13 @@ pub(crate) fn local_toaster(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Toaster::new()
         .id(LOCAL_TOASTER_ID)
         .position(position)
-        .shadcn_lucide_icons()
 }
 
 pub mod demo;
+pub mod description;
 pub mod extras;
 pub mod notes;
 pub mod position;
 pub mod setup;
+pub mod types;
 pub mod usage;

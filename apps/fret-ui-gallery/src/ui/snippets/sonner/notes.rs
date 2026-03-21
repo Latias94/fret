@@ -16,13 +16,13 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             vec![
                 shadcn::raw::typography::muted( Arc::<str>::from(format!("Last action: {last}"))).into_element(cx),
                 shadcn::raw::typography::muted(
-                    "Preview follows `sonner-demo.tsx` (new-york-v4): buttons that trigger different toast types.",
+                    "Docs-aligned sections mirror shadcn's `Demo`, `Types`, `Description`, and `Position` previews.",
                 ).into_element(cx),
                 shadcn::raw::typography::muted(
-                    "Fret exposes extra knobs (position, pinned + swipe dismiss) for testing overlay behavior.",
+                    "Fret-specific extras stay after the docs examples: action/cancel helpers and swipe-dismiss diagnostics coverage.",
                 ).into_element(cx),
                 shadcn::raw::typography::muted(
-                    "API reference: `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
+                    "Composable custom children are not exposed yet: the current Sonner surface is still the message-style API tracked in `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
                 ).into_element(cx),
             ]
         })

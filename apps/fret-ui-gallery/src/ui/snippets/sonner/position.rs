@@ -27,6 +27,7 @@ fn wrap_controls_row<H: UiHost>(
     ui::h_flex(move |_cx| children)
         .gap(gap)
         .items_center()
+        .justify_center()
         .wrap()
         .layout(LayoutRefinement::default().w_full())
 }

@@ -33,15 +33,22 @@ Notes:
 ### Authoring ergonomics
 
 - Pass: Global entry point via `Sonner::global(app)`.
-- Pass: Mounting surface via `Toaster::new()` covers the upstream "add `<Toaster />` once" outcome.
+- Pass: Mounting surface via `Toaster::new()` covers the upstream "add `<Toaster />` once"
+  outcome, including shadcn-aligned Lucide icon defaults.
 - Pass: Message-style API exists:
   - `Sonner::toast_message(...)`
   - `Sonner::toast_{success,error,info,warning,loading}_message(...)`
   - Options via `ToastMessageOptions` (description/action/cancel/duration/pinned/dismissible).
 - Pass: Upsert-by-id exists for `loading -> success/error` flows.
 - Pass: Manual promise handle via `Sonner::toast_promise(...) -> ToastPromise`.
-- Note: Because Sonner is a global service + toaster mount pattern, it does not need a composable
-  children API or a generic `compose()` builder.
+- Pass: The UI Gallery now mirrors the docs-facing preview split:
+  - `Demo`
+  - `Types`
+  - `Description`
+  - `Position`
+- Note: A composable children/custom-content API is still not exposed on the shadcn-facing
+  surface. The current renderer is message-template-oriented; the underlying overlay mechanism could
+  support a richer surface later if a concrete product use-case appears.
 
 ### Interaction behavior
 
@@ -59,13 +66,15 @@ Notes:
 ## Conclusion
 
 - Result: This component does not currently indicate a missing mechanism-layer gap in the shadcn-facing surface.
-- Result: The main missing piece for docs parity was a concise gallery `Usage` example alongside the existing setup section.
-- Result: Follow-up work should focus on richer async/app integration helpers only if a concrete product need appears.
+- Result: The main drift was in the shadcn recipe/documentation surface, not in the toast mechanism.
+- Result: `Toaster::new()` now behaves more like the upstream wrapper default, and the gallery page now matches the docs example split.
+- Result: Follow-up work should focus on richer async/app integration helpers or a future custom-content API only if a concrete product need appears.
 
 ## Validation
 
 - `cargo test -p fret-ui-kit window_overlays::toast`
 - `cargo test -p fret-ui-shadcn --lib sonner`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app sonner_ -- --nocapture`
 - `cargo check -p fret-ui-gallery --message-format short`
 
 ## Follow-ups (recommended)

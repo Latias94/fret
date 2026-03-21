@@ -86,10 +86,26 @@ impl Default for Toaster {
             container_aria_label: Some(Arc::from("Notifications")),
             custom_aria_label: None,
             close_button_aria_label: Some(Arc::from("Close toast")),
-            icons: ToastIconOverrides::default(),
+            icons: shadcn_lucide_icon_overrides(),
             swipe_directions: None,
         }
     }
+}
+
+fn shadcn_lucide_icon_overrides() -> ToastIconOverrides {
+    let mut icons = ToastIconOverrides::default();
+    icons.close_button = Some(ToastIconOverride::icon(IconId::new_static("lucide.x")));
+    icons.success = Some(ToastIconOverride::icon(IconId::new_static(
+        "lucide.circle-check",
+    )));
+    icons.info = Some(ToastIconOverride::icon(IconId::new_static("lucide.info")));
+    icons.warning = Some(ToastIconOverride::icon(IconId::new_static(
+        "lucide.triangle-alert",
+    )));
+    icons.error = Some(ToastIconOverride::icon(IconId::new_static(
+        "lucide.octagon-x",
+    )));
+    icons
 }
 
 impl Toaster {
@@ -231,19 +247,7 @@ impl Toaster {
 
     /// Applies the shadcn/ui v4 Sonner icon set (Lucide) to match the web recipes.
     pub fn shadcn_lucide_icons(mut self) -> Self {
-        let mut icons = ToastIconOverrides::default();
-        icons.close_button = Some(ToastIconOverride::icon(IconId::new_static("lucide.x")));
-        icons.success = Some(ToastIconOverride::icon(IconId::new_static(
-            "lucide.circle-check",
-        )));
-        icons.info = Some(ToastIconOverride::icon(IconId::new_static("lucide.info")));
-        icons.warning = Some(ToastIconOverride::icon(IconId::new_static(
-            "lucide.triangle-alert",
-        )));
-        icons.error = Some(ToastIconOverride::icon(IconId::new_static(
-            "lucide.octagon-x",
-        )));
-        self.icons = icons;
+        self.icons = shadcn_lucide_icon_overrides();
         self
     }
 
@@ -1495,6 +1499,38 @@ mod tests {
             req.duration,
             fret_ui_kit::ToastDuration::UseDefault
         ));
+    }
+
+    #[test]
+    fn toaster_defaults_install_shadcn_lucide_icons() {
+        let toaster = Toaster::new();
+
+        assert!(matches!(
+            toaster.icons.close_button,
+            Some(ToastIconOverride::IconId(id)) if id == IconId::new_static("lucide.x")
+        ));
+        assert!(matches!(
+            toaster.icons.success,
+            Some(ToastIconOverride::IconId(id))
+                if id == IconId::new_static("lucide.circle-check")
+        ));
+        assert!(matches!(
+            toaster.icons.info,
+            Some(ToastIconOverride::IconId(id)) if id == IconId::new_static("lucide.info")
+        ));
+        assert!(matches!(
+            toaster.icons.warning,
+            Some(ToastIconOverride::IconId(id))
+                if id == IconId::new_static("lucide.triangle-alert")
+        ));
+        assert!(matches!(
+            toaster.icons.error,
+            Some(ToastIconOverride::IconId(id)) if id == IconId::new_static("lucide.octagon-x")
+        ));
+        assert!(
+            toaster.icons.loading.is_none(),
+            "loading icon should stay renderer-owned so it can animate"
+        );
     }
 
     #[test]
