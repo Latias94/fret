@@ -69,7 +69,7 @@
         "id": "ui-gallery-nav-command",
         "kind": "test_id"
       },
-      "type": "click"
+      "type": "click_stable"
     },
     {
       "predicate": {

@@ -30,7 +30,7 @@
       "timeout_frames": 240,
       "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
     {
       "predicate": {
         "kind": "exists",

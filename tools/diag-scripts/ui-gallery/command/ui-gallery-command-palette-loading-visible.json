@@ -28,7 +28,7 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -91,4 +91,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-command-palette-loading-visible" }
   ]
 }
-
