@@ -7375,6 +7375,26 @@
       ]
     },
     {
+      "id": "ui-gallery-table-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs-smoke",
+        "shadcn",
+        "table",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Table docs page and verifies the docs-path follow-up sections land in view.",
+        "Confirms the Data Table, API Reference, and Children sections resolve before capturing a bundle."
+      ]
+    },
+    {
       "id": "ui-gallery-table-retained-keyboard-typeahead",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
       "required_capabilities": [],

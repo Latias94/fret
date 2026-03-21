@@ -1726,8 +1726,10 @@ fn table_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_requir
         "pub fn table_footer<H: UiHost, I, F, T>( f: F, ) -> TableFooterBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
         "pub fn table_row<H: UiHost, I, F, T>( cols: u16, f: F, ) -> TableRowBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
         "pub fn table_head<T>(text: T) -> TableHead where T: Into<Arc<str>>,",
+        "pub fn table_head_children<H: UiHost, I, F, T>( f: F, ) -> TableHeadBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
         "pub fn table_cell<H: UiHost, T>(child: T) -> TableCellBuild<H, T> where T: IntoUiElement<H>,",
         "pub fn table_caption<T>(text: T) -> TableCaption where T: Into<Arc<str>>,",
+        "pub fn table_caption_children<H: UiHost, I, F, T>( f: F, ) -> TableCaptionBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>",
     ];
     let forbidden_markers = [
         "pub fn table<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
@@ -1736,8 +1738,10 @@ fn table_helpers_prefer_typed_wrapper_outputs_when_no_raw_slot_storage_is_requir
         "pub fn table_footer<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
         "pub fn table_row<H: UiHost, I>(cx: &mut ElementContext<'_, H>, cols: u16, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
         "pub fn table_head<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn table_head_children<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
         "pub fn table_cell<H: UiHost>(cx: &mut ElementContext<'_, H>, child: impl IntoUiElement<H>) -> AnyElement",
         "pub fn table_caption<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement",
+        "pub fn table_caption_children<H: UiHost, I>(cx: &mut ElementContext<'_, H>, f: impl FnOnce(&mut ElementContext<'_, H>) -> I,) -> AnyElement where I: IntoIterator<Item = AnyElement>,",
     ];
 
     for marker in required_markers {

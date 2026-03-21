@@ -9,6 +9,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
@@ -165,6 +166,97 @@ fn apply_table_footer_inherited_style(mut child: AnyElement, style: &TextStyle) 
         .map(|child| apply_table_footer_inherited_style(child, style))
         .collect();
     child
+}
+
+fn apply_table_head_inherited_style(mut child: AnyElement, style: &TextStyle) -> AnyElement {
+    match &mut child.kind {
+        ElementKind::Text(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            } else if let Some(existing) = props.style.as_mut()
+                && existing.weight == FontWeight::NORMAL
+            {
+                existing.weight = style.weight;
+            }
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::StyledText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            } else if let Some(existing) = props.style.as_mut()
+                && existing.weight == FontWeight::NORMAL
+            {
+                existing.weight = style.weight;
+            }
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Clip;
+        }
+        ElementKind::SelectableText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            } else if let Some(existing) = props.style.as_mut()
+                && existing.weight == FontWeight::NORMAL
+            {
+                existing.weight = style.weight;
+            }
+            props.wrap = TextWrap::None;
+            props.overflow = TextOverflow::Clip;
+        }
+        _ => {}
+    }
+
+    child.children = child
+        .children
+        .into_iter()
+        .map(|child| apply_table_head_inherited_style(child, style))
+        .collect();
+    child
+}
+
+fn apply_table_caption_text_defaults(mut child: AnyElement) -> AnyElement {
+    fn ensure_fill_width(layout: &mut fret_ui::element::LayoutStyle) {
+        if matches!(layout.size.width, fret_ui::element::Length::Auto) {
+            layout.size.width = fret_ui::element::Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(fret_ui::element::Length::Px(fret_core::Px(0.0)));
+        }
+    }
+
+    match &mut child.kind {
+        ElementKind::Text(props) => {
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            ensure_fill_width(&mut props.layout);
+        }
+        ElementKind::StyledText(props) => {
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            ensure_fill_width(&mut props.layout);
+        }
+        ElementKind::SelectableText(props) => {
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            ensure_fill_width(&mut props.layout);
+        }
+        _ => {}
+    }
+
+    child.children = child
+        .children
+        .into_iter()
+        .map(apply_table_caption_text_defaults)
+        .collect();
+    child
+}
+
+fn main_align_for_text_align(text_align: TextAlign) -> MainAlign {
+    match text_align {
+        TextAlign::Start => MainAlign::Start,
+        TextAlign::Center => MainAlign::Center,
+        TextAlign::End => MainAlign::End,
+    }
 }
 
 fn collect_built_table_children<H: UiHost>(
@@ -896,21 +988,50 @@ where
 }
 
 /// shadcn/ui `TableHead` (`th`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TableHead {
-    text: Arc<str>,
+    content: TableHeadContent,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     text_align: TextAlign,
 }
 
+#[derive(Debug)]
+enum TableHeadContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
 impl TableHead {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
-            text: text.into(),
+            content: TableHeadContent::Text(text.into()),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             text_align: TextAlign::Start,
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: TableHeadContent::Children(children.into_iter().collect()),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            text_align: TextAlign::Start,
+        }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> TableHeadBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        TableHeadBuild {
+            build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            text_align: TextAlign::Start,
+            _phantom: PhantomData,
         }
     }
 
@@ -939,6 +1060,7 @@ impl TableHead {
         let px = Space::N2;
         let py = Space::N0;
         let text_align = self.text_align;
+        let content_align = main_align_for_text_align(text_align);
         let caller_set_flex = self.layout.flex_item.is_some();
         let layout_override = self.layout;
 
@@ -966,7 +1088,10 @@ impl TableHead {
             layout
         });
 
-        let text = self.text;
+        let content = match self.content {
+            TableHeadContent::Text(text) => TableHeadRenderedContent::Text(text),
+            TableHeadContent::Children(children) => TableHeadRenderedContent::Children(children),
+        };
         let content_layout =
             decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_full());
         cx.container(props, move |cx| {
@@ -976,28 +1101,116 @@ impl TableHead {
                     direction: Axis::Horizontal,
                     gap: fret_core::Px(0.0).into(),
                     padding: Edges::all(fret_core::Px(0.0)).into(),
-                    justify: MainAlign::Start,
+                    justify: content_align,
                     align: CrossAlign::Center,
                     wrap: false,
                 },
-                move |cx| {
-                    let mut head_text = ui::text(text.clone())
-                        .text_size_px(style.size)
-                        .font_weight(style.weight)
-                        .text_color(ColorRef::Color(fg))
-                        .text_align(text_align)
-                        .w_full()
-                        .nowrap();
-                    if let Some(line_height) = style.line_height {
-                        head_text = head_text.line_height_px(line_height);
+                move |cx| match content {
+                    TableHeadRenderedContent::Text(text) => {
+                        let mut head_text = ui::text(text.clone())
+                            .text_size_px(style.size)
+                            .font_weight(style.weight)
+                            .text_color(ColorRef::Color(fg))
+                            .text_align(text_align)
+                            .w_full()
+                            .nowrap();
+                        if let Some(line_height) = style.line_height {
+                            head_text = head_text.line_height_px(line_height);
+                        }
+                        if let Some(letter_spacing_em) = style.letter_spacing_em {
+                            head_text = head_text.letter_spacing_em(letter_spacing_em);
+                        }
+                        vec![head_text.into_element(cx)]
                     }
-                    if let Some(letter_spacing_em) = style.letter_spacing_em {
-                        head_text = head_text.letter_spacing_em(letter_spacing_em);
+                    TableHeadRenderedContent::Children(children) => {
+                        let children = children
+                            .into_iter()
+                            .map(|child| apply_table_head_inherited_style(child, &style))
+                            .collect::<Vec<_>>();
+                        current_color::scope_children(cx, ColorRef::Color(fg), |_cx| children)
                     }
-                    vec![head_text.into_element(cx)]
                 },
             )]
         })
+    }
+}
+
+enum TableHeadRenderedContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
+pub struct TableHeadBuild<H, B> {
+    build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    text_align: TextAlign,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> TableHeadBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn text_align(mut self, align: TextAlign) -> Self {
+        self.text_align = align;
+        self
+    }
+
+    pub fn text_align_end(self) -> Self {
+        self.text_align(TextAlign::End)
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_table_children(
+            cx,
+            self.build.expect("expected table head build closure"),
+        );
+        TableHead::new_children(children)
+            .text_align(self.text_align)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for TableHeadBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for TableHeadBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for TableHeadBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for TableHeadBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableHeadBuild::into_element(self, cx)
     }
 }
 
@@ -1196,14 +1409,39 @@ where
 }
 
 /// shadcn/ui `TableCaption` (`caption`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TableCaption {
-    text: Arc<str>,
+    content: TableCaptionContent,
+}
+
+#[derive(Debug)]
+enum TableCaptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl TableCaption {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: TableCaptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: TableCaptionContent::Children(children.into_iter().collect()),
+        }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> TableCaptionBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        TableCaptionBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -1218,18 +1456,87 @@ impl TableCaption {
 
         let style = table_text_style(theme);
         let fg = muted_fg(theme);
-        let text = self.text;
+        let content = match self.content {
+            TableCaptionContent::Text(text) => TableCaptionRenderedContent::Text(text),
+            TableCaptionContent::Children(children) => {
+                TableCaptionRenderedContent::Children(children)
+            }
+        };
 
         cx.container(props, move |cx| {
-            vec![typography::scope_text_style_with_color(
-                ui::raw_text(text)
+            let caption = match content {
+                TableCaptionRenderedContent::Text(text) => ui::raw_text(text)
                     .wrap(TextWrap::Word)
                     .overflow(TextOverflow::Clip)
                     .into_element(cx),
+                TableCaptionRenderedContent::Children(children) => {
+                    let mut children = children
+                        .into_iter()
+                        .map(apply_table_caption_text_defaults)
+                        .collect::<Vec<_>>();
+                    match children.len() {
+                        0 => ui::raw_text("")
+                            .wrap(TextWrap::Word)
+                            .overflow(TextOverflow::Clip)
+                            .into_element(cx),
+                        1 => children.pop().expect("children.len() == 1"),
+                        _ => ui::v_flex(move |_cx| children)
+                            .gap(Space::N1)
+                            .items_start()
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .into_element(cx),
+                    }
+                }
+            };
+            vec![typography::scope_text_style_with_color(
+                caption,
                 typography::composable_refinement_from_style(&style),
                 fg,
             )]
         })
+    }
+}
+
+enum TableCaptionRenderedContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
+pub struct TableCaptionBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> TableCaptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_table_children(
+            cx,
+            self.build.expect("expected table caption build closure"),
+        );
+        TableCaption::new_children(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for TableCaptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> IntoUiElement<H> for TableCaptionBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableCaptionBuild::into_element(self, cx)
     }
 }
 
@@ -1311,6 +1618,20 @@ where
     TableHead::new(text)
 }
 
+pub fn table_head_children<H: UiHost, I, F, T>(
+    f: F,
+) -> TableHeadBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    TableHead::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_table_children(cx, out, children);
+    })
+}
+
 pub fn table_cell<H: UiHost, T>(child: T) -> TableCellBuild<H, T>
 where
     T: IntoUiElement<H>,
@@ -1323,6 +1644,20 @@ where
     T: Into<Arc<str>>,
 {
     TableCaption::new(text)
+}
+
+pub fn table_caption_children<H: UiHost, I, F, T>(
+    f: F,
+) -> TableCaptionBuild<H, impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    TableCaption::build(move |cx, out| {
+        let children = f(cx);
+        extend_landed_table_children(cx, out, children);
+    })
 }
 
 #[cfg(test)]
@@ -1360,6 +1695,30 @@ mod tests {
 
     fn contains_inherited_foreground(el: &AnyElement) -> bool {
         el.inherited_foreground.is_some() || el.children.iter().any(contains_inherited_foreground)
+    }
+
+    fn contains_inherited_text_style(el: &AnyElement) -> bool {
+        el.inherited_text_style.is_some() || el.children.iter().any(contains_inherited_text_style)
+    }
+
+    fn find_text_props<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_props(child, needle)),
+        }
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
     }
 
     #[derive(Default)]
@@ -1711,6 +2070,63 @@ mod tests {
     }
 
     #[test]
+    fn table_head_children_apply_header_typography_to_plain_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let expected = TextStyle {
+                weight: FontWeight::MEDIUM,
+                ..table_text_style(theme)
+            };
+
+            let head = TableHead::new_children([cx.text("Status")]).into_element(cx);
+
+            let text = find_text_props(&head, "Status").expect("expected table head text node");
+            let actual = text
+                .style
+                .as_ref()
+                .expect("expected inherited table head text style");
+            assert_eq!(actual.size, expected.size);
+            assert_eq!(actual.line_height, expected.line_height);
+            assert_eq!(actual.weight, expected.weight);
+            assert_eq!(text.wrap, TextWrap::None);
+            assert_eq!(text.overflow, TextOverflow::Clip);
+            assert!(contains_inherited_foreground(&head));
+        });
+    }
+
+    #[test]
+    fn table_head_children_helper_accepts_late_landed_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let head = table_head_children(|cx| {
+                ui::children![
+                    cx;
+                    ui::text("Status"),
+                    crate::badge::Badge::new("Live").variant(crate::badge::BadgeVariant::Outline),
+                ]
+            })
+            .into_element(cx);
+
+            assert!(find_text_props(&head, "Status").is_some());
+            assert!(find_text_props(&head, "Live").is_some());
+            assert!(contains_inherited_foreground(&head));
+        });
+    }
+
+    #[test]
     fn table_caption_scopes_inherited_text_style_without_leaf_overrides() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1751,6 +2167,39 @@ mod tests {
             ))
         );
         assert_eq!(text.inherited_foreground, Some(muted_fg(theme)));
+    }
+
+    #[test]
+    fn table_caption_children_scope_inherited_text_style_without_leaf_overrides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let caption = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            table_caption_children(|cx| {
+                ui::children![
+                    cx;
+                    ui::raw_text("A list of invoices."),
+                    ui::raw_text("Synced hourly."),
+                ]
+            })
+            .into_element(cx)
+        });
+
+        let primary =
+            find_text_element(&caption, "A list of invoices.").expect("expected primary caption");
+        let ElementKind::Text(primary_props) = &primary.kind else {
+            panic!("expected primary caption leaf to be text");
+        };
+        assert!(primary_props.style.is_none());
+        assert!(primary_props.color.is_none());
+        assert_eq!(primary_props.wrap, TextWrap::Word);
+        assert_eq!(primary_props.overflow, TextOverflow::Clip);
+        assert!(contains_inherited_text_style(&caption));
+        assert!(contains_inherited_foreground(&caption));
     }
 
     #[test]

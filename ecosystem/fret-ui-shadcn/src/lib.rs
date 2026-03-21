@@ -525,8 +525,8 @@ pub mod facade {
     pub use crate::switch::{Switch, SwitchSize, switch};
     pub use crate::table::{
         Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
-        table, table_body, table_caption, table_cell, table_footer, table_head, table_header,
-        table_row,
+        table, table_body, table_caption, table_caption_children, table_cell, table_footer,
+        table_head, table_head_children, table_header, table_row,
     };
     pub use crate::tabs::{
         Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,

@@ -4747,14 +4747,20 @@ fn table_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Footer\", footer)",
             "DocSection::build(cx, \"Actions\", actions)",
+            "DocSection::build(cx, \"Data Table\", data_table)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Children (Fret)\", children)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Footer\", footer)",
             "DocSection::new(\"Actions\", actions)",
+            "DocSection::new(\"Data Table\", data_table)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Children (Fret)\", children)",
         ],
     );
 }
@@ -6438,6 +6444,7 @@ fn selected_pagination_snippets_keep_wrapper_and_parts_lanes_explicit() {
 fn selected_table_snippets_prefer_table_wrapper_family() {
     for relative_path in [
         "src/ui/snippets/table/actions.rs",
+        "src/ui/snippets/table/children.rs",
         "src/ui/snippets/table/demo.rs",
         "src/ui/snippets/table/footer.rs",
         "src/ui/snippets/table/rtl.rs",
