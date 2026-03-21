@@ -30,42 +30,36 @@ fn profile_fields<H: UiHost>(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let open = cx.local_model_keyed("open", || false);
     let name = cx.local_model_keyed("name", || String::from("Pedro Duarte"));
     let username = cx.local_model_keyed("username", || String::from("@peduarte"));
 
-    let trigger_open = open.clone();
-    let save_open = open.clone();
-    let close_open = open.clone();
     let name_model = name.clone();
     let username_model = username.clone();
 
-    shadcn::Sheet::new(open.clone())
-        .into_element(
-            cx,
-            |cx| {
+    shadcn::Sheet::new_controllable(cx, None, false)
+        .children([
+            shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(
                 shadcn::Button::new("Open")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .test_id("ui-gallery-sheet-demo-trigger")
-                    .toggle_model(trigger_open.clone())
-                    .into_element(cx)
-            },
-            |cx| {
-                let fields = {
-                    let fields = profile_fields(cx, name_model.clone(), username_model.clone())
-                        .into_element(cx);
-                    let props = decl_style::container_props(
-                        Theme::global(&*cx.app),
-                        ChromeRefinement::default().px(Space::N4),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .min_w_0()
-                            .min_h_0()
-                        .flex_1(),
-                    );
-                    cx.container(props, move |_cx| vec![fields])
-                };
-                shadcn::SheetContent::build(|cx, out| {
+                    .test_id("ui-gallery-sheet-demo-trigger"),
+            )),
+            shadcn::SheetPart::content(
+                shadcn::SheetContent::build(move |cx, out| {
+                    let fields = {
+                        let fields = profile_fields(cx, name_model.clone(), username_model.clone())
+                            .into_element(cx);
+                        let props = decl_style::container_props(
+                            Theme::global(&*cx.app),
+                            ChromeRefinement::default().px(Space::N4),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .min_w_0()
+                                .min_h_0()
+                                .flex_1(),
+                        );
+                        cx.container(props, move |_cx| vec![fields])
+                    };
+
                     out.push_ui(
                         cx,
                         shadcn::SheetHeader::build(|cx, out| {
@@ -82,24 +76,20 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                     out.push_ui(
                         cx,
                         shadcn::SheetFooter::build(|cx, out| {
-                            out.push_ui(
-                                cx,
-                                shadcn::Button::new("Save changes")
-                                    .toggle_model(save_open.clone()),
-                            );
-                            out.push_ui(
+                            out.push_ui(cx, shadcn::Button::new("Save changes"));
+                            let close = shadcn::SheetClose::from_scope().build(
                                 cx,
                                 shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .toggle_model(close_open.clone()),
+                                    .variant(shadcn::ButtonVariant::Outline),
                             );
+                            out.push(close);
                         }),
                     );
                 })
-                .into_element(cx)
-                .test_id("ui-gallery-sheet-demo-content")
-            },
-        )
+                .test_id("ui-gallery-sheet-demo-content"),
+            ),
+        ])
+        .into_element(cx)
         .test_id("ui-gallery-sheet-demo")
 }
 // endregion: example

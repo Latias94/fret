@@ -50,6 +50,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
   `show_close_button(false)`, matching upstream `showCloseButton={false}`.
 - Pass: `SheetClose::from_scope()` is available as recipe-layer sugar for additional content-local
   close buttons while preserving `SheetClose::new(open)` as the explicit constructor.
+- Pass: `Sheet::children([SheetPart::trigger(...), SheetPart::content(...)])` is available as a
+  root-level part-children builder that is closer to upstream nested children composition while
+  staying in the recipe layer.
 - Pass: `Sheet::compose()` provides a recipe-level builder for part assembly without pushing
   shadcn-specific composition concerns into the lower-level mechanism contract.
 - Pass: `SheetContent::build(...)` is the typed content-side companion on that same recipe lane,
@@ -94,24 +97,30 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 - Contract test: `sheet_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Contract test: `sheet_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `sheet_open_change_events_complete_without_animation`
+- Contract test: `sheet_children_builder_opens_and_closes_with_default_close_button`
+- Contract test: `sheet_children_content_with_supports_from_scope_close`
 - Shadcn Web chrome gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_sheet_demo_panel_chrome_matches`, `web_vs_fret_sheet_side_panel_chrome_matches`, `web_vs_fret_sheet_side_right_panel_chrome_matches`, `web_vs_fret_sheet_side_bottom_panel_chrome_matches`, `web_vs_fret_sheet_side_left_panel_chrome_matches`).
 - Shadcn Web placement gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_sheet_demo_overlay_insets_match`, `web_vs_fret_sheet_side_top_overlay_insets_match`, `web_vs_fret_sheet_side_right_overlay_insets_match`, `web_vs_fret_sheet_side_bottom_overlay_insets_match`, `web_vs_fret_sheet_side_left_overlay_insets_match`).
 
-## Authoring note: `compose()`
+## Authoring note: `children([...])` and `compose()`
 
-`Sheet::compose()` is a recipe-layer bridge for authors who want a more composable part-based
-style than the raw closure root.
+`Sheet::children([...])` is now the default copyable root path for first-party docs/examples, while
+`Sheet::compose()` remains the focused builder-style alternative.
 
-- Scope: ergonomics only; it lowers into `Sheet::into_element_parts(...)`.
+- Scope: ergonomics only; both surfaces lower into `Sheet::into_element_parts(...)`.
 - Default teaching path: first-party examples now prefer
-  `Sheet::new_controllable(cx, None, false).compose().trigger(...).content_with(...)`.
+  `Sheet::new_controllable(cx, None, false).children([SheetPart::trigger(...), SheetPart::content(...)])`.
+- Typed content lane: `SheetContent::build(...)` keeps the content tree on the builder-first path
+  until the final root landing seam.
 - Focused follow-up lane: explicit `SheetTrigger` / `SheetPortal` / `SheetOverlay` ownership stays
-  documented through a dedicated `Parts` example rather than replacing the default copyable path.
+  documented through a dedicated `Parts` example, while `compose()` stays available for explicit
+  builder-style `trigger(...).content_with(...)` assembly.
 - Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
-- Limitation: this is still not a full React-style nested children API; Fret stores already-built
-  elements and assembles them at the final call site.
+- Limitation: this is still a recipe-layer builder/closure bridge rather than a full React-style
+  JSX nesting model; `children([...])` is simply the closer upstream mental model for common call
+  sites.
 
 ## Follow-ups (recommended)
 

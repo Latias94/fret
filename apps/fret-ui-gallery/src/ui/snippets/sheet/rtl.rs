@@ -30,29 +30,22 @@ fn profile_fields<H: UiHost>(
 }
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let open = cx.local_model_keyed("open", || false);
     let name = cx.local_model_keyed("name", || String::from("Pedro Duarte"));
     let username = cx.local_model_keyed("username", || String::from("peduarte"));
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let trigger_open = open.clone();
-        let save_open = open.clone();
-        let close_open = open.clone();
         let name_model = name.clone();
         let username_model = username.clone();
 
-        shadcn::Sheet::new(open.clone())
+        shadcn::Sheet::new_controllable(cx, None, false)
             .side(shadcn::SheetSide::Left)
-            .into_element(
-                cx,
-                |cx| {
+            .children([
+                shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(
                     shadcn::Button::new("Open")
                         .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-sheet-rtl-trigger")
-                        .toggle_model(trigger_open.clone())
-                        .into_element(cx)
-                },
-                |cx| {
+                        .test_id("ui-gallery-sheet-rtl-trigger"),
+                )),
+                shadcn::SheetPart::content(shadcn::SheetContent::build(move |cx, out| {
                     let fields = {
                         let fields = profile_fields(cx, name_model.clone(), username_model.clone())
                             .into_element(cx);
@@ -67,40 +60,35 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         );
                         cx.container(props, move |_cx| vec![fields])
                     };
-                    shadcn::SheetContent::build(|cx, out| {
-                        out.push_ui(
-                            cx,
-                            shadcn::SheetHeader::build(|cx, out| {
-                                out.push_ui(cx, shadcn::SheetTitle::new("Edit profile"));
-                                out.push_ui(
-                                    cx,
-                                    shadcn::SheetDescription::new(
-                                        "RTL layout keeps spacing and focus flow aligned.",
-                                    ),
-                                );
-                            }),
-                        );
-                        out.push(fields);
-                        out.push_ui(
-                            cx,
-                            shadcn::SheetFooter::build(|cx, out| {
-                                out.push_ui(
-                                    cx,
-                                    shadcn::Button::new("Save changes")
-                                        .toggle_model(save_open.clone()),
-                                );
-                                out.push_ui(
-                                    cx,
-                                    shadcn::Button::new("Close")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .toggle_model(close_open.clone()),
-                                );
-                            }),
-                        );
-                    })
-                    .into_element(cx)
-                },
-            )
+
+                    out.push_ui(
+                        cx,
+                        shadcn::SheetHeader::build(|cx, out| {
+                            out.push_ui(cx, shadcn::SheetTitle::new("Edit profile"));
+                            out.push_ui(
+                                cx,
+                                shadcn::SheetDescription::new(
+                                    "RTL layout keeps spacing and focus flow aligned.",
+                                ),
+                            );
+                        }),
+                    );
+                    out.push(fields);
+                    out.push_ui(
+                        cx,
+                        shadcn::SheetFooter::build(|cx, out| {
+                            out.push_ui(cx, shadcn::Button::new("Save changes"));
+                            let close = shadcn::SheetClose::from_scope().build(
+                                cx,
+                                shadcn::Button::new("Close")
+                                    .variant(shadcn::ButtonVariant::Outline),
+                            );
+                            out.push(close);
+                        }),
+                    );
+                })),
+            ])
+            .into_element(cx)
     })
     .test_id("ui-gallery-sheet-rtl")
 }

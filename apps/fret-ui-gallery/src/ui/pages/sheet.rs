@@ -13,18 +13,19 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
+        "`Sheet::children([...])` is the default copyable root path for part-based composition, and `SheetPart` stays on the curated `shadcn` facade so the default import lane remains copyable.",
+        "`SheetContent::build(...)` is the typed content-side companion on that same lane, so copyable snippets do not need to hand-land already-built content arrays.",
         "`Sheet::side(...)` accepts the documented `top`, `right`, `bottom`, and `left` placements through `SheetSide`.",
         "`SheetContent::show_close_button(false)` is the Fret equivalent of upstream `showCloseButton={false}`.",
-        "`SheetClose::from_scope()` remains available for additional close affordances inside sheet content without threading the same open model into each button.",
+        "`SheetClose::from_scope().build(cx, button)` is the closest Fret equivalent to upstream `<SheetClose asChild>` for footer or custom close actions.",
     ]);
 
     let notes = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/sheet.rs`. Upstream references: `repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx` and `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx`.",
         "Preview mirrors the shadcn Sheet docs path after `Installation`: `Demo`, `Usage`, `Side`, `No Close Button`, `RTL`, and `API Reference`.",
-        "`Sheet::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
-        "`SheetContent::build(...)` is the typed content-side companion on that same lane, so copyable snippets do not need to hand-land already-built content arrays.",
+        "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `compose()` stays as the focused builder-style follow-up and `Parts` keeps explicit adapter ownership visible.",
         "Default close affordance lives in `SheetContent`, matching upstream; disable it with `show_close_button(false)`.",
-        "`Usage` is the default copyable path; `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",
+        "`Usage` is the default copyable `children([...])` path, while `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`).",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .max_w(Px(980.0))
@@ -42,9 +43,7 @@ pub(super) fn preview_sheet(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let usage = DocSection::build(cx, "Usage", usage)
         .max_w(Px(980.0))
         .title_test_id("ui-gallery-section-usage-title")
-        .description(
-            "Copyable shadcn-style composition reference using typed trigger/content builders.",
-        )
+        .description("Default copyable `children([...])` path for common Sheet call sites.")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let side = DocSection::build(cx, "Side", side)
         .max_w(Px(980.0))

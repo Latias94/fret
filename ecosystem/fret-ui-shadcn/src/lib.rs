@@ -502,7 +502,7 @@ pub mod facade {
     pub use crate::separator::{Separator, SeparatorOrientation, separator};
     pub use crate::sheet::{
         Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader,
-        SheetModalMode, SheetOverlay, SheetPortal, SheetSide, SheetTitle, SheetTrigger,
+        SheetModalMode, SheetOverlay, SheetPart, SheetPortal, SheetSide, SheetTitle, SheetTrigger,
     };
     pub use crate::shortcut_hint::ShortcutHint;
     pub use crate::sidebar::{

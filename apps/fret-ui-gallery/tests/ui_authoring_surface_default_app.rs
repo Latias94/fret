@@ -2590,6 +2590,78 @@ fn sheet_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn sheet_page_marks_usage_as_default_and_parts_as_follow_up() {
+    let sheet_page = read("src/ui/pages/sheet.rs");
+    assert!(
+        sheet_page.contains(
+            "`Usage` is the default copyable `children([...])` path, while `Parts` stays after `API Reference` as a focused advanced follow-up for explicit part adapters (`SheetTrigger` / `SheetPortal` / `SheetOverlay`)."
+        ),
+        "src/ui/pages/sheet.rs should distinguish the default children() lane from the explicit part-adapter follow-up lane"
+    );
+    assert!(
+        sheet_page.contains("Default copyable `children([...])` path for common Sheet call sites."),
+        "src/ui/pages/sheet.rs should label Usage as the default copyable children() path"
+    );
+    assert!(
+        sheet_page.contains(
+            "`Usage` now teaches the root `children([...])` path because it is closer to upstream nested children composition; `compose()` stays as the focused builder-style follow-up and `Parts` keeps explicit adapter ownership visible."
+        ),
+        "src/ui/pages/sheet.rs should keep compose() documented as a follow-up after the default children() lane"
+    );
+}
+
+#[test]
+fn sheet_usage_snippet_prefers_children_root_path() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/sheet/usage.rs",
+        &[
+            "shadcn::Sheet::new_controllable(cx, None, false)",
+            ".children([",
+            "shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(",
+            "shadcn::SheetPart::content(shadcn::SheetContent::build(",
+        ],
+        &[".compose()", ".content_with("],
+    );
+}
+
+#[test]
+fn sheet_curated_snippets_prefer_children_root_path() {
+    for relative_path in [
+        "src/ui/snippets/sheet/demo.rs",
+        "src/ui/snippets/sheet/usage.rs",
+        "src/ui/snippets/sheet/no_close_button.rs",
+        "src/ui/snippets/sheet/rtl.rs",
+        "src/ui/snippets/sheet/side.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[".children([", "shadcn::SheetPart::trigger("],
+        );
+        assert!(
+            normalized.contains("shadcn::SheetPart::content("),
+            "{} should keep Sheet content on the default children() lane",
+            manifest_path(relative_path).display()
+        );
+    }
+}
+
+#[test]
+fn curated_sheet_snippets_prefer_sheet_close_scope_for_custom_close_actions() {
+    for relative_path in [
+        "src/ui/snippets/sheet/demo.rs",
+        "src/ui/snippets/sheet/no_close_button.rs",
+        "src/ui/snippets/sheet/rtl.rs",
+        "src/ui/snippets/sheet/side.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::SheetClose::from_scope().build("],
+            &[".toggle_model("],
+        );
+    }
+}
+
+#[test]
 fn spinner_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

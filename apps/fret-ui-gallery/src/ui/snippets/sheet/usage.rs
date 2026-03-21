@@ -7,12 +7,11 @@ use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Sheet::new_controllable(cx, None, false)
-        .compose()
-        .trigger(shadcn::SheetTrigger::build(
-            shadcn::Button::new("Open").variant(shadcn::ButtonVariant::Outline),
-        ))
-        .content_with(move |cx| {
-            shadcn::SheetContent::build(|cx, out| {
+        .children([
+            shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(
+                shadcn::Button::new("Open").variant(shadcn::ButtonVariant::Outline),
+            )),
+            shadcn::SheetPart::content(shadcn::SheetContent::build(|cx, out| {
                 out.push_ui(
                     cx,
                     shadcn::SheetHeader::build(|cx, out| {
@@ -23,9 +22,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         );
                     }),
                 );
-            })
-            .into_element(cx)
-        })
+            })),
+        ])
         .into_element(cx)
 }
 // endregion: example

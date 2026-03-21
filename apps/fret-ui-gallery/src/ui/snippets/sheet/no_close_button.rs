@@ -6,38 +6,43 @@ use fret::{UiChild, UiCx};
 use fret_ui_shadcn::facade as shadcn;
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
-    let open = cx.local_model(|| false);
-
-    let trigger_open = open.clone();
-
-    shadcn::Sheet::new(open.clone())
-        .into_element(
-            cx,
-            |cx| {
-                shadcn::Button::new("Open Sheet")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .toggle_model(trigger_open.clone())
-                    .into_element(cx)
-            },
-            |cx| {
+    shadcn::Sheet::new_controllable(cx, None, false)
+        .children([
+            shadcn::SheetPart::trigger(shadcn::SheetTrigger::build(
+                shadcn::Button::new("No Close Button")
+                    .variant(shadcn::ButtonVariant::Outline),
+            )),
+            shadcn::SheetPart::content(
                 shadcn::SheetContent::build(|cx, out| {
                     out.push_ui(
                         cx,
                         shadcn::SheetHeader::build(|cx, out| {
-                            out.push_ui(cx, shadcn::SheetTitle::new("No Close Button"));
+                            out.push_ui(cx, shadcn::SheetTitle::new("Custom Close"));
                             out.push_ui(
                                 cx,
                                 shadcn::SheetDescription::new(
-                                    "This example intentionally omits footer actions. Use outside press or Escape to close.",
+                                    "This sheet has no default close button. Use the footer buttons instead.",
                                 ),
                             );
                         }),
                     );
+                    out.push_ui(
+                        cx,
+                        shadcn::SheetFooter::build(|cx, out| {
+                            let cancel = shadcn::SheetClose::from_scope().build(
+                                cx,
+                                shadcn::Button::new("Cancel")
+                                    .variant(shadcn::ButtonVariant::Outline),
+                            );
+                            out.push(cancel);
+                            out.push_ui(cx, shadcn::Button::new("Save"));
+                        }),
+                    );
                 })
-                .show_close_button(false)
-                .into_element(cx)
-            },
-        )
+                .show_close_button(false),
+            ),
+        ])
+        .into_element(cx)
         .test_id("ui-gallery-sheet-no-close-button")
 }
 // endregion: example

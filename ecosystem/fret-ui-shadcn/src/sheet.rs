@@ -528,6 +528,16 @@ impl Sheet {
         SheetComposition::new(self)
     }
 
+    /// Returns a part-children builder for root-level authoring that is closer to upstream nested
+    /// children composition while still lowering into the existing recipe-layer slots.
+    pub fn children<H: UiHost, I, P>(self, parts: I) -> SheetChildren<H>
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<SheetPart<H>>,
+    {
+        SheetChildren::new(self, parts)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
@@ -1037,6 +1047,201 @@ impl Sheet {
 
 /// Recipe-level builder for composing a sheet from shadcn-style parts.
 type SheetDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+type SheetDeferredTrigger<H> =
+    Box<dyn FnOnce(&mut ElementContext<'_, H>) -> SheetTrigger + 'static>;
+
+/// Root-level part adapter for shadcn-style `Sheet` children composition.
+///
+/// This stays in the recipe layer. It does not widen the mechanism contract in `fret-ui`; it only
+/// collects authored parts and lowers them into the existing trigger/content slot surface.
+pub enum SheetPart<H: UiHost> {
+    Trigger(SheetDeferredTrigger<H>),
+    Portal(SheetPortal),
+    Overlay(SheetOverlay),
+    Content(SheetDeferredContent<H>),
+}
+
+impl<H: UiHost> std::fmt::Debug for SheetPart<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Trigger(_) => f.write_str("SheetPart::Trigger(<deferred>)"),
+            Self::Portal(portal) => f.debug_tuple("SheetPart::Portal").field(portal).finish(),
+            Self::Overlay(overlay) => f.debug_tuple("SheetPart::Overlay").field(overlay).finish(),
+            Self::Content(_) => f.write_str("SheetPart::Content(<deferred>)"),
+        }
+    }
+}
+
+impl<H: UiHost> SheetPart<H> {
+    pub fn trigger<T>(trigger: T) -> Self
+    where
+        T: SheetCompositionTriggerArg<H> + 'static,
+    {
+        Self::Trigger(Box::new(move |cx| trigger.into_sheet_trigger(cx)))
+    }
+
+    pub fn portal(portal: SheetPortal) -> Self {
+        Self::Portal(portal)
+    }
+
+    pub fn overlay(overlay: SheetOverlay) -> Self {
+        Self::Overlay(overlay)
+    }
+
+    pub fn content<T>(content: T) -> Self
+    where
+        T: IntoUiElement<H> + 'static,
+    {
+        Self::Content(Box::new(move |cx| content.into_element(cx)))
+    }
+
+    pub fn content_with(
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        Self::Content(Box::new(content))
+    }
+}
+
+impl<H: UiHost> From<SheetTrigger> for SheetPart<H> {
+    fn from(value: SheetTrigger) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost + 'static, T> From<SheetTriggerBuild<H, T>> for SheetPart<H>
+where
+    T: IntoUiElement<H> + 'static,
+{
+    fn from(value: SheetTriggerBuild<H, T>) -> Self {
+        Self::trigger(value)
+    }
+}
+
+impl<H: UiHost> From<SheetPortal> for SheetPart<H> {
+    fn from(value: SheetPortal) -> Self {
+        Self::portal(value)
+    }
+}
+
+impl<H: UiHost> From<SheetOverlay> for SheetPart<H> {
+    fn from(value: SheetOverlay) -> Self {
+        Self::overlay(value)
+    }
+}
+
+impl<H: UiHost> From<SheetContent> for SheetPart<H> {
+    fn from(value: SheetContent) -> Self {
+        Self::content(value)
+    }
+}
+
+impl<H: UiHost + 'static, B> From<SheetContentBuild<H, B>> for SheetPart<H>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>) + 'static,
+{
+    fn from(value: SheetContentBuild<H, B>) -> Self {
+        Self::content(value)
+    }
+}
+
+/// Part-children builder for root-level `Sheet` composition.
+///
+/// This is the closest Fret recipe surface to upstream nested children today:
+/// collect `SheetPart`s, then late-land them at the root call site.
+pub struct SheetChildren<H: UiHost> {
+    sheet: Sheet,
+    parts: Vec<SheetPart<H>>,
+}
+
+impl<H: UiHost> std::fmt::Debug for SheetChildren<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut trigger = 0usize;
+        let mut portal = 0usize;
+        let mut overlay = 0usize;
+        let mut content = 0usize;
+
+        for part in &self.parts {
+            match part {
+                SheetPart::Trigger(_) => trigger += 1,
+                SheetPart::Portal(_) => portal += 1,
+                SheetPart::Overlay(_) => overlay += 1,
+                SheetPart::Content(_) => content += 1,
+            }
+        }
+
+        f.debug_struct("SheetChildren")
+            .field("sheet", &self.sheet)
+            .field("trigger_parts", &trigger)
+            .field("portal_parts", &portal)
+            .field("overlay_parts", &overlay)
+            .field("content_parts", &content)
+            .finish()
+    }
+}
+
+impl<H: UiHost> SheetChildren<H> {
+    pub fn new<I, P>(sheet: Sheet, parts: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<SheetPart<H>>,
+    {
+        Self {
+            sheet,
+            parts: parts.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut trigger: Option<SheetDeferredTrigger<H>> = None;
+        let mut portal = SheetPortal::new();
+        let mut overlay = SheetOverlay::new();
+        let mut content: Option<SheetDeferredContent<H>> = None;
+
+        for part in self.parts {
+            match part {
+                SheetPart::Trigger(next) => {
+                    assert!(
+                        trigger.replace(next).is_none(),
+                        "Sheet::children(...) accepts at most one SheetTrigger"
+                    );
+                }
+                SheetPart::Portal(next) => {
+                    portal = next;
+                }
+                SheetPart::Overlay(next) => {
+                    overlay = next;
+                }
+                SheetPart::Content(next) => {
+                    assert!(
+                        content.replace(next).is_none(),
+                        "Sheet::children(...) accepts at most one SheetContent"
+                    );
+                }
+            }
+        }
+
+        let trigger =
+            trigger.expect("Sheet::children(...) requires one SheetTrigger-compatible part");
+        let content =
+            content.expect("Sheet::children(...) requires one SheetContent-compatible part");
+
+        self.sheet.into_element_parts(
+            cx,
+            move |cx| trigger(cx),
+            portal,
+            overlay,
+            move |cx| content(cx),
+        )
+    }
+}
+
+impl<H: UiHost> IntoUiElement<H> for SheetChildren<H> {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        SheetChildren::into_element(self, cx)
+    }
+}
 
 enum SheetCompositionContent<H: UiHost> {
     Eager(AnyElement),
@@ -1948,7 +2153,9 @@ mod tests {
         let base_padding =
             fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
                 let element = with_sheet_side_provider(cx, SheetSide::Bottom, |cx| {
-                    SheetContent::new([cx.text("child")]).into_element(cx)
+                    SheetContent::new([cx.text("child")])
+                        .show_close_button(false)
+                        .into_element(cx)
                 });
                 match element.kind {
                     ElementKind::Container(ContainerProps { padding, .. }) => padding,
@@ -1980,7 +2187,9 @@ mod tests {
         let inset_padding =
             fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
                 let element = with_sheet_side_provider(cx, SheetSide::Bottom, |cx| {
-                    SheetContent::new([cx.text("child")]).into_element(cx)
+                    SheetContent::new([cx.text("child")])
+                        .show_close_button(false)
+                        .into_element(cx)
                 });
                 match element.kind {
                     ElementKind::Container(ContainerProps { padding, .. }) => padding,
@@ -2210,6 +2419,161 @@ mod tests {
     }
 
     #[test]
+    fn sheet_children_builder_opens_and_closes_with_default_close_button() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                OverlayController::begin_frame(app, window);
+                let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "sheet-children-builder-opens-and-closes-with-default-close-button",
+                    |cx| {
+                        let trigger = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                trigger_id = Some(id);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let sheet = Sheet::new(open.clone())
+                            .children([
+                                SheetPart::trigger(SheetTrigger::new(trigger)),
+                                SheetPart::portal(SheetPortal::new()),
+                                SheetPart::overlay(SheetOverlay::new()),
+                                SheetPart::content(SheetContent::new([cx.text("Content")])),
+                            ])
+                            .into_element(cx);
+
+                        vec![sheet]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                trigger_id.expect("trigger id")
+            };
+
+        let trigger = render(&mut ui, &mut app, &mut services);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let trigger_center = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 2;
+        for _ in 0..settle_frames {
+            let _ = render(&mut ui, &mut app, &mut services);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        let _ = render(&mut ui, &mut app, &mut services);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let close = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Close")
+            })
+            .expect("default close button semantics node");
+        let close_center = Point::new(
+            Px(close.bounds.origin.x.0 + close.bounds.size.width.0 / 2.0),
+            Px(close.bounds.origin.y.0 + close.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
     fn sheet_compose_content_with_supports_from_scope_close() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2245,6 +2609,53 @@ mod tests {
                             let close = SheetClose::from_scope().into_element(cx);
                             SheetContent::new(vec![close]).into_element(cx)
                         })
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn sheet_children_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sheet-children-content-with-from-scope",
+            |cx| {
+                vec![
+                    Sheet::new(open.clone())
+                        .children([
+                            SheetPart::trigger(SheetTrigger::build(crate::button::Button::new(
+                                "Open",
+                            ))),
+                            SheetPart::portal(SheetPortal::new()),
+                            SheetPart::overlay(SheetOverlay::new()),
+                            SheetPart::content_with(|cx| {
+                                let close = SheetClose::from_scope().into_element(cx);
+                                SheetContent::new(vec![close]).into_element(cx)
+                            }),
+                        ])
                         .into_element(cx),
                 ]
             },
