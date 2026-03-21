@@ -103,6 +103,7 @@
     "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-tab-enters-content.json",
     "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-docs-smoke.json",
     "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-tab-text-centering-420.json",
+    "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-docs-smoke.json",
     "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json"
   ]
 }

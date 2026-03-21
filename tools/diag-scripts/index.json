@@ -7530,6 +7530,18 @@
       ]
     },
     {
+      "id": "ui-gallery-tabs-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tabs-rtl-keynav-screenshot",
       "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json",
       "required_capabilities": [

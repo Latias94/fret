@@ -4,25 +4,39 @@ use fret::UiCx;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::tabs as snippets;
 
+const TABS_PAGE_INTRO: &str = "Preview mirrors the shadcn Tabs docs path after `Installation`: `Demo`, `Usage`, `Line`, `Vertical`, `Disabled`, `Icons`, `RTL`, and `API Reference`; `Composable Parts (Fret)`, `List`, `Vertical (Line)`, `Extras`, and `Notes` stay as focused follow-ups.";
+
 pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
-    let rtl = snippets::rtl::render(cx);
-    let list = snippets::list::render(cx);
-    let disabled = snippets::disabled::render(cx);
-    let icons = snippets::icons::render(cx);
     let line = snippets::line::render(cx);
     let vertical = snippets::vertical::render(cx);
+    let disabled = snippets::disabled::render(cx);
+    let icons = snippets::icons::render(cx);
+    let rtl = snippets::rtl::render(cx);
+    let parts = snippets::parts::render(cx);
+    let list = snippets::list::render(cx);
     let vertical_line = snippets::vertical_line::render(cx);
     let extras = snippets::extras::render(cx);
 
-    let notes = doc_layout::notes_block([
-        "Preview follows upstream shadcn Tabs docs order first: Demo, Usage, Line, Vertical, Disabled, Icons, RTL; Fret-specific sections follow afterwards.",
-        "`tabs_uncontrolled(cx, default, |cx| ..)` and `tabs(cx, model, |cx| ..)` are the default first-party teaching lane; the composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` surface remains available for explicit slot-level assembly.",
-        "Keep root width caller-owned in examples such as Usage (`w-[400px]` upstream), while list/trigger chrome remains recipe-owned.",
-        "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
+    let api_reference = doc_layout::notes_block([
         "API reference: `ecosystem/fret-ui-shadcn/src/tabs.rs`.",
+        "`tabs_uncontrolled(cx, default, |cx| ..)` and `tabs(cx, model, |cx| ..)` remain the default copyable root lane for common app code.",
+        "`TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` already provide the composable compound-parts lane, so Tabs does not need a second root `children([...])` API just to match upstream nested authoring.",
+        "`TabsTrigger::children(...)` and `TabsItem::trigger_children(...)` cover caller-owned trigger content when the compact label/icon helpers are too narrow.",
+        "Root width stays caller-owned (`w-[400px]` upstream), while list/trigger/content chrome and `TabsContent` fill-width defaults stay recipe-owned.",
     ]);
+    let notes = doc_layout::notes_block([
+        "This review did not indicate a missing `fret-ui` mechanism-layer fix: existing semantics/layout gates already cover selection, roving, trigger foreground inheritance, and content fill.",
+        "The remaining drift was on the docs/public-surface side: the gallery was not surfacing the explicit `API Reference` section or a copyable compound-parts example even though the underlying surface already existed.",
+        "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
+        "List-only, vertical-line, and flex-1 examples stay after the docs path because they are regression/follow-up surfaces rather than upstream section headings.",
+    ]);
+    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+        .description("Public surface summary and owner split.")
+        .no_shell()
+        .max_w(Px(980.0))
+        .test_id_prefix("ui-gallery-tabs-api-reference");
     let notes = DocSection::build(cx, "Notes", notes).description("Parity notes and references.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("Account/password card example with inputs and footer actions.")
@@ -53,6 +67,12 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .description("RTL key navigation and indicator placement parity.")
         .test_id_prefix("ui-gallery-tabs-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let parts = DocSection::build(cx, "Composable Parts (Fret)", parts)
+        .description(
+            "Copyable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` lane for explicit slot ownership and custom trigger children.",
+        )
+        .test_id_prefix("ui-gallery-tabs-parts")
+        .code_rust_from_file_region(snippets::parts::SOURCE, "example");
     let list = DocSection::build(cx, "List", list)
         .description("Tabs list without any mounted content.")
         .test_id_prefix("ui-gallery-tabs-list")
@@ -68,7 +88,7 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("A set of layered sections of content that are displayed one at a time."),
+        Some(TABS_PAGE_INTRO),
         vec![
             demo,
             usage,
@@ -77,6 +97,8 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
             disabled,
             icons,
             rtl,
+            api_reference,
+            parts,
             list,
             vertical_line,
             extras,
