@@ -62,8 +62,12 @@ current registry implementation in `repo-ref/ui`.
   leaking data-table policy into the base component.
 - Pass: the existing row-height/caption-gap and data-table geometry gates still indicate that the
   core table layout is not blocked on a runtime/mechanism change.
-- Note: checkbox-column padding/offset parity is still best treated as a narrow recipe follow-up if
-  future evidence shows visible drift; it is not a reason to widen the mechanism layer.
+- Pass: checkbox-column padding parity now stays where upstream owns it: `TableHead` /
+  `TableCell` narrow recipe defaults drop right padding when a checkbox descendant is present.
+- Note: the upstream direct-child `translate-y-[2px]` rule is a DOM/table-baseline compensation.
+  Fret's flex-backed header geometry did not need a literal port, and mixed-height body-row
+  vertical centering in checkbox columns remains a narrower recipe/layout follow-up rather than a
+  `fret-ui` mechanism issue.
 
 ### Gallery / docs parity
 
@@ -76,11 +80,16 @@ current registry implementation in `repo-ref/ui`.
   prose notes, which matches the way upstream docs position the TanStack-backed guide.
 - Pass: the remaining diagnosis is now explicit on the page: this was public-surface/docs drift in
   `fret-ui-shadcn` + UI Gallery, not a `fret-ui` mechanism defect.
+- Pass: the checkbox/table gallery snippet now uses a header cell surface for the select-all
+  column instead of bypassing `TableHead` through `table_cell(...)`.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn table_head_children table_caption_children --status-level fail`
+- `cargo test -p fret-ui-shadcn --lib 'table::tests::table_head_checkbox' -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib 'table::tests::table_cell_checkbox' -- --nocapture`
 - `cargo nextest run -p fret-ui-shadcn table_root_defaults_to_w_full_but_allows_overrides table_build_ui_builder_path_applies_layout_patches --status-level fail`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app table_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app selected_table_snippets_prefer_table_wrapper_family`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo test -p fret-ui-shadcn --test web_vs_fret_layout 'table::web_vs_fret_layout_data_table_demo_checkbox_column_padding_and_action_button_size' -- --exact`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json --dir /tmp/fret-diag-table-docs-2 --session-auto --timeout-ms 900000 --poll-ms 200 --launch -- env CARGO_TARGET_DIR=/tmp/fret-table-diag-target-2 CARGO_NET_OFFLINE=true cargo run -p fret-ui-gallery --release`

@@ -174,3 +174,9 @@ codegen-units = 1
 # preserving usable backtraces.
 [profile.test]
 debug = 1
+
+# `fret-ui-shadcn` parity suites build large unified test binaries on macOS.
+# Keep package-level incremental off so shared-target `cargo test -p fret-ui-shadcn ...`
+# runs do not pick up unstable incremental link artifacts between iterations.
+[profile.test.package.fret-ui-shadcn]
+incremental = false

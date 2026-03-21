@@ -83,12 +83,15 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             shadcn::table_row(3, |cx| {
                                 ui::children![
                                     cx;
-                                    shadcn::table_cell(
-                                        shadcn::Checkbox::from_checked_state(select_all_state)
-                                            .a11y_label("Select all rows")
-                                            .action(act::ToggleAllRows)
-                                            .test_id("ui-gallery-checkbox-table-all"),
-                                    ),
+                                    shadcn::table_head_children(|cx| {
+                                        ui::children![
+                                            cx;
+                                            shadcn::Checkbox::from_checked_state(select_all_state)
+                                                .a11y_label("Select all rows")
+                                                .action(act::ToggleAllRows)
+                                                .test_id("ui-gallery-checkbox-table-all"),
+                                        ]
+                                    }),
                                     shadcn::table_head("Member"),
                                     shadcn::table_head("Role"),
                                 ]

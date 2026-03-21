@@ -1,10 +1,13 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use fret_core::geometry::Edges;
-use fret_core::{Axis, FontId, FontWeight, TextAlign, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Axis, FontId, FontWeight, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
+};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, ElementKind, FlexProps, MainAlign, Overflow, PressableProps, ScrollAxis,
+    AnyElement, CrossAlign, ElementKind, FlexProps, MainAlign, Overflow,
+    PressableProps, ScrollAxis,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -249,6 +252,17 @@ fn apply_table_caption_text_defaults(mut child: AnyElement) -> AnyElement {
         .map(apply_table_caption_text_defaults)
         .collect();
     child
+}
+
+fn is_checkbox_root_element(child: &AnyElement) -> bool {
+    matches!(
+        &child.kind,
+        ElementKind::Pressable(props) if props.a11y.role == Some(SemanticsRole::Checkbox)
+    )
+}
+
+fn subtree_contains_checkbox(child: &AnyElement) -> bool {
+    is_checkbox_root_element(child) || child.children.iter().any(subtree_contains_checkbox)
 }
 
 fn main_align_for_text_align(text_align: TextAlign) -> MainAlign {
@@ -1063,6 +1077,10 @@ impl TableHead {
         let content_align = main_align_for_text_align(text_align);
         let caller_set_flex = self.layout.flex_item.is_some();
         let layout_override = self.layout;
+        let content_has_checkbox = match &self.content {
+            TableHeadContent::Text(_) => false,
+            TableHeadContent::Children(children) => children.iter().any(subtree_contains_checkbox),
+        };
 
         let style = TextStyle {
             weight: FontWeight::MEDIUM,
@@ -1070,7 +1088,15 @@ impl TableHead {
         };
         let fg = foreground(theme);
 
-        let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
+        let chrome = {
+            let chrome = ChromeRefinement::default().px(px).py(py);
+            let chrome = if content_has_checkbox {
+                chrome.pr(Space::N0)
+            } else {
+                chrome
+            };
+            chrome.merge(self.chrome)
+        };
         let props = decl_style::container_props(theme, chrome, {
             let mut layout = LayoutRefinement::default()
                 .flex_1()
@@ -1291,8 +1317,21 @@ impl TableCell {
             .and_then(|s| s.width.as_ref())
             .is_some();
         let layout_override = self.layout;
-
-        let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
+        let caller_set_margin_y = layout_override
+            .margin
+            .as_ref()
+            .is_some_and(|margin| margin.top.is_some() || margin.bottom.is_some());
+        let child = apply_table_cell_text_defaults(self.child, self.text_align);
+        let child_has_checkbox = subtree_contains_checkbox(&child);
+        let chrome = {
+            let chrome = ChromeRefinement::default().px(px).py(py);
+            let chrome = if child_has_checkbox {
+                chrome.pr(Space::N0)
+            } else {
+                chrome
+            };
+            chrome.merge(self.chrome)
+        };
         let mut layout = LayoutRefinement::default()
             .flex_1()
             .min_w_0()
@@ -1306,6 +1345,11 @@ impl TableCell {
         {
             layout = layout.flex_grow(span as f32);
         }
+        if child_has_checkbox && !caller_set_margin_y {
+            // In mixed-height rows the checkbox cell should stay vertically centered like an HTML
+            // `td align-middle`, without introducing DOM-specific baseline transforms.
+            layout = layout.my_auto();
+        }
 
         let props = decl_style::container_props(theme, chrome, layout);
         let row_layout =
@@ -1315,7 +1359,6 @@ impl TableCell {
             ChromeRefinement::default(),
             LayoutRefinement::default().w_full().min_w_0(),
         );
-        let child = apply_table_cell_text_defaults(self.child, self.text_align);
         cx.container(props, move |cx| {
             vec![cx.flex(
                 FlexProps {
@@ -1664,9 +1707,12 @@ where
 mod tests {
     use super::*;
 
+    use crate::checkbox::Checkbox;
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size};
-    use fret_ui::element::{ContainerProps, ElementKind, Length, Overflow, TextProps};
+    use fret_ui::element::{
+        ContainerProps, ElementKind, Length, MarginEdge, Overflow, SpacingLength, TextProps,
+    };
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
@@ -2200,6 +2246,118 @@ mod tests {
         assert_eq!(primary_props.overflow, TextOverflow::Clip);
         assert!(contains_inherited_text_style(&caption));
         assert!(contains_inherited_foreground(&caption));
+    }
+
+    #[test]
+    fn table_head_checkbox_children_drop_right_padding_without_dom_baseline_transform() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let head = TableHead::new_children([Checkbox::from_checked(false)
+                .a11y_label("Select all")
+                .into_element(cx)])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = &head.kind else {
+                panic!("expected TableHead root to be a container element");
+            };
+            assert_eq!(props.padding.right, SpacingLength::Px(Px(0.0)));
+            assert!(
+                !contains_kind(&head, &|kind| matches!(
+                    kind,
+                    ElementKind::RenderTransform(_)
+                )),
+                "expected Fret table-head checkbox parity to avoid DOM baseline compensation wrappers"
+            );
+        });
+    }
+
+    #[test]
+    fn table_head_checkbox_descendant_drops_right_padding() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let head = TableHead::new_children([ui::h_flex(move |cx| {
+                vec![
+                    Checkbox::from_checked(false)
+                        .a11y_label("Select all")
+                        .into_element(cx),
+                ]
+            })
+            .into_element(cx)])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = &head.kind else {
+                panic!("expected TableHead root to be a container element");
+            };
+            assert_eq!(props.padding.right, SpacingLength::Px(Px(0.0)));
+        });
+    }
+
+    #[test]
+    fn table_cell_checkbox_child_drops_right_padding_without_dom_baseline_transform() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let cell = TableCell::new(
+                Checkbox::from_checked(false)
+                    .a11y_label("Select row")
+                    .into_element(cx),
+            )
+            .into_element(cx);
+
+            let ElementKind::Container(props) = &cell.kind else {
+                panic!("expected TableCell root to be a container element");
+            };
+            assert_eq!(props.padding.right, SpacingLength::Px(Px(0.0)));
+            assert!(
+                !contains_kind(&cell, &|kind| matches!(
+                    kind,
+                    ElementKind::RenderTransform(_)
+                )),
+                "expected Fret table-cell checkbox parity to avoid DOM baseline compensation wrappers"
+            );
+        });
+    }
+
+    #[test]
+    fn table_cell_checkbox_child_uses_auto_vertical_margins_for_mixed_height_rows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let cell = TableCell::new(
+                Checkbox::from_checked(false)
+                    .a11y_label("Select row")
+                    .into_element(cx),
+            )
+            .into_element(cx);
+
+            let ElementKind::Container(props) = &cell.kind else {
+                panic!("expected TableCell root to be a container element");
+            };
+            assert_eq!(props.layout.margin.top, MarginEdge::Auto);
+            assert_eq!(props.layout.margin.bottom, MarginEdge::Auto);
+        });
     }
 
     #[test]

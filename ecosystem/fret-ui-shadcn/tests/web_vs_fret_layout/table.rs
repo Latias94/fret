@@ -236,7 +236,7 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
 }
 
 #[test]
-fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
+fn web_vs_fret_layout_data_table_demo_checkbox_column_padding_and_action_button_size() {
     let web = read_web_golden("data-table-demo");
     let theme = web_theme(&web);
 
@@ -253,6 +253,12 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
             && n.attrs.get("aria-label").is_some_and(|v| v == "Select row")
     })
     .expect("web select row checkbox");
+    let web_select_all = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|r| r == "checkbox")
+            && n.attrs.get("aria-label").is_some_and(|v| v == "Select all")
+    })
+    .expect("web select all checkbox");
 
     let web_open_menu = find_first(&theme.root, &|n| {
         n.tag == "button" && contains_text(n, "Open menu")
@@ -280,11 +286,11 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
                     shadcn::TableRow::new(
                         5,
                         vec![
-                            shadcn::TableCell::new(
-                                shadcn::Checkbox::new(header_select_all.clone())
-                                    .a11y_label("Select all")
-                                    .into_element(cx),
+                            shadcn::TableHead::new_children([shadcn::Checkbox::new(
+                                header_select_all.clone(),
                             )
+                            .a11y_label("Select all")
+                            .into_element(cx)])
                             .into_element(cx),
                             shadcn::TableHead::new("Status").into_element(cx),
                             shadcn::TableHead::new("Email").into_element(cx),
@@ -362,6 +368,9 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
     let select_row = find_semantics(&snap, SemanticsRole::Checkbox, Some("Select row"))
         .or_else(|| find_semantics(&snap, SemanticsRole::Checkbox, None))
         .expect("fret select row checkbox");
+    let select_all = find_semantics(&snap, SemanticsRole::Checkbox, Some("Select all"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Checkbox, None))
+        .expect("fret select all checkbox");
     let open_menu = find_semantics(&snap, SemanticsRole::Button, Some("Open menu"))
         .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
         .expect("fret open menu button");
@@ -389,6 +398,36 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
         "data-table-demo select row checkbox height",
         select_row.bounds.size.height,
         web_select_row.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "data-table-demo select all checkbox width",
+        select_all.bounds.size.width,
+        web_select_all.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "data-table-demo select all checkbox height",
+        select_all.bounds.size.height,
+        web_select_all.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "data-table-demo select all checkbox relative x",
+        select_all.bounds.origin.x - header_row.bounds.origin.x,
+        web_select_all.rect.x - web_header_row.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "data-table-demo select all checkbox relative y",
+        select_all.bounds.origin.y - header_row.bounds.origin.y,
+        web_select_all.rect.y - web_header_row.rect.y,
+        2.0,
+    );
+    assert_close_px(
+        "data-table-demo select row checkbox relative x",
+        select_row.bounds.origin.x - body_row.bounds.origin.x,
+        web_select_row.rect.x - web_body_row.rect.x,
         1.0,
     );
 
