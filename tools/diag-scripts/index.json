@@ -2223,16 +2223,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-a11y-command-dialog-shortcut-primary",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-a11y-command-dialog-shortcut-primary.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-command"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
       "id": "ui-gallery-accordion-basic-long-text-wraps",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-basic-long-text-wraps.json",
       "required_capabilities": [
@@ -4874,7 +4864,7 @@
       "target_hints": [
         "Sets theme preset to zinc/light.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
       ]
     },
     {
@@ -4897,7 +4887,7 @@
       "target_hints": [
         "Sets theme preset to zinc/dark.",
         "Navigates to Command page and scrolls to the Docs Demo section.",
-        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. \u2318P) without tofu squares."
+        "Captures screenshots to verify CommandShortcut glyph rendering (e.g. ⌘P) without tofu squares."
       ]
     },
     {
@@ -4905,66 +4895,6 @@
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-cmdk-keybindings.json",
       "required_capabilities": [
         "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-command"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-command-palette-force-mount-item-visible",
-      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-force-mount-item-visible.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-command"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-command-palette-group-force-mount-heading-visible",
-      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-group-force-mount-heading-visible.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-command"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-command-palette-loading-visible",
-      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-loading-visible.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-command"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-command-palette-separator-always-render-visible",
-      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-command"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-command-palette-should-filter-false",
-      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-should-filter-false.json",
-      "required_capabilities": [
         "diag.script_v2"
       ],
       "suite_memberships": [
@@ -4996,24 +4926,6 @@
         "Scrolls to the RTL CommandPalette snippet.",
         "Captures a screenshot to validate inline-start/end mirroring for the search icon + padding."
       ]
-    },
-    {
-      "id": "ui-gallery-command-scrollable-filter-clamps-scroll",
-      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-command"
-      ],
-      "tags": [
-        "command",
-        "filter",
-        "scroll",
-        "shadcn",
-        "ui_gallery"
-      ],
-      "target_hints": []
     },
     {
       "id": "ui-gallery-context-menu-basic-keyboard-nav",

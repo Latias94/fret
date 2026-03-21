@@ -2799,7 +2799,8 @@ impl CommandPalette {
                                 CommandPaletteA11ySelectedMode::Checked => checked,
                             };
 
-                            let test_id_for_row = test_id_item_prefix.clone().map(|prefix| {
+                            let derived_test_id_for_row =
+                                test_id_item_prefix.clone().map(|prefix| {
                                 let seg = sanitize_test_id_segment(value.as_ref());
                                 let id = if occ == 0 {
                                     format!("{}{}", prefix, seg)
@@ -2808,9 +2809,10 @@ impl CommandPalette {
                                 };
                                 Arc::<str>::from(id)
                             });
+                            let test_id_for_row =
+                                test_id.clone().or_else(|| derived_test_id_for_row.clone());
                             let chrome_test_id = test_id_for_row
                                 .clone()
-                                .or_else(|| test_id.clone())
                                 .map(|id| Arc::<str>::from(format!("{id}.chrome")));
 
                             let mut row = cx.pressable(
@@ -2822,7 +2824,7 @@ impl CommandPalette {
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::ListBoxOption),
                                         label: Some(label.clone()),
-                                        test_id: test_id.clone(),
+                                        test_id: test_id_for_row.clone(),
                                         selected: selected_a11y,
                                         ..Default::default()
                                     }
@@ -5282,6 +5284,64 @@ mod tests {
         assert!(ids.iter().copied().any(|id| id == "cmd-input"));
         assert!(ids.iter().copied().any(|id| id == "cmd-listbox"));
         assert!(ids.iter().copied().any(|id| id == "cmd-item-alpha"));
+
+        let _ = root;
+    }
+
+    #[test]
+    fn command_palette_explicit_item_test_id_overrides_prefix_derivation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-explicit-item-test-id",
+            |cx| {
+                vec![
+                    CommandPalette::new(
+                        query.clone(),
+                        vec![
+                            CommandItem::new("التقويم").test_id("cmd-item-calendar"),
+                            CommandItem::new("Alpha"),
+                        ],
+                    )
+                    .test_id_item_prefix("cmd-item-")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "cmd-item-calendar"));
+        assert!(
+            !ids.iter().copied().any(|id| id == "cmd-item-item"),
+            "explicit CommandItem::test_id should take precedence over prefix-derived fallback ids"
+        );
 
         let _ = root;
     }
