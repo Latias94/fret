@@ -18,10 +18,16 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "Base UI's `ProgressLabel` / `ProgressValue` children API is a useful headless reference, but it belongs to a different public surface and is not promoted on the default shadcn lane.",
         "Standalone bars should set `a11y_label(...)`; the demo uses a one-shot timer (500ms) to update the value from 13 to 66, matching the upstream motion example.",
     ]);
+    let notes = doc_layout::notes_block([
+        "This page keeps the upstream docs path first (`Demo`, `Usage`, `Label`, `Controlled`, `RTL`) and leaves `API Reference` plus `Notes` as Fret follow-ups.",
+        "The review did not indicate a missing mechanism-layer change: progress semantics, determinate/indeterminate value handling, and indicator geometry already live behind the shadcn recipe and its existing gates.",
+        "Base UI remains a useful headless reference for future alternate surfaces, but it does not justify widening the default shadcn-facing authoring surface today.",
+    ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
         .no_shell()
         .test_id_prefix("ui-gallery-progress-api-reference")
         .description("Public surface summary, docs-parity notes, and children API ownership.");
+    let notes = DocSection::build(cx, "Notes", notes).description("Parity notes and owner split.");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("One-shot timer preview aligned with the upstream demo's 13% -> 66% update.")
         .test_id_prefix("ui-gallery-progress-demo")
@@ -46,9 +52,9 @@ pub(super) fn preview_progress(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Radix Progress docs path first: Demo, Usage, Label, Controlled, RTL. `API Reference` then explains the snapshot/value lane, the model-backed bridges, and why Base UI's children API stays out of the default shadcn surface.",
+            "Preview mirrors the shadcn/Radix Progress docs path first: Demo, Usage, Label, Controlled, RTL. `API Reference` and `Notes` then explain the snapshot/value lane, the model-backed bridges, and why Base UI's children API stays out of the default shadcn surface.",
         ),
-        vec![demo, usage, label, controlled, rtl, api_reference],
+        vec![demo, usage, label, controlled, rtl, api_reference, notes],
     );
 
     vec![body.test_id("ui-gallery-progress").into_element(cx)]
