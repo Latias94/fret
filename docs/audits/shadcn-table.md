@@ -20,6 +20,9 @@ current registry implementation in `repo-ref/ui`.
 - Example compositions:
   - `repo-ref/ui/apps/v4/registry/new-york-v4/examples/table-demo.tsx`
   - `repo-ref/ui/apps/v4/registry/bases/base/examples/table-example.tsx`
+  - `repo-ref/ui/apps/v4/examples/base/table-footer.tsx`
+  - `repo-ref/ui/apps/v4/examples/base/table-actions.tsx`
+  - `repo-ref/ui/apps/v4/examples/base/table-rtl.tsx`
 
 ## Fret implementation
 
@@ -47,9 +50,11 @@ current registry implementation in `repo-ref/ui`.
   composable `caption` lane while preserving recipe-owned caption typography and muted foreground.
 - Pass: `table_head(...)` and `table_caption(...)` remain the compact text-first constructors for
   the common docs examples, so the new children lane does not replace the default authoring path.
-- Note: `TableCell` remains on a single-child-root surface for now because callers can already pass
-  an arbitrary composed child subtree through `table_cell(...)`, and this audit did not find enough
-  first-party pressure to widen it into a sibling-child collector yet.
+- Pass: `TableCell` still stays on a single-child-root surface, and `text_align_end()` now aligns
+  both plain text and a composed child root (for example an actions dropdown trigger) without
+  forcing callers back through an app-side wrapper helper.
+- Note: this audit still did not find enough first-party pressure to widen `TableCell` into a
+  sibling-child collector; `table_cell(...)` remains the right lane for a composed child subtree.
 - Note: no extra generic `compose()` root builder is warranted here; the free wrapper family plus
   explicit part structs already cover the common shadcn lane.
 
@@ -67,6 +72,9 @@ current registry implementation in `repo-ref/ui`.
 - Pass: mixed-height body-row checkbox cells now also center vertically at the recipe layer via
   auto vertical margins on the cell root, matching the `align-middle` outcome without widening any
   `fret-ui` mechanism contract.
+- Pass: `TableCell::text_align_end()` now also positions non-text child roots at the inline end,
+  closing the recipe/API seam that previously forced the gallery actions example to wrap the
+  dropdown trigger in a local alignment helper.
 - Note: the upstream direct-child `translate-y-[2px]` rule remains a DOM/table-baseline
   compensation; Fret's flex-backed table did not need a literal transform port once checkbox cells
   centered correctly inside taller rows.
@@ -78,6 +86,11 @@ current registry implementation in `repo-ref/ui`.
 - Pass: `Children (Fret)` is now an explicit follow-up section that documents the new composable
   `table_head_children(...)` / `table_caption_children(...)` lane without displacing the upstream
   docs path.
+- Pass: the `Actions` snippet now matches the docs story more closely: upstream product/price copy,
+  ghost icon trigger, end-aligned dropdown content, and no gallery-only `align_end(...)` wrapper.
+- Pass: the `RTL` snippet now follows the docs story instead of a shortened English stub: Arabic
+  copy, seven invoice rows, translated caption/footer labels, and the same footer presence as the
+  upstream example.
 - Pass: `Data Table` now appears as a dedicated handoff section instead of being buried inside
   prose notes, which matches the way upstream docs position the TanStack-backed guide.
 - Pass: the remaining diagnosis is now explicit on the page: this was public-surface/docs drift in
@@ -90,8 +103,10 @@ current registry implementation in `repo-ref/ui`.
 - `cargo nextest run -p fret-ui-shadcn table_head_children table_caption_children --status-level fail`
 - `cargo test -p fret-ui-shadcn --lib 'table::tests::table_head_checkbox' -- --nocapture`
 - `cargo test -p fret-ui-shadcn --lib 'table::tests::table_cell_checkbox' -- --nocapture`
+- `cargo test -p fret-ui-shadcn --lib 'table::tests::table_cell_text_align_end_aligns_non_text_child_roots_without_fill_width_wrapper' -- --exact`
 - `cargo nextest run -p fret-ui-shadcn table_root_defaults_to_w_full_but_allows_overrides table_build_ui_builder_path_applies_layout_patches --status-level fail`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app table_page_uses_typed_doc_sections_for_app_facing_snippets`
 - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app selected_table_snippets_prefer_table_wrapper_family`
+- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app selected_table_snippet_helpers_prefer_into_ui_element_over_anyelement`
 - `cargo test -p fret-ui-shadcn --test web_vs_fret_layout 'table::web_vs_fret_layout_data_table_demo_checkbox_column_padding_and_action_button_size' -- --exact`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json --dir /tmp/fret-diag-table-docs-2 --session-auto --timeout-ms 900000 --poll-ms 200 --launch -- env CARGO_TARGET_DIR=/tmp/fret-table-diag-target-2 CARGO_NET_OFFLINE=true cargo run -p fret-ui-gallery --release`

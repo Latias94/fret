@@ -1308,6 +1308,8 @@ impl TableCell {
         let theme = Theme::global(&*cx.app);
         let px = Space::N2;
         let py = Space::N2;
+        let text_align = self.text_align;
+        let content_align = main_align_for_text_align(text_align.unwrap_or(TextAlign::Start));
         let caller_set_flex = self.layout.flex_item.is_some();
         let caller_set_width = self
             .layout
@@ -1320,7 +1322,11 @@ impl TableCell {
             .margin
             .as_ref()
             .is_some_and(|margin| margin.top.is_some() || margin.bottom.is_some());
-        let child = apply_table_cell_text_defaults(self.child, self.text_align);
+        let child = apply_table_cell_text_defaults(self.child, text_align);
+        let child_is_text_root = matches!(
+            &child.kind,
+            ElementKind::Text(_) | ElementKind::StyledText(_) | ElementKind::SelectableText(_)
+        );
         let child_has_checkbox = subtree_contains_checkbox(&child);
         let chrome = {
             let chrome = ChromeRefinement::default().px(px).py(py);
@@ -1353,10 +1359,17 @@ impl TableCell {
         let props = decl_style::container_props(theme, chrome, layout);
         let row_layout =
             decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_full());
+        // Keep plain text on the fill-width lane so text alignment still controls the inline
+        // content, but let composed child roots keep auto width so cell alignment can position
+        // them like upstream `text-right` actions cells.
         let wrapper_props = decl_style::container_props(
             theme,
             ChromeRefinement::default(),
-            LayoutRefinement::default().w_full().min_w_0(),
+            if child_is_text_root {
+                LayoutRefinement::default().w_full().min_w_0()
+            } else {
+                LayoutRefinement::default().min_w_0()
+            },
         );
         cx.container(props, move |cx| {
             vec![cx.flex(
@@ -1365,7 +1378,7 @@ impl TableCell {
                     direction: Axis::Horizontal,
                     gap: fret_core::Px(0.0).into(),
                     padding: Edges::all(fret_core::Px(0.0)).into(),
-                    justify: MainAlign::Start,
+                    justify: content_align,
                     align: CrossAlign::Center,
                     wrap: false,
                 },
@@ -2356,6 +2369,48 @@ mod tests {
             };
             assert_eq!(props.layout.margin.top, MarginEdge::Auto);
             assert_eq!(props.layout.margin.bottom, MarginEdge::Auto);
+        });
+    }
+
+    #[test]
+    fn table_cell_text_align_end_aligns_non_text_child_roots_without_fill_width_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let cell = TableCell::new(
+                crate::button::Button::new("")
+                    .a11y_label("Open menu")
+                    .variant(crate::button::ButtonVariant::Ghost)
+                    .size(crate::button::ButtonSize::Icon)
+                    .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                    .into_element(cx),
+            )
+            .text_align_end()
+            .into_element(cx);
+
+            let flex = cell
+                .children
+                .first()
+                .expect("expected TableCell inner flex child");
+            let ElementKind::Flex(props) = &flex.kind else {
+                panic!("expected TableCell inner child to be a flex container");
+            };
+            assert_eq!(props.justify, MainAlign::End);
+
+            let wrapper = flex
+                .children
+                .first()
+                .expect("expected TableCell wrapper child");
+            let ElementKind::Container(props) = &wrapper.kind else {
+                panic!("expected TableCell wrapper to be a container element");
+            };
+            assert_eq!(props.layout.size.width, Length::Auto);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         });
     }
 

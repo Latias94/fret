@@ -4,54 +4,50 @@ pub const SOURCE: &str = include_str!("actions.rs");
 use std::sync::Arc;
 
 use fret::{UiChild, UiCx};
+use fret_core::FontWeight;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-
-fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B>
-where
-    B: IntoUiElement<fret_app::App>,
-{
-    ui::h_flex(move |cx| ui::children![cx; child])
-        .layout(LayoutRefinement::default().w_full())
-        .justify_end()
-}
 
 fn action_row(
     product: &'static str,
     price: &'static str,
     open_model: Model<bool>,
-    key: &'static str,
+    slug: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
-    let row_test_id = format!("ui-gallery-table-actions-row-{key}");
-    let trigger_id = format!("ui-gallery-table-actions-trigger-{key}");
+    let row_test_id = format!("ui-gallery-table-actions-row-{slug}");
+    let trigger_id = format!("ui-gallery-table-actions-trigger-{slug}");
 
     shadcn::table_row(3, move |cx| {
-        let dropdown = shadcn::DropdownMenu::from_open(open_model.clone()).build(
-            cx,
-            shadcn::Button::new("?")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::Icon)
-                .toggle_model(open_model.clone())
-                .test_id(Arc::<str>::from(trigger_id.clone())),
-            |_cx| {
-                vec![
-                    shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Edit")),
-                    shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Duplicate")),
-                    shadcn::DropdownMenuEntry::Separator,
-                    shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("Delete").variant(
-                            shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
+        let dropdown = shadcn::DropdownMenu::from_open(open_model.clone())
+            .align(shadcn::DropdownMenuAlign::End)
+            .build(
+                cx,
+                shadcn::Button::new("")
+                    .a11y_label("Open menu")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Icon)
+                    .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                    .toggle_model(open_model.clone())
+                    .test_id(Arc::<str>::from(trigger_id.clone())),
+                |_cx| {
+                    vec![
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Edit")),
+                        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Duplicate")),
+                        shadcn::DropdownMenuEntry::Separator,
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("Delete").variant(
+                                shadcn::raw::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            ),
                         ),
-                    ),
-                ]
-            },
-        );
+                    ]
+                },
+            );
 
         ui::children![
             cx;
-            shadcn::table_cell(ui::text(product)),
+            shadcn::table_cell(ui::text(product).font_weight(FontWeight::MEDIUM)),
             shadcn::table_cell(ui::text(price)),
-            shadcn::table_cell(align_end(dropdown)),
+            shadcn::table_cell(dropdown).text_align_end(),
         ]
     })
     .test_id(row_test_id)
@@ -74,9 +70,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                             shadcn::table_head("Product")
                                 .refine_layout(LayoutRefinement::default().w_px(Px(280.0))),
                             shadcn::table_head("Price")
-                                .refine_layout(LayoutRefinement::default().w_px(Px(180.0))),
+                                .refine_layout(LayoutRefinement::default().w_px(Px(140.0))),
                             shadcn::table_head("Actions")
-                                .refine_layout(LayoutRefinement::default().w_px(Px(120.0))),
+                                .text_align_end()
+                                .refine_layout(LayoutRefinement::default().w_px(Px(96.0))),
                         ]
                     })
                     .border_bottom(true),
@@ -84,9 +81,14 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             }),
             shadcn::table_body(|_cx| {
                 vec![
-                    action_row("Gaming Mouse", "$129.99", open_1, "row-1"),
-                    action_row("Mechanical Keyboard", "$89.99", open_2, "row-2"),
-                    action_row("4K Monitor", "$299.99", open_3, "row-3"),
+                    action_row("Wireless Mouse", "$29.99", open_1, "wireless-mouse"),
+                    action_row(
+                        "Mechanical Keyboard",
+                        "$129.99",
+                        open_2,
+                        "mechanical-keyboard",
+                    ),
+                    action_row("USB-C Hub", "$49.99", open_3, "usb-c-hub"),
                 ]
             }),
         ]

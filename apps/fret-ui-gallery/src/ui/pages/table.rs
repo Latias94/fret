@@ -22,12 +22,12 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "API reference: `ecosystem/fret-ui-shadcn/src/table.rs`.",
         "`Table` still owns the responsive `w-full overflow-x-auto` wrapper outcome, while page/container sizing remains caller-owned.",
         "`TableHead` and `TableCaption` now expose both compact text constructors (`table_head(...)`, `table_caption(...)`) and composable children helpers (`table_head_children(...)`, `table_caption_children(...)`).",
-        "`TableCell` already accepts an arbitrary composed child root through `table_cell(...)`, so this pass did not widen it into a sibling-children collector.",
+        "`TableCell` still stays on a single-child-root surface, but `text_align_end()` now aligns both plain text and a composed child root (for example an actions trigger) without an extra wrapper helper.",
     ]);
     let notes = doc_layout::notes_block([
-        "This review did not indicate a missing `fret-ui` mechanism-layer fix: the drift was in shadcn public-surface coverage and the gallery teaching surface.",
+        "This review did not indicate a missing `fret-ui` mechanism-layer fix: the remaining drift was in `fret-ui-shadcn` recipe semantics and the gallery teaching surface.",
         "Horizontal overflow handling, header/body/footer ownership, and the handoff to `DataTable` remain in the right layer.",
-        "Checkbox-column padding parity and mixed-height body-row vertical centering now both live in `fret-ui-shadcn` recipe defaults (`TableHead` / `TableCell`) without widening any runtime contract.",
+        "Checkbox-column padding parity, mixed-height body-row vertical centering, and non-text `TableCell::text_align_end()` alignment now all live in `fret-ui-shadcn` recipe defaults without widening any runtime contract.",
     ]);
 
     let demo = DocSection::build(cx, "Demo", demo)
@@ -43,7 +43,9 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-table-footer")
         .code_rust_from_file_region(snippets::footer::SOURCE, "example");
     let actions = DocSection::build(cx, "Actions", actions)
-        .description("Uses `<DropdownMenu />` as an actions column.")
+        .description(
+            "Matches the docs actions story with a right-aligned `<DropdownMenu />` trigger.",
+        )
         .test_id_prefix("ui-gallery-table-actions")
         .code_rust_from_file_region(snippets::actions::SOURCE, "example");
     let data_table = DocSection::build(cx, "Data Table", data_table)
@@ -52,7 +54,9 @@ pub(super) fn preview_table(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .max_w(Px(980.0))
         .test_id_prefix("ui-gallery-table-data-table");
     let rtl = DocSection::build(cx, "RTL", rtl)
-        .description("Validates right-to-left direction support.")
+        .description(
+            "Matches the docs RTL story with translated copy, footer, and full invoice rows.",
+        )
         .test_id_prefix("ui-gallery-table-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let api_reference = DocSection::build(cx, "API Reference", api_reference)

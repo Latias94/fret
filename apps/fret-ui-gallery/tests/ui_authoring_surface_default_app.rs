@@ -7187,12 +7187,14 @@ fn selected_table_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/table/actions.rs",
         &[
-            "fn align_end<B>(child: B) -> impl IntoUiElement<fret_app::App> + use<B> where B: IntoUiElement<fret_app::App>",
-            "fn action_row(product: &'static str, price: &'static str, open_model: Model<bool>, key: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "fn action_row(product: &'static str, price: &'static str, open_model: Model<bool>, slug: &'static str,) -> impl IntoUiElement<fret_app::App> + use<>",
+            "shadcn::DropdownMenu::from_open(open_model.clone()).align(shadcn::DropdownMenuAlign::End)",
+            "shadcn::table_cell(dropdown).text_align_end()",
         ],
         &[
-            "fn align_end(cx: &mut UiCx<'_>, child: AnyElement) -> AnyElement",
-            "fn action_row(product: &'static str, price: &'static str, open_model: Model<bool>, key: &'static str,) -> AnyElement",
+            "fn align_end<B>(child: B)",
+            "shadcn::table_cell(align_end(dropdown))",
+            "fn action_row(product: &'static str, price: &'static str, open_model: Model<bool>, slug: &'static str,) -> AnyElement",
         ],
     );
 }

@@ -49,11 +49,11 @@ fn make_invoice_table(
                     shadcn::table_row(4, |cx| {
                         ui::children![
                             cx;
-                            shadcn::table_head("Invoice")
+                            shadcn::table_head("الفاتورة")
                                 .refine_layout(LayoutRefinement::default().w_px(invoice_w)),
-                            shadcn::table_head("Status"),
-                            shadcn::table_head("Method"),
-                            shadcn::table_head("Amount").text_align_end(),
+                            shadcn::table_head("الحالة"),
+                            shadcn::table_head("الطريقة"),
+                            shadcn::table_head("المبلغ").text_align_end(),
                         ]
                     })
                     .border_bottom(true),
@@ -75,7 +75,7 @@ fn make_invoice_table(
                         shadcn::table_row(4, |cx| {
                             ui::children![
                                 cx;
-                                shadcn::table_cell(ui::text("Total")).col_span(3),
+                                shadcn::table_cell(ui::text("المجموع")).col_span(3),
                                 shadcn::table_cell(ui::text("$2,500.00")).text_align_end(),
                             ]
                         })
@@ -86,7 +86,7 @@ fn make_invoice_table(
             );
         }
 
-        children.push(shadcn::table_caption("A list of your recent invoices.").into_element(cx));
+        children.push(shadcn::table_caption("قائمة بفواتيرك الأخيرة.").into_element(cx));
         children
     })
     .ui()
@@ -96,10 +96,14 @@ fn make_invoice_table(
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
-        let rows: [(&str, &str, &str, &str); 3] = [
-            ("INV001", "Paid", "Credit Card", "$250.00"),
-            ("INV002", "Pending", "PayPal", "$150.00"),
-            ("INV003", "Unpaid", "Bank Transfer", "$350.00"),
+        let rows: [(&str, &str, &str, &str); 7] = [
+            ("INV001", "مدفوع", "بطاقة ائتمانية", "$250.00"),
+            ("INV002", "قيد الانتظار", "PayPal", "$150.00"),
+            ("INV003", "غير مدفوع", "تحويل بنكي", "$350.00"),
+            ("INV004", "مدفوع", "بطاقة ائتمانية", "$450.00"),
+            ("INV005", "مدفوع", "PayPal", "$550.00"),
+            ("INV006", "قيد الانتظار", "تحويل بنكي", "$200.00"),
+            ("INV007", "غير مدفوع", "بطاقة ائتمانية", "$300.00"),
         ];
 
         make_invoice_table(&rows, true, "ui-gallery-table-rtl").into_element(cx)
