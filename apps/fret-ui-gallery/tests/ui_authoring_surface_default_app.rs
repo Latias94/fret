@@ -4442,9 +4442,12 @@ fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Disabled\", disabled)",
             "DocSection::build(cx, \"Icons\", icons)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Composable Parts (Fret)\", parts)",
             "DocSection::build(cx, \"List\", list)",
             "DocSection::build(cx, \"Vertical (Line)\", vertical_line)",
             "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
@@ -4454,9 +4457,31 @@ fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Disabled\", disabled)",
             "DocSection::new(\"Icons\", icons)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Composable Parts (Fret)\", parts)",
             "DocSection::new(\"List\", list)",
             "DocSection::new(\"Vertical (Line)\", vertical_line)",
             "DocSection::new(\"Extras\", extras)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+}
+
+#[test]
+fn tabs_page_uses_typed_notes_blocks_for_api_reference_and_notes() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/tabs.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
         ],
     );
 }
@@ -5505,12 +5530,27 @@ fn selected_doc_pages_prefer_docsection_build_for_typed_notes_blocks() {
         ],
     );
 
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/tabs.rs",
+        &[
+            "let api_reference = doc_layout::notes_block([",
+            "let notes = doc_layout::notes_block([",
+            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let notes = DocSection::build(cx, \"Notes\", notes)",
+        ],
+        &[
+            "let api_reference = doc_layout::notes(",
+            "let notes = doc_layout::notes(",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Notes\", notes)",
+        ],
+    );
+
     for relative_path in [
         "src/ui/pages/context_menu.rs",
         "src/ui/pages/menubar.rs",
         "src/ui/pages/progress.rs",
         "src/ui/pages/pagination.rs",
-        "src/ui/pages/tabs.rs",
         "src/ui/pages/scroll_area.rs",
         "src/ui/pages/slider.rs",
         "src/ui/pages/icons.rs",
@@ -7580,6 +7620,52 @@ fn switch_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Label Association\", label)",
             "DocSection::new(\"Style Override\", style_override)",
         ],
+    );
+}
+
+#[test]
+fn switch_docs_path_snippets_keep_upstream_label_binding_and_size_layout() {
+    let airplane = assert_normalized_markers_present(
+        "src/ui/snippets/switch/airplane_mode.rs",
+        &[
+            "let control_id = ControlId::from(\"ui-gallery-switch-airplane\");",
+            ".control_id(control_id.clone())",
+            "shadcn::Label::new(\"Airplane Mode\").for_control(control_id)",
+            ".test_id(\"ui-gallery-switch-airplane-label\")",
+        ],
+    );
+    assert!(
+        !airplane.contains(".max_w(Px(520.0))"),
+        "switch airplane demo should stay source-aligned and keep caller-owned width caps out of the docs-path snippet"
+    );
+
+    assert_normalized_markers_present(
+        "src/ui/snippets/switch/rtl.rs",
+        &[
+            "let control_id = ControlId::from(\"ui-gallery-switch-rtl\");",
+            ".for_control(control_id.clone())",
+            ".control_id(control_id)",
+            ".test_id(\"ui-gallery-switch-rtl-label\")",
+        ],
+    );
+
+    let sizes = assert_normalized_markers_present(
+        "src/ui/snippets/switch/sizes.rs",
+        &[
+            "let size_default = cx.local_model_keyed(\"size_default\", || false);",
+            "let small_id = ControlId::from(\"ui-gallery-switch-size-sm\");",
+            "let default_id = ControlId::from(\"ui-gallery-switch-size-default\");",
+            "shadcn::field_group(|cx| {",
+            ".for_control(small_id)",
+            ".for_control(default_id)",
+            ".test_id(\"ui-gallery-switch-size-small-label\")",
+            ".test_id(\"ui-gallery-switch-size-default-label\")",
+            ".max_w(Px(160.0))",
+        ],
+    );
+    assert!(
+        !sizes.contains("ui::h_flex(|_cx|vec![small,default])"),
+        "switch sizes docs-path snippet should keep the upstream vertical field-group composition"
     );
 }
 

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("bluetooth.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
-use fret_core::Px;
+use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
@@ -11,25 +11,24 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         fret_ui_kit::WidgetStateProperty::new(None)
             .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),
     );
+    let control_id = ControlId::from("ui-gallery-switch-bluetooth");
 
     ui::h_flex(|cx| {
         vec![
             shadcn::Switch::new_controllable(cx, None, true)
+                .control_id(control_id.clone())
                 .a11y_label("Bluetooth")
                 .style(style)
                 .test_id("ui-gallery-switch-bluetooth-toggle")
                 .into_element(cx),
-            shadcn::Label::new("Bluetooth").into_element(cx),
+            shadcn::Label::new("Bluetooth")
+                .for_control(control_id)
+                .test_id("ui-gallery-switch-bluetooth-label")
+                .into_element(cx),
         ]
     })
     .gap(Space::N2)
     .items_center()
-    .layout(
-        LayoutRefinement::default()
-            .w_full()
-            .min_w_0()
-            .max_w(Px(520.0)),
-    )
     .into_element(cx)
     .test_id("ui-gallery-switch-bluetooth")
 }

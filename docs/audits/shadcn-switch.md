@@ -28,6 +28,7 @@ base examples, and the existing switch web gates.
 ### Authoring surface
 
 - Pass: `Switch::new(model)` plus `size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` covers the documented control-level surface.
+- Pass: `Label::for_control(...)` and `FieldLabel::for_control(...)` now cover the upstream `htmlFor` label-binding path across the docs-path demo, size rows, and field-based examples.
 - Pass: `Switch::from_checked(...)` and `action(...)` / `action_payload(...)` remain available for action-first authoring without forcing a `Model<bool>` at every call site.
 - Pass: `FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` covers the upstream description and choice-card compositions without widening `Switch` into a generic children API.
 - Pass: `Switch` remains a leaf control; no extra generic `compose()` / `asChild` surface is needed here.
@@ -42,11 +43,14 @@ base examples, and the existing switch web gates.
 ### Gallery / docs parity
 
 - Pass: the gallery now mirrors the upstream base Switch docs path first: `Demo`, `Usage`, `Description`, `Choice Card`, `Disabled`, `Invalid`, `Size`, and `RTL`.
+- Pass: the docs-path `Demo`, `Size`, and `RTL` snippets now keep source-aligned label/control binding, and `Size` now matches the upstream vertical `FieldGroup` composition with both switches initially unchecked.
 - Pass: `Label Association` and `Style Override` remain explicit Fret follow-ups after the upstream path because they document Fret-specific control-registry and styling escape hatches.
 - Pass: this work is mostly docs/public-surface parity, with one small source-alignment fix: `Switch` now exposes `aria_invalid(...)` directly.
 
 ## Validation
 
 - `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
+- `cargo nextest run -p fret-ui-gallery switch_docs_path_snippets_keep_upstream_label_binding_and_size_layout --fail-fast`
+- `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-label-clicks.json`
 - Existing chrome + focus gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`switch-demo`, `switch-demo.focus`)
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`switch-demo`)

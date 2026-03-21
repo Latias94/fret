@@ -3,15 +3,20 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret::{UiChild, UiCx};
 use fret_core::Px;
+use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     let rtl = cx.local_model(|| false);
+    let control_id = ControlId::from("ui-gallery-switch-rtl");
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         shadcn::Field::new([
             shadcn::FieldContent::new([
-                shadcn::FieldLabel::new("Share across devices").into_element(cx),
+                shadcn::FieldLabel::new("Share across devices")
+                    .for_control(control_id.clone())
+                    .test_id("ui-gallery-switch-rtl-label")
+                    .into_element(cx),
                 shadcn::FieldDescription::new(
                     "Focus is shared across devices, and turns off when you leave the app.",
                 )
@@ -19,6 +24,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
             ])
             .into_element(cx),
             shadcn::Switch::new(rtl)
+                .control_id(control_id)
                 .a11y_label("Share across devices")
                 .test_id("ui-gallery-switch-rtl-toggle")
                 .into_element(cx),

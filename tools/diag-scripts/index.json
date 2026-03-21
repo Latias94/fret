@@ -7353,6 +7353,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-switch-docs-label-clicks",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-label-clicks.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs-path",
+        "label",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that the docs-path Demo, Size, and RTL labels toggle their paired switches through control associations."
+      ]
+    },
+    {
       "id": "ui-gallery-switch-docs-smoke",
       "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-smoke.json",
       "required_capabilities": [

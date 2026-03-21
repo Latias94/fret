@@ -17,10 +17,10 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let style_override = snippets::bluetooth::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "`Switch::new(model)` is the Fret equivalent of the upstream `<Switch />`; `size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` now cover the documented control-level surface.",
+        "`Switch::new(model)` is the Fret equivalent of the upstream `<Switch />`; `size(...)`, `disabled(...)`, `aria_invalid(...)`, `control_id(...)`, and `a11y_label(...)` cover the documented control surface, while `Label::for_control(...)` / `FieldLabel::for_control(...)` carry the upstream `htmlFor` teaching path.",
         "Track/thumb chrome and the intrinsic switch sizes remain recipe-owned because the upstream component source defines those defaults on the switch itself.",
         "Caller-owned layout stays explicit for `max-w-*`, stacked field groups, and surrounding page/grid negotiation; the recipe should not absorb those constraints.",
-        "`FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` covers the source-aligned description and choice-card compositions without widening `Switch` into a generic children API.",
+        "`Label::for_control(...)` covers the inline `Demo` / `Size` rows, and `FieldLabel::for_control(...)` plus `FieldLabel::wrap(...)` cover the description and choice-card compositions without widening `Switch` into a generic children API.",
         "`SwitchStyle` remains a focused Fret follow-up for token-safe track/thumb overrides; it is not part of the upstream docs path, but it is the right escape hatch when product recipes need custom checked colors.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -74,7 +74,7 @@ pub(super) fn preview_switch(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Switch docs path first: Demo, Usage, Description, Choice Card, Disabled, Invalid, Size, RTL, then keeps `Label Association`, `Style Override`, and `API Reference` as explicit Fret follow-ups.",
+            "Preview mirrors the shadcn Switch docs path first: Demo, Usage, Description, Choice Card, Disabled, Invalid, Size, RTL, with source-aligned label/control binding on the docs-path rows before `Label Association`, `Style Override`, and `API Reference` continue as explicit Fret follow-ups.",
         ),
         vec![
             demo,
