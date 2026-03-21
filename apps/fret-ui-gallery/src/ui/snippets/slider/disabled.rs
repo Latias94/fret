@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("demo.rs");
+pub const SOURCE: &str = include_str!("disabled.rs");
 
 // region: example
 use fret::{UiChild, UiCx};
@@ -9,9 +9,10 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     shadcn::Slider::new_controllable(cx, None, || vec![50.0])
         .range(0.0, 100.0)
         .step(1.0)
-        .a11y_label("Slider")
+        .disabled(true)
+        .a11y_label("Disabled slider")
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
-        .test_id_prefix("ui-gallery-slider-single")
+        .test_id_prefix("ui-gallery-slider-disabled")
         .into_element(cx)
 }
 // endregion: example

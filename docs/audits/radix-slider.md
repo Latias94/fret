@@ -39,5 +39,5 @@ Key upstream concepts:
 - Pass: shadcn `Slider` exposes `min_steps_between_thumbs` (Radix `minStepsBetweenThumbs`) and enforces it.
 - Pass: Controlled/uncontrolled values (`value` / `defaultValue`) can be modeled via
   `slider_use_values_model(...)`.
-- Partial: Semantics are still root-level; Radix exposes `role="slider"` per thumb (a11y alignment
-  deferred).
+- Pass: The shadcn slider recipe now exposes `role="slider"` semantics per thumb while keeping the
+  root as the diagnostics/container boundary, which matches the Radix ownership split more closely.

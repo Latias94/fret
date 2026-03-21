@@ -11,7 +11,7 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
         .range(0.0, 100.0)
         .step(1.0)
         .a11y_label("Slider")
+        .test_id_prefix("ui-gallery-slider-usage")
         .into_element(cx)
-        .test_id("ui-gallery-slider-usage")
 }
 // endregion: example

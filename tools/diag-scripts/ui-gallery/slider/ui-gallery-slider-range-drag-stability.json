@@ -1,109 +1,206 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "slider" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-slider" } },
     {
-      "type": "wait_until",
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "alt": false,
+        "ctrl": true,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "text": "slider",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-slider",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-slider" }
+        "target": {
+          "id": "ui-gallery-page-slider",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "wait_frames", "n": 10 },
-
     {
-      "type": "wait_until",
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-0" }
+        "target": {
+          "id": "ui-gallery-slider-range-thumb-0",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" }
+        "target": {
+          "id": "ui-gallery-slider-range-thumb-1",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-slider-range-range" }
+        "target": {
+          "id": "ui-gallery-slider-range-range",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
     {
-      "type": "drag_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
+      "button": "left",
+      "clamp_to_window_bounds": true,
       "delta_x": 240.0,
       "delta_y": 0.0,
-      "steps": 16
+      "steps": 16,
+      "target": {
+        "id": "ui-gallery-slider-range-thumb-1",
+        "kind": "test_id"
+      },
+      "type": "drag_pointer"
     },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "assert",
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
-        "kind": "bounds_overlapping_x",
-        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-0" },
-        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
-        "eps_px": 0.5
-      }
+        "a": {
+          "id": "ui-gallery-slider-range-thumb-0",
+          "kind": "test_id"
+        },
+        "b": {
+          "id": "ui-gallery-slider-range-range",
+          "kind": "test_id"
+        },
+        "eps_px": 0.5,
+        "kind": "bounds_overlapping_x"
+      },
+      "type": "assert"
     },
     {
-      "type": "assert",
       "predicate": {
-        "kind": "bounds_overlapping_x",
-        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
-        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
-        "eps_px": 0.5
-      }
+        "a": {
+          "id": "ui-gallery-slider-range-thumb-1",
+          "kind": "test_id"
+        },
+        "b": {
+          "id": "ui-gallery-slider-range-range",
+          "kind": "test_id"
+        },
+        "eps_px": 0.5,
+        "kind": "bounds_overlapping_x"
+      },
+      "type": "assert"
     },
-
     {
-      "type": "drag_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
+      "button": "left",
+      "clamp_to_window_bounds": true,
       "delta_x": -240.0,
       "delta_y": 0.0,
-      "steps": 16
-    },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "assert",
-      "predicate": {
-        "kind": "bounds_overlapping_x",
-        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-0" },
-        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
-        "eps_px": 0.5
-      }
+      "steps": 16,
+      "target": {
+        "id": "ui-gallery-slider-range-thumb-1",
+        "kind": "test_id"
+      },
+      "type": "drag_pointer"
     },
     {
-      "type": "assert",
-      "predicate": {
-        "kind": "bounds_overlapping_x",
-        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
-        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
-        "eps_px": 0.5
-      }
+      "n": 2,
+      "type": "wait_frames"
     },
-
-    { "type": "capture_bundle", "label": "ui-gallery-slider-range-drag-stability" }
+    {
+      "predicate": {
+        "a": {
+          "id": "ui-gallery-slider-range-thumb-0",
+          "kind": "test_id"
+        },
+        "b": {
+          "id": "ui-gallery-slider-range-range",
+          "kind": "test_id"
+        },
+        "eps_px": 0.5,
+        "kind": "bounds_overlapping_x"
+      },
+      "type": "assert"
+    },
+    {
+      "predicate": {
+        "a": {
+          "id": "ui-gallery-slider-range-thumb-1",
+          "kind": "test_id"
+        },
+        "b": {
+          "id": "ui-gallery-slider-range-range",
+          "kind": "test_id"
+        },
+        "eps_px": 0.5,
+        "kind": "bounds_overlapping_x"
+      },
+      "type": "assert"
+    },
+    {
+      "label": "ui-gallery-slider-range-drag-stability",
+      "type": "capture_bundle"
+    }
   ]
 }

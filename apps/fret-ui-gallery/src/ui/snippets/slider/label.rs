@@ -36,6 +36,6 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
-    .test_id("ui-gallery-slider-label")
+    .test_id("ui-gallery-slider-label-field")
 }
 // endregion: example

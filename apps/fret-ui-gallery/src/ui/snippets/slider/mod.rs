@@ -6,7 +6,13 @@
 //!
 //! Keep `ui-gallery-slider-*` `test_id`s stable: diag scripts depend on them.
 
+pub mod controlled;
 pub mod demo;
+pub mod disabled;
 pub mod extras;
 pub mod label;
+pub mod multiple;
+pub mod range;
+pub mod rtl;
 pub mod usage;
+pub mod vertical;

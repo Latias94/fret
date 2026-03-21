@@ -3799,10 +3799,16 @@ fn toast_page_uses_typed_doc_sections_for_app_facing_snippets() {
 fn slider_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
+            "src/ui/snippets/slider/controlled.rs",
             "src/ui/snippets/slider/demo.rs",
+            "src/ui/snippets/slider/disabled.rs",
             "src/ui/snippets/slider/extras.rs",
             "src/ui/snippets/slider/label.rs",
+            "src/ui/snippets/slider/multiple.rs",
+            "src/ui/snippets/slider/range.rs",
+            "src/ui/snippets/slider/rtl.rs",
             "src/ui/snippets/slider/usage.rs",
+            "src/ui/snippets/slider/vertical.rs",
         ],
         &[
             "use fret::{UiChild, UiCx};",
@@ -7768,14 +7774,30 @@ fn slider_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Range\", range)",
+            "DocSection::build(cx, \"Multiple Thumbs\", multiple)",
+            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Controlled\", controlled)",
+            "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Label Association\", label)",
             "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Range\", range)",
+            "DocSection::new(\"Multiple Thumbs\", multiple)",
+            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Controlled\", controlled)",
+            "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Label Association\", label)",
             "DocSection::new(\"Extras\", extras)",
+            "DocSection::new(\"Notes\", notes)",
         ],
     );
 }
@@ -8663,19 +8685,8 @@ fn selected_alert_snippets_prefer_alert_wrapper_family() {
 
 #[test]
 fn selected_slider_snippet_helpers_prefer_into_ui_element_over_anyelement() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/snippets/slider/demo.rs",
-        &[
-            "fn controlled<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Model<Vec<f32>>,) -> impl IntoUiElement<H> + use<H>",
-            "shadcn::slider(controlled_values)",
-        ],
-        &[
-            "fn controlled<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Model<Vec<f32>>,) -> AnyElement",
-            "shadcn::Slider::new(controlled_values)",
-        ],
-    );
-
     for relative_path in [
+        "src/ui/snippets/slider/controlled.rs",
         "src/ui/snippets/slider/usage.rs",
         "src/ui/snippets/slider/label.rs",
         "src/ui/snippets/field/slider.rs",
@@ -8685,6 +8696,22 @@ fn selected_slider_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             relative_path,
             &["shadcn::slider("],
             &["shadcn::Slider::new("],
+        );
+    }
+
+    for relative_path in [
+        "src/ui/snippets/slider/demo.rs",
+        "src/ui/snippets/slider/range.rs",
+        "src/ui/snippets/slider/multiple.rs",
+        "src/ui/snippets/slider/vertical.rs",
+        "src/ui/snippets/slider/disabled.rs",
+        "src/ui/snippets/slider/rtl.rs",
+        "src/ui/snippets/slider/extras.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &["shadcn::Slider::new_controllable("],
+            &["-> AnyElement"],
         );
     }
 }
@@ -9833,4 +9860,82 @@ fn material3_legacy_preview_tree_is_retired() {
         "{} should stay deleted after the Material 3 page migration",
         previews_root.display()
     );
+}
+
+#[test]
+fn slider_gallery_snippets_stamp_test_id_prefixes_on_the_slider_builder_surface() {
+    for (relative_path, required_markers, forbidden_markers) in [
+        (
+            "src/ui/snippets/slider/demo.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-single\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-single\")"],
+        ),
+        (
+            "src/ui/snippets/slider/usage.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-usage\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-usage\")"],
+        ),
+        (
+            "src/ui/snippets/slider/range.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-range\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-range\")"],
+        ),
+        (
+            "src/ui/snippets/slider/multiple.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-multiple\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-multiple\")"],
+        ),
+        (
+            "src/ui/snippets/slider/vertical.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-vertical\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-vertical\")"],
+        ),
+        (
+            "src/ui/snippets/slider/controlled.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-controlled\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-controlled\")"],
+        ),
+        (
+            "src/ui/snippets/slider/disabled.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-disabled\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-disabled\")"],
+        ),
+        (
+            "src/ui/snippets/slider/rtl.rs",
+            vec![".test_id_prefix(\"ui-gallery-slider-rtl\")"],
+            vec![".into_element(cx).test_id(\"ui-gallery-slider-rtl\")"],
+        ),
+        (
+            "src/ui/snippets/slider/extras.rs",
+            vec![
+                ".test_id_prefix(\"ui-gallery-slider-on-value-commit\")",
+                ".test_id_prefix(\"ui-gallery-slider-inverted\")",
+            ],
+            vec![],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing slider test-id-prefix marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+
+        for marker in forbidden_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&marker),
+                "{} reintroduced post-landing slider test-id stamping `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
 }
