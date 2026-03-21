@@ -5,9 +5,31 @@ use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space};
 
 use crate::model::MessageRole;
+
+#[derive(Debug, Clone, Copy)]
+struct MessageContext {
+    from: MessageRole,
+}
+
+#[derive(Debug, Default, Clone)]
+struct MessageLocalState {
+    context: Option<MessageContext>,
+}
+
+fn message_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<MessageContext> {
+    cx.inherited_state::<MessageLocalState>()
+        .and_then(|state| state.context)
+}
+
+#[track_caller]
+fn require_message_context<H: UiHost>(cx: &ElementContext<'_, H>) -> MessageContext {
+    message_context(cx).unwrap_or_else(|| {
+        panic!("Message context is missing. Use Message::into_element_with_children(...) when composing role-aware children (e.g. MessageContent::from_context).")
+    })
+}
 
 /// A role-aware message wrapper aligned with AI Elements `Message` (`message.tsx`).
 ///
@@ -59,6 +81,35 @@ impl Message {
         self
     }
 
+    pub fn into_element_with_children<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let context = MessageContext { from: self.from };
+        cx.root_state(MessageLocalState::default, |state| {
+            state.context = Some(context);
+        });
+
+        let children = children(cx);
+        let Message {
+            from,
+            children: _,
+            test_id,
+            gap,
+            layout,
+        } = self;
+
+        Message {
+            from,
+            children,
+            test_id,
+            gap,
+            layout,
+        }
+        .into_element(cx)
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let justify = if self.from == MessageRole::User {
             Justify::End
@@ -82,10 +133,16 @@ impl Message {
         } else {
             LayoutRefinement::default().w_full().min_w_0()
         };
+        let items = if self.from == MessageRole::User {
+            Items::End
+        } else {
+            Items::Stretch
+        };
 
         let inner = ui::v_stack(move |_cx| children)
             .layout(inner_layout)
             .gap(gap)
+            .items(items)
             .into_element(cx);
 
         let row = ui::h_row(move |_cx| vec![inner])
@@ -114,6 +171,7 @@ impl Message {
 /// assistant messages as plain flow content (no bubble by default).
 pub struct MessageContent {
     from: MessageRole,
+    from_context: bool,
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -136,6 +194,18 @@ impl MessageContent {
     pub fn new(from: MessageRole, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             from,
+            from_context: false,
+            children: children.into_iter().collect(),
+            test_id: None,
+            layout: LayoutRefinement::default(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn from_context(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            from: MessageRole::Assistant,
+            from_context: true,
             children: children.into_iter().collect(),
             test_id: None,
             layout: LayoutRefinement::default(),
@@ -161,7 +231,13 @@ impl MessageContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bubble_fg = if self.from == MessageRole::User {
+        let from = if self.from_context {
+            require_message_context(cx).from
+        } else {
+            self.from
+        };
+
+        let bubble_fg = if from == MessageRole::User {
             // Upstream (ai-elements) uses `text-foreground` for user bubbles.
             Some(
                 theme
@@ -171,7 +247,7 @@ impl MessageContent {
         } else {
             None
         };
-        let base_chrome = if self.from == MessageRole::User {
+        let base_chrome = if from == MessageRole::User {
             let bg = theme
                 .color_by_key("fret.ai.message.user.bg")
                 .unwrap_or_else(|| theme.color_token("secondary"));
@@ -192,7 +268,7 @@ impl MessageContent {
                 .overflow_hidden();
             // Assistant/system/tool messages should participate in the full-width flow so text
             // measurement receives stable width constraints (avoids 0-width wrap explosions).
-            if self.from != MessageRole::User {
+            if from != MessageRole::User {
                 layout = layout.w_full();
             }
             layout
@@ -274,6 +350,37 @@ mod tests {
             assert!(
                 !contains_foreground_scope(&el),
                 "expected message bubble content to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
+    }
+
+    #[test]
+    fn message_content_from_context_inherits_message_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "message-context", |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let expected_fg = theme
+                .color_by_key("fret.ai.message.user.fg")
+                .unwrap_or_else(|| theme.color_token("foreground"));
+
+            let el = Message::new(MessageRole::User, Vec::<AnyElement>::new())
+                .into_element_with_children(cx, |cx| {
+                    vec![MessageContent::from_context([cx.text("Hello")]).into_element(cx)]
+                });
+
+            let inherited = find_first_inherited_foreground_node(&el)
+                .expect("expected MessageContent::from_context to inherit the Message role");
+
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&el),
+                "expected MessageContent::from_context to attach inherited foreground without inserting a ForegroundScope"
             );
         });
     }

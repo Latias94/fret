@@ -144,13 +144,8 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         })
                         .collect();
 
-                    let content = ui_ai::MessageContent::new(message.role, response_parts)
-                        .test_id(format!("ui-ai-message-usage-msg-{index}-content"))
-                        .into_element(cx);
-
-                    let mut children = vec![content];
-                    if Some(index) == last_assistant_index {
-                        let actions = ui_ai::MessageActions::new([
+                    let actions = (Some(index) == last_assistant_index).then(|| {
+                        ui_ai::MessageActions::new([
                             ui_ai::MessageAction::new("Retry")
                                 .tooltip("Retry")
                                 .icon(fret_icons::ids::ui::LOADER)
@@ -166,13 +161,28 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                         ])
                         .justify(Justify::Start)
                         .test_id("ui-ai-message-usage-actions")
-                        .into_element(cx);
-                        children.push(actions);
-                    }
-
-                    ui_ai::Message::new(message.role, children)
-                        .test_id(format!("ui-ai-message-usage-msg-{index}"))
                         .into_element(cx)
+                    });
+
+                    let content_test_id =
+                        Arc::<str>::from(format!("ui-ai-message-usage-msg-{index}-content"));
+                    let message_test_id =
+                        Arc::<str>::from(format!("ui-ai-message-usage-msg-{index}"));
+                    let from = message.role;
+
+                    ui_ai::Message::new(from, [])
+                        .test_id(message_test_id)
+                        .into_element_with_children(cx, move |cx| {
+                            let content = ui_ai::MessageContent::from_context(response_parts)
+                                .test_id(content_test_id)
+                                .into_element(cx);
+
+                            let mut children = vec![content];
+                            if let Some(actions) = actions {
+                                children.push(actions);
+                            }
+                            children
+                        })
                 })
                 .collect();
 

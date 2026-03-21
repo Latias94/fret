@@ -61,49 +61,43 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     .test_id("ui-ai-message-demo-user-actions")
     .into_element(cx);
 
-    let assistant = ui_ai::Message::new(
-        ui_ai::MessageRole::Assistant,
-        [
-            ui_ai::MessageContent::new(
-                ui_ai::MessageRole::Assistant,
-                [ui_ai::MessageResponse::new(Arc::<str>::from(
-                    "**Assistant** messages default to a full-width flow (no bubble).\n\n\
+    let assistant = ui_ai::Message::new(ui_ai::MessageRole::Assistant, [])
+        .test_id("ui-ai-message-demo-assistant")
+        .into_element_with_children(cx, move |cx| {
+            vec![
+                ui_ai::MessageContent::from_context([ui_ai::MessageResponse::new(
+                    Arc::<str>::from(
+                        "**Assistant** messages default to a full-width flow (no bubble).\n\n\
 Compose actions/toolbar slots as separate children.\n\n\
 ```rust\n\
 fn streamed_demo() {\n\
     println!(\"hello from message response\");\n\
 }\n\
 ```\n",
-                ))
+                    ),
+                )
                 .streaming(false)
                 .test_id_prefix("ui-ai-message-demo-assistant-response-")
-                .into_element(cx)],
-            )
-            .test_id("ui-ai-message-demo-assistant-content")
-            .into_element(cx),
-            assistant_actions,
-        ],
-    )
-    .test_id("ui-ai-message-demo-assistant")
-    .into_element(cx);
+                .into_element(cx)])
+                .test_id("ui-ai-message-demo-assistant-content")
+                .into_element(cx),
+                assistant_actions,
+            ]
+        });
 
-    let user = ui_ai::Message::new(
-        ui_ai::MessageRole::User,
-        [
-            ui_ai::MessageContent::new(
-                ui_ai::MessageRole::User,
-                [
+    let user = ui_ai::Message::new(ui_ai::MessageRole::User, [])
+        .test_id("ui-ai-message-demo-user")
+        .into_element_with_children(cx, move |cx| {
+            vec![
+                ui_ai::MessageContent::from_context([
                     cx.text("User messages render as a bubble aligned to the right."),
                     cx.text("Bubble chrome is controlled by theme tokens."),
-                ],
-            )
-            .test_id("ui-ai-message-demo-user-content")
-            .into_element(cx),
-            user_actions,
-        ],
-    )
-    .test_id("ui-ai-message-demo-user")
-    .into_element(cx);
+                ])
+                .test_id("ui-ai-message-demo-user-content")
+                .into_element(cx),
+                user_actions,
+            ]
+        });
 
     let title = cx.text("Message (AI Elements): alignment + bubble + actions + markdown response.");
 
