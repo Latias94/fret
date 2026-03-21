@@ -131,8 +131,9 @@ impl ConversationDownload {
 
         let mut btn = if let Some(children) = self.children {
             Button::new("")
+                .a11y_label(self.label.clone())
                 .children(children)
-                .size(ButtonSize::Icon)
+                .size(ButtonSize::Sm)
                 .refine_layout(layout.clone())
         } else if self.show_label {
             Button::new(self.label.clone())

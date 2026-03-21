@@ -16,7 +16,6 @@ use super::conversation::{
     CONVERSATION_SCROLL_BUTTON_SLOT_KEY, conversation_slot_placeholder, use_conversation_context,
 };
 
-#[derive(Clone)]
 /// An overlay “scroll to bottom” affordance driven by a `VirtualListScrollHandle`.
 ///
 /// Callers should compose this inside a `relative()` root so its absolute positioning resolves
@@ -25,6 +24,7 @@ pub struct ConversationScrollButton {
     handle: Option<ScrollHandle>,
     threshold: Px,
     label: Arc<str>,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -34,6 +34,7 @@ impl std::fmt::Debug for ConversationScrollButton {
         f.debug_struct("ConversationScrollButton")
             .field("threshold", &self.threshold)
             .field("label", &self.label.as_ref())
+            .field("has_children", &self.children.is_some())
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
@@ -46,6 +47,7 @@ impl ConversationScrollButton {
             handle: Some(handle.base_handle().clone()),
             threshold: Px(8.0),
             label: Arc::<str>::from("Scroll to bottom"),
+            children: None,
             test_id: None,
             layout: LayoutRefinement::default(),
         }
@@ -56,6 +58,7 @@ impl ConversationScrollButton {
             handle: Some(handle),
             threshold: Px(8.0),
             label: Arc::<str>::from("Scroll to bottom"),
+            children: None,
             test_id: None,
             layout: LayoutRefinement::default(),
         }
@@ -71,6 +74,11 @@ impl ConversationScrollButton {
         self
     }
 
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -79,6 +87,18 @@ impl ConversationScrollButton {
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
+    }
+
+    /// Returns an overlay element that is hidden when the handle is effectively at bottom.
+    ///
+    /// Callers should compose this inside a `relative()` root (e.g. a `Stack`) so the absolute
+    /// positioning resolves correctly.
+    pub fn into_element_with_children<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.children(children(cx)).into_element(cx)
     }
 
     /// Returns an overlay element that is hidden when the handle is effectively at bottom.
@@ -150,13 +170,20 @@ impl ConversationScrollButton {
             host.request_redraw(action_cx.window);
         });
 
-        let mut button = Button::new("")
-            .a11y_label(self.label)
-            .variant(ButtonVariant::Outline)
-            .size(ButtonSize::Icon)
-            .leading_icon(IconId::new_static("lucide.arrow-down"))
-            .corner_radii_override(Corners::all(Px(999.0)))
-            .on_activate(on_activate);
+        let mut button = if let Some(children) = self.children {
+            Button::new("")
+                .a11y_label(self.label)
+                .children(children)
+                .size(ButtonSize::Sm)
+        } else {
+            Button::new("")
+                .a11y_label(self.label)
+                .size(ButtonSize::Icon)
+                .leading_icon(IconId::new_static("lucide.arrow-down"))
+        }
+        .variant(ButtonVariant::Outline)
+        .corner_radii_override(Corners::all(Px(999.0)))
+        .on_activate(on_activate);
 
         if let Some(test_id) = self.test_id {
             button = button.test_id(test_id);
@@ -193,8 +220,87 @@ impl Default for ConversationScrollButton {
             handle: None,
             threshold: Px(8.0),
             label: Arc::<str>::from("Scroll to bottom"),
+            children: None,
             test_id: None,
             layout: LayoutRefinement::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::{Conversation, ConversationContent};
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ElementKind, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(320.0)),
+        )
+    }
+
+    fn has_test_id(element: &AnyElement, expected: &str) -> bool {
+        if element
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(expected)
+        {
+            return true;
+        }
+
+        if matches!(
+            &element.kind,
+            ElementKind::Semantics(props) if props.test_id.as_deref() == Some(expected)
+        ) {
+            return true;
+        }
+
+        element
+            .children
+            .iter()
+            .any(|child| has_test_id(child, expected))
+    }
+
+    fn has_text(element: &AnyElement, expected: &str) -> bool {
+        match &element.kind {
+            ElementKind::Text(TextProps { text, .. }) if text.as_ref() == expected => true,
+            _ => element
+                .children
+                .iter()
+                .any(|child| has_text(child, expected)),
+        }
+    }
+
+    #[test]
+    fn custom_children_render_inside_conversation_overlay_slot() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let handle = ScrollHandle::default();
+        handle.set_viewport_size(Size::new(Px(320.0), Px(160.0)));
+        handle.set_content_size(Size::new(Px(320.0), Px(640.0)));
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Conversation::new([])
+                    .scroll_handle(handle.clone())
+                    .stick_to_bottom(false)
+                    .into_element_with_children(cx, |cx| {
+                        vec![
+                            ConversationContent::new([cx.text("Body")]).into_element(cx),
+                            ConversationScrollButton::default()
+                                .test_id("conversation-scroll")
+                                .children([cx.text("Jump to latest")])
+                                .into_element(cx),
+                        ]
+                    })
+            });
+
+        assert!(has_text(&element, "Jump to latest"));
+        assert!(has_test_id(&element, "conversation-scroll.chrome"));
     }
 }

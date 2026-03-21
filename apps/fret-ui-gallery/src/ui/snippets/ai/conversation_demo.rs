@@ -236,3 +236,29 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
     cx.container(props, move |_cx| vec![body])
 }
 // endregion: example
+
+// region: custom_scroll_button
+#[allow(dead_code)]
+fn custom_scroll_button(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
+    ui_ai::ConversationScrollButton::default().into_element_with_children(cx, |cx| {
+        vec![
+            ui::h_row(move |cx| {
+                vec![
+                    icon::icon(cx, IconId::new_static("lucide.chevrons-down")),
+                    cx.text("Latest"),
+                ]
+            })
+            .gap(Space::N1)
+            .items_center()
+            .into_element(cx),
+        ]
+    })
+}
+// endregion: custom_scroll_button
+
+// region: messages_to_markdown_export
+#[allow(dead_code)]
+fn export_markdown(messages: &[ui_ai::AiMessage]) -> String {
+    ui_ai::messages_to_markdown(messages)
+}
+// endregion: messages_to_markdown_export

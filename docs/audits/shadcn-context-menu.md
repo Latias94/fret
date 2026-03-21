@@ -112,14 +112,13 @@ Key upstream behaviors/surfaces:
 
 ## Missing surfaces (significant)
 
-Still missing (relative to upstream shadcn/ui v4):
+No currently confirmed significant surface gaps relative to the current shadcn/Base UI docs
+surface.
 
-- Investigating: end-to-end native touch long-press open is not yet validated on the UI Gallery
-  `Basic` example. The repro script
-  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`
-  currently times out after the touch-hold open attempt, while lower-level/unit coverage still
-  indicates the long-press timer logic exists. That points to an integration or runner-level gap
-  rather than a shadcn docs-surface problem.
+- The previously investigated native touch long-press path on the UI Gallery `Basic` example now
+  passes again through
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`,
+  so it should remain treated as a regression gate rather than an open component/runtime gap.
 
 ## Implemented surfaces (notable)
 
@@ -151,7 +150,7 @@ Still missing (relative to upstream shadcn/ui v4):
 - Interaction test: `context_menu_opens_on_shift_f10`
 - Interaction test: `context_menu_opens_on_context_menu_key`
 - Interaction test: `context_menu_disabled_blocks_pointer_and_keyboard_open`
-- Touch long-press repro (currently failing under native diag): `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`
+- Touch long-press diag gate: `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`
 - Interaction test: `context_menu_submenu_opens_on_arrow_right_without_pointer_move`
 - Submenu openSteps parity (web-vs-fret): `context-menu-demo.submenu-kbd*` follows the extractor semantics (`scrollIntoView({ block: "center" })` + focus + ArrowRight),
   while `context-menu-demo.submenu` opens via hover after driving the submenu open-delay timer from effects.
