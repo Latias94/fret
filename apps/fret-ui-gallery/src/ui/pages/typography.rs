@@ -58,7 +58,7 @@ pub(super) fn preview_typography(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let list = DocSection::build(cx, "list", list)
         .description("Bulleted/ordered list content.")
         .code_rust_from_file_region(snippets::list::SOURCE, "example");
-    let inline_code = DocSection::build(cx, "InlineCode", inline_code)
+    let inline_code = DocSection::build(cx, "Inline code", inline_code)
         .description("Inline code styling for commands and identifiers.")
         .code_rust_from_file_region(snippets::inline_code::SOURCE, "example");
     let lead = DocSection::build(cx, "Lead", lead)

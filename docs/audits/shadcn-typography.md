@@ -39,7 +39,7 @@ This audit records why Fret keeps typography as a docs/helper surface rather tha
 
 - Pass: the gallery mirrors the upstream typography page structure (`Demo`, headings, paragraph, blockquote, table, list, inline code, lead, large, small, muted, and RTL) and now uses the same sample headings/body copy for the focused sections.
 - Pass: the full demo/RTL story now tracks the upstream content order more closely, while keeping the single inline-link sentence flattened to plain text on the raw helper lane until inline link/rich-text composition is promoted as a separate contract.
-- Pass with a known local drift: the gallery section key/title remains `InlineCode` instead of the upstream "Inline code" wording because the current typed authoring-surface marker test keys off that stable section name.
+- Pass: the gallery now also uses the upstream "Inline code" heading spelling, which keeps the display copy and the existing `docsec-inline-code-*` diagnostics anchors aligned.
 - Pass: keeping the page available is still useful for copyable examples even though the status remains `Skip` in the registry baseline table.
 - Pass: this is a deliberate `Skip` because the upstream page is documentation, not a true shipped component.
 
@@ -50,3 +50,4 @@ This audit records why Fret keeps typography as a docs/helper surface rather tha
 - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout layout_typography_fixtures::web_vs_fret_layout_typography_geometry_matches_web_fixtures -- --exact`
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app typography_page_uses_typed_doc_sections_for_app_facing_snippets -- --exact`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-docs-smoke.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
