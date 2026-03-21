@@ -284,6 +284,7 @@ pub enum TabsActivationDirection {
 impl TabsActivationDirection {
     fn from_indices(
         orientation: TabsOrientation,
+        direction: crate::direction::LayoutDirection,
         prev: Option<usize>,
         next: Option<usize>,
     ) -> Self {
@@ -297,9 +298,15 @@ impl TabsActivationDirection {
         match orientation {
             TabsOrientation::Horizontal => {
                 if next < prev {
-                    Self::Left
+                    match direction {
+                        crate::direction::LayoutDirection::Ltr => Self::Left,
+                        crate::direction::LayoutDirection::Rtl => Self::Right,
+                    }
                 } else {
-                    Self::Right
+                    match direction {
+                        crate::direction::LayoutDirection::Ltr => Self::Right,
+                        crate::direction::LayoutDirection::Rtl => Self::Left,
+                    }
                 }
             }
             TabsOrientation::Vertical => {
@@ -752,6 +759,7 @@ fn set_tabs_value_and_emit_change(
     on_value_change_with_event_details: Option<&OnValueChangeWithEventDetails>,
     source: TabsValueChangeSource,
     orientation: TabsOrientation,
+    direction: crate::direction::LayoutDirection,
 ) {
     let prev_value = host.models_mut().read(model, |v| v.clone()).ok().flatten();
     if prev_value == next {
@@ -765,7 +773,7 @@ fn set_tabs_value_and_emit_change(
     let next_idx =
         fret_ui_kit::primitives::tabs::active_index_from_values(values, next.as_deref(), disabled);
     let activation_direction =
-        TabsActivationDirection::from_indices(orientation, prev_idx, next_idx);
+        TabsActivationDirection::from_indices(orientation, direction, prev_idx, next_idx);
 
     if let Some(on_value_change_with_event_details) = on_value_change_with_event_details {
         let mut event_details = TabsValueChangeEventDetails {
@@ -1823,6 +1831,7 @@ impl Tabs {
                 .model();
 
         let theme = Theme::global(&*cx.app).snapshot();
+        let layout_direction = crate::direction::use_direction(cx, None);
         let mut gap = tabs_gap(&theme);
         if let Some(gap_px_override) = gap_px_override {
             gap = gap_px_override;
@@ -2077,6 +2086,7 @@ impl Tabs {
                                     let on_value_change_with_event_details_for_roving =
                                         on_value_change_with_event_details.clone();
                                     let orientation_for_roving = orientation;
+                                    let direction_for_roving = layout_direction;
                                     cx.roving_on_active_change(Arc::new(move |host, _acx, idx| {
                                         let Some(value) = values_for_roving.get(idx).cloned() else {
                                             return;
@@ -2093,6 +2103,7 @@ impl Tabs {
                                             on_value_change_with_event_details_for_roving.as_ref(),
                                             TabsValueChangeSource::RovingActiveChange,
                                             orientation_for_roving,
+                                            direction_for_roving,
                                         );
                                     }));
                                 }
@@ -2178,6 +2189,7 @@ impl Tabs {
                                     let values_for_change = values_arc.clone();
                                     let disabled_for_change = disabled_flags_arc.clone();
                                     let orientation_for_change = orientation;
+                                    let direction_for_change = layout_direction;
                                     let item_disabled =
                                         disabled_flags.get(idx).copied().unwrap_or(true);
                                     let tab_stop = active_idx.is_some_and(|a| a == idx);
@@ -2245,6 +2257,7 @@ impl Tabs {
                                                                 .as_ref(),
                                                             TabsValueChangeSource::PointerDown,
                                                             orientation_for_change,
+                                                            direction_for_change,
                                                         );
                                                         R::Continue
                                                     }
@@ -2286,6 +2299,7 @@ impl Tabs {
                                                         .as_ref(),
                                                     TabsValueChangeSource::Activate,
                                                     orientation_for_change,
+                                                    direction_for_change,
                                                 );
                                             },
                                         ));
@@ -4445,6 +4459,185 @@ mod tests {
         assert_eq!(
             changed[0].1.activation_direction,
             TabsActivationDirection::Right
+        );
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_details_reports_left_activation_direction_in_rtl_on_pointer_down()
+    {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeDetails)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_handler = changed.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-details-pointer-rtl",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![crate::direction::with_direction_provider(
+                    cx,
+                    crate::direction::LayoutDirection::Rtl,
+                    |cx| {
+                        Tabs::new(model.clone())
+                            .activation_mode(TabsActivationMode::Manual)
+                            .on_value_change_with_details(Some(Arc::new(move |value, details| {
+                                changed_for_handler
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner())
+                                    .push((value, details));
+                            })))
+                            .items(items)
+                            .into_element(cx)
+                    },
+                )]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].0.as_deref(), Some("beta"));
+        assert_eq!(changed[0].1.source, TabsValueChangeSource::PointerDown);
+        assert_eq!(
+            changed[0].1.activation_direction,
+            TabsActivationDirection::Left
+        );
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_details_reports_left_activation_direction_in_rtl_on_roving_active_change()
+    {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeDetails)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_handler = changed.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-details-roving-rtl",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![crate::direction::with_direction_provider(
+                    cx,
+                    crate::direction::LayoutDirection::Rtl,
+                    |cx| {
+                        Tabs::new(model.clone())
+                            .activation_mode(TabsActivationMode::Automatic)
+                            .on_value_change_with_details(Some(Arc::new(move |value, details| {
+                                changed_for_handler
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner())
+                                    .push((value, details));
+                            })))
+                            .items(items)
+                            .into_element(cx)
+                    },
+                )]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable tab");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].0.as_deref(), Some("beta"));
+        assert_eq!(
+            changed[0].1.source,
+            TabsValueChangeSource::RovingActiveChange
+        );
+        assert_eq!(
+            changed[0].1.activation_direction,
+            TabsActivationDirection::Left
         );
     }
 

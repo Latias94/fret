@@ -55,7 +55,8 @@ Base UI `Tabs.Root` behavior.
 - Pass: Root/list/trigger tokens align with shadcn v4 defaults (`h-9`, `p-[3px]`, muted list chrome,
   active trigger background/border/shadow conventions).
 - Note: Default-style ownership remains split on purpose: root width constraints such as upstream
-  `className="w-[400px]"` stay caller-owned, while list/trigger/content chrome remains recipe-owned.
+  `className="w-[400px]"` and the demo shell `w-full max-w-sm` stay caller-owned, while
+  list/trigger/content chrome remains recipe-owned.
 - Pass: `TabsContent` defaults to filling the remaining main-axis space (shadcn `flex-1` intent).
 - Pass: Trigger content remains rich (icons/badges/custom children).
 
@@ -63,6 +64,8 @@ Base UI `Tabs.Root` behavior.
 
 - Pass: The UI Gallery page now mirrors the upstream docs path first:
   `Demo`, `Usage`, `Line`, `Vertical`, `Disabled`, `Icons`, `RTL`, and `API Reference`.
+- Pass: The lead UI Gallery `Demo` snippet now keeps the upstream `w-full max-w-sm` shell and no
+  longer forces a full-width `TabsList`.
 - Pass: `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` already cover the composable
   compound-parts lane, so no separate root `children([...])` API is needed for Tabs.
 - Pass: The gallery keeps a copyable `Composable Parts (Fret)` follow-up after `API Reference` so
@@ -74,9 +77,6 @@ Base UI `Tabs.Root` behavior.
   canceling a pending selection write via `Tabs::on_value_change_with_event_details(...)` /
   `TabsRoot::on_value_change_with_event_details(...)`, but older callbacks remain
   notification-only.
-- Partial: Base UI carries `activationDirection` details (`left/right/up/down/none`). Fret exposes
-  this via `Tabs::on_value_change_with_details(...)` / `TabsRoot::on_value_change_with_details(...)`,
-  but currently derives it from the selected index delta rather than DOM geometry.
 
 ## Validation
 
@@ -89,7 +89,10 @@ Base UI `Tabs.Root` behavior.
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_source_reports_roving_active_change`
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_details_reports_activation_direction_on_pointer_down`
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_details_reports_activation_direction_on_roving_active_change`
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_details_reports_left_activation_direction_in_rtl_on_pointer_down`
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_details_reports_left_activation_direction_in_rtl_on_roving_active_change`
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_event_details_can_cancel_model_update`
 - `cargo nextest run -p fret-ui-gallery tabs_page_uses_typed_doc_sections_for_app_facing_snippets`
+- `cargo nextest run -p fret-ui-gallery tabs_demo_snippet_keeps_upstream_demo_width_lane_and_intrinsic_list`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
 - Web layout gates remain covered in `web_vs_fret_layout` tabs assertions.

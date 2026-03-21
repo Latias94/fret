@@ -24,11 +24,11 @@ pub(super) fn preview_tabs(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         "`tabs_uncontrolled(cx, default, |cx| ..)` and `tabs(cx, model, |cx| ..)` remain the default copyable root lane for common app code.",
         "`TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` already provide the composable compound-parts lane, so Tabs does not need a second root `children([...])` API just to match upstream nested authoring.",
         "`TabsTrigger::children(...)` and `TabsItem::trigger_children(...)` cover caller-owned trigger content when the compact label/icon helpers are too narrow.",
-        "Root width stays caller-owned (`w-[400px]` upstream), while list/trigger/content chrome and `TabsContent` fill-width defaults stay recipe-owned.",
+        "Demo shell (`w-full max-w-sm`) and usage width (`w-[400px]`) stay caller-owned, while list/trigger/content chrome and `TabsContent` fill-width defaults stay recipe-owned.",
     ]);
     let notes = doc_layout::notes_block([
-        "This review did not indicate a missing `fret-ui` mechanism-layer fix: existing semantics/layout gates already cover selection, roving, trigger foreground inheritance, and content fill.",
-        "The remaining drift was on the docs/public-surface side: the gallery was not surfacing the explicit `API Reference` section or a copyable compound-parts example even though the underlying surface already existed.",
+        "No `fret-ui` runtime change was needed for Tabs semantics/layout; the only mechanism-adjacent parity fix stayed in `fret-ui-shadcn` and makes Base UI-style `activation_direction` metadata respect RTL physical movement.",
+        "The docs surface keeps the upstream width split explicit: `Demo` mirrors the `w-full max-w-sm` shell, while `Usage` keeps the `w-[400px]` call-site width from the docs block.",
         "Password fields use `Input::password()` to mirror `type=\"password\"` in shadcn/ui examples.",
         "List-only, vertical-line, and flex-1 examples stay after the docs path because they are regression/follow-up surfaces rather than upstream section headings.",
     ]);

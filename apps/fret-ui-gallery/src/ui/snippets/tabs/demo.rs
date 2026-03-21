@@ -108,8 +108,12 @@ pub fn render(cx: &mut UiCx<'_>) -> impl UiChild + use<> {
                 .trigger_test_id("ui-gallery-tabs-demo-trigger-password"),
         ]
     })
-    .list_full_width(true)
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+    .refine_layout(
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(Px(384.0))
+            .min_w_0(),
+    )
     .into_element(cx)
     .test_id("ui-gallery-tabs-demo")
 }

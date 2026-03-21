@@ -4487,6 +4487,43 @@ fn tabs_page_uses_typed_notes_blocks_for_api_reference_and_notes() {
 }
 
 #[test]
+fn tabs_demo_snippet_keeps_upstream_demo_width_lane_and_intrinsic_list() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/tabs/demo.rs",
+        &["LayoutRefinement::default().w_full().max_w(Px(384.0)).min_w_0()"],
+    );
+
+    assert!(
+        !normalized.contains(".list_full_width(true)"),
+        "{} should keep the upstream demo list intrinsic instead of forcing a gallery-only full-width list",
+        manifest_path("src/ui/snippets/tabs/demo.rs").display()
+    );
+    assert!(
+        !normalized.contains("max_w(Px(460.0))"),
+        "{} should keep the upstream `max-w-sm` demo shell instead of the old wider gallery cap",
+        manifest_path("src/ui/snippets/tabs/demo.rs").display()
+    );
+}
+
+#[test]
+fn tabs_page_explains_width_split_and_existing_parts_lane() {
+    let tabs_page = read("src/ui/pages/tabs.rs");
+
+    assert!(
+        tabs_page.contains(
+            "Demo shell (`w-full max-w-sm`) and usage width (`w-[400px]`) stay caller-owned, while list/trigger/content chrome and `TabsContent` fill-width defaults stay recipe-owned."
+        ),
+        "src/ui/pages/tabs.rs should keep the upstream demo-vs-usage width split explicit"
+    );
+    assert!(
+        tabs_page.contains(
+            "`TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` already provide the composable compound-parts lane, so Tabs does not need a second root `children([...])` API just to match upstream nested authoring."
+        ),
+        "src/ui/pages/tabs.rs should explain why Tabs does not need an additional root children() surface"
+    );
+}
+
+#[test]
 fn card_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
