@@ -17,7 +17,7 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Skeleton::new()` matches the upstream leaf primitive path where the caller owns size and shape.",
         "`Skeleton::block()` is a Fret convenience for the common `w-full h-4` placeholder row, but it is intentionally not the default upstream path.",
-        "Skeleton remains a visual placeholder primitive, so no extra generic `compose()` API is needed here.",
+        "Skeleton remains a visual placeholder primitive, so no extra generic `compose()` or composable children API is needed here.",
         "Default chrome (`accent`, `rounded-md`, pulse animation) stays recipe-owned, while explicit width, height, aspect ratio, and fully rounded avatar shapes remain caller-owned.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
@@ -30,7 +30,7 @@ pub(super) fn preview_skeleton(cx: &mut UiCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-skeleton-demo")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
-        .description("Basic skeleton block.")
+        .description("Leaf placeholder with caller-owned size and shape.")
         .test_id_prefix("ui-gallery-skeleton-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let avatar = DocSection::build(cx, "Avatar", avatar)

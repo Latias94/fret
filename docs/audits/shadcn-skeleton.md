@@ -13,9 +13,15 @@ base examples, and the current gallery/docs surface.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/skeleton.mdx`
-- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/skeleton.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/examples/base/skeleton-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/skeleton-avatar.tsx`, `repo-ref/ui/apps/v4/examples/base/skeleton-card.tsx`, `repo-ref/ui/apps/v4/examples/base/skeleton-text.tsx`, `repo-ref/ui/apps/v4/examples/base/skeleton-form.tsx`, `repo-ref/ui/apps/v4/examples/base/skeleton-table.tsx`, `repo-ref/ui/apps/v4/examples/base/skeleton-rtl.tsx`
+- Docs pages: `repo-ref/ui/apps/v4/content/docs/components/base/skeleton.mdx`,
+  `repo-ref/ui/apps/v4/content/docs/components/radix/skeleton.mdx`
+- Component implementations: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/skeleton.tsx`,
+  `repo-ref/ui/apps/v4/registry/bases/base/ui/skeleton.tsx`,
+  `repo-ref/ui/apps/v4/registry/bases/radix/ui/skeleton.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/skeleton-demo.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/skeleton-card.tsx`,
+  `repo-ref/ui/apps/v4/registry/bases/base/examples/skeleton-example.tsx`,
+  `repo-ref/ui/apps/v4/registry/bases/radix/examples/skeleton-example.tsx`
 
 ## Fret implementation
 
@@ -29,6 +35,7 @@ base examples, and the current gallery/docs surface.
 - Pass: `Skeleton::new()` covers the upstream leaf primitive path where callers set size and shape explicitly.
 - Pass: `Skeleton::block()` remains a focused Fret convenience (`w-full h-4`) for common loading rows without changing the upstream default path.
 - Pass: `Skeleton` is a visual leaf primitive, so Fret intentionally does not add a generic `compose()` builder here.
+- Pass: No composable children API is needed here; the upstream shadcn/base/radix surfaces all expose `Skeleton` as a leaf `div`/placeholder boundary rather than a compound parts family.
 
 ### Visual defaults and ownership
 
@@ -44,5 +51,6 @@ base examples, and the current gallery/docs surface.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib skeleton`
+- `CARGO_TARGET_DIR=target-codex-skeleton cargo check -p fret-ui-gallery --message-format short`
+- `CARGO_TARGET_DIR=target-codex-skeleton cargo test -p fret-ui-shadcn --lib skeleton`
+- `CARGO_TARGET_DIR=target-codex-skeleton cargo test -p fret-ui-shadcn --test web_vs_fret_layout skeleton`

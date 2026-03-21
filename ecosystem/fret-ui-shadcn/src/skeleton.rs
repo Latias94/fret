@@ -155,6 +155,26 @@ mod tests {
     }
 
     #[test]
+    fn skeleton_new_stays_a_size_free_leaf_primitive() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Skeleton::new().into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!("expected Skeleton to build a Container element");
+        };
+        assert_eq!(props.layout.size.width, Length::Auto);
+        assert_eq!(props.layout.size.height, Length::Auto);
+        assert!(
+            el.children.is_empty(),
+            "expected Skeleton::new() to remain a leaf primitive with no child slot"
+        );
+    }
+
+    #[test]
     fn skeleton_pulse_changes_background_alpha_across_frames() {
         let window = AppWindowId::default();
         let mut app = App::new();
