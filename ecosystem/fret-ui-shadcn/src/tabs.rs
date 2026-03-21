@@ -4557,7 +4557,7 @@ mod tests {
 
     #[test]
     fn tabs_on_value_change_with_details_reports_left_activation_direction_in_rtl_on_roving_active_change()
-    {
+     {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();

@@ -6,8 +6,7 @@ use fret_core::{
 };
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, ElementKind, FlexProps, MainAlign, Overflow,
-    PressableProps, ScrollAxis,
+    AnyElement, CrossAlign, ElementKind, FlexProps, MainAlign, Overflow, PressableProps, ScrollAxis,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
